@@ -281,7 +281,16 @@ pub struct CaptureScene<'w, 's> {
             &'static UiGlobalTransform,
         ),
     >,
-    ui_text: Query<'w, 's, (&'static Text, &'static ComputedNode)>,
+    ui_text: Query<
+        'w,
+        's,
+        (
+            &'static Text,
+            &'static ComputedNode,
+            &'static Node,
+            Option<&'static InheritedVisibility>,
+        ),
+    >,
     camera: Query<
         'w,
         's,
@@ -432,8 +441,8 @@ impl CaptureScene<'_, '_> {
                 let size = node.size();
                 serde_json::json!({"name": name.as_str(), "min": (center - size * 0.5).to_array(), "max": (center + size * 0.5).to_array()})
             }).collect::<Vec<_>>());
-        report["ui_text"] = serde_json::Value::Array(self.ui_text.iter().filter(|(text, _)| !text.0.trim().is_empty()).map(|(text, node)| {
-            serde_json::json!({"text": text.0, "size": node.size().to_array()})
+        report["ui_text"] = serde_json::Value::Array(self.ui_text.iter().filter(|(text, _, _, _)| !text.0.trim().is_empty()).map(|(text, node, style, visibility)| {
+            serde_json::json!({"text": text.0, "size": node.size().to_array(), "visible": style.display != Display::None && visibility.is_none_or(|visibility| visibility.get())})
         }).collect());
         if let Some(environment) = self.environment.as_ref()
             && let Some(content) = self.content.as_ref()
@@ -462,7 +471,7 @@ impl CaptureScene<'_, '_> {
         }
         report["draw_calls"] = self.world_draws.report();
         report["enhanced_scenery"] = self.enhanced_scenery.report();
-        report["weather_state"] = self.weather_state.as_ref().map_or(serde_json::Value::Null,|s|serde_json::json!({"atmosphere":s.atmosphere,"profile":s.profile,"seed":s.seed,"live":s.live}));
+        report["weather_state"] = self.weather_state.as_ref().map_or(serde_json::Value::Null,|s|serde_json::json!({"atmosphere":s.atmosphere,"profile":s.profile,"seed":s.seed,"live":s.live,"journey":s.journey,"elapsed_s":s.timeline_elapsed_s()}));
         #[cfg(any(feature = "dev-tools", feature = "experimental-framepace"))]
         {
             report["dev_diagnostics"] = self

@@ -1,0 +1,846 @@
+{
+  "viewer_sha256": "a1b5bfcdc22ae28d42b017d64b91645eeb8b8df1ac481b4be21ca6329049fe22",
+  "scenario_sha256": "66772c2a6e44b54c1ea75feb7976641b6a48f6b5c647c171063c8ca962cafe4e",
+  "camera": {
+    "yaw": -1,
+    "pitch": 0.65,
+    "distance_m": 210
+  },
+  "resolution": [
+    1280,
+    720
+  ],
+  "view_radius_m": 450,
+  "results": {
+    "rain-light": {
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.7504000067710876,
+          "flake_size": 1.0,
+          "fog_density": 0.0001700000138953328,
+          "overcast": 0.5220000147819519,
+          "phase": "calm",
+          "rain": 0.18000000715255737,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "visibility_m": 10380.0,
+          "wind_mps": [
+            1.340000033378601,
+            0.0,
+            0.48000001907348633
+          ]
+        },
+        "elapsed_s": 0.0,
+        "journey": {
+          "pace": "fast",
+          "winter": true
+        },
+        "live": false,
+        "profile": "drizzle",
+        "seed": 82
+      },
+      "effective_weather": "rain",
+      "particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 8192,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 1474,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 51
+      },
+      "formation": {
+        "cars": 8,
+        "maximum_spacing_error_m": 0.051058251657021714,
+        "tolerance_m": 2.0,
+        "scope": "car centres versus path offsets; includes curve chord shortening"
+      },
+      "odometer_m": 0.0,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shaders": {
+        "failed": 0,
+        "pending": 0
+      },
+      "elapsed_wall_s": 33.2,
+      "peak_rss_mib": 1841.4,
+      "initial_phase_s": 0,
+      "target_m": 0
+    },
+    "rain-heavy": {
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.9800000190734863,
+          "flake_size": 1.0,
+          "fog_density": 0.0005799999926239252,
+          "overcast": 0.8500000238418579,
+          "phase": "calm",
+          "rain": 1.0,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "visibility_m": 3000.0,
+          "wind_mps": [
+            3.799999952316284,
+            0.0,
+            1.2999999523162842
+          ]
+        },
+        "elapsed_s": 0.0,
+        "journey": {
+          "pace": "fast",
+          "winter": true
+        },
+        "live": false,
+        "profile": "downpour",
+        "seed": 82
+      },
+      "effective_weather": "rain",
+      "particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 8192,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 8192,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 50
+      },
+      "formation": {
+        "cars": 8,
+        "maximum_spacing_error_m": 0.051058251657021714,
+        "tolerance_m": 2.0,
+        "scope": "car centres versus path offsets; includes curve chord shortening"
+      },
+      "odometer_m": 0.0,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shaders": {
+        "failed": 0,
+        "pending": 0
+      },
+      "elapsed_wall_s": 32.2,
+      "peak_rss_mib": 1771.5,
+      "initial_phase_s": 0,
+      "target_m": 0
+    },
+    "snow-light": {
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.6615999937057495,
+          "flake_size": 0.699999988079071,
+          "fog_density": 0.0002539999841246754,
+          "overcast": 0.5049999952316284,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 0.2199999988079071,
+          "snow_cover": 0.25,
+          "storm": 0.0,
+          "visibility_m": 2060.0,
+          "wind_mps": [
+            1.4160000085830688,
+            0.0,
+            0.5640000104904175
+          ]
+        },
+        "elapsed_s": 0.0,
+        "journey": {
+          "pace": "fast",
+          "winter": true
+        },
+        "live": false,
+        "profile": "light_snow",
+        "seed": 82
+      },
+      "effective_weather": "snow",
+      "particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 8192,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 1802,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 50
+      },
+      "formation": {
+        "cars": 8,
+        "maximum_spacing_error_m": 0.051058251657021714,
+        "tolerance_m": 2.0,
+        "scope": "car centres versus path offsets; includes curve chord shortening"
+      },
+      "odometer_m": 0.0,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shaders": {
+        "failed": 0,
+        "pending": 0
+      },
+      "elapsed_wall_s": 32.5,
+      "peak_rss_mib": 1778.1,
+      "initial_phase_s": 0,
+      "target_m": 0
+    },
+    "snow-moderate": {
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.7680000066757202,
+          "flake_size": 1.0,
+          "fog_density": 0.0005200000014156103,
+          "overcast": 0.6000000238418579,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 0.6000000238418579,
+          "snow_cover": 0.6000000238418579,
+          "storm": 0.0,
+          "visibility_m": 1300.0,
+          "wind_mps": [
+            2.4800000190734863,
+            0.0,
+            1.0199999809265137
+          ]
+        },
+        "elapsed_s": 0.0,
+        "journey": {
+          "pace": "fast",
+          "winter": true
+        },
+        "live": false,
+        "profile": "steady_snow",
+        "seed": 82
+      },
+      "effective_weather": "snow",
+      "particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 8192,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 4915,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 51
+      },
+      "formation": {
+        "cars": 8,
+        "maximum_spacing_error_m": 0.051058251657021714,
+        "tolerance_m": 2.0,
+        "scope": "car centres versus path offsets; includes curve chord shortening"
+      },
+      "odometer_m": 0.0,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shaders": {
+        "failed": 0,
+        "pending": 0
+      },
+      "elapsed_wall_s": 32.7,
+      "peak_rss_mib": 1796.6,
+      "initial_phase_s": 0,
+      "target_m": 0
+    },
+    "snow-heavy": {
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.8799999952316284,
+          "flake_size": 1.350000023841858,
+          "fog_density": 0.0007999999797903001,
+          "overcast": 0.699999988079071,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 1.0,
+          "snow_cover": 1.0,
+          "storm": 0.0,
+          "visibility_m": 500.0,
+          "wind_mps": [
+            3.5999999046325684,
+            0.0,
+            1.5
+          ]
+        },
+        "elapsed_s": 0.0,
+        "journey": {
+          "pace": "fast",
+          "winter": true
+        },
+        "live": false,
+        "profile": "heavy_snow",
+        "seed": 82
+      },
+      "effective_weather": "snow",
+      "particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 8192,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 8192,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 50
+      },
+      "formation": {
+        "cars": 8,
+        "maximum_spacing_error_m": 0.051058251657021714,
+        "tolerance_m": 2.0,
+        "scope": "car centres versus path offsets; includes curve chord shortening"
+      },
+      "odometer_m": 0.0,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shaders": {
+        "failed": 0,
+        "pending": 0
+      },
+      "elapsed_wall_s": 32.7,
+      "peak_rss_mib": 1805.9,
+      "initial_phase_s": 0,
+      "target_m": 0
+    },
+    "random-clear": {
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.2199999988079071,
+          "flake_size": 1.0,
+          "fog_density": 3.9999998989515007e-05,
+          "overcast": 0.0,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "visibility_m": 20000.0,
+          "wind_mps": [
+            0.800000011920929,
+            0.0,
+            0.30000001192092896
+          ]
+        },
+        "elapsed_s": 0.0,
+        "journey": {
+          "pace": "fast",
+          "winter": true
+        },
+        "live": false,
+        "profile": "random_journey",
+        "seed": 82
+      },
+      "effective_weather": "clear",
+      "particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": null,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 0
+      },
+      "formation": {
+        "cars": 8,
+        "maximum_spacing_error_m": 0.051058251657021714,
+        "tolerance_m": 2.0,
+        "scope": "car centres versus path offsets; includes curve chord shortening"
+      },
+      "odometer_m": 0.0,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shaders": {
+        "failed": 0,
+        "pending": 0
+      },
+      "elapsed_wall_s": 32.8,
+      "peak_rss_mib": 1766.8,
+      "initial_phase_s": 0,
+      "target_m": 0
+    },
+    "random-transition": {
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.4406778812408447,
+          "flake_size": 0.8500829935073853,
+          "fog_density": 0.00014694081619381905,
+          "overcast": 0.25236034393310547,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 0.10993915796279907,
+          "snow_cover": 0.12493086606264114,
+          "storm": 0.0,
+          "visibility_m": 11034.9609375,
+          "wind_mps": [
+            1.1078296899795532,
+            0.0,
+            0.43192699551582336
+          ]
+        },
+        "elapsed_s": 45.0,
+        "journey": {
+          "pace": "fast",
+          "winter": true
+        },
+        "live": false,
+        "profile": "random_journey",
+        "seed": 82
+      },
+      "effective_weather": "snow",
+      "particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 8192,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 900,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 51
+      },
+      "formation": {
+        "cars": 8,
+        "maximum_spacing_error_m": 0.051058251657021714,
+        "tolerance_m": 2.0,
+        "scope": "car centres versus path offsets; includes curve chord shortening"
+      },
+      "odometer_m": 0.0,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shaders": {
+        "failed": 0,
+        "pending": 0
+      },
+      "elapsed_wall_s": 33.0,
+      "peak_rss_mib": 1771.8,
+      "initial_phase_s": 45,
+      "target_m": 0
+    },
+    "random-snow": {
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.661579966545105,
+          "flake_size": 0.7000136375427246,
+          "fog_density": 0.00025399026344530284,
+          "overcast": 0.5049770474433899,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 0.21999000012874603,
+          "snow_cover": 0.2499886453151703,
+          "storm": 0.0,
+          "visibility_m": 2060.814453125,
+          "wind_mps": [
+            1.415972113609314,
+            0.0,
+            0.5639880299568176
+          ]
+        },
+        "elapsed_s": 60.0,
+        "journey": {
+          "pace": "fast",
+          "winter": true
+        },
+        "live": false,
+        "profile": "random_journey",
+        "seed": 82
+      },
+      "effective_weather": "snow",
+      "particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 8192,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 1802,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 51
+      },
+      "formation": {
+        "cars": 8,
+        "maximum_spacing_error_m": 0.051058251657021714,
+        "tolerance_m": 2.0,
+        "scope": "car centres versus path offsets; includes curve chord shortening"
+      },
+      "odometer_m": 0.0,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shaders": {
+        "failed": 0,
+        "pending": 0
+      },
+      "elapsed_wall_s": 32.8,
+      "peak_rss_mib": 1787.6,
+      "initial_phase_s": 60,
+      "target_m": 0
+    },
+    "random-dry": {
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.2199999988079071,
+          "flake_size": 1.0,
+          "fog_density": 3.9999998989515007e-05,
+          "overcast": 0.0,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "visibility_m": 20000.0,
+          "wind_mps": [
+            0.800000011920929,
+            0.0,
+            0.30000001192092896
+          ]
+        },
+        "elapsed_s": 120.0,
+        "journey": {
+          "pace": "fast",
+          "winter": true
+        },
+        "live": false,
+        "profile": "random_journey",
+        "seed": 82
+      },
+      "effective_weather": "clear",
+      "particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": null,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 0
+      },
+      "formation": {
+        "cars": 8,
+        "maximum_spacing_error_m": 0.051058251657021714,
+        "tolerance_m": 2.0,
+        "scope": "car centres versus path offsets; includes curve chord shortening"
+      },
+      "odometer_m": 0.0,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shaders": {
+        "failed": 0,
+        "pending": 0
+      },
+      "elapsed_wall_s": 32.5,
+      "peak_rss_mib": 1761.5,
+      "initial_phase_s": 120,
+      "target_m": 0
+    },
+    "random-moving": {
+      "initial_phase_s": 45,
+      "target_m": 250,
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.9529272317886353,
+          "flake_size": 1.0,
+          "fog_density": 0.0005607640487141907,
+          "overcast": 0.8197212815284729,
+          "phase": "calm",
+          "rain": 0.9643778800964355,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "visibility_m": 3605.576171875,
+          "wind_mps": [
+            3.693133592605591,
+            0.0,
+            1.2643778324127197
+          ]
+        },
+        "elapsed_s": 93.39999999999938,
+        "journey": {
+          "pace": "fast",
+          "winter": true
+        },
+        "live": false,
+        "profile": "random_journey",
+        "seed": 81
+      },
+      "effective_weather": "rain",
+      "particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 8192,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 7900,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 129
+      },
+      "formation": {
+        "cars": 8,
+        "maximum_spacing_error_m": 0.01776091844284977,
+        "tolerance_m": 2.0,
+        "scope": "car centres versus path offsets; includes curve chord shortening"
+      },
+      "odometer_m": 250.2153148948061,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shaders": {
+        "failed": 0,
+        "pending": 0
+      },
+      "elapsed_wall_s": 46.0,
+      "peak_rss_mib": 1776.7
+    },
+    "rain-moderate": {
+      "initial_phase_s": 0,
+      "target_m": 0,
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.8736000061035156,
+          "flake_size": 1.0,
+          "fog_density": 0.00039000000106170774,
+          "overcast": 0.6980000138282776,
+          "phase": "calm",
+          "rain": 0.6200000047683716,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "visibility_m": 6420.0,
+          "wind_mps": [
+            2.6600000858306885,
+            0.0,
+            0.9200000166893005
+          ]
+        },
+        "elapsed_s": 0.0,
+        "journey": {
+          "pace": "fast",
+          "winter": true
+        },
+        "live": false,
+        "profile": "steady_rain",
+        "seed": 82
+      },
+      "effective_weather": "rain",
+      "particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 8192,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 5079,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 51
+      },
+      "formation": {
+        "cars": 8,
+        "maximum_spacing_error_m": 0.051058251657021714,
+        "tolerance_m": 2.0,
+        "scope": "car centres versus path offsets; includes curve chord shortening"
+      },
+      "odometer_m": 0.0,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shaders": {
+        "failed": 0,
+        "pending": 0
+      },
+      "elapsed_wall_s": 33.0,
+      "peak_rss_mib": 1773.6
+    }
+  },
+  "date": "2026-10-08",
+  "source_base_commit": "64a783d9e564838ef812746b899f5b8e55d9fd58",
+  "scope": "Native Chiltern v4, winter, eight-car Birmingham Pullman, approximately 436 m free itinerary from Test Paddington Suburban Up.pat. Static temporal offsets plus a 250 m moving check; not a full-service weather benchmark.",
+  "checks": {
+    "check_sh": "passed",
+    "rust_tests_passed": 1723,
+    "native_rust_test_invocations": 3,
+    "python_suites": "passed",
+    "final_viewer_clippy_and_build": "passed",
+    "menu_captures_passed": 9,
+    "native_captures_passed": 11
+  },
+  "ui_results": [
+    {
+      "configuration": "rain",
+      "page": "weather",
+      "width": 1280,
+      "height": 720,
+      "scale": 1.0,
+      "elapsed_s": 8.91975869899943,
+      "peak_rss_mib": 383.33203125,
+      "exit_code": 0
+    },
+    {
+      "configuration": "rain",
+      "page": "weather-settings",
+      "width": 1280,
+      "height": 720,
+      "scale": 1.0,
+      "elapsed_s": 8.919390050999937,
+      "peak_rss_mib": 360.27734375,
+      "exit_code": 0
+    },
+    {
+      "configuration": "snow",
+      "page": "weather",
+      "width": 1280,
+      "height": 720,
+      "scale": 1.0,
+      "elapsed_s": 8.92038751400105,
+      "peak_rss_mib": 364.0234375,
+      "exit_code": 0
+    },
+    {
+      "configuration": "snow",
+      "page": "weather-settings",
+      "width": 1280,
+      "height": 720,
+      "scale": 1.0,
+      "elapsed_s": 8.919268532999922,
+      "peak_rss_mib": 360.1640625,
+      "exit_code": 0
+    },
+    {
+      "configuration": "random",
+      "page": "weather",
+      "width": 1280,
+      "height": 720,
+      "scale": 1.0,
+      "elapsed_s": 8.919177723000757,
+      "peak_rss_mib": 365.1796875,
+      "exit_code": 0
+    },
+    {
+      "configuration": "random",
+      "page": "weather-options",
+      "width": 1280,
+      "height": 720,
+      "scale": 1.0,
+      "elapsed_s": 8.919524951999847,
+      "peak_rss_mib": 363.7109375,
+      "exit_code": 0
+    },
+    {
+      "configuration": "random",
+      "page": "weather-settings",
+      "width": 1280,
+      "height": 720,
+      "scale": 1.0,
+      "elapsed_s": 8.925607745999514,
+      "peak_rss_mib": 360.85546875,
+      "exit_code": 0
+    },
+    {
+      "configuration": "small",
+      "page": "weather",
+      "width": 800,
+      "height": 600,
+      "scale": 1.0,
+      "elapsed_s": 8.921515018999344,
+      "peak_rss_mib": 382.29296875,
+      "exit_code": 0
+    },
+    {
+      "configuration": "small",
+      "page": "weather-options",
+      "width": 800,
+      "height": 600,
+      "scale": 1.0,
+      "elapsed_s": 8.919897589001266,
+      "peak_rss_mib": 381.32421875,
+      "exit_code": 0
+    }
+  ]
+}

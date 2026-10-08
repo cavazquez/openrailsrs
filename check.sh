@@ -33,6 +33,7 @@ unset OPENRAILSRS_WEATHER_EXECUTION OPENRAILSRS_WEATHER_PARTICLE_BUDGET OPENRAIL
 unset OPENRAILSRS_TRAIN_EFFECT_EXECUTION
 unset OPENRAILSRS_FOG_QUALITY OPENRAILSRS_TRAIN_MOTION OPENRAILSRS_CAPTURE_HEADLIGHTS
 unset OPENRAILSRS_WEATHER_PROFILE OPENRAILSRS_WEATHER_SEED OPENRAILSRS_WEATHER_PHASE_S OPENRAILSRS_WEATHER_QUALITY
+unset OPENRAILSRS_WEATHER_PACE
 unset OPENRAILSRS_DEV_TOOLS OPENRAILSRS_DEV_INSPECTOR OPENRAILSRS_FRAMEPACE OPENRAILSRS_DIAGNOSTICS_OUT
 unset OPENRAILSRS_SCENERY_PROFILE OPENRAILSRS_CAMERA_JOURNEY OPENRAILSRS_TRAIN_EFFECTS_ENABLED
 unset OPENRAILSRS_SCENERY_QUALITY OPENRAILSRS_DEV_INSPECTOR_SELECT OPENRAILSRS_CAPTURE_WIPER
@@ -55,6 +56,7 @@ python3 -m unittest discover -s scripts -p test_service_capture.py
 python3 -m unittest discover -s scripts -p test_scenery_oracle.py
 python3 -m unittest discover -s scripts -p test_weather_execution.py
 python3 -m unittest discover -s scripts -p test_viewer_benchmark.py
+python3 -m unittest discover -s scripts -p test_player_menu.py
 python3 -m unittest discover -s scripts -p test_train_effects.py
 python3 -m unittest discover -s scripts -p test_train_atmosphere.py
 python3 -m unittest discover -s scripts -p test_native_pilot.py

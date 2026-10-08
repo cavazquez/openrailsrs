@@ -122,6 +122,7 @@ pub(super) fn build_new_game(
     p: &mut ChildSpawnerCommands<'_>,
     ui: &PlayerUiState,
     menu: &PlayerLaunchMenu,
+    settings: &PlayerSettings,
 ) {
     match ui.new_game_step {
         NewGameStep::Route => {
@@ -290,6 +291,7 @@ pub(super) fn build_new_game(
             });
         }
         NewGameStep::Environment => {
+            let mode = WeatherMode::selected(menu.environment, settings.weather_profile);
             label(p, "Prepará las condiciones del viaje", 21.0, TEXT);
             selector(
                 p,
@@ -299,14 +301,46 @@ pub(super) fn build_new_game(
             );
             selector(
                 p,
-                if menu.environment.weather == crate::environment::EnvironmentSource::Manual {
-                    "Clima elegido"
-                } else {
-                    "Clima de respaldo"
+                "Modo del clima",
+                mode.label().into(),
+                MenuField::WeatherSource,
+            );
+            selector(
+                p,
+                match mode {
+                    WeatherMode::Fixed => "Clima elegido",
+                    WeatherMode::Random => "Clima inicial",
+                    WeatherMode::LocalNow => "Clima de respaldo",
                 },
                 menu.weather.label().into(),
                 MenuField::Weather,
             );
+            if mode == WeatherMode::Fixed
+                && matches!(menu.weather, PlayerWeather::Rain | PlayerWeather::Snow)
+            {
+                selector(
+                    p,
+                    "Intensidad",
+                    settings
+                        .weather_profile
+                        .intensity_label(menu.weather)
+                        .into(),
+                    MenuField::WeatherIntensity,
+                );
+            } else if mode == WeatherMode::Random {
+                selector(
+                    p,
+                    "Ritmo de cambios",
+                    settings.weather_pace.label().into(),
+                    MenuField::WeatherPace,
+                );
+                label(
+                    p,
+                    "Nubes, viento, niebla y precipitación cambian gradualmente. En invierno puede nevar; también si elegís Nieve como clima inicial. El clima sigue el tiempo de la partida.",
+                    12.0,
+                    MUTED,
+                );
+            }
             selector(
                 p,
                 "Estación del año",
@@ -315,11 +349,7 @@ pub(super) fn build_new_game(
             );
             label(
                 p,
-                format!(
-                    "Hora visual: {} · Clima: {}",
-                    menu.environment.time.label(),
-                    menu.environment.weather.label()
-                ),
+                format!("Hora visual: {}", menu.environment.time.label(),),
                 13.0,
                 MUTED,
             );
@@ -328,7 +358,7 @@ pub(super) fn build_new_game(
                 if ui.new_game_advanced {
                     "Ocultar opciones de hora y clima"
                 } else {
-                    "Hora y clima del lugar · opciones"
+                    "Más opciones de hora y clima"
                 },
                 UiCommand::NewGameAdvanced,
             );
@@ -339,12 +369,20 @@ pub(super) fn build_new_game(
                     menu.environment.time.label().into(),
                     MenuField::TimeSource,
                 );
-                selector(
-                    p,
-                    "Origen del clima",
-                    menu.environment.weather.label().into(),
-                    MenuField::WeatherSource,
-                );
+                if mode == WeatherMode::Random {
+                    selector(
+                        p,
+                        "Secuencia",
+                        format!("{}", settings.weather_seed),
+                        MenuField::WeatherSeed,
+                    );
+                    label(
+                        p,
+                        "Otra secuencia cambia el pronóstico del viaje. Reiniciar o continuar una partida conserva la secuencia elegida.",
+                        12.0,
+                        MUTED,
+                    );
+                }
                 label(
                     p,
                     "Actual del lugar usa la zona horaria de la ruta y consulta Open-Meteo con conexión. El clima elegido sirve de respaldo. La hora de salida conserva el horario del servicio.",
@@ -410,6 +448,7 @@ pub(super) fn build_launch_footer(
     p: &mut ChildSpawnerCommands<'_>,
     ui: &PlayerUiState,
     menu: &PlayerLaunchMenu,
+    settings: &PlayerSettings,
 ) {
     let service = if menu.path == 0 {
         menu.current()
@@ -417,10 +456,17 @@ pub(super) fn build_launch_footer(
     } else {
         format!("Exploración · {}", menu.path_label())
     };
-    let weather = if menu.environment.weather == crate::environment::EnvironmentSource::Manual {
-        menu.weather.label().into()
-    } else {
-        format!("Clima del lugar (respaldo: {})", menu.weather.label())
+    let weather = match WeatherMode::selected(menu.environment, settings.weather_profile) {
+        WeatherMode::Fixed if matches!(menu.weather, PlayerWeather::Rain | PlayerWeather::Snow) => {
+            format!(
+                "{} · intensidad {}",
+                menu.weather.label(),
+                settings.weather_profile.intensity_label(menu.weather)
+            )
+        }
+        WeatherMode::Fixed => menu.weather.label().into(),
+        WeatherMode::Random => format!("Clima aleatorio · {}", settings.weather_pace.label()),
+        WeatherMode::LocalNow => format!("Clima del lugar (respaldo: {})", menu.weather.label()),
     };
     p.spawn((
         Node {
@@ -721,6 +767,10 @@ pub(super) fn capture_page(ui: &mut PlayerUiState, page: &str) {
             (PlayerPanel::Content, NewGameStep::Route, false)
         }
         "settings" => (PlayerPanel::Settings, NewGameStep::Route, false),
+        "weather-settings" => {
+            ui.settings_tab = SettingsTab::Environment;
+            (PlayerPanel::Settings, NewGameStep::Route, false)
+        }
         "controls" => {
             ui.settings_tab = SettingsTab::Controls;
             (PlayerPanel::Settings, NewGameStep::Route, false)

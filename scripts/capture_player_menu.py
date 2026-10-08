@@ -16,7 +16,7 @@ import time
 
 PAGES = (
     "home", "route", "train", "weather", "weather-options", "continue",
-    "library", "downloads", "settings", "controls",
+    "library", "downloads", "settings", "weather-settings", "controls",
 )
 
 
@@ -32,7 +32,8 @@ def check_layout(report, page, width, height):
 
     inside(root, {"min": [0, 0], "max": [width, height]})
     for text in report["ui_text"]:
-        assert all(size > 0 for size in text["size"]), "Collapsed text: " + text["text"]
+        if text.get("visible", True):
+            assert all(size > 0 for size in text["size"]), "Collapsed text: " + text["text"]
     if page == "home":
         cards = [nodes["home-" + title] for title in (
             "Nueva partida", "Continuar", "Biblioteca", "Ajustes",
@@ -49,7 +50,7 @@ def check_layout(report, page, width, height):
         for name, node in nodes.items():
             if name.startswith("ui-NewGameStep("):
                 inside(node, root)
-    elif page in ("settings", "controls"):
+    elif page in ("settings", "weather-settings", "controls"):
         inside(nodes["ui-SaveSettings"], root)
     pipelines = report.get("shader_pipelines")
     if pipelines:
@@ -88,7 +89,11 @@ def capture(args):
                 for page in args.pages:
                     data = output / (page + "-player-data")
                     data.mkdir(exist_ok=True)
-                    (data / "settings.json").write_text(json.dumps({"ui_scale": args.scale}))
+                    (data / "settings.json").write_text(json.dumps({
+                        "ui_scale": args.scale, "weather_profile": args.weather_profile,
+                        "weather_pace": args.weather_pace,
+                        "environment": {"manual_weather": args.weather},
+                    }))
                     shot = output / (page + ".png")
                     env.update(OPENRAILSRS_PLAYER_DIR=str(data),
                                OPENRAILSRS_SCREENSHOT=str(shot),
@@ -142,6 +147,9 @@ def main():
     parser.add_argument("--width", type=int, default=1280)
     parser.add_argument("--height", type=int, default=720)
     parser.add_argument("--scale", type=float, default=1.0)
+    parser.add_argument("--weather", choices=("clear", "rain", "fog", "snow", "overcast", "storm"), default="clear")
+    parser.add_argument("--weather-profile", choices=("automatic", "drizzle", "steady_rain", "downpour", "light_snow", "steady_snow", "heavy_snow", "after_snow", "storm_cycle", "random_journey"), default="automatic")
+    parser.add_argument("--weather-pace", choices=("slow", "normal", "fast"), default="normal")
     args = parser.parse_args()
     if args.width < 640 or args.height < 360 or not 0.8 <= args.scale <= 1.5:
         parser.error("Use at least 640×360 and an interface scale between 0.8 and 1.5")

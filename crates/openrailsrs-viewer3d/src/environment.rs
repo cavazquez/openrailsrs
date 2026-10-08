@@ -401,12 +401,17 @@ pub struct EnvironmentBadge;
 pub fn update_badge(
     environment: Res<LiveEnvironment>,
     content: Res<ActivePlayerContent>,
+    weather: Option<Res<crate::weather_state::WeatherState>>,
     mut badges: Query<(&mut Text, &mut Visibility), With<EnvironmentBadge>>,
 ) {
     for (mut text, mut visibility) in &mut badges {
+        let random = weather.as_ref().is_some_and(|state| {
+            state.profile == crate::weather_state::WeatherProfile::RandomJourney && !state.live
+        });
         let selection = content.environment;
         *visibility = if selection.time == EnvironmentSource::Manual
             && selection.weather == EnvironmentSource::Manual
+            && !random
         {
             Visibility::Hidden
         } else {
@@ -417,7 +422,7 @@ pub fn update_badge(
                 if selection.time == EnvironmentSource::LocalNow {
                     "Hora real pendiente".to_string()
                 } else {
-                    "Hora manual".to_string()
+                    "Hora del servicio".to_string()
                 }
             },
             |t| format!("{} · {}", t.format("%H:%M:%S"), t.timezone()),
@@ -428,6 +433,8 @@ pub fn update_badge(
             } else {
                 "respaldo manual"
             }
+        } else if random {
+            "aleatorio"
         } else {
             "manual"
         };
@@ -441,12 +448,24 @@ pub fn update_badge(
         } else {
             ""
         };
-        **text = format!("{clock} · {} ({source}){status}", content.weather.label());
+        let intensity = weather
+            .as_ref()
+            .map_or(0., |state| state.atmosphere.rain.max(state.atmosphere.snow));
+        let detail = if random && intensity > 0.02 {
+            format!(" · {:.0}%", intensity * 100.)
+        } else {
+            String::new()
+        };
+        **text = format!(
+            "{clock} · {}{detail} ({source}){status}",
+            content.weather.label()
+        );
     }
 }
 
 pub fn update(
     time: Res<Time<Real>>,
+    settings: Option<Res<crate::player_settings::PlayerSettings>>,
     mut environment: ResMut<LiveEnvironment>,
     mut content: ResMut<ActivePlayerContent>,
 ) {
@@ -543,8 +562,25 @@ pub fn update(
     {
         environment.network_status = format!("Zona horaria: {zone} · clima elegido por el jugador");
     }
-    if content.weather != weather {
-        content.weather = weather;
+    if selection.weather == EnvironmentSource::LocalNow {
+        if content.weather != weather {
+            content.weather = weather;
+        }
+    } else {
+        let profile = crate::weather_state::WeatherProfile::from_env().unwrap_or_else(|| {
+            settings.as_ref().map_or(
+                crate::weather_state::WeatherProfile::Automatic,
+                |settings| settings.weather_profile,
+            )
+        });
+        // The journey owns the effective category; the wall-clock tick must
+        // never replace it with the initial/manual weather between keyframes.
+        if profile != crate::weather_state::WeatherProfile::RandomJourney {
+            let weather = profile.weather().unwrap_or(weather);
+            if content.weather != weather {
+                content.weather = weather;
+            }
+        }
     }
 }
 

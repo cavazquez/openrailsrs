@@ -14,20 +14,24 @@ pub enum WeatherProfile {
     SteadyRain,
     Downpour,
     LightSnow,
+    SteadySnow,
     HeavySnow,
     AfterSnow,
     StormCycle,
+    RandomJourney,
 }
 impl WeatherProfile {
-    pub const ALL: [Self; 8] = [
+    pub const ALL: [Self; 10] = [
         Self::Automatic,
         Self::Drizzle,
         Self::SteadyRain,
         Self::Downpour,
         Self::LightSnow,
+        Self::SteadySnow,
         Self::HeavySnow,
         Self::AfterSnow,
         Self::StormCycle,
+        Self::RandomJourney,
     ];
     pub fn next(self) -> Self {
         Self::ALL[(Self::ALL.iter().position(|p| *p == self).unwrap_or(0) + 1) % Self::ALL.len()]
@@ -39,9 +43,11 @@ impl WeatherProfile {
             Self::SteadyRain => "Lluvia sostenida",
             Self::Downpour => "Lluvia intensa",
             Self::LightSnow => "Nevada leve",
+            Self::SteadySnow => "Nevada moderada",
             Self::HeavySnow => "Nevada intensa",
             Self::AfterSnow => "Después de nevar",
             Self::StormCycle => "Tormenta: aproximación, actividad y despeje",
+            Self::RandomJourney => "Aleatorio durante el recorrido",
         }
     }
     pub fn parse(value: &str) -> Option<Self> {
@@ -51,24 +57,63 @@ impl WeatherProfile {
             "rain" | "steady_rain" => Self::SteadyRain,
             "downpour" => Self::Downpour,
             "light_snow" => Self::LightSnow,
+            "steady_snow" => Self::SteadySnow,
             "heavy_snow" => Self::HeavySnow,
             "after_snow" => Self::AfterSnow,
             "storm_cycle" => Self::StormCycle,
+            "random" | "random_journey" => Self::RandomJourney,
             _ => return None,
         })
     }
+    pub fn from_env() -> Option<Self> {
+        std::env::var("OPENRAILSRS_WEATHER_PROFILE")
+            .ok()
+            .as_deref()
+            .and_then(Self::parse)
+    }
     pub fn weather(self) -> Option<PlayerWeather> {
         match self {
-            Self::Automatic => None,
+            Self::Automatic | Self::RandomJourney => None,
             Self::Drizzle | Self::SteadyRain | Self::Downpour => Some(PlayerWeather::Rain),
-            Self::LightSnow | Self::HeavySnow => Some(PlayerWeather::Snow),
+            Self::LightSnow | Self::SteadySnow | Self::HeavySnow => Some(PlayerWeather::Snow),
             Self::AfterSnow => Some(PlayerWeather::Overcast),
             Self::StormCycle => Some(PlayerWeather::Storm),
         }
     }
+    pub fn intensity_label(self, weather: PlayerWeather) -> &'static str {
+        match self {
+            Self::Drizzle | Self::LightSnow => "Leve",
+            Self::SteadyRain | Self::SteadySnow => "Moderada",
+            Self::Downpour | Self::HeavySnow => "Intensa",
+            Self::Automatic if weather == PlayerWeather::Snow => "Intensa",
+            Self::Automatic if weather == PlayerWeather::Rain => "Moderada",
+            _ => self.label(),
+        }
+    }
+    pub fn cycle_intensity(self, weather: PlayerWeather, delta: i32) -> Self {
+        let choices: &[Self] = match weather {
+            PlayerWeather::Rain => &[Self::Drizzle, Self::SteadyRain, Self::Downpour],
+            PlayerWeather::Snow => &[Self::LightSnow, Self::SteadySnow, Self::HeavySnow],
+            PlayerWeather::Overcast => &[Self::Automatic, Self::AfterSnow],
+            _ => &[Self::Automatic],
+        };
+        let index = choices
+            .iter()
+            .position(|profile| *profile == self)
+            .unwrap_or_else(|| {
+                if weather == PlayerWeather::Snow {
+                    2
+                } else if weather == PlayerWeather::Rain {
+                    1
+                } else {
+                    0
+                }
+            });
+        choices[crate::player_launch::cycle(index, choices.len(), delta)]
+    }
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum StormPhase {
     #[default]
@@ -78,7 +123,7 @@ pub enum StormPhase {
     Clearing,
 }
 
-#[derive(Clone, Copy, Debug, Serialize)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct Atmosphere {
     pub rain: f32,
     pub snow: f32,
@@ -89,12 +134,18 @@ pub struct Atmosphere {
     pub storm: f32,
     pub visibility_m: f32,
     pub fog_density: f32,
-    #[serde(serialize_with = "serialize_wind")]
+    #[serde(
+        serialize_with = "serialize_wind",
+        deserialize_with = "deserialize_wind"
+    )]
     pub wind_mps: Vec3,
     pub phase: StormPhase,
 }
 fn serialize_wind<S: serde::Serializer>(wind: &Vec3, serializer: S) -> Result<S::Ok, S::Error> {
     wind.to_array().serialize(serializer)
+}
+fn deserialize_wind<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<Vec3, D::Error> {
+    <[f32; 3]>::deserialize(deserializer).map(Vec3::from_array)
 }
 impl Default for Atmosphere {
     fn default() -> Self {
@@ -114,7 +165,7 @@ impl Default for Atmosphere {
     }
 }
 impl Atmosphere {
-    fn blend(self, target: Self, amount: f32) -> Self {
+    pub(crate) fn blend(self, target: Self, amount: f32) -> Self {
         let lerp = |a: f32, b: f32| a + (b - a) * amount;
         Self {
             rain: lerp(self.rain, target.rain),
@@ -130,6 +181,38 @@ impl Atmosphere {
             phase: target.phase,
         }
     }
+    pub fn weather(self) -> PlayerWeather {
+        if self.storm > 0.2 {
+            PlayerWeather::Storm
+        } else if self.snow > 0.02 && self.snow > self.rain {
+            PlayerWeather::Snow
+        } else if self.rain > 0.02 {
+            PlayerWeather::Rain
+        } else if self.visibility_m < 1_000. || self.fog_density > 0.004 {
+            PlayerWeather::Fog
+        } else if self.cloud_cover > 0.5 {
+            PlayerWeather::Overcast
+        } else {
+            PlayerWeather::Clear
+        }
+    }
+    fn valid(self) -> bool {
+        [
+            self.rain,
+            self.snow,
+            self.snow_cover,
+            self.cloud_cover,
+            self.overcast,
+            self.storm,
+        ]
+        .iter()
+        .all(|value| (0.0..=1.0).contains(value))
+            && (0.5..=2.).contains(&self.flake_size)
+            && (1.0..=100_000.).contains(&self.visibility_m)
+            && (0.0..=1.).contains(&self.fog_density)
+            && self.wind_mps.is_finite()
+            && self.wind_mps.length() <= 150.
+    }
 }
 fn smooth(value: f32) -> f32 {
     let t = value.clamp(0., 1.);
@@ -144,6 +227,9 @@ pub fn fixed_at(
     seed: u32,
     seconds: f64,
 ) -> Atmosphere {
+    if profile == WeatherProfile::RandomJourney {
+        return crate::weather_journey::atmosphere_at(weather, seed, seconds, default());
+    }
     let mut a = Atmosphere::default();
     let weather = profile.weather().unwrap_or(weather);
     match weather {
@@ -172,21 +258,14 @@ pub fn fixed_at(
             a.wind_mps = Vec3::new(0.8 + a.rain * 3., 0., 0.3 + a.rain);
         }
         PlayerWeather::Snow => {
-            a.snow = if profile == WeatherProfile::LightSnow {
-                0.22
-            } else {
-                1.
+            let (snow, cover, size) = match profile {
+                WeatherProfile::LightSnow => (0.22, 0.25, 0.7),
+                WeatherProfile::SteadySnow => (0.6, 0.6, 1.),
+                _ => (1., 1., 1.35),
             };
-            a.snow_cover = if profile == WeatherProfile::LightSnow {
-                0.25
-            } else {
-                1.
-            };
-            a.flake_size = if profile == WeatherProfile::LightSnow {
-                0.7
-            } else {
-                1.35
-            };
+            a.snow = snow;
+            a.snow_cover = cover;
+            a.flake_size = size;
             a.cloud_cover = 0.6 + a.snow * 0.28;
             a.overcast = 0.45 + a.snow * 0.25;
             a.visibility_m = 2_500. - a.snow * 2_000.;
@@ -253,9 +332,16 @@ pub struct WeatherState {
     pub profile: WeatherProfile,
     pub seed: u32,
     pub live: bool,
+    pub journey: crate::weather_journey::JourneyOptions,
     start_s: f64,
     last_s: Option<f64>,
-    selection: Option<(PlayerWeather, WeatherProfile, bool, u32)>,
+    selection: Option<(
+        PlayerWeather,
+        WeatherProfile,
+        bool,
+        u32,
+        crate::weather_journey::JourneyOptions,
+    )>,
     transition_from: Atmosphere,
 }
 impl Default for WeatherState {
@@ -265,6 +351,7 @@ impl Default for WeatherState {
             profile: default(),
             seed: 1,
             live: false,
+            journey: default(),
             start_s: 0.,
             last_s: None,
             selection: None,
@@ -276,6 +363,10 @@ impl WeatherState {
     pub fn elapsed_s(&self, clock: f64) -> f64 {
         (clock - self.start_s).max(0.)
     }
+    pub fn timeline_elapsed_s(&self) -> f64 {
+        self.elapsed_s(self.last_s.unwrap_or(self.start_s))
+    }
+    #[cfg(test)]
     fn advance(
         &mut self,
         clock: f64,
@@ -284,9 +375,20 @@ impl WeatherState {
         seed: u32,
         sample: Option<&WeatherSample>,
     ) {
+        self.advance_journey(clock, weather, profile, seed, sample, self.journey);
+    }
+    fn advance_journey(
+        &mut self,
+        clock: f64,
+        weather: PlayerWeather,
+        profile: WeatherProfile,
+        seed: u32,
+        sample: Option<&WeatherSample>,
+        journey: crate::weather_journey::JourneyOptions,
+    ) {
         let first = self.last_s.is_none() || self.last_s.is_some_and(|last| clock < last);
         let previous = self.last_s.replace(clock).unwrap_or(clock);
-        let selection = (weather, profile, sample.is_some(), seed);
+        let selection = (weather, profile, sample.is_some(), seed, journey);
         if self.selection != Some(selection) || clock < previous {
             self.start_s = clock;
             self.selection = Some(selection);
@@ -294,9 +396,21 @@ impl WeatherState {
         }
         self.profile = profile;
         self.seed = seed;
+        self.journey = journey;
         self.live = sample.is_some();
         let target = sample.map_or_else(
-            || fixed_at(weather, profile, seed, self.elapsed_s(clock)),
+            || {
+                if profile == WeatherProfile::RandomJourney {
+                    crate::weather_journey::atmosphere_at(
+                        weather,
+                        seed,
+                        self.elapsed_s(clock),
+                        journey,
+                    )
+                } else {
+                    fixed_at(weather, profile, seed, self.elapsed_s(clock))
+                }
+            },
             live_at,
         );
         let dt = (clock - previous).clamp(0., 5.) as f32;
@@ -313,17 +427,82 @@ impl WeatherState {
                 .blend(target, 1. - (-self.elapsed_s(clock) as f32 / 6.).exp());
         }
     }
+    pub fn checkpoint(&self) -> Option<WeatherCheckpoint> {
+        let (initial, profile, live, seed, journey) = self.selection?;
+        if live {
+            return None;
+        }
+        Some(WeatherCheckpoint {
+            initial,
+            profile,
+            seed,
+            journey,
+            elapsed_s: self.elapsed_s(self.last_s?),
+            atmosphere: self.atmosphere,
+            transition_from: self.transition_from,
+        })
+    }
 }
 
-pub fn reset(mut state: ResMut<WeatherState>, mut wet: ResMut<crate::wet_surfaces::WetSurfaces>) {
-    *state = default();
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct WeatherCheckpoint {
+    pub initial: PlayerWeather,
+    pub profile: WeatherProfile,
+    pub seed: u32,
+    pub journey: crate::weather_journey::JourneyOptions,
+    elapsed_s: f64,
+    atmosphere: Atmosphere,
+    transition_from: Atmosphere,
+}
+impl WeatherCheckpoint {
+    pub fn valid(&self) -> bool {
+        self.elapsed_s.is_finite()
+            && (0.0..=31_536_000.).contains(&self.elapsed_s)
+            && self.atmosphere.valid()
+            && self.transition_from.valid()
+    }
+    pub fn restore(&self, clock: f64) -> WeatherState {
+        WeatherState {
+            atmosphere: self.atmosphere,
+            profile: self.profile,
+            seed: self.seed,
+            live: false,
+            journey: self.journey,
+            start_s: clock - self.elapsed_s,
+            last_s: Some(clock),
+            selection: Some((self.initial, self.profile, false, self.seed, self.journey)),
+            transition_from: self.transition_from,
+        }
+    }
+    pub fn apply_settings(&self, settings: &mut crate::player_settings::PlayerSettings) {
+        settings.weather_profile = self.profile;
+        settings.weather_seed = self.seed;
+        settings.weather_pace = self.journey.pace;
+    }
+}
+#[derive(Resource)]
+pub struct PendingWeatherRestore(pub WeatherCheckpoint);
+
+pub fn reset(
+    mut commands: Commands,
+    live: Option<Res<crate::live::LiveDrive>>,
+    saved: Option<Res<PendingWeatherRestore>>,
+    mut state: ResMut<WeatherState>,
+    mut wet: ResMut<crate::wet_surfaces::WetSurfaces>,
+) {
+    *state = saved.as_ref().map_or_else(WeatherState::default, |saved| {
+        saved
+            .0
+            .restore(live.as_ref().map_or(0., |drive| drive.session.time_s()))
+    });
+    commands.remove_resource::<PendingWeatherRestore>();
     wet.reset_clock();
 }
 
 pub fn update(
     live: Option<Res<crate::live::LiveDrive>>,
     time: Res<Time>,
-    content: Res<crate::player_launch::ActivePlayerContent>,
+    mut content: ResMut<crate::player_launch::ActivePlayerContent>,
     settings: Res<crate::player_settings::PlayerSettings>,
     environment: Res<crate::environment::LiveEnvironment>,
     mut state: ResMut<WeatherState>,
@@ -331,11 +510,7 @@ pub fn update(
     let clock = live
         .as_ref()
         .map_or(time.elapsed_secs_f64(), |l| l.session.time_s());
-    let profile = std::env::var("OPENRAILSRS_WEATHER_PROFILE")
-        .ok()
-        .as_deref()
-        .and_then(WeatherProfile::parse)
-        .unwrap_or(settings.weather_profile);
+    let profile = WeatherProfile::from_env().unwrap_or(settings.weather_profile);
     let seed = std::env::var("OPENRAILSRS_WEATHER_SEED")
         .ok()
         .and_then(|s| s.parse().ok())
@@ -345,12 +520,22 @@ pub fn update(
         .and_then(|s| s.parse::<f64>().ok())
         .filter(|s| s.is_finite() && *s >= 0.)
         .unwrap_or(0.);
-    state.advance(
+    let journey = crate::weather_journey::JourneyOptions {
+        pace: std::env::var("OPENRAILSRS_WEATHER_PACE")
+            .ok()
+            .as_deref()
+            .and_then(crate::weather_journey::WeatherPace::parse)
+            .unwrap_or(settings.weather_pace),
+        winter: live.as_ref().is_some_and(|drive| drive.season == "winter"),
+    };
+    let initial = content.environment.manual_weather;
+    state.advance_journey(
         clock + offset,
-        content.weather,
+        initial,
         profile,
         seed,
         environment.current_sample(content.environment),
+        journey,
     );
     // The reproducible phase is independent of the start time of the service.
     if !state.live
@@ -359,13 +544,216 @@ pub fn update(
         && offset > 0.
     {
         state.start_s -= offset;
-        state.atmosphere = fixed_at(content.weather, profile, seed, offset);
+        state.atmosphere = if profile == WeatherProfile::RandomJourney {
+            crate::weather_journey::atmosphere_at(initial, seed, offset, journey)
+        } else {
+            fixed_at(initial, profile, seed, offset)
+        };
+    }
+    let effective = if profile == WeatherProfile::RandomJourney && !state.live {
+        state.atmosphere.weather()
+    } else if !state.live {
+        profile.weather().unwrap_or(initial)
+    } else {
+        content.weather
+    };
+    if content.weather != effective {
+        content.weather = effective;
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn random_forecast_reaches_rail_adhesion_and_survives_environment_ticks() {
+        use crate::weather_journey::WeatherPace;
+        use bevy::ecs::system::RunSystemOnce;
+        let mut drive =
+            crate::live::LiveDrive::from_scenario_path(&crate::test_harness::smoke_scenario_path())
+                .unwrap();
+        drive.paused = false;
+        let mut app = App::new();
+        app.insert_resource(drive)
+            .init_resource::<Time>()
+            .init_resource::<Time<Real>>()
+            .init_resource::<Time<Fixed>>()
+            .init_resource::<crate::environment::LiveEnvironment>()
+            .init_resource::<crate::player_launch::ActivePlayerContent>()
+            .init_resource::<WeatherState>()
+            .insert_resource(crate::player_settings::PlayerSettings {
+                weather_profile: WeatherProfile::RandomJourney,
+                weather_pace: WeatherPace::Fast,
+                weather_seed: 81,
+                ..default()
+            })
+            .add_systems(
+                Update,
+                (
+                    crate::environment::update,
+                    update,
+                    crate::live::advance_live_sim,
+                )
+                    .chain(),
+            );
+        let mut seen = std::collections::BTreeSet::new();
+        for _ in 0..=145 {
+            app.world_mut()
+                .resource_mut::<Time<Real>>()
+                .advance_by(std::time::Duration::from_secs(1));
+            app.world_mut()
+                .resource_mut::<Time<Fixed>>()
+                .advance_by(std::time::Duration::from_secs(1));
+            app.update();
+            let state = app.world().resource::<WeatherState>();
+            let content = app
+                .world()
+                .resource::<crate::player_launch::ActivePlayerContent>();
+            assert_eq!(content.weather, state.atmosphere.weather());
+            let drive = app.world().resource::<crate::live::LiveDrive>();
+            let rail = drive.session.state.rail_adhesion.as_ref().unwrap();
+            let expected = match content.weather {
+                PlayerWeather::Rain => openrailsrs_sim::adhesion::RailWeather::Rain,
+                PlayerWeather::Storm => openrailsrs_sim::adhesion::RailWeather::Storm,
+                PlayerWeather::Snow => openrailsrs_sim::adhesion::RailWeather::Snow,
+                PlayerWeather::Fog => openrailsrs_sim::adhesion::RailWeather::Fog,
+                _ => openrailsrs_sim::adhesion::RailWeather::Dry,
+            };
+            assert_eq!(rail.weather, expected);
+            seen.insert(content.weather.label());
+        }
+        assert!(seen.len() >= 2);
+        assert!(app.world().resource::<WeatherState>().timeline_elapsed_s() > 140.);
+        app.world_mut().run_system_once(update).unwrap();
+        app.world_mut()
+            .resource_mut::<crate::live::LiveDrive>()
+            .paused = true;
+        let before =
+            serde_json::to_string(&app.world().resource::<WeatherState>().atmosphere).unwrap();
+        app.world_mut()
+            .resource_mut::<Time<Real>>()
+            .advance_by(std::time::Duration::from_secs(5));
+        app.update();
+        let paused =
+            serde_json::to_string(&app.world().resource::<WeatherState>().atmosphere).unwrap();
+        assert_eq!(before, paused);
+        app.update();
+        assert_eq!(
+            paused,
+            serde_json::to_string(&app.world().resource::<WeatherState>().atmosphere).unwrap()
+        );
+    }
+    #[test]
+    fn random_weather_is_pause_safe_frame_independent_and_restores_its_forecast() {
+        use crate::weather_journey::{JourneyOptions, WeatherPace};
+        let options = JourneyOptions {
+            pace: WeatherPace::Fast,
+            winter: true,
+        };
+        let mut slow = WeatherState::default();
+        let mut fast = WeatherState::default();
+        for i in 0..=145 {
+            slow.advance_journey(
+                i as f64,
+                PlayerWeather::Clear,
+                WeatherProfile::RandomJourney,
+                81,
+                None,
+                options,
+            );
+        }
+        for i in 0..=145 * 60 {
+            fast.advance_journey(
+                i as f64 / 60.,
+                PlayerWeather::Clear,
+                WeatherProfile::RandomJourney,
+                81,
+                None,
+                options,
+            );
+        }
+        let atmosphere = |state: &WeatherState| serde_json::to_string(&state.atmosphere).unwrap();
+        assert_eq!(atmosphere(&slow), atmosphere(&fast));
+        let before = atmosphere(&fast);
+        fast.advance_journey(
+            145.,
+            PlayerWeather::Clear,
+            WeatherProfile::RandomJourney,
+            81,
+            None,
+            options,
+        );
+        assert_eq!(before, atmosphere(&fast));
+        let saved: WeatherCheckpoint =
+            serde_json::from_str(&serde_json::to_string(&fast.checkpoint().unwrap()).unwrap())
+                .unwrap();
+        assert!(saved.valid());
+        // Resuming at a different clock origin must continue the same keyframe.
+        let mut restored = saved.restore(1000.);
+        assert_eq!(before, atmosphere(&restored));
+        for i in 1..=300 {
+            fast.advance_journey(
+                145. + i as f64,
+                PlayerWeather::Clear,
+                WeatherProfile::RandomJourney,
+                81,
+                None,
+                options,
+            );
+            restored.advance_journey(
+                1000. + i as f64,
+                PlayerWeather::Clear,
+                WeatherProfile::RandomJourney,
+                81,
+                None,
+                options,
+            );
+            assert_eq!(atmosphere(&fast), atmosphere(&restored));
+        }
+    }
+    #[test]
+    fn precipitation_intensity_is_ordered_and_checkpoints_reject_invalid_atmosphere() {
+        for (weather, profiles) in [
+            (
+                PlayerWeather::Rain,
+                [
+                    WeatherProfile::Drizzle,
+                    WeatherProfile::SteadyRain,
+                    WeatherProfile::Downpour,
+                ],
+            ),
+            (
+                PlayerWeather::Snow,
+                [
+                    WeatherProfile::LightSnow,
+                    WeatherProfile::SteadySnow,
+                    WeatherProfile::HeavySnow,
+                ],
+            ),
+        ] {
+            let frames = profiles.map(|profile| fixed_at(weather, profile, 81, 0.));
+            for pair in frames.windows(2) {
+                assert!(pair[0].rain.max(pair[0].snow) < pair[1].rain.max(pair[1].snow));
+                assert!(pair[0].visibility_m > pair[1].visibility_m);
+                assert!(pair[0].wind_mps.length() < pair[1].wind_mps.length());
+            }
+        }
+        let mut state = WeatherState::default();
+        state.advance(
+            0.,
+            PlayerWeather::Clear,
+            WeatherProfile::RandomJourney,
+            81,
+            None,
+        );
+        let mut checkpoint = state.checkpoint().unwrap();
+        assert!(checkpoint.valid());
+        checkpoint.atmosphere.rain = 2.;
+        assert!(!checkpoint.valid());
+        checkpoint.atmosphere.rain = 0.;
+        checkpoint.elapsed_s = f64::INFINITY;
+        assert!(!checkpoint.valid());
+    }
     #[test]
     fn storm_boundaries_are_continuous_and_seeded_gusts_repeat() {
         for t in [120., 360., 480., 660.] {

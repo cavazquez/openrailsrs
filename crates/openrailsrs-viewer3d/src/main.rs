@@ -1696,16 +1696,32 @@ fn begin_player_launch(
     mut commands: Commands,
     mut queue: ResMut<openrailsrs_viewer3d::player_launch::PlayerLaunchQueue>,
     mut next: ResMut<NextState<ViewerAppState>>,
-    settings: Res<openrailsrs_viewer3d::player_settings::PlayerSettings>,
+    mut settings: ResMut<openrailsrs_viewer3d::player_settings::PlayerSettings>,
     mut content: ResMut<openrailsrs_viewer3d::player_launch::ActivePlayerContent>,
+    mut menu: ResMut<openrailsrs_viewer3d::player_launch::PlayerLaunchMenu>,
 ) {
     let Some(request) = queue.0.take() else {
         return;
     };
+    if let Some(weather) = &request.weather_checkpoint {
+        weather.apply_settings(&mut settings);
+        commands.insert_resource(openrailsrs_viewer3d::weather_state::PendingWeatherRestore(
+            weather.clone(),
+        ));
+    } else {
+        commands.remove_resource::<openrailsrs_viewer3d::weather_state::PendingWeatherRestore>();
+        if request.resume.is_some() {
+            settings.weather_profile =
+                openrailsrs_viewer3d::weather_state::WeatherProfile::Automatic;
+        }
+    }
     openrailsrs_viewer3d::launch::set_viewing_distance_m(settings.view_distance_m);
     content.route_root = request.route_root.clone();
     content.weather = request.weather;
     content.environment = request.environment;
+    settings.environment = request.environment;
+    menu.environment = request.environment;
+    menu.weather = request.environment.manual_weather;
     content.description = openrailsrs_scenarios::load_scenario(&request.path)
         .map(|s| s.scenario.description)
         .unwrap_or_default();

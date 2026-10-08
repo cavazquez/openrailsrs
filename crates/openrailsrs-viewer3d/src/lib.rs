@@ -105,6 +105,7 @@ pub mod transfer;
 pub mod view_window;
 pub mod water;
 pub mod weather_execution;
+pub mod weather_journey;
 pub mod weather_particles;
 mod weather_particles_gpu;
 pub mod weather_state;
@@ -204,6 +205,7 @@ impl Plugin for ViewerPlugin {
                 Update,
                 environment::update_badge
                     .after(environment::update)
+                    .after(weather_state::update)
                     .run_if(in_state(ViewerAppState::Playing)),
             )
             .add_systems(
@@ -227,6 +229,7 @@ impl Plugin for ViewerPlugin {
                 Update,
                 weather_state::update
                     .after(environment::update)
+                    .before(live::live_driver_input)
                     .before(player_ui::apply_weather)
                     .before(storm::update)
                     .before(wet_surfaces::update)

@@ -80,6 +80,8 @@ pub struct SavedGame {
     pub weather: PlayerWeather,
     #[serde(default)]
     pub environment: Option<crate::environment::EnvironmentSelection>,
+    #[serde(default)]
+    pub weather_checkpoint: Option<crate::weather_state::WeatherCheckpoint>,
     pub camera: SavedCamera,
 }
 impl SavedGame {
@@ -88,6 +90,7 @@ impl SavedGame {
         content: &ActivePlayerContent,
         camera: SavedCamera,
         path: &Path,
+        weather: Option<&crate::weather_state::WeatherState>,
     ) -> Result<(), String> {
         let game = Self {
             version: 1,
@@ -100,6 +103,7 @@ impl SavedGame {
             season: live.season.clone(),
             weather: content.weather,
             environment: Some(content.environment),
+            weather_checkpoint: weather.and_then(crate::weather_state::WeatherState::checkpoint),
             camera,
         };
         atomic_write(
@@ -114,6 +118,10 @@ impl SavedGame {
         let game: Self = serde_json::from_slice(&std::fs::read(path).map_err(|e| e.to_string())?)
             .map_err(|e| format!("No se puede leer la partida: {e}"))?;
         if game.version != 1
+            || game
+                .weather_checkpoint
+                .as_ref()
+                .is_some_and(|weather| !weather.valid())
             || !game.start_clock_s.is_finite()
             || !game
                 .camera
@@ -139,7 +147,7 @@ impl SavedGame {
                     || Quat::from_array(p.rotation).length_squared() < 0.9
             })
         {
-            return Err("Versión o cámara de partida inválida".into());
+            return Err("Versión, cámara o clima de partida inválidos".into());
         }
         Ok(game)
     }
@@ -158,6 +166,7 @@ impl SavedGame {
                     ..default()
                 }),
             resume: Some(path.to_path_buf()),
+            weather_checkpoint: game.weather_checkpoint,
         })
     }
     pub fn restore(self, live: &mut LiveDrive) -> Result<SavedCamera, String> {
@@ -301,12 +310,45 @@ mod tests {
             },
             ..default()
         };
-        SavedGame::save(&mut original, &content, cam, &save).unwrap();
+        let mut weather_app = App::new();
+        weather_app
+            .init_resource::<Time>()
+            .init_resource::<crate::environment::LiveEnvironment>()
+            .init_resource::<crate::weather_state::WeatherState>()
+            .insert_resource(content.clone())
+            .insert_resource(crate::player_settings::PlayerSettings {
+                weather_profile: crate::weather_state::WeatherProfile::RandomJourney,
+                weather_pace: crate::weather_journey::WeatherPace::Fast,
+                weather_seed: 81,
+                ..default()
+            })
+            .add_systems(Update, crate::weather_state::update);
+        weather_app.update();
+        weather_app
+            .world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_secs(145));
+        weather_app.update();
+        let weather = weather_app
+            .world()
+            .resource::<crate::weather_state::WeatherState>();
+        SavedGame::save(&mut original, &content, cam, &save, Some(weather)).unwrap();
         let game = SavedGame::read(&save).unwrap();
         assert_eq!(game.environment, Some(content.environment));
+        assert_eq!(game.weather_checkpoint.as_ref().unwrap().seed, 81);
+        let restored_weather = game
+            .weather_checkpoint
+            .as_ref()
+            .unwrap()
+            .restore(original.session.time_s());
+        assert_eq!(
+            serde_json::to_string(&weather.atmosphere).unwrap(),
+            serde_json::to_string(&restored_weather.atmosphere).unwrap()
+        );
         let mut legacy: serde_json::Value =
             serde_json::from_slice(&std::fs::read(&save).unwrap()).unwrap();
         legacy.as_object_mut().unwrap().remove("environment");
+        legacy.as_object_mut().unwrap().remove("weather_checkpoint");
         std::fs::write(
             tmp.path().join("old-save.json"),
             serde_json::to_vec(&legacy).unwrap(),
@@ -318,6 +360,15 @@ mod tests {
                 .environment
                 .is_none()
         );
+        let mut invalid: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&save).unwrap()).unwrap();
+        invalid["weather_checkpoint"]["atmosphere"]["rain"] = 2.into();
+        std::fs::write(
+            tmp.path().join("invalid-weather.json"),
+            serde_json::to_vec(&invalid).unwrap(),
+        )
+        .unwrap();
+        assert!(SavedGame::read(&tmp.path().join("invalid-weather.json")).is_err());
         let scenario = tmp.path().join("resumed.toml");
         std::fs::write(&scenario, &game.scenario_toml).unwrap();
         let mut resumed = LiveDrive::from_scenario_path(&scenario).unwrap();

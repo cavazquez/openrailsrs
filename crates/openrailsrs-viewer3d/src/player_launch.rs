@@ -642,6 +642,7 @@ impl PlayerLaunchMenu {
                 ..self.environment
             },
             resume: None,
+            weather_checkpoint: None,
         })
     }
 }
@@ -824,6 +825,7 @@ pub struct QueuedPlayerLaunch {
     pub weather: PlayerWeather,
     pub environment: crate::environment::EnvironmentSelection,
     pub resume: Option<PathBuf>,
+    pub weather_checkpoint: Option<crate::weather_state::WeatherCheckpoint>,
 }
 #[derive(Resource, Default)]
 pub struct PlayerLaunchQueue(pub Option<QueuedPlayerLaunch>);

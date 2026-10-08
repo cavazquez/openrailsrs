@@ -178,6 +178,7 @@ def run_checkpoint(args, name, target, pause):
         ("weather_profile", "OPENRAILSRS_WEATHER_PROFILE"),
         ("weather_seed", "OPENRAILSRS_WEATHER_SEED"),
         ("weather_phase_s", "OPENRAILSRS_WEATHER_PHASE_S"),
+        ("weather_pace", "OPENRAILSRS_WEATHER_PACE"),
         ("weather_quality", "OPENRAILSRS_WEATHER_QUALITY"),
         ("framepace", "OPENRAILSRS_FRAMEPACE"),
         ("present_mode", "OPENRAILSRS_PRESENT_MODE"),

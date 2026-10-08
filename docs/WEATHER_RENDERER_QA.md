@@ -36,6 +36,28 @@ Cada partida inicia un registro nuevo. Los reportes almacenan hasta 12.000 muest
 
 ## Pruebas reproducibles
 
+El menú permite seleccionar la intensidad de lluvia/nieve antes de iniciar y
+desde F10. `steady_snow` cubre la nevada moderada. `random_journey` agrega un
+pronóstico por tiempo ferroviario, semilla y estación: `OPENRAILSRS_WEATHER_PACE`
+acepta `slow`, `normal` o `fast` (intervalos de 600/240/60 s). Las capturas pueden
+usar `OPENRAILSRS_WEATHER_PHASE_S` para comparar fases con la misma cámara y
+formación pausada. La fase, semilla y canales compartidos figuran en
+`weather_state`; guardar conserva el estado y la transición. Ver la
+[prueba manual 51](PLAYER_MANUAL_TESTS.md#51-intensidad-de-lluvia-y-nieve-y-clima-aleatorio).
+Las capturas del menú y del pronóstico en Chiltern v4 están en
+[la verificación del 8 de octubre](fixtures/compatibility/weather-menu-2026-10-08/README.md).
+
+Para revisar los controles con datos aislados, sin tocar las preferencias del jugador:
+
+```bash
+python3 scripts/capture_player_menu.py --pages weather weather-settings \
+  --weather rain --weather-profile downpour --out-dir tmp/qa/menu-rain
+python3 scripts/capture_player_menu.py --pages weather weather-settings \
+  --weather snow --weather-profile steady_snow --out-dir tmp/qa/menu-snow
+python3 scripts/capture_player_menu.py --pages weather weather-options weather-settings \
+  --weather-profile random_journey --weather-pace fast --out-dir tmp/qa/menu-random
+```
+
 Se necesita el paquete original de Chiltern v4 fuera del repositorio y un escenario nativo auditado. Los archivos `--route-root` y `--scenario` se proporcionan explícitamente. Compilar el mismo binario con las tres features anteriores para toda la comparación. Cada ejecución utiliza datos de jugador y compositor aislados; las ejecuciones son secuenciales, con GPU real, 1280×720, radio 450 m y semilla 81.
 
 ```bash
