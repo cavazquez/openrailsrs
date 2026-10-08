@@ -254,6 +254,7 @@ pub struct CaptureScene<'w, 's> {
     graphics_memory: Res<'w, crate::gpu_memory::GraphicsMemory>,
     weather_particles: Res<'w, crate::weather_particles::WeatherParticles>,
     weather_state: Option<Res<'w, crate::weather_state::WeatherState>>,
+    weather_journey: Option<Res<'w, crate::weather_journey_telemetry::WeatherJourneyTelemetry>>,
     enhanced_scenery: Res<'w, crate::enhanced_scenery::EnhancedScenery>,
     world_draws: Res<'w, crate::world_instancing::WorldDrawCounters>,
     #[cfg(feature = "dev-tools")]
@@ -433,6 +434,10 @@ impl CaptureScene<'_, '_> {
         })));
         report["rail_adhesion"] =
             serde_json::json!(live.and_then(|l| l.session.state.rail_adhesion.as_ref()));
+        report["weather_journey"] = self
+            .weather_journey
+            .as_ref()
+            .map_or(serde_json::Value::Null, |journey| journey.report());
         report["ui_layout"] = serde_json::Value::Array(self.menu_nodes.iter().filter(|(name, _, _)| {
                 name.as_str().starts_with("ui-") || name.as_str().starts_with("home-")
                     || matches!(name.as_str(), "player-menu" | "launch-footer" | "launch-unavailable")

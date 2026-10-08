@@ -106,6 +106,7 @@ pub mod view_window;
 pub mod water;
 pub mod weather_execution;
 pub mod weather_journey;
+pub mod weather_journey_telemetry;
 pub mod weather_particles;
 mod weather_particles_gpu;
 pub mod weather_state;
@@ -200,6 +201,7 @@ impl Plugin for ViewerPlugin {
         app.add_plugins(windshield::WindshieldPlugin);
         app.init_resource::<environment::LiveEnvironment>()
             .init_resource::<weather_state::WeatherState>()
+            .init_resource::<weather_journey_telemetry::WeatherJourneyTelemetry>()
             .init_resource::<storm::StormState>()
             .add_systems(
                 Update,
@@ -214,7 +216,11 @@ impl Plugin for ViewerPlugin {
             )
             .add_systems(
                 OnEnter(ViewerAppState::Playing),
-                (weather_state::reset, storm::reset),
+                (
+                    weather_state::reset,
+                    storm::reset,
+                    weather_journey_telemetry::reset,
+                ),
             )
             .add_systems(
                 Update,
@@ -235,6 +241,13 @@ impl Plugin for ViewerPlugin {
                     .before(wet_surfaces::update)
                     .before(sky::sync_route_atmosphere)
                     .before(route_lighting::update_route_sun)
+                    .run_if(in_state(ViewerAppState::Playing)),
+            )
+            .add_systems(
+                Update,
+                weather_journey_telemetry::update
+                    .after(weather_state::update)
+                    .after(live::live_driver_input)
                     .run_if(in_state(ViewerAppState::Playing)),
             )
             .add_systems(
@@ -776,6 +789,7 @@ impl Plugin for ViewerPlugin {
                 Update,
                 capture::capture_system
                     .after(storm::update)
+                    .after(weather_journey_telemetry::update)
                     .after(camera::constrain_exterior_camera_to_terrain)
                     .after(camera::update_driver_camera_fov)
                     .after(route_lighting::update_route_sun)

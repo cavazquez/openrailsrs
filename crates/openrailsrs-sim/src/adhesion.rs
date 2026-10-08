@@ -119,6 +119,10 @@ pub struct RailCarState {
 pub struct RailAdhesionState {
     pub weather: RailWeather,
     pub weather_factor: f64,
+    /// Optional continuous target supplied by a live environment. Old saves
+    /// and reference callers retain the authored category presets.
+    #[serde(default)]
+    pub weather_target_factor: Option<f64>,
     pub sander_command: bool,
     pub backwards: bool,
     pub cars: Vec<RailCarState>,
@@ -128,6 +132,7 @@ impl RailAdhesionState {
         Self {
             weather,
             weather_factor: weather.factor(),
+            weather_target_factor: None,
             sander_command: false,
             backwards: false,
             cars: config
@@ -148,6 +153,9 @@ impl RailAdhesionState {
     }
     pub fn valid_for(&self, config: &RailAdhesionConfig) -> bool {
         (0.5..=1.).contains(&self.weather_factor)
+            && self
+                .weather_target_factor
+                .is_none_or(|factor| (0.5..=1.).contains(&factor))
             && self.cars.len() == config.vehicles.len()
             && self.cars.iter().zip(&config.vehicles).all(|(c, v)| {
                 c.sand_m3.is_finite()
@@ -201,7 +209,9 @@ pub(crate) fn prepare(state: &mut TrainSimState, config: &RailAdhesionConfig, ba
     let Some(rail) = &mut state.rail_adhesion else {
         return;
     };
-    let target = rail.weather.factor();
+    let target = rail
+        .weather_target_factor
+        .unwrap_or_else(|| rail.weather.factor());
     let tau = if target < rail.weather_factor {
         12.
     } else {
@@ -480,6 +490,30 @@ mod tests {
         assert!((s[0] * 2. - d[0]).abs() < 1e-8);
         assert!(d[0] < 1.0e6);
         assert_eq!(snow.brake_system.cylinders.len(), 0);
+    }
+
+    #[test]
+    fn continuous_target_controls_brake_contact_and_survives_old_saves() {
+        let c = config();
+        let run = |target| {
+            let mut s = state(&c, RailWeather::Rain, false);
+            s.rail_adhesion.as_mut().unwrap().weather_target_factor = Some(target);
+            prepare(&mut s, &c, 1., 600.);
+            let mut force = [1e6];
+            cap_brakes(&s, &c, &mut force);
+            assert!(s.rail_adhesion.as_ref().unwrap().valid_for(&c));
+            force[0]
+        };
+        assert!(run(0.928) > run(0.752));
+        assert!(run(0.752) > run(0.6));
+        let mut rail = RailAdhesionState::new(&c, RailWeather::Snow, 0.);
+        let mut old = serde_json::to_value(&rail).unwrap();
+        old.as_object_mut().unwrap().remove("weather_target_factor");
+        rail = serde_json::from_value(old).unwrap();
+        assert_eq!(rail.weather_target_factor, None);
+        assert!(rail.valid_for(&c));
+        rail.weather_target_factor = Some(f64::NAN);
+        assert!(!rail.valid_for(&c));
     }
 
     #[test]

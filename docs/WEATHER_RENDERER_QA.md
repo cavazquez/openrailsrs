@@ -119,4 +119,41 @@ no reutilizan resultados si cambia la configuración de cámara, radio o niebla.
 [Evidencia de Paddington](fixtures/compatibility/paddington-2026-10-07/README.md).
 [Comprobación manual](PLAYER_MANUAL_TESTS.md#50-chiltern-v4-formación-y-clima-en-paddington).
 
+### Viaje completo bajo clima cambiante
+
+`check_weather_journey.py` recorre un servicio nativo completo con clima aleatorio,
+semilla fija, cabina, limpiaparabrisas y faros bajos. Exige cada parada original
+en orden, menos de 10 m de error y menos de 0,1 m/s al detenerse, sin omisiones.
+La carpeta de la ruta y el escenario auditado se proporcionan explícitamente;
+el contenido original y los reportes con rutas locales quedan fuera de Git.
+
+```bash
+python3 scripts/check_weather_journey.py --route-root "$CHILTERN_ROUTE" \
+  --scenario "$CHILTERN_SERVICE" --weather-seed 82 --weather-pace normal \
+  --speed-mul 32 --out-dir tmp/qa/weather-journey
+```
+
+Para cubrir nieve en este ensayo, el escenario debe estar en invierno.
+El ensayo exige al menos tres condiciones efectivas, frenado sobre vía húmeda
+y un cambio de agarre acotado a 0,045 por segundo de simulación. Lluvia y nieve
+alcanzan el contacto según su intensidad; la vía tarda 12 s en aproximarse al
+agarre húmedo y 90 s en recuperar el seco. Son constantes del modelo de juego,
+no medidas de una vía concreta. Los llamadores headless conservan sus perfiles
+de referencia mientras no soliciten el objetivo continuo.
+
+`weather_journey` guarda hasta 720 muestras, cada diez segundos de simulación
+y al completar una parada: velocidad, precipitación, visibilidad, agarre actual
+y objetivo, patinaje, esfuerzo y freno que llega a la vía. Sus estadísticas por
+clima excluyen carga inicial, pausa y espera posterior a la llegada, conservando
+el trabajo de sectores cargados durante el viaje. Los percentiles generales,
+RSS y VRAM siguen en sus campos separados. El historial de diagnóstico se
+reinicia al iniciar/restaurar; el estado meteorológico y físico sí se guarda.
+
+Tiempo ×32 permite comprobar el servicio sin esperar una hora, pero también
+incrementa física y streaming por cuadro. Los resultados no se extrapolan a
+tiempo ×1 ni representan paridad visual/física con Open Rails. Para evaluar
+tirones, conservar equipo, radio, cámara, calidad y aceleración temporal.
+[Prueba manual 52](PLAYER_MANUAL_TESTS.md#52-viaje-completo-con-clima-cambiante).
+[Evidencia del recorrido y de los faros en niebla](fixtures/compatibility/weather-journey-2026-10-08/README.md).
+
 APIs de referencia: [Bevy dev tools](https://docs.rs/bevy/0.19.1/bevy/dev_tools/index.html), [inspector de sólo lectura](https://docs.rs/bevy-inspector-egui/0.37.0/bevy_inspector_egui/reflect_inspector/struct.InspectorUi.html), [framepace 0.22](https://github.com/aevyrie/bevy_framepace/blob/main/Cargo.toml). Las versiones y features efectivas quedan fijadas por Cargo.lock.

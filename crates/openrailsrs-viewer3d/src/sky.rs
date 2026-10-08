@@ -241,11 +241,12 @@ pub fn sync_route_atmosphere(
         }
         // Local extinction supplies the dense near field. Retain a milder far
         // haze rather than charging scene geometry the same fog twice.
-        let visibility = if content.weather == PlayerWeather::Fog && volumetric.is_some() {
-            visibility * 4.0
-        } else {
-            visibility
-        };
+        let dense_fraction = weather
+            .as_ref()
+            .map_or(f32::from(content.weather == PlayerWeather::Fog), |state| {
+                state.atmosphere.dense_fog_fraction()
+            });
+        let visibility = blended_fog_visibility(visibility, dense_fraction, volumetric.is_some());
         let day = params.sun.w;
         let mut f = viewer_distance_fog(visibility, false);
         // One atmospheric model throughout twilight; reduce forward sun glare
@@ -259,6 +260,15 @@ pub fn sync_route_atmosphere(
         );
         *fog = f;
     }
+}
+
+fn blended_fog_visibility(visibility: f32, dense_fraction: f32, volumetric: bool) -> f32 {
+    visibility
+        * if volumetric {
+            1. + 3. * dense_fraction.clamp(0., 1.)
+        } else {
+            1.
+        }
 }
 
 /// Toggle fog with `F` — zeros falloff instead of removing [`DistanceFog`].
@@ -297,6 +307,19 @@ pub fn toggle_distance_fog(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn near_and_far_fog_share_extinction_gradually() {
+        assert_eq!(blended_fog_visibility(120., 1., true), 480.);
+        assert_eq!(blended_fog_visibility(120., 1., false), 120.);
+        let mut previous = blended_fog_visibility(8000., 0., true);
+        for i in 1..=1000 {
+            let amount = i as f32 / 1000.;
+            let visibility = blended_fog_visibility(8000. + (120. - 8000.) * amount, amount, true);
+            assert!((visibility - previous).abs() < 32.);
+            previous = visibility;
+        }
+    }
     use bevy::pbr::FogFalloff;
     use openrailsrs_bevy_scenery::sky_palette;
     use openrailsrs_track::TrackGraph;

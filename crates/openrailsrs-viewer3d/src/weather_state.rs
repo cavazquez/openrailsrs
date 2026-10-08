@@ -165,6 +165,19 @@ impl Default for Atmosphere {
     }
 }
 impl Atmosphere {
+    /// Share the same continuous atmosphere with wheel/rail contact. This is
+    /// a normalized gameplay model, not measured adhesion or an ice model.
+    pub fn rail_factor(self) -> f64 {
+        let rain = f64::from(self.rain.clamp(0., 1.)) * 0.4;
+        let snow = f64::from(self.snow.clamp(0., 1.)) * 0.5;
+        let fog = f64::from(self.dense_fog_fraction()) * 0.4;
+        (1. - rain.max(snow).max(fog)).clamp(0.5, 1.)
+    }
+
+    pub fn dense_fog_fraction(self) -> f32 {
+        smooth((self.fog_density - 0.001) / (0.065 - 0.001))
+    }
+
     pub(crate) fn blend(self, target: Self, amount: f32) -> Self {
         let lerp = |a: f32, b: f32| a + (b - a) * amount;
         Self {
@@ -620,6 +633,9 @@ mod tests {
                 _ => openrailsrs_sim::adhesion::RailWeather::Dry,
             };
             assert_eq!(rail.weather, expected);
+            assert!(
+                (rail.weather_target_factor.unwrap() - state.atmosphere.rail_factor()).abs() < 1e-9
+            );
             seen.insert(content.weather.label());
         }
         assert!(seen.len() >= 2);
@@ -642,6 +658,56 @@ mod tests {
             paused,
             serde_json::to_string(&app.world().resource::<WeatherState>().atmosphere).unwrap()
         );
+    }
+
+    #[test]
+    fn rail_intensity_and_dense_fog_blend_without_category_jumps() {
+        for (weather, profiles) in [
+            (
+                PlayerWeather::Rain,
+                [
+                    WeatherProfile::Drizzle,
+                    WeatherProfile::SteadyRain,
+                    WeatherProfile::Downpour,
+                ],
+            ),
+            (
+                PlayerWeather::Snow,
+                [
+                    WeatherProfile::LightSnow,
+                    WeatherProfile::SteadySnow,
+                    WeatherProfile::HeavySnow,
+                ],
+            ),
+        ] {
+            let targets = profiles.map(|p| fixed_at(weather, p, 82, 0.).rail_factor());
+            assert!(targets[0] > targets[1] && targets[1] > targets[2]);
+            assert!((0.5..=1.).contains(&targets[2]));
+        }
+        let dry = Atmosphere::default();
+        let fog = fixed_at(PlayerWeather::Fog, WeatherProfile::Automatic, 82, 0.);
+        let mut previous = dry;
+        for i in 1..=1000 {
+            let a = dry.blend(fog, i as f32 / 1000.);
+            assert!((a.rail_factor() - previous.rail_factor()).abs() < 0.001);
+            assert!((a.dense_fog_fraction() - previous.dense_fog_fraction()).abs() < 0.002);
+            previous = a;
+        }
+        assert_eq!(fog.dense_fog_fraction(), 1.);
+        assert!((fog.rail_factor() - 0.6).abs() < 1e-9);
+        // A stronger storm must not improve contact when only the HUD category changes.
+        for i in 1..=100 {
+            let a = fixed_at(
+                PlayerWeather::Storm,
+                WeatherProfile::StormCycle,
+                82,
+                120. + i as f64,
+            );
+            assert_eq!(
+                a.rail_factor(),
+                (1. - f64::from(a.rain) * 0.4).clamp(0.5, 1.)
+            );
+        }
     }
     #[test]
     fn random_weather_is_pause_safe_frame_independent_and_restores_its_forecast() {

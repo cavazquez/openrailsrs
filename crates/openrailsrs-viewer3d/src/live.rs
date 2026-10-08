@@ -401,6 +401,7 @@ pub fn advance_live_sim(
     mut live: ResMut<LiveDrive>,
     settings: Option<Res<crate::player_settings::PlayerSettings>>,
     content: Option<Res<crate::player_launch::ActivePlayerContent>>,
+    atmosphere: Option<Res<crate::weather_state::WeatherState>>,
     mut ui: Option<ResMut<crate::player_ui::PlayerUiState>>,
 ) {
     if live.paused || loading.is_some() {
@@ -425,9 +426,16 @@ pub fn advance_live_sim(
             PlayerWeather::Fog => RailWeather::Fog,
             _ => RailWeather::Dry,
         };
-        live.session.set_rail_weather(weather);
+        let set_weather = |session: &mut LiveDriveSession| {
+            if let Some(atmosphere) = atmosphere.as_ref() {
+                session.set_rail_weather_factor(weather, atmosphere.atmosphere.rail_factor());
+            } else {
+                session.set_rail_weather(weather);
+            }
+        };
+        set_weather(&mut live.session);
         for service in &mut live.traffic.services {
-            service.session.set_rail_weather(weather);
+            set_weather(&mut service.session);
         }
     }
     let was_arrived = live.session.arrived;

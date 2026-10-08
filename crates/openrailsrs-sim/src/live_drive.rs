@@ -202,6 +202,22 @@ pub struct LiveDriveSession {
 
 impl LiveDriveSession {
     pub fn set_rail_weather(&mut self, weather: crate::adhesion::RailWeather) {
+        self.set_rail_weather_contact(weather, None);
+    }
+
+    /// Continuous normalized grip target, without advancing the rail surface
+    /// or consuming sand. Wetting/drying remains on the physics clock.
+    pub fn set_rail_weather_factor(&mut self, weather: crate::adhesion::RailWeather, factor: f64) {
+        if factor.is_finite() {
+            self.set_rail_weather_contact(weather, Some(factor.clamp(0.5, 1.)));
+        }
+    }
+
+    fn set_rail_weather_contact(
+        &mut self,
+        weather: crate::adhesion::RailWeather,
+        target: Option<f64>,
+    ) {
         let Some(config) = &self.physics.rail_adhesion else {
             return;
         };
@@ -209,6 +225,12 @@ impl LiveDriveSession {
         let dynamics = self.state.native_dynamics.as_ref();
         let rail = self.state.rail_adhesion.get_or_insert_with(|| {
             let mut rail = crate::adhesion::RailAdhesionState::new(config, weather, speed);
+            if let Some(target) = target {
+                rail.weather_factor = target;
+                for car in &mut rail.cars {
+                    car.factor = target;
+                }
+            }
             if let Some(dynamics) = dynamics {
                 for (axle, &index) in dynamics
                     .axles
@@ -225,6 +247,7 @@ impl LiveDriveSession {
             rail
         });
         rail.weather = weather;
+        rail.weather_target_factor = target;
     }
 
     pub fn toggle_sander(&mut self) -> Result<(), String> {

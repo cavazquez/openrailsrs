@@ -57,6 +57,7 @@ python3 -m unittest discover -s scripts -p test_scenery_oracle.py
 python3 -m unittest discover -s scripts -p test_weather_execution.py
 python3 -m unittest discover -s scripts -p test_viewer_benchmark.py
 python3 -m unittest discover -s scripts -p test_player_menu.py
+python3 -m unittest discover -s scripts -p test_weather_journey.py
 python3 -m unittest discover -s scripts -p test_train_effects.py
 python3 -m unittest discover -s scripts -p test_train_atmosphere.py
 python3 -m unittest discover -s scripts -p test_native_pilot.py
