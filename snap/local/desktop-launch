@@ -1,8 +1,21 @@
 #!/bin/sh
 set -eu
 export OPENRAILSRS_RESOURCES="$SNAP/share/openrailsrs"
-export OPENRAILSRS_PYTHON="$SNAP/usr/bin/python3"
-export PYTHONHOME="$SNAP/usr"
-export SSL_CERT_FILE="$SNAP/etc/ssl/certs/ca-certificates.crt"
+# Snapcraft excludes files already supplied by core24, including Python and TLS roots.
+if [ -x "$SNAP/usr/bin/python3" ]; then
+    export OPENRAILSRS_PYTHON="$SNAP/usr/bin/python3"
+    export PYTHONHOME="$SNAP/usr"
+else
+    export OPENRAILSRS_PYTHON=/usr/bin/python3
+    unset PYTHONHOME
+fi
+if [ -r "$SNAP/etc/ssl/certs/ca-certificates.crt" ]; then
+    export SSL_CERT_FILE="$SNAP/etc/ssl/certs/ca-certificates.crt"
+else
+    export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+fi
 export LD_LIBRARY_PATH="$SNAP/usr/lib/x86_64-linux-gnu:$SNAP/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+# Vulkan discovers the packaged Mesa ICDs through XDG; keep host/NVIDIA search paths.
+export XDG_DATA_DIRS="$SNAP/usr/share:$SNAP/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+export XKB_CONFIG_ROOT="$SNAP/usr/share/X11/xkb"
 exec "$@"

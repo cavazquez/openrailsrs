@@ -30,6 +30,16 @@ GitHub Actions: mismo `check.sh` + cobertura Codecov + visual smoke (xvfb/lavapi
 
 ## Inicio rápido
 
+La alpha Linux amd64 está en [Snap Store](https://snapcraft.io/openrailsrs), canal
+**edge**. Instalá el juego y abrí **Biblioteca** para descargar las rutas originales:
+
+```bash
+sudo snap install openrailsrs --edge
+openrailsrs
+```
+
+Para trabajar desde las fuentes:
+
 ```bash
 cargo build
 cargo test
@@ -153,8 +163,8 @@ shaders y ejemplos necesarios para ejecutar desde otra carpeta. El contenido
 original se instala por separado y queda en los datos del usuario; no se
 incorpora al paquete ni al repositorio. El paquete agrega `Jugar.sh --check`,
 `Jugar.sh`, `LEEME.txt` y metadatos/hashes de compilación. No requiere Rust ni
-Cargo para jugar. La construcción de QA actual requiere **glibc 2.43**; todavía
-no es un binario general para distribuciones anteriores.
+Cargo para jugar. El paquete portátil de QA requiere **glibc 2.43**; el Snap
+publicado se compila en **core24**, que aporta su propia base con glibc 2.39.
 
 ```bash
 cargo install --path crates/openrailsrs-cli   # binario `openrailsrs`

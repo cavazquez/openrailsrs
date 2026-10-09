@@ -1,0 +1,186 @@
+{
+  "verified_date_utc": "2026-10-09",
+  "publication": {
+    "name": "openrailsrs",
+    "version": "0.1.0-alpha.1",
+    "revision": 1,
+    "channel": "latest/edge",
+    "architecture": "amd64",
+    "base": "core24",
+    "confinement": "strict",
+    "grade": "devel",
+    "store_url": "https://snapcraft.io/openrailsrs",
+    "snap_id": "7K4v1g3CeSnkbvIV2tndVNj1YNlffZyz",
+    "size_bytes": 120311808,
+    "sha256": "1135d595164cbe13298bb511dacff1ffbb5f6f159e2f40a7a225efc908125bd0",
+    "store_download_sha256": "1135d595164cbe13298bb511dacff1ffbb5f6f159e2f40a7a225efc908125bd0",
+    "store_download_matches": true,
+    "other_channels_released": false
+  },
+  "source": {
+    "base_commit": "46100c1ca6e1849944b5d0079e49583310085e80",
+    "scope": "Tracked-source snapshot with the packaging changes below; game code unchanged from base commit.",
+    "packaging_sha256": {
+      "snap/snapcraft.yaml": "745e5a24d37fbd9fb3e1c81dde0bf8f7633f858d72700c49d59f0602fb17c35e",
+      "snap/local/desktop-launch": "23f937a02f471b4c92b15f646699d31a502ac2793a08f0b2d432c39703da7094",
+      "scripts/test_packaging.py": "1500720bb99c92571a3acfa02ef153625eae2747dfb9304c90ec2c64838fad7b"
+    },
+    "embedded_build_commit_note": "BUILD.json has null source_commit/source_dirty because the build source deliberately excludes .git.",
+    "base_ci": "https://github.com/cavazquez/openrailsrs/actions/runs/37731235742",
+    "base_ci_result": "success"
+  },
+  "build": {
+    "snapcraft": "9.1.4",
+    "rust": "1.99.0",
+    "distribution": "Ubuntu 24.04",
+    "metadata": {
+      "source_commit": null,
+      "source_dirty": null,
+      "architecture": "x86_64",
+      "build_libc": [
+        "glibc",
+        "2.39"
+      ],
+      "required_glibc": "2.39",
+      "downloaded_content_included": false,
+      "binary_sha256": {
+        "openrailsrs": "fa50432b421da3ce5fe44eaf316ae5b5d891c1d07baa8291ec7ae9b557904eb3",
+        "openrailsrs-viewer3d": "74568670bca1c01dfa7c91f6af7ac7f894e7b2abae569ca2c6c5a2e64b1644ac",
+        "openrailsrs-prepare-content": "acb4f8806f93e5362686c722545ea35aecc59695c749e217fca5bd7a9c4e1fea"
+      }
+    },
+    "downloaded_content_included": false,
+    "manifest_files": 214
+  },
+  "checks": {
+    "packaging_tests": {
+      "passed": 8,
+      "failed": 0
+    },
+    "shell_syntax": "passed",
+    "diff_whitespace": "passed",
+    "privacy_audit": {
+      "result": "passed",
+      "scope": "Own binaries/resources; known personal-path and credential patterns only.",
+      "universal_secret_detector": false
+    },
+    "strict_installation": {
+      "snapd": "2.76.3",
+      "environment": "Isolated Ubuntu 24.04 LXD test instance",
+      "local_revision": "x3",
+      "snap_debug_confinement": "strict",
+      "devmode": false,
+      "snap_install_notes": "-",
+      "user_common_retained_on_local_updates": true
+    },
+    "catalogue_entries": 15,
+    "https": {
+      "status": 200,
+      "url": "https://github.com/cavazquez/openrailsrs",
+      "certificate_validation": true,
+      "tls_roots_source": "core24"
+    },
+    "menu": "passed",
+    "menu_resolution": [
+      960,
+      640
+    ],
+    "desktop_entry": "meta/gui/openrailsrs.desktop"
+  },
+  "scenes": {
+    "rain": {
+      "scenario": "examples/smoke/scenario.toml",
+      "resolution": [
+        640,
+        360
+      ],
+      "effective_weather": "rain",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "Cpu",
+        "hardware": false,
+        "name": "llvmpipe (LLVM 20.1.2, 256 bits)"
+      },
+      "renderer_selection": "cpu",
+      "weather_particles": {
+        "cpu_mesh_updates": 53,
+        "cpu_particles": 634,
+        "execution": "cpu",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": 0.05000000074505806,
+        "quality_level": 1,
+        "requested": "cpu",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 6
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "unactivated_near_shapes": 0,
+      "pending_terrain_tiles": 0
+    },
+    "snow": {
+      "scenario": "examples/smoke/scenario.toml",
+      "resolution": [
+        640,
+        360
+      ],
+      "effective_weather": "snow",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "Cpu",
+        "hardware": false,
+        "name": "llvmpipe (LLVM 20.1.2, 256 bits)"
+      },
+      "renderer_selection": "cpu",
+      "weather_particles": {
+        "cpu_mesh_updates": 53,
+        "cpu_particles": 1024,
+        "execution": "cpu",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": 0.05000000074505806,
+        "quality_level": 1,
+        "requested": "cpu",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 7
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "unactivated_near_shapes": 0,
+      "pending_terrain_tiles": 0
+    }
+  },
+  "captures": {
+    "menu.png": {
+      "sha256": "a8ac7f2952b57fd2ce12e8d266062e65c5f8d8645172d50dc522bfe8564d10b2",
+      "bytes": 63141
+    },
+    "rain.png": {
+      "sha256": "b5727e80c8bff0337bd3fac1184c491832aa0661ebcd1b657fdc92fe71aeac87",
+      "bytes": 87803
+    },
+    "snow.png": {
+      "sha256": "8be8ca43c688b53acc68d424ca6412d5c63bcf823c5ec8621a41c625f56dc68e",
+      "bytes": 184558
+    }
+  },
+  "limits": [
+    "Short smoke scenes, not a full original route journey inside Snap.",
+    "X11 virtual display and software Vulkan; physical GPU and Wayland not tested inside Snap.",
+    "Audio disabled in the isolated test environment.",
+    "Precipitation forced to CPU in this test; Hanabi hardware path not certified by these captures.",
+    "HTTPS/catalogue checks do not constitute a completed route download/install test.",
+    "Smoke fixture uses deliberately synthetic terrain/object colours."
+  ]
+}

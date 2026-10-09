@@ -1,5 +1,6 @@
 """Distribution must include resources while excluding downloads and private files."""
 import json
+import os
 from pathlib import Path
 import tempfile
 import subprocess
@@ -10,6 +11,26 @@ import package_snap
 
 
 class PackagingTests(unittest.TestCase):
+    def test_snap_launcher_uses_base_python_and_trusted_certificates(self):
+        with tempfile.TemporaryDirectory() as directory:
+            # Reproduce Snapcraft's removal of Python/CA files already in core24.
+            root = Path(directory) / "Snap con espacios"
+            root.mkdir()
+            launcher = Path(__file__).resolve().parents[1] / 'snap/local/desktop-launch'
+            environment = dict(os.environ, SNAP=str(root),
+                               PYTHONHOME=str(root/'missing-python'),
+                               SSL_CERT_FILE=str(root/'missing-certificates.pem'))
+            probe = (
+                'import os, ssl, subprocess; '
+                'subprocess.run([os.environ["OPENRAILSRS_PYTHON"], "-c", '
+                '"import ssl; assert ssl.create_default_context().cert_store_stats()[\'x509_ca\'] > 0"], '
+                'check=True); '
+                'assert ssl.create_default_context().cert_store_stats()["x509_ca"] > 0'
+            )
+            result = subprocess.run(['/bin/sh', str(launcher), '/usr/bin/python3', '-c', probe],
+                                    env=environment, text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_portable_bundle_is_independent_and_excludes_content_and_outcomes(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

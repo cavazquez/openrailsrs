@@ -42,8 +42,11 @@ del directorio de ejecución. `OPENRAILSRS_PLAYER_DIR` permite aislar una prueba
 
 ## Snap de desarrollo
 
-`snap/snapcraft.yaml` usa core24, amd64 y confinamiento estricto. Incluye Python,
-TLS y bibliotecas gráficas; declara interfaces de red, audio, pantalla y GPU.
+`snap/snapcraft.yaml` usa core24, amd64 y confinamiento estricto. Usa Python y
+certificados TLS del paquete o de core24; incluye bibliotecas gráficas y mapas
+XKB, y declara interfaces de red, audio, pantalla y GPU. El lanzador configura
+los directorios de Vulkan y teclado y evita un `PYTHONHOME` incompatible con
+el intérprete de la base.
 Para un checkout con descargas/builds locales, prepará primero una copia limpia:
 
 ```bash
@@ -64,21 +67,48 @@ Las descargas, guardados, ajustes y caché se almacenan en
 `$SNAP_USER_COMMON/openrailsrs`, conservado entre revisiones. `$SNAP` es de solo
 lectura. Para contenido de un disco externo, conectá explícitamente
 `sudo snap connect openrailsrs:removable-media`; la carpeta debe seguir siendo
-accesible al usuario. La receta de desarrollo no publica nada en Snap Store.
+accesible al usuario. La construcción local no publica en Snap Store: la subida
+se hace con un comando separado.
 
-## Primera alpha en Snap Store
+## Alpha disponible en Snap Store
 
-La receta identifica la versión como **0.1.0-alpha.1**, con `grade: devel`
-y `confinement: strict`. El nombre `openrailsrs` fue reservado por el
-mantenedor. La publicación propuesta es **latest/edge**: Snap Store ofrece
-stable, candidate, beta y edge, sin un riesgo llamado alpha. Una versión devel
-no puede publicarse en stable o candidate. Ver
+El **9 de octubre de 2026** se publicó **0.1.0-alpha.1**, revisión **1**, para
+Linux amd64 en [Snap Store](https://snapcraft.io/openrailsrs), canal **latest/edge**.
+Tiene `grade: devel`, `confinement: strict` y base core24. Stable, candidate y
+beta todavía no tienen revisiones publicadas.
+
+```bash
+sudo snap install openrailsrs --edge
+openrailsrs
+# Si ya está instalado:
+sudo snap refresh openrailsrs --edge
+```
+
+El menú permite descargar las rutas y trenes originales desde **Biblioteca**.
+El Snap no incluye ese contenido ni datos del jugador. La actualización
+conserva las descargas, ajustes y partidas en `$SNAP_USER_COMMON/openrailsrs`.
+
+Snap Store ofrece stable, candidate, beta y edge, sin un riesgo llamado alpha.
+Una versión devel no puede publicarse en stable o candidate. Ver
 [canales de Snapcraft](https://ubuntu.com/docs/snapcraft/9/reference/channels/).
 
-El paquete de QA anterior, `0.1.0`, precede los cambios de Hanabi y no debe
-usarse como la nueva alpha. Hay que reconstruir desde las fuentes actuales y
-comprobar en confinamiento estricto el menú, una partida, descargas originales,
-audio, GPU y persistencia. La inspección de archivos no reemplaza esa prueba.
+El paquete publicado mide **120.311.808 bytes**. Se descargó nuevamente desde
+edge y su SHA-256 coincide con el archivo probado:
+`1135d595164cbe13298bb511dacff1ffbb5f6f159e2f40a7a225efc908125bd0`.
+Se construyó con Snapcraft 9.1.4 y Rust 1.99.0 en Ubuntu 24.04/core24; sus
+binarios requieren glibc 2.39, provista por la base.
+
+La instalación real en una instancia LXD con confinamiento estricto comprobó
+la CLI y sus quince entradas de catálogo, HTTPS con validación de certificados,
+el menú y escenas de lluvia y nieve. Se usaron X11 virtual, Vulkan por software
+y partículas CPU. Los datos comunes sobrevivieron a las actualizaciones locales.
+Las ocho pruebas de empaquetado y la auditoría de archivos propios pasaron.
+Esta prueba no certifica GPU física, audio, Wayland ni un recorrido original
+completo dentro de Snap; HTTPS verifica conectividad, no la instalación completa
+de una ruta. [Capturas, hashes y alcance de QA](fixtures/compatibility/snap-edge-2026-10-09/README.md).
+
+El paquete de QA anterior, `0.1.0`, precede los cambios de Hanabi y no corresponde
+a esta publicación.
 
 Para inspeccionar una distribución extraída, sin subirla ni imprimir valores
 sensibles:
@@ -95,8 +125,8 @@ secretos. Los baselines, capturas, logs, CSV y replays de desarrollo no se
 distribuyen. Se conservan los escenarios jugables, shaders, licencias y
 créditos públicos; los contactos de una licencia no se censuran.
 
-Después de reconstruir y probar el Snap, el mantenedor inicia sesión en su
-terminal y puede publicarlo:
+Para una nueva revisión, reconstruí y probá el Snap antes de subirlo. Si la
+cuenta todavía no está autenticada, iniciá sesión:
 
 ```bash
 snapcraft login
@@ -109,7 +139,8 @@ cuenta de Ubuntu One; revisalos antes de publicar. Esos datos son ajenos al
 binario. Ver [datos del publicador](https://dashboard.snapcraft.io/docs/reference/v1/snap.html#about-publisher).
 El comando de publicación sigue la
 [guía oficial de revisiones y releases](https://documentation.ubuntu.com/snapcraft/8.9.0/how-to/publishing/manage-revisions-and-releases/).
-Una vez publicado, la instalación será `sudo snap install openrailsrs --edge`.
+
+## Revisión de empaquetado del 7 de octubre de 2026
 
 La inspección del Snap anterior encontró una ruta personal en la descripción
 de `examples/chiltern/scenario.toml` y cuatro registros de ensayos incluidos.
@@ -122,7 +153,8 @@ alpha nueva ni como una prueba del juego actualizado dentro de Snap.
 
 Snapcraft validó la receta con `expand-extensions`; las siete pruebas de
 empaquetado pasaron y `check.sh` completó 1.681 pruebas Rust y 67 Python.
-El Snap no está instalado en el host y no se realizó una publicación en tienda.
+En esa fecha el Snap no estaba instalado en el host y no se había publicado en
+tienda. La prueba y publicación del 9 de octubre se registran arriba.
 
 ## Estado de las pruebas del 5 de octubre de 2026
 
