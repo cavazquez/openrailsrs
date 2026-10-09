@@ -53,7 +53,7 @@ Para un checkout con descargas/builds locales, prepará primero una copia limpia
 python3 scripts/package_snap.py --source-dir tmp/dist/snap-source
 cd tmp/dist/snap-source
 snapcraft pack --use-lxd
-sudo snap install --dangerous openrailsrs_0.1.0-alpha.1_amd64.snap
+sudo snap install --dangerous openrailsrs_0.1.0-alpha.2_amd64.snap
 openrailsrs.cli content --list
 openrailsrs
 ```
@@ -71,6 +71,11 @@ accesible al usuario. La construcción local no publica en Snap Store: la subida
 se hace con un comando separado.
 
 ## Alpha disponible en Snap Store
+
+Actualmente **latest/edge** ofrece **0.1.0-alpha.2**, revisión **2**, publicada
+el 9 de octubre de 2026. Corrige el arranque en Wayland y el aviso falso de
+NVIDIA: resuelve el socket de la sesión, conserva el directorio privado de
+Snap y usa X11 si Wayland no responde y hay una conexión X11 disponible.
 
 El **9 de octubre de 2026** se publicó **0.1.0-alpha.1**, revisión **1**, para
 Linux amd64 en [Snap Store](https://snapcraft.io/openrailsrs), canal **latest/edge**.
@@ -92,7 +97,7 @@ Snap Store ofrece stable, candidate, beta y edge, sin un riesgo llamado alpha.
 Una versión devel no puede publicarse en stable o candidate. Ver
 [canales de Snapcraft](https://ubuntu.com/docs/snapcraft/9/reference/channels/).
 
-El paquete publicado mide **120.311.808 bytes**. Se descargó nuevamente desde
+El paquete de la primera revisión mide **120.311.808 bytes**. Se descargó nuevamente desde
 edge y su SHA-256 coincide con el archivo probado:
 `1135d595164cbe13298bb511dacff1ffbb5f6f159e2f40a7a225efc908125bd0`.
 Se construyó con Snapcraft 9.1.4 y Rust 1.99.0 en Ubuntu 24.04/core24; sus
@@ -109,6 +114,15 @@ de una ruta. [Capturas, hashes y alcance de QA](fixtures/compatibility/snap-edge
 
 El paquete de QA anterior, `0.1.0`, precede los cambios de Hanabi y no corresponde
 a esta publicación.
+
+La revisión 2 también mide **120.311.808 bytes**; su SHA-256 es
+`ad8ef7086b46b85afbf0cb16537f7ac051fd54b348b08f0155b875af0a7ab8ad`.
+El paquete completo se instaló en confinamiento estricto y abrió el menú con
+Wayland, con el respaldo X11 y con X11 explícito. El binario y lanzador extraídos
+también abrieron con Wayland y RX 7600 dentro de la instalación estricta anterior
+del equipo, sin sustituirla. Pasaron 13 pruebas de empaquetado, nueve pruebas
+Rust del binario, formato y Clippy. [Capturas y alcance de esta corrección](fixtures/compatibility/snap-wayland-2026-10-09/README.md).
+Para elegir el backend explícitamente, consultá [VIEWER3D.md](VIEWER3D.md#snap-waylanderrorconnectionnocompositor-antes-del-menú).
 
 Para inspeccionar una distribución extraída, sin subirla ni imprimir valores
 sensibles:
@@ -130,7 +144,7 @@ cuenta todavía no está autenticada, iniciá sesión:
 
 ```bash
 snapcraft login
-snapcraft upload openrailsrs_0.1.0-alpha.1_amd64.snap --release latest/edge
+snapcraft upload openrailsrs_0.1.0-alpha.2_amd64.snap --release latest/edge
 ```
 
 No se guardan credenciales de Snapcraft dentro del repositorio ni del paquete.

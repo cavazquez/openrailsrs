@@ -274,6 +274,38 @@ Setup Wine/OR: [`CHILTERN.md`](CHILTERN.md). Física vs OR: [`OR_PARITY.md`](OR_
 
 ## Troubleshooting ventana / GPU
 
+### Snap: `WaylandError(Connection(NoCompositor))` antes del menú
+
+La revisión 1 de la alpha buscaba el socket de Wayland en el directorio privado
+de Snap. El compositor lo mantiene en la carpeta de la sesión. Las interfaces
+podían estar conectadas y aun así el visor fallaba antes de crear la ventana.
+La corrección resuelve la conexión real sin reemplazar `XDG_RUNTIME_DIR`.
+Si Wayland no responde y hay `DISPLAY`, el lanzador elige X11 antes de iniciar
+winit. Una conexión de Wayland válida conserva ese backend.
+
+Para actualizar y abrir:
+
+```bash
+sudo snap refresh openrailsrs --edge
+snap run openrailsrs
+```
+
+En el Snap también podés solicitar un backend de ventana explícito:
+
+```bash
+OPENRAILSRS_WINDOW_BACKEND=x11 snap run openrailsrs
+OPENRAILSRS_WINDOW_BACKEND=wayland snap run openrailsrs
+```
+
+El valor predeterminado es `auto`. Elegir X11 mantiene la selección de GPU/CPU
+del renderizador. Si el backend solicitado no está disponible, el lanzador
+explica el problema antes de iniciar Bevy. `snap connections openrailsrs`
+permite revisar las interfaces `wayland` y `x11`.
+
+El uso de directorios distintos está descrito en la
+[documentación de Snap sobre Wayland](https://forum.snapcraft.io/t/wayland-interface-xdg-runtime-dir-and-connecting-clients-to-server/11345).
+El lanzador también admite una ruta absoluta o un descriptor Wayland heredado.
+
 ### Wayland + GPU híbrida (AMD iGPU + NVIDIA)
 
 Síntoma típico tras cargar el mundo:
@@ -293,4 +325,6 @@ Mitigaciones (en orden):
 3. Forzar Mutter/primary GPU AMD si el escritorio usa NVIDIA.
 4. Present mode: `OPENRAILSRS_PRESENT_MODE=fifo` (default es `auto_vsync`). El workspace ya habilita features Bevy `wayland` + `x11`.
 
-El viewer imprime un aviso al arrancar si detecta varios `/dev/dri/renderD*` y `nvidia-smi` roto.
+El visor imprime ese aviso sólo si detecta varios `/dev/dri/renderD*` y
+`nvidia-smi` devuelve el error concreto `Driver/library version mismatch`.
+Dos GPU AMD o la ausencia de `nvidia-smi` dentro de Snap no indican ese fallo.

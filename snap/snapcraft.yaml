@@ -1,6 +1,6 @@
 name: openrailsrs
 base: core24
-version: '0.1.0-alpha.1'
+version: '0.1.0-alpha.2'
 title: openrailsrs
 summary: Simulador ferroviario libre en desarrollo
 description: |
@@ -43,6 +43,7 @@ parts:
       cp -a "$openrailsrs_bundle_dir/." "$CRAFT_PART_INSTALL/"
       rm -rf "$openrailsrs_bundle_dir"
       cp snap/local/desktop-launch "$CRAFT_PART_INSTALL/bin/desktop-launch"
+      cp snap/local/display-launch.py "$CRAFT_PART_INSTALL/bin/display-launch.py"
       chmod +x "$CRAFT_PART_INSTALL/bin/desktop-launch"
       mkdir -p "$CRAFT_PART_INSTALL/share/applications"
       cp "$CRAFT_PART_INSTALL/openrailsrs.desktop" "$CRAFT_PART_INSTALL/share/applications/openrailsrs.desktop"

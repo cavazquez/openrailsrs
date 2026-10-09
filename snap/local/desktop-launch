@@ -18,4 +18,4 @@ export LD_LIBRARY_PATH="$SNAP/usr/lib/x86_64-linux-gnu:$SNAP/lib/x86_64-linux-gn
 # Vulkan discovers the packaged Mesa ICDs through XDG; keep host/NVIDIA search paths.
 export XDG_DATA_DIRS="$SNAP/usr/share:$SNAP/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
 export XKB_CONFIG_ROOT="$SNAP/usr/share/X11/xkb"
-exec "$@"
+exec "$OPENRAILSRS_PYTHON" "$SNAP/bin/display-launch.py" "$@"

@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ADDITIONS = (
     "crates/openrailsrs-bevy-scenery/src/texture_cache.rs",
     "packaging/resources.json", "scripts/package_linux.py", "scripts/package_snap.py",
-    "snap/snapcraft.yaml", "snap/local/desktop-launch",
+    "snap/snapcraft.yaml", "snap/local/desktop-launch", "snap/local/display-launch.py",
 )
 
 

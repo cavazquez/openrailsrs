@@ -1,0 +1,162 @@
+{
+  "verified_date": "2026-10-09",
+  "issue": "https://github.com/cavazquez/openrailsrs/issues/205",
+  "version": "0.1.0-alpha.2",
+  "architecture": "amd64",
+  "base": "core24",
+  "confinement": "strict",
+  "publication": {
+    "channel": "latest/edge",
+    "status": "released",
+    "revision": 2,
+    "download_verified": true,
+    "download_sha256": "ad8ef7086b46b85afbf0cb16537f7ac051fd54b348b08f0155b875af0a7ab8ad",
+    "store_url": "https://snapcraft.io/openrailsrs"
+  },
+  "artifact": {
+    "sha256": "ad8ef7086b46b85afbf0cb16537f7ac051fd54b348b08f0155b875af0a7ab8ad",
+    "bytes": 120311808
+  },
+  "source": {
+    "base_commit": "700d0523cbe52b420b1351789d87cd78c3022b7a",
+    "changed_source_sha256": {
+      "snap/snapcraft.yaml": "6e0467ecc5bd4a1591258823c00957376b063de85d0a2d5b86fd2e56f97c30c2",
+      "snap/local/desktop-launch": "7c644c437074237cc8e058c44490d65fb4240c69c9b5dac4d2cd0428ff619adc",
+      "snap/local/display-launch.py": "df8bf85d7cb26f3e68806a8c23884ad3532c70139ab34e260df2ec73b51717d8",
+      "crates/openrailsrs-viewer3d/src/main.rs": "b38b75075f539f35940ace58fb9dba45e6472fd14989f9f7745be85dc0923bf8",
+      "scripts/package_snap.py": "31acf3ca3e4299e7525e10db5da8414e674cc029081d3d880ae0fb5addaf2a20",
+      "scripts/test_packaging.py": "d7602d0d66259348e787fb5475cbc14a6a6aa05b2978518c12756f91f9be6d24"
+    },
+    "snapshot_matches": true
+  },
+  "build": {
+    "snapcraft": "9.1.4",
+    "rust": "1.99.0",
+    "distribution": "Ubuntu 24.04",
+    "metadata": {
+      "source_commit": null,
+      "source_dirty": null,
+      "architecture": "x86_64",
+      "build_libc": [
+        "glibc",
+        "2.39"
+      ],
+      "required_glibc": "2.39",
+      "downloaded_content_included": false,
+      "binary_sha256": {
+        "openrailsrs": "fa50432b421da3ce5fe44eaf316ae5b5d891c1d07baa8291ec7ae9b557904eb3",
+        "openrailsrs-viewer3d": "1ef2d91456e655b3d6812261903ac43f8b0747841cbcb55405d0480757633d4b",
+        "openrailsrs-prepare-content": "acb4f8806f93e5362686c722545ea35aecc59695c749e217fca5bd7a9c4e1fea"
+      }
+    }
+  },
+  "checks": {
+    "packaging_python_passed": 13,
+    "viewer_binary_rust_passed": 9,
+    "viewer_binary_rust_ignored": 1,
+    "fmt": "passed",
+    "clippy": "passed",
+    "shell_syntax": "passed",
+    "privacy_audit": "passed",
+    "privacy_audit_scope": "Known patterns in own binaries/resources, not a universal secret detector."
+  },
+  "strict_installation": {
+    "environment": "Isolated Ubuntu 24.04 LXD instance",
+    "local_revision": "x4",
+    "snapd": "2.76.3",
+    "devmode": false,
+    "snap_debug_confinement": "strict"
+  },
+  "scenes": {
+    "wayland": {
+      "resolution": [
+        960,
+        640
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "Cpu",
+        "hardware": false,
+        "name": "llvmpipe (LLVM 20.1.2, 256 bits)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "menu_visible": true,
+      "display_condition": "Relative Wayland name with DISPLAY unset; socket in runtime parent."
+    },
+    "x11-fallback": {
+      "resolution": [
+        960,
+        640
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "Cpu",
+        "hardware": false,
+        "name": "llvmpipe (LLVM 20.1.2, 256 bits)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "menu_visible": true,
+      "display_condition": "Unreachable Wayland socket with Xvfb DISPLAY available."
+    },
+    "x11-explicit": {
+      "resolution": [
+        960,
+        640
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "Cpu",
+        "hardware": false,
+        "name": "llvmpipe (LLVM 20.1.2, 256 bits)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "menu_visible": true,
+      "display_condition": "Available Wayland socket, explicit x11 selection with Xvfb."
+    }
+  },
+  "captures": {
+    "wayland.png": {
+      "sha256": "423ddcaaff714a404bbc2071df5dd53d9806efcf54403a2b5d885a5eec403666"
+    },
+    "x11-fallback.png": {
+      "sha256": "a8ac7f2952b57fd2ce12e8d266062e65c5f8d8645172d50dc522bfe8564d10b2"
+    },
+    "x11-explicit.png": {
+      "sha256": "a8ac7f2952b57fd2ce12e8d266062e65c5f8d8645172d50dc522bfe8564d10b2"
+    },
+    "native-gpu.png": {
+      "sha256": "f21f3d476b34898842b1fd588734dfa8d26910ab2bf0232968aeb8ef7ba4a00d"
+    }
+  },
+  "limits": [
+    "Startup/menu checks; no full original route journey.",
+    "Audio disabled in these graphical checks.",
+    "Full alpha.2 installation tested with software Vulkan in LXD; hardware test scope specified separately."
+  ],
+  "hardware_payload_check": {
+    "scope": "Exact alpha.2 viewer binary and display launcher extracted from the package, executed inside installed strict revision 1 with its unchanged base/resources/libraries. Host installation not replaced.",
+    "display": "Native desktop Wayland, relative name resolved by new launcher",
+    "renderer": {
+      "backend": "Vulkan",
+      "device_type": "DiscreteGpu",
+      "hardware": true,
+      "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+    },
+    "shader_pipelines": {
+      "failed": 0,
+      "pending": 0
+    },
+    "nvidia_warning_emitted": false,
+    "viewer_sha256": "1ef2d91456e655b3d6812261903ac43f8b0747841cbcb55405d0480757633d4b",
+    "launcher_sha256": "df8bf85d7cb26f3e68806a8c23884ad3532c70139ab34e260df2ec73b51717d8"
+  }
+}

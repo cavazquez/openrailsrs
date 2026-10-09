@@ -190,16 +190,14 @@ fn warn_hybrid_gpu_display_if_needed() {
     if render_nodes < 2 {
         return;
     }
-    let nvidia_smi = std::process::Command::new("nvidia-smi")
-        .arg("-L")
-        .output()
-        .ok();
-    let nvidia_broken = nvidia_smi.as_ref().is_none_or(|o| {
-        !o.status.success()
-            || String::from_utf8_lossy(&o.stderr).contains("Driver/library version mismatch")
-            || String::from_utf8_lossy(&o.stdout).contains("Driver/library version mismatch")
-    });
-    if !nvidia_broken {
+    let Ok(nvidia_smi) = std::process::Command::new("nvidia-smi").arg("-L").output() else {
+        // Multiple render nodes also occur on AMD-only systems. Snap may not
+        // expose nvidia-smi; absence is not evidence of a broken NVIDIA driver.
+        return;
+    };
+    if nvidia_smi.status.success()
+        || !reports_nvidia_driver_library_mismatch(&nvidia_smi.stdout, &nvidia_smi.stderr)
+    {
         return;
     }
     eprintln!(
@@ -209,6 +207,12 @@ fn warn_hybrid_gpu_display_if_needed() {
          Fix: reboot to reload the NVIDIA kernel module, then retry. Alternatives: log into \
          an Xorg session, or make Mutter use the AMD iGPU as primary (see docs/VIEWER3D.md)."
     );
+}
+
+fn reports_nvidia_driver_library_mismatch(stdout: &[u8], stderr: &[u8]) -> bool {
+    [stdout, stderr]
+        .into_iter()
+        .any(|output| String::from_utf8_lossy(output).contains("Driver/library version mismatch"))
 }
 
 /// `OPENRAILSRS_PRESENT_MODE`: `auto_vsync` (default), `auto_no_vsync`, `fifo`, `mailbox`, `immediate`.
@@ -1783,6 +1787,23 @@ fn exit_on_esc(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn nvidia_warning_requires_the_actual_driver_library_mismatch() {
+        assert!(!reports_nvidia_driver_library_mismatch(b"", b""));
+        assert!(!reports_nvidia_driver_library_mismatch(
+            b"GPU 0: NVIDIA",
+            b"Permission denied"
+        ));
+        assert!(reports_nvidia_driver_library_mismatch(
+            b"",
+            b"Failed to initialize NVML: Driver/library version mismatch\n"
+        ));
+        assert!(reports_nvidia_driver_library_mismatch(
+            b"Driver/library version mismatch",
+            b""
+        ));
+    }
 
     #[test]
     fn cpu_prefetch_preserves_the_initial_camera_and_graph_frame() {

@@ -2,6 +2,9 @@
 import json
 import os
 from pathlib import Path
+import runpy
+import shutil
+import socket
 import tempfile
 import subprocess
 import unittest
@@ -9,13 +12,17 @@ from unittest.mock import patch
 import package_linux
 import package_snap
 
+DISPLAY_LAUNCHER = Path(__file__).resolve().parents[1] / 'snap/local/display-launch.py'
+display_environment = runpy.run_path(str(DISPLAY_LAUNCHER))['display_environment']
+
 
 class PackagingTests(unittest.TestCase):
     def test_snap_launcher_uses_base_python_and_trusted_certificates(self):
         with tempfile.TemporaryDirectory() as directory:
             # Reproduce Snapcraft's removal of Python/CA files already in core24.
             root = Path(directory) / "Snap con espacios"
-            root.mkdir()
+            (root/'bin').mkdir(parents=True)
+            shutil.copyfile(DISPLAY_LAUNCHER, root/'bin/display-launch.py')
             launcher = Path(__file__).resolve().parents[1] / 'snap/local/desktop-launch'
             environment = dict(os.environ, SNAP=str(root),
                                PYTHONHOME=str(root/'missing-python'),
@@ -30,6 +37,80 @@ class PackagingTests(unittest.TestCase):
             result = subprocess.run(['/bin/sh', str(launcher), '/usr/bin/python3', '-c', probe],
                                     env=environment, text=True, capture_output=True)
             self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_snap_wayland_resolves_compositor_outside_private_runtime(self):
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = Path(directory)/'snap.openrailsrs'
+            runtime.mkdir()
+            path = Path(directory)/'wayland-7'
+            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as server:
+                server.bind(str(path))
+                server.listen(4)
+                environment = {'SNAP_NAME':'openrailsrs', 'XDG_RUNTIME_DIR':str(runtime),
+                               'WAYLAND_DISPLAY':'wayland-7', 'DISPLAY':':0'}
+                selected, message = display_environment(environment)
+                self.assertEqual(selected['WAYLAND_DISPLAY'], str(path))
+                self.assertEqual(selected['XDG_RUNTIME_DIR'], str(runtime))
+                self.assertIsNone(message)
+
+    def test_snap_wayland_preserves_absolute_and_inherited_connections(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)/'compositor'
+            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as server:
+                server.bind(str(path))
+                server.listen(4)
+                selected, _ = display_environment({'WAYLAND_DISPLAY':str(path)})
+                self.assertEqual(selected['WAYLAND_DISPLAY'], str(path))
+        left, right = socket.socketpair()
+        with left, right:
+            selected, _ = display_environment({'WAYLAND_SOCKET':str(left.fileno())})
+            self.assertEqual(selected['WAYLAND_SOCKET'], str(left.fileno()))
+
+    def test_snap_stale_wayland_falls_back_to_x11_before_winit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)/'wayland-0'
+            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as stale:
+                stale.bind(str(path))  # socket exists, but no compositor listens.
+                selected, message = display_environment({'WAYLAND_DISPLAY':str(path),
+                    'WAYLAND_SOCKET':'invalid', 'DISPLAY':':1'})
+            self.assertNotIn('WAYLAND_DISPLAY', selected)
+            self.assertNotIn('WAYLAND_SOCKET', selected)
+            self.assertEqual(selected['DISPLAY'], ':1')
+            self.assertIn('X11', message)
+            with self.assertRaisesRegex(ValueError, 'conectar'):
+                display_environment({'WAYLAND_DISPLAY':str(path),
+                                     'OPENRAILSRS_WINDOW_BACKEND':'wayland', 'DISPLAY':':1'})
+
+    def test_snap_x11_override_removes_wayland_and_requires_display(self):
+        selected, _ = display_environment({'OPENRAILSRS_WINDOW_BACKEND':'x11',
+            'DISPLAY':':2', 'WAYLAND_DISPLAY':'wayland-0', 'WAYLAND_SOCKET':'3'})
+        self.assertNotIn('WAYLAND_DISPLAY', selected)
+        self.assertNotIn('WAYLAND_SOCKET', selected)
+        with self.assertRaisesRegex(ValueError, 'DISPLAY'):
+            display_environment({'OPENRAILSRS_WINDOW_BACKEND':'x11'})
+        with self.assertRaisesRegex(ValueError, 'auto, wayland o x11'):
+            display_environment({'OPENRAILSRS_WINDOW_BACKEND':'invalid'})
+
+    def test_snap_display_launcher_preserves_arguments_and_exit_status(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)/'Snap con espacios'
+            (root/'bin').mkdir(parents=True)
+            shutil.copyfile(DISPLAY_LAUNCHER, root/'bin/display-launch.py')
+            viewer = root/'bin/openrailsrs-viewer3d'
+            viewer.write_text('#!/usr/bin/python3\nimport json,os,sys\n'
+                'print(json.dumps([sys.argv[1:], os.environ.get("WAYLAND_DISPLAY"), '
+                'os.environ.get("DISPLAY")]))\nsys.exit(7)\n')
+            viewer.chmod(0o755)
+            launcher = DISPLAY_LAUNCHER.parent/'desktop-launch'
+            environment = dict(os.environ, SNAP=str(root), DISPLAY=':1',
+                WAYLAND_DISPLAY=str(root/'missing-wayland'), WAYLAND_SOCKET='',
+                OPENRAILSRS_WINDOW_BACKEND='auto')
+            result = subprocess.run(['/bin/sh',str(launcher),str(viewer),
+                '--scenario','ruta con espacios.toml'],env=environment,
+                text=True,capture_output=True)
+            self.assertEqual(result.returncode, 7, result.stderr)
+            self.assertEqual(json.loads(result.stdout),
+                             [['--scenario','ruta con espacios.toml'],None,':1'])
 
     def test_portable_bundle_is_independent_and_excludes_content_and_outcomes(self):
         with tempfile.TemporaryDirectory() as directory:
