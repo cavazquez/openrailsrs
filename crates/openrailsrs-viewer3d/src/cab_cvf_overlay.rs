@@ -406,7 +406,9 @@ pub(crate) fn sync_cab_cvf_overlay(
 
     let night = CabTextureLighting {
         dark: cab_night_textures_enabled(),
-        light: live.as_ref().is_some_and(|live| live.session.cab_light),
+        light: live
+            .as_ref()
+            .is_some_and(|live| live.session.effective_cab_light()),
     };
     if (night.dark, night.light) != (overlay_state.night_textures, overlay_state.cab_light) {
         overlay_state.night_textures = night.dark;

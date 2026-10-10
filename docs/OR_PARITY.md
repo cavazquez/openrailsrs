@@ -394,3 +394,7 @@ sintéticos de `examples/traction_operation`, con el mismo núcleo que el visor.
 python3 scripts/capture_traction_operation_reference.py --out-dir tmp/traction-reference-nueva
 cargo test --locked -p openrailsrs-sim --test traction_operation -- --nocapture
 ```
+
+## Frenos de vacío, EP antiguo y alimentación
+
+Los nuevos ensayos de las formaciones usadas añaden 1007 puntos/estados de las DLL originales 1.6.1: 320 de vacío, 384 EP y 303 de alimentación. Las tolerancias de presión son 0,0005/0,001 PSI, la fuerza admite 5 N y los estados de potencia exigen igualdad exacta. Dos capturas independientes fueron idénticas. No alteran las referencias o tolerancias del servicio Pullman ni de la Class 47. [Entradas, procedimiento y límites](NATIVE_BRAKES_POWER.md).

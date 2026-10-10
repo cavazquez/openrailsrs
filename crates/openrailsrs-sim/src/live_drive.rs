@@ -429,6 +429,7 @@ impl LiveDriveSession {
         };
         let partial_throttle_run_up_time_s = max_partial_throttle_run_up_time_s(&diesel_engines);
         let physics = TrainPhysics {
+            power_supply: crate::power_supply::PowerTrainConfig::from_consist(&consist),
             rail_adhesion: Some(crate::adhesion::RailAdhesionConfig::load(
                 &consist_path,
                 consist_root(&consist_path),
@@ -1022,6 +1023,38 @@ impl LiveDriveSession {
     }
 
     /// Snapshot for the live cab panel (Fase C3).
+    pub fn effective_headlights(&self) -> u8 {
+        if self.state.power_supply.cars.first().map_or_else(
+            || self.formation.cars.first().is_none_or(|c| c.battery_on),
+            |c| c.supply.low_voltage,
+        ) {
+            self.headlights
+        } else {
+            0
+        }
+    }
+
+    pub fn effective_cab_light(&self) -> bool {
+        self.cab_light
+            && self.state.power_supply.cars.first().map_or_else(
+                || {
+                    self.formation
+                        .cars
+                        .first()
+                        .is_none_or(|c| c.battery_on && c.power_on)
+                },
+                |c| c.supply.cab,
+            )
+    }
+
+    pub fn effective_wiper_active(&self) -> bool {
+        self.wiper_active
+            && self.state.power_supply.cars.first().map_or_else(
+                || self.formation.cars.first().is_none_or(|c| c.battery_on),
+                |c| c.supply.low_voltage,
+            )
+    }
+
     pub fn cab_telemetry(&self) -> CabTelemetry {
         let speed_kmh = self.state.velocity_mps * 3.6;
         let limit_kmh = self.effective_speed_limit_mps() * 3.6;
@@ -1047,16 +1080,20 @@ impl LiveDriveSession {
             .cylinders
             .first()
             .is_some_and(|b| b.air_vented);
-        let brake_pipe_bar = if head_vented {
-            0.0
-        } else {
-            self.state
-                .brake_system
-                .cylinders
-                .first()
-                .and_then(|c| c.pipe_pressure_bar())
-                .unwrap_or_else(|| (5.0 - self.driver_brake * 3.5).max(0.0))
-        };
+        let brake_pipe_bar = self
+            .state
+            .brake_system
+            .cylinders
+            .first()
+            .and_then(|c| c.pipe_pressure_bar())
+            .unwrap_or_else(|| {
+                if head_vented {
+                    0.
+                } else {
+                    (5.0 - self.driver_brake * 3.5).max(0.0)
+                }
+            });
+        let supply = self.state.power_supply.cars.first().map(|c| &c.supply);
         let cylinders = &self.state.brake_system.cylinders;
         // The driving cab reads the lead vehicle's cylinder, not the average of
         // trailer/motor pressures with different native full-pressure ratings.
@@ -1095,21 +1132,21 @@ impl LiveDriveSession {
                     crate::electric::BreakerState::Closed => 2,
                 }
             }),
-            main_power: self
-                .state
-                .electric
-                .cars
-                .first()
-                .is_some_and(|c| c.main_power),
+            main_power: supply.is_some_and(|s| s.main),
+            auxiliary_power: supply.is_some_and(|s| s.auxiliary),
+            low_voltage_power: supply.is_some_and(|s| s.low_voltage),
+            cab_power: supply.is_some_and(|s| s.cab),
+            train_supply: supply.is_some_and(|s| s.train_supply),
+            vacuum_brake: cylinders.first().is_some_and(|c| c.is_vacuum()),
             speed_kmh,
             limit_kmh,
             throttle_pct: self.driver_throttle * 100.0,
             brake_pct: self.driver_brake * 100.0,
             direction: self.driver_direction.clamp(0.0, 1.0),
             horn_active: self.time_s() < self.horn_pressed_until_s,
-            wiper_active: self.wiper_active,
-            headlights: self.headlights,
-            cab_light: self.cab_light,
+            wiper_active: self.effective_wiper_active(),
+            headlights: self.effective_headlights(),
+            cab_light: self.effective_cab_light(),
             main_res_bar,
             brake_pipe_bar,
             brake_cyl_bar,
@@ -1143,6 +1180,11 @@ pub struct CabTelemetry {
     pub line_voltage_v: f64,
     pub circuit_breaker_state: u8,
     pub main_power: bool,
+    pub auxiliary_power: bool,
+    pub low_voltage_power: bool,
+    pub cab_power: bool,
+    pub train_supply: bool,
+    pub vacuum_brake: bool,
     pub speed_kmh: f64,
     pub limit_kmh: f64,
     pub throttle_pct: f64,

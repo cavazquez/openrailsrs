@@ -22,6 +22,8 @@ pub struct CarOperationState {
     pub powered: bool,
     pub power_on: bool,
     pub battery_on: bool,
+    #[serde(default)]
+    pub train_supply_switch_on: bool,
     pub mu_connected: bool,
     pub handbrake: bool,
     /// Hose to the preceding car (index zero has no preceding car).
@@ -58,6 +60,7 @@ impl FormationState {
                     powered,
                     power_on: powered,
                     battery_on: powered,
+                    train_supply_switch_on: false,
                     mu_connected: powered,
                     handbrake: false,
                     hose_connected: true,
@@ -106,6 +109,7 @@ pub enum CarOperation {
     RearCock,
     Power,
     Battery,
+    TrainSupply,
     MultipleUnit,
 }
 
@@ -280,6 +284,13 @@ impl LiveDriveSession {
             .valid_for(&self.original_physics.electric)
         {
             return Err("La alimentación eléctrica guardada no corresponde a la formación".into());
+        }
+        if !saved
+            .state
+            .power_supply
+            .valid_for(&self.original_physics.power_supply, saved.state.time.0)
+        {
+            return Err("La alimentación guardada no corresponde a la formación".into());
         }
         if let Some(rail) = &saved.state.rail_adhesion
             && self
@@ -536,13 +547,29 @@ impl LiveDriveSession {
             }
             CarOperation::FrontCock => car.front_cock_open = !car.front_cock_open,
             CarOperation::RearCock => car.rear_cock_open = !car.rear_cock_open,
-            CarOperation::Power | CarOperation::Battery | CarOperation::MultipleUnit => {
+            CarOperation::Power
+            | CarOperation::Battery
+            | CarOperation::MultipleUnit
+            | CarOperation::TrainSupply => {
                 if !car.powered {
                     return Err("Este coche no tiene tracción".into());
                 }
                 match action {
                     CarOperation::Power => car.power_on = !car.power_on,
                     CarOperation::Battery => car.battery_on = !car.battery_on,
+                    CarOperation::TrainSupply => {
+                        if !self.original_physics.power_supply.cars.iter().any(|c| {
+                            c.vehicle == index
+                                && c.params.train_supply_fitted
+                                && c.params.manual_train_supply
+                        }) {
+                            return Err(
+                                "Este coche no tiene un interruptor de alimentación de pasajeros"
+                                    .into(),
+                            );
+                        }
+                        car.train_supply_switch_on = !car.train_supply_switch_on;
+                    }
                     CarOperation::MultipleUnit => car.mu_connected = !car.mu_connected,
                     _ => unreachable!(),
                 }
@@ -631,7 +658,9 @@ impl LiveDriveSession {
             .enumerate()
         {
             if let Vehicle::Loco(l) = v
-                && !(op.power_on && op.battery_on && (index == 0 || op.mu_connected))
+                && !(op.power_on
+                    && (l.steam.is_some() || op.battery_on)
+                    && (index == 0 || op.mu_connected))
             {
                 l.max_power_w = 0.0;
                 l.max_tractive_effort_n = 0.0;
@@ -641,14 +670,22 @@ impl LiveDriveSession {
             }
         }
         let mut p = self.original_physics.clone();
+        for car in &mut p.power_supply.cars {
+            if let Some(op) = self.formation.cars.get(car.vehicle) {
+                car.enabled =
+                    car.vehicle < n && op.power_on && (car.vehicle == 0 || op.mu_connected);
+                car.battery_on = op.battery_on;
+                car.master_key_on = op.power_on;
+                car.train_supply_switch_on = op.train_supply_switch_on;
+            }
+        }
         if let Some(rail) = &mut p.rail_adhesion {
             for (i, v) in rail.vehicles.iter_mut().enumerate() {
-                v.enabled =
-                    v.powered
-                        && i < n
-                        && self.formation.cars.get(i).is_some_and(|c| {
-                            c.power_on && c.battery_on && (i == 0 || c.mu_connected)
-                        });
+                v.enabled = v.powered
+                    && i < n
+                    && self.formation.cars.get(i).is_some_and(|c| {
+                        c.power_on && (v.steam || c.battery_on) && (i == 0 || c.mu_connected)
+                    });
             }
         }
         for car in &mut p.diesel.cars {

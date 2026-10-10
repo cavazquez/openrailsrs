@@ -378,6 +378,15 @@ pub fn control_value(control: &ControlType, tel: &CabTelemetry) -> f64 {
         ControlType::Generic(name) if name.eq_ignore_ascii_case("POWER_ON") => {
             f64::from(u8::from(tel.main_power))
         }
+        ControlType::Generic(name) if name.eq_ignore_ascii_case("AUXILIARY_POWER_ON") => {
+            f64::from(u8::from(tel.auxiliary_power))
+        }
+        ControlType::Generic(name) if name.eq_ignore_ascii_case("BATTERY_SWITCH") => {
+            f64::from(u8::from(tel.low_voltage_power))
+        }
+        ControlType::Generic(name) if name.eq_ignore_ascii_case("ELECTRIC_TRAIN_SUPPLY") => {
+            f64::from(u8::from(tel.train_supply))
+        }
         _ => 0.0,
     }
 }
@@ -405,6 +414,10 @@ pub fn dial_control_value(
             };
             if units.eq_ignore_ascii_case("PSI") {
                 bar * 14.503_773_8
+            } else if units.eq_ignore_ascii_case("INCHES_OF_MERCURY") {
+                bar / 0.033_863_89
+            } else if units.eq_ignore_ascii_case("KPA") {
+                bar * 100.
             } else {
                 bar
             }
@@ -1102,6 +1115,11 @@ mod tests {
             line_voltage_v: 0.,
             circuit_breaker_state: 0,
             main_power: false,
+            auxiliary_power: false,
+            low_voltage_power: false,
+            cab_power: false,
+            train_supply: false,
+            vacuum_brake: false,
             speed_kmh: 50.0,
             limit_kmh: 80.0,
             throttle_pct: 75.0,

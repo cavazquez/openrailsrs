@@ -92,7 +92,7 @@ fn sync_windshield(
         wipe.last_wipe_s = None;
     }
     wipe.last_clock_s = clock;
-    if live.session.wiper_active {
+    if live.session.effective_wiper_active() {
         wipe.last_wipe_s = Some(clock);
     }
     let visible = (*follow == CameraFollowMode::DriverCam || follow.is_cab2d())
@@ -200,7 +200,7 @@ fn sync_windshield(
                 }),
             near_clip: near,
             last_wipe_s: wipe.last_wipe_s.map_or(-1.0, |s| s as f32),
-            wiper_on: f32::from(live.session.wiper_active),
+            wiper_on: f32::from(live.session.effective_wiper_active()),
             _pad: Vec3::new(
                 live.session.velocity_mps().abs() as f32,
                 atmosphere

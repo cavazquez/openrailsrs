@@ -1,0 +1,186 @@
+Engine ( "1960Driving"
+  Mass ( 29t-uk )
+  Size ( 2.620m 2.600m 15.800m )
+  MaxForce ( 42kN )
+  MaxVelocity ( 45mph )
+  MaxBrakeForce ( 100kN )
+  BrakeSystemType ( "EP" )
+  BrakeEquipmentType ( "Triple_Valve, Distributor, auxilary_reservoir, Handbrake" )
+  MaxApplicationRate ( 25.0 )
+  MaxReleaseRate ( 10.0 )
+  BrakeCylinderPressureForMaxBrakeBrakeForce ( 70psi )
+  ORTSBearingType ( Roller )
+  ORTSDavis_A ( 371 )
+  ORTSDavis_B ( 10.3 )
+  ORTSDavis_C ( 2.56 )
+  ORTSDavisDragConstant ( 0.0028 )
+  ORTSDriveWheelWeight ( 29t-uk )
+  WheelRadius ( 15.5in )
+  NumWheels ( 4 )
+  ORTSMaxTractiveForceCurves ( 0 (	
+0.00	0
+22.13	0
+  )	
+0.25 (	
+0.00	18848
+0.38	28105
+0.76	8356
+1.53	2484
+3.06	739
+5.10	302
+7.22	164
+10.06	92
+11.80	0
+14.08	0
+16.09	0
+18.10	0
+20.12	0
+22.13	0
+  )	
+0.5 (	
+0.00	18848
+0.57	14053
+0.58	34763
+1.15	14053
+1.16	27860
+1.72	14053
+1.73	24408
+2.29	14053
+2.30	22337
+2.87	14053
+2.88	20956
+3.44	14053
+3.45	19970
+4.01	14053
+4.02	19230
+4.59	14053
+4.60	18655
+5.16	14053
+5.17	18195
+5.73	14053
+7.64	8356
+13.41	3124
+13.45	0
+14.08	0
+16.09	0
+18.10	0
+20.12	0
+22.13	0
+  )	
+	
+	
+1.0 (	
+0.00	18848
+0.38	28105
+0.39	41790
+0.76	28105
+0.77	37228
+1.15	28105
+1.16	34947
+1.53	28105
+1.54	33579
+1.91	28105
+1.92	32667
+2.29	28105
+2.30	32015
+2.68	28105
+2.69	31526
+3.06	28105
+3.07	31146
+3.44	28105
+3.45	30842
+3.82	28105
+3.83	30850
+4.25	28105
+4.26	30600
+4.67	28105
+4.68	30392
+5.10	28105
+5.11	30216
+5.52	28105
+5.53	30065
+5.95	28105
+5.96	29935
+6.37	28105
+6.38	29820
+6.79	28105
+6.80	29720
+7.22	28105
+7.23	29630
+10.06	19230
+13.41	10509
+13.45	0
+14.08	0
+16.09	0
+18.10	0
+20.12	0
+22.13	0
+  )	
+1.25 (	
+0.00	18848
+0.38	28105
+0.39	41790
+0.76	28105
+0.77	37228
+1.15	28105
+1.16	34947
+1.53	28105
+1.54	33579
+1.91	28105
+1.92	32667
+2.29	28105
+2.30	32015
+2.68	28105
+2.69	31526
+3.06	28105
+3.07	31146
+3.44	28105
+3.45	30842
+3.82	28105
+3.83	30850
+4.25	28105
+4.26	30600
+4.67	28105
+4.68	30392
+5.10	28105
+5.11	30216
+5.52	28105
+5.53	30065
+5.95	28105
+5.96	29935
+6.37	28105
+6.38	29820
+6.79	28105
+6.80	29720
+7.22	28105
+7.23	29630
+7.87	27283
+7.88	27220
+10.06	27283
+11.80	20219
+11.81	20201
+14.08	16481
+16.09	13185
+18.10	9889
+20.12	6593
+22.13	3296
+  ) )
+  Throttle ( 0 1.25 1 0
+NumNotches ( 5
+Notch (	0.00	0	 Dummy )
+Notch (	0.25	0	 Dummy )
+Notch (	0.50	0	 Dummy )
+Notch (	1.00	0	 Dummy )
+Notch ( 1.25    0        Dummy ) ) )
+  ORTSBrakeShoeFriction ( 0.0 0.50 8.0 0.288 16.1 0.241 24.1 0.211 32.2 0.187 40.2 0.173 48.3 0.161 56.3 0.150 64.4 0.142 72.2 0.139 80.5 0.134 88.5 0.129 96.6 0.125 104.6 0.123 112.7 0.121 )
+  MaxAuxilaryChargingRate ( 20.0 )
+  TripleValveRatio ( 2.5 )
+  BrakePipeVolume ( 0.58ft^3 )
+  ORTSBrakePipeChargingRate ( 150 )
+  TrainBrakesControllerMaxSystemPressure ( 70psi )
+  TrainBrakesControllerMaxReleaseRate ( 4.0psi/s )
+  TrainBrakesControllerMaxApplicationRate ( 3.0psi/s )
+  TrainBrakesControllerFullServicePressureDrop ( 24 )
+  Type ( Electric )
+  TrainBrakesControllerEmergencyApplicationRate ( 48psi/s )
+)

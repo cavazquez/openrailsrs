@@ -3,3 +3,8 @@
 examples/baselines/chiltern_local/** -text whitespace=cr-at-eol
 examples/baselines/class47/** -text whitespace=cr-at-eol
 tools/openrails-reference/FormationCapture.cs -text
+# Parameter exports retain author whitespace; immutable oracle hashes cover it.
+examples/brake_supply_native/** -text
+examples/brake_supply_native/vehicles/* -whitespace
+tools/openrails-reference/BrakePowerReference.cs -text
+oracles/openrails-brake-power*.json -text

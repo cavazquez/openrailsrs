@@ -46,6 +46,7 @@ fn two_edge_graph() -> TrackGraph {
 
 fn default_physics() -> TrainPhysics {
     TrainPhysics {
+        power_supply: Default::default(),
         rail_adhesion: None,
         diesel: Default::default(),
         electric: Default::default(),

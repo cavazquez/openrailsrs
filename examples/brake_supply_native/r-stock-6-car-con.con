@@ -1,0 +1,8 @@
+(Train
+  (Engine "vehicles/46a8411c7a1a.eng")
+  (Wagon "vehicles/0b02c8f061c9.wag")
+  (Wagon "vehicles/0b02c8f061c9.wag")
+  (Wagon "vehicles/0b02c8f061c9.wag")
+  (Wagon "vehicles/0b02c8f061c9.wag")
+  (Engine "vehicles/ef7dc960e903.eng")
+)

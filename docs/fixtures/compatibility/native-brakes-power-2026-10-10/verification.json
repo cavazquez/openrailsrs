@@ -1,0 +1,783 @@
+{
+  "date": "2026-10-10",
+  "reference": {
+    "reference_version": "1.6.1",
+    "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+    "sha256": {
+      "RunActivity.exe": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2",
+      "Orts.Simulation.dll": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679",
+      "Orts.Settings.dll": "fe0d8d81149f480f3972c80e64ffaf6012c7599e32c26c8e4d46510e3edbb2e7",
+      "Orts.Common.dll": "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212",
+      "Orts.Formats.Msts.dll": "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465",
+      "Orts.Parsers.Msts.dll": "8e0781c9f861ed95b4467d1bf948ea7aca896d634f21ac5952f97a9f630d0b36",
+      "MonoGame.Framework.dll": "c6a16c29705a4c847e0e4a2647bf432604cd9320cbc5d4125ab01ae7bb7e6542",
+      "Newtonsoft.Json.dll": "9af2e1c672afd67a291b8f2031a341a3788d4d9f683eaddc6ceab3a3a74c546e"
+    },
+    "helper_sha256": "f09ad78bcb4cdaa538e33b6dbb2ca8ac255083b0fa70903076f6f3cfc0e4f5c6",
+    "profiles_sha256": "dcb117020a99266919e30d4cb11ce78a663af19e0913522fd5e2d487fdeeb67e",
+    "output_sha256": "723251e0418d42acb9d0c965a786afc682bc0d289c28395463406150c04e61e8"
+  },
+  "reference_points": {
+    "vacuum": 320,
+    "legacy_ep": 384,
+    "power": 303
+  },
+  "tolerances": {
+    "vacuum_absolute_psi": 0.0005,
+    "legacy_ep_absolute_psi": 0.001,
+    "shoe_force_n": 5,
+    "power_states": "exact"
+  },
+  "reference_capture_count": 2,
+  "reference_captures_byte_identical": true,
+  "audio": {
+    "profile": "strict installed openrailsrs revision 1; corrected workspace payload and core24 libraries",
+    "device_probe_volume": 0,
+    "published_revision_2_includes_fix": false,
+    "formation": "Bristol Pullman",
+    "views": [
+      {
+        "view": "cab",
+        "status": "pass",
+        "report": {
+          "programs": 16,
+          "streams": 58,
+          "samples": 69,
+          "decoded_mib": 10.446857,
+          "active_voices": 4,
+          "warnings": [],
+          "device": true,
+          "wiper_fallback": true
+        },
+        "mix": {
+          "duration_s": 11.982267573696145,
+          "rms": 0.10140138356319066,
+          "peak_dbfs": -3.9015026587209944,
+          "clipped_percent": 0.0
+        },
+        "wav_sha256": "dde4e5902d8b5c5ffba684fea664ce34dabb48cc57333c7a3414efc8ddeba978"
+      },
+      {
+        "view": "exterior",
+        "status": "pass",
+        "report": {
+          "programs": 16,
+          "streams": 58,
+          "samples": 69,
+          "decoded_mib": 10.446857,
+          "active_voices": 4,
+          "warnings": [],
+          "device": true,
+          "wiper_fallback": true
+        },
+        "mix": {
+          "duration_s": 11.982267573696145,
+          "rms": 0.18046646761899382,
+          "peak_dbfs": -1.0004493301428767,
+          "clipped_percent": 0.0
+        },
+        "wav_sha256": "825f29bbe10697369b2e724fa59f43f6ed5915e08a6e6cd7b25c860d3c59b353"
+      }
+    ]
+  },
+  "renderer": {
+    "downpour": {
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "odometer_m": 150.00457413982133,
+      "formation_validation": {
+        "cars": 8,
+        "maximum_spacing_error_m": 0.017737880143847917,
+        "tolerance_m": 2.0,
+        "scope": "car centres versus path offsets; includes curve chord shortening"
+      },
+      "peak_rss_mib": 2675.6,
+      "performance": {
+        "elapsed_s": 75.79724664100038,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 31,
+        "frame_p99_ms": 73,
+        "frames": 2839,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 28,
+        "gameplay_frames": 910,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 43.781938,
+        "hitches_over_100_ms": 6,
+        "loading_frames": 1939,
+        "longest_frame_ms": 1598.983147,
+        "peak_rss_mib": 2675.61328125,
+        "rss_mib": 2217.02734375,
+        "startup_longest_frame_ms": 1598.983147
+      },
+      "graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 2724.25,
+        "peak_process_vram_mib": 1927.9140625,
+        "process_gtt_mib": 84.20703125,
+        "process_vram_mib": 1927.9140625,
+        "source": "linux_drm_fdinfo"
+      },
+      "dev_diagnostics": {
+        "categories": {
+          "cpu_main": 312,
+          "presentation_or_idle": 527,
+          "shader_pipeline": 2,
+          "streaming": 10
+        },
+        "cpu_main_ms": {
+          "p50": 7.353562,
+          "p95": 25.993174,
+          "p99": 32.923541
+        },
+        "exports": 0,
+        "frame_ms": {
+          "p50": 25.10603,
+          "p95": 37.478564,
+          "p99": 43.313781000000006
+        },
+        "gpu_ms": {
+          "p50": 1.26604,
+          "p95": 1.43772,
+          "p99": 1.57444
+        },
+        "gpu_time_scope": "longest instrumented render span; nested passes are not summed",
+        "hitches": [
+          {
+            "category": "cpu_main",
+            "cpu_main_ms": 34.80072,
+            "frame_ms": 50.070406,
+            "gpu_ms": 1.39328,
+            "input_queue_ms": 15.257874,
+            "pending_assets": 0,
+            "pending_pipelines": 0,
+            "render_cpu_ms": 0.6672870000000001,
+            "streaming": false
+          },
+          {
+            "category": "presentation_or_idle",
+            "cpu_main_ms": 34.475807999999994,
+            "frame_ms": 59.573,
+            "gpu_ms": 1.57912,
+            "input_queue_ms": null,
+            "pending_assets": 0,
+            "pending_pipelines": 0,
+            "render_cpu_ms": 0.906631,
+            "streaming": false
+          },
+          {
+            "category": "presentation_or_idle",
+            "cpu_main_ms": 26.955958,
+            "frame_ms": 55.281355,
+            "gpu_ms": 1.4122,
+            "input_queue_ms": null,
+            "pending_assets": 0,
+            "pending_pipelines": 0,
+            "render_cpu_ms": 0.570177,
+            "streaming": false
+          }
+        ],
+        "hitches_over_100_ms": 0,
+        "input_latency_scope": "synthetic queue to next ECS frame; excludes hardware and display",
+        "input_queue_ms": {
+          "p50": 19.508673,
+          "p95": 20.326960000000003,
+          "p99": 20.383575
+        },
+        "renderer_diagnostics": [
+          [
+            "render/ui/vertex_shader_invocations",
+            1728.0
+          ],
+          [
+            "render/clustering/elapsed_cpu",
+            0.013986
+          ],
+          [
+            "render/main_transparent_pass_2d/elapsed_cpu",
+            0.000521
+          ],
+          [
+            "render/ui/clipper_primitives_out",
+            856.0
+          ],
+          [
+            "render/ui/elapsed_cpu",
+            0.00532
+          ],
+          [
+            "render/upscaling/elapsed_gpu",
+            0.01936
+          ],
+          [
+            "render/early_mesh_preprocessing/compute_shader_invocations",
+            3200.0
+          ],
+          [
+            "render/main_opaque_pass_3d/elapsed_gpu",
+            1.18696
+          ],
+          [
+            "render/main_transparent_pass_2d/clipper_invocations",
+            0.0
+          ],
+          [
+            "render/main_opaque_pass_3d/fragment_shader_invocations",
+            3752521.0
+          ],
+          [
+            "render/main_transparent_pass_2d/elapsed_gpu",
+            0.00032
+          ],
+          [
+            "render/main_transparent_pass_3d/fragment_shader_invocations",
+            168828.0
+          ],
+          [
+            "render/ui/elapsed_gpu",
+            0.01676
+          ],
+          [
+            "render/upscaling/elapsed_cpu",
+            0.000841
+          ],
+          [
+            "render/main_transparent_pass_3d/clipper_invocations",
+            28367.0
+          ],
+          [
+            "render/bin_unpacking/elapsed_gpu",
+            0.00348
+          ],
+          [
+            "render/main_opaque_pass_3d/vertex_shader_invocations",
+            988580.0
+          ],
+          [
+            "render/main_transparent_pass_3d/vertex_shader_invocations",
+            67319.0
+          ],
+          [
+            "render/main_opaque_pass_3d/elapsed_cpu",
+            0.62555
+          ],
+          [
+            "render/main_transparent_pass_2d/vertex_shader_invocations",
+            0.0
+          ],
+          [
+            "render/main_transparent_pass_2d/fragment_shader_invocations",
+            0.0
+          ],
+          [
+            "render/main_transparent_pass_3d/clipper_primitives_out",
+            10926.0
+          ],
+          [
+            "render/bin_unpacking/elapsed_cpu",
+            0.003206
+          ],
+          [
+            "render/main_transparent_pass_3d/elapsed_cpu",
+            0.13139299999999998
+          ],
+          [
+            "render/early_mesh_preprocessing/elapsed_cpu",
+            0.0046890000000000005
+          ],
+          [
+            "render/main_opaque_pass_3d/clipper_primitives_out",
+            122264.0
+          ],
+          [
+            "render/clustering/elapsed_gpu",
+            0.06944
+          ],
+          [
+            "render/ui/fragment_shader_invocations",
+            181537.0
+          ],
+          [
+            "render/main_transparent_pass_2d/clipper_primitives_out",
+            0.0
+          ],
+          [
+            "render/ui/clipper_invocations",
+            856.0
+          ],
+          [
+            "render/main_opaque_pass_3d/clipper_invocations",
+            493450.0
+          ],
+          [
+            "render/bin_unpacking/compute_shader_invocations",
+            0.0
+          ],
+          [
+            "render/early_mesh_preprocessing/elapsed_gpu",
+            0.01576
+          ],
+          [
+            "render/main_transparent_pass_3d/elapsed_gpu",
+            0.07724
+          ]
+        ],
+        "samples": 851,
+        "warmup_frames": 60
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 8192,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 8192,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 178
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "conditions": {
+        "view_radius_m": 2000,
+        "resolution": [
+          1280,
+          720
+        ],
+        "fog": "volumetric64",
+        "quality": "high",
+        "speed_multiplier": 4,
+        "target_m": 150,
+        "steady_ready_frames": 480,
+        "scope": "Paddington short itinerary; auto-pause at checkpoint; overall diagnostics include loading/paused settling, gameplay metrics exclude loading"
+      }
+    },
+    "heavy_snow": {
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "odometer_m": 150.3906624210438,
+      "formation_validation": {
+        "cars": 8,
+        "maximum_spacing_error_m": 0.017724428341431064,
+        "tolerance_m": 2.0,
+        "scope": "car centres versus path offsets; includes curve chord shortening"
+      },
+      "peak_rss_mib": 2675.5,
+      "performance": {
+        "elapsed_s": 77.0204086380001,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 40,
+        "frame_p99_ms": 73,
+        "frames": 2831,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 34,
+        "gameplay_frame_p99_ms": 41,
+        "gameplay_frames": 891,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 53.462592,
+        "hitches_over_100_ms": 7,
+        "loading_frames": 1950,
+        "longest_frame_ms": 1626.463913,
+        "peak_rss_mib": 2671.91796875,
+        "rss_mib": 2196.328125,
+        "startup_longest_frame_ms": 1626.463913
+      },
+      "graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 2717.55859375,
+        "peak_process_vram_mib": 1933.71484375,
+        "process_gtt_mib": 84.20703125,
+        "process_vram_mib": 1933.71484375,
+        "source": "linux_drm_fdinfo"
+      },
+      "dev_diagnostics": {
+        "categories": {
+          "cpu_main": 305,
+          "presentation_or_idle": 515,
+          "shader_pipeline": 2,
+          "streaming": 10
+        },
+        "cpu_main_ms": {
+          "p50": 9.073898,
+          "p95": 32.513082999999995,
+          "p99": 40.186834999999995
+        },
+        "exports": 0,
+        "frame_ms": {
+          "p50": 25.487129,
+          "p95": 37.836639,
+          "p99": 44.579727999999996
+        },
+        "gpu_ms": {
+          "p50": 1.36316,
+          "p95": 1.52044,
+          "p99": 1.60228
+        },
+        "gpu_time_scope": "longest instrumented render span; nested passes are not summed",
+        "hitches": [
+          {
+            "category": "cpu_main",
+            "cpu_main_ms": 48.205828,
+            "frame_ms": 60.099743999999994,
+            "gpu_ms": 1.20452,
+            "input_queue_ms": null,
+            "pending_assets": 0,
+            "pending_pipelines": 0,
+            "render_cpu_ms": 0.856908,
+            "streaming": false
+          },
+          {
+            "category": "cpu_main",
+            "cpu_main_ms": 40.715465,
+            "frame_ms": 50.4567,
+            "gpu_ms": 1.20016,
+            "input_queue_ms": 9.724133,
+            "pending_assets": 0,
+            "pending_pipelines": 0,
+            "render_cpu_ms": 0.9670030000000001,
+            "streaming": false
+          },
+          {
+            "category": "cpu_main",
+            "cpu_main_ms": 48.198766,
+            "frame_ms": 52.638524,
+            "gpu_ms": 1.37296,
+            "input_queue_ms": null,
+            "pending_assets": 0,
+            "pending_pipelines": 0,
+            "render_cpu_ms": 0.672526,
+            "streaming": false
+          }
+        ],
+        "hitches_over_100_ms": 0,
+        "input_latency_scope": "synthetic queue to next ECS frame; excludes hardware and display",
+        "input_queue_ms": {
+          "p50": 14.814358,
+          "p95": 17.529930999999998,
+          "p99": 17.961712000000002
+        },
+        "renderer_diagnostics": [
+          [
+            "render/ui/vertex_shader_invocations",
+            1724.0
+          ],
+          [
+            "render/clustering/elapsed_cpu",
+            0.014276
+          ],
+          [
+            "render/main_transparent_pass_2d/elapsed_cpu",
+            0.000301
+          ],
+          [
+            "render/ui/clipper_primitives_out",
+            854.0
+          ],
+          [
+            "render/ui/elapsed_cpu",
+            0.006071999999999999
+          ],
+          [
+            "render/upscaling/elapsed_gpu",
+            0.0186
+          ],
+          [
+            "render/early_mesh_preprocessing/compute_shader_invocations",
+            3200.0
+          ],
+          [
+            "render/main_opaque_pass_3d/elapsed_gpu",
+            1.40692
+          ],
+          [
+            "render/main_transparent_pass_2d/clipper_invocations",
+            0.0
+          ],
+          [
+            "render/main_opaque_pass_3d/fragment_shader_invocations",
+            3738473.0
+          ],
+          [
+            "render/main_transparent_pass_2d/elapsed_gpu",
+            0.00032
+          ],
+          [
+            "render/main_transparent_pass_3d/fragment_shader_invocations",
+            164757.0
+          ],
+          [
+            "render/ui/elapsed_gpu",
+            0.01692
+          ],
+          [
+            "render/upscaling/elapsed_cpu",
+            0.0012029999999999999
+          ],
+          [
+            "render/main_transparent_pass_3d/clipper_invocations",
+            28431.0
+          ],
+          [
+            "render/bin_unpacking/elapsed_gpu",
+            0.00348
+          ],
+          [
+            "render/main_opaque_pass_3d/vertex_shader_invocations",
+            988748.0
+          ],
+          [
+            "render/main_transparent_pass_3d/vertex_shader_invocations",
+            67511.0
+          ],
+          [
+            "render/main_opaque_pass_3d/elapsed_cpu",
+            0.603058
+          ],
+          [
+            "render/main_transparent_pass_2d/vertex_shader_invocations",
+            0.0
+          ],
+          [
+            "render/main_transparent_pass_2d/fragment_shader_invocations",
+            0.0
+          ],
+          [
+            "render/main_transparent_pass_3d/clipper_primitives_out",
+            10878.0
+          ],
+          [
+            "render/bin_unpacking/elapsed_cpu",
+            0.001562
+          ],
+          [
+            "render/main_transparent_pass_3d/elapsed_cpu",
+            0.089856
+          ],
+          [
+            "render/early_mesh_preprocessing/elapsed_cpu",
+            0.005741
+          ],
+          [
+            "render/main_opaque_pass_3d/clipper_primitives_out",
+            122431.0
+          ],
+          [
+            "render/clustering/elapsed_gpu",
+            0.06704
+          ],
+          [
+            "render/ui/fragment_shader_invocations",
+            181501.0
+          ],
+          [
+            "render/main_transparent_pass_2d/clipper_primitives_out",
+            0.0
+          ],
+          [
+            "render/ui/clipper_invocations",
+            854.0
+          ],
+          [
+            "render/main_opaque_pass_3d/clipper_invocations",
+            493506.0
+          ],
+          [
+            "render/bin_unpacking/compute_shader_invocations",
+            0.0
+          ],
+          [
+            "render/early_mesh_preprocessing/elapsed_gpu",
+            0.01644
+          ],
+          [
+            "render/main_transparent_pass_3d/elapsed_gpu",
+            0.07772
+          ]
+        ],
+        "samples": 832,
+        "warmup_frames": 60
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 8192,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 8192,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 178
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "conditions": {
+        "view_radius_m": 2000,
+        "resolution": [
+          1280,
+          720
+        ],
+        "fog": "volumetric64",
+        "quality": "high",
+        "speed_multiplier": 4,
+        "target_m": 150,
+        "steady_ready_frames": 480,
+        "scope": "Paddington short itinerary; auto-pause at checkpoint; overall diagnostics include loading/paused settling, gameplay metrics exclude loading"
+      }
+    }
+  },
+  "viewer_sha256": "bf652696737ab280ee2b12fa2a3ab618ca7f3fe1b82bb59fe28847c0b8f82f75",
+  "formation_checks": {
+    "selected_formations": 7,
+    "service_application_release": "pass",
+    "brake_state_save_resume": "pass",
+    "vacuum_cock_and_open_hose": "pass",
+    "scope": "numeric subsystem fixtures, not full steam thermal initialization or complete trips for every formation"
+  },
+  "journey": {
+    "renderer": {
+      "backend": "Vulkan",
+      "device_type": "DiscreteGpu",
+      "hardware": true,
+      "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+    },
+    "viewer_sha256": "bf652696737ab280ee2b12fa2a3ab618ca7f3fe1b82bb59fe28847c0b8f82f75",
+    "scenario_sha256": "10ce3f887d4941a69b0a8566383fa8c70fc7cc52187489a7be7f4970c4aa4912",
+    "odometer_m": 62679.93472528982,
+    "service_complete": true,
+    "station_results": [
+      {
+        "actual_arrive_s": 39.799999999999876,
+        "actual_depart_s": 60.99999999999867,
+        "arrival_speed_mps": 0.09223095373383203,
+        "delay_s": 0.0,
+        "dwell_s": 20.250000000000153,
+        "early_departure_s": 0.0,
+        "name": "Banbury General",
+        "node": "n6758",
+        "position_error_m": 3.211989136851514,
+        "scheduled_arrive_s": 60.0
+      },
+      {
+        "actual_arrive_s": 1525.84999999916,
+        "actual_depart_s": 1647.799999999049,
+        "arrival_speed_mps": 0.096395929363377,
+        "delay_s": 265.84999999916,
+        "dwell_s": 119.99999999999532,
+        "early_departure_s": 0.0,
+        "name": "Bicester North",
+        "node": "n5439",
+        "position_error_m": 3.310980586487858,
+        "scheduled_arrive_s": 1260.0
+      },
+      {
+        "actual_arrive_s": 2595.4000000006763,
+        "actual_depart_s": 2881.0000000017153,
+        "arrival_speed_mps": 0.09546556750996685,
+        "delay_s": 0.0,
+        "dwell_s": 283.6500000000302,
+        "early_departure_s": 0.0,
+        "name": "Princes Risborough",
+        "node": "n5509",
+        "position_error_m": 2.6862821197282756,
+        "scheduled_arrive_s": 2760.0
+      },
+      {
+        "actual_arrive_s": 3770.5000000049513,
+        "actual_depart_s": 3892.450000005395,
+        "arrival_speed_mps": 0.09951668853453284,
+        "delay_s": 110.50000000495129,
+        "dwell_s": 119.99999999999532,
+        "early_departure_s": 0.0,
+        "name": "High Wycombe",
+        "node": "n4306",
+        "position_error_m": 3.484398024622351,
+        "scheduled_arrive_s": 3660.0
+      }
+    ],
+    "weather_journey_validation": {
+      "passed": true,
+      "samples": 381,
+      "effective_weather_types": 5,
+      "minimum_rail_factor": 0.5000001436806927,
+      "maximum_grip_change_per_simulation_s": 0.00825390141566531,
+      "wet_braking_simulation_s": 1174.9000000030026,
+      "moving_wet_braking_samples": 66,
+      "scope": "continuity and shared weather contact; no calibrated physical-parity claim"
+    },
+    "peak_rss_mib": 2809.2,
+    "performance": {
+      "elapsed_s": 270.70308927699966,
+      "frame_p50_ms": 25,
+      "frame_p95_ms": 45,
+      "frame_p99_ms": 77,
+      "frames": 9840,
+      "gameplay_frame_p50_ms": 25,
+      "gameplay_frame_p95_ms": 45,
+      "gameplay_frame_p99_ms": 77,
+      "gameplay_frames": 9183,
+      "gameplay_hitches_over_100_ms": 19,
+      "gameplay_longest_frame_ms": 924.185503,
+      "hitches_over_100_ms": 21,
+      "loading_frames": 9435,
+      "longest_frame_ms": 1680.478574,
+      "peak_rss_mib": 2782.515625,
+      "rss_mib": 2555.6640625,
+      "startup_longest_frame_ms": 1680.478574
+    },
+    "graphics_memory": {
+      "device_total_mib": 8688.0,
+      "device_used_mib": 2518.08984375,
+      "peak_process_vram_mib": 1660.875,
+      "process_gtt_mib": 84.20703125,
+      "process_vram_mib": 1660.875,
+      "source": "linux_drm_fdinfo"
+    },
+    "shader_pipelines": {
+      "failed": 0,
+      "pending": 0
+    },
+    "pending_terrain_tiles": 0,
+    "pending_gpu_uploads": 0,
+    "native_signal_errors": {},
+    "conditions": {
+      "route": "Chiltern v4",
+      "formation": "Birmingham Pullman",
+      "season": "winter",
+      "weather_profile": "random_journey",
+      "seed": 82,
+      "speed_multiplier": 16,
+      "view_radius_m": 450,
+      "scope": "62.7 km, four stations; accelerated renderer/streaming continuity test, not complete Open Rails physical parity or performance at x1"
+    }
+  },
+  "checks": {
+    "packaging_tests": 14,
+    "packaging": "pass",
+    "original_reference_integrity": "pass",
+    "workspace": "pass: check.sh (fmt, clippy, workspace tests, Python suites, build, pinned acceptance oracles, complete station service)",
+    "steam_battery_operating_and_save_resume": "pass",
+    "class47_authored_train_supply_switch_and_auxiliaries": "pass"
+  },
+  "validated_viewer_sha256": "57f7efc425a6b30cf55a7f2d8e04ebb2ec70477348cafcd063b0cfcaf974b863"
+}

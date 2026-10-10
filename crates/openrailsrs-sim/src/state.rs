@@ -15,6 +15,8 @@ pub struct TrainSimState {
     pub diesel: crate::diesel_operation::DieselTrainState,
     #[serde(default)]
     pub electric: crate::electric::ElectricTrainState,
+    #[serde(default)]
+    pub power_supply: crate::power_supply::PowerTrainState,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub native_dynamics: Option<crate::native_dynamics::NativeDynamicsState>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -68,6 +70,7 @@ impl TrainSimState {
             refill_used_kg: Default::default(),
             diesel: Default::default(),
             electric: Default::default(),
+            power_supply: Default::default(),
             native_dynamics: None,
             rail_adhesion: None,
             time: SimTime(0.0),

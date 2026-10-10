@@ -80,6 +80,7 @@ use crate::ast::{Ast, Atom};
 use crate::error::FormatError;
 
 pub mod native_physics;
+pub mod power_supply;
 /// Named STF blocks in either `(key values...)` or `key (values...)` form.
 pub mod vehicle_runtime;
 

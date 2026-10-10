@@ -14,9 +14,24 @@ import package_snap
 
 DISPLAY_LAUNCHER = Path(__file__).resolve().parents[1] / 'snap/local/display-launch.py'
 display_environment = runpy.run_path(str(DISPLAY_LAUNCHER))['display_environment']
+audio_environment = runpy.run_path(str(DISPLAY_LAUNCHER))['audio_environment']
 
 
 class PackagingTests(unittest.TestCase):
+    def test_snap_audio_reaches_session_pulse_without_replacing_private_runtime(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            runtime=root/'snap.openrailsrs';runtime.mkdir()
+            (root/'pulse').mkdir()
+            with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as server:
+                server.bind(str(root/'pulse/native'));server.listen()
+                env={'SNAP_NAME':'openrailsrs','XDG_RUNTIME_DIR':str(runtime)}
+                actual=audio_environment(env)
+                self.assertEqual(actual['PULSE_SERVER'],f'unix:{root}/pulse/native')
+                self.assertEqual(actual['XDG_RUNTIME_DIR'],str(runtime))
+                env['PULSE_SERVER']='tcp:chosen-server'
+                self.assertEqual(audio_environment(env)['PULSE_SERVER'],'tcp:chosen-server')
+            self.assertNotIn('PULSE_SERVER',audio_environment({'SNAP_NAME':'openrailsrs','XDG_RUNTIME_DIR':str(runtime)}))
     def test_snap_launcher_uses_base_python_and_trusted_certificates(self):
         with tempfile.TemporaryDirectory() as directory:
             # Reproduce Snapcraft's removal of Python/CA files already in core24.

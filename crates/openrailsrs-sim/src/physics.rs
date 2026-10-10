@@ -36,6 +36,7 @@ fn speed_limit_traction_factor(v: f64, speed_cap: f64) -> f64 {
 /// Fixed physical parameters for the consist, computed once before the simulation loop.
 #[derive(Clone)]
 pub struct TrainPhysics {
+    pub power_supply: crate::power_supply::PowerTrainConfig,
     pub rail_adhesion: Option<crate::adhesion::RailAdhesionConfig>,
     pub diesel: crate::diesel_operation::DieselTrainConfig,
     pub electric: crate::electric::ElectricTrainConfig,
@@ -192,13 +193,16 @@ pub fn step(
         )
     });
     let native_brake_forces = state.brake_system.cylinder_forces_n(v);
-    state.fuel_consumption_g += crate::diesel_operation::advance(
+    crate::power_supply::advance(state, &train.power_supply);
+    state.fuel_consumption_g += crate::diesel_operation::advance_with_supply(
         &mut state.diesel,
         &train.diesel,
         physical_throttle,
         dt,
         train.native.is_some(),
+        &state.power_supply,
     );
+    crate::power_supply::advance(state, &train.power_supply);
     let mut rail_motor_forces = Vec::with_capacity(train.diesel_engines.len());
     let mut contact_motor_forces = Vec::new();
     let steam_wheel_speed = train
@@ -307,6 +311,7 @@ pub fn step(
                 let vehicle_index = train.diesel_vehicle_indices.get(i).copied().unwrap_or(i);
                 let curve_throttle = if state.electric.power_available(vehicle_index)
                     && state.diesel.power_available(vehicle_index)
+                    && state.power_supply.power_available(vehicle_index)
                 {
                     traction_throttle
                 } else {
@@ -458,6 +463,7 @@ pub fn step(
                 .filter(|(vehicle, _)| {
                     state.electric.power_available(*vehicle)
                         && state.diesel.power_available(*vehicle)
+                        && state.power_supply.power_available(*vehicle)
                 })
                 .map(|(_, curve)| curve.interpolate(v).unwrap_or(0.))
                 .sum::<f64>()
@@ -490,7 +496,10 @@ pub fn step(
                     } else {
                         0.
                     }
-                } else if state.electric.power_available(i) && state.diesel.power_available(i) {
+                } else if state.electric.power_available(i)
+                    && state.diesel.power_available(i)
+                    && state.power_supply.power_available(i)
+                {
                     train
                         .electric
                         .fallback_cars

@@ -64,11 +64,23 @@ def display_environment(environment):
                      'wayland/x11 del Snap y ejecutá el juego desde tu sesión gráfica.')
 
 
+def audio_environment(environment):
+    result = dict(environment)
+    if not result.get('PULSE_SERVER'):
+        runtime = Path(result.get('XDG_RUNTIME_DIR', ''))
+        instance = result.get('SNAP_INSTANCE_NAME') or result.get('SNAP_NAME')
+        if runtime.is_absolute() and instance and runtime.name == f'snap.{instance}':
+            server = runtime.parent / 'pulse/native'
+            if reachable(server):
+                result['PULSE_SERVER'] = f'unix:{server}'
+    return result
+
+
 def main():
     if len(sys.argv) < 2:
         print('openrailsrs: falta el comando de la aplicación.', file=sys.stderr)
         return 2
-    environment = dict(os.environ)
+    environment = audio_environment(os.environ)
     if Path(sys.argv[1]).name == 'openrailsrs-viewer3d':
         try:
             environment, message = display_environment(environment)

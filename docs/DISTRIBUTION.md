@@ -70,6 +70,10 @@ lectura. Para contenido de un disco externo, conectá explícitamente
 accesible al usuario. La construcción local no publica en Snap Store: la subida
 se hace con un comando separado.
 
+## Corrección de audio preparada
+
+Las fuentes incluyen el puente ALSA–PulseAudio y el descubrimiento del socket de la sesión. Se comprobó la apertura real con contenido original en cabina y exterior bajo el perfil estricto, usando un payload de prueba sin cambiar el Snap instalado. La revisión 2 de edge todavía no incluye esta corrección; requiere construir y publicar otra revisión. [QA de audio](NATIVE_AUDIO.md#audio-dentro-del-snap).
+
 ## Alpha disponible en Snap Store
 
 Actualmente **latest/edge** ofrece **0.1.0-alpha.2**, revisión **2**, publicada

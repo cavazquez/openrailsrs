@@ -43,6 +43,7 @@ fn path_data_for(path: &[&str], g: &TrackGraph) -> PathData {
 /// Train without an explicit traction curve — uses P/v fallback.
 fn default_train_pv() -> TrainPhysics {
     TrainPhysics {
+        power_supply: Default::default(),
         rail_adhesion: None,
         diesel: Default::default(),
         electric: Default::default(),
@@ -72,6 +73,7 @@ fn default_train_pv() -> TrainPhysics {
 /// Train with an explicit traction curve (two-segment).
 fn default_train_with_curve() -> TrainPhysics {
     TrainPhysics {
+        power_supply: Default::default(),
         rail_adhesion: None,
         diesel: Default::default(),
         electric: Default::default(),
@@ -215,6 +217,7 @@ fn speed_limit_allows_modest_overspeed_before_cutoff() {
     .unwrap();
 
     let train = TrainPhysics {
+        power_supply: Default::default(),
         rail_adhesion: None,
         diesel: Default::default(),
         electric: Default::default(),

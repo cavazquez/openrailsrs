@@ -35,7 +35,28 @@ pub fn read_msts_text_with_includes(path: impl AsRef<Path>) -> Result<String, Fo
         .or_else(|| path.ancestors().find(|p| named(p, "TRAINSET")))
         .or_else(|| path.parent())
         .ok_or_else(|| error(&path, "Sin directorio de contenido"))?;
-    expand(&path, root, &mut vec![], &mut 0)
+    // Resources remain relative to the original vehicle folder, but Includes
+    // resolve relative to the selected OpenRails override, as in OR 1.6.1.
+    let override_path = path
+        .parent()
+        .unwrap()
+        .join("OpenRails")
+        .join(path.file_name().unwrap());
+    let selected = if path.parent().is_some_and(|p| {
+        p.file_name()
+            .is_some_and(|n| n.eq_ignore_ascii_case("OpenRails"))
+    }) {
+        path.clone()
+    } else if let Some(candidate) = resolve_path_case_insensitive(&override_path) {
+        let candidate = candidate.canonicalize().map_err(|e| error(&candidate, e))?;
+        if !candidate.starts_with(root) {
+            return Err(error(&candidate, "OpenRails fuera de la instalación"));
+        }
+        candidate
+    } else {
+        path.clone()
+    };
+    expand(&selected, root, &mut vec![], &mut 0)
 }
 pub fn read_vehicle_ast(path: impl AsRef<Path>) -> Result<Ast, FormatError> {
     parse_vehicle_text(&read_msts_text_with_includes(path)?)
@@ -175,6 +196,42 @@ fn expand(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn openrails_override_uses_its_own_includes_and_later_values() {
+        let (_temp, root) = fixture();
+        let engine = root.join("Stock/power.eng");
+        std::fs::write(
+            &engine,
+            "Wagon ( power BrakeSystemType ( Air_single_pipe ) )",
+        )
+        .unwrap();
+        std::fs::create_dir_all(root.join("Stock/openrails")).unwrap();
+        std::fs::write(
+            root.join("Stock/openrails/common.inc"),
+            "BrakeSystemType ( Air_single_pipe ) MaxApplicationRate ( 1 )",
+        )
+        .unwrap();
+        std::fs::write(root.join("Stock/openrails/POWER.ENG"),"Wagon ( power Include ( common.inc ) BrakeSystemType ( Vacuum_single_pipe ) MaxApplicationRate ( 2InHg/s ) )").unwrap();
+        let p = crate::parse_vehicle_brake_profile(&read_vehicle_ast(&engine).unwrap());
+        assert_eq!(p.system.as_deref(), Some("Vacuum_single_pipe"));
+        assert!((p.native_vacuum.unwrap().application_psi_s - 2. * 0.491154152).abs() < 1e-8);
+    }
+    #[cfg(unix)]
+    #[test]
+    fn escaping_openrails_override_is_rejected() {
+        let (_temp, root) = fixture();
+        let outside = tempfile::tempdir().unwrap();
+        std::fs::write(outside.path().join("power.eng"), "Wagon ( power )").unwrap();
+        let engine = root.join("Stock/power.eng");
+        std::fs::write(&engine, "Wagon ( power )").unwrap();
+        std::os::unix::fs::symlink(outside.path(), root.join("Stock/OpenRails")).unwrap();
+        assert!(
+            read_vehicle_ast(engine)
+                .unwrap_err()
+                .to_string()
+                .contains("fuera de la instalación")
+        );
+    }
     #[test]
     fn a_missing_include_outside_the_installation_is_not_an_installation_hint() {
         let (_temp, root) = fixture();

@@ -17,6 +17,65 @@ fn steam_params() -> openrailsrs_train::SteamParams {
 }
 
 #[test]
+fn native_supply_delays_survive_save_and_battery_gates_cab_lights() {
+    let mut s = session("scenario.toml");
+    s.headlights = 2;
+    s.cab_light = true;
+    advance(&mut s, 0.1);
+    assert!(s.cab_telemetry().main_power);
+    assert_eq!(s.effective_headlights(), 2);
+    s.toggle_diesel_engine(0).unwrap();
+    s.operate_car(0, CarOperation::Battery).unwrap();
+    advance(&mut s, 0.1);
+    assert_eq!(s.effective_headlights(), 0);
+    assert!(!s.effective_cab_light());
+    assert!(!s.cab_telemetry().main_power);
+    advance(&mut s, 10.);
+    s.operate_car(0, CarOperation::Battery).unwrap();
+    s.toggle_diesel_engine(0).unwrap();
+    advance(&mut s, 8.);
+    let saved = s.snapshot();
+    let mut resumed = session("scenario.toml");
+    resumed.restore_snapshot(saved).unwrap();
+    advance(&mut s, 3.);
+    advance(&mut resumed, 3.);
+    assert_eq!(s.state.power_supply, resumed.state.power_supply);
+    assert!(resumed.cab_telemetry().main_power);
+    assert!(resumed.cab_telemetry().auxiliary_power);
+    assert_eq!(resumed.effective_headlights(), 2);
+    assert!(resumed.effective_cab_light());
+    let mut invalid = resumed.snapshot();
+    invalid.state.power_supply.cars[0].supply.main_started_s = Some(f64::INFINITY);
+    assert!(resumed.restore_snapshot(invalid).is_err());
+}
+
+#[test]
+fn steam_mechanics_and_boiler_continue_with_battery_off() {
+    let mut s = session("scenario_steam.toml");
+    s.driver_direction = 1.;
+    s.driver_brake = 0.;
+    s.driver_throttle = 0.5;
+    s.headlights = 2;
+    s.cab_light = true;
+    s.wiper_active = true;
+    s.operate_car(0, CarOperation::Battery).unwrap();
+    advance(&mut s, 8.);
+    assert!(s.physics.steam_params.is_some());
+    assert!(s.cab_telemetry().main_power);
+    assert!(s.velocity_mps() > 0.1);
+    assert!(s.state.boiler_state.as_ref().unwrap().tractive_force_n > 0.);
+    assert_eq!(s.effective_headlights(), 0);
+    assert!(!s.effective_cab_light());
+    assert!(!s.effective_wiper_active());
+    let mut resumed = session("scenario_steam.toml");
+    resumed.restore_snapshot(s.snapshot()).unwrap();
+    advance(&mut s, 2.);
+    advance(&mut resumed, 2.);
+    assert_eq!(s.state.power_supply, resumed.state.power_supply);
+    assert_eq!(s.state.boiler_state, resumed.state.boiler_state);
+}
+
+#[test]
 fn diesel_idle_burns_authored_fuel_and_stopping_cuts_traction() {
     let mut s = session("scenario.toml");
     advance(&mut s, 10.);

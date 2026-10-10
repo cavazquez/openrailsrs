@@ -204,7 +204,7 @@ fn state(session: &openrailsrs_sim::LiveDriveSession, vehicle: usize) -> SoundSt
             session.exterior.door,
             openrailsrs_sim::DoorState::Opening | openrailsrs_sim::DoorState::Open
         ),
-        headlights: session.headlights,
+        headlights: t.headlights,
     }
 }
 

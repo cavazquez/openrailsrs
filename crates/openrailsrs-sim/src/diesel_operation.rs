@@ -170,6 +170,17 @@ pub fn advance(
     dt: f64,
     native: bool,
 ) -> f64 {
+    advance_with_supply(state, config, throttle, dt, native, &Default::default())
+}
+
+pub fn advance_with_supply(
+    state: &mut DieselTrainState,
+    config: &DieselTrainConfig,
+    throttle: f64,
+    dt: f64,
+    native: bool,
+    supply: &crate::power_supply::PowerTrainState,
+) -> f64 {
     state.initialize(config);
     if !dt.is_finite() || dt < 0. || !throttle.is_finite() {
         return 0.;
@@ -190,8 +201,17 @@ pub fn advance(
         }
         if s.phase == EnginePhase::Running {
             let throttle = if car.connected { throttle } else { 0. };
-            s.demanded_rpm = car.governor.target_rpm(throttle);
-            s.rpm = if native {
+            let minimum_rpm = supply
+                .cars
+                .iter()
+                .find(|c| c.vehicle == car.vehicle)
+                .map_or(0., |c| c.supply.minimum_diesel_rpm)
+                .min(car.governor.max_rpm);
+            s.demanded_rpm = car.governor.target_rpm(throttle).max(minimum_rpm);
+            s.rpm = if minimum_rpm > car.governor.target_rpm(throttle) {
+                car.governor
+                    .advance_native_target_rpm(s.rpm, s.demanded_rpm, dt)
+            } else if native {
                 car.governor.advance_native_rpm(s.rpm, throttle, dt)
             } else {
                 car.governor.advance_rpm(s.rpm, throttle, dt)

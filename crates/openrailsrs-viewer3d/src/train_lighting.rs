@@ -305,17 +305,16 @@ pub fn update_train_lights(
             rotation * crate::shapes::msts_shape_to_train_rotation()
         };
         let point = translation + rotation * lamp.position;
-        let enabled = active
-            && lamp.level_mask & (1 << session.headlights.min(2)) != 0
-            && session.formation.cars.first().is_none_or(|c| c.battery_on);
+        let headlights = session.effective_headlights().min(2);
+        let enabled = active && lamp.level_mask & (1 << headlights) != 0;
         if let Some(mut spot) = spot {
-            let low = session.headlights == 1;
+            let low = headlights == 1;
             let direction = (rotation
                 * Vec3::new(0.0, if low { -0.055 } else { -0.035 }, lamp.forward))
             .normalize();
             transform.set_if_neq(Transform::from_translation(point).looking_to(direction, Vec3::Y));
             let intensity = if enabled {
-                beam_intensity(session.headlights)
+                beam_intensity(headlights)
             } else {
                 0.0
             };
@@ -356,9 +355,10 @@ pub fn update_cab_lighting(
     let daylight = sun
         .as_ref()
         .map_or(1.0, |s| (s.direction.y * 2.0).clamp(0.0, 1.0));
-    let brightness = (0.08 + daylight * 0.92).max(if live.session.cab_light { 0.75 } else { 0.0 });
+    let cab_light = live.session.effective_cab_light();
+    let brightness = (0.08 + daylight * 0.92).max(if cab_light { 0.75 } else { 0.0 });
     let variation = if crate::shapes::cab_night_textures_enabled() {
-        if live.session.cab_light { 2 } else { 1 }
+        if cab_light { 2 } else { 1 }
     } else {
         0
     };

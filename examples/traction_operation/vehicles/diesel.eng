@@ -13,4 +13,6 @@
   (MaxDieselLevel 25l)
   (DieselUsedPerHourAtIdle 18l)
   (DieselUsedPerHourAtMaxPower 180l)
+  (ORTSPowerOnDelay 3s)
+  (ORTSAuxPowerOnDelay 1s)
 )

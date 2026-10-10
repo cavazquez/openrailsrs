@@ -395,10 +395,18 @@ fn update_driving_hud(
                 )
             }
             HudField::Brakes => (
-                format!(
-                    "Tubería   {:>4.2} bar\nCilindro  {:>4.2} bar",
-                    cab.brake_pipe_bar, cab.brake_cyl_bar
-                ),
+                if cab.vacuum_brake {
+                    format!(
+                        "Vacío tubo {:>4.1} inHg\nVacío cil. {:>4.1} inHg",
+                        cab.brake_pipe_bar / 0.03386389,
+                        cab.brake_cyl_bar / 0.03386389
+                    )
+                } else {
+                    format!(
+                        "Tubería   {:>4.2} bar\nCilindro  {:>4.2} bar",
+                        cab.brake_pipe_bar, cab.brake_cyl_bar
+                    )
+                },
                 MUTED,
             ),
             HudField::Doors => {
@@ -414,13 +422,13 @@ fn update_driving_hud(
             HudField::Lights => (
                 format!(
                     "Faros {} · cabina {}\nLimpiaparabrisas {}",
-                    match session.headlights {
+                    match cab.headlights {
                         0 => "apagados",
                         1 => "bajos",
                         _ => "altos",
                     },
-                    if session.cab_light { "Sí" } else { "No" },
-                    if session.wiper_active { "Sí" } else { "No" },
+                    if cab.cab_light { "Sí" } else { "No" },
+                    if cab.wiper_active { "Sí" } else { "No" },
                 ),
                 MUTED,
             ),

@@ -1,0 +1,18 @@
+Wagon ( "LURtrailer"
+  Mass ( 30t )
+  Size ( 2.71m 3.5m 15.5m )
+  MaxBrakeForce ( 50000N )
+  BrakeSystemType ( "EP" )
+  BrakeEquipmentType ( "EP_brake" )
+  MaxApplicationRate ( 50 )
+  MaxReleaseRate ( 40 )
+  BrakeCylinderPressureForMaxBrakeBrakeForce ( 70 )
+  Friction ( 150N/m/s		1		-1mph		0		1
+		5.1N/rad/s		1		-1rad/s		0		1 )
+  WheelRadius ( 0.5m )
+  NumWheels ( 8 )
+  CouplingHasRigidConnection (  )
+  MaxAuxilaryChargingRate ( 35 )
+  TripleValveRatio ( 2.5 )
+  Type ( Automatic )
+)

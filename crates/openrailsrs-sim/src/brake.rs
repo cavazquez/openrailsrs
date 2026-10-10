@@ -11,7 +11,9 @@
 //! For a single-vehicle consist (locomotive only), the propagation delay is
 //! zero and the behaviour is identical to the previous instantaneous model.
 
+use crate::legacy_ep_brake::LegacyEpState;
 use crate::native_ep_brake::{NativeAirState, NativeEpState, PSI_TO_BAR};
+use crate::native_vacuum_brake::NativeVacuumState;
 use openrailsrs_formats::{BrakeShoeFrictionCurve, resolve_brake_shoe_curve};
 use openrailsrs_train::{Consist, Vehicle};
 use serde::{Deserialize, Serialize};
@@ -73,6 +75,12 @@ pub struct BrakeCylinder {
     native_ep: Option<NativeEpState>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     native_air: Option<NativeAirState>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    native_vacuum: Option<NativeVacuumState>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    legacy_ep: Option<LegacyEpState>,
+    #[serde(default)]
+    transfer_only: bool,
     #[serde(default)]
     native_air_skid: bool,
 }
@@ -155,11 +163,23 @@ pub fn vehicle_specs_from_consist(
             } else {
                 0.0
             };
+            let mut profile = profile.clone();
+            if let Some(ep) = profile.legacy_ep.as_mut() {
+                ep.pipe_volume_m3.get_or_insert(
+                    0.032f64.powi(2) * std::f64::consts::PI / 4. * (length_m + 1.).max(5.),
+                );
+            }
+            if let Some(vacuum) = profile.native_vacuum.as_mut() {
+                vacuum.pipe_volume_m3.get_or_insert(
+                    0.05f64.powi(2) * std::f64::consts::PI / 4. * (length_m + 1.).max(5.),
+                );
+            }
+            let ep_instant = profile.electro_pneumatic().unwrap_or(ep);
             BrakeVehicleSpec {
-                profile: profile.clone(),
+                profile,
                 position_m: cylinder_pos,
                 max_force_n: force_n,
-                ep_instant: profile.electro_pneumatic().unwrap_or(ep),
+                ep_instant,
                 shoe_friction,
                 mass_kg,
                 skid_adhesion_mu,
@@ -200,6 +220,9 @@ impl BrakeCylinder {
             skid_adhesion_mu,
             native_ep: None,
             native_air: None,
+            native_vacuum: None,
+            legacy_ep: None,
+            transfer_only: false,
             native_air_skid: false,
         }
     }
@@ -234,12 +257,28 @@ impl BrakeCylinder {
         self.native_air_skid = self.native_air.is_some() && skid && self.current_force_n > 25.;
     }
     pub fn pipe_pressure_bar(&self) -> Option<f64> {
+        if let Some(vacuum) = &self.native_vacuum {
+            return Some(
+                (crate::native_vacuum_brake::ATMOSPHERE_PSI - vacuum.pipe_psi).max(0.) * PSI_TO_BAR,
+            );
+        }
         self.native_air
             .as_ref()
             .map(|air| air.pipe_psi * PSI_TO_BAR)
     }
 
+    pub fn is_vacuum(&self) -> bool {
+        self.native_vacuum.is_some()
+    }
+
     pub fn pressure_bar(&self) -> f64 {
+        if let Some(ep) = &self.legacy_ep {
+            return ep.pressure_psi * PSI_TO_BAR;
+        }
+        if let Some(vacuum) = &self.native_vacuum {
+            return (crate::native_vacuum_brake::ATMOSPHERE_PSI - vacuum.cylinder_psi).max(0.)
+                * PSI_TO_BAR;
+        }
         self.native_air
             .as_ref()
             .map(|air| &air.cylinder)
@@ -312,6 +351,28 @@ impl BrakeSystem {
                     v.skid_adhesion_mu,
                 );
                 cylinder.native_ep = v.profile.native_ep.clone().map(NativeEpState::new);
+                cylinder.legacy_ep = v.profile.legacy_ep.clone().map(|mut p| {
+                    if let Some(lead) = vehicles.first().and_then(|v| v.profile.legacy_ep.as_ref())
+                    {
+                        p.charged_psi = lead.charged_psi;
+                    }
+                    LegacyEpState::new(p, 15.)
+                });
+                cylinder.native_vacuum = v.profile.native_vacuum.clone().map(|mut profile| {
+                    if let Some(lead) = vehicles
+                        .first()
+                        .and_then(|v| v.profile.native_vacuum.as_ref())
+                    {
+                        profile.charged_vacuum_psi = lead.charged_vacuum_psi;
+                    }
+                    NativeVacuumState::new(profile, 15.)
+                });
+                cylinder.transfer_only = v.profile.system.as_ref().is_some_and(|s| {
+                    matches!(
+                        s.trim().to_ascii_lowercase().as_str(),
+                        "vacuum_piped" | "air_piped"
+                    )
+                });
                 cylinder.native_air = v.profile.native_air.clone().map(|mut profile| {
                     if let Some(lead) = vehicles.first().and_then(|v| v.profile.native_air.as_ref())
                     {
@@ -343,7 +404,7 @@ impl BrakeSystem {
             train_air_full_release_s: train_air_full_release_s.max(0.5),
             ep_only_wire: vehicles
                 .first()
-                .is_some_and(|v| v.profile.native_ep.is_some()),
+                .is_some_and(|v| v.profile.native_ep.is_some() || v.profile.legacy_ep.is_some()),
         }
     }
 
@@ -414,7 +475,34 @@ impl BrakeSystem {
         }
 
         for cyl in &mut self.cylinders {
+            if cyl.transfer_only {
+                cyl.current_force_n = 0.;
+                continue;
+            }
+            if let Some(vacuum) = cyl.native_vacuum.as_mut() {
+                if !cyl.air_isolated {
+                    cyl.time_pending_s = (cyl.time_pending_s - dt).max(0.);
+                    if cyl.time_pending_s == 0. || cyl.air_vented {
+                        vacuum.step(command, dt, cyl.air_vented);
+                    } else {
+                        vacuum.step_pipe(dt, false);
+                    }
+                    cyl.current_force_n = vacuum.shoe_force_n(cyl.max_force_n);
+                    cyl.state = if command > 0. || cyl.air_vented {
+                        BrakeState::Applying
+                    } else {
+                        BrakeState::Releasing
+                    };
+                }
+                continue;
+            }
             if cyl.air_vented {
+                if let Some(ep) = cyl.legacy_ep.as_mut() {
+                    ep.precharge(1.);
+                    cyl.current_force_n = ep.shoe_force_n(cyl.max_force_n);
+                    cyl.state = BrakeState::Applied;
+                    continue;
+                }
                 if let Some(air) = cyl.native_air.as_mut() {
                     air.precharge(1.);
                     cyl.current_force_n = air.cylinder.shoe_force_n(cyl.max_force_n);
@@ -432,6 +520,16 @@ impl BrakeSystem {
                 continue;
             }
             if cyl.air_isolated {
+                continue;
+            }
+            if let Some(ep) = cyl.legacy_ep.as_mut() {
+                ep.step(command, dt);
+                cyl.current_force_n = ep.shoe_force_n(cyl.max_force_n);
+                cyl.state = if command > 0. {
+                    BrakeState::Applying
+                } else {
+                    BrakeState::Releasing
+                };
                 continue;
             }
             if let Some(ep) = cyl.native_ep.as_mut() {
@@ -533,6 +631,32 @@ impl BrakeSystem {
     pub fn precharge(&mut self, command: f64) {
         let command = command.clamp(0.0, 1.0);
         for cyl in &mut self.cylinders {
+            if let Some(ep) = cyl.legacy_ep.as_mut() {
+                ep.precharge(command);
+                cyl.current_force_n = ep.shoe_force_n(cyl.max_force_n);
+                cyl.time_pending_s = 0.;
+                cyl.state = if command > 0. {
+                    BrakeState::Applied
+                } else {
+                    BrakeState::Charged
+                };
+                continue;
+            }
+            if cyl.transfer_only {
+                cyl.current_force_n = 0.;
+                continue;
+            }
+            if let Some(vacuum) = cyl.native_vacuum.as_mut() {
+                vacuum.precharge(command);
+                cyl.current_force_n = vacuum.shoe_force_n(cyl.max_force_n);
+                cyl.time_pending_s = 0.;
+                cyl.state = if command > 0. {
+                    BrakeState::Applied
+                } else {
+                    BrakeState::Charged
+                };
+                continue;
+            }
             if let Some(air) = cyl.native_air.as_mut() {
                 air.precharge(command);
                 cyl.current_force_n = air.cylinder.shoe_force_n(cyl.max_force_n);

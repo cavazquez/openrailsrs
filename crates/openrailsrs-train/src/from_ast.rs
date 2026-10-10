@@ -18,6 +18,8 @@ pub fn load_engine_from_path(path: impl AsRef<Path>) -> Result<Locomotive, Train
     let engine = EngineFile::from_ast(&ast)?;
     let mut locomotive: Locomotive = engine.into();
     locomotive.brake_profile = openrailsrs_formats::parse_vehicle_brake_profile(&ast);
+    locomotive.power_supply =
+        Box::new(openrailsrs_formats::typed::power_supply::parse_power_supply(&ast)?);
     if let Some(ep) = locomotive.brake_profile.native_ep.as_mut() {
         // Native STF normalization retains bodies; the file kind is known here.
         ep.main_reservoir = true;
@@ -411,6 +413,7 @@ impl From<EngineFile> for Locomotive {
         );
         Self {
             name: value.name,
+            power_supply: Default::default(),
             diesel_operation: value.diesel_operation.map(Box::new),
             electric: value.electric.map(Box::new),
             mass_kg: value.mass_kg,

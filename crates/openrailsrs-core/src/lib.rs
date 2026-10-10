@@ -2,6 +2,7 @@
 
 pub mod electrification;
 pub mod ids;
+pub mod power_supply;
 pub mod time;
 
 pub use ids::{EdgeId, NodeId};

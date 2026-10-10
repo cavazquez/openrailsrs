@@ -469,6 +469,15 @@ impl ConsistAuditor {
                 script.name.clone()
             };
             let available = asset(&script_dirs, &file, false).is_some();
+            // OR tries this filename then falls back to its default supply
+            // when absent. An actual author-provided Default.cs remains custom.
+            if !available
+                && file.eq_ignore_ascii_case("Default.cs")
+                && matches!(script.system, ScriptSystem::PowerSupply)
+            {
+                stock.limitations.push("Alimentación Default.cs ausente: se usa el comportamiento nativo Rust, como el fallback de OR".into());
+                continue;
+            }
             if !available {
                 stock.missing_resources.push(MissingResource::new(
                     path,

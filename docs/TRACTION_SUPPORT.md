@@ -266,3 +266,7 @@ de la caldera. La prueba de sonido está en [NATIVE_AUDIO.md](NATIVE_AUDIO.md).
 Los ejemplos `traction_operation` prueban motores, fogonero y agotamiento sin
 un viaje largo. Pasos y resultados esperados en la
 [sección 38 de pruebas manuales](PLAYER_MANUAL_TESTS.md#38-vapor-y-diésel-reservas-arranque-y-fogonero).
+
+## Alimentación y frenos por vehículo
+
+El mando de alimentación y los nuevos frenos de vacío/EP antiguo se ejecutan en Rust. Principal, auxiliar, batería, cabina y ETS conservan estado propio; los retardos y cambios de fuente llegan a tracción e iluminación. Los ensayos originales y sus límites se describen en [NATIVE_BRAKES_POWER.md](NATIVE_BRAKES_POWER.md). El host C# de TCS sigue siendo opcional; no es un host general de scripts de freno/alimentación de terceros.

@@ -103,6 +103,14 @@ En Demo Model 1 la Class 47 declara WAV de material compartido GP38 y otros
 archivos que no vienen en el paquete: la prueba debe conservar esas faltas.
 La auditoría del menú indica el destino donde colocar recursos del autor.
 
+## Audio dentro del Snap
+
+La corrección nativa incluye `libasound2-plugins`, `libpulse0` y una configuración ALSA de reproducción. El lanzador usa el socket PulseAudio de la sesión cuando Snap separa `XDG_RUNTIME_DIR`, conserva ese directorio privado y respeta `PULSE_SERVER` si el usuario lo eligió. Usa la interfaz [audio-playback](https://snapcraft.io/docs/reference/interfaces/audio-playback-interface/).
+
+La comprobación del 10 de octubre abrió el dispositivo dentro del perfil estricto del Snap instalado: cabina y exterior del Pullman, 16 programas SMS, 69 muestras, sin avisos del mezclador. La prueba usa volumen cero y no reemplaza la escucha manual. Las bibliotecas usadas pertenecen a Ubuntu 24.04/core24.
+
+Esta corrección está en las fuentes y el payload de QA. **No está incluida en la revisión 2 publicada en edge.** La prueba no sustituyó la instalación del jugador. [Evidencia y alcance](fixtures/compatibility/native-brakes-power-2026-10-10/README.md).
+
 ## Límites
 
 Este oráculo comprueba semántica y ganancia, **no identidad acústica de una

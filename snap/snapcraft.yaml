@@ -32,7 +32,7 @@ parts:
     source: .
     rust-channel: stable
     build-packages: [pkg-config, libx11-dev, libxcursor-dev, libxrandr-dev, libxi-dev, libasound2-dev, libwayland-dev, libxkbcommon-dev, libxkbcommon-x11-dev, python3, git]
-    stage-packages: [python3, ca-certificates, libasound2t64, libx11-6, libxcursor1, libxrandr2, libxi6, libwayland-client0, libwayland-cursor0, libxkbcommon0, libxkbcommon-x11-0, xkb-data, libvulkan1, mesa-vulkan-drivers, xdg-utils]
+    stage-packages: [python3, ca-certificates, libasound2t64, libasound2-plugins, libpulse0, libx11-6, libxcursor1, libxrandr2, libxi6, libwayland-client0, libwayland-cursor0, libxkbcommon0, libxkbcommon-x11-0, xkb-data, libvulkan1, mesa-vulkan-drivers, xdg-utils]
     override-build: |
       export CARGO_BUILD_JOBS=2
       export RUSTUP_TOOLCHAIN=stable
@@ -44,6 +44,8 @@ parts:
       rm -rf "$openrailsrs_bundle_dir"
       cp snap/local/desktop-launch "$CRAFT_PART_INSTALL/bin/desktop-launch"
       cp snap/local/display-launch.py "$CRAFT_PART_INSTALL/bin/display-launch.py"
+      mkdir -p "$CRAFT_PART_INSTALL/etc"
+      cp snap/local/asound.conf "$CRAFT_PART_INSTALL/etc/asound.conf"
       chmod +x "$CRAFT_PART_INSTALL/bin/desktop-launch"
       mkdir -p "$CRAFT_PART_INSTALL/share/applications"
       cp "$CRAFT_PART_INSTALL/openrailsrs.desktop" "$CRAFT_PART_INSTALL/share/applications/openrailsrs.desktop"

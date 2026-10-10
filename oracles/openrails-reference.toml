@@ -300,3 +300,157 @@ sha256 = "45026c82e62a869acb0b461d297ab29b63688978533d3f1568f80ece5e0aaa84"
 [[files]]
 path = "oracles/openrails-traction-operation-provenance.json"
 sha256 = "e10f9e760ca47a9ca391c6f5459e21037bd89b9e963525ca77e0d8cf45b49006"
+
+# Original vacuum, legacy EP and default power supplies for installed formations.
+
+[[files]]
+path = "tools/openrails-reference/BrakePowerReference.cs"
+sha256 = "f09ad78bcb4cdaa538e33b6dbb2ca8ac255083b0fa70903076f6f3cfc0e4f5c6"
+
+[[files]]
+path = "oracles/openrails-brake-power.json"
+sha256 = "723251e0418d42acb9d0c965a786afc682bc0d289c28395463406150c04e61e8"
+
+[[files]]
+path = "oracles/openrails-brake-power-provenance.json"
+sha256 = "e07b641e4b9dcbfec3077d6e4730046dabb9cdf15efd3fbad156ecad609d4868"
+
+[[files]]
+path = "examples/brake_supply_native/121single-con.con"
+sha256 = "50b8463c62441c0e21e7b286b2aa3ad0169cfb56c2d1942a4a0532489740de96"
+
+[[files]]
+path = "examples/brake_supply_native/1960centralwr8car-con.con"
+sha256 = "679333fc11d90fef0321bbfdf331e819f5a085856d0dab5a5d28100415d767ae"
+
+[[files]]
+path = "examples/brake_supply_native/bristol-pullman-con.con"
+sha256 = "d0b11d8002df1d33bb8d3d1190e43f7b64856bd0ff8e6cb22e7bdf4f8bdb891e"
+
+[[files]]
+path = "examples/brake_supply_native/downton-hall-le-con.con"
+sha256 = "d0361357022bb54e4a56a1fac7c4cdcd19636dd29b51bd3e4344e6d899ec14b7"
+
+[[files]]
+path = "examples/brake_supply_native/kingle-con.con"
+sha256 = "a3343a9825e362dd4af229c4685e92fd9bdfad4a36231578de57a3cbe4b751b4"
+
+[[files]]
+path = "examples/brake_supply_native/mt-mt-class-47-6-mk2-pp-con.con"
+sha256 = "cb281a1c63bf8c1fe252c2d24678ebd4a254ea83c4d094191d66300430dee168"
+
+[[files]]
+path = "examples/brake_supply_native/profiles.json"
+sha256 = "dcb117020a99266919e30d4cb11ce78a663af19e0913522fd5e2d487fdeeb67e"
+
+[[files]]
+path = "examples/brake_supply_native/provenance.json"
+sha256 = "2c1412b8b03085d1adebcd349e98e264dc092bb9aaf7fb0c1f17232d9d403bd9"
+
+[[files]]
+path = "examples/brake_supply_native/r-stock-6-car-con.con"
+sha256 = "e4709755efc77ebf0d230f501487ba7a47b2b25e719e4f64428891bbf68d0af1"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/0b02c8f061c9.wag"
+sha256 = "07b3eddd6c022bc007bb60e954bae0cc2907fc28655e2d01cfbbcd1cc3971448"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/1812693b6ca0.wag"
+sha256 = "52c2f1e6c0f900c1d1501f7067a7d8d6b1fd153c814584982bc05a97479add44"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/1aa5b3dfe7c9.eng"
+sha256 = "87a5b2dc34b46bb474808f11ef1241aa8c99ed9e2299466194e5b95748abc442"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/207f338067cc.eng"
+sha256 = "3863aade3969ee3b276e666f812b308509f3be7ef14d08f08e1600ea5d85fa3c"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/2e745329c63e.eng"
+sha256 = "cdb19d9713328545bf2930d465b07dd8a733723352bfa59a54976d994cf3f61d"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/4161fbba02d4.wag"
+sha256 = "3e391c3d941cb8068cb9134384d595eb2fd52cb1281d1fd3e0637e4d322c9715"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/43cbe1ce2075.eng"
+sha256 = "c34fe16c1ea2626ec2d9dcc849b277424ca1dfe5fbff45c932c1a3e50565ba55"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/46a8411c7a1a.eng"
+sha256 = "713338852246e78407891dc0d80e119c7dc0e2922f30ebdabf4aaeaf436c2c10"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/47d93a2d1efd.eng"
+sha256 = "6c19a4d088b79d50df9bdf1195069ceaa7f0fdbe1a13d7c420dd01e240731e74"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/4cd9656c1238.wag"
+sha256 = "7121f45cdfce108139f29259b69bdf1970d2e81f80a76a3c0092212c337d7850"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/4ea3bf2355f6.wag"
+sha256 = "2086f94ca273bb4c13307acb0650afeb7278db9da7ba13c9e155324d6b9a0f5a"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/5b5885d8a98e.wag"
+sha256 = "8c1b343e0e700531e2ac3ab4de14a7483565af53b7ac73e2c471fb4a33ad787a"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/5bcf3c25ab42.wag"
+sha256 = "be057b78003238f5db2bf4bd03d92884bf206dc1c817643e83abcbe36d9c60f1"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/86b9af33a1f3.wag"
+sha256 = "5ac4f9925b27215a7b182371c9fb7f4f1c20f6e3ff6fd9f39edf23e4cc4bed80"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/904145f2c1d2.eng"
+sha256 = "c098da0ec6aadbd3f0015a93b925321d7741d78afb97348cd9bfa32be53f91b4"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/9a5618fb82b7.wag"
+sha256 = "258b5bab6ce5d4d30365fdb86ce6cc91e4d18ff51afa425ca30ef6a1b4672b72"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/b0b2158fbe94.wag"
+sha256 = "b64bb88f3e6baf36799d2ec24498789d81eb933173e5acc101fc7c5f76f02818"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/b490bea8bf47.wag"
+sha256 = "dd504fde4ce7a79353bfb811e8b68b39970a644e156ae57c905748dbd67c4eba"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/d4684bf68f49.wag"
+sha256 = "c3af39b5a3676920c75ad514d8f5614d7099c42c60224f8358270651df2eef03"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/d48ba927ce1c.wag"
+sha256 = "abfebd23ac33a5c96b399ce687a61d6977e1385f9df6ffdb09c5dcb7ef7cf22b"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/df540d3c68ff.wag"
+sha256 = "4dacaeef9fb86b1478596bd696342e4db32ec60aa46be351ba419196b7f898c3"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/e82d5984aebf.eng"
+sha256 = "991302b6d20da877ce89163fbe183a91026233531dfa20173102832d88e34083"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/ef7dc960e903.eng"
+sha256 = "deaa085abf1192a472db9c474f6ac1ebcfec8067c02cd6e739ec488dcb39f8b1"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/f0a6e44cd462.wag"
+sha256 = "ee05a15a1f7dae72bca34b18282eab28c467549841aa9a20eac7374f2eaa6c04"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/f965dc08e136.wag"
+sha256 = "f1035fb0e89288ff04b06fe1f778e343500f060b53d83ef077acaa823f656eaa"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/f9b2e5c4f49d.wag"
+sha256 = "8eaccaff343bd383acc7c33a61c4494572ab67da899ea50563312619bef06a94"

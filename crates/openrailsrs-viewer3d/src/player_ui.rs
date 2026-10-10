@@ -1530,6 +1530,15 @@ fn build_formation(p: &mut ChildSpawnerCommands<'_>, ui: &PlayerUiState, s: &Liv
         }
     });
     dynamic(p, DynamicText::Car, 14.0);
+    if s.physics.power_supply.cars.iter().any(|c| {
+        c.vehicle == ui.selected_car && c.params.manual_train_supply && c.params.train_supply_fitted
+    }) {
+        button(
+            p,
+            "Alimentación de pasajeros",
+            UiCommand::Car(CarOperation::TrainSupply),
+        );
+    }
     if s.physics
         .diesel
         .cars
@@ -2570,7 +2579,7 @@ fn car_text(s: &LiveDriveSession, index: usize) -> String {
             .parked_brakes
             .get(index - s.formation.coupled_count)
     };
-    format!(
+    let mut text = format!(
         "COCHE {} · {}\nMasa {:.1} t · longitud {:.1} m · {}\nFreno de mano: {} · manguera: {}\nLlaves delantera / trasera: {} / {}\nTracción: {} · batería: {} · mando múltiple: {}\nFuerza de frenado: {:.1} kN · tubería: {}",
         index + 1,
         c.name,
@@ -2618,7 +2627,23 @@ fn car_text(s: &LiveDriveSession, index: usize) -> String {
                 "Conectada al mando"
             })
             .unwrap_or("—")
-    )
+    );
+    if let Some(power) = s
+        .state
+        .power_supply
+        .cars
+        .iter()
+        .find(|p| p.vehicle == index)
+    {
+        text += &format!(
+            "\nAlimentación principal: {} · auxiliar: {}\nCabina: {} · pasajeros: {}",
+            yes(power.supply.main),
+            yes(power.supply.auxiliary),
+            yes(power.supply.cab),
+            yes(power.supply.train_supply)
+        );
+    }
+    text
 }
 fn advanced_text(
     l: &LiveDrive,
