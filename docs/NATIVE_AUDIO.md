@@ -109,7 +109,7 @@ La corrección nativa incluye `libasound2-plugins`, `libpulse0` y una configurac
 
 La comprobación del 10 de octubre abrió el dispositivo dentro del perfil estricto del Snap instalado: cabina y exterior del Pullman, 16 programas SMS, 69 muestras, sin avisos del mezclador. La prueba usa volumen cero y no reemplaza la escucha manual. Las bibliotecas usadas pertenecen a Ubuntu 24.04/core24.
 
-Esta corrección está en las fuentes y el payload de QA. **No está incluida en la revisión 2 publicada en edge.** La prueba no sustituyó la instalación del jugador. [Evidencia y alcance](fixtures/compatibility/native-brakes-power-2026-10-10/README.md).
+La corrección se publicó el **11 de octubre de 2026** en **0.1.0-alpha.3**, revisión **3** de **latest/edge**. El paquete final también incorpora el directorio privado `pulseaudio/` en la búsqueda de bibliotecas del lanzador: una prueba estricta abre el dispositivo, activa una voz de limpiaparabrisas y no registra avisos. No sustituyó la instalación del jugador ni realizó escucha con parlantes. [QA anterior con SMS originales](fixtures/compatibility/native-brakes-power-2026-10-10/README.md) y [paquete final publicado](fixtures/compatibility/train-operation-2026-10-11/README.md).
 
 ## Límites
 

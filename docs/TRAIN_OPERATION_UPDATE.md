@@ -28,7 +28,8 @@ Los perfiles, cachés y descargas se guardan fuera del paquete.
 `openrailsrs`, abrí Biblioteca y comprobá la ubicación de tu contenido. Probá una
 partida, guardala y cerrá el visor; Continuar debe conservar el estado. Activá sonido
 en F10 y comprobá bocina y limpiaparabrisas. La publicación y evidencia del paquete
-se registran en el issue #208.
+se registran en el [informe de pruebas](fixtures/compatibility/train-operation-2026-10-11/README.md)
+y en el issue #208.
 
 ## 3. Ruedas, bogies, suspensión y enganches
 
@@ -176,4 +177,6 @@ los de audio verifican balance continuo, Doppler y excepciones SMS.
 
 La captura de referencia térmica es reproducible con
 `scripts/capture_traction_operation_reference.py`. Capturas GPU, histogramas del
-viaje ×1, memoria y el paquete publicado se conservan en el registro del issue #208.
+viaje ×1, memoria y el paquete publicado se conservan en el
+[informe de pruebas](fixtures/compatibility/train-operation-2026-10-11/README.md)
+y en el registro del issue #208.

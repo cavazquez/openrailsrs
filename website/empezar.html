@@ -27,8 +27,9 @@
       <nav id="main-nav" aria-label="Navegación principal"><a href="index.html">Inicio</a><a href="experiencia.html">El juego</a><a href="empezar.html" aria-current="page">Cómo empezar</a><a href="contenido.html">Rutas y trenes</a><a href="estado.html">Qué falta</a><a class="nav-github" href="https://github.com/cavazquez/openrailsrs">Código <span aria-hidden="true">↗</span></a></nav>
     </div>
   </header>
-  <main id="contenido"><header class="page-intro wrap"><p class="eyebrow">Instalación</p><h1>Tu primera partida.</h1><p class="lead">La versión de desarrollo se compila desde el código. Linux es el sistema que usamos para las pruebas. Podés empezar con Demo Model 1 o con tu instalación de Chiltern.</p></header>
+  <main id="contenido"><header class="page-intro wrap"><p class="eyebrow">Instalación</p><h1>Tu primera partida.</h1><p class="lead">En Linux podés instalar la alpha desde Snap Store o compilar el código. Podés empezar con los ejemplos incluidos, Demo Model 1 o tu instalación de Chiltern.</p></header>
 <section class="section wrap getting-started" id="instalacion">
+  <aside class="note"><strong>Instalar sin compilar</strong>La alpha está en <a href="https://snapcraft.io/openrailsrs">Snap Store</a>, canal edge. Ejecutá <code>sudo snap install openrailsrs --edge</code> y luego <code>snap run openrailsrs</code>. Si ya la tenés, actualizá con <code>sudo snap refresh openrailsrs --edge</code>. Biblioteca conserva las rutas descargadas entre revisiones.</aside>
   <div class="section-heading"><div><h2>Compilar y abrir el menú</h2></div><p>Necesitás Git, Rust 1.95 o superior y las bibliotecas gráficas y de audio de tu distribución. Python 3 se usa para descargar contenido.</p></div>
   <ol class="steps">
     <li><span class="step-number">1</span><div><h3>Descargá el proyecto</h3><div class="code-box"><pre><code>git clone https://github.com/cavazquez/openrailsrs.git
@@ -46,7 +47,7 @@ target/debug/openrailsrs-viewer3d --menu</code></pre><button class="copy-button"
 
 # Abrir directamente el servicio de seis estaciones
 ./scripts/run_chiltern_service.sh --direct</code></pre><button class="copy-button" type="button">Copiar</button></div><a href="https://github.com/cavazquez/openrailsrs/blob/main/docs/CHILTERN.md">Guía de Chiltern <span aria-hidden="true">↗</span></a></details>
-  <p class="small-note">También hay un paquete Linux de prueba con <code>Jugar.sh</code>, <code>LEEME.txt</code> y recursos incluidos. Si recibiste ese archivo, extraelo completo, ejecutá <code>./Jugar.sh --check</code> y luego <code>./Jugar.sh</code>: no hace falta Rust ni Cargo. La construcción actual requiere glibc 2.43; todavía no hay una descarga general para distribuciones anteriores. La instalación y el confinamiento del Snap siguen pendientes. Los pasos están en <a href="https://github.com/cavazquez/openrailsrs/blob/main/docs/DISTRIBUTION.md">la guía de distribución</a>.</p>
+  <p class="small-note">También hay un paquete Linux de prueba con <code>Jugar.sh</code>, <code>LEEME.txt</code> y recursos incluidos. Si recibiste ese archivo, extraelo completo, ejecutá <code>./Jugar.sh --check</code> y luego <code>./Jugar.sh</code>: no hace falta Rust ni Cargo. Esa construcción requiere glibc 2.43; todavía no hay una descarga portátil general para distribuciones anteriores. El Snap usa core24 y se construye por separado. Los pasos están en <a href="https://github.com/cavazquez/openrailsrs/blob/main/docs/DISTRIBUTION.md">la guía de distribución</a>.</p>
 </section>
 <section class="section wrap" id="primer-viaje">
   <div class="section-heading"><div><h2>Las teclas del primer viaje</h2></div><p>El tren empieza detenido. Mirá el monitor de vía: te indica la parada, la distancia y cuándo podés cerrar las puertas y salir.</p></div>

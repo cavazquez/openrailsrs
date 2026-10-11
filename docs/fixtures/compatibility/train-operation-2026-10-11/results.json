@@ -1,0 +1,629 @@
+{
+  "date": "2026-10-11",
+  "reference": {
+    "version": "Open Rails 1.6.1",
+    "commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5"
+  },
+  "full_check": {
+    "rust_passed": 1750,
+    "python_passed": 88,
+    "status": "pass",
+    "github": {
+      "status": "success",
+      "url": "https://github.com/cavazquez/openrailsrs/actions/runs/38121876318",
+      "jobs": [
+        "check.sh",
+        "Cobertura de tests",
+        "Visual smoke (#43)",
+        "Optional C# TCS host (Linux)"
+      ]
+    }
+  },
+  "journey_1x": {
+    "baseline": {
+      "viewer_sha256": "a97af064d906d4ba8dcc55df0f44723631e8cc9f328aba29786d01a9bcbe7673",
+      "scenario_sha256": "a75b31738ecc7b820e76237363527b78676b49679ff16bf0025340f1a9ffd6fa",
+      "service_complete": true,
+      "performance": {
+        "elapsed_s": 788.3091844549975,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 39,
+        "frame_p99_ms": 48,
+        "frames": 30994,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 39,
+        "gameplay_frame_p99_ms": 48,
+        "gameplay_frames": 29677,
+        "gameplay_hitches_over_100_ms": 3,
+        "gameplay_longest_frame_ms": 137.482413,
+        "hitches_over_100_ms": 6,
+        "loading_frames": 4272,
+        "longest_frame_ms": 1742.004305,
+        "peak_rss_mib": 2173.078125,
+        "rss_mib": 2073.79296875,
+        "startup_longest_frame_ms": 1742.004305
+      },
+      "station_results": [
+        {
+          "actual_arrive_s": 0.05,
+          "actual_depart_s": 22.000000000000178,
+          "arrival_speed_mps": 0.0,
+          "delay_s": 0.05,
+          "dwell_s": 20.00000000000015,
+          "early_departure_s": 0.0,
+          "name": "Northolt Park",
+          "node": "n97",
+          "position_error_m": 2.2737367544323206e-13,
+          "scheduled_arrive_s": 0.0
+        },
+        {
+          "actual_arrive_s": 364.25000000004854,
+          "actual_depart_s": 421.00000000006145,
+          "arrival_speed_mps": 0.09289049961983863,
+          "delay_s": 0.0,
+          "dwell_s": 54.799999999999024,
+          "early_departure_s": 0.0,
+          "name": "South Ruislip",
+          "node": "n101",
+          "position_error_m": 2.665857534746465,
+          "scheduled_arrive_s": 390.0
+        },
+        {
+          "actual_arrive_s": 692.4999999999179,
+          "actual_depart_s": 750.9999999998647,
+          "arrival_speed_mps": 0.09281712749216979,
+          "delay_s": 0.0,
+          "dwell_s": 56.549999999998924,
+          "early_departure_s": 0.0,
+          "name": "West Ruislip",
+          "node": "n105",
+          "position_error_m": 3.0223121270810225,
+          "scheduled_arrive_s": 720.0
+        }
+      ],
+      "weather_journey_validation": {
+        "passed": true,
+        "samples": 77,
+        "effective_weather_types": 5,
+        "minimum_rail_factor": 0.6010198516177125,
+        "maximum_grip_change_per_simulation_s": 0.014252821085397304,
+        "wet_braking_simulation_s": 237.6499999999126,
+        "moving_wet_braking_samples": 11,
+        "scope": "continuity and shared weather contact; no calibrated physical-parity claim"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      }
+    },
+    "candidate_quiet": {
+      "viewer_sha256": "9759189f53fe85574fa35322b3146fd3a74e29f2668a19a607146d0d7d469d28",
+      "scenario_sha256": "a75b31738ecc7b820e76237363527b78676b49679ff16bf0025340f1a9ffd6fa",
+      "service_complete": true,
+      "performance": {
+        "elapsed_s": 788.2205041350039,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 38,
+        "frame_p99_ms": 44,
+        "frames": 31125,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 38,
+        "gameplay_frame_p99_ms": 44,
+        "gameplay_frames": 29815,
+        "gameplay_hitches_over_100_ms": 2,
+        "gameplay_longest_frame_ms": 139.89258099999998,
+        "hitches_over_100_ms": 5,
+        "loading_frames": 4286,
+        "longest_frame_ms": 1759.16924,
+        "peak_rss_mib": 2390.05859375,
+        "rss_mib": 2295.171875,
+        "startup_longest_frame_ms": 1759.16924
+      },
+      "station_results": [
+        {
+          "actual_arrive_s": 0.05,
+          "actual_depart_s": 22.000000000000178,
+          "arrival_speed_mps": 0.0,
+          "delay_s": 0.05,
+          "dwell_s": 20.00000000000015,
+          "early_departure_s": 0.0,
+          "name": "Northolt Park",
+          "node": "n97",
+          "position_error_m": 2.2737367544323206e-13,
+          "scheduled_arrive_s": 0.0
+        },
+        {
+          "actual_arrive_s": 364.25000000004854,
+          "actual_depart_s": 421.00000000006145,
+          "arrival_speed_mps": 0.09288976813904581,
+          "delay_s": 0.0,
+          "dwell_s": 54.799999999999024,
+          "early_departure_s": 0.0,
+          "name": "South Ruislip",
+          "node": "n101",
+          "position_error_m": 2.6659884853916083,
+          "scheduled_arrive_s": 390.0
+        },
+        {
+          "actual_arrive_s": 692.4999999999179,
+          "actual_depart_s": 750.9999999998647,
+          "arrival_speed_mps": 0.09281718278538567,
+          "delay_s": 0.0,
+          "dwell_s": 56.549999999998924,
+          "early_departure_s": 0.0,
+          "name": "West Ruislip",
+          "node": "n105",
+          "position_error_m": 3.022438380316089,
+          "scheduled_arrive_s": 720.0
+        }
+      ],
+      "weather_journey_validation": {
+        "passed": true,
+        "samples": 77,
+        "effective_weather_types": 5,
+        "minimum_rail_factor": 0.6010198541364946,
+        "maximum_grip_change_per_simulation_s": 0.014252750995496754,
+        "wet_braking_simulation_s": 237.6499999999126,
+        "moving_wet_braking_samples": 11,
+        "scope": "continuity and shared weather contact; no calibrated physical-parity claim"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      }
+    },
+    "scope": "RX 7600/RADV, 1280x720, 2 km, native eight-car Pullman, audio disabled; baseline and final one run each; gameplay excludes initial loading. Quiet is an intermediate build. Final includes synthetic-car pose and explicit sun layers; no concurrent compilation. Slight P99 improvement, no demonstrated reduction of >100 ms hitches or memory.",
+    "candidate_final": {
+      "viewer_sha256": "3fabf3ffb23e2ab11a04dce301b476eee712dc3699c2f6718c8d8945093a6a12",
+      "scenario_sha256": "a75b31738ecc7b820e76237363527b78676b49679ff16bf0025340f1a9ffd6fa",
+      "service_complete": true,
+      "odometer_m": 7055.0242874948935,
+      "performance": {
+        "elapsed_s": 787.9876037350011,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 38,
+        "frame_p99_ms": 45,
+        "frames": 31069,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 38,
+        "gameplay_frame_p99_ms": 45,
+        "gameplay_frames": 29755,
+        "gameplay_hitches_over_100_ms": 5,
+        "gameplay_longest_frame_ms": 130.722177,
+        "hitches_over_100_ms": 8,
+        "loading_frames": 4294,
+        "longest_frame_ms": 1668.7463679999998,
+        "peak_rss_mib": 2350.09375,
+        "rss_mib": 2251.44921875,
+        "startup_longest_frame_ms": 1668.7463679999998
+      },
+      "station_results": [
+        {
+          "actual_arrive_s": 0.05,
+          "actual_depart_s": 22.000000000000178,
+          "arrival_speed_mps": 0.0,
+          "delay_s": 0.05,
+          "dwell_s": 20.00000000000015,
+          "early_departure_s": 0.0,
+          "name": "Northolt Park",
+          "node": "n97",
+          "position_error_m": 2.2737367544323206e-13,
+          "scheduled_arrive_s": 0.0
+        },
+        {
+          "actual_arrive_s": 364.25000000004854,
+          "actual_depart_s": 421.00000000006145,
+          "arrival_speed_mps": 0.09288977410871754,
+          "delay_s": 0.0,
+          "dwell_s": 54.799999999999024,
+          "early_departure_s": 0.0,
+          "name": "South Ruislip",
+          "node": "n101",
+          "position_error_m": 2.665987779815623,
+          "scheduled_arrive_s": 390.0
+        },
+        {
+          "actual_arrive_s": 692.4999999999179,
+          "actual_depart_s": 750.9999999998647,
+          "arrival_speed_mps": 0.0928171502462547,
+          "delay_s": 0.0,
+          "dwell_s": 56.549999999998924,
+          "early_departure_s": 0.0,
+          "name": "West Ruislip",
+          "node": "n105",
+          "position_error_m": 3.0224413984051353,
+          "scheduled_arrive_s": 720.0
+        }
+      ],
+      "weather_journey_validation": {
+        "passed": true,
+        "samples": 77,
+        "effective_weather_types": 5,
+        "minimum_rail_factor": 0.6010198545689087,
+        "maximum_grip_change_per_simulation_s": 0.014252750995496754,
+        "wet_braking_simulation_s": 237.6499999999126,
+        "moving_wet_braking_samples": 11,
+        "scope": "continuity and shared weather contact; no calibrated physical-parity claim"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "native_signal_errors": {}
+    }
+  },
+  "dense_weather": {
+    "downpour": {
+      "odometer_m": 50.01772772900973,
+      "performance": {
+        "elapsed_s": 121.98756045200011,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 26,
+        "frame_p99_ms": 59,
+        "frames": 4680,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 26,
+        "gameplay_frame_p99_ms": 26,
+        "gameplay_frames": 2672,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 41.406916,
+        "hitches_over_100_ms": 5,
+        "loading_frames": 2013,
+        "longest_frame_ms": 1829.876378,
+        "peak_rss_mib": 2740.6640625,
+        "rss_mib": 2208.9765625,
+        "startup_longest_frame_ms": 1829.876378
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 8192,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 8192,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 238
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "formation_validation": {
+        "cars": 8,
+        "maximum_spacing_error_m": 0.026672774015697343,
+        "tolerance_m": 2.0,
+        "scope": "car centres versus path offsets; includes curve chord shortening"
+      },
+      "weather_frames": {
+        "Lluvia": {
+          "elapsed_wall_s": 67.27853258999997,
+          "frames": 2673,
+          "hitches_over_100_ms": 0,
+          "longest_frame_ms": 41.406916
+        }
+      },
+      "viewer_sha256": "9759189f53fe85574fa35322b3146fd3a74e29f2668a19a607146d0d7d469d28"
+    },
+    "heavy_snow": {
+      "odometer_m": 50.023784441996355,
+      "performance": {
+        "elapsed_s": 125.46303092600006,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 27,
+        "frame_p99_ms": 75,
+        "frames": 4721,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 26,
+        "gameplay_frame_p99_ms": 26,
+        "gameplay_frames": 2676,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 44.055877,
+        "hitches_over_100_ms": 15,
+        "loading_frames": 2050,
+        "longest_frame_ms": 1806.559084,
+        "peak_rss_mib": 2664.8984375,
+        "rss_mib": 2489.69140625,
+        "startup_longest_frame_ms": 1806.559084
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 8192,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 8192,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 10240,
+        "shelter_refreshes": 245
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "formation_validation": {
+        "cars": 8,
+        "maximum_spacing_error_m": 0.026710833687218383,
+        "tolerance_m": 2.0,
+        "scope": "car centres versus path offsets; includes curve chord shortening"
+      },
+      "weather_frames": {
+        "Nieve": {
+          "elapsed_wall_s": 67.31130269900002,
+          "frames": 2677,
+          "hitches_over_100_ms": 0,
+          "longest_frame_ms": 44.055877
+        }
+      },
+      "viewer_sha256": "9759189f53fe85574fa35322b3146fd3a74e29f2668a19a607146d0d7d469d28"
+    }
+  },
+  "native_audio_offline": [
+    {
+      "formation": "Birmingham Pullman.con",
+      "view": "exterior",
+      "status": "pass",
+      "missing_wav": [],
+      "report": {
+        "programs": 16,
+        "streams": 58,
+        "samples": 69,
+        "decoded_mib": 10.446857,
+        "active_voices": 28,
+        "warnings": [],
+        "device": false,
+        "wiper_fallback": true,
+        "duration_s": 11.982267573696145,
+        "rms": 0.17987423212856427,
+        "peak_dbfs": -1.0004493301428767,
+        "clipped_percent": 0.0
+      }
+    },
+    {
+      "formation": "Birmingham Pullman.con",
+      "view": "cab",
+      "status": "pass",
+      "missing_wav": [],
+      "report": {
+        "programs": 16,
+        "streams": 58,
+        "samples": 69,
+        "decoded_mib": 10.446857,
+        "active_voices": 28,
+        "warnings": [],
+        "device": false,
+        "wiper_fallback": true,
+        "duration_s": 11.982267573696145,
+        "rms": 0.10113676284383274,
+        "peak_dbfs": -3.2881545844054676,
+        "clipped_percent": 0.0
+      }
+    }
+  ],
+  "traffic": {
+    "viewer_sha256": "9759189f53fe85574fa35322b3146fd3a74e29f2668a19a607146d0d7d469d28",
+    "service_complete": true,
+    "elapsed_s": 336.7,
+    "station_results": [
+      {
+        "actual_arrive_s": 0.05,
+        "actual_depart_s": 301.00000000003416,
+        "arrival_speed_mps": 0.0,
+        "delay_s": 0.05,
+        "dwell_s": 299.0000000000337,
+        "early_departure_s": 0.0,
+        "name": "Northolt Park",
+        "node": "n97",
+        "position_error_m": 2.2737367544323206e-13,
+        "scheduled_arrive_s": 0.0
+      },
+      {
+        "actual_arrive_s": 643.2999999999627,
+        "actual_depart_s": 830.999999999792,
+        "arrival_speed_mps": 0.09383701485251707,
+        "delay_s": 0.0,
+        "dwell_s": 185.750000000008,
+        "early_departure_s": 0.0,
+        "name": "South Ruislip",
+        "node": "n101",
+        "position_error_m": 2.6960750405633007,
+        "scheduled_arrive_s": 750.0
+      },
+      {
+        "actual_arrive_s": 1102.649999999545,
+        "actual_depart_s": 1180.9999999994736,
+        "arrival_speed_mps": 0.0975407164364371,
+        "delay_s": 0.0,
+        "dwell_s": 76.3999999999978,
+        "early_departure_s": 0.0,
+        "name": "West Ruislip",
+        "node": "n105",
+        "position_error_m": 3.0918250747236016,
+        "scheduled_arrive_s": 1150.0
+      }
+    ],
+    "native_signal_errors": {},
+    "train_effects": {
+      "cpu_capacity": 0,
+      "cpu_live_particles": 0,
+      "cpu_mesh_updates": 0,
+      "cpu_obstacle_hits": 0,
+      "enabled": true,
+      "execution": "gpu",
+      "fallback_reason": null,
+      "gpu_backend": "bevy_hanabi 0.19.0",
+      "gpu_bounds_per_emitter": 8,
+      "gpu_capacity": 510,
+      "gpu_emitters": 6,
+      "gpu_simulation_delta_s": 0.0,
+      "gpu_spawn_requests": 12207,
+      "inherits_vehicle_velocity": true,
+      "live_particles": null,
+      "max_cpu_particle_speed_mps": 0.0,
+      "max_particle_speed_mps": null,
+      "native_emitters": 6,
+      "nearby_opaque_bounds": 184,
+      "particle_limit": 512,
+      "quality_level": 0,
+      "render_layers": [
+        0
+      ],
+      "requested": "gpu",
+      "simulation_clock_s": 1180.9999999994736,
+      "steam_pulses_follow_wheels": true,
+      "wind_mps": [
+        2.093182325363159,
+        0.0,
+        0.7310607433319092
+      ]
+    },
+    "services": [
+      {
+        "arrived": true,
+        "departed": true,
+        "edge": null,
+        "id": "Pullman adelantado",
+        "odometer_m": 3648.285051715249,
+        "stops": 2,
+        "velocity_kmh": 0.0
+      },
+      {
+        "arrived": true,
+        "departed": true,
+        "edge": null,
+        "id": "Pullman contrario",
+        "odometer_m": 3251.1869800000095,
+        "stops": 1,
+        "velocity_kmh": 0.0
+      }
+    ],
+    "scope": "Chiltern classic original Pullman for all three services, x4 clock; acceptance of completion/signals/visual emitters, not a performance comparison."
+  },
+  "snap": {
+    "version": "0.1.0-alpha.3",
+    "architecture": "amd64",
+    "base": "core24",
+    "confinement": "strict",
+    "size_bytes": 159780864,
+    "sha256": "6fb1e19e239c2063c74456261a5add7b1e1de0f82bccd93b3bcccffbc6ab7e36",
+    "status": "published-latest-edge",
+    "compiled_source_files_verified": 51,
+    "audio": {
+      "active_voices": 1,
+      "decoded_mib": 0.0,
+      "device": true,
+      "programs": 0,
+      "samples": 0,
+      "streams": 0,
+      "warnings": [],
+      "wiper_fallback": true
+    },
+    "common_data_preserved": true,
+    "scope": "LXD non-root user, full AppArmor/seccomp; X11 virtual, lavapipe/CPU particles, PulseAudio silent null sink; real audio device opens, no listening claim.",
+    "yard": {
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "cars": 3,
+      "train_motion": {
+        "cars": 3,
+        "level": "soft",
+        "max_pitch_deg": 0.0,
+        "max_roll_deg": 0.0,
+        "max_vertical_m": 0.0,
+        "wheel_bogie_pose_compensated": true
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": null,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 0
+      }
+    },
+    "rain": {
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "cars": 2,
+      "train_motion": {
+        "cars": 2,
+        "level": "soft",
+        "max_pitch_deg": 0.0,
+        "max_roll_deg": 0.0,
+        "max_vertical_m": 0.0,
+        "wheel_bogie_pose_compensated": true
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 53,
+        "cpu_particles": 1024,
+        "execution": "cpu",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": 0.15000000596046448,
+        "quality_level": 1,
+        "requested": "cpu",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 10
+      }
+    },
+    "snow": {
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "cars": 2,
+      "train_motion": {
+        "cars": 2,
+        "level": "soft",
+        "max_pitch_deg": 0.0,
+        "max_roll_deg": 0.0,
+        "max_vertical_m": 0.0,
+        "wheel_bogie_pose_compensated": true
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 53,
+        "cpu_particles": 1024,
+        "execution": "cpu",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": 0.05000000074505806,
+        "quality_level": 1,
+        "requested": "cpu",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 8
+      }
+    },
+    "revision": 3,
+    "channel": "latest/edge",
+    "published_date": "2026-10-11",
+    "store_url": "https://snapcraft.io/openrailsrs",
+    "store_download_sha256": "6fb1e19e239c2063c74456261a5add7b1e1de0f82bccd93b3bcccffbc6ab7e36",
+    "store_download_matches_qa": true
+  },
+  "source_commit": "a0af50cfe64d2020756f4537301d14db0cb1d881"
+}

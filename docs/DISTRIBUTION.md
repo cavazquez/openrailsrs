@@ -1,7 +1,7 @@
 # Binario Linux trasladable y Snap
 
 Los recursos originales se instalan por separado. Los paquetes incluyen tres
-binarios, shaders, recursos propios y ejemplos; excluyen descargas, datos del
+binarios, shaders, recursos versionados y ejemplos; excluyen descargas, datos del
 jugador, salidas de simulación y credenciales. El manifiesto de recursos es una
 lista explícita. El instalador y el catálogo de contenido están embebidos.
 
@@ -53,7 +53,7 @@ Para un checkout con descargas/builds locales, prepará primero una copia limpia
 python3 scripts/package_snap.py --source-dir tmp/dist/snap-source
 cd tmp/dist/snap-source
 snapcraft pack --use-lxd
-sudo snap install --dangerous openrailsrs_0.1.0-alpha.2_amd64.snap
+sudo snap install --dangerous openrailsrs_0.1.0-alpha.3_amd64.snap
 openrailsrs.cli content --list
 openrailsrs
 ```
@@ -70,16 +70,30 @@ lectura. Para contenido de un disco externo, conectá explícitamente
 accesible al usuario. La construcción local no publica en Snap Store: la subida
 se hace con un comando separado.
 
-## Corrección de audio preparada
+## Audio dentro del Snap
 
-Las fuentes incluyen el puente ALSA–PulseAudio y el descubrimiento del socket de la sesión. Se comprobó la apertura real con contenido original en cabina y exterior bajo el perfil estricto, usando un payload de prueba sin cambiar el Snap instalado. La revisión 2 de edge todavía no incluye esta corrección; requiere construir y publicar otra revisión. [QA de audio](NATIVE_AUDIO.md#audio-dentro-del-snap).
+La revisión 3 incluye el puente ALSA–PulseAudio, el descubrimiento del socket de la sesión y la ruta de carga de `libpulsecommon`. El paquete final abrió el dispositivo y reprodujo una voz de limpiaparabrisas hacia un sumidero silencioso de QA, bajo el perfil estricto y sin avisos. La prueba anterior también abrió el contenido original en cabina y exterior. Estas pruebas no sustituyen la escucha manual. [QA de audio](NATIVE_AUDIO.md#audio-dentro-del-snap).
 
 ## Alpha disponible en Snap Store
 
-Actualmente **latest/edge** ofrece **0.1.0-alpha.2**, revisión **2**, publicada
-el 9 de octubre de 2026. Corrige el arranque en Wayland y el aviso falso de
-NVIDIA: resuelve el socket de la sesión, conserva el directorio privado de
-Snap y usa X11 si Wayland no responde y hay una conexión X11 disponible.
+Actualmente **latest/edge** ofrece **0.1.0-alpha.3**, revisión **3**, publicada
+el **11 de octubre de 2026**. Incluye las [diez mejoras de conducción y operación](TRAIN_OPERATION_UPDATE.md):
+carga gradual de escenario, movimiento por coche, audio espacial, independiente
+y emergencia, depósito/compresor, cargas eléctricas, vapor sincronizado,
+temperatura diésel, tráfico curado y un patio guiado.
+
+El paquete mide **159.780.864 bytes** y su SHA-256 es
+`6fb1e19e239c2063c74456261a5add7b1e1de0f82bccd93b3bcccffbc6ab7e36`.
+Se descargó nuevamente desde edge: el archivo de la tienda tiene el mismo hash.
+Se verificaron 51 archivos de fuentes, receta y lanzador contra la copia
+compilada. CLI, menú, ejemplos, HTTPS, audio y persistencia pasaron en una
+instancia LXD sin privilegios, con confinamiento estricto, X11 virtual y
+Vulkan por software. La prueba no certifica GPU física, Wayland ni un viaje
+original completo dentro del Snap. [Resultados y capturas](fixtures/compatibility/train-operation-2026-10-11/README.md).
+
+La revisión **2**, del 9 de octubre, corrigió el arranque en Wayland y el aviso
+falso de NVIDIA: resuelve el socket de la sesión, conserva el directorio privado
+de Snap y usa X11 si Wayland no responde y hay una conexión X11 disponible.
 
 El **9 de octubre de 2026** se publicó **0.1.0-alpha.1**, revisión **1**, para
 Linux amd64 en [Snap Store](https://snapcraft.io/openrailsrs), canal **latest/edge**.
