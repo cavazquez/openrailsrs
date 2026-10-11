@@ -302,6 +302,11 @@ pub fn advance_temperature(
         let available = car.governor.power_at_rpm(s.rpm).max(1.0);
         let load = ((force * state.velocity_mps + supplied) / available).max(0.0);
         advance_thermal_car(s, p, car.governor.idle_rpm, car.governor.max_rpm, load, dt);
+        // Ambient heat exchange is a Rust extension around the native 20 °C
+        // baseline; it does not change the original cooling/protection model.
+        let exchange =
+            (state.ambient_temperature_c.clamp(-100.0, 65.0) - 20.0) * (1.0 - (-dt / 300.0).exp());
+        s.temperature_c = (s.temperature_c + exchange).clamp(40.0, 600.0);
     }
 }
 

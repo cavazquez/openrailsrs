@@ -45,9 +45,15 @@ pub struct SoundState {
     pub cylinder_cocks: bool,
     pub horn: bool,
     pub wiper: bool,
+    pub wiper_rate: f32,
     pub sander: bool,
     pub doors: bool,
     pub headlights: u8,
+    pub curve_squeal: bool,
+    pub coupler_contact: i8,
+    pub coupler_force_n: f32,
+    pub coupler_relative_speed: f32,
+    pub coupling_event: u8,
 }
 impl SoundState {
     fn control(self, c: Control, distance: f32) -> f32 {
@@ -95,6 +101,20 @@ impl SoundState {
             if (now - before).abs() > 0.005 {
                 e.push(event);
             }
+        }
+        if self.coupling_event != 0
+            && old.coupling_event != 0
+            && self.coupling_event != old.coupling_event
+        {
+            e.push(u32::from(self.coupling_event));
+        }
+        if self.coupler_contact != 0
+            && self.coupler_contact != old.coupler_contact
+            && self.coupler_force_n.abs() > 1000.
+            && self.coupler_relative_speed.abs() > 0.05
+            && !e.contains(&58)
+        {
+            e.push(58);
         }
         if self.headlights != old.headlights {
             e.push(37);
@@ -238,6 +258,10 @@ pub struct SoundFrame {
     pub listener_vehicle: usize,
     pub paused: bool,
     pub volume: f32,
+    pub mix: crate::mix::SoundMix,
+    /// Presentation delta controls crossfades; zero preserves offline oracles.
+    pub presentation_dt_s: f32,
+    pub rain_surface: crate::weather::RainSurface,
     pub trains: Vec<TrainSoundFrame>,
 }
 #[derive(Clone, Debug, Default, Serialize)]
@@ -250,6 +274,20 @@ pub struct SoundReport {
     pub warnings: Vec<String>,
     pub device: bool,
     pub wiper_fallback: bool,
+    pub voices: Vec<VoiceReport>,
+    pub update_us: u64,
+}
+#[derive(Clone, Debug, Serialize)]
+pub struct VoiceReport {
+    pub train: usize,
+    pub vehicle: usize,
+    pub program: String,
+    pub stream: usize,
+    pub resource: String,
+    pub trigger: String,
+    pub group: crate::mix::SoundGroup,
+    pub gain: f32,
+    pub paused: bool,
 }
 
 #[derive(Clone)]
@@ -269,6 +307,8 @@ struct Bank {
     vehicle: usize,
     location: SoundLocation,
     program: SmsProgram,
+    program_name: String,
+    curve_only: bool,
     samples: HashMap<String, Wave>,
 }
 impl Bank {
@@ -347,6 +387,63 @@ fn external_pass_through(ast: &openrailsrs_formats::Ast) -> Option<f32> {
     let block = sms::child(wagon, "ORTSExternalSoundPassedThroughPercent")?;
     let percent: f32 = sms::items(block).get(1).and_then(sms::text)?.parse().ok()?;
     (percent.is_finite() && percent >= 0.0).then(|| percent.min(100.0) / 100.0)
+}
+
+fn curve_sound_refs(route: &Path) -> Vec<(String, SoundLocation)> {
+    let route = resolve_path_case_insensitive(route).unwrap_or_else(|| route.into());
+    let entries = std::fs::read_dir(&route)
+        .ok()
+        .into_iter()
+        .flatten()
+        .filter_map(Result::ok)
+        .map(|e| e.path());
+    let mut index = None;
+    fn find(a: &openrailsrs_formats::Ast) -> Option<usize> {
+        if sms::block(a, "ORTSCurveSMSNumber") {
+            return sms::items(a).get(1).and_then(sms::text)?.parse().ok();
+        }
+        sms::items(a)
+            .iter()
+            .filter(|c| matches!(c, openrailsrs_formats::Ast::List(_)))
+            .find_map(find)
+    }
+    for file in entries.filter(|p| p.extension().is_some_and(|e| e.eq_ignore_ascii_case("trk"))) {
+        index = read_msts_file_to_string(&file)
+            .ok()
+            .and_then(|s| parse_named_stf(&s).ok())
+            .and_then(|a| find(&a));
+        if index.is_some() {
+            break;
+        }
+    }
+    let Some(index) = index else {
+        return vec![];
+    };
+    let Some(path) = resolve_path_case_insensitive(&route.join("ttype.dat")) else {
+        return vec![];
+    };
+    let Ok(text) = read_msts_file_to_string(&path) else {
+        return vec![];
+    };
+    let text = text
+        .lines()
+        .filter(|l| !l.starts_with("SIMISA"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let Ok(ast) = parse_named_stf(&format!("TrackTypes ( {text} )")) else {
+        return vec![];
+    };
+    let types = sms::items(&ast)
+        .iter()
+        .filter(|a| sms::block(a, "TrackType"))
+        .collect::<Vec<_>>();
+    let Some(t) = types.get(index) else {
+        return vec![];
+    };
+    [(2, SoundLocation::Passenger), (3, SoundLocation::Exterior)]
+        .into_iter()
+        .filter_map(|(i, location)| Some((sms::items(t).get(i).and_then(sms::text)?, location)))
+        .collect()
 }
 
 fn resolve_sample(dirs: &[PathBuf], name: &str) -> Option<PathBuf> {
@@ -439,14 +536,15 @@ impl NativeSoundBank {
                 .and_then(|a| ConsistFile::from_ast(&a));
             let entries = match parsed {
                 Ok(c) => c.entries,
-                Err(e) => {
-                    result
-                        .report
-                        .warnings
-                        .push(format!("{}: {e}", spec.consist.display()));
+                Err(_e) => {
+                    result.report.warnings.push(format!(
+                        "{}: formación ilegible",
+                        crate::mix::resource_name(&spec.consist.to_string_lossy())
+                    ));
                     continue;
                 }
             };
+            let curve_refs = curve_sound_refs(&spec.route);
             // A program per vehicle is needed for distinct rolling sound. Share
             // decoded WAVs even when the same program serves all eight coaches.
             for (vehicle, entry) in entries.into_iter().enumerate() {
@@ -460,18 +558,30 @@ impl NativeSoundBank {
                     .parent()
                     .and_then(Path::parent)
                     .unwrap_or(&spec.route);
-                let root = authored
-                    .file_name()
-                    .and_then(|name| {
-                        resolve_path_case_insensitive(&content.join("TRAINS/TRAINSET").join(name))
-                    })
-                    .unwrap_or_else(|| authored.into());
+                let root = if authored.ancestors().any(|p| {
+                    p.file_name()
+                        .is_some_and(|n| n.eq_ignore_ascii_case("TRAINSET"))
+                }) {
+                    authored.to_path_buf()
+                } else {
+                    authored
+                        .file_name()
+                        .and_then(|name| {
+                            resolve_path_case_insensitive(
+                                &content.join("TRAINS/TRAINSET").join(name),
+                            )
+                        })
+                        .unwrap_or_else(|| authored.into())
+                };
                 let stock = sound_vehicle_path(&root, path.file_name().unwrap_or_default());
                 let ast =
                     match read_msts_text_with_includes(&stock).and_then(|t| parse_named_stf(&t)) {
                         Ok(a) => a,
-                        Err(e) => {
-                            result.report.warnings.push(e.to_string());
+                        Err(_e) => {
+                            result.report.warnings.push(format!(
+                                "{}: definición ilegible",
+                                crate::mix::resource_name(&stock.to_string_lossy())
+                            ));
                             continue;
                         }
                     };
@@ -508,8 +618,10 @@ impl NativeSoundBank {
                     }
                 }
                 visit(&ast, SoundLocation::Exterior, &mut refs);
+                refs.extend(curve_refs.iter().cloned());
                 for (name, location) in refs {
-                    if location != SoundLocation::Exterior
+                    if !curve_refs.iter().any(|r| r.0 == name && r.1 == location)
+                        && location != SoundLocation::Exterior
                         && result.banks.iter().any(|b| {
                             b.train == spec.id && b.vehicle == vehicle && b.location == location
                         })
@@ -523,28 +635,32 @@ impl NativeSoundBank {
                         content.join("SOUND"),
                     ];
                     let Some(path) = resolve_sample(&dirs, &name) else {
-                        result
-                            .report
-                            .warnings
-                            .push(format!("Missing SMS: {name} ({})", stock.display()));
+                        result.report.warnings.push(format!(
+                            "Falta SMS: {} ({})",
+                            crate::mix::resource_name(&name),
+                            crate::mix::resource_name(&stock.to_string_lossy())
+                        ));
                         continue;
                     };
                     let program = match SmsProgram::from_path(&path) {
                         Ok(p) => p,
-                        Err(e) => {
-                            result
-                                .report
-                                .warnings
-                                .push(format!("{}: {e}", path.display()));
+                        Err(_e) => {
+                            result.report.warnings.push(format!(
+                                "{}: programa SMS inválido",
+                                crate::mix::resource_name(&path.to_string_lossy())
+                            ));
                             continue;
                         }
                     };
-                    result.report.warnings.extend(
-                        program
-                            .warnings
-                            .iter()
-                            .map(|w| format!("{}: {w}", path.display())),
-                    );
+                    result
+                        .report
+                        .warnings
+                        .extend(program.warnings.iter().map(|w| {
+                            format!(
+                                "{}: {w}",
+                                crate::mix::resource_name(&path.to_string_lossy())
+                            )
+                        }));
                     let mut samples = HashMap::new();
                     for stream in &program.streams {
                         for trigger in &stream.triggers {
@@ -564,8 +680,9 @@ impl NativeSoundBank {
                                     ];
                                     let Some(file) = resolve_sample(&search, name) else {
                                         result.report.warnings.push(format!(
-                                            "Missing WAV: {name} ({})",
-                                            path.display()
+                                            "Missing WAV: {} ({})",
+                                            crate::mix::resource_name(name),
+                                            crate::mix::resource_name(&path.to_string_lossy())
                                         ));
                                         continue;
                                     };
@@ -605,10 +722,12 @@ impl NativeSoundBank {
                                                 waves.insert(file.clone(), w);
                                             }
                                             Err(e) => {
-                                                result
-                                                    .report
-                                                    .warnings
-                                                    .push(format!("{}: {e}", file.display()));
+                                                result.report.warnings.push(format!(
+                                                    "{}: {e}",
+                                                    crate::mix::resource_name(
+                                                        &file.to_string_lossy()
+                                                    )
+                                                ));
                                                 continue;
                                             }
                                         }
@@ -624,6 +743,8 @@ impl NativeSoundBank {
                         vehicle,
                         location,
                         program,
+                        program_name: crate::mix::resource_name(&path.to_string_lossy()),
+                        curve_only: curve_refs.iter().any(|r| r.0 == name && r.1 == location),
                         samples,
                     });
                 }
@@ -695,6 +816,11 @@ struct StreamRuntime {
     deadlines: Vec<f64>,
     choices: Vec<usize>,
     pan: Arc<AtomicU32>,
+    group: crate::mix::SoundGroup,
+    resource: String,
+    trigger: String,
+    mix_gain: f32,
+    gain: f32,
 }
 
 /// Mono positional SMS sources become stereo without moving authored stereo
@@ -741,24 +867,29 @@ struct Playback {
     voices: Vec<Vec<StreamRuntime>>,
     previous: HashMap<(usize, usize), (SoundState, f32)>,
     brake_sounds: HashMap<(usize, usize), BrakeSound>,
+    last_coupler_impact: HashMap<(usize, usize), f64>,
     active_sources: Vec<bool>,
     initial: bool,
     last_time_s: f64,
     mixer: rodio::mixer::Mixer,
     wiper: Player,
     native_wiper: bool,
+    native_wiper_vehicles: std::collections::HashSet<usize>,
+    wiper_vehicle: usize,
+    update_us: u64,
 }
 impl Playback {
     fn new(bank: NativeSoundBank, mixer: &rodio::mixer::Mixer) -> Self {
-        let native_wiper = bank.banks.iter().any(|b| {
-            b.train == 0 && b.vehicle == 0 && b.audible(SoundLocation::Cab, 0, true)
+        let native_wiper_vehicles: std::collections::HashSet<_> = bank.banks.iter().filter(|b| {
+            b.train == 0 && b.audible(SoundLocation::Cab,b.vehicle,true)
                 && b.program.streams.iter().flat_map(|s| &s.triggers).any(|trigger| {
                     matches!(trigger.kind, TriggerKind::Discrete(6))
                         && trigger.commands.iter().any(|command| {
                             matches!(command, Command::Play { files, .. } if files.iter().any(|f| b.samples.contains_key(f)))
                         })
                 })
-        });
+        }).map(|b|b.vehicle).collect();
+        let native_wiper = native_wiper_vehicles.contains(&0);
         let voices = bank
             .banks
             .iter()
@@ -776,6 +907,15 @@ impl Playback {
                         deadlines: vec![0.0; s.triggers.len()],
                         choices: vec![0; s.triggers.len()],
                         pan: Arc::new(AtomicU32::new(0.0_f32.to_bits())),
+                        group: if b.curve_only {
+                            crate::mix::SoundGroup::Rolling
+                        } else {
+                            crate::mix::classify(s, b.location != SoundLocation::Exterior)
+                        },
+                        resource: String::new(),
+                        trigger: String::new(),
+                        mix_gain: 0.0,
+                        gain: 0.0,
                     })
                     .collect()
             })
@@ -786,14 +926,19 @@ impl Playback {
             voices,
             previous: HashMap::new(),
             brake_sounds: HashMap::new(),
+            last_coupler_impact: HashMap::new(),
             initial: true,
             last_time_s: 0.0,
             mixer: mixer.clone(),
             wiper: Player::connect_new(mixer),
             native_wiper,
+            native_wiper_vehicles,
+            wiper_vehicle: 0,
+            update_us: 0,
         }
     }
     fn update(&mut self, frame: &SoundFrame) {
+        let started = std::time::Instant::now();
         if frame.time_s < self.last_time_s {
             // Restart and saved-game restore rewind the simulation clock. Keep
             // decoded samples but reset triggers, deadlines and loop releases.
@@ -808,12 +953,15 @@ impl Playback {
             }
             self.previous.clear();
             self.brake_sounds.clear();
+            self.last_coupler_impact.clear();
             self.active_sources.fill(false);
             self.initial = true;
             self.wiper.stop();
             self.wiper = Player::connect_new(&self.mixer);
         }
         self.last_time_s = frame.time_s;
+        self.wiper_vehicle = frame.listener_vehicle;
+        self.native_wiper = self.native_wiper_vehicles.contains(&frame.listener_vehicle);
         self.update_wiper(frame);
         let interior_gain = self
             .bank
@@ -842,7 +990,24 @@ impl Playback {
             let events = frame_events
                 .entry((train.id, bank.vehicle))
                 .or_insert_with(|| {
+                    let mut previous = previous;
+                    if history.is_none() {
+                        previous.coupler_contact = state.coupler_contact;
+                        previous.coupling_event = state.coupling_event;
+                    }
                     let mut events = state.events(previous);
+                    if events.contains(&58) && state.coupling_event == previous.coupling_event {
+                        let key = (train.id, bank.vehicle);
+                        if self
+                            .last_coupler_impact
+                            .get(&key)
+                            .is_some_and(|t| frame.time_s - *t < 0.25)
+                        {
+                            events.retain(|e| *e != 58);
+                        } else {
+                            self.last_coupler_impact.insert(key, frame.time_s);
+                        }
+                    }
                     events.extend(
                         self.brake_sounds
                             .entry((train.id, bank.vehicle))
@@ -861,9 +1026,14 @@ impl Playback {
                 SoundLocation::Exterior
             };
             let has_interior = self.bank.banks.iter().any(|b| {
-                b.train == 0 && b.vehicle == frame.listener_vehicle && b.location == listener
+                b.train == 0
+                    && b.vehicle == frame.listener_vehicle
+                    && b.location == listener
+                    && !b.curve_only
             });
-            let audible = *active && bank.audible(listener, frame.listener_vehicle, has_interior);
+            let audible = *active
+                && (!bank.curve_only || state.curve_squeal)
+                && bank.audible(listener, frame.listener_vehicle, has_interior);
             let external = bank
                 .program
                 .cameras
@@ -972,6 +1142,8 @@ impl Playback {
                                 let Some(wave) = bank.samples.get(&files[index]) else {
                                     continue;
                                 };
+                                voice.resource = crate::mix::resource_name(&files[index]);
+                                voice.trigger = format!("{:?}", trigger.kind);
                                 voice.player.stop();
                                 voice.player = Player::connect_new(&self.mixer);
                                 let release = Arc::new(AtomicU8::new(0));
@@ -1024,21 +1196,45 @@ impl Playback {
                     .iter()
                     .map(|c| c.value(state.control(c.control, source_distance)))
                     .product::<f32>();
+                let target = if audible { distance_gain } else { 0.0 };
+                voice.mix_gain = if self.initial || frame.presentation_dt_s <= 0.0 {
+                    target
+                } else {
+                    crate::mix::approach(
+                        voice.mix_gain,
+                        target,
+                        frame.presentation_dt_s.min(0.2),
+                        0.18,
+                    )
+                };
                 let gain = bank.program.volume
                     * stream.volume
                     * voice.volume
                     * curves
-                    * distance_gain
+                    * voice.mix_gain
+                    * frame.mix.gain(voice.group)
                     * frame.volume;
-                voice
-                    .player
-                    .set_volume(if audible { gain.clamp(0.0, 1.0) } else { 0.0 });
+                voice.gain = gain.clamp(0.0, 1.0);
+                voice.player.set_volume(voice.gain);
                 let pitch = stream.frequency.as_ref().map_or(1.0, |c| {
                     c.value(state.control(c.control, source_distance)) / voice.rate
                 });
-                voice
-                    .player
-                    .set_speed((pitch * voice.stereo_speed * placement.doppler).clamp(0.1, 4.0));
+                voice.player.set_speed(
+                    (pitch
+                        * voice.stereo_speed
+                        * placement.doppler
+                        * if voice.group == crate::mix::SoundGroup::Cab
+                            && stream
+                                .triggers
+                                .iter()
+                                .any(|t| matches!(t.kind, TriggerKind::Discrete(6 | 7)))
+                        {
+                            state.wiper_rate.max(1.0)
+                        } else {
+                            1.0
+                        })
+                    .clamp(0.1, 4.0),
+                );
                 if frame.paused {
                     voice.player.pause();
                 } else {
@@ -1062,14 +1258,19 @@ impl Playback {
             })
             .collect();
         self.initial = false;
+        self.update_us = started.elapsed().as_micros().min(u64::MAX as u128) as u64;
     }
 
     fn update_wiper(&mut self, frame: &SoundFrame) {
         if self.native_wiper {
+            if !self.wiper.empty() {
+                self.wiper.stop();
+                self.wiper = Player::connect_new(&self.mixer);
+            }
             return;
         }
         let train = frame.trains.iter().find(|t| t.id == 0);
-        let on = train.is_some_and(|t| t.vehicle_state(0).wiper);
+        let on = train.is_some_and(|t| t.vehicle_state(frame.listener_vehicle).wiper);
         if !on {
             if !self.wiper.empty() {
                 self.wiper.stop();
@@ -1087,16 +1288,20 @@ impl Playback {
                 .repeat_infinite(),
             );
         }
-        let gain = if frame.cab && frame.listener_vehicle == 0 {
+        let gain = if frame.cab {
             1.0
         } else if !frame.cab && !frame.passenger {
             train.map_or(0.0, |t| {
-                0.15 * inverse_distance_gain(t.vehicle_distance(0), 100.0)
+                0.15 * inverse_distance_gain(t.vehicle_distance(frame.listener_vehicle), 100.0)
             })
         } else {
             0.0
         };
-        self.wiper.set_volume(frame.volume * gain);
+        self.wiper.set_speed(train.map_or(1., |t| {
+            t.vehicle_state(frame.listener_vehicle).wiper_rate.max(1.)
+        }));
+        self.wiper
+            .set_volume(frame.volume * frame.mix.gain(crate::mix::SoundGroup::Cab) * gain);
         if frame.paused {
             self.wiper.pause();
         } else {
@@ -1114,6 +1319,44 @@ impl Playback {
             .count();
         report.active_voices += usize::from(!self.wiper.empty());
         report.wiper_fallback = !self.native_wiper;
+        report.update_us = self.update_us;
+        report.voices = self
+            .bank
+            .banks
+            .iter()
+            .zip(&self.voices)
+            .flat_map(|(b, voices)| {
+                voices
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, v)| !v.player.empty())
+                    .map(|(stream, v)| VoiceReport {
+                        train: b.train,
+                        vehicle: b.vehicle,
+                        program: b.program_name.clone(),
+                        stream,
+                        resource: v.resource.clone(),
+                        trigger: v.trigger.clone(),
+                        group: v.group,
+                        gain: v.gain,
+                        paused: v.player.is_paused(),
+                    })
+            })
+            .take(256)
+            .collect();
+        if !self.wiper.empty() {
+            report.voices.push(VoiceReport {
+                train: 0,
+                vehicle: self.wiper_vehicle,
+                program: "limpiaparabrisas · respaldo Rust".into(),
+                stream: 0,
+                resource: "wiper sintetizado".into(),
+                trigger: "orden y batería disponibles".into(),
+                group: crate::mix::SoundGroup::Cab,
+                gain: self.wiper.volume(),
+                paused: self.wiper.is_paused(),
+            });
+        }
         report
     }
 }
@@ -1159,20 +1402,25 @@ impl NativeAudioEngine {
             output.mixer().add(source.limit(mix_limit()));
             let mut playback = Playback::new(bank, &mixer);
             let mut thunder_voices: Vec<(Player, f32)> = vec![];
-            let rain = Player::connect_new(&mixer);
+            let rain: [Player; 4] = std::array::from_fn(|_| Player::connect_new(&mixer));
             let wind = Player::connect_new(&mixer);
-            for (player, is_wind) in [(&rain, false), (&wind, true)] {
+            for (player, samples) in rain
+                .iter()
+                .zip(crate::weather::RainSurface::ALL.map(|s| s.samples()))
+                .chain(std::iter::once((&wind, crate::weather::samples(true))))
+            {
                 player.append(
                     SamplesBuffer::new(
                         rodio::ChannelCount::new(1).unwrap(),
                         rodio::SampleRate::new(crate::weather::SAMPLE_RATE).unwrap(),
-                        crate::weather::samples(is_wind),
+                        samples,
                     )
                     .repeat_infinite(),
                 );
                 player.set_volume(0.);
             }
             let mut atmosphere = (0., 0.);
+            let mut surface_gains = [0.0; 4];
             for frame in rx {
                 playback.update(&frame);
                 for latest in weather_rx.try_iter() {
@@ -1182,12 +1430,25 @@ impl NativeAudioEngine {
                     atmosphere.0,
                     atmosphere.1,
                     frame.cab || frame.passenger,
-                    frame.volume,
+                    frame.volume * frame.mix.gain(crate::mix::SoundGroup::Ambient),
                     frame.paused,
                 );
-                rain.set_volume(gains.0);
+                for (i, player) in rain.iter().enumerate() {
+                    let target = if i == frame.rain_surface.index() {
+                        frame.rain_surface.gain()
+                    } else {
+                        0.
+                    };
+                    surface_gains[i] = crate::mix::approach(
+                        surface_gains[i],
+                        target,
+                        frame.presentation_dt_s.min(0.2),
+                        0.3,
+                    );
+                    player.set_volume(gains.0 * surface_gains[i]);
+                }
                 wind.set_volume(gains.1);
-                for player in [&rain, &wind] {
+                for player in rain.iter().chain(std::iter::once(&wind)) {
                     if frame.paused {
                         player.pause();
                     } else {
@@ -1208,7 +1469,11 @@ impl NativeAudioEngine {
                     thunder_voices.push((player, event.distance_m));
                 }
                 for (player, distance) in &thunder_voices {
-                    player.set_volume(frame.volume * crate::thunder::gain(*distance, frame.cab));
+                    player.set_volume(
+                        frame.volume
+                            * frame.mix.gain(crate::mix::SoundGroup::Ambient)
+                            * crate::thunder::gain(*distance, frame.cab),
+                    );
                     if frame.paused {
                         player.pause();
                     } else {
@@ -1298,6 +1563,8 @@ mod tests {
             vehicle,
             location: SoundLocation::Exterior,
             program,
+            program_name: "test.sms".into(),
+            curve_only: false,
             samples: HashMap::from([("tone.wav".into(), test_wave())]),
         }
     }
@@ -1778,6 +2045,8 @@ mod tests {
             vehicle: 0,
             location: SoundLocation::Cab,
             program,
+            program_name: "test.sms".into(),
+            curve_only: false,
             samples: HashMap::new(),
         };
         assert!(bank.audible(SoundLocation::Exterior, 0, true));
@@ -1879,6 +2148,8 @@ mod tests {
                 vehicle: 0,
                 location,
                 program: program.clone(),
+                program_name: "test.sms".into(),
+                curve_only: false,
                 samples: HashMap::from([(
                     "tone.wav".into(),
                     Wave {
@@ -2018,5 +2289,117 @@ mod tests {
             on.events(on).is_empty(),
             "held switches must not restart native loops"
         );
+    }
+
+    #[test]
+    fn plan30_sms_mix_camera_fades_preserve_loop_and_trigger_state() {
+        let program=SmsProgram::parse("Tr_SMS ( ScalabiltyGroup ( 5 Activation ( CabCam () ) Streams ( 1 Stream ( VolumeCurve ( Variable2Controlled CurvePoints ( 2 0 0.2 1 1 ) ) Triggers ( 1 Initial_Trigger ( StartLoop ( 1 File ( tone.wav -1 ) ) ) ) ) ) ) )").unwrap();
+        let mut bank = test_bank(0, program);
+        bank.location = SoundLocation::Cab;
+        let (mut playback, mut source) = test_playback(vec![bank]);
+        let mut frame = test_frame();
+        frame.cab = true;
+        frame.presentation_dt_s = 1. / 60.;
+        playback.update(&frame);
+        let release = playback.voices[0][0].release.as_ref().unwrap().clone();
+        for tick in 1..=60 {
+            frame.time_s = tick as f64 / 60.;
+            frame.trains[0].state.variable2 = tick as f32 / 60.;
+            playback.update(&frame);
+            for _ in 0..100 {
+                source.next();
+            }
+        }
+        assert_eq!(playback.report().active_voices, 1);
+        assert!(Arc::ptr_eq(
+            &release,
+            playback.voices[0][0].release.as_ref().unwrap()
+        ));
+        assert_eq!(
+            playback.report().voices[0].group,
+            crate::mix::SoundGroup::Motor
+        );
+        frame.cab = false;
+        for tick in 61..=120 {
+            frame.time_s = tick as f64 / 60.;
+            playback.update(&frame);
+        }
+        assert!(playback.report().voices[0].gain < 0.01);
+        frame.cab = true;
+        frame.mix.gains[crate::mix::SoundGroup::Motor.index()] = 0.;
+        playback.update(&frame);
+        assert_eq!(playback.report().voices[0].gain, 0.);
+        frame.mix = Default::default();
+        frame.paused = true;
+        playback.update(&frame);
+        assert!(playback.report().voices[0].paused);
+        assert!(Arc::ptr_eq(
+            &release,
+            playback.voices[0][0].release.as_ref().unwrap()
+        ));
+    }
+    #[test]
+    fn plan30_coupler_contacts_generate_one_native_event_per_physical_change() {
+        let old = SoundState {
+            coupling_event: 58,
+            ..Default::default()
+        };
+        let impact = SoundState {
+            coupler_contact: 1,
+            coupler_force_n: 12000.,
+            coupler_relative_speed: 0.2,
+            ..old
+        };
+        assert_eq!(impact.events(old), vec![58]);
+        assert!(impact.events(impact).is_empty());
+        assert!(
+            SoundState {
+                coupler_relative_speed: 0.,
+                ..impact
+            }
+            .events(old)
+            .is_empty()
+        );
+        assert_eq!(
+            SoundState {
+                coupling_event: 61,
+                ..old
+            }
+            .events(old),
+            vec![61]
+        );
+        assert_eq!(
+            old.events(SoundState {
+                coupling_event: 61,
+                ..old
+            }),
+            vec![58]
+        );
+        assert!(old.events(SoundState::default()).is_empty());
+    }
+    #[test]
+    fn plan30_optional_curve_programs_do_not_mute_normal_sounds_or_play_on_straight_track() {
+        let program=SmsProgram::parse("Tr_SMS ( ScalabiltyGroup ( 5 Streams ( 1 Stream ( Triggers ( 1 Initial_Trigger ( StartLoop ( 1 File ( tone.wav -1 ) ) ) ) ) ) ) )").unwrap();
+        let normal = test_bank(0, program.clone());
+        let mut curve = test_bank(0, program);
+        curve.curve_only = true;
+        curve.location = SoundLocation::Passenger;
+        let (mut playback, _source) = test_playback(vec![normal, curve]);
+        let mut frame = test_frame();
+        frame.passenger = true;
+        playback.update(&frame);
+        assert!(playback.voices[0][0].gain > 0.);
+        assert_eq!(playback.voices[1][0].gain, 0.);
+        frame.trains[0].state.curve_squeal = true;
+        frame.time_s = 1.;
+        playback.update(&frame);
+        assert!(playback.voices[0][0].gain > 0.);
+        assert!(playback.voices[1][0].gain > 0.);
+        assert_eq!(playback.voices[1][0].group, crate::mix::SoundGroup::Rolling);
+        frame.trains[0].state.curve_squeal = false;
+        frame.time_s = 2.;
+        playback.update(&frame);
+        assert!(playback.voices[0][0].gain > 0.);
+        assert_eq!(playback.voices[1][0].gain, 0.);
     }
 }

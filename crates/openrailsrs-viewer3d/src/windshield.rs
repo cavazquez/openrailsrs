@@ -60,6 +60,7 @@ pub struct WindshieldSettings {
     pub glass: Vec4,
     pub blade1: Vec4,
     pub blade2: Vec4,
+    pub sweep: Vec4,
 }
 #[derive(Resource, Default)]
 struct WindshieldWipeState {
@@ -110,10 +111,7 @@ fn sync_windshield(
             _ => 0.02,
         };
         let path = cvf.cvf_path.as_deref();
-        let profile = path
-            .and_then(|p| preferences.cab_profiles.get(p.to_string_lossy().as_ref()))
-            .copied()
-            .unwrap_or_default();
+        let profile = path.map(|p| preferences.cab_profile(p)).unwrap_or_default();
         let count = path
             .zip(cvf.runtime.as_ref())
             .map_or(2, |(p, r)| crate::cab_profile::blade_count(r, p));
@@ -213,6 +211,18 @@ fn sync_windshield(
             glass,
             blade1,
             blade2,
+            sweep: Vec4::new(
+                live.session.selected_wiper_mode().sweep_s() as f32,
+                if live.session.selected_wiper_mode()
+                    == openrailsrs_sim::wiper::WiperMode::Intermittent
+                {
+                    6.0
+                } else {
+                    live.session.selected_wiper_mode().sweep_s() as f32
+                },
+                0.0,
+                0.0,
+            ),
         };
         if let Some(mut current) = current {
             *current = settings;

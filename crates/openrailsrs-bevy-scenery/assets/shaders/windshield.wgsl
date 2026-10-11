@@ -1,5 +1,5 @@
 #import bevy_core_pipeline::fullscreen_vertex_shader::FullscreenVertexOutput
-struct Settings { time_s: f32, rain: f32, near_clip: f32, last_wipe_s: f32, wiper_on: f32, snow: f32, _pad: vec3<f32>, glass: vec4<f32>, blade1: vec4<f32>, blade2: vec4<f32> }
+struct Settings { time_s: f32, rain: f32, near_clip: f32, last_wipe_s: f32, wiper_on: f32, snow: f32, _pad: vec3<f32>, glass: vec4<f32>, blade1: vec4<f32>, blade2: vec4<f32>, sweep: vec4<f32> }
 @group(0) @binding(0) var scene: texture_2d<f32>;
 @group(0) @binding(1) var scene_sampler: sampler;
 @group(0) @binding(2) var<uniform> settings: Settings;
@@ -12,8 +12,10 @@ fn wet_after_wipe(uv: vec2<f32>, blade: vec4<f32>) -> f32 {
     let angle = atan2(vector.x, -vector.y);
     if (abs(angle) > 0.95 || length(vector) > blade.z || length(vector) < 0.025) { return 1.0; }
     let a = (angle + 0.95) / 1.9;
-    let phase = fract(settings.last_wipe_s / 1.8);
-    let since = min(fract(phase - a * 0.5), fract(phase - (1.0 - a * 0.5))) * 1.8;
+    let sweep_s=max(settings.sweep.x,0.1);
+    let cycle_s=max(settings.sweep.y,sweep_s);
+    let phase = fract(settings.last_wipe_s / cycle_s) * cycle_s / sweep_s;
+    let since = min(fract(phase - a * 0.5), fract(phase - (1.0 - a * 0.5))) * sweep_s;
     let refill_s = mix(14.0, 2.5, settings.rain);
     return clamp((since + settings.time_s - settings.last_wipe_s) / refill_s, 0.04, 1.0);
 }

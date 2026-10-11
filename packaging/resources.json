@@ -18,6 +18,7 @@
   "crates/openrailsrs-bevy-scenery/assets/msts/tiles/single_parse/w-001000-001000.w",
   "crates/openrailsrs-bevy-scenery/assets/msts/w-001000-001000.w",
   "crates/openrailsrs-bevy-scenery/assets/shaders/hanabi_weather_fragment.wgsl",
+  "crates/openrailsrs-bevy-scenery/assets/shaders/moon.wgsl",
   "crates/openrailsrs-bevy-scenery/assets/shaders/or_cab.wgsl",
   "crates/openrailsrs-bevy-scenery/assets/shaders/or_forest.wgsl",
   "crates/openrailsrs-bevy-scenery/assets/shaders/or_moment_blur.wgsl",

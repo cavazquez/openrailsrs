@@ -56,8 +56,10 @@ impl Plugin for PlayerUiPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PlayerUiState>()
             .init_resource::<PlayerSettings>()
+            .init_resource::<crate::save_history::SaveHistory>()
             .init_resource::<PlayerLaunchMenu>()
             .init_resource::<previews::Previews>()
+            .init_resource::<crate::save_history::SaveHistory>()
             .init_resource::<crate::official_content::OfficialContent>()
             .init_resource::<bevy_clipboard::Clipboard>()
             .init_resource::<PlayerLaunchQueue>()
@@ -83,6 +85,8 @@ impl Plugin for PlayerUiPlugin {
                 (
                     player_keys,
                     choice_keys,
+                    crate::save_history::history_keys,
+                    crate::save_history::poll_history,
                     poll_content_download,
                     poll_menu_audits,
                     handle_buttons.in_set(EnvironmentControls),
@@ -160,7 +164,10 @@ pub struct PlayerUiState {
     library_tab: LibraryTab,
     settings_tab: SettingsTab,
     pub(crate) notice: String,
-    rebuild: bool,
+    pub(crate) rebuild: bool,
+    pub(crate) history_focus: bool,
+    pub(crate) history_query: String,
+    history_filter: crate::save_history::Filter,
     root: Option<Entity>,
     camera: Option<Entity>,
 }
@@ -189,6 +196,9 @@ impl Default for PlayerUiState {
             settings_tab: SettingsTab::General,
             notice: String::new(),
             rebuild: true,
+            history_focus: false,
+            history_query: String::new(),
+            history_filter: default(),
             root: None,
             camera: None,
         }
@@ -249,7 +259,10 @@ enum UiCommand {
     ReturnMenu,
     Save(usize),
     Load(usize),
-    Resume(usize),
+    ResumeHistory(usize),
+    HistorySearch,
+    HistoryFilter(crate::save_history::Filter),
+    HistoryRefresh,
     SelectRoute(usize),
     SelectChoice(ChoiceKind, usize),
     PreviewRotate(f32),
@@ -318,6 +331,11 @@ enum MenuField {
 #[derive(Clone, Copy, Debug)]
 enum SettingField {
     QuickStations,
+    Difficulty(crate::player_settings::DifficultyProfile),
+    Temperature,
+    TemperatureAuto,
+    SkyDate,
+    CabZone(u8),
     StrictService,
     TrafficBrakeAssistance,
     SeatHeight,
@@ -342,6 +360,9 @@ enum SettingField {
     SceneryProfile,
     SceneryQuality,
     TrainMotion,
+    HeadMotion,
+    DeskMotion,
+    TunnelExposure,
     TimeSource,
     WeatherSource,
     ManualWeather,
@@ -349,6 +370,7 @@ enum SettingField {
     Renderer,
     Audio,
     Volume,
+    AudioGroup(openrailsrs_audio::mix::SoundGroup),
     Units,
 }
 
@@ -659,6 +681,9 @@ fn player_keys(
     if teleport.open {
         return;
     }
+    if ui.history_focus {
+        return;
+    }
     if ui.choice_focus.is_some() {
         if keys.just_pressed(KeyCode::Escape) {
             ui.choice_focus = None;
@@ -734,7 +759,7 @@ fn player_keys(
 #[derive(SystemParam)]
 struct CameraForSave<'w, 's> {
     follow: Res<'w, CameraFollowMode>,
-    look: Res<'w, DriverLookOffset>,
+    look: ResMut<'w, DriverLookOffset>,
     origin: Res<'w, crate::floating_origin::FloatingOrigin>,
     mode: Res<'w, crate::camera::CameraMode>,
     driver: Res<'w, crate::camera::LiveDriverCab>,
@@ -755,6 +780,7 @@ struct CameraForSave<'w, 's> {
 struct MenuOptions<'w> {
     settings: ResMut<'w, PlayerSettings>,
     previews: ResMut<'w, previews::Previews>,
+    history: ResMut<'w, crate::save_history::SaveHistory>,
 }
 fn handle_buttons(
     mut commands: Commands,
@@ -767,7 +793,7 @@ fn handle_buttons(
     mut content: ResMut<ActivePlayerContent>,
     mut downloads: ResMut<crate::official_content::OfficialContent>,
     mut clipboard: Option<ResMut<bevy_clipboard::Clipboard>>,
-    camera: CameraForSave,
+    mut camera: CameraForSave,
     mut exit: MessageWriter<AppExit>,
     mouse: Res<ButtonInput<MouseButton>>,
     cab: Res<crate::cab_cvf::CabCvfState>,
@@ -777,6 +803,7 @@ fn handle_buttons(
     let MenuOptions {
         mut settings,
         mut previews,
+        mut history,
     } = options;
     for (interaction, command) in &buttons {
         if *interaction != Interaction::Pressed || !mouse.just_pressed(MouseButton::Left) {
@@ -796,7 +823,7 @@ fn handle_buttons(
             UiCommand::MissingOrigin=>crate::official_content::missing_source(&menu).ok_or("No hay un origen verificado".to_string()).and_then(|s|crate::official_content::open_source_url(&s.page)),
             UiCommand::MissingAudit=>menu.reaudit_selected().map(|message|{ui.notice=message;}),
             UiCommand::MissingUpdate=>crate::official_content::missing_source(&menu).map(|s|s.package_id).and_then(|id|downloads.packages.iter().position(|p|p.id()==id)).ok_or("No hay una descarga automática verificada para este origen".to_string()).and_then(|index|{downloads.selected=index;downloads.start().map(|()|open_panel(&mut ui,&mut live,PlayerPanel::Content))}),
-            UiCommand::Open(panel)=>{open_panel(&mut ui,&mut live,*panel);Ok(())},
+            UiCommand::Open(panel)=>{if *panel == PlayerPanel::Continue {history.request(crate::player_settings::player_data_dir());}open_panel(&mut ui,&mut live,*panel);Ok(())},
             UiCommand::Close=>{close_panel(&mut ui,&mut live);Ok(())},
             UiCommand::Exit => { exit.write(AppExit::Success); Ok(()) },
             UiCommand::ReturnMenu => {
@@ -810,7 +837,10 @@ fn handle_buttons(
                 })
             },
             UiCommand::Start=>menu.prepare().map(|request|{launch.0=Some(request);ui.panel=PlayerPanel::None;ui.notice="Cargando la partida…".into();}),
-            UiCommand::Resume(slot)=>SavedGame::prepare_resume(&slot_path(*slot)).map(|request|{launch.0=Some(request);ui.panel=PlayerPanel::None;}),
+            UiCommand::HistorySearch=>{ui.history_focus=true;Ok(())},
+            UiCommand::HistoryFilter(filter)=>{ui.history_filter= *filter;ui.history_focus=false;Ok(())},
+            UiCommand::HistoryRefresh=>{history.request(player_data_dir());Ok(())},
+            UiCommand::ResumeHistory(index)=>history.entries.get(*index).ok_or("Partida inexistente".into()).and_then(|entry|SavedGame::prepare_resume(&entry.path)).map(|request|{launch.0=Some(request);ui.panel=PlayerPanel::None;}),
             UiCommand::SelectRoute(index) => {
                 let delta = *index as i32 - menu.route as i32;
                 menu.cycle_route(delta);
@@ -893,7 +923,7 @@ fn handle_buttons(
                         passenger_car: camera.passenger.consist_car, passenger_head: camera.passenger.head_msts.to_array(),
                         passenger_look: [camera.passenger.look_pitch, camera.passenger.look_yaw, camera.passenger.pitch_limit, camera.passenger.yaw_limit],
                     });
-                    SavedGame::save(l, &content, saved, &slot_path(*slot), weather.as_deref())
+                    SavedGame::save(l, &content, saved, &slot_path(*slot), weather.as_deref(),Some(&settings))
                 })
                     .map(|()|{ui.notice=format!("Partida guardada en la ranura {} · {:.0} m · {:.1} {}",slot+1,l.session.state.odometer_m,settings.display_speed_mps(l.session.velocity_mps()),settings.speed_unit_label());})
             }else{Err("No hay una partida activa".into())},
@@ -902,7 +932,9 @@ fn handle_buttons(
                     let selected_weather=saved.weather;
                     let environment=saved.environment.unwrap_or(crate::environment::EnvironmentSelection { manual_weather: selected_weather, ..default() });
                     let checkpoint=saved.weather_checkpoint.clone();
+                    let options=saved.player_options.clone();
                     let camera=saved.restore(l)?;
+                    if let Some(options)=options {options.apply(&mut settings);}
                     content.weather=selected_weather;content.environment=environment;
                     if let Some(checkpoint)=checkpoint {
                         checkpoint.apply_settings(&mut settings);
@@ -961,15 +993,20 @@ fn handle_buttons(
             UiCommand::Setting(field,step)=>{match field {
                 SettingField::SeatHeight | SettingField::SeatBack | SettingField::WipeScale | SettingField::CabReset => {
                     if let Some(path) = &cab.cvf_path {
-                        let profile = settings.cab_profiles.entry(path.to_string_lossy().into_owned()).or_default();
+                        let profile = settings.cab_profile_mut(path);
                         match field {
                             SettingField::SeatHeight => profile.seat_height_m=(profile.seat_height_m+step).clamp(-0.4,0.4),
                             SettingField::SeatBack => profile.seat_back_m=(profile.seat_back_m+step).clamp(-0.4,0.4),
                             SettingField::WipeScale => profile.wipe_scale=(profile.wipe_scale+step).clamp(0.6,1.4),
-                            _ => *profile=default(),
+                            _ => { *profile=default(); *camera.look=default(); },
                         }
                     }
                 },
+                SettingField::Difficulty(profile)=>profile.apply(&mut settings),
+                SettingField::Temperature=>settings.ambient_temperature_c=Some((settings.ambient_temperature_c.unwrap_or(20.0)+step).clamp(-45.0,45.0)),
+                SettingField::TemperatureAuto=>settings.ambient_temperature_c=None,
+                SettingField::SkyDate=>{if let Ok(date)=settings.sky_date.parse::<chrono::NaiveDate>() {let next=date+chrono::Duration::days(if *step<0. {-1}else{1}); if (1900..=2100).contains(&chrono::Datelike::year(&next)) {settings.sky_date=next.to_string();}}},
+                SettingField::CabZone(zone)=>{ if let Some(path)=&cab.cvf_path {let profile=settings.cab_profile_mut(path);let value=match zone {0=>&mut profile.instrument_light,1=>&mut profile.console_light,_=>&mut profile.interior_light};*value=(*value+step).clamp(0.0,1.0);}},
                 SettingField::QuickStations=>settings.quick_station_practice= !settings.quick_station_practice,
                 SettingField::StrictService=>settings.strict_service= !settings.strict_service,
                 SettingField::TrafficBrakeAssistance=>settings.traffic_brake_assistance= !settings.traffic_brake_assistance,
@@ -994,6 +1031,9 @@ fn handle_buttons(
                 SettingField::TrainEffectsEnabled=>settings.train_effects_enabled = !settings.train_effects_enabled,
                 SettingField::TrainEffectExecution=>settings.train_effect_execution=settings.train_effect_execution.next(),
                 SettingField::TrainMotion=>settings.train_motion=settings.train_motion.next(),
+                SettingField::HeadMotion=>settings.head_motion=(settings.head_motion+step).clamp(0.0,1.0),
+                SettingField::DeskMotion=>settings.desk_motion=(settings.desk_motion+step).clamp(0.0,1.0),
+                SettingField::TunnelExposure=>settings.tunnel_exposure_ev=(settings.tunnel_exposure_ev+step).clamp(0.0,3.0),
                 SettingField::TimeSource=>{content.environment.time=if live.is_some(){content.environment.time.next()}else{menu.environment.time.next()};menu.environment.time=content.environment.time;settings.environment.time=content.environment.time;},
                 SettingField::WeatherSource=>{
                     if live.is_none(){content.environment=menu.environment;}
@@ -1011,6 +1051,7 @@ fn handle_buttons(
                 SettingField::Renderer=>settings.renderer=settings.renderer.next(),
                 SettingField::Audio=>settings.audio_enabled= !settings.audio_enabled,
                 SettingField::Volume=>settings.audio_volume=(settings.audio_volume+step).clamp(0.0,1.0),
+                SettingField::AudioGroup(group)=>{ let gain=&mut settings.audio_mix.gains[group.index()]; *gain=(*gain+step).clamp(0.0,1.0); },
             }ui.notice="Vista previa aplicada; pulsá Guardar ajustes para conservarla".into();Ok(())},
             UiCommand::Rebind(action)=>{ui.awaiting_key=Some(*action);ui.notice=format!("Pulsá la nueva tecla para {} · Esc cancela",action.label());Ok(())},
             UiCommand::DefaultKeys=>{settings.keys=PlayerSettings::default().keys;ui.notice="Controles predeterminados restaurados".into();Ok(())},
@@ -1050,6 +1091,7 @@ fn build_panel(
     content: Res<ActivePlayerContent>,
     cab: Res<crate::cab_cvf::CabCvfState>,
     previews: Option<Res<previews::Previews>>,
+    history: Res<crate::save_history::SaveHistory>,
 ) {
     if !ui.rebuild {
         return;
@@ -1141,7 +1183,7 @@ fn build_panel(
             .with_children(|p| match panel {
                 PlayerPanel::Menu => launcher::build_home(p),
                 PlayerPanel::NewGame => launcher::build_new_game(p, &ui, &menu, &settings, previews.as_deref()),
-                PlayerPanel::Continue => launcher::build_continue(p),
+                PlayerPanel::Continue => launcher::build_continue(p,&ui,&history),
                 PlayerPanel::Content => launcher::build_library(p, ui.library_tab, &downloads, &menu),
                 PlayerPanel::MissingResources => {
                     row(p, |p| {
@@ -1326,6 +1368,16 @@ fn content_diagnostics(p: &mut ChildSpawnerCommands<'_>, menu: &PlayerLaunchMenu
     let Some(audit) = menu.consist_audits.get(consist) else {
         return;
     };
+    label(
+        p,
+        if full {
+            crate::content_validation::details(audit)
+        } else {
+            crate::content_validation::summary(audit)
+        },
+        12.0,
+        MUTED,
+    );
     let required = audit
         .missing_resources
         .iter()
@@ -1754,6 +1806,36 @@ fn build_settings(
 ) {
     match tab {
         SettingsTab::General => {
+            label(
+                p,
+                format!(
+                    "Perfil: {}",
+                    crate::player_settings::DifficultyProfile::selected(s)
+                        .map_or("Personalizado", |p| p.label())
+                ),
+                14.0,
+                ACCENT,
+            );
+            row(p, |p| {
+                for profile in crate::player_settings::DifficultyProfile::ALL {
+                    button(
+                        p,
+                        profile.label(),
+                        UiCommand::Setting(SettingField::Difficulty(profile), 0.0),
+                    );
+                }
+            });
+            label(
+                p,
+                format!(
+                    "Ayudas: embarque rápido {} · freno ante tráfico {} · paradas obligatorias {}",
+                    yes(s.quick_station_practice),
+                    yes(s.traffic_brake_assistance),
+                    yes(s.strict_service)
+                ),
+                12.0,
+                MUTED,
+            );
             button(
                 p,
                 format!("Velocidad: {}", s.speed_unit_label()),
@@ -1826,11 +1908,19 @@ fn build_settings(
                 5.0,
             );
             if let Some(path) = cab_path {
-                let profile = s
-                    .cab_profiles
-                    .get(path.to_string_lossy().as_ref())
-                    .copied()
-                    .unwrap_or_default();
+                let profile = s.cab_profile(path);
+                for (zone, name, value) in [
+                    (0, "Instrumentos", profile.instrument_light),
+                    (1, "Pupitre", profile.console_light),
+                    (2, "Interior", profile.interior_light),
+                ] {
+                    settings_row(
+                        p,
+                        format!("Luz · {name}: {:.0}%", value * 100.0),
+                        SettingField::CabZone(zone),
+                        0.1,
+                    );
+                }
                 label(
                     p,
                     format!(
@@ -1913,6 +2003,25 @@ fn build_settings(
                 12.0,
                 MUTED,
             );
+            for (caption, field, value, step) in [
+                ("Cabeza", SettingField::HeadMotion, s.head_motion, 0.1),
+                ("Pupitre", SettingField::DeskMotion, s.desk_motion, 0.1),
+                (
+                    "Adaptación en túnel (EV)",
+                    SettingField::TunnelExposure,
+                    s.tunnel_exposure_ev,
+                    0.25,
+                ),
+            ] {
+                row(p, |p| {
+                    button(
+                        p,
+                        format!("{caption}: {value:.2} −"),
+                        UiCommand::Setting(field, -step),
+                    );
+                    button(p, "+", UiCommand::Setting(field, step));
+                });
+            }
             button(
                 p,
                 format!("Modelo de niebla: {}", s.fog_quality.label()),
@@ -1953,6 +2062,35 @@ fn build_settings(
             );
         }
         SettingsTab::Environment => {
+            settings_row(
+                p,
+                format!("Fecha lunar: {} (hora manual)", s.sky_date),
+                SettingField::SkyDate,
+                1.,
+            );
+            settings_row(
+                p,
+                format!(
+                    "Temperatura manual: {}",
+                    s.ambient_temperature_c
+                        .map_or("automática según lugar y estación".into(), |t| format!(
+                            "{t:.0} °C"
+                        ))
+                ),
+                SettingField::Temperature,
+                5.0,
+            );
+            button(
+                p,
+                "Temperatura automática",
+                UiCommand::Setting(SettingField::TemperatureAuto, 0.0),
+            );
+            label(
+                p,
+                "Clima actual usa la temperatura observada; la manual es una estimación editable. Temperatura compartida con refrigeración y condensación.",
+                12.0,
+                MUTED,
+            );
             let mode = WeatherMode::selected(environment, s.weather_profile);
             label(p, "HORA Y CLIMA", 13.0, MUTED);
             button(
@@ -2060,6 +2198,20 @@ fn build_settings(
                 format!("Volumen: {:.0}%", s.audio_volume * 100.0),
                 SettingField::Volume,
                 0.1,
+            );
+            for group in openrailsrs_audio::mix::SoundGroup::ALL {
+                settings_row(
+                    p,
+                    format!("{}: {:.0}%", group.label(), s.audio_mix.gain(group) * 100.0),
+                    SettingField::AudioGroup(group),
+                    0.1,
+                );
+            }
+            label(
+                p,
+                "Los volúmenes se aplican al instante y conservan las curvas de los sonidos originales. Guardar ajustes conserva la mezcla.",
+                12.0,
+                MUTED,
             );
         }
         SettingsTab::Controls => {
@@ -2511,6 +2663,21 @@ fn update_panel_text(
                         if ui.advanced_page == 8 {
                             text = environment.hud_text(&content, l.clock_time_s());
                             text += &format!(
+                                "\n\n{}",
+                                crate::forecast::text(
+                                    content.environment,
+                                    settings.weather_profile,
+                                    content.environment.manual_weather,
+                                    settings.weather_seed,
+                                    crate::weather_journey::JourneyOptions {
+                                        pace: settings.weather_pace,
+                                        winter: l.season.eq_ignore_ascii_case("winter")
+                                    },
+                                    s.time_s(),
+                                    Some(&environment)
+                                )
+                            );
+                            text += &format!(
                                 "\nReloj del servicio: {} · estación del año {}\nF10: hora, clima manual/actual y rayos. La simulación puede pausarse sin detener el reloj real.",
                                 clock(l.clock_time_s()),
                                 l.season
@@ -2533,6 +2700,25 @@ fn update_panel_text(
                                 );
                                 if let Some(warning) = report.warnings.first() {
                                     text += &format!("\nAudio: {warning}");
+                                }
+                                text += &format!(
+                                    "\nMezcla: {} µs · recursos ausentes/avisos {}",
+                                    report.update_us,
+                                    report.warnings.len()
+                                );
+                                for voice in report.voices.iter().take(8) {
+                                    text += &format!(
+                                        "\nT{} C{} · {} #{} · {} · {} · {} · {:.0}%{}",
+                                        voice.train,
+                                        voice.vehicle + 1,
+                                        voice.program,
+                                        voice.stream,
+                                        voice.resource,
+                                        voice.trigger,
+                                        voice.group.label(),
+                                        voice.gain * 100.0,
+                                        if voice.paused { " · pausa" } else { "" }
+                                    );
                                 }
                             }
                             text += &format!("\n{}", performance.hud_text());
@@ -3320,6 +3506,7 @@ mod tests {
             .insert_state(ViewerAppState::Menu)
             .init_resource::<PlayerUiState>()
             .init_resource::<previews::Previews>()
+            .init_resource::<crate::save_history::SaveHistory>()
             .insert_resource(PlayerLaunchMenu::discover(
                 &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../.."),
                 None,
@@ -3791,6 +3978,7 @@ mod tests {
                 .init_resource::<PlayerUiState>()
                 .init_resource::<PlayerLaunchMenu>()
                 .init_resource::<previews::Previews>()
+                .init_resource::<crate::save_history::SaveHistory>()
                 .init_resource::<crate::official_content::OfficialContent>()
                 .init_resource::<PlayerSettings>()
                 .init_resource::<PlayerLaunchQueue>()
@@ -3996,6 +4184,7 @@ mod tests {
             app.init_resource::<PlayerUiState>()
                 .init_resource::<PlayerLaunchMenu>()
                 .init_resource::<previews::Previews>()
+                .init_resource::<crate::save_history::SaveHistory>()
                 .init_resource::<crate::official_content::OfficialContent>()
                 .init_resource::<PlayerSettings>()
                 .init_resource::<PlayerLaunchQueue>()
@@ -4209,6 +4398,7 @@ mod tests {
             .init_resource::<PlayerUiState>()
             .init_resource::<PlayerLaunchMenu>()
             .init_resource::<previews::Previews>()
+            .init_resource::<crate::save_history::SaveHistory>()
             .init_resource::<crate::official_content::OfficialContent>()
             .init_resource::<PlayerSettings>()
             .init_resource::<PlayerLaunchQueue>()

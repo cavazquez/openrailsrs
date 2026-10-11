@@ -63,13 +63,18 @@ pub(crate) fn update_cab_mouse_label(
     }
 }
 fn actionable(control: &ControlType) -> bool {
+    if let ControlType::Generic(name) = control
+        && let Some(name) = name.to_ascii_uppercase().strip_prefix("ORTS_")
+    {
+        return actionable(&ControlType::Generic(name.into()));
+    }
     matches!(
         control,
         ControlType::Throttle
             | ControlType::ThrottleDisplay
             | ControlType::TrainBrake
             | ControlType::DirectionDisplay
-    ) || matches!(control,ControlType::Generic(name)if matches!(name.to_ascii_uppercase().as_str(),"HORN"|"WHISTLE"|"WIPERS"|"WIPER"|"EXTERNALWIPERS"|"DOORS"|"SAND"|"SANDER"|"SANDERS"|"PANTOGRAPH"|"PANTOGRAPHS"|"HEADLIGHT"|"HEADLIGHTS"|"CABLIGHT"|"CIRCUIT_BREAKER"|"CIRCUITBREAKER"|"CIRCUIT_BREAKER_DRIVER_CLOSING_ORDER"|"REGULATOR"|"CUTOFF"|"REVERSER_PLATE"|"DAMPERS_FRONT"|"WATER_INJECTOR1"|"WATER_INJECTOR2"|"STEAM_INJ1"|"STEAM_INJ2"|"BLOWER"|"CYL_COCKS"))
+    ) || matches!(control,ControlType::Generic(name)if matches!(name.to_ascii_uppercase().as_str(),"HORN"|"WHISTLE"|"WIPERS"|"WIPER"|"EXTERNALWIPERS"|"DOORS"|"SAND"|"SANDER"|"SANDERS"|"PANTOGRAPH"|"PANTOGRAPHS"|"HEADLIGHT"|"HEADLIGHTS"|"CABLIGHT"|"CIRCUIT_BREAKER"|"CIRCUITBREAKER"|"CIRCUIT_BREAKER_DRIVER_CLOSING_ORDER"|"REGULATOR"|"CUTOFF"|"REVERSER_PLATE"|"DAMPERS_FRONT"|"WATER_INJECTOR1"|"WATER_INJECTOR2"|"STEAM_INJ1"|"STEAM_INJ2"|"BLOWER"|"CYL_COCKS"|"ENGINE_BRAKE"|"LOCOMOTIVE_BRAKE"|"BATTERY_SWITCH"|"POWER_ON"|"ELECTRIC_TRAIN_SUPPLY"|"ENGINE_START"|"ENGINE_STOP"|"DIESEL_ENGINE"|"PLAYER_DIESEL_ENGINE_STARTER"|"PLAYER_DIESEL_ENGINE_STOPPER"|"EMERGENCY_BRAKE"|"EMERGENCY_RESET"|"TCS_ACKNOWLEDGE"|"HAND_BRAKE"))
 }
 fn control_name(control: &ControlType) -> &str {
     match control {
@@ -81,15 +86,26 @@ fn control_name(control: &ControlType) -> &str {
     }
 }
 fn is_lever(control: &ControlType) -> bool {
+    if let ControlType::Generic(name) = control
+        && let Some(name) = name.to_ascii_uppercase().strip_prefix("ORTS_")
+    {
+        return is_lever(&ControlType::Generic(name.into()));
+    }
     matches!(
         control,
         ControlType::Throttle
             | ControlType::ThrottleDisplay
             | ControlType::TrainBrake
             | ControlType::DirectionDisplay
-    ) || matches!(control, ControlType::Generic(name) if matches!(name.to_ascii_uppercase().as_str(), "REGULATOR" | "CUTOFF" | "REVERSER_PLATE" | "DAMPERS_FRONT"))
+    ) || matches!(control, ControlType::Generic(name) if matches!(name.to_ascii_uppercase().as_str(), "REGULATOR" | "CUTOFF" | "REVERSER_PLATE" | "DAMPERS_FRONT" | "ENGINE_BRAKE" | "LOCOMOTIVE_BRAKE"))
 }
 pub fn apply_cab_control(live: &mut LiveDrive, control: &ControlType, value: f64) {
+    if let ControlType::Generic(name) = control
+        && let Some(original) = name.to_ascii_uppercase().strip_prefix("ORTS_")
+    {
+        apply_cab_control(live, &ControlType::Generic(original.into()), value);
+        return;
+    }
     match control {
         ControlType::Throttle | ControlType::ThrottleDisplay => {
             live.session.driver_throttle = value.clamp(0.0, 1.0);
@@ -109,6 +125,58 @@ pub fn apply_cab_control(live: &mut LiveDrive, control: &ControlType, value: f64
         }
         ControlType::Generic(name) => match name.to_ascii_uppercase().as_str() {
             "HORN" | "WHISTLE" => live.session.trigger_horn(0.15),
+            "ENGINE_BRAKE" | "LOCOMOTIVE_BRAKE" => {
+                let _ = live.session.set_independent_brake(value.clamp(0.0, 1.0));
+            }
+            "BATTERY_SWITCH" | "POWER_ON" | "ELECTRIC_TRAIN_SUPPLY" | "HAND_BRAKE" => {
+                let operation = match name.to_ascii_uppercase().as_str() {
+                    "BATTERY_SWITCH" => openrailsrs_sim::operations::CarOperation::Battery,
+                    "POWER_ON" => openrailsrs_sim::operations::CarOperation::Power,
+                    "ELECTRIC_TRAIN_SUPPLY" => {
+                        openrailsrs_sim::operations::CarOperation::TrainSupply
+                    }
+                    _ => openrailsrs_sim::operations::CarOperation::Handbrake,
+                };
+                let _ = live
+                    .session
+                    .operate_car(live.session.cab_vehicle(), operation);
+            }
+            "ENGINE_START"
+            | "ENGINE_STOP"
+            | "DIESEL_ENGINE"
+            | "PLAYER_DIESEL_ENGINE_STARTER"
+            | "PLAYER_DIESEL_ENGINE_STOPPER" => {
+                let index = live.session.cab_vehicle();
+                let running = live
+                    .session
+                    .state
+                    .diesel
+                    .car(index)
+                    .is_some_and(|c| c.command_running);
+                let name = name.to_ascii_uppercase();
+                if name == "DIESEL_ENGINE"
+                    || ((name == "ENGINE_START" || name == "PLAYER_DIESEL_ENGINE_STARTER")
+                        && !running)
+                    || ((name == "ENGINE_STOP" || name == "PLAYER_DIESEL_ENGINE_STOPPER")
+                        && running)
+                {
+                    let _ = live.session.toggle_diesel_engine(index);
+                }
+            }
+            "EMERGENCY_BRAKE" => {
+                live.session.state.brake_system.emergency = true;
+                live.session.driver_throttle = 0.0;
+                live.session.driver_brake = 1.0;
+            }
+            "EMERGENCY_RESET" => {
+                let _ = live.session.reset_emergency();
+            }
+            "TCS_ACKNOWLEDGE" => {
+                live.session
+                    .send_tcs_input(openrailsrs_sim::etcs::TcsInput::Acknowledge {
+                        message: String::new(),
+                    })
+            }
             "REGULATOR" => live.session.driver_throttle = value.clamp(0., 1.),
             "CUTOFF" | "REVERSER_PLATE" | "DAMPERS_FRONT" => {
                 if let Some(b) = &live.session.state.boiler_state {
@@ -369,5 +437,33 @@ mod tests {
         let hit = raycast_mesh(&mesh, world, Vec3::ZERO, Vec3::Z).unwrap();
         assert!((hit - 8.0).abs() < 0.01);
         assert!(raycast_mesh(&mesh, world, Vec3::new(5.0, 0.0, 0.0), Vec3::Z).is_none());
+    }
+
+    #[test]
+    fn plan30_native_mouse_aliases_use_physical_interlocks_and_idempotent_starters() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/traction_operation/scenario.toml");
+        let mut live = LiveDrive::from_scenario_path(&path).unwrap();
+        let stop = ControlType::Generic("ORTS_PLAYER_DIESEL_ENGINE_STOPPER".into());
+        assert!(actionable(&stop));
+        apply_cab_control(&mut live, &stop, 1.);
+        assert!(!live.session.state.diesel.cars[0].command_running);
+        apply_cab_control(&mut live, &stop, 1.);
+        assert!(!live.session.state.diesel.cars[0].command_running);
+        let start = ControlType::Generic("ORTS_PLAYER_DIESEL_ENGINE_STARTER".into());
+        assert!(actionable(&start));
+        apply_cab_control(&mut live, &start, 1.);
+        assert!(live.session.state.diesel.cars[0].command_running);
+        let brake = ControlType::Generic("ORTS_ENGINE_BRAKE".into());
+        assert!(actionable(&brake));
+        assert!(is_lever(&brake));
+        apply_cab_control(&mut live, &brake, 0.7);
+        assert!((live.session.state.brake_system.independent_command - 0.7).abs() < 1e-9);
+        live.session.state.velocity_mps = 10.;
+        apply_cab_control(&mut live, &ControlType::DirectionDisplay, 0.);
+        assert_ne!(
+            live.session.driver_direction, 0.,
+            "mouse may not reverse a moving train"
+        );
     }
 }

@@ -114,16 +114,28 @@ pub fn init_capture(mut commands: Commands) {
 /// Normal launches never use it, and it does not modify saved player settings.
 pub fn apply_light_override(
     capture: Option<Res<CaptureState>>,
-    live: Option<ResMut<crate::live::LiveDrive>>,
+    mut live: Option<ResMut<crate::live::LiveDrive>>,
 ) {
     if capture.is_some()
-        && let Some(mut live) = live
+        && let Some(live) = live.as_mut()
         && let Some(level) = std::env::var("OPENRAILSRS_CAPTURE_HEADLIGHTS")
             .ok()
             .and_then(|v| v.parse::<u8>().ok())
             .filter(|v| *v <= 2)
     {
         live.session.headlights = level;
+    }
+    if capture.is_some()
+        && std::env::var("OPENRAILSRS_CAPTURE_SANDER").is_ok_and(|v| v == "1")
+        && let Some(live) = live.as_mut()
+        && !live
+            .session
+            .state
+            .rail_adhesion
+            .as_ref()
+            .is_some_and(|r| r.sander_command)
+    {
+        let _ = live.session.toggle_sander();
     }
 }
 
@@ -247,6 +259,7 @@ pub struct CaptureScene<'w, 's> {
     entities: Option<Res<'w, crate::world_tile_index::WorldTileEntityIndex>>,
     focus: Option<Res<'w, crate::world::RouteFocus>>,
     sun: Option<Res<'w, crate::route_lighting::RouteSunState>>,
+    moon: Option<Res<'w, crate::moon::MoonState>>,
     environment: Option<Res<'w, crate::environment::LiveEnvironment>>,
     content: Option<Res<'w, crate::player_launch::ActivePlayerContent>>,
     storm: Option<Res<'w, crate::storm::StormState>>,
@@ -478,6 +491,7 @@ impl CaptureScene<'_, '_> {
         report["draw_calls"] = self.world_draws.report();
         report["enhanced_scenery"] = self.enhanced_scenery.report();
         report["weather_state"] = self.weather_state.as_ref().map_or(serde_json::Value::Null,|s|serde_json::json!({"atmosphere":s.atmosphere,"profile":s.profile,"seed":s.seed,"live":s.live,"journey":s.journey,"elapsed_s":s.timeline_elapsed_s()}));
+        report["moon"] = self.moon.as_ref().map_or(serde_json::Value::Null, |m| serde_json::json!({"illuminated":m.illuminated,"altitude_deg":m.altitude_deg,"date":m.date,"lux":m.lux}));
         #[cfg(any(feature = "dev-tools", feature = "experimental-framepace"))]
         {
             report["dev_diagnostics"] = self

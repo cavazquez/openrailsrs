@@ -16,6 +16,7 @@ use std::time::Duration;
 
 use rodio::{DeviceSinkBuilder, Player, Source, source::SineWave};
 
+pub mod mix;
 pub mod native;
 pub mod sms;
 pub mod thunder;

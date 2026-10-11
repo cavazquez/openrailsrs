@@ -61,3 +61,5 @@ pub use steam::BoilerState;
 pub mod native_signals;
 mod track_reservations;
 pub use track_reservations::{DispatcherStatus, SwitchLock};
+
+pub mod wiper;

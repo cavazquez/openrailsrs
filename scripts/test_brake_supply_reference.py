@@ -1,5 +1,7 @@
 """Protect the provenance and safe numeric-only export of native brake fixtures."""
 import json
+import hashlib
+import build_content_validation
 from pathlib import Path
 import tempfile
 import unittest
@@ -42,6 +44,23 @@ class BrakeSupplyReferenceTests(unittest.TestCase):
         self.assertEqual(len(reference['legacy_ep']),6)
         self.assertEqual({r['kind'] for r in reference['power']},{'diesel','electric','steam'})
         self.assertEqual(len(reference['power']),303)
+
+    def test_content_evidence_hashes_dependencies_and_preserves_subsystem_scope(self):
+        index = json.loads((ROOT/'oracles/content-validation.json').read_text())
+        provenance = json.loads((ROOT/'examples/brake_supply_native/provenance.json').read_text())['source_sha256']
+        reference = json.loads((ROOT/'oracles/openrails-brake-power-provenance.json').read_text())
+        self.assertEqual(index['reference_commit'], reference['reference_commit'])
+        self.assertEqual(index['reference_version'], reference['reference_version'])
+        self.assertEqual(len(index['records']), 11)
+        for entry in index['records']:
+            self.assertEqual(entry['source_sha256'], build_content_validation.fingerprint(entry['source_files']))
+            self.assertEqual(entry['evidence_sha256'], hashlib.sha256((ROOT/entry['evidence']).read_bytes()).hexdigest())
+            package = entry['source'].split('/', 1)[0]
+            self.assertTrue(entry['source_files'])
+            for name, sha in entry['source_files'].items():
+                self.assertEqual(provenance[package+'/'+name], sha)
+            self.assertEqual(entry['points'], 64)
+            self.assertIn('Freno', entry['scope'])
 
 
 if __name__=='__main__':

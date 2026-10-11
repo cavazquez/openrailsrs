@@ -16,6 +16,14 @@ fn error(path: &Path, message: impl std::fmt::Display) -> FormatError {
 /// separators. Common.Include siblings inside TRAINS are allowed; paths out
 /// of that installation, cycles and unbounded expansion are rejected.
 pub fn read_msts_text_with_includes(path: impl AsRef<Path>) -> Result<String, FormatError> {
+    read_msts_text_with_sources(path).map(|(text, _)| text)
+}
+
+/// Return every effective ENG/WAG/Include source selected by the bounded loader.
+/// Auditors can fingerprint dependencies without inferring them from filenames.
+pub fn read_msts_text_with_sources(
+    path: impl AsRef<Path>,
+) -> Result<(String, Vec<PathBuf>), FormatError> {
     let path = path.as_ref();
     let absolute = if path.is_absolute() {
         path.to_path_buf()
@@ -56,7 +64,9 @@ pub fn read_msts_text_with_includes(path: impl AsRef<Path>) -> Result<String, Fo
     } else {
         path.clone()
     };
-    expand(&selected, root, &mut vec![], &mut 0)
+    let mut sources = Vec::new();
+    let text = expand(&selected, root, &mut vec![], &mut 0, &mut sources)?;
+    Ok((text, sources))
 }
 pub fn read_vehicle_ast(path: impl AsRef<Path>) -> Result<Ast, FormatError> {
     parse_vehicle_text(&read_msts_text_with_includes(path)?)
@@ -146,6 +156,7 @@ fn expand(
     root: &Path,
     stack: &mut Vec<PathBuf>,
     bytes: &mut usize,
+    sources: &mut Vec<PathBuf>,
 ) -> Result<String, FormatError> {
     if stack.len() >= MAX_DEPTH || stack.iter().any(|p| p == path) {
         return Err(error(path, "Include circular o demasiado profundo"));
@@ -160,6 +171,9 @@ fn expand(
         return Err(error(path, "Include supera el límite de 32 MiB"));
     }
     stack.push(path.to_owned());
+    if !sources.iter().any(|source| source == path) {
+        sources.push(path.to_owned());
+    }
     let body = source.trim_start_matches('\u{feff}').trim_start();
     let body = if body.starts_with("SIMISA") {
         body.split_once('\n').map_or("", |(_, s)| s).trim_start()
@@ -247,7 +261,7 @@ fn expand(
                 if !included.starts_with(root) {
                     return Err(error(path, "Include fuera de la instalación"));
                 }
-                let fragment = expand(&included, root, stack, bytes)?;
+                let fragment = expand(&included, root, stack, bytes, sources)?;
                 let fragment = fragment.trim_start_matches('\u{feff}');
                 let fragment = if fragment.starts_with("SIMISA") {
                     fragment.split_once('\n').map_or("", |(_, s)| s)

@@ -118,7 +118,7 @@ pub(super) struct GpuEmitter {
 
 pub(super) struct GpuAssets {
     pub texture: Handle<Image>,
-    effects: HashMap<(bool, usize), Handle<EffectAsset>>,
+    effects: HashMap<(bool, bool, usize), Handle<EffectAsset>>,
 }
 impl GpuAssets {
     pub fn new(texture: Handle<Image>) -> Self {
@@ -131,11 +131,12 @@ impl GpuAssets {
         &mut self,
         assets: &mut Assets<EffectAsset>,
         steam: bool,
+        sand: bool,
         capacity: usize,
     ) -> Handle<EffectAsset> {
         self.effects
-            .entry((steam, capacity))
-            .or_insert_with(|| assets.add(plume_asset(steam, capacity as u32)))
+            .entry((steam, sand, capacity))
+            .or_insert_with(|| assets.add(particle_asset(steam, sand, capacity as u32)))
             .clone()
     }
 }
@@ -191,7 +192,11 @@ pub(super) fn properties(
 /// Closed-form drag identical to the CPU path, with automatic Euler motion
 /// disabled. Properties are per emitter; position/velocity/size/color live in
 /// GPU storage. No per-particle readback or vertex upload is needed.
+#[cfg(test)]
 fn plume_asset(steam: bool, capacity: u32) -> EffectAsset {
+    particle_asset(steam, false, capacity)
+}
+fn particle_asset(steam: bool, sand: bool, capacity: u32) -> EffectAsset {
     let writer = ExprWriter::new();
     let position = writer.add_property("spawn_position", Vec3::ZERO.into());
     let velocity = writer.add_property("spawn_velocity", Vec3::ZERO.into());
@@ -207,20 +212,34 @@ fn plume_asset(steam: bool, capacity: u32) -> EffectAsset {
         writer.add_property(format!("solid_min_{i}"), Vec3::splat(10000.0).into());
         writer.add_property(format!("solid_max_{i}"), Vec3::splat(-10000.0).into());
     }
-    let drag = if steam { 1.7 } else { 1.1 };
+    let drag = if sand {
+        5.0
+    } else if steam {
+        1.7
+    } else {
+        1.1
+    };
+    let lifetime = if sand {
+        0.35
+    } else {
+        super::train_effects::PUFF_LIFETIME_S
+    };
     // Hanabi initializes before updating in the same GPU frame. Starting age
     // at -delta and limiting the first step to zero keeps newborns at the
     // current native outlet, matching the CPU path even at accelerated time.
     let dt = writer
         .delta_time()
         .min(writer.attr(Attribute::AGE).max(writer.lit(0.0)));
-    let equilibrium = writer.prop(wind) + writer.lit(Vec3::Y * (0.35 / drag));
+    let equilibrium = writer.prop(wind) * writer.lit(if sand { 0.1 } else { 1.0 })
+        + writer.lit(Vec3::Y * (if sand { -7.0 } else { 0.35 } / drag));
     let relative = writer.attr(Attribute::VELOCITY) - equilibrium.clone();
     let decay = (writer.lit(-drag) * dt.clone()).exp();
     let turbulence = |age: bevy_hanabi::WriterExpr| {
         let phase = writer.attr(Attribute::F32_3);
-        writer.lit(Vec3::X * 0.18) * (age.clone() * writer.lit(2.7) + phase.clone()).sin()
-            + writer.lit(Vec3::Z * 0.16) * (age * writer.lit(1.9) + phase * writer.lit(1.3)).cos()
+        writer.lit(Vec3::X * if sand { 0.002 } else { 0.18 })
+            * (age.clone() * writer.lit(2.7) + phase.clone()).sin()
+            + writer.lit(Vec3::Z * if sand { 0.002 } else { 0.16 })
+                * (age * writer.lit(1.9) + phase * writer.lit(1.3)).cos()
     };
     let age_now = writer.attr(Attribute::AGE).max(writer.lit(0.0));
     let turbulent_step = turbulence(age_now.clone()) - turbulence(age_now - dt.clone());
@@ -233,10 +252,14 @@ fn plume_asset(steam: bool, capacity: u32) -> EffectAsset {
     let age = writer.attr(Attribute::AGE);
     let size = (writer.attr(Attribute::F32_0)
         * writer.lit(2.0)
-        * (writer.lit(1.0) + age.clone() * writer.lit(4.0)))
+        * (writer.lit(1.0) + age.clone() * writer.lit(if sand { 0.0 } else { 4.0 })))
     .expr();
-    let fade = writer.lit(1.0) - age / writer.lit(super::train_effects::PUFF_LIFETIME_S);
-    let rgb = writer.lit(Vec4::new(1.0, 1.0, 1.0, 0.0));
+    let fade = writer.lit(1.0) - age / writer.lit(lifetime);
+    let rgb = writer.lit(if sand {
+        Vec4::new(1., 0.78, 0.46, 0.)
+    } else {
+        Vec4::new(1.0, 1.0, 1.0, 0.0)
+    });
     let alpha = writer.lit(Vec4::new(0.0, 0.0, 0.0, 1.0));
     let color = (rgb.clone() * writer.attr(Attribute::F32_1) * writer.prop(light)
         + alpha.clone() * writer.attr(Attribute::F32_2) * fade.clone() * fade)
@@ -254,10 +277,7 @@ fn plume_asset(steam: bool, capacity: u32) -> EffectAsset {
             Attribute::AGE,
             (writer.delta_time() * writer.lit(-1.0)).expr(),
         ),
-        (
-            Attribute::LIFETIME,
-            writer.lit(super::train_effects::PUFF_LIFETIME_S).expr(),
-        ),
+        (Attribute::LIFETIME, writer.lit(lifetime).expr()),
         (
             Attribute::F32_0,
             (writer.prop(radius)
@@ -277,7 +297,9 @@ fn plume_asset(steam: bool, capacity: u32) -> EffectAsset {
     let mut module = writer.finish();
     module.add_texture_slot("plume");
     let mut effect = EffectAsset::new(capacity, SpawnerSettings::rate(0.0.into()), module)
-        .with_name(if steam {
+        .with_name(if sand {
+            "physical sand"
+        } else if steam {
             "native steam"
         } else {
             "native diesel smoke"

@@ -128,3 +128,11 @@ un subsistema completo. Ver [alcance de tracción](TRACTION_SUPPORT.md).
 
 La escucha manual se describe en la sección 36 de
 [PLAYER_MANUAL_TESTS.md](PLAYER_MANUAL_TESTS.md).
+
+## Mezcla, superficies y diagnóstico (11 de octubre de 2026)
+
+F10 → Sonido regula Motor, Rodadura, Cabina y controles, Ambiente y Anuncios; las preferencias se guardan sin recargar bancos. La clasificación toma nombres originales, controles y eventos; los SMS de curva pertenecen a Rodadura. El paso interior/exterior y la distancia se interpolan en 0,18 s preservando bucles y disparadores. El Doppler recibe velocidad física de cada coche y oyente, no diferencias entre posiciones de cámara de cuadros consecutivos.
+
+Los SMS de curva referenciados por `ttype.dat` se activan sólo cuando el coche circula por una curva compatible. Couple/Uncouple siguen cambios reales de enganche y los golpes físicos exigen contacto, fuerza y velocidad relativa; mantener contacto no repite el evento. Motor, turbo o chirrido necesitan sus WAV originales. La lluvia tiene cuatro superficies acústicas del visor —exterior, vidrio, techo metálico y cubierta— con una transición de 0,3 s.
+
+F8 → Diagnóstico muestra programa, stream, archivo, disparador, grupo, ganancia, pausa y tiempo de mezcla. Los recursos se identifican por nombre, sin prefijos de instalaciones personales. Los avisos de archivos ausentes permanecen visibles. [Pruebas de las ampliaciones](PLAN_30.md) y `scripts/check_native_audio.py` permiten comparar cabina/exterior y comprobar PCM sin saturación. Estos fundidos y superficies son mejoras de presentación; el oráculo SMS original conserva sus cálculos y umbrales.

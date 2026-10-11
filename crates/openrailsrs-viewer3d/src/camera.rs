@@ -1294,6 +1294,7 @@ pub fn follow_train_camera(
         Option<Res<crate::player_settings::PlayerSettings>>,
         Option<Res<crate::cab_cvf::CabCvfState>>,
         Option<Res<PassengerCamState>>,
+        Option<Res<crate::train_motion::TrainMotion>>,
     ),
     train_query: Query<
         (&Transform, Option<&crate::train::TrainMarker>),
@@ -1311,7 +1312,10 @@ pub fn follow_train_camera(
             Without<crate::live::LiveTrainCar>,
         ),
     >,
-    lead_car: Query<&Transform, (With<crate::cab_view::CabLeadVehicle>, Without<Camera3d>)>,
+    lead_car: Query<
+        (Entity, &Transform),
+        (With<crate::cab_view::CabLeadVehicle>, Without<Camera3d>),
+    >,
     passenger_cars: Query<
         (&Transform, &GlobalTransform, &crate::live::LiveTrainCar),
         (
@@ -1326,7 +1330,7 @@ pub fn follow_train_camera(
         (With<Camera3d>, Without<crate::train::TrainMarker>),
     >,
 ) {
-    let (settings, cvf, passenger) = cab_preferences;
+    let (settings, cvf, passenger, train_motion) = cab_preferences;
     if *follow == CameraFollowMode::Off {
         return;
     }
@@ -1382,9 +1386,16 @@ pub fn follow_train_camera(
             .iter()
             .next()
             .filter(|_| cab.head_lead_local.is_some())
-            .map(|lead| {
+            .map(|(entity, lead)| {
+                let response = train_motion.as_ref().map_or(Transform::IDENTITY, |m| {
+                    m.relative_response(
+                        entity,
+                        settings.as_ref().map_or(0.5, |s| s.head_motion),
+                        true,
+                    )
+                });
                 driver_camera_transform_from_lead(
-                    &GlobalTransform::from(train_tf.mul_transform(*lead)),
+                    &GlobalTransform::from(train_tf.mul_transform(*lead * response)),
                     &cab,
                     look,
                 )
@@ -1401,11 +1412,7 @@ pub fn follow_train_camera(
         if let Some(profile) = cvf
             .as_ref()
             .and_then(|c| c.cvf_path.as_ref())
-            .and_then(|p| {
-                settings
-                    .as_ref()
-                    .and_then(|s| s.cab_profiles.get(p.to_string_lossy().as_ref()))
-            })
+            .and_then(|p| settings.as_ref().map(|s| s.cab_profile(p)))
         {
             let offset = Vec3::new(0.0, profile.seat_height_m, profile.seat_back_m);
             let train_offset = cab.interior_placement.rotation * offset;
@@ -1423,9 +1430,16 @@ pub fn follow_train_camera(
             .iter()
             .next()
             .filter(|_| cab.head_lead_local.is_some())
-            .map(|lead| {
+            .map(|(entity, lead)| {
+                let response = train_motion.as_ref().map_or(Transform::IDENTITY, |m| {
+                    m.relative_response(
+                        entity,
+                        settings.as_ref().map_or(0.5, |s| s.head_motion),
+                        true,
+                    )
+                });
                 driver_camera_transform_from_lead(
-                    &GlobalTransform::from(train_tf.mul_transform(*lead)),
+                    &GlobalTransform::from(train_tf.mul_transform(*lead * response)),
                     &cab,
                     look,
                 )
@@ -1506,7 +1520,7 @@ pub fn follow_train_camera(
             .ok()
             .as_deref()
             == Some("1")
-        && let Some(lead) = lead_car.iter().next()
+        && let Some((_, lead)) = lead_car.iter().next()
     {
         train_pose.translation = train_tf.mul_transform(*lead).translation;
         orbit.focus = train_pose.translation;
@@ -1932,23 +1946,35 @@ pub fn fly_camera_allowed(follow: Res<CameraFollowMode>) -> bool {
 }
 
 /// Widen FOV and tighten near clip indoors; keep the live world's light policy.
+fn adapt_exposure(previous: f32, target: f32, dt: f32) -> f32 {
+    target + (previous - target) * (-dt.max(0.) / 0.8).exp()
+}
+
 pub fn update_driver_camera_fov(
     opts: Res<ViewerLaunchOpts>,
     follow: Res<CameraFollowMode>,
     sun: Option<Res<crate::route_lighting::RouteSunState>>,
     storm: Option<Res<crate::storm::StormState>>,
     weather: Option<Res<crate::weather_state::WeatherState>>,
+    surroundings: (
+        Option<Res<crate::effect_obstacles::EffectObstacles>>,
+        Option<Res<crate::player_settings::PlayerSettings>>,
+        Res<Time>,
+        Option<Res<crate::live::LiveDrive>>,
+    ),
+    mut adaptation: Local<Option<f32>>,
     mut query: Query<
         (
             &mut Projection,
             &mut AmbientLight,
             &mut Tonemapping,
             &mut Exposure,
+            &Transform,
         ),
         With<Camera3d>,
     >,
 ) {
-    let Ok((mut projection, mut ambient, mut tonemapping, mut exposure)) = query.single_mut()
+    let Ok((mut projection, mut ambient, mut tonemapping, mut exposure, pose)) = query.single_mut()
     else {
         return;
     };
@@ -1983,7 +2009,22 @@ pub fn update_driver_camera_fov(
         *exposure = Exposure::SUNLIGHT;
         if let Some(sun) = sun.as_ref() {
             let day = (sun.direction.y * 2.0).clamp(0.0, 1.0);
-            exposure.ev100 = 6.0 + (Exposure::SUNLIGHT.ev100 - 6.0) * day;
+            let (obstacles, settings, time, live) = &surroundings;
+            let cover = obstacles
+                .as_ref()
+                .map_or(0.0, |o| o.enclosure(pose.translation));
+            let strength = settings.as_ref().map_or(1.5, |s| s.tunnel_exposure_ev);
+            let target = (6.0 + (Exposure::SUNLIGHT.ev100 - 6.0) * day - cover * strength)
+                .clamp(6.0, Exposure::SUNLIGHT.ev100);
+            let dt = if live.as_ref().is_some_and(|l| l.paused) {
+                0.0
+            } else {
+                time.delta_secs().min(0.25)
+            };
+            let previous = adaptation.unwrap_or(target);
+            let next = adapt_exposure(previous, target, dt);
+            exposure.ev100 = next;
+            *adaptation = Some(next);
         }
     } else if indoors {
         ambient.brightness = 350.0;
@@ -2246,6 +2287,7 @@ mod tests {
     #[test]
     fn entering_live_cab_keeps_outdoor_exposure_through_the_windscreen() {
         let mut app = App::new();
+        app.init_resource::<Time>();
         app.insert_resource(ViewerLaunchOpts {
             live: true,
             ..default()
@@ -3166,5 +3208,23 @@ mod tests {
         keys.press(KeyCode::Space);
         let axes = read_fly_axes(&keys, None, true);
         assert_eq!(axes.y, 0.0);
+    }
+
+    #[test]
+    fn plan30_tunnel_exposure_is_gradual_pause_safe_and_independent_of_frame_rate() {
+        let start = Exposure::SUNLIGHT.ev100;
+        let target = start - 1.5;
+        assert_eq!(adapt_exposure(start, target, 0.), start);
+        let evolve = |fps: u32| {
+            let mut value = start;
+            for _ in 0..fps * 2 {
+                value = adapt_exposure(value, target, 1. / fps as f32);
+            }
+            value
+        };
+        assert!((evolve(30) - evolve(120)).abs() < 0.0001);
+        let first = adapt_exposure(start, target, 1. / 60.);
+        assert!(first < start && first > target);
+        assert!(evolve(60) > target && evolve(60) < start);
     }
 }

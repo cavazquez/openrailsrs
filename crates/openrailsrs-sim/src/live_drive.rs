@@ -200,6 +200,7 @@ pub struct LiveDriveSession {
     pub(crate) horn_pressed_until_s: f64,
     /// Wiper switch (cab CVF TWO_STATE / EXTERNALWIPERS).
     pub wiper_active: bool,
+    pub wiper_mode: crate::wiper::WiperMode,
     /// OR headlight positions: 0 off, 1 dim, 2 bright.
     pub headlights: u8,
     pub cab_light: bool,
@@ -382,44 +383,55 @@ impl LiveDriveSession {
         if self.physics.max_tractive_effort_n <= 0.0 {
             return "Sin unidades de tracción conectadas".into();
         }
-        for c in &self.state.diesel.cars {
-            if c.vehicle >= self.formation.coupled_count {
-                continue;
-            }
-            if c.fuel_l <= 0.0 {
-                return format!("Vehículo {} sin combustible", c.vehicle + 1);
+        let index = self.cab_vehicle_index;
+        let vehicle = index + 1;
+        if let Some(c) = self.state.diesel.car(index) {
+            if c.fuel_l <= 0. {
+                return format!(
+                    "Vehículo {vehicle}: sin combustible; abastecé el tanque en un punto habilitado"
+                );
             }
             if c.phase != crate::diesel_operation::EnginePhase::Running {
                 return format!(
-                    "Vehículo {}: motor {}",
-                    c.vehicle + 1,
+                    "Vehículo {vehicle}: motor {}; revisá batería y arranque en B",
                     c.phase.label().to_lowercase()
                 );
             }
             let available = crate::diesel_operation::available_fraction(
                 &self.state.diesel,
                 &self.physics.diesel,
-                c.vehicle,
+                index,
             );
             if available < 0.999 {
                 return format!(
-                    "Protección térmica del vehículo {}: {:.1} °C; potencia disponible {:.0}%",
-                    c.vehicle + 1,
+                    "Vehículo {vehicle}: Protección térmica a {:.1} °C; potencia {:.0}%. Bajá regulador y dejá refrigerar",
                     c.temperature_c,
-                    available * 100.0
+                    available * 100.
                 );
             }
+        }
+        if self
+            .formation
+            .cars
+            .get(index)
+            .is_some_and(|c| !c.battery_on || !c.power_on)
+        {
+            return format!(
+                "Vehículo {vehicle}: mando desconectado; revisá batería y encendido en F9"
+            );
         }
         if self
             .state
             .power_supply
             .cars
             .iter()
-            .filter(|c| c.vehicle < self.formation.coupled_count)
-            .all(|c| !c.supply.main)
-            && !self.state.power_supply.cars.is_empty()
+            .find(|c| c.vehicle == index)
+            .is_some_and(|c| !c.supply.main)
+            || !self.state.electric.power_available(index)
         {
-            return "Sin alimentación de tracción: revisá B y F9 (fuente, batería y mando)".into();
+            return format!(
+                "Vehículo {vehicle}: alimentación de tracción cortada; comprobá contacto con la vía, pantógrafo y disyuntor en B"
+            );
         }
         if self.state.brake_system.independent_command > 0.0 {
             return "Freno independiente aplicado".into();
@@ -431,22 +443,39 @@ impl LiveDriveSession {
             .state
             .rail_adhesion
             .as_ref()
-            .is_some_and(|r| r.slipping())
+            .is_some_and(|r| r.cars.get(index).is_some_and(|c| c.slipping))
         {
             return "Patinaje: reducí regulador o aplicá arena".into();
         }
-        let demand = self.state.power_supply.auxiliary_w + self.state.power_supply.hotel_w;
-        if demand > 0.0 {
-            return format!(
-                "Auxiliares y pasajeros reservan {:.1} kW de la potencia del motor",
-                demand / 1000.0
-            );
-        }
-        if self.driver_throttle <= 0.0 {
+        if self.driver_throttle <= 0. {
             return "Regulador cerrado: marcha por inercia".into();
         }
-        "Tracción normal: la fuerza disponible disminuye al aumentar la velocidad".into()
+        let telemetry = self.cab_telemetry();
+        let force = self
+            .state
+            .motor_force_n
+            .get(index)
+            .copied()
+            .unwrap_or(0.)
+            .max(0.);
+        let current = telemetry.max_current_a.map_or(String::new(), |max| {
+            format!(
+                " · corriente {:.0} A",
+                max * telemetry.traction_load_fraction
+            )
+        });
+        let demand = self.state.power_supply.vehicle_load_w(index);
+        let hotel = if demand > 0. {
+            format!(" · auxiliares reservan {:.1} kW", demand / 1000.)
+        } else {
+            String::new()
+        };
+        format!(
+            "Vehículo {vehicle}: {:.1} kN{current}{hotel}. La fuerza baja al aumentar la velocidad por el límite de potencia; no indica una avería",
+            force / 1000.
+        )
     }
+
     pub fn toggle_pantograph(&mut self) -> Result<(), String> {
         if !self
             .physics
@@ -738,6 +767,7 @@ impl LiveDriveSession {
             exterior,
             horn_pressed_until_s: 0.0,
             wiper_active: false,
+            wiper_mode: default_wiper_mode(),
             headlights: 1,
             cab_light: false,
             speed_mul: 1.0,
@@ -804,12 +834,17 @@ impl LiveDriveSession {
         }
     }
 
+    pub fn horn_active(&self) -> bool {
+        self.time_s() < self.horn_pressed_until_s
+    }
+
     pub fn trigger_horn(&mut self, hold_s: f64) {
         self.horn_pressed_until_s = self.time_s() + hold_s.max(0.05);
     }
 
     pub fn toggle_wiper(&mut self) {
-        self.wiper_active = !self.wiper_active;
+        self.wiper_mode = self.selected_wiper_mode().next();
+        self.wiper_active = self.wiper_mode != crate::wiper::WiperMode::Off;
     }
 
     pub fn time_s(&self) -> f64 {
@@ -1211,6 +1246,10 @@ impl LiveDriveSession {
     }
 
     /// Snapshot for the live cab panel (Fase C3).
+    pub fn cab_vehicle(&self) -> usize {
+        self.cab_vehicle_index
+    }
+
     pub fn effective_headlights(&self) -> u8 {
         if self.state.power_supply.cars.first().map_or_else(
             || self.formation.cars.first().is_none_or(|c| c.battery_on),
@@ -1235,8 +1274,17 @@ impl LiveDriveSession {
             )
     }
 
+    pub fn selected_wiper_mode(&self) -> crate::wiper::WiperMode {
+        if !self.wiper_active {
+            crate::wiper::WiperMode::Off
+        } else if self.wiper_mode == crate::wiper::WiperMode::Off {
+            crate::wiper::WiperMode::Slow
+        } else {
+            self.wiper_mode
+        }
+    }
     pub fn effective_wiper_active(&self) -> bool {
-        self.wiper_active
+        self.selected_wiper_mode().moving(self.time_s())
             && self.state.power_supply.cars.first().map_or_else(
                 || self.formation.cars.first().is_none_or(|c| c.battery_on),
                 |c| c.supply.low_voltage,
@@ -1338,8 +1386,26 @@ impl LiveDriveSession {
             direction: self.driver_direction.clamp(0.0, 1.0),
             horn_active: self.time_s() < self.horn_pressed_until_s,
             wiper_active: self.effective_wiper_active(),
+            wiper_mode: self.selected_wiper_mode(),
             headlights: self.effective_headlights(),
             cab_light: self.effective_cab_light(),
+            engine_failure: self
+                .state
+                .diesel
+                .car(self.cab_vehicle_index)
+                .is_some_and(|c| c.fuel_l <= 0.)
+                || self
+                    .state
+                    .boiler_state
+                    .as_ref()
+                    .is_some_and(|b| b.low_water_failure),
+            thermal_limiting: crate::diesel_operation::available_fraction(
+                &self.state.diesel,
+                &self.physics.diesel,
+                self.cab_vehicle_index,
+            ) < 0.999,
+            emergency: self.state.brake_system.emergency,
+            independent_brake_pct: self.state.brake_system.independent_command * 100.,
             main_res_bar,
             brake_pipe_bar,
             brake_cyl_bar,
@@ -1403,6 +1469,10 @@ impl LiveDriveSession {
 #[derive(Clone, Debug, PartialEq)]
 pub struct CabTelemetry {
     pub wheel_slip: bool,
+    pub engine_failure: bool,
+    pub thermal_limiting: bool,
+    pub emergency: bool,
+    pub independent_brake_pct: f64,
     pub sander_on: bool,
     pub steam: Option<crate::steam::BoilerState>,
     pub diesel: Option<crate::diesel_operation::DieselCarState>,
@@ -1423,6 +1493,7 @@ pub struct CabTelemetry {
     pub direction: f64,
     pub horn_active: bool,
     pub wiper_active: bool,
+    pub wiper_mode: crate::wiper::WiperMode,
     pub headlights: u8,
     pub cab_light: bool,
     pub main_res_bar: f64,
@@ -2172,4 +2243,8 @@ mod native_lookahead_tests {
         assert!(context.current_post_speed_limit_mps >= context.speed_limit_mps);
         assert_eq!(session.curve_parameters.len(), session.formation.cars.len());
     }
+}
+
+fn default_wiper_mode() -> crate::wiper::WiperMode {
+    crate::wiper::WiperMode::Off
 }

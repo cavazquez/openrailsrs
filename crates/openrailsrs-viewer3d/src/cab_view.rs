@@ -70,6 +70,7 @@ pub(crate) struct CabTextureBinding {
     pub standard_material: Handle<StandardMaterial>,
     /// Day, dark with lights off, dark with lights on.
     pub variants: [(Handle<Image>, LinearRgba); 3],
+    pub zone: usize,
 }
 
 #[derive(Default)]
@@ -178,6 +179,7 @@ fn publish_cab_lighting(
                 or_material: part.or_cab_material.clone(),
                 standard_material: part.material.clone(),
                 variants,
+                zone: cab_light_zone(part.texture_name.as_deref().unwrap_or("")),
             })
         })
         .collect()
@@ -977,6 +979,35 @@ pub fn sync_cab_interior(
             "openrailsrs-viewer3d: cab interior ready — {} part(s) in driver view",
             asset.parts.len()
         );
+    }
+}
+
+/// Zones apply where the original model supplies separate texture banks.
+pub(crate) fn cab_light_zone(name: &str) -> usize {
+    let name = name.to_ascii_lowercase();
+    if ["dial", "gauge", "instrument", "digit"]
+        .iter()
+        .any(|s| name.contains(s))
+    {
+        0
+    } else if ["desk", "console", "panel", "pupitre"]
+        .iter()
+        .any(|s| name.contains(s))
+    {
+        1
+    } else {
+        2
+    }
+}
+
+/// The desk remains attached to the physical car but has a separate, bounded response.
+pub fn update_desk_motion(
+    settings: Res<crate::player_settings::PlayerSettings>,
+    motion: Res<crate::train_motion::TrainMotion>,
+    mut roots: Query<(&ChildOf, &mut Transform), With<CabInteriorRoot>>,
+) {
+    for (parent, mut transform) in &mut roots {
+        *transform = motion.relative_response(parent.parent(), settings.desk_motion, false);
     }
 }
 

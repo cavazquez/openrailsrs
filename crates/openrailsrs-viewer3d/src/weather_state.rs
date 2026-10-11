@@ -140,6 +140,11 @@ pub struct Atmosphere {
     )]
     pub wind_mps: Vec3,
     pub phase: StormPhase,
+    #[serde(default = "default_temperature")]
+    pub temperature_c: f32,
+}
+fn default_temperature() -> f32 {
+    20.0
 }
 fn serialize_wind<S: serde::Serializer>(wind: &Vec3, serializer: S) -> Result<S::Ok, S::Error> {
     wind.to_array().serialize(serializer)
@@ -161,6 +166,7 @@ impl Default for Atmosphere {
             fog_density: 0.00004,
             wind_mps: Vec3::new(0.8, 0., 0.3),
             phase: StormPhase::Calm,
+            temperature_c: default_temperature(),
         }
     }
 }
@@ -192,6 +198,7 @@ impl Atmosphere {
             fog_density: lerp(self.fog_density, target.fog_density),
             wind_mps: self.wind_mps.lerp(target.wind_mps, amount),
             phase: target.phase,
+            temperature_c: lerp(self.temperature_c, target.temperature_c),
         }
     }
     pub fn weather(self) -> PlayerWeather {
@@ -223,6 +230,8 @@ impl Atmosphere {
             && (0.5..=2.).contains(&self.flake_size)
             && (1.0..=100_000.).contains(&self.visibility_m)
             && (0.0..=1.).contains(&self.fog_density)
+            && self.temperature_c.is_finite()
+            && (-100.0..=65.0).contains(&self.temperature_c)
             && self.wind_mps.is_finite()
             && self.wind_mps.length() <= 150.
     }
@@ -313,6 +322,11 @@ pub fn fixed_at(
             );
         }
     }
+    a.temperature_c = if weather == PlayerWeather::Snow {
+        -2.0
+    } else {
+        20.0
+    };
     if profile == WeatherProfile::AfterSnow {
         a.snow_cover = 1.;
         a.visibility_m = 12_000.;
@@ -330,6 +344,7 @@ fn live_at(sample: &WeatherSample) -> Atmosphere {
     a.cloud_cover = sample.cloud_cover / 100.;
     a.overcast = (a.cloud_cover * 0.9).clamp(0., 0.95);
     a.wind_mps = sample.wind();
+    a.temperature_c = sample.temperature_2m;
     if a.rain > 0. {
         a.rain = (sample.precipitation / 5.).clamp(0.08, 1.);
     }
@@ -411,7 +426,7 @@ impl WeatherState {
         self.seed = seed;
         self.journey = journey;
         self.live = sample.is_some();
-        let target = sample.map_or_else(
+        let mut target = sample.map_or_else(
             || {
                 if profile == WeatherProfile::RandomJourney {
                     crate::weather_journey::atmosphere_at(
@@ -426,6 +441,8 @@ impl WeatherState {
             },
             live_at,
         );
+        target.wind_mps =
+            crate::journey_environment::gust(target.wind_mps, seed, self.elapsed_s(clock));
         let dt = (clock - previous).clamp(0., 5.) as f32;
         // Fixed profiles are analytic after startup. A user changing weather or
         // live data gets a bounded transition instead of a flash between modes.
@@ -513,7 +530,7 @@ pub fn reset(
 }
 
 pub fn update(
-    live: Option<Res<crate::live::LiveDrive>>,
+    mut live: Option<ResMut<crate::live::LiveDrive>>,
     time: Res<Time>,
     mut content: ResMut<crate::player_launch::ActivePlayerContent>,
     settings: Res<crate::player_settings::PlayerSettings>,
@@ -562,6 +579,24 @@ pub fn update(
         } else {
             fixed_at(initial, profile, seed, offset)
         };
+    }
+    // All consumers receive the same temperature and pause-safe gust. Manual
+    // temperature is explicitly an estimate, never a live observation.
+    if !state.live {
+        state.atmosphere.temperature_c = settings.ambient_temperature_c.unwrap_or_else(|| {
+            crate::journey_environment::temperature(
+                environment.location,
+                live.as_ref().map_or("summer", |l| l.season.as_str()),
+                live.as_ref().map_or(clock, |l| l.clock_time_s()),
+                state.atmosphere.weather(),
+            )
+        });
+    }
+    if let Some(live) = live.as_mut() {
+        live.session.state.ambient_temperature_c = f64::from(state.atmosphere.temperature_c);
+        for service in &mut live.traffic.services {
+            service.session.state.ambient_temperature_c = f64::from(state.atmosphere.temperature_c);
+        }
     }
     let effective = if profile == WeatherProfile::RandomJourney && !state.live {
         state.atmosphere.weather()

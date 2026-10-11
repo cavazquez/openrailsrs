@@ -283,6 +283,11 @@ pub fn cab_lever_matrix_indices(runtime: &CabCvfRuntime) -> HashSet<usize> {
 }
 /// Normalized 0–1 value for a cab control from live telemetry.
 pub fn control_value(control: &ControlType, tel: &CabTelemetry) -> f64 {
+    if let ControlType::Generic(name) = control
+        && let Some(original) = name.strip_prefix("ORTS_")
+    {
+        return control_value(&ControlType::Generic(original.into()), tel);
+    }
     match control {
         ControlType::Generic(name) if matches!(name.as_str(), "SAND" | "SANDER" | "SANDERS") => {
             f64::from(tel.sander_on)
@@ -295,6 +300,54 @@ pub fn control_value(control: &ControlType, tel: &CabTelemetry) -> f64 {
         {
             f64::from(tel.wheel_slip)
         }
+        ControlType::Generic(name) if name == "ENGINE_BRAKE" || name == "LOCOMOTIVE_BRAKE" => {
+            tel.independent_brake_pct / 100.
+        }
+        ControlType::Generic(name) if name == "ENGINE_FAILURE" => f64::from(tel.engine_failure),
+        ControlType::Generic(name) if name == "ENGINE_OVERHEAT" => f64::from(tel.thermal_limiting),
+        ControlType::Generic(name) if name == "EMERGENCY_BRAKE" => f64::from(tel.emergency),
+        ControlType::Generic(name) if name == "PLAYER_DIESEL_ENGINE" => {
+            f64::from(tel.diesel.as_ref().is_some_and(|d| {
+                matches!(
+                    d.phase,
+                    openrailsrs_sim::diesel_operation::EnginePhase::Running
+                        | openrailsrs_sim::diesel_operation::EnginePhase::Starting
+                )
+            }))
+        }
+        ControlType::Generic(name) if name == "PLAYER_DIESEL_ENGINE_STATE" => {
+            tel.diesel.as_ref().map_or(0., |d| match d.phase {
+                openrailsrs_sim::diesel_operation::EnginePhase::Stopped => 0.,
+                openrailsrs_sim::diesel_operation::EnginePhase::Starting => 2.,
+                openrailsrs_sim::diesel_operation::EnginePhase::Running => 3.,
+                openrailsrs_sim::diesel_operation::EnginePhase::Stopping => 1.,
+            })
+        }
+        ControlType::Generic(name) if name == "PLAYER_DIESEL_ENGINE_STARTER" => {
+            f64::from(tel.diesel.as_ref().is_some_and(|d| {
+                d.phase == openrailsrs_sim::diesel_operation::EnginePhase::Starting
+            }))
+        }
+        ControlType::Generic(name) if name == "PLAYER_DIESEL_ENGINE_STOPPER" => {
+            f64::from(tel.diesel.as_ref().is_some_and(|d| {
+                d.phase == openrailsrs_sim::diesel_operation::EnginePhase::Stopping
+            }))
+        }
+        ControlType::Generic(name) if name == "CIRCUIT_BREAKER_CLOSED" => {
+            f64::from(tel.circuit_breaker_state == 2)
+        }
+        ControlType::Generic(name) if name == "CIRCUIT_BREAKER_OPEN" => {
+            f64::from(tel.circuit_breaker_state == 0)
+        }
+        ControlType::Generic(name)
+            if name == "CIRCUIT_BREAKER_AUTHORIZED"
+                || name == "CIRCUIT_BREAKER_DRIVER_CLOSING_AUTHORIZATION" =>
+        {
+            f64::from(tel.low_voltage_power && tel.line_voltage_v > 0.)
+        }
+        ControlType::Generic(name) if name == "CIRCUIT_BREAKER_OPEN_AND_AUTHORIZED" => f64::from(
+            tel.circuit_breaker_state == 0 && tel.low_voltage_power && tel.line_voltage_v > 0.,
+        ),
         ControlType::Throttle | ControlType::ThrottleDisplay => tel.throttle_pct / 100.0,
         ControlType::TrainBrake => tel.brake_pct / 100.0,
         // Distinct from train brake; no dedicated telemetry yet.
@@ -401,6 +454,11 @@ pub fn dial_control_value(
     tel: &CabTelemetry,
 ) -> f64 {
     let units = dial.units.as_deref().unwrap_or("");
+    if let ControlType::Generic(name) = control
+        && name.eq_ignore_ascii_case("ORTS_DIESEL_TEMPERATURE")
+    {
+        return tel.diesel.as_ref().map_or(0., |d| d.temperature_c);
+    }
     match control {
         ControlType::Speedometer => {
             if units.eq_ignore_ascii_case("MILES_PER_HOUR") {
@@ -786,7 +844,12 @@ fn anim_key_for_lever(shape: &ShapeFile, anim_node: Option<usize>, value: f64) -
 fn moving_control_value(control: &ControlType, tel: &CabTelemetry, time_s: f64) -> f64 {
     if matches!(control, ControlType::Generic(n) if n == "EXTERNALWIPERS") {
         if tel.wiper_active {
-            crate::windshield::wiper_phase(time_s)
+            (if tel.wiper_mode == openrailsrs_sim::wiper::WiperMode::Off {
+                openrailsrs_sim::wiper::WiperMode::Slow
+            } else {
+                tel.wiper_mode
+            })
+            .phase(time_s)
         } else {
             0.0
         }
@@ -1124,6 +1187,10 @@ mod tests {
     fn control_value_maps_throttle_and_brake() {
         let tel = CabTelemetry {
             wheel_slip: false,
+            engine_failure: false,
+            thermal_limiting: false,
+            emergency: false,
+            independent_brake_pct: 0.,
             sander_on: false,
             steam: None,
             diesel: None,
@@ -1143,6 +1210,7 @@ mod tests {
             direction: 0.5,
             horn_active: false,
             wiper_active: false,
+            wiper_mode: openrailsrs_sim::wiper::WiperMode::Off,
             headlights: 1,
             cab_light: false,
             main_res_bar: 8.0,
@@ -1944,5 +2012,46 @@ mod tests {
             horn_rotation_changed || horn_translation_changed,
             "M5 horn must move while telemetry says it is active"
         );
+    }
+
+    #[test]
+    fn plan30_native_status_displays_follow_engine_emergency_and_recovery() {
+        use openrailsrs_sim::diesel_operation::EnginePhase;
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/traction_operation/scenario.toml");
+        let mut live = crate::live::LiveDrive::from_scenario_path(&path).unwrap();
+        let control = |n: &str| ControlType::Generic(format!("ORTS_{n}"));
+        // OR 1.6.1 DieselEngineState enum: Stopped=0, Stopping=1, Starting=2, Running=3.
+        for (phase, value) in [
+            (EnginePhase::Stopped, 0.),
+            (EnginePhase::Stopping, 1.),
+            (EnginePhase::Starting, 2.),
+            (EnginePhase::Running, 3.),
+        ] {
+            live.session.state.diesel.cars[0].phase = phase;
+            let telemetry = live.session.cab_telemetry();
+            assert_eq!(
+                control_value(&control("PLAYER_DIESEL_ENGINE_STATE"), &telemetry),
+                value
+            );
+            assert_eq!(
+                control_value(&control("PLAYER_DIESEL_ENGINE_STARTER"), &telemetry),
+                f64::from(phase == EnginePhase::Starting)
+            );
+        }
+        live.session.state.brake_system.emergency = true;
+        assert_eq!(
+            control_value(&control("EMERGENCY_BRAKE"), &live.session.cab_telemetry()),
+            1.
+        );
+        live.session.state.brake_system.emergency = false;
+        assert_eq!(
+            control_value(&control("EMERGENCY_BRAKE"), &live.session.cab_telemetry()),
+            0.
+        );
+        live.session.state.diesel.cars[0].fuel_l = 0.;
+        assert!(live.session.cab_telemetry().engine_failure);
+        live.session.state.diesel.cars[0].fuel_l = 1.;
+        assert!(!live.session.cab_telemetry().engine_failure);
     }
 }

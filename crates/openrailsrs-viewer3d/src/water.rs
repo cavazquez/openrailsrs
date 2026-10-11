@@ -214,9 +214,12 @@ pub fn spawn_water_objects(
 
 pub(crate) fn update_water_patches(
     time: Res<Time>,
+    live: Option<Res<crate::live::LiveDrive>>,
     mut surfaces: Query<(&mut Transform, &WaterSurface)>,
 ) {
-    let t = time.elapsed_secs();
+    let t = live
+        .as_ref()
+        .map_or(time.elapsed_secs(), |l| l.session.time_s() as f32);
     for (mut transform, surface) in &mut surfaces {
         let amp = if surface.is_reflection { 0.018 } else { 0.07 };
         let wave = (t * 1.65 + surface.phase).sin() * amp;
@@ -319,5 +322,47 @@ mod tests {
         let wave_a = (0.5_f32 * 1.65 + surface.phase).sin() * 0.07;
         let wave_b = (1.0_f32 * 1.65 + surface.phase).sin() * 0.07;
         assert_ne!(wave_a, wave_b);
+    }
+
+    #[test]
+    fn plan30_water_uses_rail_clock_through_pause_and_retains_rebased_horizontal_pose() {
+        use bevy::ecs::system::RunSystemOnce;
+        let path =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke/scenario.toml");
+        let mut live = crate::live::LiveDrive::from_scenario_path(&path).unwrap();
+        live.paused = true;
+        live.session.state.time.0 = 12.;
+        let mut app = App::new();
+        app.insert_resource(live).init_resource::<Time>();
+        let e = app
+            .world_mut()
+            .spawn((
+                Transform::from_xyz(-5., 12., -7.),
+                WaterSurface {
+                    render_base_y: 12.,
+                    phase: 0.2,
+                    is_reflection: false,
+                },
+            ))
+            .id();
+        app.world_mut()
+            .run_system_once(update_water_patches)
+            .unwrap();
+        let first = *app.world().get::<Transform>(e).unwrap();
+        app.world_mut()
+            .resource_mut::<Time>()
+            .advance_by(std::time::Duration::from_secs(10));
+        app.world_mut()
+            .get_mut::<Transform>(e)
+            .unwrap()
+            .translation
+            .x -= 1024.;
+        app.world_mut()
+            .run_system_once(update_water_patches)
+            .unwrap();
+        let second = app.world().get::<Transform>(e).unwrap();
+        assert_eq!(first.translation.y, second.translation.y);
+        assert_eq!(second.translation.x, first.translation.x - 1024.);
+        assert!(second.translation.y > 11.93 && second.translation.y < 12.07);
     }
 }

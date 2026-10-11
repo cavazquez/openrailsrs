@@ -611,6 +611,7 @@ mod tests {
             vehicles: 1,
             powered_vehicles: 1,
             compatibility: vec![openrailsrs_train::consist_audit::VehicleCompatibility {
+                source_sha256: String::new(),
                 vehicle: 1,
                 stock_path: PathBuf::from("Test.eng"),
                 declared,

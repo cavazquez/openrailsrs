@@ -513,7 +513,11 @@ pub struct VehicleEmitter {
 }
 pub fn parse_vehicle_emitters(ast: &Ast) -> Vec<VehicleEmitter> {
     let mut out = Vec::new();
-    for family in ["DieselSpecialEffects", "SteamSpecialEffects"] {
+    for family in [
+        "DieselSpecialEffects",
+        "SteamSpecialEffects",
+        "SanderSpecialEffects",
+    ] {
         for block in named_blocks(ast, family) {
             let Ast::List(items) = block else { continue };
             let items = if matches!(items.first(),Some(Ast::Atom(Atom::Symbol(name))) if name.eq_ignore_ascii_case(family))

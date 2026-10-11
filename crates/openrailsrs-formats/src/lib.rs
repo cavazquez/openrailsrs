@@ -107,7 +107,9 @@ pub use vehicle_field_catalog::{
     ParserSupport, VEHICLE_FIELD_CATALOG, VehicleFieldSpec, VehicleKind, catalog_for_kind,
     lookup_field,
 };
-pub use vehicle_include::{read_msts_text_with_includes, read_vehicle_ast};
+pub use vehicle_include::{
+    read_msts_text_with_includes, read_msts_text_with_sources, read_vehicle_ast,
+};
 
 pub mod timetable;
 pub use timetable::{

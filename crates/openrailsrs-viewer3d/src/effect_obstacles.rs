@@ -68,6 +68,26 @@ impl EffectObstacles {
             1.0
         }
     }
+    /// Conservative near-field cover using individual opaque parts, excluding trains.
+    pub fn overhead(&self, point: Vec3) -> bool {
+        self.solids
+            .iter()
+            .any(|b| b.owner.is_none() && b.hits(point, point + Vec3::Y * 12.0))
+    }
+    pub fn enclosure(&self, point: Vec3) -> f32 {
+        if !self.overhead(point) {
+            return 0.0;
+        }
+        let walls = [Vec3::X, Vec3::NEG_X, Vec3::Z, Vec3::NEG_Z]
+            .into_iter()
+            .filter(|d| {
+                self.solids
+                    .iter()
+                    .any(|b| b.owner.is_none() && b.hits(point, point + *d * 8.0))
+            })
+            .count();
+        (walls as f32 / 3.0).clamp(0.0, 1.0)
+    }
     pub fn nearest(&self, point: Vec3, count: usize, source: Entity) -> Vec<Solid> {
         // Do not block an authored outlet with a rest-baked source-car box.
         // Otherwise accelerated steps can kill a plume while it leaves its stack.
@@ -253,5 +273,42 @@ mod tests {
         assert!(scene.blocked(from, to, Some(source)));
         scene.solids[0].owner = None;
         assert!(scene.blocked(from, to, Some(source)));
+    }
+
+    #[test]
+    fn plan30_tunnel_enclosure_requires_near_world_roof_and_walls() {
+        let roof = Solid {
+            min: Vec3::new(-10., 3., -10.),
+            max: Vec3::new(10., 4., 10.),
+            owner: None,
+        };
+        let mut obstacles = EffectObstacles {
+            solids: vec![roof],
+            ..default()
+        };
+        assert!(obstacles.overhead(Vec3::ZERO));
+        assert_eq!(obstacles.enclosure(Vec3::ZERO), 0.);
+        obstacles.solids.extend([
+            Solid {
+                min: Vec3::new(-4., 0., -10.),
+                max: Vec3::new(-3., 4., 10.),
+                owner: None,
+            },
+            Solid {
+                min: Vec3::new(3., 0., -10.),
+                max: Vec3::new(4., 4., 10.),
+                owner: None,
+            },
+        ]);
+        assert!((obstacles.enclosure(Vec3::Y) - 2. / 3.).abs() < 1e-6);
+        assert_eq!(obstacles.enclosure(Vec3::new(100., 0., 0.)), 0.);
+        for solid in &mut obstacles.solids {
+            solid.owner = Some(Entity::PLACEHOLDER);
+        }
+        assert_eq!(
+            obstacles.enclosure(Vec3::Y),
+            0.,
+            "the player's body is not a tunnel"
+        );
     }
 }

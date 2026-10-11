@@ -1,0 +1,140 @@
+{
+  "schema": 1,
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "records": [
+    {
+      "source": "Chiltern/RF_Class121/RF_Class121_DMBS.eng",
+      "source_sha256": "a82374b193a73926fb846dfc63c7bf70bb332c903cc846c5829be96f9e734569",
+      "source_files": {
+        "RF_Class121/RF_Class121_DMBS.eng": "4e7fac1905163a557d80034b71d37bfcd618274540bdf2e1429bdf546d4af01f"
+      },
+      "scope": "Freno de vacío",
+      "points": 64,
+      "evidence": "oracles/openrails-brake-power.json",
+      "evidence_sha256": "723251e0418d42acb9d0c965a786afc682bc0d289c28395463406150c04e61e8",
+      "provenance": "oracles/openrails-brake-power-provenance.json"
+    },
+    {
+      "source": "Chiltern/4994DowntonHall/OpenRails/4994E.eng",
+      "source_sha256": "09261f4fdb2981b9dacb062a0a597a0ba6593078ad93ff9c84c04ea8b4daa266",
+      "source_files": {
+        "4994DowntonHall/OpenRails/4994E.eng": "756564ed1c832dc80e24d2dcb83297fa36dabe7d9648137969975b558ab28545"
+      },
+      "scope": "Freno de vacío",
+      "points": 64,
+      "evidence": "oracles/openrails-brake-power.json",
+      "evidence_sha256": "723251e0418d42acb9d0c965a786afc682bc0d289c28395463406150c04e61e8",
+      "provenance": "oracles/openrails-brake-power-provenance.json"
+    },
+    {
+      "source": "Chiltern/4994DowntonHall/OpenRails/BR_HallT_Late.wag",
+      "source_sha256": "b0defc28fd50447521f02d85780edf84bb14fc6dd77dbb51c199fe2ee2b41d31",
+      "source_files": {
+        "4994DowntonHall/OpenRails/BR_HallT_Late.wag": "58beb9bbae373bf01ee665c4398c24a82480a4111de523faf6e01382ba7d439e"
+      },
+      "scope": "Freno de vacío",
+      "points": 64,
+      "evidence": "oracles/openrails-brake-power.json",
+      "evidence_sha256": "723251e0418d42acb9d0c965a786afc682bc0d289c28395463406150c04e61e8",
+      "provenance": "oracles/openrails-brake-power-provenance.json"
+    },
+    {
+      "source": "Chiltern/King George IV/OpenRails/BR_Green_6003.eng",
+      "source_sha256": "9c53f9eb50bdafd1388d46c609b12a367a1ec2cb3fbb2825a0116c610279e96f",
+      "source_files": {
+        "King George IV/OpenRails/BR_Green_6003.eng": "139d969ba9de19498572142fc0eb319d9d19950e2b2fea721564001859a249bf"
+      },
+      "scope": "Freno de vacío",
+      "points": 64,
+      "evidence": "oracles/openrails-brake-power.json",
+      "evidence_sha256": "723251e0418d42acb9d0c965a786afc682bc0d289c28395463406150c04e61e8",
+      "provenance": "oracles/openrails-brake-power-provenance.json"
+    },
+    {
+      "source": "Chiltern/Collett4000gTender/OpenRails/CollBRLate.wag",
+      "source_sha256": "b4f18214516b011269e1ce35f48bf144f255ed7e10da850cc58c2704213031ff",
+      "source_files": {
+        "Collett4000gTender/OpenRails/CollBRLate.wag": "afe722bda792e317351041def3bcba83017f12b8efb688207f7bb053617241a5"
+      },
+      "scope": "Freno de vacío",
+      "points": 64,
+      "evidence": "oracles/openrails-brake-power.json",
+      "evidence_sha256": "723251e0418d42acb9d0c965a786afc682bc0d289c28395463406150c04e61e8",
+      "provenance": "oracles/openrails-brake-power-provenance.json"
+    },
+    {
+      "source": "Chiltern/1960 Central Line Stock/OpenRails/1960Driving.eng",
+      "source_sha256": "067f34195901ca06754c1d9b27d4fe9102138b7b06bdc5fcf7264312441ab856",
+      "source_files": {
+        "1960 Central Line Stock/OpenRails/1960Driving.eng": "d8954021990d99d659b096ed4a5d9589d8c607158926378884a39f218a844e6a"
+      },
+      "scope": "Freno EP original sin geometría de cilindro",
+      "points": 64,
+      "evidence": "oracles/openrails-brake-power.json",
+      "evidence_sha256": "723251e0418d42acb9d0c965a786afc682bc0d289c28395463406150c04e61e8",
+      "provenance": "oracles/openrails-brake-power-provenance.json"
+    },
+    {
+      "source": "Chiltern/1960 Central Line Stock/OpenRails/Stdtrailer4905.wag",
+      "source_sha256": "9fb453768d7957de47d2a3dc44a7ac4f14270313579da75ce991c0a3093d7787",
+      "source_files": {
+        "1960 Central Line Stock/OpenRails/Stdtrailer4905.wag": "5b674823a4cff6c9bb1910620c95937d814315af778a6d6627515f32d31b960d"
+      },
+      "scope": "Freno EP original sin geometría de cilindro",
+      "points": 64,
+      "evidence": "oracles/openrails-brake-power.json",
+      "evidence_sha256": "723251e0418d42acb9d0c965a786afc682bc0d289c28395463406150c04e61e8",
+      "provenance": "oracles/openrails-brake-power-provenance.json"
+    },
+    {
+      "source": "Chiltern/1960 Central Line Stock/OpenRails/Stdtrailer4904.wag",
+      "source_sha256": "86473a3f1433a6bd3a0986aebfdf14519fd7499d7d5a90208573b70397076c49",
+      "source_files": {
+        "1960 Central Line Stock/OpenRails/Stdtrailer4904.wag": "38f1ec9fc78ca2da3008d2cc4c099901494a4107d80652bd9e38b3cc1e210e4c"
+      },
+      "scope": "Freno EP original sin geometría de cilindro",
+      "points": 64,
+      "evidence": "oracles/openrails-brake-power.json",
+      "evidence_sha256": "723251e0418d42acb9d0c965a786afc682bc0d289c28395463406150c04e61e8",
+      "provenance": "oracles/openrails-brake-power-provenance.json"
+    },
+    {
+      "source": "Chiltern/LURStock/LURmotorwest.eng",
+      "source_sha256": "f6aa743cdee3f35e78342c345f5fd2e852c2178dc29afae26d980891b1b06f6e",
+      "source_files": {
+        "LURStock/LURmotorwest.eng": "cde2e9392057c36a3791440cf92c88b872b592bfa569c3be0f68bb39187f4aff"
+      },
+      "scope": "Freno EP original sin geometría de cilindro",
+      "points": 64,
+      "evidence": "oracles/openrails-brake-power.json",
+      "evidence_sha256": "723251e0418d42acb9d0c965a786afc682bc0d289c28395463406150c04e61e8",
+      "provenance": "oracles/openrails-brake-power-provenance.json"
+    },
+    {
+      "source": "Chiltern/LURStock/LURtrailer.wag",
+      "source_sha256": "54a47c4d2d55776d67f4aa54a3164d38c881db48c2549761d875e5fe4737b0be",
+      "source_files": {
+        "LURStock/LURtrailer.wag": "1e0efe5ad883d228379c902d7277615bc84813005d58450d82cc474752c94f83"
+      },
+      "scope": "Freno EP original sin geometría de cilindro",
+      "points": 64,
+      "evidence": "oracles/openrails-brake-power.json",
+      "evidence_sha256": "723251e0418d42acb9d0c965a786afc682bc0d289c28395463406150c04e61e8",
+      "provenance": "oracles/openrails-brake-power-provenance.json"
+    },
+    {
+      "source": "Chiltern/LURStock/LURmotoreast.eng",
+      "source_sha256": "851bb0cc1229f71f0272fb4e9616f3cfaba53700973e9c01d9ab22253c3d6e80",
+      "source_files": {
+        "LURStock/LURmotoreast.eng": "70ae8cc67e326b3b22ba8a8b91ef491401cf3fb85567365348e0e4bf021271fb"
+      },
+      "scope": "Freno EP original sin geometría de cilindro",
+      "points": 64,
+      "evidence": "oracles/openrails-brake-power.json",
+      "evidence_sha256": "723251e0418d42acb9d0c965a786afc682bc0d289c28395463406150c04e61e8",
+      "provenance": "oracles/openrails-brake-power-provenance.json"
+    }
+  ],
+  "scope": "Comparaciones de subsistemas con entradas prescritas; no certifica circulación ni todos los sistemas del vehículo."
+}

@@ -1707,6 +1707,9 @@ fn begin_player_launch(
     let Some(request) = queue.0.take() else {
         return;
     };
+    if let Some(options) = &request.player_options {
+        options.apply(&mut settings);
+    }
     if let Some(weather) = &request.weather_checkpoint {
         weather.apply_settings(&mut settings);
         commands.insert_resource(openrailsrs_viewer3d::weather_state::PendingWeatherRestore(

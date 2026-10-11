@@ -1235,17 +1235,7 @@ pub(crate) fn handle_cab2d_mouse_controls(
                     && mouse_buttons.just_pressed(MouseButton::Left)
                     && *interaction == Interaction::Pressed
                 {
-                    if matches!(&widget.control_type, ControlType::Generic(n) if matches!(n.as_str(), "SAND" | "SANDER" | "SANDERS"))
-                    {
-                        let _ = live.session.toggle_sander();
-                    } else if is_horn {
-                        live.session.trigger_horn(0.35);
-                    } else if matches!(
-                        &widget.control_type,
-                        ControlType::Generic(n) if n.contains("WIPER")
-                    ) {
-                        live.session.toggle_wiper();
-                    }
+                    crate::cab_mouse::apply_cab_control(&mut live, &widget.control_type, 1.0);
                 }
             }
             CabCvfOverlayKind::TriState { frames, .. } => {
@@ -1274,18 +1264,7 @@ pub(crate) fn handle_cab2d_mouse_controls(
 }
 
 fn apply_mouse_lever_value(live: &mut LiveDrive, control: &ControlType, value: f64) {
-    match control {
-        ControlType::Throttle | ControlType::ThrottleDisplay => {
-            live.session.driver_throttle = value.clamp(0.0, 1.0);
-        }
-        ControlType::TrainBrake => {
-            live.session.driver_brake = value.clamp(0.0, 1.0);
-        }
-        ControlType::DirectionDisplay => {
-            let _ = live.session.set_direction(value.clamp(0.0, 1.0));
-        }
-        _ => {}
-    }
+    crate::cab_mouse::apply_cab_control(live, control, value);
 }
 
 #[cfg(test)]

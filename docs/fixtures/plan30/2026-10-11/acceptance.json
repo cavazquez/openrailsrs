@@ -1,0 +1,1530 @@
+{
+  "schema": 1,
+  "date": "2026-10-11",
+  "reference": {
+    "version": "1.6.1",
+    "commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5"
+  },
+  "bevy": "0.19.1",
+  "hanabi": "0.19.0",
+  "content": {
+    "route": "Chiltern v4",
+    "author_revision": "8236df20ed9f596b8cf15720c43bfbdd0c43125d",
+    "scenario": "examples/chiltern_extended/scenario.toml",
+    "scenario_sha256": "faac5f908bfafd4a73ecf5be3e1c9601970c110b8926b7c80ac3221387baf5bf",
+    "view_radius_m": 450,
+    "weather_particle_budget": 2048,
+    "player_data": "isolated temporary application data"
+  },
+  "selected_issues": [
+    {
+      "issue": 248,
+      "title": "Plan 038: Agregar vibraciones al pasar por juntas e irregularidades",
+      "themes": [
+        "material-rodante",
+        "graficos"
+      ],
+      "difficulty": "media",
+      "code": "train_motion.rs",
+      "regression_filters": "plan30_spatial_joints"
+    },
+    {
+      "issue": 250,
+      "title": "Plan 040: Reproducir configuraciones particulares de faros por locomotora",
+      "themes": [
+        "material-rodante",
+        "graficos"
+      ],
+      "difficulty": "media",
+      "code": "train_lighting.rs; formats/typed/vehicle_lights.rs",
+      "regression_filters": "plan30_original_alternative_conditions; plan30_beams_respond"
+    },
+    {
+      "issue": 251,
+      "title": "Plan 041: Mostrar luces de cola según extremo activo de la formación",
+      "themes": [
+        "material-rodante",
+        "operaciones"
+      ],
+      "difficulty": "media",
+      "code": "train_lighting.rs",
+      "regression_filters": "plan30_tail_conditions"
+    },
+    {
+      "issue": 255,
+      "title": "Plan 045: Mostrar arena en el contacto entre rueda y riel",
+      "themes": [
+        "material-rodante",
+        "graficos"
+      ],
+      "difficulty": "media",
+      "code": "train_effects.rs; train_effects_gpu.rs",
+      "regression_filters": "plan30_sand_reads_delivered; effects_update_uses_live_wind"
+    },
+    {
+      "issue": 256,
+      "title": "Plan 046: Diferenciar vapor y condensación según temperatura ambiente",
+      "themes": [
+        "vapor",
+        "clima"
+      ],
+      "difficulty": "media",
+      "code": "journey_environment.rs; train_effects.rs",
+      "regression_filters": "plan30_sand_reads_delivered"
+    },
+    {
+      "issue": 261,
+      "title": "Plan 051: Ampliar controles originales operables con el mouse",
+      "themes": [
+        "cabina",
+        "accesibilidad"
+      ],
+      "difficulty": "media",
+      "code": "cab_mouse.rs",
+      "regression_filters": "plan30_native_mouse_aliases"
+    },
+    {
+      "issue": 262,
+      "title": "Plan 052: Incorporar velocidades e intermitencia del limpiaparabrisas",
+      "themes": [
+        "cabina",
+        "clima"
+      ],
+      "difficulty": "media",
+      "code": "sim/wiper.rs; windshield.rs; cab_cvf.rs; audio/native.rs",
+      "regression_filters": "plan30_wiper_cadence_power; playable_native_wiper"
+    },
+    {
+      "issue": 266,
+      "title": "Plan 056: Guardar asiento y cámara por modelo de tren",
+      "themes": [
+        "cabina",
+        "accesibilidad"
+      ],
+      "difficulty": "baja",
+      "code": "cab_profile.rs; camera.rs; player_settings.rs",
+      "regression_filters": "plan30_model_preferences"
+    },
+    {
+      "issue": 267,
+      "title": "Plan 057: Afinar exposición al entrar y salir de túneles",
+      "themes": [
+        "cabina",
+        "graficos"
+      ],
+      "difficulty": "media",
+      "code": "effect_obstacles.rs; camera.rs",
+      "regression_filters": "plan30_tunnel_enclosure; plan30_tunnel_exposure"
+    },
+    {
+      "issue": 268,
+      "title": "Plan 058: Separar movimiento de pupitre, carrocería y cabeza",
+      "themes": [
+        "cabina",
+        "material-rodante"
+      ],
+      "difficulty": "media",
+      "code": "train_motion.rs; cab_view.rs; camera.rs",
+      "regression_filters": "plan30_spatial_joints; suspension"
+    },
+    {
+      "issue": 269,
+      "title": "Plan 059: Regular iluminación de instrumentos por sector e intensidad",
+      "themes": [
+        "cabina",
+        "graficos"
+      ],
+      "difficulty": "media",
+      "code": "cab_cvf.rs; cab_profile.rs",
+      "regression_filters": "night; cablight; brightness"
+    },
+    {
+      "issue": 270,
+      "title": "Plan 060: Explicar causas de pérdida de tracción y variaciones de corriente",
+      "themes": [
+        "cabina",
+        "jugabilidad"
+      ],
+      "difficulty": "baja",
+      "code": "sim/live_drive.rs; player_ui.rs",
+      "regression_filters": "plan30_traction_diagnosis"
+    },
+    {
+      "issue": 271,
+      "title": "Plan 061: Mostrar fallos de sistemas mediante indicadores originales",
+      "themes": [
+        "cabina",
+        "fisica"
+      ],
+      "difficulty": "media",
+      "code": "cab_cvf.rs; sim/live_drive.rs",
+      "regression_filters": "plan30_native_status_displays"
+    },
+    {
+      "issue": 288,
+      "title": "Plan 078: Animar agua conservando contenido original",
+      "themes": [
+        "escenario",
+        "graficos"
+      ],
+      "difficulty": "media",
+      "code": "water.rs",
+      "regression_filters": "plan30_water_uses_rail_clock"
+    },
+    {
+      "issue": 290,
+      "title": "Plan 080: Representar fases lunares e iluminación nocturna",
+      "themes": [
+        "clima",
+        "graficos"
+      ],
+      "difficulty": "media",
+      "code": "moon.rs; scenery/assets/shaders/moon.wgsl",
+      "regression_filters": "lunar; moon"
+    },
+    {
+      "issue": 293,
+      "title": "Plan 083: Mostrar pronóstico del viaje en menú y partida",
+      "themes": [
+        "clima",
+        "jugabilidad"
+      ],
+      "difficulty": "media",
+      "code": "forecast.rs; environment.rs; player_ui/launcher.rs",
+      "regression_filters": "forecast_preserves; plan30_provider_forecast"
+    },
+    {
+      "issue": 294,
+      "title": "Plan 084: Incorporar temperatura ambiente a sistemas del tren",
+      "themes": [
+        "clima",
+        "fisica"
+      ],
+      "difficulty": "media",
+      "code": "journey_environment.rs; weather_state.rs; sim/diesel_operation.rs",
+      "regression_filters": "plan30_ambient_temperature; plan30_wiper_cadence_power"
+    },
+    {
+      "issue": 298,
+      "title": "Plan 088: Agregar ráfagas de viento sobre vegetación y partículas",
+      "themes": [
+        "clima",
+        "graficos"
+      ],
+      "difficulty": "media",
+      "code": "journey_environment.rs; weather_state.rs",
+      "regression_filters": "climate_uses_location; effects_update_uses_live_wind"
+    },
+    {
+      "issue": 304,
+      "title": "Plan 094: Diferenciar sonido de lluvia sobre vidrio y cubiertas",
+      "themes": [
+        "clima",
+        "audio"
+      ],
+      "difficulty": "media",
+      "code": "audio/weather.rs; audio/native.rs; native_audio.rs",
+      "regression_filters": "plan30_rain_surface_banks"
+    },
+    {
+      "issue": 305,
+      "title": "Plan 095: Afinar transiciones de motor, turbo y carga con audio original",
+      "themes": [
+        "audio",
+        "diesel"
+      ],
+      "difficulty": "media",
+      "code": "native_audio.rs; audio/native.rs",
+      "regression_filters": "plan30_sms_mix_camera; native_"
+    },
+    {
+      "issue": 306,
+      "title": "Plan 096: Mejorar chirridos de ruedas según curva y vehículo",
+      "themes": [
+        "audio",
+        "via"
+      ],
+      "difficulty": "media",
+      "code": "native_audio.rs; audio/native.rs",
+      "regression_filters": "curve; plan30_sms_mix_camera"
+    },
+    {
+      "issue": 307,
+      "title": "Plan 097: Relacionar golpes de enganches con fuerzas físicas",
+      "themes": [
+        "audio",
+        "material-rodante"
+      ],
+      "difficulty": "media",
+      "code": "audio/native.rs; native_audio.rs",
+      "regression_filters": "plan30_coupler_contacts"
+    },
+    {
+      "issue": 308,
+      "title": "Plan 098: Mejorar sensación acústica de trenes que pasan cerca",
+      "themes": [
+        "audio",
+        "trafico"
+      ],
+      "difficulty": "media",
+      "code": "native_audio.rs; train_effects.rs",
+      "regression_filters": "placement; radial; vehicle_world_velocity"
+    },
+    {
+      "issue": 313,
+      "title": "Plan 103: Ofrecer volúmenes separados por grupo de sonido",
+      "themes": [
+        "audio",
+        "accesibilidad"
+      ],
+      "difficulty": "baja",
+      "code": "audio/mix.rs; player_settings.rs; player_ui.rs",
+      "regression_filters": "plan30_difficulty_and_independent_audio; plan30_sms_mix_camera"
+    },
+    {
+      "issue": 315,
+      "title": "Plan 105: Suavizar sonido al cambiar de cámara o coche",
+      "themes": [
+        "audio",
+        "cabina"
+      ],
+      "difficulty": "media",
+      "code": "audio/native.rs; native_audio.rs",
+      "regression_filters": "plan30_sms_mix_camera"
+    },
+    {
+      "issue": 316,
+      "title": "Plan 106: Mostrar sonidos activos y causas en un diagnóstico",
+      "themes": [
+        "audio",
+        "herramientas"
+      ],
+      "difficulty": "media",
+      "code": "audio/native.rs; audio/mix.rs; player_ui.rs",
+      "regression_filters": "plan30_sms_mix_camera; resource_name"
+    },
+    {
+      "issue": 359,
+      "title": "Plan 149: Agregar perfiles de dificultad con ayudas identificadas",
+      "themes": [
+        "jugabilidad",
+        "accesibilidad"
+      ],
+      "difficulty": "media",
+      "code": "player_settings.rs; saved_game.rs; player_ui.rs",
+      "regression_filters": "plan30_difficulty_and_independent_audio"
+    },
+    {
+      "issue": 369,
+      "title": "Plan 159: Mostrar nivel de validación por formación y sistema",
+      "themes": [
+        "contenido",
+        "validacion"
+      ],
+      "difficulty": "baja",
+      "code": "content_validation.rs; train/consist_audit.rs; oracles/content-validation.json",
+      "regression_filters": "evidence_requires_exact; plan30_content_fingerprint; test_content_evidence_hashes"
+    },
+    {
+      "issue": 378,
+      "title": "Plan 168: Agregar historial de partidas con búsqueda y filtros",
+      "themes": [
+        "jugabilidad",
+        "contenido"
+      ],
+      "difficulty": "baja",
+      "code": "save_history.rs; saved_game.rs; player_ui/launcher.rs",
+      "regression_filters": "plan30_history_filters_metadata"
+    },
+    {
+      "issue": 404,
+      "title": "Plan 194: Actualizar ROADMAP con estado real y pendientes",
+      "themes": [
+        "documentacion"
+      ],
+      "difficulty": "baja",
+      "code": "ROADMAP.md; docs/PLAN_30.md",
+      "regression_filters": "check.sh; documentación"
+    }
+  ],
+  "check": {
+    "pass": true,
+    "command": "CARGO_BUILD_JOBS=2 ./check.sh",
+    "log_sha256": "27e05239f8e2374ccef34229c597c2b3f0dfe7fff79e8ce02549a2bbbc2cdbac",
+    "rust_passed": 1823,
+    "python_passed": 94,
+    "native_original_source_profiles": 11,
+    "native_source_test": "native_service_content_validation_matches_effective_original_sources"
+  },
+  "oracles": [
+    {
+      "suite": "short",
+      "case": "birmingham_multi_body",
+      "pass": true,
+      "velocity_rms_mps": 0.41766655849863266,
+      "velocity_max_mps": 1.1131239999999991,
+      "position_max_m": 18.460499999999996
+    },
+    {
+      "suite": "short",
+      "case": "full_throttle_multi_body",
+      "pass": true,
+      "velocity_rms_mps": 0.4396171036733714,
+      "velocity_max_mps": 0.7013919999999993,
+      "position_max_m": 1748.3729999999382
+    },
+    {
+      "suite": "short",
+      "case": "brake_coast_multi_body",
+      "pass": true,
+      "velocity_rms_mps": 0.43668490099917856,
+      "velocity_max_mps": 0.7612239999999879,
+      "position_max_m": 2098.629999999952
+    },
+    {
+      "suite": "short",
+      "case": "half_throttle",
+      "pass": true,
+      "velocity_rms_mps": 0.6019629682900177,
+      "velocity_max_mps": 0.7619919999999949,
+      "position_max_m": 105.901
+    },
+    {
+      "suite": "service",
+      "case": "chiltern_local_native_controls",
+      "pass": true,
+      "velocity_rms_mps": 0.20814117191791448,
+      "velocity_max_mps": 1.0920745404890035,
+      "position_max_m": 39.61086000000023
+    },
+    {
+      "suite": "class47",
+      "case": "class47_original_controls",
+      "pass": true,
+      "velocity_rms_mps": 0.23821276471195812,
+      "velocity_max_mps": 1.9414654999953274,
+      "position_max_m": 25.78580000000011
+    }
+  ],
+  "visual": [
+    {
+      "capture": "night-off-cab",
+      "screenshot_sha256": "ca629490ca633e83cee98c1b0de57388408de0636bd31e3b539872c003d4a270",
+      "clock_s": 16800.0,
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 48.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "rotation_xyzw": [
+          -0.07096271216869354,
+          0.8383246064186096,
+          0.112522654235363,
+          0.5286916494369507
+        ],
+        "yaw_rad": -2.6960983276367188
+      },
+      "weather": {
+        "atmosphere": {
+          "cloud_cover": 0.2199999988079071,
+          "flake_size": 1.0,
+          "fog_density": 3.9999998989515007e-05,
+          "overcast": 0.0,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "temperature_c": -10.0,
+          "visibility_m": 20000.0,
+          "wind_mps": [
+            0.6820047497749329,
+            0.0,
+            0.27491018176078796
+          ]
+        },
+        "elapsed_s": 0.0,
+        "journey": {
+          "pace": "normal",
+          "winter": true
+        },
+        "live": false,
+        "profile": "automatic",
+        "seed": 42
+      },
+      "moon": {
+        "altitude_deg": 28.621143341064453,
+        "date": "2000-01-21 04:41 UTC",
+        "illuminated": 0.9999952912330627,
+        "lux": 0.1197533831000328
+      },
+      "headlights": 0,
+      "wiper": false,
+      "odometer_m": 0.0,
+      "floating_origin_shift_m": [
+        -297.279296875,
+        0.0,
+        102.0225830078125
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "train_effects": {
+        "cpu_capacity": 0,
+        "cpu_live_particles": 0,
+        "cpu_mesh_updates": 0,
+        "cpu_obstacle_hits": 0,
+        "enabled": true,
+        "execution": "gpu",
+        "fallback_reason": null,
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_bounds_per_emitter": 8,
+        "gpu_capacity": 510,
+        "gpu_emitters": 30,
+        "gpu_simulation_delta_s": 0.0,
+        "gpu_spawn_requests": 0,
+        "inherits_vehicle_velocity": true,
+        "live_particles": null,
+        "max_cpu_particle_speed_mps": 0.0,
+        "max_particle_speed_mps": null,
+        "native_emitters": 6,
+        "nearby_opaque_bounds": 184,
+        "particle_limit": 512,
+        "quality_level": 0,
+        "render_layers": [
+          0
+        ],
+        "requested": "gpu",
+        "sander_contact_emitters": 24,
+        "simulation_clock_s": 0.0,
+        "steam_pulses_follow_wheels": true,
+        "temperature_c": -10.0,
+        "wind_mps": [
+          0.6820047497749329,
+          0.0,
+          0.27491018176078796
+        ]
+      },
+      "peak_rss_mib": 1880.7,
+      "gameplay_frame_p95_ms": 25,
+      "gpu_tiles": 4,
+      "gpu_entities": 1876
+    },
+    {
+      "capture": "night-low-cab",
+      "screenshot_sha256": "f55f9465f7fe341092203941a5110c6e26b30debb1f4f2fbe2624db7eb2afc87",
+      "clock_s": 16800.0,
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 48.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "rotation_xyzw": [
+          -0.07096271216869354,
+          0.8383246064186096,
+          0.112522654235363,
+          0.5286916494369507
+        ],
+        "yaw_rad": -2.6960983276367188
+      },
+      "weather": {
+        "atmosphere": {
+          "cloud_cover": 0.2199999988079071,
+          "flake_size": 1.0,
+          "fog_density": 3.9999998989515007e-05,
+          "overcast": 0.0,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "temperature_c": -10.0,
+          "visibility_m": 20000.0,
+          "wind_mps": [
+            0.6820047497749329,
+            0.0,
+            0.27491018176078796
+          ]
+        },
+        "elapsed_s": 0.0,
+        "journey": {
+          "pace": "normal",
+          "winter": true
+        },
+        "live": false,
+        "profile": "automatic",
+        "seed": 42
+      },
+      "moon": {
+        "altitude_deg": 28.621143341064453,
+        "date": "2000-01-21 04:41 UTC",
+        "illuminated": 0.9999952912330627,
+        "lux": 0.1197533831000328
+      },
+      "headlights": 1,
+      "wiper": false,
+      "odometer_m": 0.0,
+      "floating_origin_shift_m": [
+        -297.279296875,
+        0.0,
+        102.0225830078125
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "train_effects": {
+        "cpu_capacity": 0,
+        "cpu_live_particles": 0,
+        "cpu_mesh_updates": 0,
+        "cpu_obstacle_hits": 0,
+        "enabled": true,
+        "execution": "gpu",
+        "fallback_reason": null,
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_bounds_per_emitter": 8,
+        "gpu_capacity": 510,
+        "gpu_emitters": 30,
+        "gpu_simulation_delta_s": 0.0,
+        "gpu_spawn_requests": 0,
+        "inherits_vehicle_velocity": true,
+        "live_particles": null,
+        "max_cpu_particle_speed_mps": 0.0,
+        "max_particle_speed_mps": null,
+        "native_emitters": 6,
+        "nearby_opaque_bounds": 184,
+        "particle_limit": 512,
+        "quality_level": 0,
+        "render_layers": [
+          0
+        ],
+        "requested": "gpu",
+        "sander_contact_emitters": 24,
+        "simulation_clock_s": 0.0,
+        "steam_pulses_follow_wheels": true,
+        "temperature_c": -10.0,
+        "wind_mps": [
+          0.6820047497749329,
+          0.0,
+          0.27491018176078796
+        ]
+      },
+      "peak_rss_mib": 1881.3,
+      "gameplay_frame_p95_ms": 25,
+      "gpu_tiles": 4,
+      "gpu_entities": 1876
+    },
+    {
+      "capture": "night-high-cab",
+      "screenshot_sha256": "3f1abe256db3cce11b9330e39e97d3e5bb476d072b1478fbc6c86714e18f7235",
+      "clock_s": 16800.0,
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 48.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "rotation_xyzw": [
+          -0.07096271216869354,
+          0.8383246064186096,
+          0.112522654235363,
+          0.5286916494369507
+        ],
+        "yaw_rad": -2.6960983276367188
+      },
+      "weather": {
+        "atmosphere": {
+          "cloud_cover": 0.2199999988079071,
+          "flake_size": 1.0,
+          "fog_density": 3.9999998989515007e-05,
+          "overcast": 0.0,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "temperature_c": -10.0,
+          "visibility_m": 20000.0,
+          "wind_mps": [
+            0.6820047497749329,
+            0.0,
+            0.27491018176078796
+          ]
+        },
+        "elapsed_s": 0.0,
+        "journey": {
+          "pace": "normal",
+          "winter": true
+        },
+        "live": false,
+        "profile": "automatic",
+        "seed": 42
+      },
+      "moon": {
+        "altitude_deg": 28.621143341064453,
+        "date": "2000-01-21 04:41 UTC",
+        "illuminated": 0.9999952912330627,
+        "lux": 0.1197533831000328
+      },
+      "headlights": 2,
+      "wiper": false,
+      "odometer_m": 0.0,
+      "floating_origin_shift_m": [
+        -297.279296875,
+        0.0,
+        102.0225830078125
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "train_effects": {
+        "cpu_capacity": 0,
+        "cpu_live_particles": 0,
+        "cpu_mesh_updates": 0,
+        "cpu_obstacle_hits": 0,
+        "enabled": true,
+        "execution": "gpu",
+        "fallback_reason": null,
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_bounds_per_emitter": 8,
+        "gpu_capacity": 510,
+        "gpu_emitters": 30,
+        "gpu_simulation_delta_s": 0.0,
+        "gpu_spawn_requests": 0,
+        "inherits_vehicle_velocity": true,
+        "live_particles": null,
+        "max_cpu_particle_speed_mps": 0.0,
+        "max_particle_speed_mps": null,
+        "native_emitters": 6,
+        "nearby_opaque_bounds": 184,
+        "particle_limit": 512,
+        "quality_level": 0,
+        "render_layers": [
+          0
+        ],
+        "requested": "gpu",
+        "sander_contact_emitters": 24,
+        "simulation_clock_s": 0.0,
+        "steam_pulses_follow_wheels": true,
+        "temperature_c": -10.0,
+        "wind_mps": [
+          0.6820047497749329,
+          0.0,
+          0.27491018176078796
+        ]
+      },
+      "peak_rss_mib": 1872.5,
+      "gameplay_frame_p95_ms": 25,
+      "gpu_tiles": 4,
+      "gpu_entities": 1876
+    },
+    {
+      "capture": "night-native-exterior",
+      "screenshot_sha256": "9ea755cd0472feaa7d1cbe9c74b982ca3e10c55c5738484a1560cc0d7eee812c",
+      "clock_s": 16800.0,
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 48.0,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "rotation_xyzw": [
+          -0.09722062945365906,
+          0.7103374600410461,
+          0.10010211169719696,
+          0.6898900866508484
+        ],
+        "yaw_rad": 1.600000023841858
+      },
+      "weather": {
+        "atmosphere": {
+          "cloud_cover": 0.2199999988079071,
+          "flake_size": 1.0,
+          "fog_density": 3.9999998989515007e-05,
+          "overcast": 0.0,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "temperature_c": -10.0,
+          "visibility_m": 20000.0,
+          "wind_mps": [
+            0.6820047497749329,
+            0.0,
+            0.27491018176078796
+          ]
+        },
+        "elapsed_s": 0.0,
+        "journey": {
+          "pace": "normal",
+          "winter": true
+        },
+        "live": false,
+        "profile": "automatic",
+        "seed": 42
+      },
+      "moon": {
+        "altitude_deg": 28.621143341064453,
+        "date": "2000-01-21 04:41 UTC",
+        "illuminated": 0.9999952912330627,
+        "lux": 0.1197533831000328
+      },
+      "headlights": 1,
+      "wiper": false,
+      "odometer_m": 0.0,
+      "floating_origin_shift_m": [
+        -297.279296875,
+        0.0,
+        102.0225830078125
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "train_effects": {
+        "cpu_capacity": 0,
+        "cpu_live_particles": 0,
+        "cpu_mesh_updates": 0,
+        "cpu_obstacle_hits": 0,
+        "enabled": true,
+        "execution": "gpu",
+        "fallback_reason": null,
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_bounds_per_emitter": 8,
+        "gpu_capacity": 510,
+        "gpu_emitters": 30,
+        "gpu_simulation_delta_s": 0.0,
+        "gpu_spawn_requests": 0,
+        "inherits_vehicle_velocity": true,
+        "live_particles": null,
+        "max_cpu_particle_speed_mps": 0.0,
+        "max_particle_speed_mps": null,
+        "native_emitters": 6,
+        "nearby_opaque_bounds": 184,
+        "particle_limit": 512,
+        "quality_level": 0,
+        "render_layers": [
+          0
+        ],
+        "requested": "gpu",
+        "sander_contact_emitters": 24,
+        "simulation_clock_s": 0.0,
+        "steam_pulses_follow_wheels": true,
+        "temperature_c": -10.0,
+        "wind_mps": [
+          0.6820047497749329,
+          0.0,
+          0.27491018176078796
+        ]
+      },
+      "peak_rss_mib": 1317.1,
+      "gameplay_frame_p95_ms": 25,
+      "gpu_tiles": 4,
+      "gpu_entities": 1876
+    },
+    {
+      "capture": "rain-sand-gpu",
+      "screenshot_sha256": "2e997b4bdf75191753c90be1442ecf3ded732471681ae39e9456a139c70b0198",
+      "clock_s": 35747.7,
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 48.0,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "rotation_xyzw": [
+          -0.09722063690423965,
+          0.7103374600410461,
+          0.10010211914777756,
+          0.6898900866508484
+        ],
+        "yaw_rad": 1.600000023841858
+      },
+      "weather": {
+        "atmosphere": {
+          "cloud_cover": 0.8736000061035156,
+          "flake_size": 1.0,
+          "fog_density": 0.00039000000106170774,
+          "overcast": 0.6980000138282776,
+          "phase": "calm",
+          "rain": 0.6200000047683716,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "temperature_c": -10.0,
+          "visibility_m": 6420.0,
+          "wind_mps": [
+            2.6696407794952393,
+            0.0,
+            1.1349694728851318
+          ]
+        },
+        "elapsed_s": 47.69999999999943,
+        "journey": {
+          "pace": "normal",
+          "winter": false
+        },
+        "live": false,
+        "profile": "automatic",
+        "seed": 42
+      },
+      "moon": {
+        "altitude_deg": -12.995203971862793,
+        "date": "2000-01-21 09:57 UTC",
+        "illuminated": 0.9992538690567017,
+        "lux": 0.0
+      },
+      "headlights": 1,
+      "wiper": true,
+      "odometer_m": 100.07245221199328,
+      "floating_origin_shift_m": [
+        -297.279296875,
+        0.0,
+        102.0225830078125
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "train_effects": {
+        "cpu_capacity": 0,
+        "cpu_live_particles": 0,
+        "cpu_mesh_updates": 0,
+        "cpu_obstacle_hits": 0,
+        "enabled": true,
+        "execution": "gpu",
+        "fallback_reason": null,
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_bounds_per_emitter": 8,
+        "gpu_capacity": 510,
+        "gpu_emitters": 30,
+        "gpu_simulation_delta_s": 0.0,
+        "gpu_spawn_requests": 5680,
+        "inherits_vehicle_velocity": true,
+        "live_particles": null,
+        "max_cpu_particle_speed_mps": 0.0,
+        "max_particle_speed_mps": null,
+        "native_emitters": 6,
+        "nearby_opaque_bounds": 184,
+        "particle_limit": 512,
+        "quality_level": 0,
+        "render_layers": [
+          0
+        ],
+        "requested": "gpu",
+        "sander_contact_emitters": 24,
+        "simulation_clock_s": 47.69999999999943,
+        "steam_pulses_follow_wheels": true,
+        "temperature_c": -10.0,
+        "wind_mps": [
+          2.6696407794952393,
+          0.0,
+          1.1349694728851318
+        ]
+      },
+      "peak_rss_mib": 1308.9,
+      "gameplay_frame_p95_ms": 25,
+      "gpu_tiles": 4,
+      "gpu_entities": 2056
+    },
+    {
+      "capture": "snow-wiper-gpu-cab",
+      "screenshot_sha256": "320a2179b38385dd54e8f30520c32722015a27e8ab5ba3d3feb95bb6ce0bbdfb",
+      "clock_s": 35747.85,
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 48.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "rotation_xyzw": [
+          -0.06882241368293762,
+          0.8492473363876343,
+          0.11405566334724426,
+          0.5109147429466248
+        ],
+        "yaw_rad": -2.661524772644043
+      },
+      "weather": {
+        "atmosphere": {
+          "cloud_cover": 0.8799999952316284,
+          "flake_size": 1.350000023841858,
+          "fog_density": 0.0007999999797903001,
+          "overcast": 0.699999988079071,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 1.0,
+          "snow_cover": 1.0,
+          "storm": 0.0,
+          "temperature_c": -10.0,
+          "visibility_m": 500.0,
+          "wind_mps": [
+            3.5719635486602783,
+            0.0,
+            1.7920711040496826
+          ]
+        },
+        "elapsed_s": 47.84999999999942,
+        "journey": {
+          "pace": "normal",
+          "winter": false
+        },
+        "live": false,
+        "profile": "automatic",
+        "seed": 42
+      },
+      "moon": {
+        "altitude_deg": -12.995203971862793,
+        "date": "2000-01-21 09:57 UTC",
+        "illuminated": 0.9992538690567017,
+        "lux": 0.0
+      },
+      "headlights": 1,
+      "wiper": true,
+      "odometer_m": 101.08550874246265,
+      "floating_origin_shift_m": [
+        -297.279296875,
+        0.0,
+        102.0225830078125
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "train_effects": {
+        "cpu_capacity": 0,
+        "cpu_live_particles": 0,
+        "cpu_mesh_updates": 0,
+        "cpu_obstacle_hits": 0,
+        "enabled": true,
+        "execution": "gpu",
+        "fallback_reason": null,
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_bounds_per_emitter": 8,
+        "gpu_capacity": 510,
+        "gpu_emitters": 30,
+        "gpu_simulation_delta_s": 0.0,
+        "gpu_spawn_requests": 774,
+        "inherits_vehicle_velocity": true,
+        "live_particles": null,
+        "max_cpu_particle_speed_mps": 0.0,
+        "max_particle_speed_mps": null,
+        "native_emitters": 6,
+        "nearby_opaque_bounds": 184,
+        "particle_limit": 512,
+        "quality_level": 0,
+        "render_layers": [
+          0
+        ],
+        "requested": "gpu",
+        "sander_contact_emitters": 24,
+        "simulation_clock_s": 47.84999999999942,
+        "steam_pulses_follow_wheels": true,
+        "temperature_c": -10.0,
+        "wind_mps": [
+          3.5719635486602783,
+          0.0,
+          1.7920711040496826
+        ]
+      },
+      "peak_rss_mib": 1865.3,
+      "gameplay_frame_p95_ms": 25,
+      "gpu_tiles": 4,
+      "gpu_entities": 2056
+    },
+    {
+      "capture": "rain-cpu-cab",
+      "screenshot_sha256": "297d6c309b33cd5e2c0e9e4cdd1fe67c9d3955bd1414a5d0f80d93652bfbeb93",
+      "clock_s": 35700.0,
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 48.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "rotation_xyzw": [
+          -0.07096271216869354,
+          0.8383246064186096,
+          0.112522654235363,
+          0.5286916494369507
+        ],
+        "yaw_rad": -2.6960983276367188
+      },
+      "weather": {
+        "atmosphere": {
+          "cloud_cover": 0.8736000061035156,
+          "flake_size": 1.0,
+          "fog_density": 0.00039000000106170774,
+          "overcast": 0.6980000138282776,
+          "phase": "calm",
+          "rain": 0.6200000047683716,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "temperature_c": -10.0,
+          "visibility_m": 6420.0,
+          "wind_mps": [
+            2.2692928314208984,
+            0.0,
+            0.8473969101905823
+          ]
+        },
+        "elapsed_s": 0.0,
+        "journey": {
+          "pace": "normal",
+          "winter": false
+        },
+        "live": false,
+        "profile": "automatic",
+        "seed": 42
+      },
+      "moon": {
+        "altitude_deg": -12.926261901855469,
+        "date": "2000-01-21 09:56 UTC",
+        "illuminated": 0.9992574453353882,
+        "lux": 0.0
+      },
+      "headlights": 1,
+      "wiper": true,
+      "odometer_m": 0.0,
+      "floating_origin_shift_m": [
+        -297.279296875,
+        0.0,
+        102.0225830078125
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "train_effects": {
+        "cpu_capacity": 512,
+        "cpu_live_particles": 0,
+        "cpu_mesh_updates": 0,
+        "cpu_obstacle_hits": 0,
+        "enabled": true,
+        "execution": "cpu",
+        "fallback_reason": null,
+        "gpu_backend": null,
+        "gpu_bounds_per_emitter": 8,
+        "gpu_capacity": 0,
+        "gpu_emitters": 0,
+        "gpu_simulation_delta_s": 0.0,
+        "gpu_spawn_requests": 0,
+        "inherits_vehicle_velocity": true,
+        "live_particles": 0,
+        "max_cpu_particle_speed_mps": 0.0,
+        "max_particle_speed_mps": 0.0,
+        "native_emitters": 6,
+        "nearby_opaque_bounds": 184,
+        "particle_limit": 512,
+        "quality_level": 0,
+        "render_layers": [
+          0
+        ],
+        "requested": "cpu",
+        "sander_contact_emitters": 24,
+        "simulation_clock_s": 0.0,
+        "steam_pulses_follow_wheels": true,
+        "temperature_c": -10.0,
+        "wind_mps": [
+          2.2692928314208984,
+          0.0,
+          0.8473969101905823
+        ]
+      },
+      "peak_rss_mib": 1903.4,
+      "gameplay_frame_p95_ms": 25,
+      "gpu_tiles": 4,
+      "gpu_entities": 1884
+    },
+    {
+      "capture": "denham-water-exterior",
+      "screenshot_sha256": "8408e255f85a9f59cc9d6eb56a212718652713243308d638d2a85c7667deae68",
+      "clock_s": 43000.0,
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 160.0,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.6000000238418579,
+        "rotation_xyzw": [
+          -0.20589089393615723,
+          0.6853164434432983,
+          0.21199320256710052,
+          0.6655892729759216
+        ],
+        "yaw_rad": 1.600000023841858
+      },
+      "weather": {
+        "atmosphere": {
+          "cloud_cover": 0.2199999988079071,
+          "flake_size": 1.0,
+          "fog_density": 3.9999998989515007e-05,
+          "overcast": 0.0,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "temperature_c": -10.0,
+          "visibility_m": 20000.0,
+          "wind_mps": [
+            0.6820047497749329,
+            0.0,
+            0.27491018176078796
+          ]
+        },
+        "elapsed_s": 0.0,
+        "journey": {
+          "pace": "normal",
+          "winter": false
+        },
+        "live": false,
+        "profile": "automatic",
+        "seed": 42
+      },
+      "moon": {
+        "altitude_deg": -19.826929092407227,
+        "date": "2000-01-21 11:58 UTC",
+        "illuminated": 0.998595118522644,
+        "lux": 0.0
+      },
+      "headlights": 1,
+      "wiper": false,
+      "odometer_m": 0.0,
+      "floating_origin_shift_m": [
+        -372.41015625,
+        0.0,
+        -128.1997833251953
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "train_effects": {
+        "cpu_capacity": 0,
+        "cpu_live_particles": 0,
+        "cpu_mesh_updates": 0,
+        "cpu_obstacle_hits": 0,
+        "enabled": true,
+        "execution": "gpu",
+        "fallback_reason": null,
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_bounds_per_emitter": 8,
+        "gpu_capacity": 510,
+        "gpu_emitters": 30,
+        "gpu_simulation_delta_s": 0.0,
+        "gpu_spawn_requests": 0,
+        "inherits_vehicle_velocity": true,
+        "live_particles": null,
+        "max_cpu_particle_speed_mps": 0.0,
+        "max_particle_speed_mps": null,
+        "native_emitters": 6,
+        "nearby_opaque_bounds": 184,
+        "particle_limit": 512,
+        "quality_level": 0,
+        "render_layers": [
+          0
+        ],
+        "requested": "gpu",
+        "sander_contact_emitters": 24,
+        "simulation_clock_s": 0.0,
+        "steam_pulses_follow_wheels": true,
+        "temperature_c": -10.0,
+        "wind_mps": [
+          0.6820047497749329,
+          0.0,
+          0.27491018176078796
+        ]
+      },
+      "peak_rss_mib": 1244.1,
+      "gameplay_frame_p95_ms": 25,
+      "gpu_tiles": 2,
+      "gpu_entities": 2326
+    },
+    {
+      "capture": "night-moon-exterior",
+      "screenshot_sha256": "4eb547eaa570653a0c66a04f77cd66eddcc4047c6ac0045222492bfbccfd2748",
+      "clock_s": 22800.0,
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 42.126121520996094,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.010112586431205273,
+        "rotation_xyzw": [
+          -0.0034160849172621965,
+          0.7372466921806335,
+          0.0037277669180184603,
+          0.6756047010421753
+        ],
+        "yaw_rad": 1.6579999923706055
+      },
+      "weather": {
+        "atmosphere": {
+          "cloud_cover": 0.2199999988079071,
+          "flake_size": 1.0,
+          "fog_density": 3.9999998989515007e-05,
+          "overcast": 0.0,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "temperature_c": -10.0,
+          "visibility_m": 20000.0,
+          "wind_mps": [
+            0.6820047497749329,
+            0.0,
+            0.27491018176078796
+          ]
+        },
+        "elapsed_s": 0.0,
+        "journey": {
+          "pace": "normal",
+          "winter": true
+        },
+        "live": false,
+        "profile": "automatic",
+        "seed": 42
+      },
+      "moon": {
+        "altitude_deg": 13.62021255493164,
+        "date": "2000-01-21 06:21 UTC",
+        "illuminated": 0.9999128580093384,
+        "lux": 0.058866117149591446
+      },
+      "headlights": 0,
+      "wiper": false,
+      "odometer_m": 0.0,
+      "floating_origin_shift_m": [
+        -297.279296875,
+        0.0,
+        102.0225830078125
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "train_effects": {
+        "cpu_capacity": 0,
+        "cpu_live_particles": 0,
+        "cpu_mesh_updates": 0,
+        "cpu_obstacle_hits": 0,
+        "enabled": true,
+        "execution": "gpu",
+        "fallback_reason": null,
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_bounds_per_emitter": 8,
+        "gpu_capacity": 510,
+        "gpu_emitters": 30,
+        "gpu_simulation_delta_s": 0.0,
+        "gpu_spawn_requests": 0,
+        "inherits_vehicle_velocity": true,
+        "live_particles": null,
+        "max_cpu_particle_speed_mps": 0.0,
+        "max_particle_speed_mps": null,
+        "native_emitters": 6,
+        "nearby_opaque_bounds": 184,
+        "particle_limit": 512,
+        "quality_level": 0,
+        "render_layers": [
+          0
+        ],
+        "requested": "gpu",
+        "sander_contact_emitters": 24,
+        "simulation_clock_s": 0.0,
+        "steam_pulses_follow_wheels": true,
+        "temperature_c": -10.0,
+        "wind_mps": [
+          0.6820047497749329,
+          0.0,
+          0.27491018176078796
+        ]
+      },
+      "peak_rss_mib": 1298.2,
+      "gameplay_frame_p95_ms": 25,
+      "gpu_tiles": 4,
+      "gpu_entities": 1876
+    }
+  ],
+  "audio": [
+    {
+      "formation": "Birmingham Pullman.con",
+      "view": "exterior",
+      "pass": true,
+      "pcm_sha256": "8f3bedc4f6f59690f4c7296e9eab6d42e2936a11f6298e63b688b9c28ee8d157",
+      "programs": 16,
+      "streams": 58,
+      "samples": 69,
+      "active_voices": 28,
+      "duration_s": 11.982267573696145,
+      "rms": 0.17987423212856427,
+      "peak_dbfs": -1.0004493301428767,
+      "clipped_percent": 0.0,
+      "update_us": 4,
+      "missing_wav": 0
+    },
+    {
+      "formation": "Birmingham Pullman.con",
+      "view": "cab",
+      "pass": true,
+      "pcm_sha256": "bda87f389ad16eae976582efa378ec0e1f7718d3c1ad5fe96c7af6910461ac28",
+      "programs": 16,
+      "streams": 58,
+      "samples": 69,
+      "active_voices": 28,
+      "duration_s": 11.982267573696145,
+      "rms": 0.10113676284383274,
+      "peak_dbfs": -3.2881545844054676,
+      "clipped_percent": 0.0,
+      "update_us": 8,
+      "missing_wav": 0
+    },
+    {
+      "formation": "Bristol Pullman.con",
+      "view": "exterior",
+      "pass": true,
+      "pcm_sha256": "8f3bedc4f6f59690f4c7296e9eab6d42e2936a11f6298e63b688b9c28ee8d157",
+      "programs": 16,
+      "streams": 58,
+      "samples": 69,
+      "active_voices": 28,
+      "duration_s": 11.982267573696145,
+      "rms": 0.17987423212856427,
+      "peak_dbfs": -1.0004493301428767,
+      "clipped_percent": 0.0,
+      "update_us": 5,
+      "missing_wav": 0
+    },
+    {
+      "formation": "Bristol Pullman.con",
+      "view": "cab",
+      "pass": true,
+      "pcm_sha256": "bda87f389ad16eae976582efa378ec0e1f7718d3c1ad5fe96c7af6910461ac28",
+      "programs": 16,
+      "streams": 58,
+      "samples": 69,
+      "active_voices": 28,
+      "duration_s": 11.982267573696145,
+      "rms": 0.10113676284383274,
+      "peak_dbfs": -3.2881545844054676,
+      "clipped_percent": 0.0,
+      "update_us": 4,
+      "missing_wav": 0
+    }
+  ],
+  "menu": [
+    {
+      "page": "train",
+      "width": 800,
+      "height": 600,
+      "scale": 1.0,
+      "elapsed_s": 9.020105939009227,
+      "peak_rss_mib": 484.73046875,
+      "exit_code": 0
+    },
+    {
+      "page": "weather-options",
+      "width": 800,
+      "height": 600,
+      "scale": 1.0,
+      "elapsed_s": 9.020585193007719,
+      "peak_rss_mib": 427.98046875,
+      "exit_code": 0
+    },
+    {
+      "page": "weather-settings",
+      "width": 800,
+      "height": 600,
+      "scale": 1.0,
+      "elapsed_s": 9.020235528005287,
+      "peak_rss_mib": 406.42578125,
+      "exit_code": 0
+    },
+    {
+      "page": "settings",
+      "width": 800,
+      "height": 600,
+      "scale": 1.0,
+      "elapsed_s": 9.019832341000438,
+      "peak_rss_mib": 427.375,
+      "exit_code": 0
+    },
+    {
+      "page": "continue",
+      "width": 800,
+      "height": 600,
+      "scale": 1.0,
+      "elapsed_s": 9.02144635800505,
+      "peak_rss_mib": 395.48046875,
+      "exit_code": 0
+    }
+  ],
+  "scope": [
+    "Capturas cortas reproducibles en Chiltern v4 original, radio visual de 450 m y pantalla privada Weston; no equivalen a un benchmark de todo el recorrido.",
+    "La pantalla de prueba está regulada a 40 cuadros/s; el p95 de 25 ms no mide el rendimiento máximo de la GPU.",
+    "Audio PCM de dos formaciones originales en cabina/exterior y regresiones de mezcla/estados; no certifica identidad acústica completa con OpenAL ni sustituye una escucha humana.",
+    "Guía manual por issue en docs/PLAN_30.md. Recursos compatibles y sistemas originales contrastados conservan su alcance específico.",
+    "Los recursos originales, descargas, WAV y capturas quedan fuera de Git; este registro conserva resultados y hashes."
+  ]
+}

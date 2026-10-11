@@ -27,3 +27,5 @@ Resultados y límites de las comprobaciones en
 Hora y clima actuales del lugar, respaldo manual, zona horaria y rayos: [LIVE_ENVIRONMENT.md](LIVE_ENVIRONMENT.md).
 
 Perfiles de clima, escenografía opcional, inspector y mediciones del renderer: [WEATHER_RENDERER_QA.md](WEATHER_RENDERER_QA.md).
+
+Treinta ampliaciones de tren/cabina, entorno, sonido e historial, con criterios y prueba manual por issue: [PLAN_30.md](PLAN_30.md).

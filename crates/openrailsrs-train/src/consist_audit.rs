@@ -11,6 +11,7 @@ use openrailsrs_formats::{
     resolve_path_case_insensitive, sms_wave_references,
 };
 use serde::Serialize;
+use sha2::{Digest, Sha256};
 
 use crate::{consist_asset_root, resolve_consist_entry_path};
 
@@ -128,6 +129,8 @@ fn display_path(path: &Path) -> PathBuf {
 pub struct VehicleCompatibility {
     pub vehicle: usize,
     pub stock_path: PathBuf,
+    /// Hash of all effective source files, including OpenRails overrides and Includes.
+    pub source_sha256: String,
     pub declared: VehicleContentMetadata,
     pub limitations: Vec<String>,
 }
@@ -192,7 +195,58 @@ struct StockAudit {
     warnings: Vec<String>,
     missing_resources: Vec<MissingResource>,
     metadata: VehicleContentMetadata,
+    source_sha256: String,
     limitations: Vec<String>,
+}
+
+/// An installation-independent fingerprint: canonical relative names and SHA-256
+/// of every effective file. Even an Include-only edit invalidates prior evidence.
+pub fn source_fingerprint(path: &Path) -> Result<String, FormatError> {
+    let (_, sources) = openrailsrs_formats::read_msts_text_with_sources(path)?;
+    let mut hashes = std::collections::BTreeMap::new();
+    for source in sources {
+        let root = source
+            .ancestors()
+            .find(|p| {
+                p.file_name()
+                    .is_some_and(|n| n.eq_ignore_ascii_case("TRAINSET"))
+            })
+            .or_else(|| {
+                source.ancestors().find(|p| {
+                    p.file_name()
+                        .is_some_and(|n| n.eq_ignore_ascii_case("TRAINS"))
+                })
+            })
+            .or_else(|| source.parent())
+            .unwrap();
+        let name = source
+            .strip_prefix(root)
+            .unwrap()
+            .to_string_lossy()
+            .replace('\\', "/")
+            .to_lowercase();
+        let data = std::fs::read(&source).map_err(|e| FormatError::UnexpectedToken {
+            offset: 0,
+            message: e.to_string(),
+        })?;
+        let digest = format!("{:x}", Sha256::digest(data));
+        if hashes
+            .insert(name, digest.clone())
+            .is_some_and(|previous| previous != digest)
+        {
+            return Err(FormatError::UnexpectedToken {
+                offset: 0,
+                message: "Ambiguous dependency identity".into(),
+            });
+        }
+    }
+    let mut hasher = Sha256::new();
+    for (name, hash) in hashes {
+        hasher.update((name.len() as u64).to_le_bytes());
+        hasher.update(name.as_bytes());
+        hasher.update(hash.as_bytes());
+    }
+    Ok(format!("{:x}", hasher.finalize()))
 }
 
 #[derive(Clone, Debug)]
@@ -331,6 +385,7 @@ impl ConsistAuditor {
                     report.compatibility.push(VehicleCompatibility {
                         vehicle: index + 1,
                         stock_path: path.clone(),
+                        source_sha256: stock.source_sha256.clone(),
                         declared: stock.metadata.clone(),
                         limitations: stock.limitations.clone(),
                     });
@@ -423,6 +478,7 @@ impl ConsistAuditor {
             warnings: vec![],
             missing_resources: vec![],
             metadata,
+            source_sha256: source_fingerprint(path).unwrap_or_default(),
             limitations: vec![],
         };
         self.inspect_subsystems(path, &root, &mut stock);
@@ -1059,5 +1115,57 @@ mod tests {
                 .compatibility_summary()
                 .contains("termodinámica simplificada")
         );
+    }
+
+    #[test]
+    fn plan30_content_fingerprint_tracks_includes_and_survives_install_relocation() {
+        let a = tempfile::tempdir().unwrap();
+        let b = tempfile::tempdir().unwrap();
+        for root in [a.path(), b.path()] {
+            let stock = root.join("TRAINS/TRAINSET/model");
+            std::fs::create_dir_all(&stock).unwrap();
+            std::fs::write(
+                stock.join("vehicle.eng"),
+                "Wagon ( Mass ( 30t ) Include ( brake.inc ) )",
+            )
+            .unwrap();
+            std::fs::write(stock.join("brake.inc"), "MaxBrakeForce ( 50kN )").unwrap();
+        }
+        let source = |r: &Path| r.join("TRAINS/TRAINSET/model/vehicle.eng");
+        let first = source_fingerprint(&source(a.path())).unwrap();
+        assert_eq!(first, source_fingerprint(&source(b.path())).unwrap());
+        std::fs::write(
+            b.path().join("TRAINS/TRAINSET/model/brake.inc"),
+            "MaxBrakeForce ( 70kN )",
+        )
+        .unwrap();
+        assert_ne!(first, source_fingerprint(&source(b.path())).unwrap());
+    }
+    #[test]
+    #[ignore = "requires the original Chiltern TRAINSET"]
+    fn native_service_content_validation_matches_effective_original_sources() {
+        let route =
+            PathBuf::from(std::env::var("OPENRAILSRS_NATIVE_ROUTE").expect("original route"));
+        let trainset = route
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .join("TRAINS/TRAINSET");
+        let registry: serde_json::Value =
+            serde_json::from_str(include_str!("../../../oracles/content-validation.json")).unwrap();
+        for record in registry["records"].as_array().unwrap() {
+            let source = record["source"]
+                .as_str()
+                .unwrap()
+                .split_once('/')
+                .unwrap()
+                .1;
+            assert_eq!(
+                source_fingerprint(&trainset.join(source)).unwrap(),
+                record["source_sha256"].as_str().unwrap(),
+                "{source}"
+            );
+        }
     }
 }

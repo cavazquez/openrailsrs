@@ -98,6 +98,18 @@ pub struct WeatherSample {
     pub wind_speed_10m: f32,
     pub wind_direction_10m: f32,
     pub timezone: String,
+    #[serde(default)]
+    pub forecast: Vec<WeatherForecast>,
+}
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct WeatherForecast {
+    pub time: i64,
+    pub weather_code: u16,
+    pub temperature_c: f32,
+    pub precipitation: f32,
+    pub snow_cm: f32,
+    pub wind_mps: f32,
+    pub precipitation_probability: f32,
 }
 impl WeatherSample {
     pub fn weather(&self) -> Option<PlayerWeather> {
@@ -108,6 +120,12 @@ impl WeatherSample {
     }
     fn valid(&self) -> bool {
         DateTime::from_timestamp(self.time, 0).is_some()
+            && self.forecast.len() <= 72
+            && self
+                .forecast
+                .iter()
+                .all(|p| p.valid() && (-7200..=259200).contains(&p.time.saturating_sub(self.time)))
+            && self.forecast.windows(2).all(|w| w[0].time < w[1].time)
             && self.weather().is_some()
             && self.timezone.parse::<Tz>().is_ok()
             && self.temperature_2m.is_finite()
@@ -122,6 +140,18 @@ impl WeatherSample {
         // Meteorological bearing is where wind comes FROM; Bevy +Z is south.
         let bearing = self.wind_direction_10m.to_radians();
         Vec3::new(-bearing.sin(), 0.0, bearing.cos()) * self.wind_speed_10m.min(18.0)
+    }
+}
+
+impl WeatherForecast {
+    fn valid(&self) -> bool {
+        DateTime::from_timestamp(self.time, 0).is_some()
+            && weather_for_code(self.weather_code).is_some()
+            && (-100.0..=65.0).contains(&self.temperature_c)
+            && (0.0..=1000.0).contains(&self.precipitation)
+            && (0.0..=1000.0).contains(&self.snow_cm)
+            && (0.0..=150.0).contains(&self.wind_mps)
+            && (0.0..=100.0).contains(&self.precipitation_probability)
     }
 }
 
@@ -150,6 +180,18 @@ struct ProviderResponse {
     longitude: f64,
     timezone: String,
     current: ProviderCurrent,
+    #[serde(default)]
+    hourly: Option<ProviderHourly>,
+}
+#[derive(Deserialize)]
+struct ProviderHourly {
+    time: Vec<i64>,
+    weather_code: Vec<u16>,
+    temperature_2m: Vec<f32>,
+    precipitation: Vec<f32>,
+    snowfall: Vec<f32>,
+    wind_speed_10m: Vec<f32>,
+    precipitation_probability: Vec<f32>,
 }
 #[derive(Deserialize)]
 struct ProviderCurrent {
@@ -185,6 +227,42 @@ pub fn parse_weather(
     {
         return Err("Datos meteorológicos de otra ubicación".into());
     }
+    let mut forecast = vec![];
+    if let Some(h) = response.hourly {
+        let count = h.time.len();
+        if count > 72
+            || [
+                h.weather_code.len(),
+                h.temperature_2m.len(),
+                h.precipitation.len(),
+                h.snowfall.len(),
+                h.wind_speed_10m.len(),
+                h.precipitation_probability.len(),
+            ]
+            .iter()
+            .any(|n| *n != count)
+        {
+            return Err("Pronóstico incompleto o demasiado largo".into());
+        }
+        for i in 0..count {
+            let point = WeatherForecast {
+                time: h.time[i],
+                weather_code: h.weather_code[i],
+                temperature_c: h.temperature_2m[i],
+                precipitation: h.precipitation[i],
+                snow_cm: h.snowfall[i],
+                wind_mps: h.wind_speed_10m[i],
+                precipitation_probability: h.precipitation_probability[i],
+            };
+            if !point.valid()
+                || !(-7200..=259200).contains(&point.time.saturating_sub(now))
+                || (i > 0 && point.time <= h.time[i - 1])
+            {
+                return Err("Pronóstico inválido o de otra fecha".into());
+            }
+            forecast.push(point);
+        }
+    }
     let c = response.current;
     let sample = WeatherSample {
         time: c.time,
@@ -196,6 +274,7 @@ pub fn parse_weather(
         wind_speed_10m: c.wind_speed_10m,
         wind_direction_10m: c.wind_direction_10m,
         timezone: response.timezone,
+        forecast,
     };
     if !sample.valid() || !sample.fresh(now) {
         return Err("Datos meteorológicos inválidos o vencidos".into());
@@ -227,7 +306,7 @@ fn fetch_weather(location: RouteLocation) -> Result<WeatherSample, String> {
         .build()
         .into();
     let url = format!(
-        "https://api.open-meteo.com/v1/forecast?latitude={:.5}&longitude={:.5}&current=temperature_2m,weather_code,cloud_cover,precipitation,snowfall,wind_speed_10m,wind_direction_10m&wind_speed_unit=ms&timeformat=unixtime&timezone=auto&forecast_days=1",
+        "https://api.open-meteo.com/v1/forecast?latitude={:.5}&longitude={:.5}&current=temperature_2m,weather_code,cloud_cover,precipitation,snowfall,wind_speed_10m,wind_direction_10m&wind_speed_unit=ms&timeformat=unixtime&timezone=auto&forecast_hours=6&hourly=temperature_2m,weather_code,precipitation,snowfall,wind_speed_10m,precipitation_probability",
         location.latitude, location.longitude
     );
     let mut response = agent
@@ -861,5 +940,30 @@ mod tests {
         let sample = fetch_weather(location()).unwrap();
         assert_eq!(sample.timezone, "Europe/London");
         assert!(sample.valid());
+    }
+
+    #[test]
+    fn plan30_provider_forecast_rejects_mismatched_arrays_dates_and_probabilities() {
+        let mut r = response();
+        let now = 1791100800i64;
+        r["hourly"] = serde_json::json!({"time":[now,now+3600],"weather_code":[95,61],"temperature_2m":[12.3,13.],"precipitation":[2.5,1.],"snowfall":[0.,0.],"wind_speed_10m":[4.,5.],"precipitation_probability":[80.,60.]});
+        let parse =
+            |r: &serde_json::Value| parse_weather(&serde_json::to_vec(r).unwrap(), location(), now);
+        let sample = parse(&r).unwrap();
+        assert_eq!(sample.forecast.len(), 2);
+        assert_eq!(sample.forecast[0].temperature_c, sample.temperature_2m);
+        assert_eq!(sample.forecast[1].precipitation_probability, 60.);
+        let mut malformed = r.clone();
+        malformed["hourly"]["wind_speed_10m"] = serde_json::json!([4.]);
+        assert!(parse(&malformed).is_err());
+        malformed = r.clone();
+        malformed["hourly"]["time"] = serde_json::json!([now + 3600, now]);
+        assert!(parse(&malformed).is_err());
+        malformed = r.clone();
+        malformed["hourly"]["precipitation_probability"] = serde_json::json!([101., 60.]);
+        assert!(parse(&malformed).is_err());
+        malformed = r;
+        malformed["hourly"]["time"] = serde_json::json!([now, now + 300000]);
+        assert!(parse(&malformed).is_err());
     }
 }

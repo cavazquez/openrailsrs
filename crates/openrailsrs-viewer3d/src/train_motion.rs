@@ -35,7 +35,7 @@ impl MotionLevel {
             Self::Strong => "Marcado",
         }
     }
-    fn scale(self) -> f32 {
+    pub(crate) fn scale(self) -> f32 {
         match self {
             Self::Off => 0.0,
             Self::Soft => 0.35,
@@ -67,6 +67,8 @@ struct CarMotion {
     clock: Option<f64>,
     heading: Option<f32>,
     speed: f32,
+    distance: f64,
+    vehicle: usize,
     roll: Spring,
     pitch: Spring,
     bounce: Spring,
@@ -106,6 +108,30 @@ impl TrainMotion {
             "max_pitch_deg":self.cars.values().map(|c|c.pitch.position.abs().to_degrees()).fold(0.0_f32,f32::max),
             "max_vertical_m":self.cars.values().map(|c|c.bounce.position.abs()).fold(0.0_f32,f32::max),
             "wheel_bogie_pose_compensated":true})
+    }
+}
+
+/// Spatial joints at 18.3 m plus low-amplitude roughness; never advance on render frames.
+pub(crate) fn track_response(distance: f64, speed: f32, vehicle: usize) -> Vec3 {
+    let running = (speed.abs() / 25.0).clamp(0.0, 1.0);
+    let phase = (distance * std::f64::consts::TAU / 18.3) as f32;
+    let joint = ((distance + 9.15).rem_euclid(18.3) - 9.15) as f32;
+    let impact = (-(joint / 0.30).powi(2)).exp();
+    let stiffness = 0.8 + (vehicle % 5) as f32 * 0.06;
+    Vec3::new(
+        (phase * 0.73).sin() * 0.001,
+        phase.sin() * 0.002,
+        ((phase * 1.1).sin() * 0.012 + (phase * 0.57).cos() * 0.006 + impact * 0.025) * stiffness,
+    ) * running
+}
+impl TrainMotion {
+    pub fn relative_response(&self, entity: Entity, gain: f32, head: bool) -> Transform {
+        let Some(c) = self.cars.get(&entity) else {
+            return Transform::IDENTITY;
+        };
+        let r = track_response(c.distance, c.speed, c.vehicle) * self.level.scale() * gain;
+        let scale = if head { 0.55 } else { 0.16 };
+        suspension_pose(r.y * scale, r.x * scale, r.z * scale)
     }
 }
 
@@ -226,14 +252,12 @@ pub fn update(
                 f64::from(offset.offset_m),
                 0.0,
             );
-            let running = (speed.abs() / 25.0).clamp(0.0, 1.0);
-            let track_phase = (distance * std::f64::consts::TAU / 18.3) as f32;
-            let roll = (-lateral * 0.014 + track_phase.sin() * 0.002 * running) * scale;
-            let pitch =
-                (-acceleration * 0.006 + (track_phase * 0.73).sin() * 0.001 * running) * scale;
-            let bounce = ((track_phase * 1.1).sin() * 0.018 + (track_phase * 0.57).cos() * 0.008)
-                * running
-                * scale;
+            let response = track_response(distance, speed, index);
+            car.distance = distance;
+            car.vehicle = index;
+            let roll = (-lateral * 0.014 + response.y) * scale;
+            let pitch = (-acceleration * 0.006 + response.x) * scale;
+            let bounce = response.z * scale;
             car.roll.advance(roll, dt, 4.0);
             car.pitch.advance(pitch, dt, 4.5);
             car.bounce.advance(bounce, dt, 7.0);
@@ -431,5 +455,35 @@ mod tests {
                 .running_gear
                 .is_empty()
         );
+    }
+
+    #[test]
+    fn plan30_spatial_joints_are_vehicle_specific_bounded_and_stop_without_speed() {
+        for i in 0..20000 {
+            let distance = i as f64 * 0.01;
+            let r = track_response(distance, 45., 0);
+            assert!(r.x.abs() <= 0.0011 && r.y.abs() <= 0.0021 && r.z.abs() < 0.05);
+            assert_eq!(track_response(distance, 0., 0), Vec3::ZERO);
+        }
+        assert_ne!(track_response(0., 25., 0), track_response(0., 25., 3));
+        let e = Entity::PLACEHOLDER;
+        let mut motion = TrainMotion {
+            level: MotionLevel::Soft,
+            ..default()
+        };
+        motion.cars.insert(
+            e,
+            CarMotion {
+                distance: 0.,
+                speed: 25.,
+                ..default()
+            },
+        );
+        let head = motion.relative_response(e, 1., true);
+        let desk = motion.relative_response(e, 1., false);
+        assert!(head.translation.y.abs() > desk.translation.y.abs());
+        assert_eq!(motion.relative_response(e, 0., true), Transform::IDENTITY);
+        motion.level = MotionLevel::Off;
+        assert_eq!(motion.relative_response(e, 1., true), Transform::IDENTITY);
     }
 }

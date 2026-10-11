@@ -434,7 +434,7 @@ fn update_driving_hud(
                         _ => "altos",
                     },
                     if cab.cab_light { "Sí" } else { "No" },
-                    if cab.wiper_active { "Sí" } else { "No" },
+                    cab.wiper_mode.label(),
                 ),
                 MUTED,
             ),

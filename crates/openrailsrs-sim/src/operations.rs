@@ -159,6 +159,8 @@ pub struct SessionSnapshot {
     pub traffic_brake_assistance: bool,
     pub wiper_active: bool,
     #[serde(default)]
+    pub wiper_mode: crate::wiper::WiperMode,
+    #[serde(default)]
     pub headlights: u8,
     #[serde(default)]
     pub cab_light: bool,
@@ -252,6 +254,7 @@ impl LiveDriveSession {
             driver_direction: self.driver_direction,
             traffic_brake_assistance: self.traffic_brake_assistance,
             wiper_active: self.wiper_active,
+            wiper_mode: self.selected_wiper_mode(),
             headlights: self.headlights,
             cab_light: self.cab_light,
             horn_pressed_until_s: self.horn_pressed_until_s,
@@ -287,6 +290,11 @@ impl LiveDriveSession {
 
     /// Validate completely before mutating the current game.
     pub fn validate_snapshot(&self, saved: &SessionSnapshot) -> Result<(), String> {
+        if !saved.state.ambient_temperature_c.is_finite()
+            || !(-100.0..=65.0).contains(&saved.state.ambient_temperature_c)
+        {
+            return Err("Temperatura ambiente guardada inválida".into());
+        }
         match (&self.script_tcs, &saved.script_state) {
             (Some(host), Some(state)) => host.validate_snapshot(state)?,
             (None, None) => (),
@@ -677,6 +685,7 @@ impl LiveDriveSession {
         self.driver_direction = saved.driver_direction;
         self.traffic_brake_assistance = saved.traffic_brake_assistance;
         self.wiper_active = saved.wiper_active;
+        self.wiper_mode = saved.wiper_mode;
         self.headlights = saved.headlights.min(2);
         self.cab_light = saved.cab_light;
         self.horn_pressed_until_s = saved.horn_pressed_until_s;
@@ -1786,5 +1795,133 @@ mod tests {
         assert_eq!(s.physics.max_power_w, 0.0);
         assert_eq!(s.physics.max_tractive_effort_n, 0.0);
         assert!(s.physics.diesel_engines.is_empty());
+    }
+
+    #[test]
+    fn plan30_wiper_cadence_power_and_temperature_restore_without_phase_drift() {
+        let mut s = session("chiltern_extended");
+        s.wiper_mode = crate::wiper::WiperMode::Fast;
+        s.wiper_active = true;
+        s.state.ambient_temperature_c = -8.;
+        s.state.time.0 = 0.45;
+        let selected = s.selected_wiper_mode();
+        assert_eq!(selected, crate::wiper::WiperMode::Fast);
+        assert!(s.cab_telemetry().wiper_active);
+        let snapshot = s.snapshot();
+        let phase = selected.phase(s.time_s());
+        s.wiper_mode = crate::wiper::WiperMode::Off;
+        s.wiper_active = false;
+        s.state.ambient_temperature_c = 20.;
+        s.restore_snapshot(snapshot).unwrap();
+        assert_eq!(s.state.ambient_temperature_c, -8.);
+        assert_eq!(s.selected_wiper_mode().phase(s.time_s()), phase);
+        let cab = s.cab_vehicle();
+        s.formation.cars[cab].battery_on = false;
+        for c in &mut s.state.power_supply.cars {
+            if c.vehicle == cab {
+                c.supply.low_voltage = false;
+            }
+        }
+        assert!(!s.cab_telemetry().wiper_active);
+        assert_eq!(s.selected_wiper_mode(), crate::wiper::WiperMode::Fast);
+    }
+    #[test]
+    fn plan30_traction_diagnosis_uses_active_vehicle_and_recovers_from_physical_faults() {
+        let mut s = session("chiltern_extended");
+        s.driver_direction = 1.;
+        s.driver_throttle = 0.7;
+        s.exterior.door = crate::DoorState::Closed;
+        let cab = s.cab_vehicle();
+        s.state.brake_system.emergency = true;
+        assert!(s.traction_diagnosis().contains("Emergencia"));
+        s.state.brake_system.emergency = false;
+        s.driver_direction = 0.5;
+        assert!(s.traction_diagnosis().contains("neutro"));
+        s.driver_direction = 1.;
+        s.state
+            .diesel
+            .cars
+            .iter_mut()
+            .find(|c| c.vehicle == cab)
+            .unwrap()
+            .fuel_l = 0.;
+        assert!(s.traction_diagnosis().contains("sin combustible"));
+        s.state
+            .diesel
+            .cars
+            .iter_mut()
+            .find(|c| c.vehicle == cab)
+            .unwrap()
+            .fuel_l = 100.;
+        s.state
+            .diesel
+            .cars
+            .iter_mut()
+            .find(|c| c.vehicle == cab)
+            .unwrap()
+            .phase = crate::diesel_operation::EnginePhase::Stopped;
+        assert!(s.traction_diagnosis().contains("motor detenido"));
+        s.state
+            .diesel
+            .cars
+            .iter_mut()
+            .find(|c| c.vehicle == cab)
+            .unwrap()
+            .phase = crate::diesel_operation::EnginePhase::Running;
+        s.formation.cars[cab].battery_on = false;
+        assert!(s.traction_diagnosis().contains("batería"));
+        s.formation.cars[cab].battery_on = true;
+        s.state.brake_system.independent_command = 0.4;
+        assert!(s.traction_diagnosis().contains("independiente"));
+        s.state.brake_system.independent_command = 0.;
+        s.driver_throttle = 0.;
+        s.driver_brake = 0.;
+        s.step_realtime(30., |_| {});
+        s.driver_throttle = 0.7;
+        for car in &mut s.state.power_supply.cars {
+            car.supply.main = true;
+        }
+        if let Some(adhesion) = &mut s.state.rail_adhesion {
+            for car in &mut adhesion.cars {
+                car.slipping = false;
+            }
+        }
+        s.state.velocity_mps = 40.;
+        let before = serde_json::to_string(&s.state).unwrap();
+        assert!(
+            s.traction_diagnosis().contains("límite de potencia"),
+            "{}",
+            s.traction_diagnosis()
+        );
+        assert_eq!(serde_json::to_string(&s.state).unwrap(), before);
+    }
+    #[test]
+    fn plan30_ambient_temperature_affects_compatible_diesel_heat_without_changing_fuel_or_phase() {
+        let s = session("chiltern_extended");
+        let mut cold = s.state.clone();
+        for car in &mut cold.diesel.cars {
+            car.temperature_c = 90.;
+        }
+        let mut hot = cold.clone();
+        cold.ambient_temperature_c = -10.;
+        hot.ambient_temperature_c = 35.;
+        let motors = s
+            .physics
+            .diesel
+            .cars
+            .iter()
+            .map(|c| c.vehicle)
+            .collect::<Vec<_>>();
+        crate::diesel_operation::advance_temperature(&mut cold, &s.physics.diesel, &motors, 30.);
+        crate::diesel_operation::advance_temperature(&mut hot, &s.physics.diesel, &motors, 30.);
+        for (c, h) in cold.diesel.cars.iter().zip(&hot.diesel.cars) {
+            assert!(c.temperature_c < h.temperature_c);
+            assert_eq!(c.fuel_l, h.fuel_l);
+            assert_eq!(c.rpm, h.rpm);
+            assert_eq!(c.phase, h.phase);
+        }
+        let before = cold.diesel.clone();
+        crate::diesel_operation::advance_temperature(&mut cold, &s.physics.diesel, &motors, 0.);
+        assert_eq!(cold.diesel, before);
     }
 }

@@ -243,13 +243,19 @@ pub struct PlayerSettings {
     pub scenery_quality: crate::enhanced_scenery::SceneryQuality,
     pub train_effect_execution: crate::weather_execution::WeatherExecution,
     pub train_motion: crate::train_motion::MotionLevel,
+    pub head_motion: f32,
+    pub desk_motion: f32,
+    pub tunnel_exposure_ev: f32,
     pub renderer: crate::weather_execution::RendererSelection,
     pub environment: crate::environment::EnvironmentSelection,
     pub lightning: bool,
+    pub ambient_temperature_c: Option<f32>,
+    pub sky_date: String,
     pub ui_scale: f32,
     pub mph: bool,
     pub audio_enabled: bool,
     pub audio_volume: f32,
+    pub audio_mix: openrailsrs_audio::mix::SoundMix,
     /// Short boarding and no booked-departure wait; distinct from normal service.
     pub quick_station_practice: bool,
     /// Missed stations normally incur a penalty; strict mode ends the activity.
@@ -282,13 +288,19 @@ impl Default for PlayerSettings {
             scenery_quality: default(),
             train_effect_execution: crate::weather_execution::WeatherExecution::Auto,
             train_motion: crate::train_motion::MotionLevel::Soft,
+            head_motion: 0.5,
+            desk_motion: 0.25,
+            tunnel_exposure_ev: 1.5,
             renderer: crate::weather_execution::RendererSelection::Auto,
             environment: default(),
             lightning: true,
+            ambient_temperature_c: None,
+            sky_date: "2026-10-11".into(),
             ui_scale: 1.0,
             mph: false,
             audio_enabled: true,
             audio_volume: 0.4,
+            audio_mix: default(),
             quick_station_practice: false,
             strict_service: false,
             traffic_brake_assistance: false,
@@ -299,6 +311,45 @@ impl Default for PlayerSettings {
                 .map(|a| (a, format!("{:?}", a.default_key())))
                 .collect(),
         }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DifficultyProfile {
+    Guided,
+    Practice,
+    Timetable,
+    Strict,
+}
+impl DifficultyProfile {
+    pub const ALL: [Self; 4] = [Self::Guided, Self::Practice, Self::Timetable, Self::Strict];
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Guided => "Guiado",
+            Self::Practice => "Práctica",
+            Self::Timetable => "Horario normal",
+            Self::Strict => "Actividad estricta",
+        }
+    }
+    pub fn apply(self, s: &mut PlayerSettings) {
+        s.quick_station_practice = matches!(self, Self::Guided | Self::Practice);
+        s.traffic_brake_assistance = self == Self::Guided;
+        s.strict_service = self == Self::Strict;
+    }
+    pub fn selected(s: &PlayerSettings) -> Option<Self> {
+        Self::ALL.into_iter().find(|p| {
+            let mut candidate = s.clone();
+            p.apply(&mut candidate);
+            (
+                candidate.quick_station_practice,
+                candidate.traffic_brake_assistance,
+                candidate.strict_service,
+            ) == (
+                s.quick_station_practice,
+                s.traffic_brake_assistance,
+                s.strict_service,
+            )
+        })
     }
 }
 
@@ -341,7 +392,12 @@ impl PlayerSettings {
         Ok(())
     }
     pub fn validate(&self) -> Result<(), String> {
-        if !self.view_distance_m.is_finite()
+        if self
+            .sky_date
+            .parse::<chrono::NaiveDate>()
+            .ok()
+            .is_none_or(|d| !(1900..=2100).contains(&chrono::Datelike::year(&d)))
+            || !self.view_distance_m.is_finite()
             || !(500.0..=4000.0).contains(&self.view_distance_m)
             || !self.cab_fov_deg.is_finite()
             || !(35.0..=90.0).contains(&self.cab_fov_deg)
@@ -349,15 +405,34 @@ impl PlayerSettings {
             || !(0.8..=1.5).contains(&self.ui_scale)
             || !self.audio_volume.is_finite()
             || !(0.0..=1.0).contains(&self.audio_volume)
+            || self
+                .ambient_temperature_c
+                .is_some_and(|x| !x.is_finite() || !(-45.0..=45.0).contains(&x))
+            || !self.audio_mix.valid()
             || !(128..=8192).contains(&self.weather_particle_budget)
         {
             return Err("Ajustes gráficos fuera del rango permitido".into());
+        }
+        if [self.head_motion, self.desk_motion]
+            .iter()
+            .any(|x| !x.is_finite() || !(0.0..=1.0).contains(x))
+            || !self.tunnel_exposure_ev.is_finite()
+            || !(0.0..=3.0).contains(&self.tunnel_exposure_ev)
+        {
+            return Err("Movimiento o exposición fuera del rango permitido".into());
         }
         if self.cab_profiles.values().any(|p| {
             !p.seat_height_m.is_finite()
                 || !(-0.4..=0.4).contains(&p.seat_height_m)
                 || !p.seat_back_m.is_finite()
                 || !(-0.4..=0.4).contains(&p.seat_back_m)
+                || !p.look_yaw.is_finite()
+                || p.look_yaw.abs() > std::f32::consts::PI
+                || !p.look_pitch.is_finite()
+                || p.look_pitch.abs() > 1.4
+                || [p.instrument_light, p.console_light, p.interior_light]
+                    .iter()
+                    .any(|x| !x.is_finite() || !(0.0..=1.0).contains(x))
                 || !p.wipe_scale.is_finite()
                 || !(0.6..=1.4).contains(&p.wipe_scale)
         }) {
@@ -644,5 +719,33 @@ mod tests {
         let saved = PlayerSettings::load(&path).unwrap();
         assert!(saved.mph);
         assert_eq!(saved.keys, upgraded.keys);
+    }
+
+    #[test]
+    fn plan30_difficulty_and_independent_audio_levels_persist_without_touching_graphics() {
+        let mut settings = PlayerSettings::default();
+        settings.audio_mix.gains = [0.1, 0.2, 0.3, 0.4, 0.5];
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("settings.json");
+        for profile in DifficultyProfile::ALL {
+            profile.apply(&mut settings);
+            assert_eq!(DifficultyProfile::selected(&settings), Some(profile));
+            settings.save(&path).unwrap();
+            let restored = PlayerSettings::load(&path).unwrap();
+            assert_eq!(DifficultyProfile::selected(&restored), Some(profile));
+            assert_eq!(restored.audio_mix.gains, settings.audio_mix.gains);
+            assert_eq!(restored.view_distance_m, 2000.);
+            let saved = crate::saved_game::SavedPlayerOptions::capture(&restored);
+            let mut altered = restored.clone();
+            altered.quick_station_practice = !altered.quick_station_practice;
+            saved.apply(&mut altered);
+            assert_eq!(DifficultyProfile::selected(&altered), Some(profile));
+        }
+        settings.quick_station_practice = true;
+        settings.strict_service = true;
+        settings.traffic_brake_assistance = false;
+        assert!(DifficultyProfile::selected(&settings).is_none());
+        settings.audio_mix.gains[0] = f32::NAN;
+        assert!(settings.validate().is_err());
     }
 }

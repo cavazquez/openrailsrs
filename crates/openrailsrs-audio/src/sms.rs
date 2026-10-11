@@ -185,7 +185,10 @@ fn pair(ast: &Ast, name: &str, default: (f32, f32)) -> (f32, f32) {
 fn curve(ast: &Ast, warnings: &mut Vec<String>) -> Option<Curve> {
     let name = items(ast).get(1).and_then(text)?;
     let Some(control) = Control::parse(&name) else {
-        warnings.push(format!("Unsupported sound curve: {name}"));
+        warnings.push(format!(
+            "Unsupported sound curve: {}",
+            crate::mix::resource_name(&name)
+        ));
         return None;
     };
     let points = child(ast, "CurvePoints")?;
@@ -212,7 +215,8 @@ fn curve(ast: &Ast, warnings: &mut Vec<String>) -> Option<Curve> {
     // are present in real LUR/steam SMS files and must keep those semantics.
     if points.len() != count {
         warnings.push(format!(
-            "Invalid sound curve: {name} ({count} points expected, got {points:?})"
+            "Invalid sound curve: {} ({count} points expected, got {points:?})",
+            crate::mix::resource_name(&name)
         ));
         return None;
     }

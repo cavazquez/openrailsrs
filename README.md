@@ -68,6 +68,8 @@ Guías: [`docs/CHILTERN.md`](docs/CHILTERN.md) · [`docs/VIEWER3D_TESTING.md`](d
 
 ## Funciones implementadas
 
+El lote de [treinta mejoras de octubre](docs/PLAN_30.md) amplía luces originales y marcadores de cola, arena visible, movimiento de cabina, modos de limpiaparabrisas, iluminación por sector, luna, temperatura y pronóstico. Incorpora mezcla SMS continua entre cámaras, cinco grupos de volumen, diagnósticos físicos/sonoros, perfiles de dificultad e historial con buscador. La guía indica cómo probar cada cambio a mano y qué recursos necesita.
+
 ### Partida, contenido y controles
 
 - Inicio con **Nueva partida, Continuar, Biblioteca y Ajustes**. Nueva partida se organiza en **Ruta y servicio → Tren → Hora y clima**, con resumen y **Jugar** siempre visibles. El detalle de recursos, los recorridos alternativos y las opciones de hora/clima del lugar se abren por separado. Ajustes tiene pestañas y guardado visible; las auditorías de formaciones se hacen en segundo plano. [Cómo probar cada pantalla](docs/PLAYER_MANUAL_TESTS.md#40-inicio-con-cuatro-opciones-y-nueva-partida-en-tres-pasos).
@@ -134,7 +136,7 @@ Guías: [`docs/CHILTERN.md`](docs/CHILTERN.md) · [`docs/VIEWER3D_TESTING.md`](d
 
 ### Alcance y pruebas
 
-La compatibilidad se valida por función y contenido: **no se afirma paridad completa con Open Rails**. SIGSCR cubre las funciones contrastadas con sus DLL; enlaces particulares y actores de maniobra requieren validación por actividad. Las inversiones y operaciones de horarios admitidas se detallan en [la guía de contenido nativo](docs/NATIVE_CONTENT_UPDATE.md); los eventos ACT, pools y coordinación completa entre formaciones distintas siguen acotados. El peralte generado usa la velocidad de diseño de la ruta; falta validar límites locales por categoría y tablas antiguas. El API C# sigue siendo opcional y acotado. Vapor y frenos tienen subsistemas parciales; la paridad física se certifica por ensayo. Completar un recorrido nuevo no certifica sus tiempos ni todos sus sistemas. La nieve reduce el agarre mediante un perfil de juego; todavía no hay temperatura, deshielo ni formación de hielo.
+La compatibilidad se valida por función y contenido: **no se afirma paridad completa con Open Rails**. SIGSCR cubre las funciones contrastadas con sus DLL; enlaces particulares y actores de maniobra requieren validación por actividad. Las inversiones y operaciones de horarios admitidas se detallan en [la guía de contenido nativo](docs/NATIVE_CONTENT_UPDATE.md); los eventos ACT, pools y coordinación completa entre formaciones distintas siguen acotados. El peralte generado usa la velocidad de diseño de la ruta; falta validar límites locales por categoría y tablas antiguas. El API C# sigue siendo opcional y acotado. Vapor y frenos tienen subsistemas parciales; la paridad física se certifica por ensayo. Completar un recorrido nuevo no certifica sus tiempos ni todos sus sistemas. La nieve reduce el agarre mediante un perfil de juego; la temperatura ambiente ya participa en refrigeración diésel y condensación, pero todavía no hay deshielo ni formación de hielo.
 
 La tracción eléctrica requiere tensión y un captador compatible: catenaria, tercer o cuarto riel. Bajar el pantógrafo, abrir el disyuntor o entrar en un sector sin tensión corta el esfuerzo; el tren sigue por inercia. Con un modelo animado compatible y altura de catenaria válida, el captador ajusta su recorrido original al hilo; puede haber un arco breve al perder o recuperar contacto bajo carga. `O` acciona el pantógrafo y `J` el disyuntor; F8 muestra cada coche motor. Los ejemplos `electric_supply` permiten comprobarlo en un recorrido corto.
 
@@ -170,7 +172,7 @@ Para probar nieve, elegí **Origen del clima → Elegido por el jugador** y **Cl
 OPENRAILSRS_WEATHER=snow ./scripts/run_chiltern_service.sh --direct
 ```
 
-Desde el menú también podés elegir noche, lluvia, niebla, nublado o tormenta, y optar por hora y/o clima actuales del lugar. F10 permite cambiar su origen y elegir clima durante la partida; el reloj del servicio sigue independiente. **V** activa el limpiaparabrisas; las teclas de faros, luces y demás acciones se consultan en **F6** y se reasignan en **F10**.
+Desde el menú también podés elegir noche, lluvia, niebla, nublado o tormenta, y optar por hora y/o clima actuales del lugar. F10 permite cambiar su origen y elegir clima durante la partida; el reloj del servicio sigue independiente. **V** recorre Apagado, Intermitente, Lento y Rápido en el limpiaparabrisas; las teclas de faros, luces y demás acciones se consultan en **F6** y se reasignan en **F10**.
 
 ## CLI
 

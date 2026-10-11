@@ -15,7 +15,6 @@ use openrailsrs_audio::native::{
 #[derive(Resource, Default)]
 pub struct NativeAudio {
     pub engine: Option<NativeAudioEngine>,
-    positions: std::collections::HashMap<(usize, usize), (f64, f32)>,
 }
 
 pub fn start_native_audio(
@@ -24,7 +23,6 @@ pub fn start_native_audio(
     mut audio: ResMut<NativeAudio>,
 ) {
     audio.engine = None;
-    audio.positions.clear();
     let Some(live) = live else { return };
     let Ok(scenario) = openrailsrs_scenarios::load_scenario(live.scenario_path()) else {
         return;
@@ -53,7 +51,6 @@ pub fn start_native_audio(
 }
 pub fn stop_native_audio(mut audio: ResMut<NativeAudio>) {
     audio.engine = None;
-    audio.positions.clear();
 }
 
 fn state(session: &openrailsrs_sim::LiveDriveSession, vehicle: usize) -> SoundState {
@@ -84,7 +81,10 @@ fn state(session: &openrailsrs_sim::LiveDriveSession, vehicle: usize) -> SoundSt
     let car = session.formation.cars.get(vehicle);
     let parked = vehicle >= session.formation.coupled_count;
     let controls_powered = car.is_some_and(|c| {
-        c.powered && c.power_on && c.battery_on && (vehicle == 0 || c.mu_connected)
+        c.powered
+            && c.power_on
+            && c.battery_on
+            && (vehicle == session.cab_vehicle() || c.mu_connected)
     }) && !parked;
     let mut powered = controls_powered
         && session.state.electric.power_available(vehicle)
@@ -200,12 +200,46 @@ fn state(session: &openrailsrs_sim::LiveDriveSession, vehicle: usize) -> SoundSt
         horn: controls_powered
             && t.horn_active
             && boiler.is_none_or(|b| b.pressure_bar > 0. && !b.low_water_failure),
-        wiper: vehicle == 0 && t.wiper_active,
+        wiper: vehicle == session.cab_vehicle() && t.wiper_active,
+        wiper_rate: (1.8 / session.selected_wiper_mode().sweep_s()) as f32,
         doors: matches!(
             session.exterior.door,
             openrailsrs_sim::DoorState::Opening | openrailsrs_sim::DoorState::Open
         ),
         headlights: t.headlights,
+        curve_squeal: false,
+        coupler_contact: session.state.couplers.get(vehicle).map_or(0, |c| {
+            if c.broken || c.extension_m.abs() <= c.free_play_m {
+                0
+            } else if c.extension_m > 0. {
+                1
+            } else {
+                -1
+            }
+        }),
+        coupler_force_n: session.state.couplers.get(vehicle).map_or(0., |c| {
+            c.force_n(
+                session
+                    .state
+                    .vehicles
+                    .get(vehicle + 1)
+                    .map_or(0., |v| v.velocity_mps)
+                    - velocity,
+            )
+        }) as f32,
+        coupler_relative_speed: (session
+            .state
+            .vehicles
+            .get(vehicle + 1)
+            .map_or(velocity, |v| v.velocity_mps)
+            - velocity) as f32,
+        coupling_event: if vehicle + 1 >= session.formation.cars.len() {
+            0
+        } else if vehicle + 1 == session.formation.coupled_count {
+            61
+        } else {
+            58
+        },
     }
 }
 
@@ -217,31 +251,39 @@ fn vehicle_states(session: &openrailsrs_sim::LiveDriveSession) -> Vec<SoundState
 
 pub fn update_native_audio(
     live: Option<Res<LiveDrive>>,
-    mut audio: ResMut<NativeAudio>,
+    audio: Res<NativeAudio>,
     weather: Option<Res<crate::weather_state::WeatherState>>,
     settings: Res<PlayerSettings>,
+    time: Res<Time>,
     follow: Res<CameraFollowMode>,
     passenger: Option<Res<crate::camera::PassengerCamState>>,
     camera: Query<&GlobalTransform, With<Camera3d>>,
     player: Query<(Entity, &GlobalTransform), With<LiveTrainMarker>>,
     traffic: Query<(Entity, &TrafficTrainMarker, &GlobalTransform)>,
+    geometry: (
+        Res<crate::shapes::RouteAssets>,
+        Res<crate::track::TrackScene>,
+        Res<crate::track_position::TrackPositionResolverCache>,
+        Option<Res<crate::effect_obstacles::EffectObstacles>>,
+    ),
     cars: Query<(
         &ChildOf,
         &crate::rolling_stock::ConsistCarIndex,
         &GlobalTransform,
+        &crate::rolling_stock_anim::TrainCarTrackOffset,
     )>,
 ) {
     let Some(live) = live else { return };
     if audio.engine.is_none() {
         return;
     }
-    let Some(engine) = audio.engine.as_ref() else {
+    let Some(_engine) = audio.engine.as_ref() else {
         return;
     };
     let Ok(camera) = camera.single() else { return };
     let car_distances = |head: Option<Entity>, count| {
         let mut distances = vec![f32::INFINITY; count];
-        for (parent, car, transform) in &cars {
+        for (parent, car, transform, _) in &cars {
             if Some(parent.parent()) == head
                 && let Some(distance) = distances.get_mut(car.0)
             {
@@ -288,10 +330,29 @@ pub fn update_native_audio(
             },
         });
     }
-    let _ = engine;
     let right = camera.rotation() * Vec3::X;
+    let (assets, scene, cache, obstacles) = geometry;
+    let resolver = assets
+        .track_db()
+        .map(|t| cache.resolver(t, Some(assets.tsection())));
+    let listener_car = if *follow == CameraFollowMode::PassengerCam {
+        passenger.as_ref().map_or(0, |p| p.consist_car)
+    } else {
+        live.session.cab_vehicle()
+    };
+    let listener_velocity = if *follow == CameraFollowMode::Off {
+        Vec3::ZERO
+    } else {
+        cars.iter()
+            .find(|(p, i, _, _)| {
+                player_pose.is_some_and(|(e, _)| e == p.parent()) && i.0 == listener_car
+            })
+            .map_or(Vec3::ZERO, |(_, i, t, o)| {
+                crate::train_effects::vehicle_world_velocity(t, o, &live.session, i.0)
+            })
+    };
     let mut spatial = std::collections::HashMap::new();
-    for (parent, car, transform) in &cars {
+    for (parent, car, transform, offset) in &cars {
         let id = if player_pose.is_some_and(|(entity, _)| entity == parent.parent()) {
             0
         } else if let Some((_, marker, _)) = traffic
@@ -302,25 +363,39 @@ pub fn update_native_audio(
         } else {
             continue;
         };
+        let session = if id == 0 {
+            Some(&live.session)
+        } else {
+            live.traffic.services.get(id - 1).map(|s| &s.session)
+        };
+        let Some(session) = session else {
+            continue;
+        };
+        let velocity =
+            crate::train_effects::vehicle_world_velocity(transform, offset, session, car.0);
         let delta = transform.translation() - camera.translation();
-        let distance = delta.length();
-        let now = live.session.time_s();
-        let radial = audio
-            .positions
-            .get(&(id, car.0))
-            .map_or(0.0, |(time, old)| {
-                let dt = now - time;
-                if !live.paused && dt > 0.0 && dt < 1.0 {
-                    (distance - old) / dt as f32
-                } else {
-                    0.0
-                }
-            });
-        audio.positions.insert((id, car.0), (now, distance));
+        let radial = if live.paused {
+            0.
+        } else {
+            (velocity - listener_velocity).dot(delta.normalize_or_zero())
+        };
         spatial.insert(
             (id, car.0),
             SoundPlacement::from_radial_velocity(delta.normalize_or_zero().dot(right), radial),
         );
+        if let Some((edge, position)) = session.presentation_position_for_car(
+            f64::from(offset.offset_m),
+            f64::from(offset.offset_m),
+            0.0,
+        ) && let Some((radius, _, _)) = resolver
+            .as_ref()
+            .and_then(|r| r.curve_on_graph_edge(&scene.graph, &edge, position))
+            && let Some(train) = trains.iter_mut().find(|t| t.id == id)
+            && let Some(state) = train.vehicle_states.get_mut(car.0)
+        {
+            state.curve_squeal =
+                radius.abs() > 0. && radius.abs() < 301. && state.speed.abs() > 0.1;
+        }
     }
     for train in &mut trains {
         train.vehicle_placement = (0..train.vehicle_states.len())
@@ -343,16 +418,29 @@ pub fn update_native_audio(
             CameraFollowMode::DriverCam | CameraFollowMode::Cab2d
         ),
         passenger: *follow == CameraFollowMode::PassengerCam,
-        listener_vehicle: if *follow == CameraFollowMode::PassengerCam {
-            passenger.as_ref().map_or(0, |p| p.consist_car)
-        } else {
-            0
-        },
+        listener_vehicle: listener_car,
         paused: live.paused,
         volume: if settings.audio_enabled {
             settings.audio_volume
         } else {
             0.0
+        },
+        mix: settings.audio_mix,
+        presentation_dt_s: time.delta_secs(),
+        rain_surface: if matches!(
+            *follow,
+            CameraFollowMode::DriverCam | CameraFollowMode::Cab2d
+        ) {
+            openrailsrs_audio::weather::RainSurface::Glass
+        } else if *follow == CameraFollowMode::PassengerCam {
+            openrailsrs_audio::weather::RainSurface::MetalRoof
+        } else if obstacles
+            .as_ref()
+            .is_some_and(|o| o.overhead(camera.translation()))
+        {
+            openrailsrs_audio::weather::RainSurface::Shelter
+        } else {
+            openrailsrs_audio::weather::RainSurface::Outside
         },
         trains,
     });

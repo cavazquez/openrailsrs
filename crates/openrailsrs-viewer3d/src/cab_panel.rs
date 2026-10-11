@@ -414,6 +414,10 @@ mod tests {
     fn cab_panel_formats_diesel_and_brake() {
         let tel = CabTelemetry {
             wheel_slip: false,
+            engine_failure: false,
+            thermal_limiting: false,
+            emergency: false,
+            independent_brake_pct: 0.,
             sander_on: false,
             steam: None,
             diesel: None,
@@ -433,6 +437,7 @@ mod tests {
             direction: 1.0,
             horn_active: false,
             wiper_active: false,
+            wiper_mode: openrailsrs_sim::wiper::WiperMode::Off,
             headlights: 1,
             cab_light: false,
             main_res_bar: 8.0,
@@ -472,6 +477,10 @@ mod tests {
     fn cab_panel_marks_overspeed() {
         let tel = CabTelemetry {
             wheel_slip: false,
+            engine_failure: false,
+            thermal_limiting: false,
+            emergency: false,
+            independent_brake_pct: 0.,
             sander_on: false,
             steam: None,
             diesel: None,
@@ -491,6 +500,7 @@ mod tests {
             direction: 0.5,
             horn_active: false,
             wiper_active: false,
+            wiper_mode: openrailsrs_sim::wiper::WiperMode::Off,
             headlights: 1,
             cab_light: false,
             main_res_bar: 12.0,

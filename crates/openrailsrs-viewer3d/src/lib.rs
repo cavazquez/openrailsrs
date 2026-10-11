@@ -20,6 +20,7 @@ pub mod cab_screen;
 pub mod cab_view;
 pub mod camera;
 pub mod capture;
+pub mod content_validation;
 pub mod etcs;
 mod visual_fault;
 pub use openrailsrs_or_shader::coordinates;
@@ -28,6 +29,7 @@ pub mod dyntrack;
 pub mod enhanced_scenery;
 pub mod environment;
 pub mod floating_origin;
+pub mod forecast;
 pub mod forest;
 pub mod gameplay;
 pub mod hud;
@@ -50,7 +52,9 @@ mod effect_obstacles;
 pub mod electric_contact;
 pub mod gpu_memory;
 pub mod ground_fog;
+mod journey_environment;
 mod launch_audits;
+pub mod moon;
 pub mod native_audio;
 pub mod night_sky;
 pub mod official_content;
@@ -67,6 +71,7 @@ pub mod rolling_stock;
 pub mod rolling_stock_anim;
 pub mod route_bootstrap;
 pub mod route_lighting;
+pub mod save_history;
 pub mod saved_game;
 pub mod scene;
 pub mod scenery_audit;
@@ -276,6 +281,13 @@ impl Plugin for ViewerPlugin {
                     .run_if(live::live_mode_active)
                     .run_if(in_state(ViewerAppState::Playing)),
             );
+        app.add_systems(
+            Update,
+            cab_view::update_desk_motion
+                .after(train_motion::update)
+                .run_if(live::live_mode_active)
+                .run_if(in_state(ViewerAppState::Playing)),
+        );
         app.init_resource::<electric_contact::ElectricContacts>()
             .add_systems(
                 Update,
@@ -371,6 +383,14 @@ impl Plugin for ViewerPlugin {
                 .run_if(in_state(ViewerAppState::Playing)),
         );
         app.add_plugins(bevy::pbr::MaterialPlugin::<sky::RailwaySkyMaterial>::default());
+        app.add_plugins(bevy::pbr::MaterialPlugin::<moon::MoonMaterial>::default())
+            .init_resource::<moon::MoonState>()
+            .add_systems(
+                Update,
+                moon::update
+                    .after(route_lighting::update_route_sun)
+                    .run_if(in_state(ViewerAppState::Playing)),
+            );
         app.init_resource::<native_audio::NativeAudio>();
         app.add_systems(
             OnEnter(ViewerAppState::Playing),
@@ -460,6 +480,7 @@ impl Plugin for ViewerPlugin {
                     scene::spawn_ground_and_lights,
                     sky::spawn_sky_dome.run_if(launch::sky_dome_active),
                     night_sky::spawn_stars.run_if(launch::sky_dome_active),
+                    moon::spawn.run_if(launch::sky_dome_active),
                     ground_fog::spawn_ground_fog.run_if(launch::sky_dome_active),
                     train_lighting::spawn_train_lights.run_if(live::live_mode_active),
                     terrain::init_terrain_spawn_progress.run_if(launch::full_scenery_active),
@@ -744,6 +765,7 @@ impl Plugin for ViewerPlugin {
                         .run_if(player_ui::world_input_available)
                         .after(cab_cvf_overlay::update_cab_cvf_overlay)
                         .run_if(live::live_mode_active),
+                    cab_profile::remember_view.after(camera::follow_train_camera),
                     camera::update_driver_camera_fov,
                     overspeed_flash::tick_overspeed_flash.run_if(live::live_mode_active),
                     overspeed_flash::apply_overspeed_flash.run_if(live::live_mode_active),

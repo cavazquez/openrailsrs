@@ -69,6 +69,12 @@ impl SavedCamera {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SavedGame {
     pub version: u32,
+    #[serde(default)]
+    pub created_utc: Option<i64>,
+    #[serde(default)]
+    pub train_name: String,
+    #[serde(default)]
+    pub player_options: Option<SavedPlayerOptions>,
     pub scenario_toml: String,
     pub route_root: Option<PathBuf>,
     pub description: String,
@@ -84,6 +90,35 @@ pub struct SavedGame {
     pub weather_checkpoint: Option<crate::weather_state::WeatherCheckpoint>,
     pub camera: SavedCamera,
 }
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SavedPlayerOptions {
+    pub quick_stations: bool,
+    pub strict_service: bool,
+    pub traffic_brake_assistance: bool,
+    pub ambient_temperature_c: Option<f32>,
+    #[serde(default)]
+    pub sky_date: Option<String>,
+}
+impl SavedPlayerOptions {
+    pub fn capture(s: &crate::player_settings::PlayerSettings) -> Self {
+        Self {
+            quick_stations: s.quick_station_practice,
+            strict_service: s.strict_service,
+            traffic_brake_assistance: s.traffic_brake_assistance,
+            ambient_temperature_c: s.ambient_temperature_c,
+            sky_date: Some(s.sky_date.clone()),
+        }
+    }
+    pub fn apply(&self, s: &mut crate::player_settings::PlayerSettings) {
+        s.quick_station_practice = self.quick_stations;
+        s.strict_service = self.strict_service;
+        s.traffic_brake_assistance = self.traffic_brake_assistance;
+        s.ambient_temperature_c = self.ambient_temperature_c;
+        if let Some(date) = &self.sky_date {
+            s.sky_date = date.clone();
+        }
+    }
+}
 impl SavedGame {
     pub fn save(
         live: &mut LiveDrive,
@@ -91,9 +126,21 @@ impl SavedGame {
         camera: SavedCamera,
         path: &Path,
         weather: Option<&crate::weather_state::WeatherState>,
+        settings: Option<&crate::player_settings::PlayerSettings>,
     ) -> Result<(), String> {
         let game = Self {
             version: 1,
+            created_utc: Some(chrono::Utc::now().timestamp()),
+            train_name: live
+                .session
+                .formation
+                .cars
+                .iter()
+                .map(|c| c.name.as_str())
+                .take(3)
+                .collect::<Vec<_>>()
+                .join(" / "),
+            player_options: settings.map(SavedPlayerOptions::capture),
             scenario_toml: canonical_scenario(live.scenario_path())?,
             route_root: content.route_root.clone(),
             description: content.description.clone(),
@@ -106,10 +153,19 @@ impl SavedGame {
             weather_checkpoint: weather.and_then(crate::weather_state::WeatherState::checkpoint),
             camera,
         };
-        atomic_write(
-            path,
-            &serde_json::to_vec_pretty(&game).map_err(|e| e.to_string())?,
-        )
+        let bytes = serde_json::to_vec_pretty(&game).map_err(|e| e.to_string())?;
+        atomic_write(path, &bytes)?;
+        // A replaced slot remains available in history. Private application
+        // archives are independent of downloaded route/vehicle content.
+        if path.parent() == Some(player_data_dir().as_path()) {
+            let history = player_data_dir().join("history");
+            let id = format!(
+                "{}.json",
+                chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)
+            );
+            atomic_write(&history.join(id), &bytes)?;
+        }
+        Ok(())
     }
     pub fn read(path: &Path) -> Result<Self, String> {
         if std::fs::metadata(path).map_err(|e| e.to_string())?.len() > 16 * 1024 * 1024 {
@@ -117,7 +173,15 @@ impl SavedGame {
         }
         let game: Self = serde_json::from_slice(&std::fs::read(path).map_err(|e| e.to_string())?)
             .map_err(|e| format!("No se puede leer la partida: {e}"))?;
-        if game.version != 1
+        if game.player_options.as_ref().is_some_and(|o| {
+            o.sky_date.as_ref().is_some_and(|d| {
+                d.parse::<chrono::NaiveDate>()
+                    .ok()
+                    .is_none_or(|d| !(1900..=2100).contains(&chrono::Datelike::year(&d)))
+            }) || o
+                .ambient_temperature_c
+                .is_some_and(|t| !t.is_finite() || !(-45.0..=45.0).contains(&t))
+        }) || game.version != 1
             || game
                 .weather_checkpoint
                 .as_ref()
@@ -151,8 +215,15 @@ impl SavedGame {
         }
         Ok(game)
     }
+    pub(crate) fn validate_route_available(&self) -> Result<(), String> {
+        if self.route_root.as_ref().is_some_and(|root| !root.is_dir()) {
+            return Err("La carpeta de la ruta guardada ya no está disponible; reinstalá el contenido original en su ubicación antes de continuar".into());
+        }
+        Ok(())
+    }
     pub fn prepare_resume(path: &Path) -> Result<QueuedPlayerLaunch, String> {
         let game = Self::read(path)?;
+        game.validate_route_available()?;
         let scenario = crate::player_launch::absolute(&player_data_dir().join("resume.toml"));
         atomic_write(&scenario, game.scenario_toml.as_bytes())?;
         Ok(QueuedPlayerLaunch {
@@ -167,9 +238,11 @@ impl SavedGame {
                 }),
             resume: Some(path.to_path_buf()),
             weather_checkpoint: game.weather_checkpoint,
+            player_options: game.player_options,
         })
     }
     pub fn restore(self, live: &mut LiveDrive) -> Result<SavedCamera, String> {
+        self.validate_route_available()?;
         live.session.validate_snapshot(&self.session)?;
         live.traffic.validate_snapshot(&self.traffic)?;
         openrailsrs_sim::SessionSnapshot::validate_shared_dispatcher(
@@ -332,7 +405,7 @@ mod tests {
         let weather = weather_app
             .world()
             .resource::<crate::weather_state::WeatherState>();
-        SavedGame::save(&mut original, &content, cam, &save, Some(weather)).unwrap();
+        SavedGame::save(&mut original, &content, cam, &save, Some(weather), None).unwrap();
         let game = SavedGame::read(&save).unwrap();
         assert_eq!(game.environment, Some(content.environment));
         assert_eq!(game.weather_checkpoint.as_ref().unwrap().seed, 81);

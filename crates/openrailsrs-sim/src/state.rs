@@ -21,6 +21,8 @@ pub struct TrainSimState {
     pub native_dynamics: Option<crate::native_dynamics::NativeDynamicsState>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rail_adhesion: Option<crate::adhesion::RailAdhesionState>,
+    #[serde(default = "default_ambient")]
+    pub ambient_temperature_c: f64,
     pub time: SimTime,
     #[serde(default)]
     pub path_reversed: bool,
@@ -81,6 +83,7 @@ impl TrainSimState {
             power_supply: Default::default(),
             native_dynamics: None,
             rail_adhesion: None,
+            ambient_temperature_c: default_ambient(),
             time: SimTime(0.0),
             path_reversed: false,
             path_edges,
@@ -156,4 +159,8 @@ impl TrainSimState {
     pub fn time_s(&self) -> f64 {
         self.time.seconds()
     }
+}
+
+fn default_ambient() -> f64 {
+    20.0
 }

@@ -46,6 +46,7 @@ pub struct TrainEffects {
     last_clock: Option<f64>,
     shift: Vec3,
     wind: Vec3,
+    temperature_c: f32,
     requested: WeatherExecution,
     execution: WeatherExecution,
     adaptive: AdaptiveWeather,
@@ -70,9 +71,9 @@ impl TrainEffects {
             .iter()
             .map(|p| p.velocity.length())
             .fold(0.0_f32, f32::max);
-        serde_json::json!({"enabled":!self.disabled,"render_layers":[0],"native_emitters":self.emitters.len(),"live_particles":(!has_gpu).then_some(self.particles.len()),"particle_limit":MAX_PARTICLES,
+        serde_json::json!({"enabled":!self.disabled,"render_layers":[0],"native_emitters":self.emitters.iter().filter(|e|e.data.name!="sander_contact").count(),"sander_contact_emitters":self.emitters.iter().filter(|e|e.data.name=="sander_contact").count(),"live_particles":(!has_gpu).then_some(self.particles.len()),"particle_limit":MAX_PARTICLES,
             "cpu_obstacle_hits":self.cpu_collisions,"nearby_opaque_bounds":self.obstacle_count,"gpu_bounds_per_emitter":8,"steam_pulses_follow_wheels":true,
-            "wind_mps":self.wind.to_array(),"inherits_vehicle_velocity":true,
+            "wind_mps":self.wind.to_array(),"temperature_c":self.temperature_c,"inherits_vehicle_velocity":true,
             "requested":self.requested,"execution":self.execution,"gpu_backend":self.emitters.iter().any(|e|e.gpu.is_some()).then_some("bevy_hanabi 0.19.0"),
             "fallback_reason":self.fallback_reason,
             "gpu_emitters":self.emitters.iter().filter(|e|e.gpu.is_some()).count(),
@@ -92,7 +93,7 @@ impl TrainEffects {
             .map(|e| e.capacity)
             .sum::<usize>();
         format!(
-            "Humo/vapor: {} · capacidad {capacity} GPU + {} CPU · {} emisores originales",
+            "Humo/vapor: {} · capacidad {capacity} GPU + {} CPU · {} emisores",
             self.execution.label(),
             self.cpu_capacity,
             self.emitters.len()
@@ -155,7 +156,12 @@ pub fn spawn(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
-    cars: Query<(Entity, &ConsistCarIndex, &TrainCarTrackOffset)>,
+    cars: Query<(
+        Entity,
+        &ConsistCarIndex,
+        &TrainCarTrackOffset,
+        Option<&crate::rolling_stock_anim::TrainCarSupports>,
+    )>,
     origin: Res<FloatingOrigin>,
 ) {
     let Ok(scenario) = openrailsrs_scenarios::load_scenario(live.scenario_path()) else {
@@ -174,7 +180,7 @@ pub fn spawn(
         shift: origin.shift,
         ..default()
     };
-    for (entity, index, offset) in &cars {
+    for (entity, index, offset, _supports) in &cars {
         let Some(path) = paths.get(offset.track_index) else {
             continue;
         };
@@ -192,6 +198,44 @@ pub fn spawn(
                     gpu_credit: 0.0,
                     gpu: None,
                 }));
+        }
+    }
+    for (entity, index, offset, supports) in &cars {
+        let session = if offset.track_index == 0 {
+            Some(&live.session)
+        } else {
+            live.traffic
+                .services
+                .get(offset.track_index - 1)
+                .map(|s| &s.session)
+        };
+        if session.is_none_or(|s| !s.formation.cars.get(index.0).is_some_and(|c| c.powered))
+            || effects
+                .emitters
+                .iter()
+                .any(|e| e.car == entity && e.data.name.to_ascii_lowercase().contains("sand"))
+        {
+            continue;
+        }
+        let Some(supports) = supports else {
+            continue;
+        };
+        for z in [supports.front_m, supports.rear_m] {
+            for x in [-0.7175, 0.7175] {
+                effects.emitters.push(Emitter {
+                    car: entity,
+                    track: offset.track_index,
+                    data: openrailsrs_formats::VehicleEmitter {
+                        name: "sander_contact".into(),
+                        position: [x, 0.18, -z],
+                        direction: [0., -1., 0.],
+                        radius_m: 0.007,
+                    },
+                    credit: 0.,
+                    gpu_credit: 0.,
+                    gpu: None,
+                });
+            }
         }
     }
     crate::viewer_log!(
@@ -236,7 +280,7 @@ pub fn spawn(
         ExhaustMesh,
         NotShadowCaster,
         bevy::camera::visibility::NoFrustumCulling,
-        Mesh3d(meshes.add(particle_mesh(&[], &Transform::IDENTITY))),
+        Mesh3d(meshes.add(particle_mesh(&[], &Transform::IDENTITY, 20.0))),
         MeshMaterial3d(material),
         Transform::IDENTITY,
         Name::new("native train exhaust"),
@@ -253,6 +297,16 @@ fn emission(
     let n = name.to_ascii_lowercase();
     let t = session.cab_telemetry();
     let load = t.traction_load_fraction.max(session.state.throttle * 0.5) as f32;
+    if n.contains("sand") {
+        let delivered = vehicle < session.formation.coupled_count
+            && session
+                .state
+                .rail_adhesion
+                .as_ref()
+                .and_then(|r| r.cars.get(vehicle))
+                .is_some_and(|c| c.using_sand);
+        return (if delivered { 36. } else { 0. }, false, -1.);
+    }
     if n.starts_with("exhaust") {
         if session
             .state
@@ -328,7 +382,7 @@ fn steam_pulse(strokes: f64, working: bool) -> f32 {
 
 /// Native shapes face -Z after MSTS conversion. Flip reverses the authored
 /// vehicle frame, not its direction of travel; the reverser supplies that sign.
-fn vehicle_world_velocity(
+pub(crate) fn vehicle_world_velocity(
     car: &GlobalTransform,
     offset: &TrainCarTrackOffset,
     session: &openrailsrs_sim::LiveDriveSession,
@@ -358,15 +412,23 @@ fn advance_puff(puff: &mut Puff, dt: f32, wind: Vec3) {
     if dt <= 0.0 {
         return;
     }
-    let drag = if puff.steam { 1.7 } else { 1.1 };
-    let equilibrium = wind + Vec3::Y * (0.35 / drag);
+    let sand = puff.load < 0.;
+    let drag = if sand {
+        5.0
+    } else if puff.steam {
+        1.7
+    } else {
+        1.1
+    };
+    let equilibrium =
+        wind * if sand { 0.1 } else { 1. } + Vec3::Y * (if sand { -7.0 } else { 0.35 } / drag);
     let relative = puff.velocity - equilibrium;
     let decay = (-drag * dt).exp();
     let turbulence = |age: f32| {
         Vec3::new(
-            (age * 2.7 + puff.phase).sin() * 0.18,
+            (age * 2.7 + puff.phase).sin() * if sand { 0.002 } else { 0.18 },
             0.0,
-            (age * 1.9 + puff.phase * 1.3).cos() * 0.16,
+            (age * 1.9 + puff.phase * 1.3).cos() * if sand { 0.002 } else { 0.16 },
         )
     };
     puff.position +=
@@ -451,6 +513,10 @@ pub fn update(
         focus,
         fog,
     } = scene;
+    effects.temperature_c = atmosphere
+        .as_ref()
+        .map_or(20.0, |s| s.atmosphere.temperature_c);
+    let temperature_c = effects.temperature_c;
     let (Ok(camera), Ok(mesh)) = (camera.single(), mesh.single()) else {
         return;
     };
@@ -468,7 +534,7 @@ pub fn update(
         if !effects.particles.is_empty()
             && let Some(mut mesh) = meshes.get_mut(&mesh.0)
         {
-            *mesh = particle_mesh(&[], camera);
+            *mesh = particle_mesh(&[], camera, effects.temperature_c);
         }
         effects.particles.clear();
         effects.configuration = None;
@@ -586,7 +652,9 @@ pub fn update(
         }
     }
     effects.cpu_collisions += collisions;
-    effects.particles.retain(|p| p.age < PUFF_LIFETIME_S);
+    effects
+        .particles
+        .retain(|p| p.age < if p.load < 0. { 0.35 } else { PUFF_LIFETIME_S });
     let capacity = effects.cpu_capacity.saturating_sub(effects.particles.len());
     let mut born = Vec::new();
     let mut gpu_spawn_requests = 0;
@@ -609,6 +677,19 @@ pub fn update(
                 continue;
             }
             let (rate, steam, load) = emission(&emitter.data.name, session, index.0);
+            let sand = load < 0.;
+            let leading = if offset.flipped ^ (session.driver_direction <= 0.25) {
+                -1.
+            } else {
+                1.
+            };
+            if sand
+                && emitter.data.name == "sander_contact"
+                && emitter.data.position[2] * leading < 0.
+            {
+                continue;
+            }
+
             // Catch up old plumes on the simulation clock, but only emit the
             // latest interval after loading or accelerated time. Neither the
             // retained particles nor the temporary birth buffer can exceed
@@ -628,11 +709,15 @@ pub fn update(
             let count = (emitter.credit.floor() as usize).min(MAX_PARTICLES);
             emitter.credit = emitter.credit.fract();
             let velocity = vehicle_world_velocity(car, offset, session, index.0)
-                + car.rotation() * direction * (1.2 + load * 2.0)
-                + Vec3::Y * 0.5;
+                + car.rotation() * direction * if sand { 0.35 } else { 1.2 + load * 2.0 }
+                + Vec3::Y * if sand { -0.15 } else { 0.5 };
             let world_position = car.transform_point(position);
-            let radius = emitter.data.radius_m.max(0.05);
-            let (shade, opacity) = appearance(steam, load);
+            let radius = emitter.data.radius_m.max(if sand { 0.005 } else { 0.05 });
+            let (shade, opacity) = if sand {
+                (0.65, 0.9)
+            } else {
+                appearance(steam, load, temperature_c)
+            };
             let gpu_count = split_births(emitter, count, mode);
             if let Some(emitter) = &emitter.gpu
                 && let Ok((mut properties, mut spawner, anchor, compiled)) =
@@ -737,16 +822,20 @@ pub fn update(
                 || effects.last_camera_rotation != Some(camera.rotation));
     effects.particles.extend(born);
     if changed && let Some(mut mesh) = meshes.get_mut(&mesh.0) {
-        *mesh = particle_mesh(&effects.particles, camera);
+        *mesh = particle_mesh(&effects.particles, camera, effects.temperature_c);
         effects.cpu_mesh_updates += 1;
     }
     effects.last_camera_rotation = Some(camera.rotation);
 }
 
-fn appearance(steam: bool, load: f32) -> (f32, f32) {
+fn appearance(steam: bool, load: f32, temperature_c: f32) -> (f32, f32) {
     (
         if steam { 0.88 } else { 0.55 - load * 0.35 },
-        if steam { 0.6 } else { 0.7 },
+        if steam {
+            0.6 * crate::journey_environment::condensation(temperature_c)
+        } else {
+            0.7
+        },
     )
 }
 
@@ -801,7 +890,12 @@ fn configure_gpu(
                 .name
                 .to_ascii_lowercase()
                 .starts_with("exhaust");
-            let handle = gpu_assets.handle(assets, steam, quota);
+            let handle = gpu_assets.handle(
+                assets,
+                steam,
+                emitter.data.name.to_ascii_lowercase().contains("sand"),
+                quota,
+            );
             emitter.gpu = Some(gpu::spawn(
                 commands,
                 handle,
@@ -811,7 +905,7 @@ fn configure_gpu(
         }
     }
 }
-fn particle_mesh(particles: &[Puff], camera: &Transform) -> Mesh {
+fn particle_mesh(particles: &[Puff], camera: &Transform, temperature_c: f32) -> Mesh {
     let mut positions = Vec::with_capacity(particles.len() * 4);
     let mut normals = Vec::with_capacity(particles.len() * 4);
     let mut uvs = Vec::with_capacity(particles.len() * 4);
@@ -840,14 +934,27 @@ fn particle_mesh(particles: &[Puff], camera: &Transform) -> Mesh {
     for p in particles {
         let right = camera_right * p.phase.cos() + camera_up * p.phase.sin();
         let up = -camera_right * p.phase.sin() + camera_up * p.phase.cos();
-        let radius = p.radius * (1.0 + p.age * 4.0);
-        let (shade, opacity) = appearance(p.steam, p.load);
-        let alpha = (1.0 - p.age / PUFF_LIFETIME_S).powi(2) * opacity;
+        let sand = p.load < 0.;
+        let radius = p.radius * (1.0 + p.age * if sand { 0.0 } else { 4.0 });
+        let (shade, opacity) = if sand {
+            (0.65, 0.9)
+        } else {
+            appearance(p.steam, p.load, temperature_c)
+        };
+        let alpha = (1.0 - p.age / if sand { 0.35 } else { PUFF_LIFETIME_S })
+            .max(0.)
+            .powi(2)
+            * opacity;
         let base = positions.len() as u32;
         for (x, y) in [(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)] {
             positions.push((p.position + (right * x + up * y) * radius).to_array());
             normals.push(normal.to_array());
-            colors.push([shade, shade, shade, alpha]);
+            colors.push([
+                shade,
+                shade * if sand { 0.78 } else { 1. },
+                shade * if sand { 0.46 } else { 1. },
+                alpha,
+            ]);
         }
         uvs.extend([[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]]);
         indices.extend([base, base + 1, base + 2, base, base + 2, base + 3]);
@@ -976,7 +1083,7 @@ mod tests {
         let mesh = app
             .world_mut()
             .resource_mut::<Assets<Mesh>>()
-            .add(particle_mesh(&[], &Transform::IDENTITY));
+            .add(particle_mesh(&[], &Transform::IDENTITY, 20.0));
         app.world_mut().spawn((ExhaustMesh, Mesh3d(mesh)));
         let sample: crate::environment::WeatherSample = serde_json::from_value(serde_json::json!({
             "time":1791100800_i64,"weather_code":61,"temperature_2m":10.0,"cloud_cover":80.0,
@@ -1102,13 +1209,13 @@ mod tests {
             phase: 0.0,
             source: None,
         };
-        let mesh = particle_mesh(&[p], &Transform::IDENTITY);
+        let mesh = particle_mesh(&[p], &Transform::IDENTITY, 20.0);
         assert_eq!(mesh.count_vertices(), 4);
         assert_eq!(mesh.indices().unwrap().len(), 6);
     }
     #[test]
     fn idle_mesh_has_valid_buffers_and_no_visible_particles() {
-        let mesh = particle_mesh(&[], &Transform::IDENTITY);
+        let mesh = particle_mesh(&[], &Transform::IDENTITY, 20.0);
         assert_eq!(mesh.count_vertices(), 4);
         assert_eq!(mesh.indices().unwrap().len(), 6);
         let Some(bevy::mesh::VertexAttributeValues::Float32x4(colors)) =
@@ -1117,5 +1224,24 @@ mod tests {
             panic!("missing color");
         };
         assert!(colors.iter().all(|color| color[3] == 0.0));
+    }
+
+    #[test]
+    fn plan30_sand_reads_delivered_mass_and_condensation_leaves_physical_flow_unchanged() {
+        let mut s = session("scenario.toml");
+        assert_eq!(emission("SanderSpecialEffects", &s, 0).0, 0.);
+        s.set_rail_weather(openrailsrs_sim::adhesion::RailWeather::Rain);
+        s.toggle_sander().unwrap();
+        s.driver_direction = 1.;
+        s.state.velocity_mps = 12.;
+        s.step_realtime(0.1, |_| {});
+        assert!(s.state.rail_adhesion.is_some());
+        assert!(emission("SanderSpecialEffects", &s, 0).0 > 0.);
+        s.formation.coupled_count = 0;
+        assert_eq!(emission("SanderSpecialEffects", &s, 0).0, 0.);
+        let steam = session("scenario_steam.toml");
+        let flow = emission("StackFX", &steam, 0);
+        assert!(appearance(true, 0.5, -10.).1 > appearance(true, 0.5, 30.).1);
+        assert_eq!(flow, emission("StackFX", &steam, 0));
     }
 }

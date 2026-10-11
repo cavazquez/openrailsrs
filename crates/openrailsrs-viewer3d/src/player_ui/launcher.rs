@@ -314,6 +314,7 @@ pub(super) fn build_new_game(
                                 13.0,
                                 MUTED,
                             );
+                            label(p, crate::content_validation::summary(audit), 12.0, MUTED);
                             if let Some(warning) = previews
                                 .and_then(|p| p.railway.as_ref())
                                 .and_then(|railway| {
@@ -349,6 +350,23 @@ pub(super) fn build_new_game(
             );
         }
         NewGameStep::Environment => {
+            label(
+                p,
+                crate::forecast::text(
+                    menu.environment,
+                    settings.weather_profile,
+                    menu.weather,
+                    settings.weather_seed,
+                    crate::weather_journey::JourneyOptions {
+                        pace: settings.weather_pace,
+                        winter: menu.season == 3,
+                    },
+                    0.,
+                    None,
+                ),
+                12.,
+                MUTED,
+            );
             let mode = WeatherMode::selected(menu.environment, settings.weather_profile);
             label(p, "Prepará las condiciones del viaje", 21.0, TEXT);
             selector(
@@ -612,33 +630,78 @@ fn short(value: &str, limit: usize) -> String {
     }
 }
 
-pub(super) fn build_continue(p: &mut ChildSpawnerCommands<'_>) {
-    label(p, "Tus partidas guardadas", 21.0, TEXT);
+pub(super) fn build_continue(
+    p: &mut ChildSpawnerCommands<'_>,
+    ui: &PlayerUiState,
+    history: &crate::save_history::SaveHistory,
+) {
+    label(p, "Partidas e historial", 21.0, TEXT);
     label(
         p,
-        "Al reanudar se recuperan el tren, el servicio y la cámara. La partida empieza pausada.",
-        14.0,
+        "Se conservan las versiones anteriores de cada guardado. Reanudar valida contenido y abre la partida pausada.",
+        13.0,
         MUTED,
     );
-    for slot in 0..3 {
+    row(p, |p| {
+        button(
+            p,
+            format!(
+                "Buscar ruta, tren o fecha: {}{}",
+                ui.history_query,
+                if ui.history_focus { " ▏" } else { "" }
+            ),
+            UiCommand::HistorySearch,
+        );
+        button(p, "Actualizar", UiCommand::HistoryRefresh);
+    });
+    row(p, |p| {
+        for filter in crate::save_history::Filter::ALL {
+            button(
+                p,
+                format!(
+                    "{}{}",
+                    if ui.history_filter == filter {
+                        "✓ "
+                    } else {
+                        ""
+                    },
+                    filter.label()
+                ),
+                UiCommand::HistoryFilter(filter),
+            );
+        }
+    });
+    if history.loading {
+        label(p, "Revisando guardados en segundo plano…", 13.0, MUTED);
+    }
+    let mut count = 0;
+    for (index, entry) in history
+        .entries
+        .iter()
+        .enumerate()
+        .filter(|(_, e)| ui.history_filter.matches(e, &ui.history_query))
+    {
+        count += 1;
         card(p, |p| {
-            label(p, format!("Partida {}", slot + 1), 16.0, ACCENT);
-            match SavedGame::read(&slot_path(slot)) {
-                Ok(saved) => {
-                    label(p, saved_game_label(&saved), 14.0, TEXT);
-                    button(p, "Reanudar", UiCommand::Resume(slot));
+            label(p, entry.label(), 14.0, TEXT);
+            match &entry.compatible {
+                Ok(()) => {
+                    button(p, "Reanudar", UiCommand::ResumeHistory(index));
                 }
-                Err(_) => {
-                    label(p, "Sin una partida válida en esta ranura.", 13.0, MUTED);
+                Err(e) => {
+                    label(p, format!("Incompatible: {e}"), 13.0, CAUTION);
                 }
             }
         });
     }
-    button(
-        p,
-        "Empezar una nueva partida",
-        UiCommand::Open(PlayerPanel::NewGame),
-    );
+    if count == 0 && !history.loading {
+        label(
+            p,
+            "No hay partidas que coincidan con esta búsqueda.",
+            13.0,
+            MUTED,
+        );
+    }
 }
 
 pub(super) fn build_library_tabs(p: &mut ChildSpawnerCommands<'_>, selected: LibraryTab) {
