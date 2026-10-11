@@ -212,12 +212,14 @@ mod tests {
                 edge_speed_limits: vec![],
             },
             train: TrainSection {
+                power_load: Default::default(),
                 electric_pickups: vec![],
                 consist: "from_act.con".into(),
                 davis: None,
                 max_capacity: None,
             },
             gameplay: GameplaySection {
+                shunting: vec![],
                 objective: ObjectiveKind::Arrive,
                 time_limit_seconds: None,
                 difficulty: crate::Difficulty::Normal,

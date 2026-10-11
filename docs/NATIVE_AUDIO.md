@@ -114,11 +114,13 @@ Esta corrección está en las fuentes y el payload de QA. **No está incluida en
 ## Límites
 
 Este oráculo comprueba semántica y ganancia, **no identidad acústica de una
-partida completa con OpenAL**. Faltan, entre otras cosas, propagación estéreo
-espacial/Doppler equivalentes, corrección por apertura de ventanas, sonidos
+partida completa con OpenAL**. Los exteriores mono reciben balance posicional
+y Doppler acotado; interiores, Ignore3D y estéreo conservan la mezcla original.
+Faltan equivalencia acústica completa, corrección por apertura de ventanas, sonidos
 automáticos de cambios de tipo de vía y todos los comandos/scripts de sonido
-del contenido. El freno independiente necesita su propia física y telemetría;
-la primera muestra de presiones fija la referencia al iniciar/restaurar para
+del contenido. El independiente neumático ya dispone de circuito y telemetría;
+las variables SMS utilizan la presión efectiva por vehículo.
+La primera muestra de presiones fija la referencia al iniciar/restaurar para
 evitar cambios de sonido artificiales. La carga eléctrica todavía usa demanda
 como aproximación y la admisión de vapor deriva del esfuerzo del modelo
 de caldera simplificado; la variable de freno dinámico no reproduce

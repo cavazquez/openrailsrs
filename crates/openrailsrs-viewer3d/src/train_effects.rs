@@ -266,21 +266,10 @@ fn emission(
             .boiler_state
             .as_ref()
             .map_or(0., |b| b.coal_burn_kg_s as f32);
-        let params = session.vehicle_definition(vehicle).and_then(|v| match v {
-            openrailsrs_train::Vehicle::Loco(l) => l.steam.as_ref(),
-            _ => None,
-        });
-        let wheel_radius = params.map_or(0.8, |s| s.driving_wheel_radius_m);
-        let strokes = params.map_or(4.0, |s| f64::from(s.cylinder_count) * 2.0);
-        let distance =
-            session.state.odometer_m + session.render_wheel_slip_distance_m(vehicle, 0.0);
-        let phase = distance / (std::f64::consts::TAU * wheel_radius) * strokes;
-        let working = session
-            .state
-            .boiler_state
-            .as_ref()
-            .is_some_and(|b| b.tractive_force_n > 0.0 && !b.low_water_failure)
-            && session.velocity_mps().abs() > 0.1;
+        let motion = session.steam_motion(vehicle, 0.0);
+        let phase = motion.map_or(0.0, |m| m.stroke_phase);
+        let working = motion.is_some_and(|m| m.working && m.frequency_hz > 0.1);
+        let load = motion.map_or(0.0, |m| m.load) as f32;
         return (burning * 40.0 * steam_pulse(phase, working), true, load);
     }
     if n.contains("cylinder") {

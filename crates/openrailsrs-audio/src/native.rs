@@ -13,7 +13,7 @@ use std::{
     path::{Path, PathBuf},
     sync::{
         Arc, Mutex,
-        atomic::{AtomicU8, Ordering},
+        atomic::{AtomicU8, AtomicU32, Ordering},
         mpsc,
     },
 };
@@ -101,12 +101,15 @@ impl SoundState {
         }
         if let (Some(now), Some(before)) = (self.steam_phase, old.steam_phase)
             && self.throttle > 0.0
-            && now >= before
+            && now.is_finite()
+            && before.is_finite()
         {
-            let start = (before.floor() as u64).saturating_add(1);
-            let end = now.floor() as u64;
-            for phase in start.max(end.saturating_sub(63))..=end {
-                e.push(121 + ((phase - 1) % 16) as u32);
+            let a = before.floor() as i64;
+            let b = now.floor() as i64;
+            let direction = if b >= a { 1 } else { -1 };
+            for i in 1..=b.abs_diff(a).min(64) {
+                let phase = a.saturating_add((i as i64) * direction);
+                e.push(121 + phase.wrapping_sub(1).rem_euclid(16) as u32);
             }
         }
         e
@@ -179,6 +182,38 @@ pub struct TrainSoundFrame {
     /// RPM, pressure and events belong to each car, not the whole formation.
     /// A short or absent vector retains the train-level fallback for oracles.
     pub vehicle_states: Vec<SoundState>,
+    /// Listener-relative placement, optional for old offline reference frames.
+    pub vehicle_placement: Vec<SoundPlacement>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct SoundPlacement {
+    pub pan: f32,
+    pub doppler: f32,
+}
+impl Default for SoundPlacement {
+    fn default() -> Self {
+        Self {
+            pan: 0.0,
+            doppler: 1.0,
+        }
+    }
+}
+impl SoundPlacement {
+    pub fn from_radial_velocity(pan: f32, receding_mps: f32) -> Self {
+        Self {
+            pan: if pan.is_finite() {
+                pan.clamp(-1.0, 1.0)
+            } else {
+                0.0
+            },
+            doppler: if receding_mps.is_finite() && receding_mps.abs() <= 100.0 {
+                (343.0 / (343.0 + receding_mps)).clamp(0.75, 1.35)
+            } else {
+                1.0
+            },
+        }
+    }
 }
 impl TrainSoundFrame {
     fn vehicle_state(&self, index: usize) -> SoundState {
@@ -659,6 +694,47 @@ struct StreamRuntime {
     enabled: Vec<bool>,
     deadlines: Vec<f64>,
     choices: Vec<usize>,
+    pan: Arc<AtomicU32>,
+}
+
+/// Mono positional SMS sources become stereo without moving authored stereo
+/// or Ignore3D programs. The shared pan changes without reloading a sample.
+struct PannedSource {
+    source: LoopSource,
+    pan: Arc<AtomicU32>,
+    right: Option<f32>,
+}
+impl Iterator for PannedSource {
+    type Item = f32;
+    fn next(&mut self) -> Option<f32> {
+        if let Some(right) = self.right.take() {
+            return Some(right);
+        }
+        let mut mono = self.source.next()?;
+        let channels = self.source.channels().get();
+        for _ in 1..channels {
+            mono += self.source.next()?;
+        }
+        mono /= f32::from(channels);
+        let pan = f32::from_bits(self.pan.load(Ordering::Relaxed)).clamp(-1.0, 1.0);
+        // Centre retains the native mono gain; extremes eliminate the far ear.
+        self.right = Some(mono * (1.0 + pan).min(1.0));
+        Some(mono * (1.0 - pan).min(1.0))
+    }
+}
+impl Source for PannedSource {
+    fn current_span_len(&self) -> Option<usize> {
+        None
+    }
+    fn channels(&self) -> rodio::ChannelCount {
+        rodio::ChannelCount::new(2).unwrap()
+    }
+    fn sample_rate(&self) -> rodio::SampleRate {
+        self.source.sample_rate()
+    }
+    fn total_duration(&self) -> Option<std::time::Duration> {
+        None
+    }
 }
 struct Playback {
     bank: NativeSoundBank,
@@ -699,6 +775,7 @@ impl Playback {
                         enabled: vec![true; s.triggers.len()],
                         deadlines: vec![0.0; s.triggers.len()],
                         choices: vec![0; s.triggers.len()],
+                        pan: Arc::new(AtomicU32::new(0.0_f32.to_bits())),
                     })
                     .collect()
             })
@@ -804,6 +881,16 @@ impl Playback {
                     1.0
                 };
             for (stream, voice) in bank.program.streams.iter().zip(voices) {
+                let placement = if external && !bank.program.ignore_3d && !bank.program.stereo {
+                    train
+                        .vehicle_placement
+                        .get(bank.vehicle)
+                        .copied()
+                        .unwrap_or_default()
+                } else {
+                    SoundPlacement::default()
+                };
+                voice.pan.store(placement.pan.to_bits(), Ordering::Relaxed);
                 for (i, trigger) in stream.triggers.iter().enumerate() {
                     if !voice.enabled[i] {
                         continue;
@@ -888,13 +975,22 @@ impl Playback {
                                 voice.player.stop();
                                 voice.player = Player::connect_new(&self.mixer);
                                 let release = Arc::new(AtomicU8::new(0));
-                                voice.player.append(LoopSource {
+                                let source = LoopSource {
                                     source: wave.samples.clone(),
                                     wave: wave.clone(),
                                     elapsed_samples: 0,
                                     release: release.clone(),
                                     looping: *looping,
-                                });
+                                };
+                                if external && !bank.program.ignore_3d && !bank.program.stereo {
+                                    voice.player.append(PannedSource {
+                                        source,
+                                        pan: voice.pan.clone(),
+                                        right: None,
+                                    });
+                                } else {
+                                    voice.player.append(source);
+                                }
                                 voice.rate = wave.rate;
                                 voice.stereo_speed =
                                     if bank.program.stereo && wave.samples.channels().get() == 1 {
@@ -942,7 +1038,7 @@ impl Playback {
                 });
                 voice
                     .player
-                    .set_speed((pitch * voice.stereo_speed).clamp(0.1, 4.0));
+                    .set_speed((pitch * voice.stereo_speed * placement.doppler).clamp(0.1, 4.0));
                 if frame.paused {
                     voice.player.pause();
                 } else {
@@ -1233,8 +1329,59 @@ mod tests {
                 distance_m: 0.0,
                 vehicle_distances_m: vec![],
                 vehicle_states: vec![],
+                vehicle_placement: vec![],
             }],
             ..Default::default()
+        }
+    }
+
+    #[test]
+    fn positional_sound_pans_without_restarting_and_doppler_reverses_on_passing() {
+        let wave = test_wave();
+        let pan = Arc::new(AtomicU32::new((-1.0f32).to_bits()));
+        let mut source = PannedSource {
+            source: LoopSource {
+                source: wave.samples.clone(),
+                wave,
+                elapsed_samples: 0,
+                release: Arc::new(AtomicU8::new(0)),
+                looping: true,
+            },
+            pan: pan.clone(),
+            right: None,
+        };
+        assert_eq!(source.next(), Some(0.0));
+        assert_eq!(source.next(), Some(0.0));
+        assert_eq!(source.next(), Some(0.1));
+        assert_eq!(source.next(), Some(0.0));
+        pan.store(1.0f32.to_bits(), Ordering::Relaxed);
+        assert_eq!(source.next(), Some(0.0));
+        assert_eq!(source.next(), Some(0.2));
+        pan.store(0.0f32.to_bits(), Ordering::Relaxed);
+        assert_eq!(source.next(), Some(0.3));
+        assert_eq!(source.next(), Some(0.3));
+        assert!(SoundPlacement::from_radial_velocity(0.0, -30.0).doppler > 1.0);
+        assert!(SoundPlacement::from_radial_velocity(0.0, 30.0).doppler < 1.0);
+        assert_eq!(
+            SoundPlacement::from_radial_velocity(f32::NAN, 500.0),
+            SoundPlacement::default()
+        );
+    }
+
+    #[test]
+    fn ignore3d_and_authored_stereo_keep_native_pitch_and_balance() {
+        for option in ["Ignore3D ()", "Stereo ()"] {
+            let program = SmsProgram::parse(&format!("Tr_SMS ( ScalabiltyGroup ( 5 {option} Streams ( 1 Stream ( Triggers ( 1 Initial_Trigger ( StartLoop ( 1 File ( tone.wav -1 ) ) ) ) ) ) ) )")).unwrap();
+            let (mut playback, _) = test_playback(vec![test_bank(0, program)]);
+            let mut frame = test_frame();
+            playback.update(&frame);
+            let authored_speed = playback.voices[0][0].player.speed();
+            frame.trains[0].vehicle_placement =
+                vec![SoundPlacement::from_radial_velocity(-1.0, -30.0)];
+            playback.update(&frame);
+            let voice = &playback.voices[0][0];
+            assert_eq!(f32::from_bits(voice.pan.load(Ordering::Relaxed)), 0.0);
+            assert_eq!(voice.player.speed(), authored_speed);
         }
     }
 
@@ -1763,6 +1910,7 @@ mod tests {
                 distance_m: 0.0,
                 vehicle_distances_m: vec![],
                 vehicle_states: vec![],
+                vehicle_placement: vec![],
             }],
             ..Default::default()
         };
@@ -1797,6 +1945,13 @@ mod tests {
             ..before
         };
         assert_eq!(now.events(before), vec![121, 122, 123]);
+        let reverse = SoundState {
+            steam_phase: Some(-3.2),
+            ..before
+        };
+        let events = reverse.events(before);
+        assert_eq!(events.len(), 4);
+        assert!(events.iter().all(|e| (121..=136).contains(e)));
         let coast = SoundState {
             throttle: 0.0,
             ..now

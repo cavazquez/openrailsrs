@@ -2,6 +2,7 @@
 
 pub mod adhesion;
 pub mod brake;
+pub mod brake_circuit;
 pub mod coupler;
 pub mod csv_out;
 pub mod diesel_operation;
@@ -39,6 +40,7 @@ pub use etcs::{BasicEtcsTcs, EtcsTcs, EtcsTcsStatus};
 pub use exterior::{DoorState, RollingStockExteriorState};
 pub use live_drive::{CabTelemetry, LiveDriveSession};
 pub mod service;
+pub mod shunting;
 pub use multi_runner::{
     LiveMultiSim, LiveTrainSnapshot, MultiTrainResult, TrainRunResult, TrainStatus,
     run_multi_train_from_scenario_file, run_scenario_multi_train,

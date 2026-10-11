@@ -216,6 +216,15 @@ impl LiveDrive {
         })
     }
 
+    pub fn visual_steam_motion(
+        &self,
+        track: usize,
+        car: usize,
+    ) -> Option<openrailsrs_sim::steam::SteamMotion> {
+        self.session_for_track(track)?
+            .steam_motion(car, self.render_frame_remainder_s)
+    }
+
     pub fn visual_wheel_slip_distance_for_service(
         &self,
         track: usize,
@@ -537,7 +546,23 @@ pub fn live_driver_input(
     if pressed(A::BrakeDown) {
         live.session.driver_brake = (live.session.driver_brake - 0.15).max(0.0);
     }
+    if pressed(A::IndependentUp) || pressed(A::IndependentDown) {
+        let delta = if pressed(A::IndependentUp) { 0.1 } else { -0.1 };
+        let command = live.session.state.brake_system.independent_command + delta;
+        if let Err(message) = live.session.set_independent_brake(command)
+            && let Some(ui) = ui.as_mut()
+        {
+            ui.notice = message;
+        }
+    }
+    if pressed(A::EmergencyReset)
+        && let Err(message) = live.session.reset_emergency()
+        && let Some(ui) = ui.as_mut()
+    {
+        ui.notice = message;
+    }
     if pressed(A::Emergency) {
+        live.session.state.brake_system.emergency = true;
         live.session.driver_throttle = 0.0;
         live.session.driver_brake = 1.0;
     }
@@ -1366,11 +1391,10 @@ pub fn spawn_live_train(
                 let real_width = 3.0_f32;
                 let real_height = 3.6_f32;
                 let real_length = vehicle.length_m.max(4.0);
-                let local = Transform {
-                    translation: Vec3::new(vehicle.offset_m, real_height * 0.5, 0.0),
-                    scale: Vec3::new(real_length, real_height, real_width),
-                    ..default()
-                };
+                let local = crate::shapes::vehicle_authored_frame_transform(
+                    vehicle.offset_m,
+                    vehicle.flipped,
+                );
                 fallback_cars += 1;
 
                 let mut fallback = train.spawn((
@@ -1378,13 +1402,33 @@ pub fn spawn_live_train(
                     Visibility::default(),
                     LiveTrainCar { index: vi },
                     crate::rolling_stock::ConsistCarIndex(vi),
+                    crate::rolling_stock_anim::TrainCarSupports {
+                        front_m: real_length * 0.3,
+                        rear_m: -real_length * 0.3,
+                    },
+                    crate::rolling_stock_anim::TrainCarTrackOffset {
+                        offset_m: vehicle.offset_m,
+                        track_index: 0,
+                        flipped: vehicle.flipped,
+                    },
                     Name::new(format!("train:live:car:{vi}:fallback")),
                 ));
                 if is_lead {
                     fallback.insert(CabLeadVehicle);
                 }
 
-                fallback.with_children(|parent| {
+                fallback.with_children(|car| {
+                    // Keep the car root in the same unscaled native frame as
+                    // original shapes. Track poses can then park and turn each
+                    // car independently without erasing its visual dimensions.
+                    car.spawn((
+                        Transform::from_xyz(0.0, real_height * 0.5, 0.0)
+                            .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2))
+                            .with_scale(Vec3::new(real_length, real_height, real_width)),
+                        Visibility::default(),
+                        Name::new("fallback-geometry"),
+                    ))
+                    .with_children(|parent| {
                     // 1. Main body
                     parent.spawn((
                         LiveTrainBody,
@@ -1506,6 +1550,7 @@ pub fn spawn_live_train(
                             Name::new("taillight_r"),
                         ));
                     }
+                    });
                 });
             }
         });

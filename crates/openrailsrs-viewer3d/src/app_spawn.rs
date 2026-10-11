@@ -111,6 +111,16 @@ mod tests {
             world.run_system_once(spawn_sky_dome).unwrap();
             world.flush();
             assert!(world.query::<&DirectionalLight>().iter(world).count() >= 1);
+            let sun_layers = world
+                .query_filtered::<&bevy::camera::visibility::RenderLayers, With<DirectionalLight>>()
+                .single(world)
+                .unwrap();
+            assert!(sun_layers.intersects(&crate::cab_render::train_exterior_layers()));
+            assert!(
+                sun_layers.intersects(&bevy::camera::visibility::RenderLayers::layer(
+                    crate::cab_render::LAYER_CAB_INTERIOR,
+                ))
+            );
             assert!(
                 count_named(world, "sky:") >= 1
                     || world.query::<&Mesh3d>().iter(world).count() >= 1

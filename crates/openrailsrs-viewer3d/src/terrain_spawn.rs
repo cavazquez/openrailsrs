@@ -725,6 +725,7 @@ pub fn terrain_tile_bundle_materialize_system(
         stream.tile_cache.insert_scene_tile(&tile);
         elevation.merge_tile(key.0, key.1, Some(&tile));
         loaded_now += 1;
+        break; // Terrain geometry preparation consumes this queue asynchronously.
     }
     if loaded_now > 0 {
         viewer_log!("openrailsrs-viewer3d: terrain-stream — +{loaded_now} tile(s) via tilebundle");

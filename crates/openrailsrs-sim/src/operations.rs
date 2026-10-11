@@ -188,6 +188,25 @@ impl SessionSnapshot {
 }
 
 impl LiveDriveSession {
+    pub fn reset_emergency(&mut self) -> Result<(), String> {
+        if self.velocity_mps() > 0.1 || self.driver_throttle > 0.0 {
+            return Err("Detené el tren y llevá el regulador a cero antes de rearmar".into());
+        }
+        if self
+            .state
+            .brake_system
+            .cylinders
+            .iter()
+            .any(|c| c.air_vented)
+        {
+            return Err(
+                "Conectá las mangueras o cerrá las llaves abiertas antes de rearmar".into(),
+            );
+        }
+        self.state.brake_system.emergency = false;
+        Ok(())
+    }
+
     pub fn snapshot(&self) -> SessionSnapshot {
         SessionSnapshot {
             version: 1,
@@ -257,6 +276,64 @@ impl LiveDriveSession {
             );
         }
         let n = saved.formation.coupled_count;
+        if saved.gameplay.shunting_steps != self.gameplay.shunting_steps
+            || saved.gameplay.shunting_completed_s.len() > saved.gameplay.shunting_steps.len()
+            || saved
+                .gameplay
+                .shunting_completed_s
+                .iter()
+                .any(|t| !t.is_finite() || *t < 0.0 || *t > saved.state.time.0)
+            || saved
+                .gameplay
+                .shunting_completed_s
+                .windows(2)
+                .any(|pair| pair[0] > pair[1])
+        {
+            return Err("Objetivos de maniobras guardados inválidos".into());
+        }
+        if !saved.state.brake_system.independent_command.is_finite()
+            || !(0.0..=1.0).contains(&saved.state.brake_system.independent_command)
+            || saved
+                .state
+                .brake_system
+                .cylinders
+                .iter()
+                .any(|c| !c.independent_state_valid())
+            || saved.state.brake_system.circuits.iter().any(|c| {
+                !c.valid()
+                    || self
+                        .original_physics
+                        .power_supply
+                        .cars
+                        .iter()
+                        .all(|p| p.vehicle != c.vehicle)
+            })
+        {
+            return Err("Circuito de frenos guardado inválido".into());
+        }
+        let circuits = &saved.state.brake_system.circuits;
+        let expected: Vec<_> = self
+            .consist
+            .vehicles
+            .iter()
+            .enumerate()
+            .filter_map(|(i, v)| {
+                let profile = match v {
+                    Vehicle::Loco(l) => &l.brake_profile,
+                    Vehicle::Wagon(w) => &w.brake_profile,
+                };
+                profile.air_circuit.as_ref().map(|p| (i, p))
+            })
+            .collect();
+        if !circuits.is_empty()
+            && (circuits.len() != expected.len()
+                || circuits
+                    .iter()
+                    .zip(&expected)
+                    .any(|(c, (i, p))| c.vehicle != *i || &c.params != *p))
+        {
+            return Err("El circuito guardado no coincide con el equipo original".into());
+        }
         if saved.state.refill_used_kg.len() > 10000
             || saved
                 .state
@@ -481,6 +558,24 @@ impl LiveDriveSession {
         let pd = PathData::from_path(&saved.state.path_edges, &graph);
         self.script_tcs = host;
         self.state = saved.state;
+        if self.state.brake_system.circuits.is_empty() {
+            self.state.brake_system.circuits = self
+                .consist
+                .vehicles
+                .iter()
+                .enumerate()
+                .filter_map(|(i, v)| {
+                    let profile = match v {
+                        Vehicle::Loco(l) => &l.brake_profile,
+                        Vehicle::Wagon(w) => &w.brake_profile,
+                    };
+                    profile
+                        .air_circuit
+                        .clone()
+                        .map(|p| crate::brake_circuit::AirCircuit::new(i, p))
+                })
+                .collect();
+        }
         // Reconnecting a saved train must not restart a hose without a WORLD match.
         self.refilling = None;
         self.gameplay = saved.gameplay;
@@ -577,6 +672,7 @@ impl LiveDriveSession {
             }
         }
         self.sync_operating_brakes();
+        self.update_shunting();
         Ok(())
     }
 
@@ -609,6 +705,7 @@ impl LiveDriveSession {
         self.formation.cars[keep].hose_connected = false;
         self.rebuild_formation_physics();
         self.sync_operating_brakes();
+        self.update_shunting();
         Ok(())
     }
 
@@ -644,6 +741,7 @@ impl LiveDriveSession {
         self.formation.parked_head_chainage_m = None;
         self.rebuild_formation_physics();
         self.sync_operating_brakes();
+        self.update_shunting();
         Ok(())
     }
 
@@ -670,6 +768,7 @@ impl LiveDriveSession {
             }
         }
         let mut p = self.original_physics.clone();
+        p.power_supply.active_fraction = n as f64 / self.consist.vehicles.len().max(1) as f64;
         for car in &mut p.power_supply.cars {
             if let Some(op) = self.formation.cars.get(car.vehicle) {
                 car.enabled =
@@ -1003,8 +1102,18 @@ impl LiveDriveSession {
             .iter()
             .any(|eid| graph.edge(eid).is_some_and(|e| e.from.0 == id));
         if on_future {
-            if self.formation.parked_head_chainage_m.is_some() {
-                return Err("Acoplá la formación antes de cambiar su itinerario".into());
+            // The parked section must remain on the immutable path prefix.
+            // Re-routing track ahead of both sections is safe and enables yard work.
+            let unchanged_end: f64 = self.path_data.edges[..=self.state.edge_index]
+                .iter()
+                .map(|e| e.length_m)
+                .sum();
+            if self
+                .formation
+                .parked_head_chainage_m
+                .is_some_and(|p| p > unchanged_end)
+            {
+                return Err("La sección estacionada queda fuera del itinerario nuevo".into());
             }
             let tail = crate::path::edge_path(&graph, &edge.to.0, &self.gameplay.destination_node)
                 .map_err(|_| "El cambio no permite llegar al destino del servicio")?;
@@ -1037,6 +1146,7 @@ impl LiveDriveSession {
             self.state.path_edges = path;
         }
         self.graph = graph;
+        self.update_shunting();
         Ok(())
     }
 }

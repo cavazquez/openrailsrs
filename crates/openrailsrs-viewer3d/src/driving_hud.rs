@@ -173,7 +173,7 @@ fn spawn_driving_hud(mut commands: Commands, mut fonts: ResMut<Assets<Font>>) {
         Visibility::Hidden, ZIndex(120), HudPanel::Help, crate::player_ui::ScreenHud,
     )).with_children(|panel| {
         panel.spawn((Text::new(
-            "CONTROLES · F6 cierra esta ayuda\n\nD / A  subir / bajar regulador    ' / ;  aplicar / soltar freno\nW / S  adelante / atrás          \\  inversor neutro\nQ  puertas · Space  bocina · V  limpiaparabrisas\nBackspace  emergencia · Pause o P  pausa · R  reiniciar\n+ / -  acelerar / reducir el tiempo\n\n1  cabina · Alt+1  cambiar 2D/3D · 2  exterior · 3  órbita\nF1  cámara orbital · F2  cámara libre · flechas  mover cámara\nRePág / AvPág  subir / bajar cámara · rueda  acercar / alejar\nArrastrar con botón izquierdo  girar · botón central  desplazar\nF4  monitor · F5  conducción · F3  diagnóstico"
+            "CONTROLES · F6 cierra esta ayuda\n\nD / A  subir / bajar regulador    ' / ;  aplicar / soltar freno\nW / S  adelante / atrás          \\  inversor neutro\nQ  puertas · Space  bocina · V  limpiaparabrisas\n[ / ]  freno independiente · N  rearmar emergencia\nBackspace  emergencia · Pause o P  pausa · R  reiniciar\n+ / -  acelerar / reducir el tiempo\n\n1  cabina · Alt+1  cambiar 2D/3D · 2  exterior · 3  órbita\nF1  cámara orbital · F2  cámara libre · flechas  mover cámara\nRePág / AvPág  subir / bajar cámara · rueda  acercar / alejar\nArrastrar con botón izquierdo  girar · botón central  desplazar\nF4  monitor · F5  conducción · F3  diagnóstico"
         ), TextFont { font: bevy::text::FontSource::Handle(font), font_size: FontSize::Px(13.0), ..default() }, TextColor(TEXT)));
     });
 }
@@ -203,6 +203,9 @@ pub fn service_instruction(session: &openrailsrs_sim::LiveDriveSession) -> Strin
             "Omitida: {} · +{:.0} puntos\nContinuar hacia la próxima parada",
             stop.name, stop.penalty
         );
+    }
+    if let Some(instruction) = session.shunting_instruction() {
+        return instruction;
     }
     match gp.phase {
         ServicePhase::Boarding

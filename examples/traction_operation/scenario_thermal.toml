@@ -1,0 +1,22 @@
+[scenario]
+name = "Diésel: temperatura y protección térmica"
+description = "Prueba sintética: a plena carga sube la temperatura y se limita la potencia. B explica la causa. Esta protección se activa únicamente en este vehículo de prueba."
+[route]
+path = "route"
+start = "a"
+destination = "b"
+assume_signals_clear = true
+[train]
+consist = "consists/diesel_thermal.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+[simulation]
+duration = 600.0
+time_step = 0.05
+seed = 42
+legacy_power_cap = false
+[output]
+csv = "run.csv"
+metadata = "run.json"

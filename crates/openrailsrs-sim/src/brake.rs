@@ -34,6 +34,8 @@ pub enum BrakeState {
 /// One brake cylinder, representing a single vehicle's brakes.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BrakeCylinder {
+    #[serde(default)]
+    automatic_pipe_bar: Option<f64>,
     #[serde(default = "default_full_pressure_bar")]
     pub full_pressure_bar: f64,
     #[serde(default)]
@@ -48,6 +50,8 @@ pub struct BrakeCylinder {
     pub state: BrakeState,
     /// Currently applied force (N).
     pub current_force_n: f64,
+    #[serde(default)]
+    independent_force_n: f64,
     /// Parking brake force, independent of train air.
     #[serde(default)]
     pub handbrake_force_n: f64,
@@ -208,8 +212,10 @@ impl BrakeCylinder {
             ep_instant,
             state: BrakeState::Charged,
             current_force_n: 0.0,
+            independent_force_n: 0.0,
             handbrake_force_n: 0.0,
             air_vented: false,
+            automatic_pipe_bar: Some(5.0),
             air_isolated: false,
             time_pending_s: 0.0,
             apply_ramp_rate_n_per_s: max_force_n / apply_time_s,
@@ -234,14 +240,20 @@ impl BrakeCylinder {
             .as_ref()
             .map(|air| &air.cylinder)
             .or(self.native_ep.as_ref())
-            .and_then(|ep| ep.friction_coefficient(self.current_force_n, speed_mps))
+            .and_then(|ep| {
+                ep.friction_coefficient(
+                    self.current_force_n.max(self.independent_force_n),
+                    speed_mps,
+                )
+            })
             .unwrap_or_else(|| self.shoe_friction.speed_factor(speed_mps));
-        let shoe = (self.current_force_n * coefficient).max(self.handbrake_force_n);
+        let shoe = (self.current_force_n.max(self.independent_force_n) * coefficient)
+            .max(self.handbrake_force_n);
         if self.native_air.is_some() {
             // OR TrainCar.UpdateBrakeSlideCalculation derives a diesel's skid
             // from axle slip; AirSinglePipe uses 0.08 at the shoe while sliding.
             return if self.native_air_skid {
-                self.current_force_n * 0.08
+                self.current_force_n.max(self.independent_force_n) * 0.08
             } else {
                 shoe
             };
@@ -254,7 +266,9 @@ impl BrakeCylinder {
     }
 
     pub(crate) fn set_native_air_skid(&mut self, skid: bool) {
-        self.native_air_skid = self.native_air.is_some() && skid && self.current_force_n > 25.;
+        self.native_air_skid = self.native_air.is_some()
+            && skid
+            && self.current_force_n.max(self.independent_force_n) > 25.;
     }
     pub fn pipe_pressure_bar(&self) -> Option<f64> {
         if let Some(vacuum) = &self.native_vacuum {
@@ -265,6 +279,7 @@ impl BrakeCylinder {
         self.native_air
             .as_ref()
             .map(|air| air.pipe_psi * PSI_TO_BAR)
+            .or(self.automatic_pipe_bar)
     }
 
     pub fn is_vacuum(&self) -> bool {
@@ -272,6 +287,17 @@ impl BrakeCylinder {
     }
 
     pub fn pressure_bar(&self) -> f64 {
+        self.service_pressure_bar()
+            .max(self.independent_force_n / self.max_force_n.max(1.0) * self.full_pressure_bar)
+    }
+    pub(crate) fn independent_state_valid(&self) -> bool {
+        self.independent_force_n.is_finite()
+            && (0.0..=self.max_force_n).contains(&self.independent_force_n)
+            && self
+                .automatic_pipe_bar
+                .is_none_or(|pressure| pressure.is_finite() && (0.0..=10.0).contains(&pressure))
+    }
+    fn service_pressure_bar(&self) -> f64 {
         if let Some(ep) = &self.legacy_ep {
             return ep.pressure_psi * PSI_TO_BAR;
         }
@@ -312,6 +338,12 @@ impl BrakeCylinder {
 /// Whole-train brake system: a collection of cylinders fed by a single pipe.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct BrakeSystem {
+    #[serde(default)]
+    pub circuits: Vec<crate::brake_circuit::AirCircuit>,
+    #[serde(default)]
+    pub independent_command: f64,
+    #[serde(default)]
+    pub emergency: bool,
     pub cylinders: Vec<BrakeCylinder>,
     /// Speed at which the brake-pipe pressure change propagates (m/s).
     pub pipe_speed_mps: f64,
@@ -397,6 +429,18 @@ impl BrakeSystem {
             })
             .collect();
         Self {
+            circuits: vehicles
+                .iter()
+                .enumerate()
+                .filter_map(|(i, v)| {
+                    v.profile
+                        .air_circuit
+                        .clone()
+                        .map(|p| crate::brake_circuit::AirCircuit::new(i, p))
+                })
+                .collect(),
+            independent_command: 0.0,
+            emergency: false,
             cylinders,
             pipe_speed_mps,
             prev_command: 0.0,
@@ -453,7 +497,11 @@ impl BrakeSystem {
     }
 
     pub fn step_with_speed(&mut self, command: f64, dt: f64, speed_mps: f64) {
-        let command = command.clamp(0.0, 1.0);
+        let command = if self.emergency {
+            1.0
+        } else {
+            command.clamp(0.0, 1.0)
+        };
         let applying = command > 0.0;
         let command_changed = (command - self.prev_command).abs() > 1e-6;
 
@@ -475,6 +523,22 @@ impl BrakeSystem {
         }
 
         for cyl in &mut self.cylinders {
+            if cyl.native_air.is_none() && cyl.native_vacuum.is_none() && !cyl.air_isolated {
+                let old = cyl.automatic_pipe_bar.unwrap_or(5.0);
+                let target = if self.emergency || cyl.air_vented {
+                    0.0
+                } else if self.ep_only_wire {
+                    5.0
+                } else {
+                    5.0 - command * 3.5
+                };
+                let rate = if self.emergency || cyl.air_vented {
+                    5.0
+                } else {
+                    1.0
+                };
+                cyl.automatic_pipe_bar = Some(old + (target - old).clamp(-rate * dt, rate * dt));
+            }
             if cyl.transfer_only {
                 cyl.current_force_n = 0.;
                 continue;
@@ -542,7 +606,7 @@ impl BrakeSystem {
                 };
                 continue;
             }
-            if self.ep_only_wire {
+            if self.ep_only_wire && !self.emergency {
                 // An ordinary air-braked car stays released while EP-only
                 // service leaves the shared pneumatic pipe fully charged.
                 cyl.current_force_n =
@@ -559,7 +623,7 @@ impl BrakeSystem {
             }
 
             if let Some(air) = cyl.native_air.as_mut() {
-                air.step(command, dt);
+                air.step_with_emergency(command, self.emergency, dt);
                 cyl.current_force_n = air.cylinder.shoe_force_n(cyl.max_force_n);
                 cyl.state = if command > 0. {
                     BrakeState::Applying
@@ -603,6 +667,28 @@ impl BrakeSystem {
                     BrakeState::Releasing
                 };
             }
+        }
+    }
+
+    pub fn step_circuits(&mut self, supply: &crate::power_supply::PowerTrainState, dt: f64) {
+        for circuit in &mut self.circuits {
+            let Some(c) = self.cylinders.get_mut(circuit.vehicle) else {
+                continue;
+            };
+            let powered = supply
+                .cars
+                .iter()
+                .find(|s| s.vehicle == circuit.vehicle)
+                .is_none_or(|s| s.supply.auxiliary);
+            circuit.step(
+                self.independent_command,
+                c.service_pressure_bar(),
+                c.full_pressure_bar,
+                powered,
+                dt,
+            );
+            c.independent_force_n =
+                (circuit.independent_bar / c.full_pressure_bar).clamp(0.0, 1.0) * c.max_force_n;
         }
     }
 
@@ -679,7 +765,7 @@ impl BrakeSystem {
                 };
                 continue;
             }
-            if self.ep_only_wire {
+            if self.ep_only_wire && !self.emergency {
                 cyl.current_force_n = 0.;
                 continue;
             }
@@ -707,6 +793,9 @@ impl Default for BrakeSystem {
     /// enable the detailed propagation model.
     fn default() -> Self {
         Self {
+            circuits: Vec::new(),
+            independent_command: 0.0,
+            emergency: false,
             cylinders: Vec::new(),
             pipe_speed_mps: 200.0,
             prev_command: 0.0,

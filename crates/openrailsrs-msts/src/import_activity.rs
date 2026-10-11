@@ -197,12 +197,14 @@ fn import_activity_with_length(
             edge_speed_limits: vec![],
         },
         train: TrainSection {
+            power_load: Default::default(),
             electric_pickups: vec![],
             consist: player_consist_str,
             davis: None,
             max_capacity: None,
         },
         gameplay: GameplaySection {
+            shunting: vec![],
             objective: ObjectiveKind::Arrive,
             time_limit_seconds: None,
             difficulty: openrailsrs_scenarios::model::Difficulty::Normal,

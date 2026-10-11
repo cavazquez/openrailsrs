@@ -81,6 +81,7 @@ fn main() {
                     distance_m: if cab { 0.0 } else { 25.0 },
                     vehicle_distances_m: offsets.iter().map(|x| x.hypot(25.0)).collect(),
                     vehicle_states: vec![],
+                    vehicle_placement: vec![],
                     state: SoundState {
                         speed: ((seconds - 2.0).max(0.0) * 2.0) as f32,
                         distance: (seconds * seconds) as f32,

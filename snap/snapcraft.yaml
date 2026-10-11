@@ -1,6 +1,6 @@
 name: openrailsrs
 base: core24
-version: '0.1.0-alpha.2'
+version: '0.1.0-alpha.3'
 title: openrailsrs
 summary: Simulador ferroviario libre en desarrollo
 description: |

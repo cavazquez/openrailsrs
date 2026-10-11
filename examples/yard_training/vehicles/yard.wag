@@ -1,0 +1,4 @@
+(Wagon (Name "Vagón de prácticas") (Type Freight)
+  (Mass 20000) (Size 3 3.5 20) (MaxBrakeForce 80000)
+  (BrakeSystemType Air_single_pipe)
+)

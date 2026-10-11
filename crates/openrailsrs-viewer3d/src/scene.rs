@@ -164,6 +164,13 @@ pub fn spawn_ground_and_lights(
     );
     commands.spawn((
         directional_light_from_sun(&sun, shadows_enabled),
+        // Exterior PBR meshes use layer 1, and cab geometry uses layer 2.
+        // A world-only light leaves synthetic rolling stock almost black.
+        bevy::camera::visibility::RenderLayers::from_layers(&[
+            crate::cab_render::LAYER_WORLD,
+            crate::cab_render::LAYER_TRAIN_EXTERIOR,
+            crate::cab_render::LAYER_CAB_INTERIOR,
+        ]),
         shadow_cascades,
         sun_transform(&sun),
         Name::new("sun"),

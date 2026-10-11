@@ -80,12 +80,14 @@ fn make_two_train_scenario(
             edge_speed_limits: vec![],
         },
         train: TrainSection {
+            power_load: Default::default(),
             electric_pickups: vec![],
             consist: "consists/freight.con".into(),
             davis: Some(heavy_davis()),
             max_capacity: None,
         },
         gameplay: GameplaySection {
+            shunting: vec![],
             objective: ObjectiveKind::Arrive,
             time_limit_seconds: None,
             difficulty: Difficulty::Normal,

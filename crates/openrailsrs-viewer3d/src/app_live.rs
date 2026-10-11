@@ -40,6 +40,89 @@ mod tests {
     }
 
     #[test]
+    fn synthetic_yard_cars_keep_dimensions_and_park_independently() {
+        use crate::live::LiveTrainCar;
+        use crate::rolling_stock::{TrainConsistScene, try_load_consist_vehicles};
+        use crate::rolling_stock_anim::{TrainCarTrackOffset, update_consist_car_track_poses};
+        use openrailsrs_sim::CarOperation;
+        let directory = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/yard_training");
+        crate::test_harness::with_route_dir_world(&directory.join("route"), |world| {
+            let live = crate::live::LiveDrive::from_scenario_path(&directory.join("scenario.toml"))
+                .unwrap();
+            let mut consist = TrainConsistScene::default();
+            consist.set_scenario_dir(directory.clone());
+            consist.by_label.insert(
+                "primary".into(),
+                try_load_consist_vehicles(&directory, "consists/yard.con").unwrap(),
+            );
+            world.insert_resource(consist);
+            world.insert_resource(live);
+            world.run_system_once(spawn_live_train).unwrap();
+            world.flush();
+            assert_eq!(count_components::<TrainCarTrackOffset>(world), 3);
+            world
+                .run_system_once(update_consist_car_track_poses)
+                .unwrap();
+            let positions = |world: &mut World| {
+                let head = *world
+                    .query_filtered::<&Transform, With<LiveTrainMarker>>()
+                    .single(world)
+                    .unwrap();
+                let mut cars: Vec<_> = world
+                    .query::<(&LiveTrainCar, &Transform)>()
+                    .iter(world)
+                    .map(|(car, pose)| (car.index, head.mul_transform(*pose).translation))
+                    .collect();
+                cars.sort_by_key(|(index, _)| *index);
+                cars
+            };
+            let before = positions(world);
+            let geometry: Vec<_> = world
+                .query::<(&Name, &Transform, &ChildOf)>()
+                .iter(world)
+                .filter(|(name, _, _)| name.as_str() == "fallback-geometry")
+                .map(|(_, pose, parent)| (*pose, parent.parent()))
+                .collect();
+            assert_eq!(geometry.len(), 3);
+            for (mesh, parent) in geometry {
+                let car = *world.get::<Transform>(parent).unwrap();
+                assert!(car.scale.distance(Vec3::ONE) < 0.00001);
+                let frame = car.mul_transform(mesh);
+                let longitudinal = frame.to_matrix().transform_vector3(Vec3::X);
+                assert!((longitudinal.length() - 20.0).abs() < 0.001);
+                assert!(longitudinal.normalize().dot(Vec3::X) > 0.999);
+                assert!(
+                    (frame.to_matrix().transform_vector3(Vec3::Z).length() - 3.0).abs() < 0.001
+                );
+            }
+            {
+                let mut live = world.resource_mut::<crate::live::LiveDrive>();
+                for index in [1, 2] {
+                    live.session
+                        .operate_car(index, CarOperation::Handbrake)
+                        .unwrap();
+                }
+                live.session.uncouple_after(0).unwrap();
+                live.session.set_direction(1.0).unwrap();
+                live.session.driver_throttle = 0.6;
+                for _ in 0..300 {
+                    live.session.step_realtime(0.05, |_| {});
+                }
+            }
+            world.run_system_once(update_live_train_marker).unwrap();
+            world
+                .run_system_once(update_consist_car_track_poses)
+                .unwrap();
+            let after = positions(world);
+            assert!(before[0].1.distance(after[0].1) > 2.0);
+            for index in [1, 2] {
+                assert!(before[index].1.distance(after[index].1) < 0.001);
+            }
+        });
+    }
+
+    #[test]
     fn replay_spawn_skips_train_markers_when_live_resource_present() {
         with_live_world(|world| {
             world.run_system_once(spawn_track_meshes).unwrap();

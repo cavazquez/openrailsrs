@@ -1,0 +1,1 @@
+(Train (Engine "vehicles/diesel_hotel.eng") (Wagon "vehicles/hotel.wag") (Wagon "vehicles/hotel.wag"))

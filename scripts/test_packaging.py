@@ -222,7 +222,10 @@ class PackagingTests(unittest.TestCase):
         shaders = root/'crates/openrailsrs-bevy-scenery/assets/shaders'
         self.assertTrue(all(str(p.relative_to(root)) in resources for p in shaders.glob('*.wgsl')))
         for relative in ('examples/electric_supply/scenario.toml',
-                         'examples/traction_operation/scenario_steam.toml'):
+                         'examples/traction_operation/scenario_steam.toml',
+                         'examples/traction_operation/scenario_hotel.toml',
+                         'examples/traction_operation/scenario_thermal.toml',
+                         'examples/yard_training/scenario.toml'):
             self.assertIn(relative, resources)
 
     def test_snap_build_tree_excludes_previous_builds_and_untracked_downloads(self):

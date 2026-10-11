@@ -179,9 +179,39 @@ pub fn update(
         let direction = world.rotation * Vec3::NEG_Z;
         let heading = direction.x.atan2(direction.z);
         let clock = session.time_s();
-        let speed = session.state.velocity_mps as f32;
+        let index = session
+            .formation
+            .cars
+            .iter()
+            .enumerate()
+            .min_by(|(a, _), (b, _)| {
+                (session.formation.center_offset_m(*a) - f64::from(offset.offset_m))
+                    .abs()
+                    .total_cmp(
+                        &(session.formation.center_offset_m(*b) - f64::from(offset.offset_m)).abs(),
+                    )
+            })
+            .map_or(0, |(i, _)| i);
+        let speed = if index >= session.formation.coupled_count {
+            0.0
+        } else {
+            session
+                .state
+                .vehicles
+                .get(index)
+                .map_or(session.state.velocity_mps, |v| v.velocity_mps) as f32
+        };
+        let speed = speed
+            * if session.driver_direction <= 0.25 {
+                -1.0
+            } else {
+                1.0
+            };
         let car = motion.cars.entry(entity).or_default();
-        if car.clock.is_some_and(|previous| clock < previous) {
+        if car
+            .clock
+            .is_some_and(|previous| clock < previous || clock - previous > 1.0)
+        {
             *car = CarMotion::default();
         }
         let dt = (clock - car.clock.unwrap_or(clock)).max(0.0) as f32;
@@ -191,7 +221,11 @@ pub fn update(
             let change = (angle + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU)
                 - std::f32::consts::PI;
             let lateral = (speed * change / dt).clamp(-1.8, 1.8);
-            let distance = (session.state.odometer_m + f64::from(offset.offset_m)).abs();
+            let distance = session.presentation_chainage_for_car(
+                f64::from(offset.offset_m),
+                f64::from(offset.offset_m),
+                0.0,
+            );
             let running = (speed.abs() / 25.0).clamp(0.0, 1.0);
             let track_phase = (distance * std::f64::consts::TAU / 18.3) as f32;
             let roll = (-lateral * 0.014 + track_phase.sin() * 0.002 * running) * scale;
@@ -215,7 +249,12 @@ pub fn update(
     // suspension only, preserving each wheel angle and bogie track yaw.
     let mut active_parts = Vec::new();
     for (entity, parent, mut transform, keyed) in &mut running_gear {
-        if keyed.is_some_and(|k| k.kind != RollingStockPartKind::Pantograph) {
+        if keyed.is_some_and(|k| {
+            !matches!(
+                k.kind,
+                RollingStockPartKind::Pantograph | RollingStockPartKind::RunningGear
+            )
+        }) {
             continue;
         }
         motion.running_gear.insert(entity, *transform);
@@ -250,6 +289,52 @@ mod tests {
         many.advance(0.0, 1000.0, 4.0);
         assert!(many.position.is_finite() && many.position.abs() < 1e-6);
     }
+    #[test]
+    fn parked_tail_does_not_inherit_the_departing_locomotives_suspension() {
+        use bevy::ecs::system::RunSystemOnce;
+        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/yard_training/scenario.toml");
+        let mut live = crate::live::LiveDrive::from_scenario_path(&path).unwrap();
+        for i in [1, 2] {
+            live.session
+                .operate_car(i, openrailsrs_sim::operations::CarOperation::Handbrake)
+                .unwrap();
+        }
+        live.session.uncouple_after(0).unwrap();
+        let offset = live.session.formation.center_offset_m(1) as f32;
+        let mut app = App::new();
+        app.insert_resource(live)
+            .insert_resource(crate::player_settings::PlayerSettings::default())
+            .init_resource::<TrainMotion>();
+        let root = app.world_mut().spawn(Transform::IDENTITY).id();
+        let car = app
+            .world_mut()
+            .spawn((
+                Transform::IDENTITY,
+                ChildOf(root),
+                TrainCarTrackOffset {
+                    offset_m: offset,
+                    track_index: 0,
+                    flipped: false,
+                },
+            ))
+            .id();
+        app.world_mut().run_system_once(update).unwrap();
+        for tick in 1..=200 {
+            {
+                let mut live = app.world_mut().resource_mut::<crate::live::LiveDrive>();
+                live.session.state.velocity_mps = 25.0;
+                live.session.state.time.0 = f64::from(tick) * 0.05;
+            }
+            *app.world_mut().get_mut::<Transform>(car).unwrap() = Transform::IDENTITY;
+            app.world_mut().run_system_once(update).unwrap();
+            assert_eq!(
+                *app.world().get::<Transform>(car).unwrap(),
+                Transform::IDENTITY
+            );
+        }
+    }
+
     #[test]
     fn body_motion_keeps_running_gear_in_its_original_world_pose() {
         let rail =

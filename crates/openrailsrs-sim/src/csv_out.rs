@@ -285,7 +285,7 @@ mod tests {
         let head: f64 = field("brake_f_head_n").parse().unwrap();
         let train_air: f64 = field("brake_f_train_air_n").parse().unwrap();
         let tail: f64 = field("brake_f_tail_n").parse().unwrap();
-        assert!(field("brake_pipe_bar").is_empty());
+        assert_eq!(field("brake_pipe_bar").parse::<f64>().unwrap(), 5.0);
         assert!(field("brake_cylinder_bar").parse::<f64>().unwrap() > 0.0);
         assert!(head > 90_000.0);
         assert!(train_air > 70_000.0);

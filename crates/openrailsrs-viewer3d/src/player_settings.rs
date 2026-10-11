@@ -62,6 +62,9 @@ pub enum PlayerAction {
     TractionControls,
     Doors,
     Emergency,
+    IndependentUp,
+    IndependentDown,
+    EmergencyReset,
     Pause,
     Reset,
     Faster,
@@ -85,7 +88,7 @@ pub enum PlayerAction {
 }
 
 impl PlayerAction {
-    pub const ALL: [Self; 38] = [
+    pub const ALL: [Self; 41] = [
         Self::ThrottleUp,
         Self::ThrottleDown,
         Self::BrakeUp,
@@ -104,6 +107,9 @@ impl PlayerAction {
         Self::TractionControls,
         Self::Doors,
         Self::Emergency,
+        Self::IndependentUp,
+        Self::IndependentDown,
+        Self::EmergencyReset,
         Self::Pause,
         Self::Reset,
         Self::Faster,
@@ -145,6 +151,9 @@ impl PlayerAction {
             Self::TractionControls => "Controles de vapor y diésel",
             Self::Doors => "Puertas",
             Self::Emergency => "Emergencia",
+            Self::IndependentUp => "Aplicar freno independiente",
+            Self::IndependentDown => "Soltar freno independiente",
+            Self::EmergencyReset => "Rearmar emergencia (detenido)",
             Self::Pause => "Pausar / continuar",
             Self::Reset => "Reiniciar servicio",
             Self::Faster => "Acelerar tiempo",
@@ -187,6 +196,9 @@ impl PlayerAction {
             Self::TractionControls => KeyCode::KeyB,
             Self::Doors => KeyCode::KeyQ,
             Self::Emergency => KeyCode::Backspace,
+            Self::IndependentUp => KeyCode::BracketRight,
+            Self::IndependentDown => KeyCode::BracketLeft,
+            Self::EmergencyReset => KeyCode::KeyN,
             Self::Pause => KeyCode::KeyP,
             Self::Reset => KeyCode::KeyR,
             Self::Faster => KeyCode::Equal,
@@ -416,8 +428,6 @@ fn reserved_key(key: KeyCode) -> bool {
             | KeyCode::AltRight
             | KeyCode::ControlLeft
             | KeyCode::ControlRight
-            | KeyCode::BracketLeft
-            | KeyCode::BracketRight
             | KeyCode::Comma
             | KeyCode::Period
             | KeyCode::KeyF
@@ -483,6 +493,8 @@ pub fn parse_key(s: &str) -> Option<KeyCode> {
         "Quote" => KeyCode::Quote,
         "Semicolon" => KeyCode::Semicolon,
         "Backslash" => KeyCode::Backslash,
+        "BracketLeft" => KeyCode::BracketLeft,
+        "BracketRight" => KeyCode::BracketRight,
         "Backspace" => KeyCode::Backspace,
         "Equal" => KeyCode::Equal,
         "Minus" => KeyCode::Minus,
@@ -492,6 +504,8 @@ pub fn parse_key(s: &str) -> Option<KeyCode> {
 
 pub fn key_label(key: KeyCode) -> String {
     match key {
+        KeyCode::BracketLeft => "[".into(),
+        KeyCode::BracketRight => "]".into(),
         KeyCode::Space => "Espacio".into(),
         KeyCode::Pause => "Pause".into(),
         KeyCode::Backspace => "Retroceso".into(),

@@ -1,0 +1,24 @@
+[scenario]
+name = "Consumo eléctrico: pasajeros y auxiliares"
+description = "B permite elegir climatización; con frío o calor cambia el consumo y la potencia disponible. Iluminación permanente: 16 kW. Ejemplo sintético con valores declarados."
+[route]
+path = "route"
+start = "a"
+destination = "b"
+assume_signals_clear = true
+[train]
+consist = "consists/diesel_hotel.con"
+[train.power_load]
+auxiliary_w = 10000.0
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+[simulation]
+duration = 600.0
+time_step = 0.05
+seed = 42
+legacy_power_cap = false
+[output]
+csv = "run.csv"
+metadata = "run.json"

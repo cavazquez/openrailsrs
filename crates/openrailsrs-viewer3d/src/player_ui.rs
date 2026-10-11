@@ -252,6 +252,10 @@ enum UiCommand {
     BeginRefill,
     CancelRefill,
     SecureTail,
+    IndependentApply,
+    IndependentRelease,
+    EmergencyReset,
+    HotelMode,
     Uncouple,
     Recouple,
     MapPick(MapSelection),
@@ -851,6 +855,10 @@ fn handle_buttons(
                 for i in ui.selected_car+1..l.session.formation.coupled_count {
                     if !l.session.formation.cars[i].handbrake {l.session.operate_car(i,CarOperation::Handbrake)?;}
                 }ui.notice="Frenos de mano aplicados a la sección posterior".into();Ok(())}),
+            UiCommand::IndependentApply=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|{let command=l.session.state.brake_system.independent_command+0.1;l.session.set_independent_brake(command)}),
+            UiCommand::IndependentRelease=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|{let command=l.session.state.brake_system.independent_command-0.1;l.session.set_independent_brake(command)}),
+            UiCommand::EmergencyReset=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.reset_emergency()),
+            UiCommand::HotelMode=>live.as_mut().ok_or("No hay partida".into()).map(|l|{l.session.state.power_supply.hotel_mode = l.session.state.power_supply.hotel_mode.next();}),
             UiCommand::Uncouple=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.uncouple_after(ui.selected_car)).map(|()|{ui.notice="Sección posterior desacoplada y estacionada".into();}),
             UiCommand::Recouple=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.recouple()).map(|()|{ui.notice="Enganche acoplado; reconectá la manguera, abrí las llaves y soltá los frenos de mano".into();}),
             UiCommand::MapPick(selection)=>{ui.map_selection=Some(selection.clone());Ok(())},
@@ -1341,6 +1349,20 @@ fn poll_menu_audits(mut menu: ResMut<PlayerLaunchMenu>, mut ui: ResMut<PlayerUiS
 
 fn build_traction(p: &mut ChildSpawnerCommands<'_>, s: &LiveDriveSession) {
     button(p, "Arenado: activar / desactivar", UiCommand::Sander);
+    row(p, |p| {
+        if !s.state.brake_system.circuits.is_empty() {
+            button(p, "Aplicar independiente ]", UiCommand::IndependentApply);
+            button(p, "Soltar independiente [", UiCommand::IndependentRelease);
+        }
+        button(p, "Rearmar emergencia N", UiCommand::EmergencyReset);
+    });
+    if s.physics.power_supply.has_loads() {
+        button(
+            p,
+            "Climatización: auto / apagada / calor / frío",
+            UiCommand::HotelMode,
+        );
+    }
     label(
         p,
         "Podés usar estos controles en marcha o con la partida pausada. B cierra el panel; F8 muestra el detalle de tracción.",
@@ -1406,7 +1428,7 @@ fn build_traction(p: &mut ChildSpawnerCommands<'_>, s: &LiveDriveSession) {
 }
 
 fn traction_text(s: &LiveDriveSession, settings: &PlayerSettings) -> String {
-    let mut out = String::new();
+    let mut out = format!("{}\n\n", s.traction_diagnosis());
     if let Some(rail) = &s.state.rail_adhesion {
         out += &format!(
             "Vía: {} · agarre del clima {:.0}%\nArenado: {}\n\n",
@@ -1452,6 +1474,24 @@ fn traction_text(s: &LiveDriveSession, settings: &PlayerSettings) -> String {
             op.delivered_kg
         );
     }
+    out += &format!(
+        "Freno independiente {:.0}% · emergencia {}\nAuxiliares {:.1} kW · pasajeros {:.1} kW · climatización {}\nConsumo de auxiliares y pasajeros {:.3} kWh\n",
+        s.state.brake_system.independent_command * 100.0,
+        yes(s.state.brake_system.emergency),
+        s.state.power_supply.auxiliary_w / 1000.0,
+        s.state.power_supply.hotel_w / 1000.0,
+        s.state.power_supply.hotel_mode.label(),
+        s.state.power_supply.energy_j / 3_600_000.0
+    );
+    for c in &s.state.brake_system.circuits {
+        out += &format!(
+            "Depósito {}: {:.2} bar · compresor {} · independiente {:.2} bar\n",
+            c.vehicle + 1,
+            c.reservoir_bar,
+            yes(c.compressor_on),
+            c.independent_bar
+        );
+    }
     if let Some(b) = &s.state.boiler_state {
         out += &format!(
             "{} · {:.2} bar · agua de caldera {:.1}%\nTénder: {:.1} L de agua · {:.1} kg de carbón\nFuego {:.1} kg · producción {:.2} kg/s · consumo {:.2} kg/s\nFogonero {} · corte {:.0}% · pala {:.0}% · tiro {:.0}%\nInyector 1 {} · inyector 2 {} · soplador {} · purgas {}\nInyección {:.2} kg/s · carbón quemado {:.3} kg/s\n\n",
@@ -1481,6 +1521,16 @@ fn traction_text(s: &LiveDriveSession, settings: &PlayerSettings) -> String {
     }
     for (car, state) in s.physics.diesel.cars.iter().zip(&s.state.diesel.cars) {
         out += &format!(
+            "Motor {:.1} °C · refrigeración {} · potencia térmica {:.0}%\n",
+            state.temperature_c,
+            yes(state.cooling_on),
+            openrailsrs_sim::diesel_operation::available_fraction(
+                &s.state.diesel,
+                &s.physics.diesel,
+                car.vehicle
+            ) * 100.0
+        );
+        out += &format!(
             "Vehículo {} · motor {} · {:.0} rpm\nCombustible {:.2} / {:.1} L · consumo {:.2} L/h\nBatería {} · tracción {}\n\n",
             car.vehicle + 1,
             state.phase.label(),
@@ -1496,6 +1546,9 @@ fn traction_text(s: &LiveDriveSession, settings: &PlayerSettings) -> String {
 }
 
 fn build_formation(p: &mut ChildSpawnerCommands<'_>, ui: &PlayerUiState, s: &LiveDriveSession) {
+    if let Some(instruction) = s.shunting_instruction() {
+        label(p, instruction, 14.0, GOOD);
+    }
     label(
         p,
         format!(
@@ -2295,7 +2348,25 @@ fn update_panel_text(
                 let Some(l) = live.as_ref() else { continue };
                 let s = &l.session;
                 match kind {
-                    DynamicText::Notebook => notebook_text(l, &content, ui.notebook_tab, &settings),
+                    DynamicText::Notebook => {
+                        let mut text = notebook_text(l, &content, ui.notebook_tab, &settings);
+                        if !s.gameplay.shunting_steps.is_empty() {
+                            text += "\n\nMANIOBRAS\n";
+                            for (i, goal) in s.gameplay.shunting_steps.iter().enumerate() {
+                                text += &format!(
+                                    "{} {}. {}\n",
+                                    if i < s.gameplay.shunting_completed_s.len() {
+                                        "✓"
+                                    } else {
+                                        "○"
+                                    },
+                                    i + 1,
+                                    goal.instruction
+                                );
+                            }
+                        }
+                        text
+                    }
                     DynamicText::Traction => traction_text(s, &settings),
                     DynamicText::Advanced => {
                         let mut text = advanced_text(l, &content, ui.advanced_page, &settings);

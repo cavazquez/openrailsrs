@@ -1,0 +1,6 @@
+(Wagon (Name "Coche de prueba de climatización") (Type Carriage)
+  (Mass 25000) (Size 3 4 20) (MaxBrakeForce 80000)
+  (ORTSPowerSupplyContinuousPower 8kW)
+  (ORTSPowerSupplyHeatingPower 60kW)
+  (ORTSPowerSupplyAirConditioningPower 80kW)
+)

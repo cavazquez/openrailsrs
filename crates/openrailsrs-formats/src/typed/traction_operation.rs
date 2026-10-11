@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DieselOperatingParams {
+    pub thermal: DieselThermalParams,
     pub capacity_l: f64,
     pub starting_rpm: f64,
     pub confirmation_rpm: f64,
@@ -51,6 +52,25 @@ fn scalar_values(values: &[Ast]) -> Vec<String> {
     out
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct DieselThermalParams {
+    pub maximum_c: f64,
+    pub time_constant_s: f64,
+    pub cooling: u8,
+    /// Explicit Rust extension; native OR temperature is normally diagnostic.
+    pub protection: bool,
+}
+impl Default for DieselThermalParams {
+    fn default() -> Self {
+        Self {
+            maximum_c: 100.0,
+            time_constant_s: 720.0,
+            cooling: 3,
+            protection: false,
+        }
+    }
+}
+
 /// Strict quantities used for resources; unknown suffixes must not become litres.
 pub(super) fn quantity(
     ast: &Ast,
@@ -74,6 +94,9 @@ pub(super) fn quantity(
     // Normalize only the suffix; no expression is evaluated.
     let unit = unit.replace(['*', '(', ')', '^'], "");
     let scale = match (default_unit, unit.as_str()) {
+        ("c", "c" | "degc") | ("s", "s") => 1.,
+        ("s", "ms") => 0.001,
+        ("rpm", "") => 1.,
         ("l" | "ft3", "l") | ("kg", "kg") | ("rpm", "rpm") => 1.,
         ("l" | "ft3", "g-uk" | "gal-uk") => 4.54609,
         ("l" | "ft3", "g-us" | "gal-us" | "gal" | "gals" | "gallon" | "gallons") => 3.785411784,
@@ -169,7 +192,25 @@ pub(super) fn parse_diesel(
     if starting_rpm <= 0. || confirmation_rpm <= starting_rpm || confirmation_rpm >= max {
         return Err(invalid("StartingRPM / StartingConfirmRPM"));
     }
+    let maximum_c = quantity(ast, "MaxTemperature", "c")?
+        .or(quantity(ast, "DieselMaxTemperature", "c")?)
+        .unwrap_or(100.0);
+    let time_constant_s = quantity(ast, "TempTimeConstant", "s")?.unwrap_or(720.0);
+    let cooling = quantity(ast, "Cooling", "rpm")?.unwrap_or(3.0);
+    if !(40.0..=300.0).contains(&maximum_c)
+        || time_constant_s <= 0.0
+        || cooling > 3.0
+        || cooling.fract() != 0.0
+    {
+        return Err(invalid("diesel thermal parameters"));
+    }
     Ok(Some(DieselOperatingParams {
+        thermal: DieselThermalParams {
+            maximum_c,
+            time_constant_s,
+            cooling: cooling as u8,
+            protection: quantity(ast, "ORTSRSOverheatProtection", "rpm")?.unwrap_or(0.0) > 0.0,
+        },
         capacity_l: quantity(ast, "MaxDieselLevel", "l")?.unwrap_or(5000.),
         starting_rpm,
         confirmation_rpm,

@@ -9,12 +9,13 @@ use crate::{
 };
 use bevy::prelude::*;
 use openrailsrs_audio::native::{
-    ConsistSoundSpec, NativeAudioEngine, SoundFrame, SoundState, TrainSoundFrame,
+    ConsistSoundSpec, NativeAudioEngine, SoundFrame, SoundPlacement, SoundState, TrainSoundFrame,
 };
 
 #[derive(Resource, Default)]
 pub struct NativeAudio {
     pub engine: Option<NativeAudioEngine>,
+    positions: std::collections::HashMap<(usize, usize), (f64, f32)>,
 }
 
 pub fn start_native_audio(
@@ -23,6 +24,7 @@ pub fn start_native_audio(
     mut audio: ResMut<NativeAudio>,
 ) {
     audio.engine = None;
+    audio.positions.clear();
     let Some(live) = live else { return };
     let Ok(scenario) = openrailsrs_scenarios::load_scenario(live.scenario_path()) else {
         return;
@@ -51,6 +53,7 @@ pub fn start_native_audio(
 }
 pub fn stop_native_audio(mut audio: ResMut<NativeAudio>) {
     audio.engine = None;
+    audio.positions.clear();
 }
 
 fn state(session: &openrailsrs_sim::LiveDriveSession, vehicle: usize) -> SoundState {
@@ -83,7 +86,7 @@ fn state(session: &openrailsrs_sim::LiveDriveSession, vehicle: usize) -> SoundSt
     let controls_powered = car.is_some_and(|c| {
         c.powered && c.power_on && c.battery_on && (vehicle == 0 || c.mu_connected)
     }) && !parked;
-    let powered = controls_powered
+    let mut powered = controls_powered
         && session.state.electric.power_available(vehicle)
         && session.state.diesel.power_available(vehicle);
     let velocity = if parked {
@@ -111,8 +114,11 @@ fn state(session: &openrailsrs_sim::LiveDriveSession, vehicle: usize) -> SoundSt
         }
     });
     let steam = locomotive.and_then(|l| l.steam.as_ref());
+    // Steam regulator/valve gear does not depend on the cab's battery.
+    powered |= steam.is_some() && !parked && car.is_some_and(|c| c.power_on);
     let boiler = steam.and(session.state.boiler_state.as_ref());
-    let steam_working = boiler.is_some_and(|b| b.tractive_force_n > 0. && !b.low_water_failure);
+    let steam_motion = session.steam_motion(vehicle, 0.0);
+    let steam_working = steam_motion.is_some_and(|m| m.working);
     // Missing fuel-consumption data does not turn a diesel with a governor
     // into an electric. Keep the sound-variable scale tied to this motor.
     let diesel = diesel_state.is_some()
@@ -147,9 +153,9 @@ fn state(session: &openrailsrs_sim::LiveDriveSession, vehicle: usize) -> SoundSt
                 } else {
                     session.driver_throttle
                 },
-                |s| {
+                |_s| {
                     if steam_working {
-                        velocity.abs() / s.driving_wheel_radius_m / std::f64::consts::PI * 5.0
+                        steam_motion.map_or(0.0, |m| m.frequency_hz)
                     } else {
                         0.0
                     }
@@ -172,12 +178,7 @@ fn state(session: &openrailsrs_sim::LiveDriveSession, vehicle: usize) -> SoundSt
             rpm.clamp(0.0, 1.0) as f32
         },
         variable3: 0.0,
-        steam_phase: steam.filter(|_| powered && steam_working).map(|s| {
-            (session.state.odometer_m + session.render_wheel_slip_distance_m(vehicle, 0.0))
-                / (std::f64::consts::TAU * s.driving_wheel_radius_m)
-                * f64::from(s.cylinder_count)
-                * 2.0
-        }),
+        steam_phase: steam_motion.filter(|m| m.working).map(|m| m.stroke_phase),
         engine_on: diesel_state
             .map(|d| d.command_running && d.fuel_l > 0. && car.is_some_and(|c| c.battery_on)),
         injector1: boiler.is_some_and(|b| b.controls.injector1),
@@ -216,7 +217,7 @@ fn vehicle_states(session: &openrailsrs_sim::LiveDriveSession) -> Vec<SoundState
 
 pub fn update_native_audio(
     live: Option<Res<LiveDrive>>,
-    audio: Res<NativeAudio>,
+    mut audio: ResMut<NativeAudio>,
     weather: Option<Res<crate::weather_state::WeatherState>>,
     settings: Res<PlayerSettings>,
     follow: Res<CameraFollowMode>,
@@ -230,7 +231,11 @@ pub fn update_native_audio(
         &GlobalTransform,
     )>,
 ) {
-    let (Some(live), Some(engine)) = (live, audio.engine.as_ref()) else {
+    let Some(live) = live else { return };
+    if audio.engine.is_none() {
+        return;
+    }
+    let Some(engine) = audio.engine.as_ref() else {
         return;
     };
     let Ok(camera) = camera.single() else { return };
@@ -250,6 +255,7 @@ pub fn update_native_audio(
         id: 0,
         state: state(&live.session, 0),
         vehicle_states: vehicle_states(&live.session),
+        vehicle_placement: vec![],
         distance_m: player_pose
             .map_or(0.0, |(_, p)| p.translation().distance(camera.translation())),
         vehicle_distances_m: car_distances(
@@ -266,6 +272,7 @@ pub fn update_native_audio(
             id: i + 1,
             state: state(&service.session, 0),
             vehicle_states: vehicle_states(&service.session),
+            vehicle_placement: vec![],
             distance_m: if service.departed {
                 distance
             } else {
@@ -281,6 +288,48 @@ pub fn update_native_audio(
             },
         });
     }
+    let _ = engine;
+    let right = camera.rotation() * Vec3::X;
+    let mut spatial = std::collections::HashMap::new();
+    for (parent, car, transform) in &cars {
+        let id = if player_pose.is_some_and(|(entity, _)| entity == parent.parent()) {
+            0
+        } else if let Some((_, marker, _)) = traffic
+            .iter()
+            .find(|(entity, _, _)| *entity == parent.parent())
+        {
+            marker.0
+        } else {
+            continue;
+        };
+        let delta = transform.translation() - camera.translation();
+        let distance = delta.length();
+        let now = live.session.time_s();
+        let radial = audio
+            .positions
+            .get(&(id, car.0))
+            .map_or(0.0, |(time, old)| {
+                let dt = now - time;
+                if !live.paused && dt > 0.0 && dt < 1.0 {
+                    (distance - old) / dt as f32
+                } else {
+                    0.0
+                }
+            });
+        audio.positions.insert((id, car.0), (now, distance));
+        spatial.insert(
+            (id, car.0),
+            SoundPlacement::from_radial_velocity(delta.normalize_or_zero().dot(right), radial),
+        );
+    }
+    for train in &mut trains {
+        train.vehicle_placement = (0..train.vehicle_states.len())
+            .map(|i| spatial.get(&(train.id, i)).copied().unwrap_or_default())
+            .collect();
+    }
+    let Some(engine) = audio.engine.as_ref() else {
+        return;
+    };
     if let Some(weather) = weather.as_ref() {
         engine.weather(
             weather.atmosphere.rain,
@@ -354,6 +403,8 @@ mod tests {
             .map(
                 |(vehicle, rpm)| openrailsrs_sim::diesel_operation::DieselCarState {
                     vehicle,
+                    temperature_c: 40.0,
+                    cooling_on: false,
                     rpm,
                     demanded_rpm: rpm,
                     command_running: true,

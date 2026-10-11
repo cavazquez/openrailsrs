@@ -56,7 +56,7 @@ def main():
                        cwd=runtime, env=env, stdout=log, stderr=subprocess.STDOUT, timeout=60, check=True)
     manifest = {
         "reference_version": pin["version"], "reference_commit": pin["commit"],
-        "scope": "Original non-geared diesel lifecycle/RPM/flow, STF resource units and sound event IDs; not complete steam/gearbox parity",
+        "scope": "Original non-geared diesel lifecycle/RPM/flow, four native cooling modes with per-tick RPM/load inputs, STF resource units and sound event IDs; not complete steam/gearbox parity",
         "sha256": {name: hashlib.sha256((runtime / name).read_bytes()).hexdigest() for name in references},
         "helper_sha256": hashlib.sha256(HELPER.read_bytes()).hexdigest(),
         "output_sha256": hashlib.sha256(reference.read_bytes()).hexdigest(),

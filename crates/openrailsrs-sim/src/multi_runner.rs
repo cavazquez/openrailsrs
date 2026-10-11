@@ -204,7 +204,7 @@ pub fn run_scenario_multi_train(
     {
         let path_edges = crate::path::resolve_route_edges(&graph, &scenario.route)?;
         let consist_path = scenario_dir.join(&scenario.train.consist);
-        let physics = build_physics(
+        let mut physics = build_physics(
             &consist_path,
             scenario.train.davis.as_ref(),
             scenario.brake_mapping(),
@@ -216,6 +216,7 @@ pub fn run_scenario_multi_train(
                 &graph,
             ),
         )?;
+        physics.power_supply.loads = scenario.train.power_load.clone();
         let path_data = PathData::from_path(&path_edges, &graph);
         let mut state = TrainSimState::new(path_edges);
         state.brake_system = build_brake_from_path(&consist_path);

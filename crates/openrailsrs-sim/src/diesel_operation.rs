@@ -68,6 +68,10 @@ impl EnginePhase {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DieselCarState {
     pub vehicle: usize,
+    #[serde(default = "initial_temperature")]
+    pub temperature_c: f64,
+    #[serde(default)]
+    pub cooling_on: bool,
     pub command_running: bool,
     pub phase: EnginePhase,
     pub rpm: f64,
@@ -95,6 +99,8 @@ impl DieselTrainState {
                 let running = c.params.capacity_l > 0.;
                 DieselCarState {
                     vehicle: c.vehicle,
+                    temperature_c: 40.0,
+                    cooling_on: false,
                     command_running: running,
                     phase: if running {
                         EnginePhase::Running
@@ -138,6 +144,8 @@ impl DieselTrainState {
                     ]
                     .iter()
                     .all(|v| v.is_finite() && *v >= 0.)
+                    && s.temperature_c.is_finite()
+                    && (40.0..=600.0).contains(&s.temperature_c)
                     && s.fuel_l <= c.params.capacity_l
                     && s.rpm <= c.governor.max_rpm * 1.5
                     && s.demanded_rpm <= c.governor.max_rpm * 1.5
@@ -257,4 +265,124 @@ pub fn advance_with_supply(
         }
     }
     consumed
+}
+
+fn initial_temperature() -> f64 {
+    40.0
+}
+
+/// Native DieselEngine.Update temperature branches, using current delivered
+/// engine load. Optional protection is a Rust gameplay extension, not OR parity.
+pub fn advance_temperature(
+    state: &mut crate::TrainSimState,
+    config: &DieselTrainConfig,
+    motor_indices: &[usize],
+    dt: f64,
+) {
+    if !dt.is_finite() || dt <= 0.0 {
+        return;
+    }
+    for car in &config.cars {
+        let force = motor_indices
+            .iter()
+            .position(|&i| i == car.vehicle)
+            .and_then(|i| state.diesel_traction_force_n.get(i))
+            .copied()
+            .unwrap_or(0.0);
+        let supplied = state.power_supply.vehicle_load_w(car.vehicle);
+        let Some(s) = state
+            .diesel
+            .cars
+            .iter_mut()
+            .find(|s| s.vehicle == car.vehicle)
+        else {
+            continue;
+        };
+        let p = &car.params.thermal;
+        let available = car.governor.power_at_rpm(s.rpm).max(1.0);
+        let load = ((force * state.velocity_mps + supplied) / available).max(0.0);
+        advance_thermal_car(s, p, car.governor.idle_rpm, car.governor.max_rpm, load, dt);
+    }
+}
+
+/// Native temperature arithmetic uses OR's single precision, including its
+/// hysteresis boundaries. The measured load can briefly exceed rated power.
+pub fn advance_thermal_car(
+    s: &mut DieselCarState,
+    params: &openrailsrs_formats::DieselThermalParams,
+    idle_rpm: f64,
+    maximum_rpm: f64,
+    load: f64,
+    dt: f64,
+) {
+    if !dt.is_finite() || dt <= 0.0 || !load.is_finite() {
+        return;
+    }
+    let maximum = params.maximum_c as f32;
+    let tc = params.time_constant_s as f32;
+    let dt = dt.min(params.time_constant_s * 0.1) as f32;
+    let mut temperature = s.temperature_c as f32;
+    let load = load.max(0.0) as f32;
+    temperature += dt * (maximum - temperature) / tc;
+    match params.cooling {
+        0 => {
+            temperature += dt * (load * 35.0 + 60.0 - temperature) / tc;
+            s.cooling_on = false;
+        }
+        1 => {
+            temperature += dt
+                * ((s.rpm as f32 - idle_rpm as f32)
+                    / (maximum_rpm as f32 - idle_rpm as f32).max(1.0)
+                    * 95.0
+                    + 60.0
+                    - temperature)
+                / tc;
+            s.cooling_on = true;
+        }
+        2 => {
+            if temperature > maximum {
+                s.cooling_on = true;
+            }
+            if temperature < maximum - 20.0 {
+                s.cooling_on = false;
+            }
+            temperature +=
+                dt * if s.cooling_on {
+                    maximum - temperature
+                } else {
+                    -(maximum - 40.0 - temperature)
+                } / tc;
+        }
+        _ => {
+            if temperature >= 80.0 {
+                s.cooling_on = true;
+            }
+            if temperature < 60.0 {
+                s.cooling_on = false;
+            }
+            temperature += dt * (load * 95.0 - temperature) / tc;
+            temperature = temperature.min(maximum - 20.0);
+        }
+    }
+    s.temperature_c = f64::from(temperature.clamp(40.0, 600.0));
+}
+
+pub fn available_fraction(
+    state: &DieselTrainState,
+    config: &DieselTrainConfig,
+    vehicle: usize,
+) -> f64 {
+    config
+        .cars
+        .iter()
+        .find(|c| c.vehicle == vehicle)
+        .zip(state.car(vehicle))
+        .map_or(1.0, |(c, s)| {
+            if c.params.thermal.protection {
+                (1.0 - (s.temperature_c - c.params.thermal.maximum_c).max(0.0) / 30.0)
+                    .clamp(0.0, 1.0)
+            } else {
+                1.0
+            }
+        })
 }

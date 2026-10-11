@@ -502,6 +502,13 @@ pub(crate) fn update_arrival_overlay(
     } else {
         lines.insert_str(0, "Servicio completado\n\n");
     }
+    if !gp.shunting_steps.is_empty() {
+        lines.push_str(&format!(
+            "Maniobras completadas: {}/{} · F7 muestra cada objetivo\n",
+            gp.shunting_completed_s.len(),
+            gp.shunting_steps.len()
+        ));
+    }
     if gp.stop_targets.is_empty() {
         lines.push_str("\nSin paradas programadas.");
     } else {

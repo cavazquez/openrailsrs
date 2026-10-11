@@ -153,6 +153,9 @@ pub struct DavisSection {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct TrainSection {
+    /// Optional declared electrical demand; no guessed HVAC consumption.
+    #[serde(default)]
+    pub power_load: PowerLoadSection,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub electric_pickups: Vec<openrailsrs_core::electrification::ElectricPickupOverride>,
     pub consist: String,
@@ -161,6 +164,30 @@ pub struct TrainSection {
     /// Maximum passenger capacity; `None` = unlimited.
     #[serde(default)]
     pub max_capacity: Option<u32>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[serde(default)]
+pub struct PowerLoadSection {
+    pub auxiliary_w: f64,
+    pub continuous_w: f64,
+    pub heating_w: f64,
+    pub cooling_w: f64,
+}
+impl PowerLoadSection {
+    pub fn total_w(&self) -> f64 {
+        self.auxiliary_w + self.continuous_w + self.heating_w + self.cooling_w
+    }
+    pub fn valid(&self) -> bool {
+        [
+            self.auxiliary_w,
+            self.continuous_w,
+            self.heating_w,
+            self.cooling_w,
+        ]
+        .iter()
+        .all(|v| v.is_finite() && (0.0..=10_000_000.0).contains(v))
+    }
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq, Default)]
@@ -182,6 +209,8 @@ pub enum Difficulty {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct GameplaySection {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub shunting: Vec<ShuntingStep>,
     #[serde(default)]
     pub objective: ObjectiveKind,
     pub time_limit_seconds: Option<u64>,
@@ -195,6 +224,29 @@ pub struct GameplaySection {
 
 fn default_penalty_rate() -> f64 {
     1.0
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ShuntingKind {
+    Cut,
+    MoveClear,
+    Switch,
+    PickUp,
+    Depart,
+}
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+pub struct ShuntingStep {
+    pub kind: ShuntingKind,
+    pub instruction: String,
+    #[serde(default)]
+    pub count: usize,
+    #[serde(default)]
+    pub position_m: f64,
+    #[serde(default)]
+    pub node: String,
+    #[serde(default)]
+    pub switch_position: SwitchPositionDef,
 }
 
 /// Definition for an extra train in a multi-train scenario.
@@ -349,6 +401,26 @@ impl Default for OutputSection {
 
 impl ScenarioFile {
     pub fn validate(&self) -> Result<(), ScenarioError> {
+        if self.gameplay.shunting.len() > 100
+            || self.gameplay.shunting.iter().any(|step| {
+                step.instruction.trim().is_empty()
+                    || step.instruction.len() > 500
+                    || !step.position_m.is_finite()
+                    || step.position_m < 0.0
+                    || matches!(step.kind, ShuntingKind::Cut | ShuntingKind::PickUp)
+                        && (step.count == 0 || step.count > 1000)
+                    || step.kind == ShuntingKind::Switch && step.node.is_empty()
+            })
+        {
+            return Err(ScenarioError::Validation(
+                "Invalid shunting objectives".into(),
+            ));
+        }
+        if !self.train.power_load.valid() {
+            return Err(ScenarioError::Validation(
+                "train.power_load must contain finite nonnegative watts".into(),
+            ));
+        }
         if self.scenario.name.trim().is_empty() {
             return Err(ScenarioError::Validation(
                 "scenario.name must not be empty".into(),

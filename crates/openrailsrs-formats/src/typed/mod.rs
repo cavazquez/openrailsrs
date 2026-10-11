@@ -9,7 +9,7 @@ mod electric;
 mod engine;
 mod traction_operation;
 pub use electric::parse_electric_vehicle;
-pub use traction_operation::{DieselOperatingParams, SteamOperatingParams};
+pub use traction_operation::{DieselOperatingParams, DieselThermalParams, SteamOperatingParams};
 mod environment;
 mod friction;
 mod hazard;

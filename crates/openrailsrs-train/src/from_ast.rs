@@ -17,6 +17,8 @@ pub fn load_engine_from_path(path: impl AsRef<Path>) -> Result<Locomotive, Train
     let ast = parse_vehicle_text(&text)?;
     let engine = EngineFile::from_ast(&ast)?;
     let mut locomotive: Locomotive = engine.into();
+    locomotive.passenger_power =
+        openrailsrs_formats::typed::power_supply::parse_passenger_power(&ast)?;
     locomotive.brake_profile = openrailsrs_formats::parse_vehicle_brake_profile(&ast);
     locomotive.power_supply =
         Box::new(openrailsrs_formats::typed::power_supply::parse_power_supply(&ast)?);
@@ -33,6 +35,8 @@ pub fn load_wagon_from_path(path: impl AsRef<Path>) -> Result<Wagon, TrainError>
     let ast = parse_vehicle_text(&text)?;
     let wagon = WagonFile::from_ast(&ast)?;
     let mut vehicle: Wagon = wagon.into();
+    vehicle.passenger_power =
+        openrailsrs_formats::typed::power_supply::parse_passenger_power(&ast)?;
     vehicle.brake_profile = openrailsrs_formats::parse_vehicle_brake_profile(&ast);
     Ok(vehicle)
 }
@@ -412,6 +416,7 @@ impl From<EngineFile> for Locomotive {
             &value.friction,
         );
         Self {
+            passenger_power: Default::default(),
             name: value.name,
             power_supply: Default::default(),
             diesel_operation: value.diesel_operation.map(Box::new),
@@ -440,6 +445,7 @@ impl From<EngineFile> for Locomotive {
 impl From<WagonFile> for Wagon {
     fn from(value: WagonFile) -> Self {
         Self {
+            passenger_power: Default::default(),
             name: value.name,
             mass_kg: value.mass_kg,
             max_brake_force_n: value.max_brake_force_n,

@@ -496,6 +496,12 @@ impl PlayerLaunchMenu {
         .to_string_lossy()
         .into_owned();
         for service in &mut scenario.extra_trains {
+            if !choice.native_activity
+                && service.consist == "../chiltern/consists/birmingham_pullman.con"
+                && let Some(original) = choice.scenery_root.as_deref().and_then(curated_pullman)
+            {
+                service.consist = original.to_string_lossy().into_owned();
+            }
             if !Path::new(&service.consist).is_absolute() {
                 let root = if choice.native_activity {
                     choice
@@ -656,6 +662,21 @@ pub fn cycle(index: usize, len: usize, delta: i32) -> usize {
 }
 /// Discover complete scenario files, including nested examples. Reports,
 /// overlays, timetables and campaigns do not deserialize as playable scenarios.
+fn curated_pullman(route: &Path) -> Option<PathBuf> {
+    let content = route.parent()?.parent()?;
+    std::fs::read_dir(content.join("TRAINS/CONSISTS"))
+        .ok()?
+        .flatten()
+        .map(|entry| entry.path())
+        .find(|path| {
+            path.is_file()
+                && path.file_name().is_some_and(|name| {
+                    name.to_string_lossy()
+                        .eq_ignore_ascii_case("Birmingham Pullman.con")
+                })
+        })
+}
+
 fn discover_example_services(project: &Path, chiltern: Option<&Path>) -> Vec<ServiceChoice> {
     let examples = absolute(&project.join("examples"));
     // Keep the full station journey as the default, independent of directory order.
@@ -1173,6 +1194,47 @@ mod tests {
             })
         );
     }
+    #[test]
+    fn curated_traffic_finds_original_pullman_without_bundling_downloaded_resources() {
+        let content = tempfile::tempdir().unwrap();
+        let cons = content.path().join("TRAINS/CONSISTS");
+        let stock = content.path().join("TRAINS/TRAINSET/DMU");
+        std::fs::create_dir_all(&stock).unwrap();
+        std::fs::create_dir_all(&cons).unwrap();
+        std::fs::write(stock.join("power.eng"), "Wagon ( power Mass ( 40t ) Size ( 3m 4m 20m ) ) Engine ( power MaxPower ( 500kW ) MaxForce ( 100kN ) )").unwrap();
+        let original = cons.join("BIRMINGHAM PULLMAN.CON");
+        std::fs::write(
+            &original,
+            "Train ( TrainCfg ( Pullman Engine ( EngineData ( power DMU ) UiD ( 0 ) ) ) )",
+        )
+        .unwrap();
+        let native = content.path().join("ROUTES/Chiltern");
+        assert_eq!(curated_pullman(&native), Some(original.clone()));
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let mut menu = PlayerLaunchMenu::discover(&root, Some(native));
+        menu.service = menu
+            .services
+            .iter()
+            .position(|s| s.source.ends_with("chiltern_traffic/scenario.toml"))
+            .unwrap();
+        menu.refresh_choices();
+        menu.consists = vec![original.clone()];
+        menu.consist = 0;
+        menu.consist_audits
+            .insert(original.clone(), menu.auditor.inspect(&original));
+        let request = menu.prepare_in(content.path()).unwrap();
+        let launched = load_scenario(request.path).unwrap();
+        assert_eq!(launched.extra_trains.len(), 2);
+        assert!(
+            launched
+                .extra_trains
+                .iter()
+                .all(|s| Path::new(&s.consist) == original)
+        );
+        assert_eq!(launched.extra_trains[0].id, "Pullman adelantado");
+        assert_eq!(launched.extra_trains[1].id, "Pullman contrario");
+    }
+
     #[test]
     fn selected_menu_service_is_written_and_loadable() {
         let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");

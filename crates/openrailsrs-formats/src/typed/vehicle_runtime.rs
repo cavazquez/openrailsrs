@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct VehicleBrakeProfile {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub air_circuit: Option<AirCircuitParams>,
     pub system: Option<String>,
     pub max_cylinder_bar: Option<f64>,
     pub application_bar_s: Option<f64>,
@@ -17,6 +19,99 @@ pub struct VehicleBrakeProfile {
     pub native_vacuum: Option<NativeVacuumBrakeProfile>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub legacy_ep: Option<LegacyEpBrakeProfile>,
+}
+
+/// Locomotive compressor and independent brake, in SI units. OR 1.6.1
+/// MSTSLocomotive defaults apply only when the author omits a value.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct AirCircuitParams {
+    pub maximum_bar: f64,
+    pub restart_bar: f64,
+    pub reservoir_m3: f64,
+    pub charging_bar_s: f64,
+    pub application_bar_s: f64,
+    pub release_bar_s: f64,
+}
+impl Default for AirCircuitParams {
+    fn default() -> Self {
+        Self {
+            maximum_bar: 130.0 * 0.0689475729,
+            restart_bar: 110.0 * 0.0689475729,
+            reservoir_m3: 0.3,
+            charging_bar_s: 0.025 * 1.01325 / 0.3,
+            application_bar_s: 1.0,
+            release_bar_s: 1.0,
+        }
+    }
+}
+impl AirCircuitParams {
+    pub fn valid(&self) -> bool {
+        [
+            self.maximum_bar,
+            self.restart_bar,
+            self.reservoir_m3,
+            self.charging_bar_s,
+            self.application_bar_s,
+            self.release_bar_s,
+        ]
+        .iter()
+        .all(|v| v.is_finite() && *v > 0.0)
+            && self.restart_bar <= self.maximum_bar
+            && self.maximum_bar <= 100.0
+            && self.reservoir_m3 <= 100.0
+    }
+}
+
+fn parse_air_circuit(ast: &Ast) -> Option<AirCircuitParams> {
+    if named_blocks(ast, "Engine").is_empty()
+        || scalar(ast, "BrakeSystemType").is_some_and(|s| s.to_ascii_lowercase().contains("vacuum"))
+    {
+        return None;
+    }
+    let mut p = AirCircuitParams::default();
+    let pressure_field = |key| scalar(ast, key).and_then(pressure);
+    let volume = |key| {
+        scalar(ast, key).and_then(|s| {
+            let raw = s.to_ascii_lowercase().replace(['*', '(', ')', ' '], "");
+            let (number, factor) = raw
+                .strip_suffix("m^3")
+                .or_else(|| raw.strip_suffix("m3"))
+                .map_or_else(
+                    || {
+                        (
+                            raw.strip_suffix("ft^3")
+                                .or_else(|| raw.strip_suffix("ft3"))
+                                .unwrap_or(&raw),
+                            0.0283168466,
+                        )
+                    },
+                    |n| (n, 1.0),
+                );
+            number
+                .parse::<f64>()
+                .ok()
+                .filter(|v| v.is_finite() && *v > 0.0)
+                .map(|v| v * factor)
+        })
+    };
+    p.maximum_bar = pressure_field("AirBrakesMainMaxAirPressure").unwrap_or(p.maximum_bar);
+    p.restart_bar = pressure_field("AirBrakesCompressorRestartPressure")
+        .unwrap_or(p.restart_bar)
+        .min(p.maximum_bar);
+    p.reservoir_m3 = volume("ORTSAirBrakeMainResVolume")
+        .or_else(|| volume("AirBrakesMainResVolume"))
+        .unwrap_or(p.reservoir_m3);
+    p.charging_bar_s = pressure_field("ORTSMainResChargingRate").unwrap_or_else(|| {
+        volume("AirBrakesAirCompressorPowerRating")
+            .unwrap_or(0.025)
+            .max(0.025)
+            * 1.01325
+            / p.reservoir_m3
+    });
+    p.application_bar_s =
+        pressure_field("ORTSEngineBrakeApplicationRate").unwrap_or(p.application_bar_s);
+    p.release_bar_s = pressure_field("ORTSEngineBrakeReleaseRate").unwrap_or(p.release_bar_s);
+    Some(p)
 }
 
 /// EP cylinders without an authored diameter use OR's legacy pressure model.
@@ -128,6 +223,7 @@ pub(super) fn pressure(value: String) -> Option<f64> {
 }
 pub fn parse_vehicle_brake_profile(ast: &Ast) -> VehicleBrakeProfile {
     VehicleBrakeProfile {
+        air_circuit: parse_air_circuit(ast),
         system: scalar(ast, "BrakeSystemType"),
         max_cylinder_bar: [
             "MaxCylinderPressure",

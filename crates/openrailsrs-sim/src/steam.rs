@@ -293,3 +293,53 @@ pub fn stall_force_n(p: &SteamParams) -> f64 {
         * ETA_INDICATOR
         / p.driving_wheel_radius_m
 }
+
+/// A double-acting engine has two exhaust strokes per authored cylinder and
+/// wheel revolution. Presentation distance includes actual wheel slip.
+#[derive(Clone, Copy, Debug)]
+pub struct SteamMotion {
+    pub wheel_revolutions: f64,
+    pub stroke_phase: f64,
+    pub frequency_hz: f64,
+    pub load: f64,
+    pub working: bool,
+}
+impl crate::LiveDriveSession {
+    pub fn steam_motion(&self, vehicle: usize, remainder_s: f64) -> Option<SteamMotion> {
+        let openrailsrs_train::Vehicle::Loco(loco) = self.vehicle_definition(vehicle)? else {
+            return None;
+        };
+        let params = loco.steam.as_ref()?;
+        let boiler = self.state.boiler_state.as_ref()?;
+        let attached = vehicle < self.formation.coupled_count;
+        let distance = if attached {
+            self.render_head_chainage_m(remainder_s) - self.start_chainage_m
+                + self.render_wheel_slip_distance_m(vehicle, remainder_s)
+        } else {
+            self.formation
+                .parked_head_chainage_m
+                .unwrap_or(self.start_chainage_m)
+                - self.start_chainage_m
+        };
+        let revolution = distance / (std::f64::consts::TAU * params.driving_wheel_radius_m);
+        let strokes = f64::from(params.cylinder_count) * 2.0;
+        let wheel_speed = self
+            .state
+            .rail_adhesion
+            .as_ref()
+            .and_then(|r| r.cars.get(vehicle))
+            .map_or(self.velocity_mps().abs(), |c| c.wheel_speed_mps.abs());
+        let working = attached && boiler.tractive_force_n > 0.0 && !boiler.low_water_failure;
+        Some(SteamMotion {
+            wheel_revolutions: revolution,
+            stroke_phase: revolution * strokes,
+            frequency_hz: if working {
+                wheel_speed / (std::f64::consts::TAU * params.driving_wheel_radius_m) * strokes
+            } else {
+                0.0
+            },
+            load: (boiler.tractive_force_n / params.max_tractive_effort_n()).clamp(0.0, 1.0),
+            working,
+        })
+    }
+}

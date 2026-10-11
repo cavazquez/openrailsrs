@@ -41,6 +41,8 @@ pub enum RollingStockPartKind {
     Bogie,
     Door,
     Pantograph,
+    RunningGear,
+    Coupler,
     Other,
 }
 
@@ -58,6 +60,15 @@ pub fn classify_matrix_name(name: &str) -> RollingStockPartKind {
     }
     if n.starts_with("PANTO") || n.contains("PANTOGRAPH") {
         return RollingStockPartKind::Pantograph;
+    }
+    if n.contains("COUPLER") {
+        return RollingStockPartKind::Coupler;
+    }
+    if ["ROD", "PISTON", "CRANK", "VALVEGEAR", "MOTION"]
+        .iter()
+        .any(|prefix| n.starts_with(prefix))
+    {
+        return RollingStockPartKind::RunningGear;
     }
     RollingStockPartKind::Other
 }
@@ -498,7 +509,10 @@ pub fn part_anim_bundle(
     });
     let keyed = matches!(
         kind,
-        RollingStockPartKind::Door | RollingStockPartKind::Pantograph
+        RollingStockPartKind::Door
+            | RollingStockPartKind::Pantograph
+            | RollingStockPartKind::RunningGear
+            | RollingStockPartKind::Coupler
     )
     .then(|| TrainKeyedAnim {
         matrix_idx,
@@ -547,6 +561,17 @@ fn wrap_angle(a: f32) -> f32 {
         x += std::f32::consts::TAU;
     }
     x
+}
+
+/// Connected couplers share the bend angle after normalizing authored flips.
+fn coupler_relative_yaw(own: Quat, flipped: bool, other: Quat, other_flipped: bool) -> f32 {
+    let a = own * Vec3::NEG_Z * if flipped { -1.0 } else { 1.0 };
+    let b = other * Vec3::NEG_Z * if other_flipped { -1.0 } else { 1.0 };
+    let delta = b.x.atan2(b.z) - a.x.atan2(a.z);
+    ((delta + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI)
+        .clamp(-0.5, 0.5)
+        * 0.5
+        * if flipped { -1.0 } else { 1.0 }
 }
 
 /// Relative bogie yaw from track headings at car pivot and bogie sample (#69).
@@ -647,11 +672,11 @@ pub fn update_rolling_stock_part_anim(
             Option<&Transform>,
             Option<&TrainCarSupports>,
             Option<&ChildOf>,
+            Option<&crate::rolling_stock::ConsistCarIndex>,
         ),
         Without<TrainExteriorAnimPart>,
     >,
     frames: Query<&Transform, (Without<TrainCarTrackOffset>, Without<TrainExteriorAnimPart>)>,
-    car_indices: Query<&crate::rolling_stock::ConsistCarIndex>,
     train_markers: Query<&TrainMarker>,
     mut keyed: Query<
         (
@@ -684,7 +709,7 @@ pub fn update_rolling_stock_part_anim(
             .or_else(|| replay_ref.and_then(|replay| replay.wheel_distance_m(track_index)))
             .unwrap_or(0.0);
         if let Some(live) = live_ref
-            && let Ok(index) = car_indices.get(parent.parent())
+            && let Some(index) = cars.get(parent.parent()).ok().and_then(|c| c.4)
         {
             distance += live.visual_wheel_slip_distance_for_service(
                 track_index,
@@ -692,7 +717,28 @@ pub fn update_rolling_stock_part_anim(
                 wheel.steam_driver,
             );
         }
-        let angle = wheel_angle(distance, wheel.radius_m, car.is_some_and(|car| car.flipped));
+        let flipped = car.is_some_and(|car| car.flipped);
+        let steam_motion = wheel
+            .steam_driver
+            .then(|| {
+                live_ref.and_then(|live| {
+                    cars.get(parent.parent())
+                        .ok()
+                        .and_then(|c| c.4)
+                        .and_then(|index| live.visual_steam_motion(track_index, index.0))
+                })
+            })
+            .flatten();
+        let angle = steam_motion.map_or_else(
+            || wheel_angle(distance, wheel.radius_m, flipped),
+            |motion| {
+                wheel_angle(
+                    motion.wheel_revolutions * std::f64::consts::TAU,
+                    1.0,
+                    flipped,
+                )
+            },
+        );
         if wheel.angle_rad == angle && !wheel.is_added() && !binding.is_changed() {
             continue;
         }
@@ -712,7 +758,8 @@ pub fn update_rolling_stock_part_anim(
     let resolver_ref = tdb_resolver.as_ref();
 
     for (bogie, binding, mut tf, child_of) in &mut bogies {
-        let Ok((car_off, car_transform, supports, car_parent)) = cars.get(child_of.parent()) else {
+        let Ok((car_off, car_transform, supports, car_parent, _)) = cars.get(child_of.parent())
+        else {
             // No path offset on parent (e.g. fallback cube) — leave bogie straight.
             *tf = Transform::IDENTITY;
             let _ = binding;
@@ -796,7 +843,11 @@ pub fn update_rolling_stock_part_anim(
             .get(parent.parent())
             .ok()
             .map_or(0, |c| c.0.track_index);
-        let vehicle_index = car_indices.get(parent.parent()).ok().map(|c| c.0);
+        let vehicle_index = cars
+            .get(parent.parent())
+            .ok()
+            .and_then(|c| c.4)
+            .map(|c| c.0);
         let exterior = live_ref
             .and_then(|l| l.session_for_track(service))
             .map(|s| &s.exterior)
@@ -833,6 +884,75 @@ pub fn update_rolling_stock_part_anim(
         {
             frac = contacts.fraction(parent.parent(), frac);
         }
+        if keyed_anim.kind == RollingStockPartKind::RunningGear {
+            frac = live_ref
+                .and_then(|l| l.session_for_track(service))
+                .zip(vehicle_index)
+                .and_then(|(_, i)| live_ref.and_then(|l| l.visual_steam_motion(service, i)))
+                .map_or(0.0, |m| {
+                    (m.wheel_revolutions
+                        * if cars.get(parent.parent()).is_ok_and(|c| c.0.flipped) {
+                            -1.0
+                        } else {
+                            1.0
+                        })
+                    .rem_euclid(1.0) as f32
+                });
+        }
+        if keyed_anim.kind == RollingStockPartKind::Coupler {
+            if let Some(index) = vehicle_index {
+                let name = matrix_name(&binding.shape, keyed_anim.matrix_idx).to_ascii_uppercase();
+                let front = name.contains("FRONT");
+                let flipped = cars.get(parent.parent()).ok().is_some_and(|c| c.0.flipped);
+                let neighbor = if front != flipped {
+                    index.checked_sub(1)
+                } else {
+                    index.checked_add(1)
+                };
+                let connected = live_ref
+                    .and_then(|l| l.session_for_track(service))
+                    .is_some_and(|s| {
+                        neighbor.is_some_and(|n| {
+                            n < s.formation.cars.len()
+                                && (n < s.formation.coupled_count)
+                                    == (index < s.formation.coupled_count)
+                        })
+                    });
+                let yaw = if connected {
+                    let own_tf = cars.get(parent.parent()).ok().and_then(|c| c.1);
+                    let own_root = cars
+                        .get(parent.parent())
+                        .ok()
+                        .and_then(|c| c.3)
+                        .map(|p| p.parent());
+                    let other_tf = cars.iter().find_map(|(off, tf, _, root, i)| {
+                        (i.map(|i| i.0) == neighbor
+                            && off.track_index == service
+                            && root.map(|r| r.parent()) == own_root)
+                            .then_some((tf?, off.flipped))
+                    });
+                    own_tf
+                        .zip(other_tf)
+                        .map_or(0.0, |(own, (other, other_flipped))| {
+                            coupler_relative_yaw(
+                                own.rotation,
+                                flipped,
+                                other.rotation,
+                                other_flipped,
+                            )
+                        })
+                } else {
+                    0.0
+                };
+                let next = baked_part_local_rotation(
+                    &binding.shape,
+                    keyed_anim.matrix_idx,
+                    Quat::from_rotation_y(yaw),
+                );
+                tf.set_if_neq(next);
+            }
+            continue;
+        }
         let key = key_from_frac(frac, binding.frame_count);
         if keyed_anim.key == key && !keyed_anim.is_added() && !binding.is_changed() {
             continue;
@@ -864,6 +984,40 @@ mod tests {
     use openrailsrs_track::{Edge, Node, NodeKind, TrackGraph};
 
     use crate::track_position::advance_along_graph;
+
+    #[test]
+    fn couplers_ignore_authored_flips_and_share_curve_angle_without_wrapping_jumps() {
+        let forward = Quat::IDENTITY;
+        let flipped = Quat::from_rotation_y(std::f32::consts::PI);
+        assert!(coupler_relative_yaw(forward, false, flipped, true).abs() < 1e-6);
+        assert!(
+            (coupler_relative_yaw(forward, false, Quat::from_rotation_y(0.2), false) - 0.1).abs()
+                < 1e-6
+        );
+        assert!(
+            (coupler_relative_yaw(
+                Quat::from_rotation_y(3.1),
+                false,
+                Quat::from_rotation_y(-3.1),
+                false
+            ) - 0.0415927)
+                .abs()
+                < 1e-6
+        );
+        assert!(
+            coupler_relative_yaw(forward, false, Quat::from_rotation_y(1.0), false).abs() <= 0.25
+        );
+        for name in ["ROD1", "PISTON2", "CRANK_LEFT", "VALVEGEAR1", "MOTION1"] {
+            assert_eq!(
+                classify_matrix_name(name),
+                RollingStockPartKind::RunningGear
+            );
+        }
+        assert_eq!(
+            classify_matrix_name("FRONT_COUPLER"),
+            RollingStockPartKind::Coupler
+        );
+    }
 
     fn identity_matrix() -> Matrix43 {
         Matrix43 {

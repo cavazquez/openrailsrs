@@ -182,6 +182,10 @@ pub fn step(
             state.brake_system.step_with_speed(brake_frac, dt, v);
         }
     }
+    if train.native.is_none() && state.rail_adhesion.is_none() {
+        state.brake_system.step_with_speed(brake_frac, dt, v);
+    }
+    state.brake_system.step_circuits(&state.power_supply, dt);
     let physical_throttle = train.native.as_ref().map_or(state.throttle, |native| {
         native.throttle(
             state.throttle,
@@ -203,6 +207,14 @@ pub fn step(
         &state.power_supply,
     );
     crate::power_supply::advance(state, &train.power_supply);
+    crate::power_supply::update_loads(
+        state,
+        &train.power_supply,
+        train
+            .native
+            .as_ref()
+            .map_or(20.0, |n| n.environment.ambient_c),
+    );
     let mut rail_motor_forces = Vec::with_capacity(train.diesel_engines.len());
     let mut contact_motor_forces = Vec::new();
     let steam_wheel_speed = train
@@ -384,6 +396,16 @@ pub fn step(
                     state.diesel_average_force_n.get(i).copied().unwrap_or(0.0),
                     power_reduction,
                 );
+                force_n *= crate::diesel_operation::available_fraction(
+                    &state.diesel,
+                    &train.diesel,
+                    vehicle_index,
+                );
+                let load = state.power_supply.vehicle_load_w(vehicle_index);
+                if load > 0.0 {
+                    force_n =
+                        force_n.min((engine.engine_power_w(new_rpm) - load).max(0.0) / v.max(0.5));
+                }
                 state.diesel_traction_force_n[i] = force_n;
                 state.diesel_average_force_n[i] = engine.advance_average_force(
                     state.diesel_average_force_n.get(i).copied().unwrap_or(0.0),
@@ -465,7 +487,15 @@ pub fn step(
                         && state.diesel.power_available(*vehicle)
                         && state.power_supply.power_available(*vehicle)
                 })
-                .map(|(_, curve)| curve.interpolate(v).unwrap_or(0.))
+                .map(|(vehicle, curve)| {
+                    let force = curve.interpolate(v).unwrap_or(0.0);
+                    let load = state.power_supply.vehicle_load_w(*vehicle);
+                    if load > 0.0 {
+                        (force - load / v.max(0.5)).max(0.0)
+                    } else {
+                        force
+                    }
+                })
                 .sum::<f64>()
                 * state.throttle
         } else if let Some(f_curve) = train.tractive.interpolate(v) {
@@ -539,9 +569,6 @@ pub fn step(
     // Advance the air-brake system and read the total cylinder force.
     // When no cylinders are registered (default state), fall back to the
     // instantaneous scalar model so existing single-mass simulations are unchanged.
-    if train.native.is_none() && state.rail_adhesion.is_none() {
-        state.brake_system.step_with_speed(brake_frac, dt, v);
-    }
     let effective_mass = train.mass_kg + state.extra_mass_kg;
     let mut f_brake = if !state.brake_system.cylinders.is_empty() {
         state.brake_system.total_force_n(v)
@@ -816,7 +843,9 @@ pub fn step(
         dt
     };
     // Traction energy drawn from supply (gross).
-    state.cumulative_energy_j += f_motor.max(0.0) * v_avg * effective_dt;
+    state.cumulative_energy_j +=
+        (f_motor.max(0.0) * v_avg + state.power_supply.auxiliary_w + state.power_supply.hotel_w)
+            * effective_dt;
     // Regenerative braking: recover fraction of braking work.
     let regen_factor =
         if !train.electric.cars.is_empty() && !state.electric.cars.iter().any(|c| c.main_power) {
@@ -838,6 +867,12 @@ pub fn step(
     state.odometer_m += traveled;
     state.time = state.time + effective_dt;
     state.velocity_mps = if arrived { 0.0 } else { v_new };
+    crate::diesel_operation::advance_temperature(
+        state,
+        &train.diesel,
+        &train.diesel_vehicle_indices,
+        dt,
+    );
     crate::adhesion::finish(state, dt);
 
     StepResult { arrived }

@@ -43,6 +43,7 @@ fn per_vehicle_davis_uses_each_vehicle_speed() {
     let consist = Consist {
         vehicles: vec![
             Vehicle::Wagon(Wagon {
+                passenger_power: Default::default(),
                 name: "front".into(),
                 mass_kg: 50_000.0,
                 max_brake_force_n: 50_000.0,
@@ -59,6 +60,7 @@ fn per_vehicle_davis_uses_each_vehicle_speed() {
                 flipped: false,
             }),
             Vehicle::Wagon(Wagon {
+                passenger_power: Default::default(),
                 name: "rear".into(),
                 mass_kg: 30_000.0,
                 max_brake_force_n: 30_000.0,

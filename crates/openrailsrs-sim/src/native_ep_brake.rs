@@ -216,10 +216,13 @@ impl NativeAirState {
             .cylinder
             .pressure_from_air(self.cylinder.cylinder_air_psi_m3);
     }
-    pub fn step(&mut self, command: f64, dt: f64) {
+    pub fn step_with_emergency(&mut self, command: f64, emergency: bool, dt: f64) {
         let control = &self.profile.controller;
-        let demanded_pipe =
-            control.charged_psi - command.clamp(0., 1.) * control.full_service_drop_psi;
+        let demanded_pipe = if emergency {
+            0.0
+        } else {
+            control.charged_psi - command.clamp(0., 1.) * control.full_service_drop_psi
+        };
         let rate = if demanded_pipe < self.pipe_psi {
             control.application_psi_s
         } else {

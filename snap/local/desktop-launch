@@ -14,7 +14,8 @@ if [ -r "$SNAP/etc/ssl/certs/ca-certificates.crt" ]; then
 else
     export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 fi
-export LD_LIBRARY_PATH="$SNAP/usr/lib/x86_64-linux-gnu:$SNAP/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+# libpulse has a private dependency in pulseaudio/; core24 cannot supply it.
+export LD_LIBRARY_PATH="$SNAP/usr/lib/x86_64-linux-gnu:$SNAP/usr/lib/x86_64-linux-gnu/pulseaudio:$SNAP/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 # Vulkan discovers the packaged Mesa ICDs through XDG; keep host/NVIDIA search paths.
 export XDG_DATA_DIRS="$SNAP/usr/share:$SNAP/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
 export XKB_CONFIG_ROOT="$SNAP/usr/share/X11/xkb"

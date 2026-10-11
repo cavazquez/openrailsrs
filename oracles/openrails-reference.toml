@@ -291,15 +291,15 @@ sha256 = "f458b138475a22e297ac00d83c2aed90ffdf2fd27063d161ab359bce8dc189bc"
 
 [[files]]
 path = "tools/openrails-reference/TractionOperationReference.cs"
-sha256 = "e19068f18cc71f203bab02cabeb8ed4ce599a58e494b51ba436f933a7369882e"
+sha256 = "5fa5df7d2af0ff06ca91ff1f04059b6ae25738bd000d475ccbdcd11c6cda9e07"
 
 [[files]]
 path = "oracles/openrails-traction-operation.json"
-sha256 = "45026c82e62a869acb0b461d297ab29b63688978533d3f1568f80ece5e0aaa84"
+sha256 = "bd22e5b0bb55ec10c0c03f1171333a95399cb38b74cf33ef76c83c08a42ca072"
 
 [[files]]
 path = "oracles/openrails-traction-operation-provenance.json"
-sha256 = "e10f9e760ca47a9ca391c6f5459e21037bd89b9e963525ca77e0d8cf45b49006"
+sha256 = "a1d2e244979e4e16d9f050acce288aa8083520b3b496a91ec35d8fe99fe2deb0"
 
 # Original vacuum, legacy EP and default power supplies for installed formations.
 

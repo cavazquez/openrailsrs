@@ -1714,12 +1714,12 @@ pub fn orbit_camera_system(
     }
 
     let zoom_keys = if opts.live {
-        keys.pressed(KeyCode::BracketLeft) || keys.pressed(KeyCode::Comma)
+        keys.pressed(KeyCode::Comma)
     } else {
         keys.pressed(KeyCode::BracketLeft)
     };
     let zoom_out_keys = if opts.live {
-        keys.pressed(KeyCode::BracketRight) || keys.pressed(KeyCode::Period)
+        keys.pressed(KeyCode::Period)
     } else {
         keys.pressed(KeyCode::BracketRight)
     };

@@ -19,11 +19,39 @@ pub struct PowerCar {
 
 #[derive(Clone, Debug, Default)]
 pub struct PowerTrainConfig {
+    pub passenger_loads: Vec<openrailsrs_formats::typed::power_supply::PassengerPowerParams>,
+    pub loads: openrailsrs_scenarios::PowerLoadSection,
+    pub active_fraction: f64,
     pub cars: Vec<PowerCar>,
 }
 impl PowerTrainConfig {
+    pub fn has_loads(&self) -> bool {
+        self.loads.total_w() > 0.0
+            || self
+                .passenger_loads
+                .iter()
+                .any(|p| p.continuous_w + p.heating_w + p.cooling_w > 0.0)
+    }
+    pub fn from_consist_with_loads(
+        consist: &Consist,
+        loads: &openrailsrs_scenarios::PowerLoadSection,
+    ) -> Self {
+        let mut config = Self::from_consist(consist);
+        config.loads = loads.clone();
+        config
+    }
     pub fn from_consist(consist: &Consist) -> Self {
         Self {
+            passenger_loads: consist
+                .vehicles
+                .iter()
+                .map(|v| match v {
+                    Vehicle::Loco(l) => l.passenger_power.clone(),
+                    Vehicle::Wagon(w) => w.passenger_power.clone(),
+                })
+                .collect(),
+            loads: Default::default(),
+            active_fraction: 1.0,
             cars: consist
                 .vehicles
                 .iter()
@@ -60,10 +88,70 @@ pub struct PowerCarState {
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PowerTrainState {
+    pub hotel_mode: HotelMode,
+    pub auxiliary_w: f64,
+    pub hotel_w: f64,
+    pub energy_j: f64,
+    pub last_energy_time_s: Option<f64>,
     pub initialized: bool,
     pub cars: Vec<PowerCarState>,
 }
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum HotelMode {
+    #[default]
+    Auto,
+    Off,
+    Heating,
+    Cooling,
+}
+impl HotelMode {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Auto => "Automática",
+            Self::Off => "Apagada",
+            Self::Heating => "Calefacción",
+            Self::Cooling => "Aire acondicionado",
+        }
+    }
+    pub fn next(self) -> Self {
+        match self {
+            Self::Auto => Self::Off,
+            Self::Off => Self::Heating,
+            Self::Heating => Self::Cooling,
+            Self::Cooling => Self::Auto,
+        }
+    }
+}
 impl PowerTrainState {
+    pub fn vehicle_load_w(&self, vehicle: usize) -> f64 {
+        let aux_count = self
+            .cars
+            .iter()
+            .filter(|c| c.supply.auxiliary)
+            .count()
+            .max(1) as f64;
+        let ets_count = self
+            .cars
+            .iter()
+            .filter(|c| c.supply.train_supply)
+            .count()
+            .max(1) as f64;
+        self.cars
+            .iter()
+            .find(|c| c.vehicle == vehicle)
+            .map_or(0.0, |c| {
+                (if c.supply.auxiliary {
+                    self.auxiliary_w / aux_count
+                } else {
+                    0.0
+                }) + if c.supply.train_supply {
+                    self.hotel_w / ets_count
+                } else {
+                    0.0
+                }
+            })
+    }
     pub fn power_available(&self, vehicle: usize) -> bool {
         self.cars
             .iter()
@@ -74,7 +162,13 @@ impl PowerTrainState {
         if !self.initialized {
             return self.cars.is_empty();
         }
-        self.cars.len() == config.cars.len()
+        [self.auxiliary_w, self.hotel_w, self.energy_j]
+            .iter()
+            .all(|v| v.is_finite() && *v >= 0.0)
+            && self
+                .last_energy_time_s
+                .is_none_or(|t| t.is_finite() && t <= time_s && t >= 0.0)
+            && self.cars.len() == config.cars.len()
             && self
                 .cars
                 .iter()
@@ -140,4 +234,41 @@ pub fn advance(state: &mut TrainSimState, config: &PowerTrainConfig) {
             state.time.0,
         );
     }
+}
+
+/// Loads are declared per whole formation and shared only by live suppliers.
+/// The same clock is used twice by the power-state update; integrate once.
+pub fn update_loads(state: &mut TrainSimState, config: &PowerTrainConfig, ambient_c: f64) {
+    let count = (config.passenger_loads.len() as f64 * config.active_fraction).round() as usize;
+    let mut continuous = config.loads.continuous_w * config.active_fraction;
+    let mut heating = config.loads.heating_w * config.active_fraction;
+    let mut cooling = config.loads.cooling_w * config.active_fraction;
+    for p in config.passenger_loads.iter().take(count) {
+        continuous += p.continuous_w;
+        heating += p.heating_w;
+        cooling += p.cooling_w;
+    }
+    let supply = &mut state.power_supply;
+    supply.auxiliary_w = if supply.cars.iter().any(|c| c.supply.auxiliary) {
+        config.loads.auxiliary_w
+    } else {
+        0.0
+    };
+    let climate = match supply.hotel_mode {
+        HotelMode::Auto if ambient_c < 18.0 => heating,
+        HotelMode::Auto if ambient_c > 24.0 => cooling,
+        HotelMode::Heating => heating,
+        HotelMode::Cooling => cooling,
+        _ => 0.0,
+    };
+    supply.hotel_w = if supply.cars.iter().any(|c| c.supply.train_supply) {
+        continuous + climate
+    } else {
+        0.0
+    };
+    if let Some(previous) = supply.last_energy_time_s {
+        supply.energy_j +=
+            (supply.auxiliary_w + supply.hotel_w) * (state.time.0 - previous).max(0.0);
+    }
+    supply.last_energy_time_s = Some(state.time.0);
 }

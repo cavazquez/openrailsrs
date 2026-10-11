@@ -1,0 +1,72 @@
+[route]
+id = "patio_practicas"
+
+[[nodes]]
+id = "a"
+x_m = 0.0
+y_m = 0.0
+[[nodes]]
+id = "before"
+x_m = 280.0
+y_m = 0.0
+[[nodes]]
+id = "junction"
+x_m = 350.0
+y_m = 0.0
+kind = { switch = { stem_edge = "straight", diverging_edge = "diverge", default_position = "straight" } }
+[[nodes]]
+id = "b"
+x_m = 650.0
+y_m = 0.0
+[[nodes]]
+id = "c"
+x_m = 650.0
+y_m = 150.0
+[[nodes]]
+id = "destination"
+x_m = 1000.0
+y_m = 0.0
+kind = { station = { name = "Salida del patio" } }
+
+[[edges]]
+id = "approach"
+from = "a"
+to = "before"
+length_m = 280.0
+speed_limit_kmh = 20.0
+grade_percent = 0.0
+[[edges]]
+id = "stem"
+from = "before"
+to = "junction"
+length_m = 70.0
+speed_limit_kmh = 20.0
+grade_percent = 0.0
+[[edges]]
+id = "straight"
+from = "junction"
+to = "b"
+length_m = 300.0
+speed_limit_kmh = 20.0
+grade_percent = 0.0
+[[edges]]
+id = "diverge"
+from = "junction"
+to = "c"
+length_m = 335.4101966
+speed_limit_kmh = 15.0
+grade_percent = 0.0
+[[edges]]
+id = "exit_b"
+from = "b"
+to = "destination"
+length_m = 350.0
+speed_limit_kmh = 25.0
+grade_percent = 0.0
+[[edges]]
+id = "exit_c"
+from = "c"
+to = "destination"
+length_m = 380.7886553
+speed_limit_kmh = 25.0
+grade_percent = 0.0

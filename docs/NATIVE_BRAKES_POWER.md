@@ -20,7 +20,7 @@ Cada motor tiene alimentación principal, auxiliar, batería, cabina y salida pa
 
 Se leen ORTSPowerOnDelay, ORTSAuxPowerOnDelay y ORTSTractionCutOffRelayClosingDelay. Un reinicio interrumpido vuelve a contar la demora; guardar conserva los relojes. Las partidas anteriores sin este subsistema inicializan una alimentación preparada, igual que el arranque habitual.
 
-F9 muestra principal, auxiliar, cabina y pasajeros por motor. Si el autor declara un interruptor ETS, aparece **Alimentación de pasajeros**; no aparece para un vehículo sin ese equipo. La salida admite el mínimo RPM declarado. No se afirma que este indicador simule calefacción y refrigeración de todos los coches.
+F9 muestra principal, auxiliar, cabina y pasajeros por motor. Si el autor declara un interruptor ETS, aparece **Alimentación de pasajeros**; no aparece para un vehículo sin ese equipo. La salida admite el mínimo RPM declarado. Cuando el autor declara las potencias de iluminación/calefacción/refrigeración, B permite elegir climatización y contabiliza la demanda real; sin parámetros se conserva consumo cero. Se descuenta de la potencia disponible para tracción y se guarda la energía consumida. Véase [circuito neumático, independiente, emergencia y consumo](TRAIN_OPERATION_UPDATE.md#5-independiente-emergencia-y-depósito-principal).
 
 Los faros dependen de la batería y la luz de cabina requiere alimentación de cabina. V conserva la orden del limpiaparabrisas, pero movimiento, barrido y sonido requieren batería. Al reconectarla vuelven a responder a sus interruptores. El HUD de vacío muestra inHg y las agujas CVF convierten bar, PSI, kPa o inHg según su archivo.
 

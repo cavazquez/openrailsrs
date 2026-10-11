@@ -82,6 +82,30 @@ class TractionOperationReference
                     demanded_rpm = engine.DemandedRPM, flow_lps = engine.DieselFlowLps,
                     consumed_l = used });
         }
+        var thermal = new List<object>();
+        var thermalInputs = new List<object>();
+        for (int cooling = 0; cooling < 4; cooling++) {
+            engine.EngineCooling = (DieselEngine.Cooling)cooling;
+            engine.DieselTemperatureDeg = 40;
+            engine.DieselMaxTemperatureDeg = 100;
+            engine.DieselTempTimeConstantSec = 20;
+            engine.DieselTempCoolingRunning = false;
+            engine.RealRPM = engine.DemandedRPM = 900;
+            Set(engine, "State", DieselEngineState.Running);
+            loco.LocalThrottlePercent = 100;
+            loco.AbsWheelSpeedMpS = 20;
+            for (int tick = 0; tick < 2000; tick++) {
+                float load = tick < 400 ? .25f : tick < 1200 ? 1f : .1f;
+                loco.TractionForceN = load * 1000000 / 20;
+                engine.Update(.05f);
+                thermalInputs.Add(new object[] { cooling, tick + 1, engine.RealRPM, engine.LoadPercent * .01f });
+                if (tick % 40 == 39)
+                    thermal.Add(new { cooling = cooling, tick = tick + 1,
+                        temperature_c = engine.DieselTemperatureDeg,
+                        cooling_on = engine.DieselTempCoolingRunning,
+                        load = engine.LoadPercent * .01f, rpm = engine.RealRPM });
+            }
+        }
         var quantities = new List<object> {
             new { key = "MaxBoilerPressure", raw = "225", value = (double)Quantity("225", STFReader.UNITS.PressureDefaultPSI) * .06894757293168, unit = "bar" },
             new { key = "BoilerVolume", raw = "\"225*(ft^3)\"", value = (double)Quantity("\"225*(ft^3)\"", STFReader.UNITS.VolumeDefaultFT3) * 28.316846592, unit = "litres" },
@@ -97,7 +121,7 @@ class TractionOperationReference
             reference = "Open Rails 1.6.1", time_step_s = .05,
             idle_rpm = 300, max_rpm = 900, starting_rpm = 200, confirmation_rpm = 330, rpm_rate = 80,
             consumption_lph = new[] { new[] { 0, 0 }, new[] { 300, 18 }, new[] { 900, 180 } },
-            checkpoints = checkpoints, quantities = quantities, sound_events = events,
+            checkpoints = checkpoints, quantities = quantities, sound_events = events, thermal = thermal, thermal_inputs = thermalInputs,
             scope = "Native non-geared DieselEngine start/stop, RPM and flow; native resource units and sound IDs. No complete steam, gearbox, brake, power-supply or fuel-weight parity claim."
         }, Formatting.Indented).Replace("\r\n", "\n") + "\n");
     }

@@ -138,11 +138,13 @@ fn build_live_gameplay(
             ));
         }
     }
-    Ok(LiveGameplay::new(
+    let mut gameplay = LiveGameplay::new(
         scenario.route.destination.clone(),
         scenario.gameplay.penalty_per_second_late,
         stop_targets,
-    ))
+    );
+    gameplay.shunting_steps = scenario.gameplay.shunting.clone();
+    Ok(gameplay)
 }
 
 /// Interactive session: same physics as headless `sim` / `cab`, stepped from a real-time loop.
@@ -354,6 +356,87 @@ impl LiveDriveSession {
             })
         }
     }
+
+    /// Explain operating restrictions from physical state, without labelling
+    /// a normal high-speed fall in tractive effort as a broken locomotive.
+    pub fn traction_diagnosis(&self) -> String {
+        if self.state.brake_system.emergency {
+            return "Emergencia aplicada: tracción cortada; detenete y rearmá con N".into();
+        }
+        if (0.25..0.75).contains(&self.driver_direction) {
+            return "Inversor en neutro".into();
+        }
+        if self.exterior.door != crate::DoorState::Closed {
+            return "Puertas abiertas: cerralas para dar tracción".into();
+        }
+        if self.physics.max_tractive_effort_n <= 0.0 {
+            return "Sin unidades de tracción conectadas".into();
+        }
+        for c in &self.state.diesel.cars {
+            if c.vehicle >= self.formation.coupled_count {
+                continue;
+            }
+            if c.fuel_l <= 0.0 {
+                return format!("Vehículo {} sin combustible", c.vehicle + 1);
+            }
+            if c.phase != crate::diesel_operation::EnginePhase::Running {
+                return format!(
+                    "Vehículo {}: motor {}",
+                    c.vehicle + 1,
+                    c.phase.label().to_lowercase()
+                );
+            }
+            let available = crate::diesel_operation::available_fraction(
+                &self.state.diesel,
+                &self.physics.diesel,
+                c.vehicle,
+            );
+            if available < 0.999 {
+                return format!(
+                    "Protección térmica del vehículo {}: {:.1} °C; potencia disponible {:.0}%",
+                    c.vehicle + 1,
+                    c.temperature_c,
+                    available * 100.0
+                );
+            }
+        }
+        if self
+            .state
+            .power_supply
+            .cars
+            .iter()
+            .filter(|c| c.vehicle < self.formation.coupled_count)
+            .all(|c| !c.supply.main)
+            && !self.state.power_supply.cars.is_empty()
+        {
+            return "Sin alimentación de tracción: revisá B y F9 (fuente, batería y mando)".into();
+        }
+        if self.state.brake_system.independent_command > 0.0 {
+            return "Freno independiente aplicado".into();
+        }
+        if self.wheel_rail_brake_forces_n().iter().sum::<f64>() > 100.0 {
+            return "Los cilindros aún frenan; esperá la descarga o revisá mangueras y frenos de mano en F9".into();
+        }
+        if self
+            .state
+            .rail_adhesion
+            .as_ref()
+            .is_some_and(|r| r.slipping())
+        {
+            return "Patinaje: reducí regulador o aplicá arena".into();
+        }
+        let demand = self.state.power_supply.auxiliary_w + self.state.power_supply.hotel_w;
+        if demand > 0.0 {
+            return format!(
+                "Auxiliares y pasajeros reservan {:.1} kW de la potencia del motor",
+                demand / 1000.0
+            );
+        }
+        if self.driver_throttle <= 0.0 {
+            return "Regulador cerrado: marcha por inercia".into();
+        }
+        "Tracción normal: la fuerza disponible disminuye al aumentar la velocidad".into()
+    }
     pub fn toggle_pantograph(&mut self) -> Result<(), String> {
         if !self
             .physics
@@ -429,7 +512,10 @@ impl LiveDriveSession {
         };
         let partial_throttle_run_up_time_s = max_partial_throttle_run_up_time_s(&diesel_engines);
         let physics = TrainPhysics {
-            power_supply: crate::power_supply::PowerTrainConfig::from_consist(&consist),
+            power_supply: crate::power_supply::PowerTrainConfig::from_consist_with_loads(
+                &consist,
+                &scenario.train.power_load,
+            ),
             rail_adhesion: Some(crate::adhesion::RailAdhesionConfig::load(
                 &consist_path,
                 consist_root(&consist_path),
@@ -513,6 +599,22 @@ impl LiveDriveSession {
         let native_signals = crate::native_signals::NativeSignalRuntime::from_graph(&graph)
             .map_err(crate::SimError::Msg)?;
         let gameplay = build_live_gameplay(scenario, &graph, &path_edges)?;
+        for goal in &gameplay.shunting_steps {
+            use openrailsrs_scenarios::model::ShuntingKind;
+            if matches!(goal.kind, ShuntingKind::Cut | ShuntingKind::PickUp)
+                && goal.count > consist.vehicles.len()
+                || matches!(goal.kind, ShuntingKind::MoveClear | ShuntingKind::Depart)
+                    && goal.position_m > path_data.edges.iter().map(|e| e.length_m).sum::<f64>()
+                || goal.kind == ShuntingKind::Switch
+                    && !graph
+                        .node(&goal.node)
+                        .is_some_and(|n| matches!(n.kind, NodeKind::Switch { .. }))
+            {
+                return Err(SimError::Msg(
+                    "El objetivo de maniobra no corresponde a esta ruta o formación".into(),
+                ));
+            }
+        }
         let start_chainage_m =
             path_data.chainage_at_edge_position(state.edge_index, state.pos_on_edge_m);
         let at_station = gameplay.stop_targets.first().is_some_and(|stop| {
@@ -592,6 +694,17 @@ impl LiveDriveSession {
         // supplies its positional footprints before the first physics step.
         session.native_signals.needs_refresh = true;
         Ok(session)
+    }
+
+    pub fn set_independent_brake(&mut self, command: f64) -> Result<(), String> {
+        if self.state.brake_system.circuits.is_empty() {
+            return Err("Esta formación no tiene freno independiente neumático".into());
+        }
+        if !command.is_finite() {
+            return Err("Mando de freno independiente inválido".into());
+        }
+        self.state.brake_system.independent_command = command.clamp(0.0, 1.0);
+        Ok(())
     }
 
     pub fn set_direction(&mut self, direction: f64) -> Result<(), String> {
@@ -1073,7 +1186,12 @@ impl LiveDriveSession {
             }
         });
         let boiler_bar = self.state.boiler_state.as_ref().map(|b| b.pressure_bar);
-        let main_res_bar = boiler_bar.unwrap_or(8.0 - self.driver_brake * 2.0);
+        let main_res_bar = self
+            .state
+            .brake_system
+            .circuits
+            .first()
+            .map_or(boiler_bar.unwrap_or(8.0), |c| c.reservoir_bar);
         let head_vented = self
             .state
             .brake_system
@@ -1272,6 +1390,10 @@ impl LiveDriveSession {
             };
             let assistance_was_braking = self.state.brake > self.driver_brake + 0.01;
             self.state.brake = self.driver_brake;
+            if self.state.brake_system.emergency {
+                self.state.throttle = 0.0;
+                self.state.brake = 1.0;
+            }
             if self
                 .script_tcs
                 .as_ref()
@@ -1334,6 +1456,13 @@ impl LiveDriveSession {
                 self.gameplay.fail("Señal de parada rebasada");
             }
             self.tick_after_physics_step(dt, on_region_transition);
+            self.update_shunting();
+            if res.arrived
+                && self.gameplay.shunting_completed_s.len() < self.gameplay.shunting_steps.len()
+            {
+                self.gameplay
+                    .fail("Maniobras incompletas al llegar al final");
+            }
             if res.arrived {
                 self.gameplay.finish_at_route_end(
                     self.time_s(),

@@ -1,7 +1,7 @@
 {
   "reference_version": "1.6.1",
   "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
-  "scope": "Original non-geared diesel lifecycle/RPM/flow, STF resource units and sound event IDs; not complete steam/gearbox parity",
+  "scope": "Original non-geared diesel lifecycle/RPM/flow, four native cooling modes with per-tick RPM/load inputs, STF resource units and sound event IDs; not complete steam/gearbox parity",
   "sha256": {
     "RunActivity.exe": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2",
     "Orts.Simulation.dll": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679",
@@ -12,6 +12,6 @@
     "MonoGame.Framework.dll": "c6a16c29705a4c847e0e4a2647bf432604cd9320cbc5d4125ab01ae7bb7e6542",
     "Newtonsoft.Json.dll": "9af2e1c672afd67a291b8f2031a341a3788d4d9f683eaddc6ceab3a3a74c546e"
   },
-  "helper_sha256": "e19068f18cc71f203bab02cabeb8ed4ce599a58e494b51ba436f933a7369882e",
-  "output_sha256": "45026c82e62a869acb0b461d297ab29b63688978533d3f1568f80ece5e0aaa84"
+  "helper_sha256": "5fa5df7d2af0ff06ca91ff1f04059b6ae25738bd000d475ccbdcd11c6cda9e07",
+  "output_sha256": "bd22e5b0bb55ec10c0c03f1171333a95399cb38b74cf33ef76c83c08a42ca072"
 }

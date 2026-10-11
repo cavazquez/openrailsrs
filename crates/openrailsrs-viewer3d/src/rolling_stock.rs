@@ -310,6 +310,7 @@ mod tests {
         let consist = Consist {
             vehicles: vec![
                 Vehicle::Wagon(Wagon {
+                    passenger_power: Default::default(),
                     name: "a".into(),
                     mass_kg: 1.0,
                     max_brake_force_n: 0.0,
@@ -322,6 +323,7 @@ mod tests {
                     flipped: false,
                 }),
                 Vehicle::Wagon(Wagon {
+                    passenger_power: Default::default(),
                     name: "b".into(),
                     mass_kg: 1.0,
                     max_brake_force_n: 0.0,

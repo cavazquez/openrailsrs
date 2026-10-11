@@ -1854,6 +1854,9 @@ fn release_shape_render_asset_gpu(
     }
 }
 
+const WORLD_SHAPES_RETIRED_PER_FRAME: usize = 8;
+const WORLD_ENTITIES_RETIRED_PER_FRAME: usize = 128;
+
 /// Drop session entries (and GPU assets) for shapes with no remaining live entities (#51 / #114).
 fn evict_unreferenced_world_shapes(
     session: &mut WorldShapeLodCache,
@@ -1862,7 +1865,18 @@ fn evict_unreferenced_world_shapes(
     images: &mut Assets<Image>,
     materials: &mut Assets<StandardMaterial>,
 ) -> (usize, usize) {
-    let stale = session.shape_assets.evict_except(live_shape_paths);
+    let mut retained = live_shape_paths.clone();
+    // GPU uploads/destruction happen in the render world after this system;
+    // submitting every stale mesh at once defeats the main-thread time budget.
+    retained.extend(
+        session
+            .shape_assets
+            .keys()
+            .filter(|p| !live_shape_paths.contains(*p))
+            .skip(WORLD_SHAPES_RETIRED_PER_FRAME)
+            .cloned(),
+    );
+    let stale = session.shape_assets.evict_except(&retained);
     if stale.is_empty() {
         return (0, 0);
     }
@@ -3556,6 +3570,7 @@ pub fn world_tile_bundle_materialize_system(
         stream.loaded.insert(key);
         added_tile_keys.push(key);
         tiles_loaded += 1;
+        break; // One dependency bundle is materialized per frame.
     }
 
     let new_items = world.items.len().saturating_sub(item_base);
@@ -3579,7 +3594,7 @@ pub struct WorldUnloadParams<'w, 's> {
     stream: ResMut<'w, WorldTileStream>,
     handles: ResMut<'w, crate::tile_bundle::TileBundleHandles>,
     tile_index: ResMut<'w, crate::world_tile_index::WorldTileEntityIndex>,
-    shape_refs: Res<'w, crate::world_tile_index::WorldShapeLiveRefs>,
+    shape_refs: ResMut<'w, crate::world_tile_index::WorldShapeLiveRefs>,
     window: Res<'w, crate::view_window::ViewWindow>,
     opts: Res<'w, crate::launch::ViewerLaunchOpts>,
     focus: Res<'w, RouteFocus>,
@@ -3603,12 +3618,42 @@ pub struct WorldUnloadParams<'w, 's> {
 /// Unload distant world tiles and despawn scenery meshes in live mode.
 ///
 /// Despawn walks only entities indexed on candidate tiles (#75), not all WORLD entities.
-pub fn world_tile_unload_system(mut p: WorldUnloadParams) {
+#[derive(Default)]
+pub struct SceneryRetirement {
+    entities: std::collections::VecDeque<Entity>,
+    cleaning_assets: bool,
+}
+
+pub fn world_tile_unload_system(
+    mut p: WorldUnloadParams,
+    mut retirement: Local<SceneryRetirement>,
+) {
     if !p.opts.live || !p.mode.loads_msts_scenery() || p.mode.is_tile_lab() {
         return;
     }
     // Same gate as stream: mutating `world.items` mid-classify invalidates `item_index`.
     if p.progress.is_some() {
+        return;
+    }
+    // Bound deferred ECS destruction as well as foreground parsing. A dense
+    // station can contain thousands of entities in one departing tile.
+    if !retirement.entities.is_empty() || retirement.cleaning_assets {
+        for _ in 0..WORLD_ENTITIES_RETIRED_PER_FRAME {
+            let Some(entity) = retirement.entities.pop_front() else {
+                break;
+            };
+            p.shape_refs.release_entity(entity);
+            p.commands.entity(entity).try_despawn();
+        }
+        let live_paths = p.shape_refs.live_paths_after_releasing(&[]);
+        let (evicted, _) = evict_unreferenced_world_shapes(
+            &mut p.session,
+            &live_paths,
+            &mut p.meshes,
+            &mut p.images,
+            &mut p.materials,
+        );
+        retirement.cleaning_assets = evicted > 0;
         return;
     }
     let unload_radius = crate::launch::view_unload_radius_m().max(p.window.radius_m);
@@ -3629,7 +3674,7 @@ pub fn world_tile_unload_system(mut p: WorldUnloadParams) {
     let stream_diff = policy.diff_disk(cam_coord, &loaded_coords);
 
     let mut unloaded_tiles = HashSet::new();
-    for tile in &stream_diff.to_unload {
+    for tile in stream_diff.to_unload.iter().take(1) {
         let key = (tile.x, tile.z);
         unloaded_tiles.insert(key);
         p.stream.loaded.remove(&key);
@@ -3644,6 +3689,8 @@ pub fn world_tile_unload_system(mut p: WorldUnloadParams) {
     } else {
         HashSet::new()
     };
+    // Retire one GPU tile per cycle; keep the rest eligible on later scans.
+    gpu_unloaded_tiles = gpu_unloaded_tiles.into_iter().take(1).collect();
     gpu_unloaded_tiles.extend(&unloaded_tiles);
     if unloaded_tiles.is_empty() && gpu_unloaded_tiles.is_empty() {
         return;
@@ -3677,19 +3724,11 @@ pub fn world_tile_unload_system(mut p: WorldUnloadParams) {
         }
     }
 
-    let live_shape_paths = p.shape_refs.live_paths_after_releasing(&to_despawn);
     let despawned = to_despawn.len();
-    for entity in to_despawn {
-        p.commands.entity(entity).despawn();
-    }
-
-    let (shapes_evicted, textures_evicted) = evict_unreferenced_world_shapes(
-        &mut p.session,
-        &live_shape_paths,
-        &mut p.meshes,
-        &mut p.images,
-        &mut p.materials,
-    );
+    retirement.entities.extend(to_despawn);
+    retirement.cleaning_assets = true;
+    // Assets stay alive until the final entity referring to them is retired.
+    let (shapes_evicted, textures_evicted) = (0, 0);
     if std::env::var_os("OPENRAILSRS_PERF_DEBUG").is_some() {
         eprintln!(
             "[PERF] world_tile_unload_ms={:.2} tiles={} visited={} despawned={}",
@@ -5459,6 +5498,44 @@ mod tests {
         assert_eq!(index, 1);
         assert_eq!(part.prim_state_idx, 2);
         assert!(shape_lod_part_by_identity(&asset, u32::MAX, 1).is_none());
+    }
+
+    #[test]
+    fn retiring_dense_tiles_releases_assets_over_multiple_frames_without_leaking() {
+        let mut meshes = Assets::<Mesh>::default();
+        let mut images = Assets::<Image>::default();
+        let mut materials = Assets::<StandardMaterial>::default();
+        let mut session = WorldShapeLodCache::default();
+        for i in 0..17 {
+            let path = PathBuf::from(format!("/shapes/{i}.s"));
+            session.shape_assets.insert(
+                path.clone(),
+                ShapeRenderAsset {
+                    combined_mesh: meshes.add(Mesh::new(
+                        PrimitiveTopology::TriangleList,
+                        RenderAssetUsages::default(),
+                    )),
+                    parts: vec![],
+                    has_texture: false,
+                    has_night_subobj: false,
+                    texture_flags: openrailsrs_bevy_scenery::textures::TextureFlags::from_raw(0),
+                },
+            );
+            session.shapes.insert(path, ShapeFile::default().into());
+        }
+        for expected in [8, 8, 1, 0] {
+            let (evicted, _) = evict_unreferenced_world_shapes(
+                &mut session,
+                &HashSet::new(),
+                &mut meshes,
+                &mut images,
+                &mut materials,
+            );
+            assert_eq!(evicted, expected);
+        }
+        assert!(session.shape_assets.is_empty());
+        assert!(session.shapes.is_empty());
+        assert!(meshes.is_empty());
     }
 
     #[test]
