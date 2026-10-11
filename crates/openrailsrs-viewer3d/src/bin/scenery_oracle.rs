@@ -18,6 +18,8 @@ struct Capture {
     individual: bool,
     frames: u32,
     saved: bool,
+    zero_moon: bool,
+    two_lights: bool,
 }
 
 fn main() {
@@ -28,7 +30,7 @@ fn main() {
     }
     assert!(
         !args.is_empty(),
-        "scenery_oracle <output.png> [--individual] | --verify <individual.png> <instanced.png>"
+        "scenery_oracle <output.png> [--individual] [--zero-moon|--two-lights] | --verify <individual.png> <instanced.png>"
     );
     App::new()
         .add_plugins(
@@ -51,6 +53,8 @@ fn main() {
             individual: args.iter().any(|s| s == "--individual"),
             frames: 0,
             saved: false,
+            zero_moon: args.iter().any(|s| s == "--zero-moon"),
+            two_lights: args.iter().any(|s| s == "--two-lights"),
         })
         .add_systems(Startup, setup)
         .add_systems(Update, capture)
@@ -73,6 +77,19 @@ fn setup(
         },
         Transform::from_xyz(0.0, 0.0, 14.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
+    // A shadowless secondary light can precede the sun in Bevy's view uniform.
+    // Both the zero-lux and two-active-light cases must match ordinary meshes.
+    if capture.zero_moon || capture.two_lights {
+        commands.spawn((
+            DirectionalLight {
+                illuminance: if capture.two_lights { 1_000.0 } else { 0.0 },
+                color: Color::srgb(0.73, 0.81, 1.0),
+                shadow_maps_enabled: false,
+                ..default()
+            },
+            Transform::from_rotation(Quat::from_euler(EulerRot::YXZ, 0.3, -0.4, 0.0)),
+        ));
+    }
     commands.spawn((
         DirectionalLight {
             illuminance: 10_000.0,
@@ -200,6 +217,8 @@ fn verify(reference: &str, candidate: &str) {
     let mut intersection = [0usize; 3];
     let mut union = [0usize; 3];
     let mut expected = [0usize; 3];
+    let mut color_error = 0u64;
+    let mut matched = 0u64;
     for ((x, _, pa), pb) in a.enumerate_pixels().zip(b.pixels()) {
         let region = (x * 3 / a.width()).min(2) as usize;
         let ma = mask(pa);
@@ -207,6 +226,14 @@ fn verify(reference: &str, candidate: &str) {
         expected[region] += usize::from(ma);
         intersection[region] += usize::from(ma && mb);
         union[region] += usize::from(ma || mb);
+        if ma && mb {
+            matched += 1;
+            color_error +=
+                pa.0.iter()
+                    .zip(pb.0.iter())
+                    .map(|(a, b)| u64::from(a.abs_diff(*b)))
+                    .sum::<u64>();
+        }
     }
     for region in 0..3 {
         assert!(
@@ -220,4 +247,10 @@ fn verify(reference: &str, candidate: &str) {
             "custom GPU instances changed placement or disappeared in region {region}"
         );
     }
+    let mean_color_error = color_error as f64 / (matched.max(1) * 3) as f64;
+    println!("WORLD matched-pixel mean RGB difference: {mean_color_error:.6} (maximum 25)");
+    assert!(
+        mean_color_error <= 25.0,
+        "custom instances lost illumination while retaining the silhouette"
+    );
 }

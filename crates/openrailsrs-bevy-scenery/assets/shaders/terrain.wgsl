@@ -46,17 +46,19 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     }
     let snow = snow_surface(in.uv, n, surface_weather.y);
     rgb = mix(rgb * (1.0 - 0.16 * wet), vec3(0.78, 0.84, 0.89) * snow.y, snow.x * 0.86);
-    let light = view_bindings::lights.directional_lights[0];
+    let light_id = railway_lighting::railway_primary_directional_light();
+    let light = view_bindings::lights.directional_lights[light_id];
     let light_dir = light.direction_to_light;
     let ambient = terrain_half_lambert(n, light_dir);
     var shadow_mod = 1.0;
     if ((light.flags & DIRECTIONAL_LIGHT_FLAGS_SHADOWS_ENABLED_BIT) != 0u) {
         let view_z = (view_bindings::view.view_from_world * in.world_position).z;
-        shadow_mod = fetch_directional_shadow(0u, in.world_position, n, view_z, in.position.xy);
+        shadow_mod = fetch_directional_shadow(light_id, in.world_position, n, view_z, in.position.xy);
         shadow_mod = shadow_mod * saturate(ambient * 5.0 - 2.0);
     }
     let t = saturate(ambient * shadow_mod);
     rgb = rgb * (mix(SHADOW_BRIGHTNESS, FULL_BRIGHTNESS, t) * railway_lighting::railway_daylight()
+        + railway_lighting::railway_lunar_lighting(n)
         + railway_lighting::railway_spot_lighting(in.world_position, n, in.position.xy));
     if (wet > 0.0) {
         let eye = normalize(view_bindings::view.world_position.xyz - in.world_position.xyz);

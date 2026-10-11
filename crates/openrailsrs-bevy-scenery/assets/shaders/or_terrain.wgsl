@@ -32,17 +32,18 @@ struct OrTerrainParams {
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let color = textureSample(base_texture, base_sampler, in.uv);
+    let light_id = railway_lighting::railway_primary_directional_light();
 
     var t = params.image_texture_is_night;
     if (params.lit >= 0.5) {
         let n = normalize(in.world_normal);
-        let light = view_bindings::lights.directional_lights[0];
+        let light = view_bindings::lights.directional_lights[light_id];
         let light_dir = light.direction_to_light;
         let ambient = terrain_half_lambert(n, light_dir);
         var shadow_mod = 1.0;
         if ((light.flags & DIRECTIONAL_LIGHT_FLAGS_SHADOWS_ENABLED_BIT) != 0u) {
             let view_z = (view_bindings::view.view_from_world * in.world_position).z;
-            shadow_mod = fetch_directional_shadow(0u, in.world_position, n, view_z, in.position.xy);
+            shadow_mod = fetch_directional_shadow(light_id, in.world_position, n, view_z, in.position.xy);
             shadow_mod = shadow_mod * saturate(ambient * 5.0 - 2.0);
         }
         t = saturate(ambient * shadow_mod + params.image_texture_is_night);
@@ -55,7 +56,8 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     lit_rgb = lit_rgb * overlay;
     lit_rgb = lit_rgb * min(params.night_color_modifier, railway_lighting::railway_daylight());
     if (params.lit >= 0.5) {
-        lit_rgb += surface * overlay * railway_lighting::railway_spot_lighting(in.world_position, normalize(in.world_normal), in.position.xy);
+        lit_rgb += surface * overlay * (railway_lighting::railway_spot_lighting(in.world_position, normalize(in.world_normal), in.position.xy)
+            + railway_lighting::railway_lunar_lighting(normalize(in.world_normal)));
     }
     // Rain darkens the ground and adds a restrained sun reflection at grazing angles.
     let wet = clamp(params._pad0, 0.0, 1.0);
@@ -63,7 +65,7 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     if (params.lit >= 0.5 && wet > 0.0) {
         let n = normalize(in.world_normal);
         let eye = normalize(view_bindings::view.world_position.xyz - in.world_position.xyz);
-        let light = view_bindings::lights.directional_lights[0].direction_to_light;
+        let light = view_bindings::lights.directional_lights[light_id].direction_to_light;
         let h = normalize(eye + light);
         lit_rgb += vec3(pow(max(dot(n, h), 0.0), 32.0) * wet * 0.04 * railway_lighting::railway_daylight());
     }

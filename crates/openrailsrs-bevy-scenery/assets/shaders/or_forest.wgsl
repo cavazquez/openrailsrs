@@ -85,7 +85,8 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     }
     // Soft vegetation lighting (OR Normal_Light carries Eye + N·L term; keep simple).
     let rgb = color.rgb * (params.ambient * railway_lighting::railway_daylight()
-        + railway_lighting::railway_spot_lighting(in.world_position, normalize(in.world_normal), in.position.xy));
+        + railway_lighting::railway_spot_lighting(in.world_position, normalize(in.world_normal), in.position.xy)
+        + railway_lighting::railway_lunar_lighting(normalize(in.world_normal)));
     var out_color = vec4(rgb, color.a);
 #ifdef DISTANCE_FOG
     out_color = pbr_functions::apply_fog(

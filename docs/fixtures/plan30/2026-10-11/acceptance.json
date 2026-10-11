@@ -350,7 +350,7 @@
   "check": {
     "pass": true,
     "command": "CARGO_BUILD_JOBS=2 ./check.sh",
-    "log_sha256": "27e05239f8e2374ccef34229c597c2b3f0dfe7fff79e8ce02549a2bbbc2cdbac",
+    "log_sha256": "812d23d75d6cbccf6f1207d951e21749cc5f9ba3bcbda0361fa7ac99d23cd14d",
     "rust_passed": 1823,
     "python_passed": 94,
     "native_original_source_profiles": 11,
@@ -409,7 +409,7 @@
   "visual": [
     {
       "capture": "night-off-cab",
-      "screenshot_sha256": "ca629490ca633e83cee98c1b0de57388408de0636bd31e3b539872c003d4a270",
+      "screenshot_sha256": "c7e2bb202bef5d0509bfe4b375c346bf60692d5b1cf9b110530f1021eb464678",
       "clock_s": 16800.0,
       "camera": {
         "aspect_ratio": 1.7777777910232544,
@@ -513,14 +513,14 @@
           0.27491018176078796
         ]
       },
-      "peak_rss_mib": 1880.7,
+      "peak_rss_mib": 1873.7,
       "gameplay_frame_p95_ms": 25,
       "gpu_tiles": 4,
       "gpu_entities": 1876
     },
     {
       "capture": "night-low-cab",
-      "screenshot_sha256": "f55f9465f7fe341092203941a5110c6e26b30debb1f4f2fbe2624db7eb2afc87",
+      "screenshot_sha256": "d0fa328b4756a40a6b034c328c1c4fac862474915c337be0226d6f5161714c38",
       "clock_s": 16800.0,
       "camera": {
         "aspect_ratio": 1.7777777910232544,
@@ -624,14 +624,14 @@
           0.27491018176078796
         ]
       },
-      "peak_rss_mib": 1881.3,
+      "peak_rss_mib": 1857.4,
       "gameplay_frame_p95_ms": 25,
       "gpu_tiles": 4,
       "gpu_entities": 1876
     },
     {
       "capture": "night-high-cab",
-      "screenshot_sha256": "3f1abe256db3cce11b9330e39e97d3e5bb476d072b1478fbc6c86714e18f7235",
+      "screenshot_sha256": "9d9638e06a400ae49958f15c1410d0a574258ab59f9dfb0c49755941d1901273",
       "clock_s": 16800.0,
       "camera": {
         "aspect_ratio": 1.7777777910232544,
@@ -735,14 +735,14 @@
           0.27491018176078796
         ]
       },
-      "peak_rss_mib": 1872.5,
+      "peak_rss_mib": 1906.6,
       "gameplay_frame_p95_ms": 25,
       "gpu_tiles": 4,
       "gpu_entities": 1876
     },
     {
       "capture": "night-native-exterior",
-      "screenshot_sha256": "9ea755cd0472feaa7d1cbe9c74b982ca3e10c55c5738484a1560cc0d7eee812c",
+      "screenshot_sha256": "969c60f4a5c1bf8def5d9456e660b1dcb9f67877d311ccaf37cae51e7d0485db",
       "clock_s": 16800.0,
       "camera": {
         "aspect_ratio": 1.7777777910232544,
@@ -846,14 +846,14 @@
           0.27491018176078796
         ]
       },
-      "peak_rss_mib": 1317.1,
+      "peak_rss_mib": 1295.2,
       "gameplay_frame_p95_ms": 25,
       "gpu_tiles": 4,
       "gpu_entities": 1876
     },
     {
       "capture": "rain-sand-gpu",
-      "screenshot_sha256": "2e997b4bdf75191753c90be1442ecf3ded732471681ae39e9456a139c70b0198",
+      "screenshot_sha256": "a66caa9f1484422cae32023599fa50cfa39ff2e8012d6987c10bacfd16975eef",
       "clock_s": 35747.7,
       "camera": {
         "aspect_ratio": 1.7777777910232544,
@@ -862,9 +862,9 @@
         "indirect_drawing": false,
         "pitch_rad": 0.2800000011920929,
         "rotation_xyzw": [
-          -0.09722063690423965,
+          -0.09722062945365906,
           0.7103374600410461,
-          0.10010211914777756,
+          0.10010211169719696,
           0.6898900866508484
         ],
         "yaw_rad": 1.600000023841858
@@ -934,7 +934,7 @@
         "gpu_capacity": 510,
         "gpu_emitters": 30,
         "gpu_simulation_delta_s": 0.0,
-        "gpu_spawn_requests": 5680,
+        "gpu_spawn_requests": 5596,
         "inherits_vehicle_velocity": true,
         "live_particles": null,
         "max_cpu_particle_speed_mps": 0.0,
@@ -957,15 +957,15 @@
           1.1349694728851318
         ]
       },
-      "peak_rss_mib": 1308.9,
+      "peak_rss_mib": 1258.5,
       "gameplay_frame_p95_ms": 25,
       "gpu_tiles": 4,
       "gpu_entities": 2056
     },
     {
       "capture": "snow-wiper-gpu-cab",
-      "screenshot_sha256": "320a2179b38385dd54e8f30520c32722015a27e8ab5ba3d3feb95bb6ce0bbdfb",
-      "clock_s": 35747.85,
+      "screenshot_sha256": "05bbe7291310eef159b5522541bfafa52acb177ad1c70f9888938c6cc2af923e",
+      "clock_s": 35748.0,
       "camera": {
         "aspect_ratio": 1.7777777910232544,
         "distance_m": 48.0,
@@ -973,12 +973,12 @@
         "indirect_drawing": false,
         "pitch_rad": 0.2800000011920929,
         "rotation_xyzw": [
-          -0.06882241368293762,
-          0.8492473363876343,
-          0.11405566334724426,
-          0.5109147429466248
+          -0.06876585632562637,
+          0.8492636680603027,
+          0.11391011625528336,
+          0.5109275579452515
         ],
-        "yaw_rad": -2.661524772644043
+        "yaw_rad": -2.661764144897461
       },
       "weather": {
         "atmosphere": {
@@ -994,12 +994,12 @@
           "temperature_c": -10.0,
           "visibility_m": 500.0,
           "wind_mps": [
-            3.5719635486602783,
+            3.549290180206299,
             0.0,
-            1.7920711040496826
+            1.7860559225082397
           ]
         },
-        "elapsed_s": 47.84999999999942,
+        "elapsed_s": 47.99999999999941,
         "journey": {
           "pace": "normal",
           "winter": false
@@ -1009,14 +1009,14 @@
         "seed": 42
       },
       "moon": {
-        "altitude_deg": -12.995203971862793,
+        "altitude_deg": -12.99666976928711,
         "date": "2000-01-21 09:57 UTC",
-        "illuminated": 0.9992538690567017,
+        "illuminated": 0.9992537498474121,
         "lux": 0.0
       },
       "headlights": 1,
       "wiper": true,
-      "odometer_m": 101.08550874246265,
+      "odometer_m": 102.25601263262175,
       "floating_origin_shift_m": [
         -297.279296875,
         0.0,
@@ -1045,7 +1045,7 @@
         "gpu_capacity": 510,
         "gpu_emitters": 30,
         "gpu_simulation_delta_s": 0.0,
-        "gpu_spawn_requests": 774,
+        "gpu_spawn_requests": 810,
         "inherits_vehicle_velocity": true,
         "live_particles": null,
         "max_cpu_particle_speed_mps": 0.0,
@@ -1059,23 +1059,23 @@
         ],
         "requested": "gpu",
         "sander_contact_emitters": 24,
-        "simulation_clock_s": 47.84999999999942,
+        "simulation_clock_s": 47.99999999999941,
         "steam_pulses_follow_wheels": true,
         "temperature_c": -10.0,
         "wind_mps": [
-          3.5719635486602783,
+          3.549290180206299,
           0.0,
-          1.7920711040496826
+          1.7860559225082397
         ]
       },
-      "peak_rss_mib": 1865.3,
+      "peak_rss_mib": 1871.6,
       "gameplay_frame_p95_ms": 25,
       "gpu_tiles": 4,
       "gpu_entities": 2056
     },
     {
       "capture": "rain-cpu-cab",
-      "screenshot_sha256": "297d6c309b33cd5e2c0e9e4cdd1fe67c9d3955bd1414a5d0f80d93652bfbeb93",
+      "screenshot_sha256": "9b6067931b05e349cfc9d735dbe0e4c2267062e7fa8216274350e0b9808e38c5",
       "clock_s": 35700.0,
       "camera": {
         "aspect_ratio": 1.7777777910232544,
@@ -1179,14 +1179,14 @@
           0.8473969101905823
         ]
       },
-      "peak_rss_mib": 1903.4,
+      "peak_rss_mib": 1940.4,
       "gameplay_frame_p95_ms": 25,
       "gpu_tiles": 4,
       "gpu_entities": 1884
     },
     {
       "capture": "denham-water-exterior",
-      "screenshot_sha256": "8408e255f85a9f59cc9d6eb56a212718652713243308d638d2a85c7667deae68",
+      "screenshot_sha256": "123beb4fdf4d238f636778fda00c2e55f345bc46c2add67450f42f530c86c272",
       "clock_s": 43000.0,
       "camera": {
         "aspect_ratio": 1.7777777910232544,
@@ -1290,25 +1290,25 @@
           0.27491018176078796
         ]
       },
-      "peak_rss_mib": 1244.1,
+      "peak_rss_mib": 1168.7,
       "gameplay_frame_p95_ms": 25,
       "gpu_tiles": 2,
       "gpu_entities": 2326
     },
     {
       "capture": "night-moon-exterior",
-      "screenshot_sha256": "4eb547eaa570653a0c66a04f77cd66eddcc4047c6ac0045222492bfbccfd2748",
+      "screenshot_sha256": "ddc7c5f96dd68022232a8f6e632d40f8c386d14bb1195443bb2836d3701729bb",
       "clock_s": 22800.0,
       "camera": {
         "aspect_ratio": 1.7777777910232544,
-        "distance_m": 42.126121520996094,
+        "distance_m": 42.12611770629883,
         "fov_y_rad": 0.7853981852531433,
         "indirect_drawing": false,
-        "pitch_rad": 0.010112586431205273,
+        "pitch_rad": 0.010112610645592213,
         "rotation_xyzw": [
-          -0.0034160849172621965,
+          -0.003416092600673437,
           0.7372466921806335,
-          0.0037277669180184603,
+          0.003727775765582919,
           0.6756047010421753
         ],
         "yaw_rad": 1.6579999923706055
@@ -1401,7 +1401,7 @@
           0.27491018176078796
         ]
       },
-      "peak_rss_mib": 1298.2,
+      "peak_rss_mib": 1263.1,
       "gameplay_frame_p95_ms": 25,
       "gpu_tiles": 4,
       "gpu_entities": 1876
@@ -1525,6 +1525,65 @@
     "La pantalla de prueba está regulada a 40 cuadros/s; el p95 de 25 ms no mide el rendimiento máximo de la GPU.",
     "Audio PCM de dos formaciones originales en cabina/exterior y regresiones de mezcla/estados; no certifica identidad acústica completa con OpenAL ni sustituye una escucha humana.",
     "Guía manual por issue en docs/PLAN_30.md. Recursos compatibles y sistemas originales contrastados conservan su alcance específico.",
-    "Los recursos originales, descargas, WAV y capturas quedan fuera de Git; este registro conserva resultados y hashes."
-  ]
+    "Los recursos originales, descargas, WAV y capturas quedan fuera de Git; este registro conserva resultados y hashes.",
+    "La vista elevada de Denham comprueba escenografía; la aceptación visual HWater corresponde a la superficie nativa dedicada de examples/smoke/routes/test, con dimensiones 50×40 m y textura yard.ace.",
+    "La regresión gráfica cubre orden de luces, luz lunar apagada, dos luces activas y color de instancias; conserva la imagen original y sus umbrales en GPU AMD y Vulkan por software."
+  ],
+  "shader_regression": {
+    "single": {
+      "result": "passed",
+      "comparison": [
+        "WORLD region 0 silhouette overlap: 1.000000 (minimum 0.98)",
+        "WORLD region 1 silhouette overlap: 1.000000 (minimum 0.98)",
+        "WORLD region 2 silhouette overlap: 1.000000 (minimum 0.98)",
+        "WORLD matched-pixel mean RGB difference: 6.904850 (maximum 25)"
+      ]
+    },
+    "zero-moon": {
+      "result": "passed",
+      "comparison": [
+        "WORLD region 0 silhouette overlap: 1.000000 (minimum 0.98)",
+        "WORLD region 1 silhouette overlap: 1.000000 (minimum 0.98)",
+        "WORLD region 2 silhouette overlap: 1.000000 (minimum 0.98)",
+        "WORLD matched-pixel mean RGB difference: 6.904850 (maximum 25)"
+      ]
+    },
+    "two-lights": {
+      "result": "passed",
+      "comparison": [
+        "WORLD region 0 silhouette overlap: 1.000000 (minimum 0.98)",
+        "WORLD region 1 silhouette overlap: 1.000000 (minimum 0.98)",
+        "WORLD region 2 silhouette overlap: 1.000000 (minimum 0.98)",
+        "WORLD matched-pixel mean RGB difference: 6.749501 (maximum 25)"
+      ]
+    },
+    "smoke": {
+      "result": "passed",
+      "golden": "docs/fixtures/visual/smoke_orbit.png",
+      "tolerance_unchanged": true
+    },
+    "software_smoke": {
+      "result": "passed",
+      "backend": "Vulkan llvmpipe through private Xvfb",
+      "golden": "docs/fixtures/visual/smoke_orbit.png",
+      "tolerance_unchanged": true,
+      "log_sha256": "fc1a85165fb6b1570a473ab725f1fa162e779f645e60128b99b51c877944e4ba",
+      "hot_percent": 0.028
+    }
+  },
+  "water_fixture": {
+    "capture": "smoke-native-water",
+    "screenshot_sha256": "4dfa1b453fac42d77cc404e0d49dcc9f721a5a6f84194b399c4ed12437f25a9e",
+    "source": "examples/smoke/routes/test/WORLD/w-000000-000000.w",
+    "original_kind": "HWater",
+    "uid": 6,
+    "size_m": [
+      50,
+      40
+    ],
+    "texture": "yard.ace",
+    "renderer": "AMD Vulkan via private Weston",
+    "process_exit": 0,
+    "scope": "Dedicated native HWater fixture capture; bounds, pause and floating origin are covered by water regression tests. Denham capture only covers elevated scenery readiness."
+  }
 }

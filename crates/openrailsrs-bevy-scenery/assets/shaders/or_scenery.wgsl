@@ -184,7 +184,8 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
         return vec4(color.rgb, color.a);
     }
 
-    let light = view_bindings::lights.directional_lights[0];
+    let light_id = railway_lighting::railway_primary_directional_light();
+    let light = view_bindings::lights.directional_lights[light_id];
     let light_dir = light.direction_to_light;
 
     let ndotl = or_half_lambert(n, light_dir);
@@ -196,7 +197,7 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     if ((light.flags & DIRECTIONAL_LIGHT_FLAGS_SHADOWS_ENABLED_BIT) != 0u) {
         let view_z = (view_bindings::view.view_from_world * in.world_position).z;
         let view_depth = -view_z;
-        pcf_shadow = fetch_directional_shadow(0u, in.world_position, n, view_z, in.position.xy);
+        pcf_shadow = fetch_directional_shadow(light_id, in.world_position, n, view_z, in.position.xy);
         let pcf_mod = or_shadow_modulation(ambient, pcf_shadow);
 
 #ifdef OR_VSM_MOMENT_ATLAS
@@ -208,9 +209,9 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
                     * n;
                 let depth_offset = light.shadow_depth_bias * light.direction_to_light;
                 let offset_position = vec4(in.world_position.xyz + normal_offset + depth_offset, in.world_position.w);
-                let light_local = or_world_to_directional_light_local(0u, cascade_index, offset_position);
+                let light_local = or_world_to_directional_light_local(light_id, cascade_index, offset_position);
                 if (light_local.w > 0.0) {
-                    let moments = or_sample_moments_from_atlas(0u, cascade_index, light_local);
+                    let moments = or_sample_moments_from_atlas(light_id, cascade_index, light_local);
                     let moment_mod = or_ps_get_shadow_effect(ambient, moments);
                     // En espacios cerrados (tuneles) los momentos suelen discrepar del PCF;
                     // confiar en PCF cuando la diferencia es grande (pack/sample aun no alineado).
@@ -265,7 +266,8 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     }
 
     lit_rgb *= min(params.night_color_modifier, mix(railway_lighting::railway_daylight(), 1.0, params.image_texture_is_night));
-    lit_rgb += color.rgb * railway_lighting::railway_spot_lighting(in.world_position, n, in.position.xy);
+    lit_rgb += color.rgb * (railway_lighting::railway_spot_lighting(in.world_position, n, in.position.xy)
+        + railway_lighting::railway_lunar_lighting(n));
     var out_color = vec4(lit_rgb, color.a);
 #ifdef DISTANCE_FOG
     out_color = pbr_functions::apply_fog(

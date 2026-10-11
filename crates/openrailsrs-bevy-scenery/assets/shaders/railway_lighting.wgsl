@@ -8,8 +8,45 @@
     lighting::getDistanceAttenuation,
 }
 
+// Bevy sorts directional lights by shadow/volumetric state and entity, not by
+// illuminance. A zero-lux moon can therefore precede the sun. Legacy materials
+// use the strongest irradiance for their authored half-Lambert shading and must
+// use that same index when sampling its shadow cascades.
+fn railway_primary_directional_light() -> u32 {
+    var primary = 0u;
+    var strongest = -1.0;
+    for (var index = 0u; index < railway_bindings::lights.n_directional_lights; index += 1u) {
+        let color = railway_bindings::lights.directional_lights[index].color.rgb;
+        let strength = max(color.r, max(color.g, color.b));
+        if strength > strongest {
+            strongest = strength;
+            primary = index;
+        }
+    }
+    return primary;
+}
+
 fn railway_daylight() -> f32 {
-    return 0.025 + 0.975 * clamp(railway_bindings::lights.directional_lights[0].direction_to_light.y * 2.0, 0.0, 1.0);
+    if railway_bindings::lights.n_directional_lights == 0u { return 0.025; }
+    let light = railway_bindings::lights.directional_lights[railway_primary_directional_light()];
+    let strength = max(light.color.r, max(light.color.g, light.color.b));
+    // The lunar light is below one lux. Its altitude must not turn the legacy
+    // SDR day multiplier on; physical lunar contributions use actual lux below.
+    let solar_energy = clamp(strength / 1000.0, 0.0, 1.0);
+    return 0.025 + 0.975 * solar_energy * clamp(light.direction_to_light.y * 2.0, 0.0, 1.0);
+}
+
+fn railway_lunar_lighting(normal: vec3<f32>) -> vec3<f32> {
+    var sum = vec3(0.0);
+    for (var index = 0u; index < railway_bindings::lights.n_directional_lights; index += 1u) {
+        let light = railway_bindings::lights.directional_lights[index];
+        let strength = max(light.color.r, max(light.color.g, light.color.b));
+        if strength <= 1.0 {
+            sum += light.color.rgb * max(dot(normal, light.direction_to_light), 0.0)
+                * railway_bindings::view.exposure / 3.14159265;
+        }
+    }
+    return sum;
 }
 
 fn railway_spot_lighting(world: vec4<f32>, normal: vec3<f32>, fragment_xy: vec2<f32>) -> vec3<f32> {

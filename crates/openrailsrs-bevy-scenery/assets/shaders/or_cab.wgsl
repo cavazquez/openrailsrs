@@ -5,6 +5,7 @@
     mesh_view_types::DIRECTIONAL_LIGHT_FLAGS_SHADOWS_ENABLED_BIT,
     shadows::fetch_directional_shadow,
 }
+#import "shaders/railway_lighting.wgsl" as railway_lighting
 
 struct OrCabParams {
     tint_r: f32,
@@ -118,7 +119,8 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     }
 
     let n = normalize(in.world_normal);
-    let light = view_bindings::lights.directional_lights[0];
+    let light_id = railway_lighting::railway_primary_directional_light();
+    let light = view_bindings::lights.directional_lights[light_id];
     let light_dir = light.direction_to_light;
     let ndotl = or_half_lambert(n, light_dir);
     let ambient = ndotl;
@@ -126,7 +128,7 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     var shadow_mod = 1.0;
     if ((light.flags & DIRECTIONAL_LIGHT_FLAGS_SHADOWS_ENABLED_BIT) != 0u) {
         let view_z = (view_bindings::view.view_from_world * in.world_position).z;
-        shadow_mod = fetch_directional_shadow(0u, in.world_position, n, view_z, in.position.xy);
+        shadow_mod = fetch_directional_shadow(light_id, in.world_position, n, view_z, in.position.xy);
         shadow_mod = shadow_mod * saturate(ambient * 5.0 - 2.0);
     }
 

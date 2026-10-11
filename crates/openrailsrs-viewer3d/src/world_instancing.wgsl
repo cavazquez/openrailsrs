@@ -8,7 +8,9 @@
     pbr_functions,
 }
 #import bevy_render::maths::PI
+#import bevy_core_pipeline::tonemapping::tone_mapping
 #import "shaders/railway_lighting.wgsl"::railway_spot_lighting
+#import "shaders/railway_lighting.wgsl"::{railway_primary_directional_light, railway_daylight}
 #import "shaders/snow_surface.wgsl"::snow_surface
 
 struct Vertex {
@@ -134,36 +136,38 @@ fn fragment(in: VertexOutput, @builtin(front_facing) front_facing: bool) -> @loc
     let ambient = view_bindings::lights.ambient_color.rgb;
     let exposure = view_bindings::view.exposure;
     if (view_bindings::lights.n_directional_lights > 0u) {
-        let light = view_bindings::lights.directional_lights[0];
-        let light_dir = light.direction_to_light;
-        // Physical directional lights are stored in lux. Match Bevy's diffuse BRDF
-        // normalization and camera exposure; omitting both clips ordinary scenery white.
-        let ndotl = max(dot(n, light_dir), 0.0);
-        var shadow_mod = 1.0;
-        if ((light.flags & DIRECTIONAL_LIGHT_FLAGS_SHADOWS_ENABLED_BIT) != 0u) {
-            let world_pos4 = vec4<f32>(in.world_position, 1.0);
-            let view_z = (view_bindings::view.view_from_world * world_pos4).z;
-            shadow_mod = fetch_directional_shadow(
-                0u,
-                world_pos4,
-                n,
-                view_z,
-                in.clip_position.xy,
-            );
+        var directional = vec3(0.0);
+        for (var light_id = 0u; light_id < view_bindings::lights.n_directional_lights; light_id += 1u) {
+            let light = view_bindings::lights.directional_lights[light_id];
+            let light_dir = light.direction_to_light;
+            // Sum actual lux from sun and moon. Bevy's light order changes when
+            // shadows are toggled; it does not select the primary illuminant.
+            let ndotl = max(dot(n, light_dir), 0.0);
+            var shadow_mod = 1.0;
+            if ((light.flags & DIRECTIONAL_LIGHT_FLAGS_SHADOWS_ENABLED_BIT) != 0u) {
+                let world_pos4 = vec4<f32>(in.world_position, 1.0);
+                let view_z = (view_bindings::view.view_from_world * world_pos4).z;
+                shadow_mod = fetch_directional_shadow(
+                    light_id,
+                    world_pos4,
+                    n,
+                    view_z,
+                    in.clip_position.xy,
+                );
+            }
+            directional += light.color.rgb * (ndotl / PI) * shadow_mod;
         }
-        let light_rgb = light.color.rgb;
-        let diffuse_sun = light_rgb * (ndotl / PI) * shadow_mod;
-        lit = color.rgb * exposure * (ambient + diffuse_sun);
+        lit = color.rgb * exposure * (ambient + directional);
     } else {
         lit = color.rgb * exposure * max(ambient, vec3<f32>(0.35));
     }
 
     lit += color.rgb * railway_spot_lighting(vec4(in.world_position, 1.0), n, in.clip_position.xy);
     if wet>0.0 && view_bindings::lights.n_directional_lights>0u {
-        let light=view_bindings::lights.directional_lights[0];
+        let light=view_bindings::lights.directional_lights[railway_primary_directional_light()];
         let eye=normalize(view_bindings::view.world_position.xyz-in.world_position);
         let h=normalize(eye+light.direction_to_light);
-        let daylight=clamp(light.direction_to_light.y*2.0,0.0,1.0);
+        let daylight=railway_daylight();
         lit+=vec3(pow(max(dot(n,h),0.0),48.0)*wet*0.04*daylight);
     }
     var out_color = vec4<f32>(lit, color.a);
@@ -175,6 +179,11 @@ fn fragment(in: VertexOutput, @builtin(front_facing) front_facing: bool) -> @loc
         view_bindings::view.world_position.xyz,
         in.clip_position.xy,
     );
+#endif
+#ifdef TONEMAP_IN_SHADER
+    // Ordinary PBR meshes use the same color grading on SDR cameras. Omitting
+    // it saturates imported colors and makes multi-light comparisons invalid.
+    out_color = tone_mapping(out_color, view_bindings::view.color_grading);
 #endif
     return out_color;
 }

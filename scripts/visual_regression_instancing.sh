@@ -16,3 +16,8 @@ mkdir -p "$OUT"
 timeout --kill-after=5 60 target/debug/scenery_oracle "$OUT/individual.png" --individual
 timeout --kill-after=5 60 target/debug/scenery_oracle "$OUT/instanced.png"
 target/debug/scenery_oracle --verify "$OUT/individual.png" "$OUT/instanced.png"
+for lighting in zero-moon two-lights; do
+  timeout --kill-after=5 60 target/debug/scenery_oracle "$OUT/${lighting}-individual.png" --individual "--${lighting}"
+  timeout --kill-after=5 60 target/debug/scenery_oracle "$OUT/${lighting}-instanced.png" "--${lighting}"
+  target/debug/scenery_oracle --verify "$OUT/${lighting}-individual.png" "$OUT/${lighting}-instanced.png"
+done

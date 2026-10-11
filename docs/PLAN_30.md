@@ -14,7 +14,9 @@ Con el visor recién compilado, abrí `./target/debug/openrailsrs-viewer3d --men
 
 Estado: implementado y verificado. [Registro de aceptación](fixtures/plan30/2026-10-11/acceptance.json).
 
-Pasaron `check.sh` (1.823 pruebas Rust y 94 Python), las tres suites de oráculos y la comprobación adicional de once perfiles del TRAINSET original. Nueve capturas cortas de Chiltern v4 pasaron en AMD RX 7600/Vulkan, incluidas cabina/exterior nocturnos, faros apagados/bajos/altos, luna llena, arena con lluvia, nieve, efectos CPU y agua del escenario. No hubo shaders fallidos, cargas cercanas pendientes ni desbordes del presupuesto de 512 partículas del tren. El pico observado en estas capturas fue 1.903 MiB RSS; no es una medición del recorrido completo.
+Pasaron `check.sh` (1.823 pruebas Rust y 94 Python), las tres suites de oráculos y la comprobación adicional de once perfiles del TRAINSET original. Nueve capturas cortas de Chiltern v4 pasaron en AMD RX 7600/Vulkan, incluidas cabina/exterior nocturnos, faros apagados/bajos/altos, luna llena, arena con lluvia, nieve, efectos CPU y vista elevada de Denham. Una captura adicional comprueba la superficie HWater nativa del ejemplo. No hubo shaders fallidos, cargas cercanas pendientes ni desbordes del presupuesto de 512 partículas del tren. El pico observado en las capturas de Chiltern fue 1.940 MiB RSS; no es una medición del recorrido completo.
+
+La regresión gráfica conserva la imagen original y los límites de 16/255 por canal y 2% de píxeles distintos. Pasó en GPU AMD (0,089%) y Vulkan por software (0,028%). El oráculo de instancias comprueba posición y color con una luz solar, una luz lunar apagada y dos luces activas; los materiales no dependen del orden interno de las luces de Bevy.
 
 Cinco pantallas del menú pasaron el control de disposición a 800×600. Cuatro mezclas PCM de los Pullman originales, de casi doce segundos cada una, tuvieron señal, cero WAV ausentes y cero muestras recortadas. Son comprobaciones automáticas; la guía siguiente permite revisar la conducción, imagen y sonido a mano.
 
@@ -220,7 +222,7 @@ Código: `water.rs`. Regresiones: `plan30_water_uses_rail_clock`.
 
 Estado: implementado y verificado.
 
-La posición y fase lunar se calculan para fecha y coordenadas de ruta, con paralaje local y aproximación orbital para presentación. El aporte luminoso tiene su propia luz y depende de fase, horizonte y nubes.
+La posición y fase lunar se calculan para fecha y coordenadas de ruta, con paralaje local y aproximación orbital para presentación. El aporte luminoso tiene su propia luz y depende de fase, horizonte y nubes. Los materiales eligen la iluminación dominante por intensidad y usan sus sombras correspondientes; una luz lunar apagada no oscurece el terreno de día ni una luna elevada activa el brillo diurno de noche.
 
 Código: `moon.rs; scenery/assets/shaders/moon.wgsl`. Regresiones: `lunar; moon`.
 
