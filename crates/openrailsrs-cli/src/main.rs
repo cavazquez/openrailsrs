@@ -46,6 +46,15 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Import a native .timetable_or service and its reused-formation successors.
+    ImportTimetable {
+        route_dir: PathBuf,
+        timetable: PathBuf,
+        #[arg(long)]
+        service: String,
+        #[arg(long)]
+        out_dir: PathBuf,
+    },
     /// List or install packages from the curated official Open Rails catalogue.
     Content {
         #[arg(long)]
@@ -395,6 +404,31 @@ fn main() -> anyhow::Result<()> {
     }
 
     match cli.command {
+        Commands::ImportTimetable {
+            route_dir,
+            timetable,
+            service,
+            out_dir,
+        } => {
+            std::fs::create_dir_all(&out_dir)?;
+            let (track, _, _) = import_route_with_summary(&route_dir)?;
+            std::fs::write(out_dir.join("track.toml"), track)?;
+            let scenario = openrailsrs_msts::import_native_timetable(
+                &route_dir, &timetable, &service, &out_dir,
+            )?;
+            std::fs::write(
+                out_dir.join("scenario.toml"),
+                toml::to_string_pretty(&scenario)?,
+            )?;
+            println!(
+                "Horario original: {} · {} servicios · {} coches",
+                service,
+                scenario.route.legs.len(),
+                openrailsrs_train::load_consist_from_path(&scenario.train.consist)?
+                    .vehicles
+                    .len()
+            );
+        }
         Commands::Content {
             list,
             package,

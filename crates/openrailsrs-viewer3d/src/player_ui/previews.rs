@@ -8,6 +8,11 @@ use std::collections::HashMap;
 use std::path::{Component, Path, PathBuf};
 use std::sync::{Mutex, mpsc};
 
+#[path = "preview_route.rs"]
+mod route;
+#[path = "preview_train.rs"]
+mod train;
+
 const PREVIEW_LAYER: usize = 31;
 const MAX_FILE_BYTES: u64 = 32 * 1024 * 1024;
 
@@ -42,6 +47,11 @@ fn worker<K: Send + 'static, T: Send + 'static>(load: fn(&K) -> Result<T, String
 struct RouteKey {
     root: PathBuf,
     scenario: Option<PathBuf>,
+    imported: PathBuf,
+    source: PathBuf,
+    native_activity: bool,
+    native_timetable: Option<String>,
+    path: Option<PathBuf>,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct TrainKey {
@@ -58,12 +68,38 @@ pub(super) struct RailwayInfo {
 struct RouteResult {
     railway: RailwayInfo,
     image: Option<Image>,
+    map: Result<(Image, String), String>,
 }
 struct TrainResult {
-    parts: Vec<crate::shapes::LoadedShapePart>,
+    models: Vec<Vec<crate::shapes::LoadedShapePart>>,
     textures: HashMap<String, (Image, u8, bool)>,
+    vehicles: Vec<PreviewVehicle>,
     center: Vec3,
     size: Vec3,
+    missing: usize,
+    truncated: bool,
+}
+struct PreviewVehicle {
+    model: Option<usize>,
+    transform: Transform,
+    name: String,
+    center: Vec3,
+    size: Vec3,
+}
+struct PreviewScene {
+    center: Vec3,
+    size: Vec3,
+    vehicles: Vec<PreviewVehicle>,
+    missing: usize,
+    truncated: bool,
+}
+#[derive(Component)]
+pub(super) struct PreviewCamera;
+#[derive(Default)]
+pub(super) struct PreviewPose {
+    pub yaw: f32,
+    pub zoom: f32,
+    pub focus: Option<usize>,
 }
 #[derive(Component)]
 pub(super) struct PreviewRoot;
@@ -75,25 +111,35 @@ pub(super) struct Previews {
     route_key: Option<RouteKey>,
     train_key: Option<TrainKey>,
     pub route_image: Option<Handle<Image>>,
+    pub route_map: Option<Handle<Image>>,
+    pub route_map_summary: String,
+    pub show_route_map: bool,
     pub train_image: Option<Handle<Image>>,
     pub railway: Option<RailwayInfo>,
     pub route_status: String,
     pub train_status: String,
     pub route_missing: HashMap<PathBuf, bool>,
+    scene: Option<PreviewScene>,
+    pub pose: PreviewPose,
 }
 impl Default for Previews {
     fn default() -> Self {
         Self {
             route_worker: worker(load_route),
-            train_worker: worker(load_train),
+            train_worker: worker(train::load),
             route_key: None,
             train_key: None,
             route_image: None,
+            route_map: None,
+            route_map_summary: String::new(),
+            show_route_map: false,
             train_image: None,
             railway: None,
             route_status: String::new(),
             train_status: String::new(),
             route_missing: HashMap::new(),
+            scene: None,
+            pose: default(),
         }
     }
 }
@@ -192,81 +238,11 @@ fn load_route(key: &RouteKey) -> Result<RouteResult, String> {
         .as_deref()
         .and_then(|name| route_artwork(&key.root, name))
         .and_then(|path| load_texture(&path).ok().map(|texture| texture.0));
-    Ok(RouteResult { railway, image })
-}
-fn load_train(key: &TrainKey) -> Result<TrainResult, String> {
-    bounded(&key.path)?;
-    let vehicles = crate::rolling_stock::try_load_consist_vehicles(
-        key.path.parent().unwrap_or(&key.route),
-        key.path.to_string_lossy().as_ref(),
-    )
-    .ok_or("No se puede cargar la formación: revisá los recursos faltantes")?;
-    let vehicle = vehicles.first().ok_or("La formación no tiene vehículos")?;
-    let dirs = vehicle
-        .asset_dir
-        .iter()
-        .map(PathBuf::as_path)
-        .collect::<Vec<_>>();
-    let shape_path =
-        crate::rolling_stock::resolve_consist_vehicle_shape_path(&dirs, vehicle, &key.route)
-            .ok_or("Falta el modelo original del primer vehículo")?;
-    let scope = vehicle
-        .asset_dir
-        .as_deref()
-        .and_then(|dir| {
-            dir.ancestors().find(|p| {
-                p.file_name()
-                    .is_some_and(|name| name.eq_ignore_ascii_case("TRAINS"))
-            })
-        })
-        .or_else(|| {
-            shape_path.ancestors().find(|p| {
-                p.file_name().is_some_and(|name| {
-                    name.eq_ignore_ascii_case("TRAINS") || name.eq_ignore_ascii_case("ROUTES")
-                })
-            })
-        })
-        .and_then(Path::parent)
-        .unwrap_or_else(|| shape_path.parent().unwrap_or(&key.route));
-    let shape_path = confined_resource(&shape_path, scope)
-        .ok_or("El modelo de la vista previa sale de su paquete de contenido")?;
-    bounded(&shape_path)?;
-    let shape = ShapeFile::from_path(&shape_path).map_err(|e| e.to_string())?;
-    let parts = crate::shapes::build_mesh_parts_from_shape_at_distance(&shape, 0.0);
-    if parts.is_empty() || parts.len() > 1024 {
-        return Err("El modelo no tiene geometría válida para la vista previa".into());
-    }
-    let (min, max) =
-        crate::shapes::union_meshes_aabb(&parts.iter().map(|p| &p.mesh).collect::<Vec<_>>())
-            .ok_or("Modelo sin dimensiones válidas")?;
-    let mut textures = HashMap::new();
-    let mut texture_bytes = 0;
-    let root = shape_path.parent().unwrap_or(&key.route);
-    for part in &parts {
-        if let Some(name) = &part.texture_file
-            && textures.len() < 32
-            && !textures.contains_key(name)
-        {
-            let path = [
-                root.join(name.replace('\\', "/")),
-                root.join("TEXTURES").join(name.replace('\\', "/")),
-            ]
-            .iter()
-            .find_map(|path| confined_resource(path, scope));
-            if let Some(texture) = path.and_then(|path| load_texture(&path).ok()) {
-                let size = texture.0.data.as_ref().map_or(0, Vec::len);
-                if texture_bytes + size <= 64 * 1024 * 1024 {
-                    texture_bytes += size;
-                    textures.insert(name.clone(), texture);
-                }
-            }
-        }
-    }
-    Ok(TrainResult {
-        parts,
-        textures,
-        center: (min + max) * 0.5,
-        size: max - min,
+    let map = route::load(key);
+    Ok(RouteResult {
+        railway,
+        image,
+        map,
     })
 }
 pub(super) fn railway_warning(
@@ -320,19 +296,34 @@ pub(super) fn update(
     mut commands: Commands,
     mut previews: ResMut<Previews>,
     mut ui: ResMut<PlayerUiState>,
-    menu: Res<PlayerLaunchMenu>,
+    mut menu: ResMut<PlayerLaunchMenu>,
     mut images: ResMut<Assets<Image>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     roots: Query<Entity, With<PreviewRoot>>,
+    mut cameras: Query<&mut Transform, With<PreviewCamera>>,
 ) {
     if ui.panel != PlayerPanel::NewGame {
         for root in &roots {
             commands.entity(root).despawn();
         }
+        previews.scene = None;
         previews.train_key = None;
         previews.train_image = None;
         return;
+    }
+    if crate::capture::capture_enabled()
+        && std::env::var("OPENRAILSRS_SCREENSHOT_MENU").is_ok_and(|v| v == "1")
+        && let Ok(name) = std::env::var("OPENRAILSRS_SCREENSHOT_MENU_CONSIST")
+        && let Some(index) = menu
+            .consists
+            .iter()
+            .position(|p| p.file_stem().is_some_and(|s| s.eq_ignore_ascii_case(&name)))
+        && menu.consist != index
+    {
+        choices::select(&mut menu, ChoiceKind::Consist, index);
+        ui.choice_search[ChoiceKind::Consist.slot()].query = name;
+        ui.rebuild = true;
     }
     if let Some(service) = menu.current()
         && let Some(root) = &service.scenery_root
@@ -340,9 +331,20 @@ pub(super) fn update(
         let key = RouteKey {
             root: root.clone(),
             scenario: (!service.native_activity).then(|| service.source.clone()),
+            imported: service.route_dir.clone(),
+            source: service.source.clone(),
+            native_activity: service.native_activity,
+            native_timetable: service.native_timetable.clone(),
+            path: menu
+                .paths
+                .get(menu.path)
+                .filter(|_| menu.path != 0)
+                .cloned(),
         };
         if previews.route_key.as_ref() != Some(&key) {
             previews.route_image = None;
+            previews.route_map = None;
+            previews.route_map_summary = "Preparando el mapa del servicio…".into();
             previews.railway = None;
             previews.route_status = "Cargando imagen de la ruta…".into();
             let _ = previews.route_worker.tx.send(key.clone());
@@ -351,9 +353,17 @@ pub(super) fn update(
         }
     } else if previews.route_key.take().is_some() {
         previews.route_image = None;
+        previews.route_map = None;
+        previews.route_map_summary.clear();
         previews.railway = None;
         previews.route_status = "El escenario no tiene una imagen original instalada".into();
         ui.rebuild = true;
+    }
+    if crate::capture::capture_enabled()
+        && ui.in_start_menu
+        && std::env::var("OPENRAILSRS_SCREENSHOT_MENU_PAGE").is_ok_and(|page| page == "route-map")
+    {
+        previews.show_route_map = true;
     }
     let route_results = previews
         .route_worker
@@ -378,6 +388,15 @@ pub(super) fn update(
                 }
                 .into();
                 previews.route_image = result.image.map(|image| images.add(image));
+                match result.map {
+                    Ok((map, summary)) => {
+                        previews.route_map = Some(images.add(map));
+                        previews.route_map_summary = summary;
+                    }
+                    Err(error) => {
+                        previews.route_map_summary = format!("Mapa no disponible: {error}");
+                    }
+                }
                 previews.railway = Some(result.railway);
             }
             Err(error) => {
@@ -391,6 +410,7 @@ pub(super) fn update(
         for root in &roots {
             commands.entity(root).despawn();
         }
+        previews.scene = None;
         previews.train_key = None;
         previews.train_image = None;
         return;
@@ -409,7 +429,8 @@ pub(super) fn update(
                 commands.entity(root).despawn();
             }
             previews.train_image = None;
-            previews.train_status = "Cargando modelo original…".into();
+            previews.scene = None;
+            previews.train_status = "Cargando la formación original…".into();
             let _ = previews.train_worker.tx.send(key.clone());
             previews.train_key = Some(key);
             ui.rebuild = true;
@@ -438,90 +459,122 @@ pub(super) fn update(
                     TextureFormat::Rgba8Unorm,
                     Some(TextureFormat::Rgba8UnormSrgb),
                 ));
-                let textures = result
-                    .textures
-                    .into_iter()
-                    .map(|(name, (image, alpha, mask))| (name, (images.add(image), alpha, mask)))
-                    .collect::<HashMap<_, _>>();
-                let root = commands
-                    .spawn((Transform::default(), Visibility::default(), PreviewRoot))
-                    .id();
-                commands.entity(root).with_children(|p| {
-                    for part in result.parts {
-                        let texture = part
-                            .texture_file
-                            .as_ref()
-                            .and_then(|name| textures.get(name))
-                            .cloned();
-                        let passes =
-                            openrailsrs_bevy_scenery::shapes::blend_alpha_passes_from_ace_bits(
-                                texture.as_ref().map_or(0, |texture| texture.1),
-                                texture.as_ref().is_some_and(|texture| texture.2),
-                                part.texture_file.as_deref().unwrap_or(""),
-                                part.shader_name.as_deref(),
-                                part.alpha_test_mode,
-                            );
-                        let mesh = meshes.add(part.mesh);
-                        for pass in passes {
-                            let material = materials.add(StandardMaterial {
-                                base_color_texture: texture
-                                    .as_ref()
-                                    .map(|texture| texture.0.clone()),
-                                base_color: Color::WHITE,
-                                alpha_mode: pass.alpha_mode,
-                                perceptual_roughness: 0.85,
-                                cull_mode: None,
-                                double_sided: true,
-                                ..default()
-                            });
-                            p.spawn((
-                                Mesh3d(mesh.clone()),
-                                MeshMaterial3d(material),
-                                Transform::default(),
-                                RenderLayers::layer(PREVIEW_LAYER),
-                            ));
-                        }
+                let scene = train::spawn(
+                    &mut commands,
+                    result,
+                    image.clone(),
+                    &mut images,
+                    &mut meshes,
+                    &mut materials,
+                );
+                previews.train_status = format!(
+                    "{} vehículos · modelos y texturas originales{}{}",
+                    scene.vehicles.len(),
+                    if scene.missing > 0 {
+                        format!(" · {} modelos faltantes en gris", scene.missing)
+                    } else {
+                        String::new()
+                    },
+                    if scene.truncated {
+                        " · limitada a 256 vehículos"
+                    } else {
+                        ""
                     }
-                    let radius = result.size.length() * 0.65;
-                    p.spawn((
-                        Camera3d::default(),
-                        Camera {
-                            order: -10,
-                            clear_color: Color::srgb(0.07, 0.10, 0.14).into(),
-                            ..default()
-                        },
-                        RenderTarget::Image(image.clone().into()),
-                        Transform::from_translation(
-                            result.center
-                                + Vec3::new(-1.0, 0.40, -0.65).normalize() * radius.max(5.0),
-                        )
-                        .looking_at(result.center, Vec3::Y),
-                        Projection::Perspective(PerspectiveProjection {
-                            fov: 45.0_f32.to_radians(),
-                            ..default()
-                        }),
-                        RenderLayers::layer(PREVIEW_LAYER),
-                        Msaa::Off,
-                    ));
-                    p.spawn((
-                        PointLight {
-                            intensity: 25_000_000.0,
-                            range: radius.max(10.0) * 5.0,
-                            shadow_maps_enabled: false,
-                            ..default()
-                        },
-                        Transform::from_translation(
-                            result.center + Vec3::new(-radius, radius, -radius),
-                        ),
-                        RenderLayers::layer(PREVIEW_LAYER),
-                    ));
-                });
+                );
                 previews.train_image = Some(image);
-                previews.train_status =
-                    "Vista 3D del primer vehículo · modelo y texturas originales".into();
+                previews.scene = Some(scene);
+                previews.pose = default();
             }
         }
         ui.rebuild = true;
+    }
+    if let Some(scene) = &previews.scene {
+        let (center, size) = previews
+            .pose
+            .focus
+            .and_then(|i| scene.vehicles.get(i))
+            .map(|v| (v.center, v.size))
+            .unwrap_or((scene.center, scene.size));
+        let radius = (size.length() * 0.8).max(5.0) * 2.0_f32.powf(previews.pose.zoom);
+        let yaw = -1.0 + previews.pose.yaw;
+        for mut camera in &mut cameras {
+            *camera = Transform::from_translation(
+                center + Vec3::new(yaw.sin(), 0.35, yaw.cos()).normalize() * radius,
+            )
+            .looking_at(center, Vec3::Y);
+        }
+    }
+}
+
+impl Previews {
+    pub fn move_focus(&mut self, delta: i32) {
+        if let Some(scene) = &self.scene {
+            self.pose.focus = Some(cycle(
+                self.pose.focus.unwrap_or(0),
+                scene.vehicles.len(),
+                delta,
+            ));
+            self.pose.zoom = 0.0;
+        }
+    }
+    pub fn focus_label(&self) -> String {
+        self.pose
+            .focus
+            .and_then(|i| {
+                self.scene
+                    .as_ref()
+                    .and_then(|s| s.vehicles.get(i).map(|v| (i, s, v)))
+            })
+            .map(|(i, s, v)| {
+                format!(
+                    "Vehículo {}/{} · {}{}",
+                    i + 1,
+                    s.vehicles.len(),
+                    v.name,
+                    if v.model.is_none() {
+                        " · falta el modelo"
+                    } else {
+                        ""
+                    }
+                )
+            })
+            .unwrap_or_else(|| "Formación completa".into())
+    }
+}
+pub(super) fn train_card(p: &mut ChildSpawnerCommands<'_>, preview: &Previews) {
+    image_card(p, preview.train_image.as_ref(), &preview.train_status);
+    if preview.train_image.is_some() {
+        label(p, preview.focus_label(), 12.0, MUTED);
+        row(p, |p| {
+            button(p, "↶", UiCommand::PreviewRotate(-0.3));
+            button(p, "↷", UiCommand::PreviewRotate(0.3));
+            button(p, "+", UiCommand::PreviewZoom(-0.25));
+            button(p, "−", UiCommand::PreviewZoom(0.25));
+            button(p, "Todo", UiCommand::PreviewAll);
+        });
+        row(p, |p| {
+            button(p, "◀ Vehículo", UiCommand::PreviewCar(-1));
+            button(p, "Vehículo ▶", UiCommand::PreviewCar(1));
+        });
+    }
+}
+
+pub(super) fn route_card(p: &mut ChildSpawnerCommands<'_>, preview: &Previews) {
+    row(p, |p| {
+        button(p, "Imagen / Mapa", UiCommand::PreviewRouteView);
+    });
+    if preview.show_route_map {
+        image_card(p, preview.route_map.as_ref(), &preview.route_map_summary);
+    } else {
+        image_card(p, preview.route_image.as_ref(), &preview.route_status);
+        if preview.route_map.is_some() {
+            label(
+                p,
+                "Mapa del servicio disponible · Imagen / Mapa",
+                12.0,
+                MUTED,
+            );
+        }
     }
 }
 

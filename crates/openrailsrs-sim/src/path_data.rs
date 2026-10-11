@@ -244,6 +244,7 @@ mod tests {
         g.set_physics_profile(
             "e1",
             EdgePhysicsProfile {
+                platforms: vec![],
                 speed_posts: vec![
                     PositionSpeedLimit {
                         position_m: 30.0,

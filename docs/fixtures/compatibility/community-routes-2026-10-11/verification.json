@@ -1,19 +1,18 @@
 {
-  "schema": 1,
+  "schema": 2,
   "date": "2026-10-11",
-  "scope": "native content audit/import, short GPU travel checkpoints and selected complete player services; no global route certification or most-played ranking",
+  "scope": "ten native imports and stock audits; selected original ACT path/station journeys; linked native timetable and static own-section split/join; isolated GPU checkpoints and accelerated full-service weather stress. This does not certify arbitrary ACT events, all stock systems or a global most-played ranking.",
   "routes": {
     "schema": 1,
     "date": "2026-10-11",
     "selection": "Ten widely distributed routes recommended by Open Rails or their authors. Author download counts are a proxy; there is no verified global ranking of active players.",
-    "cli_sha256": "854ceaf6d4472884f7a070853d18456827941310025a2a16a3343a90d05599f9",
-    "viewer_sha256": "42d65723f6760bf343812de2a7ac86d2e7e3d7ec18024a8c4e4c561902f2afef",
+    "cli_sha256": "4a581323fdab0028f0a625e1b9de87eeb5832d6c0cc9bc7475f4e47436814aee",
     "routes": [
       {
         "id": "chiltern",
         "name": "Chiltern v4",
         "source": "https://github.com/DocMartin7644/Chiltern-Route-v4",
-        "status": "gpu_checkpoints_passed",
+        "status": "activity_imported",
         "audit": {
           "total": 188,
           "content_valid": 157,
@@ -23,9 +22,4054 @@
           "exit_code": 0
         },
         "service": {
-          "exit_code": 1,
-          "error": "Error: a station service needs a declared terminal stop"
+          "exit_code": 0,
+          "outcome": {
+            "success": true,
+            "phase": "completed",
+            "scenario": "Test Paddington Suburban Down Daytime",
+            "time_s": 199.02060517040712,
+            "distance_m": 1095.3254207587297,
+            "score": 1000.0,
+            "failure": null,
+            "completion_scope": "Resolved route and declared passenger stops; not arbitrary ACT scripted events",
+            "stops": []
+          }
         },
+        "gpu": {},
+        "scope": "installed stock, native import, optional player checkpoints",
+        "cli_sha256": "4a581323fdab0028f0a625e1b9de87eeb5832d6c0cc9bc7475f4e47436814aee",
+        "route_in_package": "Chiltern-Route-v4-8236df20ed9f596b8cf15720c43bfbdd0c43125d/ROUTES/Chiltern",
+        "package": "chiltern-v4-2fc79dd1c7f0eebc",
+        "activity": {
+          "name": "Test Paddington Suburban Down Daytime.act",
+          "consist": "Railcarx2.con",
+          "exit_code": 0,
+          "consist_override": false,
+          "stops": []
+        }
+      },
+      {
+        "id": "demo",
+        "name": "Demo Model 1 / Scottish Capital Express",
+        "source": "https://www.openrails.org/discover/get-started/",
+        "status": "activity_imported",
+        "audit": {
+          "total": 23,
+          "content_valid": 15,
+          "player_ready": 12
+        },
+        "import": {
+          "exit_code": 0
+        },
+        "service": {
+          "exit_code": 0,
+          "outcome": {
+            "success": true,
+            "phase": "completed",
+            "scenario": "0930 Edinburgh-Glasgow Queen Street",
+            "time_s": 2055.7999999987132,
+            "distance_m": 28216.005712154936,
+            "score": 1000.0,
+            "failure": null,
+            "completion_scope": "Resolved route and declared passenger stops; not arbitrary ACT scripted events",
+            "stops": [
+              {
+                "name": "Edinburgh Waverley",
+                "node": "n217",
+                "scheduled_arrive_s": 0.0,
+                "actual_arrive_s": 0.05,
+                "actual_depart_s": 61.999999999998614,
+                "position_error_m": 0.0,
+                "arrival_speed_mps": 0.0,
+                "dwell_s": 59.99999999999873,
+                "delay_s": 0.05,
+                "early_departure_s": 0.0
+              },
+              {
+                "name": "Haymarket",
+                "node": "n211",
+                "scheduled_arrive_s": 300.0,
+                "actual_arrive_s": 392.1000000000549,
+                "actual_depart_s": 454.05000000006896,
+                "position_error_m": 3.660466060904355,
+                "arrival_speed_mps": 0.0881286298806768,
+                "dwell_s": 59.99999999999873,
+                "delay_s": 92.10000000005488,
+                "early_departure_s": 0.0
+              },
+              {
+                "name": "Linlithgow",
+                "node": "n62",
+                "scheduled_arrive_s": 1380.0,
+                "actual_arrive_s": 1401.9999999992726,
+                "actual_depart_s": 2003.9499999987252,
+                "position_error_m": 5.815205341048568,
+                "arrival_speed_mps": 0.09035331018833714,
+                "dwell_s": 600.000000000002,
+                "delay_s": 21.99999999927263,
+                "early_departure_s": 0.0
+              }
+            ]
+          }
+        },
+        "gpu": {},
+        "scope": "installed stock, native import, optional player checkpoints",
+        "cli_sha256": "4a581323fdab0028f0a625e1b9de87eeb5832d6c0cc9bc7475f4e47436814aee",
+        "route_in_package": "Demo Model 1/ROUTES/SCE",
+        "package": "demo-model-1-5e4a64e1cd44e23e",
+        "activity": {
+          "name": "MT_MT_0930 Edinburgh-Glasgow Queen Street.act",
+          "consist": "MT_MT_Class 47 & 6 mk2 PP.con",
+          "exit_code": 0,
+          "consist_override": false,
+          "stops": [
+            "Edinburgh Waverley",
+            "Haymarket",
+            "Linlithgow"
+          ]
+        }
+      },
+      {
+        "id": "bnsf",
+        "name": "BNSF Starter Route",
+        "source": "https://ts-files.com/files/TS_STARTER_ROUTE.zip",
+        "status": "activity_imported",
+        "audit": {
+          "total": 17,
+          "content_valid": 1,
+          "player_ready": 1
+        },
+        "import": {
+          "exit_code": 0
+        },
+        "service": {
+          "exit_code": 0,
+          "outcome": {
+            "success": true,
+            "phase": "completed",
+            "scenario": "5. Westbound Empire Builder",
+            "time_s": 15013.828735007553,
+            "distance_m": 195934.64273457078,
+            "score": 1000.0,
+            "failure": null,
+            "completion_scope": "Resolved route and declared passenger stops; not arbitrary ACT scripted events",
+            "stops": [
+              {
+                "name": "Wenatchee",
+                "node": "n168",
+                "scheduled_arrive_s": 420.0,
+                "actual_arrive_s": 231.30000000001834,
+                "actual_depart_s": 421.00000000006145,
+                "position_error_m": 3.721598337733667,
+                "arrival_speed_mps": 0.057197924980632406,
+                "dwell_s": 188.75000000000867,
+                "delay_s": 0.0,
+                "early_departure_s": 0.0
+              },
+              {
+                "name": "Skykomish Station",
+                "node": "n26",
+                "scheduled_arrive_s": 9240.0,
+                "actual_arrive_s": 9021.000000008973,
+                "actual_depart_s": 9241.000000005772,
+                "position_error_m": 3.7737841024063528,
+                "arrival_speed_mps": 0.09670683390751136,
+                "dwell_s": 219.05000000001556,
+                "delay_s": 0.0,
+                "early_departure_s": 0.0
+              },
+              {
+                "name": "Everett Station",
+                "node": "n367",
+                "scheduled_arrive_s": 14520.0,
+                "actual_arrive_s": 13380.79999994553,
+                "actual_depart_s": 14521.049999928937,
+                "position_error_m": 3.86505237952224,
+                "arrival_speed_mps": 0.09454275825200702,
+                "dwell_s": 1139.2999999995116,
+                "delay_s": 0.0,
+                "early_departure_s": 0.0
+              }
+            ]
+          }
+        },
+        "gpu": {},
+        "scope": "installed stock, native import, optional player checkpoints",
+        "cli_sha256": "4a581323fdab0028f0a625e1b9de87eeb5832d6c0cc9bc7475f4e47436814aee",
+        "route_in_package": "ROUTES/BNSF_Scenic",
+        "package": "bnsf-starter-route-1cc2a6dfbc7b5c6d",
+        "activity": {
+          "name": "5_wb_empirebuilder.act",
+          "consist": "amtrak empire builder wb.con",
+          "exit_code": 0,
+          "consist_override": false,
+          "stops": [
+            "Wenatchee",
+            "Skykomish Station",
+            "Everett Station"
+          ]
+        }
+      },
+      {
+        "id": "lirr",
+        "name": "Long Island Railroad",
+        "source": "https://static.openrails.org/files/LIRR.zip",
+        "status": "activity_imported",
+        "audit": {
+          "total": 42,
+          "content_valid": 42,
+          "player_ready": 17
+        },
+        "import": {
+          "exit_code": 0
+        },
+        "service": {
+          "exit_code": 0,
+          "outcome": {
+            "success": true,
+            "phase": "completed",
+            "scenario": "01. BROOKLYN to HEMPSTEAD",
+            "time_s": 1603.1499999990897,
+            "distance_m": 31367.745589111957,
+            "score": 1000.0,
+            "failure": null,
+            "completion_scope": "Resolved route and declared passenger stops; not arbitrary ACT scripted events",
+            "stops": [
+              {
+                "name": "FLATBUSH TERMINAL",
+                "node": "n5462",
+                "scheduled_arrive_s": 0.0,
+                "actual_arrive_s": 0.05,
+                "actual_depart_s": 3.999999999999994,
+                "position_error_m": 2.842170943040401e-14,
+                "arrival_speed_mps": 0.0,
+                "dwell_s": 2.000000000000001,
+                "delay_s": 0.05,
+                "early_departure_s": 0.0
+              },
+              {
+                "name": "HEMPSTEAD",
+                "node": "n5514",
+                "scheduled_arrive_s": 1575.0,
+                "actual_arrive_s": 1586.199999999105,
+                "actual_depart_s": 1603.1499999990897,
+                "position_error_m": 4.241910634733358,
+                "arrival_speed_mps": 0.09950549791215052,
+                "dwell_s": 15.000000000000078,
+                "delay_s": 11.199999999105103,
+                "early_departure_s": 0.0
+              }
+            ]
+          }
+        },
+        "gpu": {},
+        "scope": "installed stock, native import, optional player checkpoints",
+        "cli_sha256": "4a581323fdab0028f0a625e1b9de87eeb5832d6c0cc9bc7475f4e47436814aee",
+        "route_in_package": "ROUTES/LIRR",
+        "package": "long-island-railroad-4d33e3e0e6d8d103",
+        "activity": {
+          "name": "01Brooklyn-Hempstead.act",
+          "consist": "SFexpress-500.con",
+          "exit_code": 0,
+          "consist_override": false,
+          "stops": [
+            "FLATBUSH TERMINAL",
+            "HEMPSTEAD"
+          ]
+        }
+      },
+      {
+        "id": "mideast",
+        "name": "MidEast Coast",
+        "source": "https://github.com/MECoast/MECoast",
+        "status": "activity_imported",
+        "audit": {
+          "total": 926,
+          "content_valid": 625,
+          "player_ready": 556
+        },
+        "import": {
+          "exit_code": 0
+        },
+        "service": {
+          "exit_code": 1,
+          "outcome": {
+            "success": false,
+            "phase": "failed",
+            "scenario": "Firsby to Spilsby Return",
+            "time_s": 1188.5999999994667,
+            "distance_m": 6821.741172956573,
+            "score": 1000.0,
+            "failure": "El tramo siguiente no contiene el extremo de la formación",
+            "completion_scope": "Resolved route and declared passenger stops; not arbitrary ACT scripted events",
+            "stops": [
+              {
+                "name": "Firsby",
+                "node": "n7553",
+                "scheduled_arrive_s": 0.0,
+                "actual_arrive_s": 0.05,
+                "actual_depart_s": 121.99999999999521,
+                "position_error_m": 0.0,
+                "arrival_speed_mps": 0.0,
+                "dwell_s": 119.99999999999532,
+                "delay_s": 0.05,
+                "early_departure_s": 0.0
+              },
+              {
+                "name": "Halton Holegate",
+                "node": "n10955",
+                "scheduled_arrive_s": 430.0,
+                "actual_arrive_s": 632.1999999999728,
+                "actual_depart_s": 694.1499999999164,
+                "position_error_m": 3.6739187718631,
+                "arrival_speed_mps": 0.09141715534665965,
+                "dwell_s": 59.99999999999873,
+                "delay_s": 202.19999999997276,
+                "early_departure_s": 0.0
+              },
+              {
+                "name": "Spilsby",
+                "node": "n10940",
+                "scheduled_arrive_s": 740.0,
+                "actual_arrive_s": 1062.2499999995816,
+                "actual_depart_s": 1164.199999999489,
+                "position_error_m": 3.7700656949091353,
+                "arrival_speed_mps": 0.06562252452351566,
+                "dwell_s": 99.99999999999646,
+                "delay_s": 322.24999999958163,
+                "early_departure_s": 0.0
+              }
+            ]
+          },
+          "error": "{\n  \"success\": false,\n  \"phase\": \"failed\",\n  \"scenario\": \"Firsby to Spilsby Return\",\n  \"time_s\": 1188.5999999994667,\n  \"distance_m\": 6821.741172956573,\n  \"score\": 1000.0,\n  \"failure\": \"El tramo siguiente no contiene el extremo de la formación\",\n  \"completion_scope\": \"Resolved route and declared passenger stops; not arbitrary ACT scripted events\",\n  \"stops\": [\n    {\n      \"name\": \"Firsby\",\n      \"node\": \"n7553\",\n      \"scheduled_arrive_s\": 0.0,\n      \"actual_arrive_s\": 0.05,\n      \"actual_depart_s\": 121.99999999999521,\n      \"position_error_m\": 0.0,\n      \"arrival_speed_mps\": 0.0,\n      \"dwell_s\": 119.99999999999532,\n      \"delay_s\": 0.05,\n      \"early_departure_s\": 0.0\n    },\n    {\n      \"name\": \"Halton Holegate\",\n      \"node\": \"n10955\",\n      \"scheduled_arrive_s\": 430.0,\n      \"actual_arrive_s\": 632.1999999999728,\n      \"actual_depart_s\": 694.1499999999164,\n      \"position_error_m\": 3.6739187718631,\n      \"arrival_speed_mps\": 0.09141715534665965,\n      \"dwell_s\": 59.99999999999873,\n      \"delay_s\": 202.19999999997276,\n      \"early_departure_s\": 0.0\n    },\n    {\n      \"name\": \"Spilsby\",\n      \"node\": \"n10940\",\n      \"scheduled_arrive_s\": 740.0,\n      \"actual_arrive_s\": 1062.2499999995816,\n      \"actual_depart_s\": 1164.199999999489,\n      \"position_error_m\": 3.7700656949091353,\n      \"arrival_speed_mps\": 0.06562252452351566,\n      \"dwell_s\": 99.99999999999646,\n      \"delay_s\": 322.24999999958163,\n      \"early_departure_s\": 0.0\n    }\n  ]\n}"
+        },
+        "gpu": {},
+        "scope": "installed stock, native import, optional player checkpoints",
+        "cli_sha256": "4a581323fdab0028f0a625e1b9de87eeb5832d6c0cc9bc7475f4e47436814aee",
+        "route_in_package": "MECoast-1c47480edb295aeb8eee5849e941da77d4ed0bf2/Routes/MidEastCoast",
+        "package": "mideast-coast-dc2592a67727005f",
+        "activity": {
+          "name": "Firsby to Spilsby Return.act",
+          "consist": "OR-84030-BR2MT-Tank-B-2MK1CC.con",
+          "exit_code": 0,
+          "consist_override": false,
+          "stops": [
+            "Firsby",
+            "Halton Holegate",
+            "Spilsby"
+          ]
+        }
+      },
+      {
+        "id": "portugal",
+        "name": "Portugal 79",
+        "source": "https://github.com/cpvirtual/OR_CPV",
+        "status": "route_imported",
+        "audit": {
+          "total": 1866,
+          "content_valid": 1435,
+          "player_ready": 1407
+        },
+        "import": {
+          "exit_code": 0
+        },
+        "service": null,
+        "gpu": {},
+        "scope": "installed stock, native import, optional player checkpoints",
+        "cli_sha256": "4a581323fdab0028f0a625e1b9de87eeb5832d6c0cc9bc7475f4e47436814aee",
+        "route_in_package": "OR_CPV-56bce7499e6368bedd21c43e9f6bdb16acf783ea/ROUTES/CPV_PT79",
+        "package": "portugal-79-72a2afec7a2e8bf5",
+        "limitation": "No selected original activity and complete original formation"
+      },
+      {
+        "id": "zigzag",
+        "name": "Great Zig Zag NSW",
+        "source": "https://www.zigzag.coalstonewcastle.com.au/route/downloads/",
+        "status": "activity_imported",
+        "audit": {
+          "total": 56,
+          "content_valid": 52,
+          "player_ready": 52
+        },
+        "import": {
+          "exit_code": 0
+        },
+        "service": {
+          "exit_code": 0,
+          "outcome": {
+            "success": true,
+            "phase": "completed",
+            "scenario": "Tutorial #6 - Loading and Servicing",
+            "time_s": 3989.9000000057495,
+            "distance_m": 5372.621380935148,
+            "score": 1000.0,
+            "failure": null,
+            "completion_scope": "Resolved route and declared passenger stops; not arbitrary ACT scripted events",
+            "stops": []
+          }
+        },
+        "gpu": {},
+        "scope": "installed stock, native import, optional player checkpoints",
+        "cli_sha256": "4a581323fdab0028f0a625e1b9de87eeb5832d6c0cc9bc7475f4e47436814aee",
+        "route_in_package": "Routes/au_great_zig_zag",
+        "package": "zigzag-v1-6",
+        "activity": {
+          "name": "tutorial#6_loading.act",
+          "consist": "tutorial#6_player_train.con",
+          "exit_code": 0,
+          "consist_override": false,
+          "stops": []
+        }
+      },
+      {
+        "id": "coals-to-newcastle",
+        "name": "Coals to Newcastle",
+        "source": "https://www.coalstonewcastle.com.au/route/downloads/",
+        "status": "route_imported",
+        "audit": {
+          "total": 0,
+          "content_valid": 0,
+          "player_ready": 0
+        },
+        "import": {
+          "exit_code": 0
+        },
+        "service": null,
+        "gpu": {},
+        "scope": "installed stock, native import, optional player checkpoints",
+        "cli_sha256": "4a581323fdab0028f0a625e1b9de87eeb5832d6c0cc9bc7475f4e47436814aee",
+        "route_in_package": "Routes/AU_Coal_to_Newcastle",
+        "package": "coals-to-newcastle-v7-4",
+        "limitation": "No selected original activity and complete original formation"
+      },
+      {
+        "id": "burrinjuck",
+        "name": "Burrinjuck",
+        "source": "https://www.burrinjuck.coalstonewcastle.com.au/route/downloads/",
+        "status": "activity_imported",
+        "audit": {
+          "total": 10,
+          "content_valid": 6,
+          "player_ready": 6
+        },
+        "import": {
+          "exit_code": 0
+        },
+        "service": {
+          "exit_code": 0,
+          "outcome": {
+            "success": true,
+            "phase": "completed",
+            "scenario": "Default",
+            "time_s": 1339.3419160722462,
+            "distance_m": 42748.928468670114,
+            "score": 1000.0,
+            "failure": null,
+            "completion_scope": "Resolved route and declared passenger stops; not arbitrary ACT scripted events",
+            "stops": []
+          }
+        },
+        "gpu": {},
+        "scope": "installed stock, native import, optional player checkpoints",
+        "cli_sha256": "4a581323fdab0028f0a625e1b9de87eeb5832d6c0cc9bc7475f4e47436814aee",
+        "route_in_package": "Routes/AU_Burrinjuck",
+        "package": "burrinjuck-v3",
+        "activity": {
+          "name": "Default.act",
+          "consist": "burr_jack_light.con",
+          "exit_code": 0,
+          "consist_override": false,
+          "stops": []
+        }
+      },
+      {
+        "id": "craven",
+        "name": "Craven Timber Railway",
+        "source": "https://www.craven.coalstonewcastle.com.au/route/downloads/",
+        "status": "activity_imported",
+        "audit": {
+          "total": 11,
+          "content_valid": 9,
+          "player_ready": 9
+        },
+        "import": {
+          "exit_code": 0
+        },
+        "service": {
+          "exit_code": 0,
+          "outcome": {
+            "success": true,
+            "phase": "completed",
+            "scenario": "Default",
+            "time_s": 509.8363318698334,
+            "distance_m": 12088.488815861368,
+            "score": 1000.0,
+            "failure": null,
+            "completion_scope": "Resolved route and declared passenger stops; not arbitrary ACT scripted events",
+            "stops": []
+          }
+        },
+        "gpu": {},
+        "scope": "installed stock, native import, optional player checkpoints",
+        "cli_sha256": "4a581323fdab0028f0a625e1b9de87eeb5832d6c0cc9bc7475f4e47436814aee",
+        "route_in_package": "Routes/au_craven",
+        "package": "craven-v1-2",
+        "activity": {
+          "name": "default.act",
+          "consist": "CT-No1-LightEngine.con",
+          "exit_code": 0,
+          "consist_override": false,
+          "stops": []
+        }
+      }
+    ]
+  },
+  "additional_activities": {
+    "schema": 1,
+    "date": "2026-10-11",
+    "selection": "Ten widely distributed routes recommended by Open Rails or their authors. Author download counts are a proxy; there is no verified global ranking of active players.",
+    "cli_sha256": "4a581323fdab0028f0a625e1b9de87eeb5832d6c0cc9bc7475f4e47436814aee",
+    "routes": [
+      {
+        "id": "chiltern-birmingham",
+        "name": "Chiltern v4",
+        "source": "https://github.com/DocMartin7644/Chiltern-Route-v4",
+        "status": "activity_imported",
+        "audit": {
+          "total": 188,
+          "content_valid": 157,
+          "player_ready": 153
+        },
+        "import": {
+          "exit_code": 0
+        },
+        "service": {
+          "exit_code": 0,
+          "outcome": {
+            "success": true,
+            "phase": "completed",
+            "scenario": "RS_Let's go to Birmingham",
+            "time_s": 4348.160710803458,
+            "distance_m": 110193.7404244738,
+            "score": 1000.0,
+            "failure": null,
+            "completion_scope": "Resolved route and declared passenger stops; not arbitrary ACT scripted events",
+            "stops": [
+              {
+                "name": "Banbury General",
+                "node": "n6363",
+                "scheduled_arrive_s": 3780.0,
+                "actual_arrive_s": 3990.550000005752,
+                "actual_depart_s": 4052.500000005977,
+                "position_error_m": 2.634916781593347,
+                "arrival_speed_mps": 0.09513275264780108,
+                "dwell_s": 59.99999999999873,
+                "delay_s": 210.55000000575183,
+                "early_departure_s": 0.0
+              }
+            ]
+          }
+        },
+        "gpu": {},
+        "scope": "installed stock, native import, optional player checkpoints",
+        "cli_sha256": "4a581323fdab0028f0a625e1b9de87eeb5832d6c0cc9bc7475f4e47436814aee",
+        "route_in_package": "Chiltern-Route-v4-8236df20ed9f596b8cf15720c43bfbdd0c43125d/ROUTES/Chiltern",
+        "package": "chiltern-v4-2fc79dd1c7f0eebc",
+        "activity": {
+          "name": "RS_Let's go to Birmingham.act",
+          "consist": "Bristol Pullman.con",
+          "exit_code": 0,
+          "consist_override": false,
+          "stops": [
+            "Banbury General"
+          ]
+        }
+      },
+      {
+        "id": "lirr-central",
+        "name": "Long Island Railroad",
+        "source": "https://static.openrails.org/files/LIRR.zip",
+        "status": "activity_imported",
+        "audit": {
+          "total": 42,
+          "content_valid": 42,
+          "player_ready": 17
+        },
+        "import": {
+          "exit_code": 0
+        },
+        "service": {
+          "exit_code": 0,
+          "outcome": {
+            "success": true,
+            "phase": "completed",
+            "scenario": "04. CENTRAL PICKUPS",
+            "time_s": 2483.9000000002707,
+            "distance_m": 32776.49343924083,
+            "score": 1000.0,
+            "failure": null,
+            "completion_scope": "Resolved route and declared passenger stops; not arbitrary ACT scripted events",
+            "stops": []
+          }
+        },
+        "gpu": {},
+        "scope": "installed stock, native import, optional player checkpoints",
+        "cli_sha256": "4a581323fdab0028f0a625e1b9de87eeb5832d6c0cc9bc7475f4e47436814aee",
+        "route_in_package": "ROUTES/LIRR",
+        "package": "long-island-railroad-4d33e3e0e6d8d103",
+        "activity": {
+          "name": "04CentralPickups.act",
+          "consist": "1xNECX102.con",
+          "exit_code": 0,
+          "consist_override": false,
+          "stops": []
+        }
+      },
+      {
+        "id": "zigzag-loading",
+        "name": "Great Zig Zag NSW",
+        "source": "https://www.zigzag.coalstonewcastle.com.au/route/downloads/",
+        "status": "activity_imported",
+        "audit": {
+          "total": 56,
+          "content_valid": 52,
+          "player_ready": 52
+        },
+        "import": {
+          "exit_code": 0
+        },
+        "service": {
+          "exit_code": 0,
+          "outcome": {
+            "success": true,
+            "phase": "completed",
+            "scenario": "Tutorial #6 - Loading and Servicing",
+            "time_s": 3989.9000000057495,
+            "distance_m": 5372.621380935148,
+            "score": 1000.0,
+            "failure": null,
+            "completion_scope": "Resolved route and declared passenger stops; not arbitrary ACT scripted events",
+            "stops": []
+          }
+        },
+        "gpu": {},
+        "scope": "installed stock, native import, optional player checkpoints",
+        "cli_sha256": "4a581323fdab0028f0a625e1b9de87eeb5832d6c0cc9bc7475f4e47436814aee",
+        "route_in_package": "Routes/au_great_zig_zag",
+        "package": "zigzag-v1-6",
+        "activity": {
+          "name": "tutorial#6_loading.act",
+          "consist": "tutorial#6_player_train.con",
+          "exit_code": 0,
+          "consist_override": false,
+          "stops": []
+        }
+      }
+    ]
+  },
+  "lirr_parameters": {
+    "scope": "Original DLL initial parameters, positive directed speed posts and native schedule; not full physical trajectory parity or all valve responses",
+    "reference": "oracles/openrails-lirr-parameters.json",
+    "reference_sha256": "1bec75725480be057203e3f7f4a7f3c121a81eb82bd7a130cf6c797da78b0f3f",
+    "cli_sha256": "4a581323fdab0028f0a625e1b9de87eeb5832d6c0cc9bc7475f4e47436814aee",
+    "matched_parameters": {
+      "cars": 7,
+      "mass_kg": 150000.0,
+      "max_power_w": 6526000.0,
+      "max_force_n": 1301300.0,
+      "max_brake_n": 350000.0,
+      "initial_allowed_speed_mps": 6.7056000000000004
+    },
+    "matched_speed_posts": 776,
+    "vehicle_body_length_m": 72.61,
+    "original_train_length_with_coupling_m": 73.21,
+    "front_placement_difference_m": 0.5844152286423139,
+    "author_duration_estimate_s": 1560,
+    "native_timetable": [
+      {
+        "platform": 1556,
+        "arrive_s": -2.0,
+        "depart_s": 2.0
+      },
+      {
+        "platform": 895,
+        "arrive_s": 1575.0,
+        "depart_s": 1590.0
+      }
+    ],
+    "passed": true
+  },
+  "native_timetable": {
+    "schema": 1,
+    "cli_sha256": "4a581323fdab0028f0a625e1b9de87eeb5832d6c0cc9bc7475f4e47436814aee",
+    "original_table": "SCE_total.timetable_or",
+    "table_sha256": "468f67da65c0840f1d09ab12870a18091ae8105a98c3e67df585d17b1596be52",
+    "initial_service": "T_0730_SHOTTS",
+    "services": [
+      "T_0730_SHOTTS",
+      "T_0800_EDBS"
+    ],
+    "scope": "original forms/reuse and reversal, same three-car formation; declared stops and path endpoint",
+    "outcome": {
+      "success": true,
+      "phase": "completed",
+      "scenario": "T_0800_EDBS",
+      "time_s": 2304.8499999996193,
+      "distance_m": 6954.042388119228,
+      "score": 1000.0,
+      "failure": null,
+      "completion_scope": "Resolved route and declared passenger stops; not arbitrary ACT scripted events",
+      "stops": [
+        {
+          "name": "Haymarket",
+          "node": "n209",
+          "scheduled_arrive_s": 120.0,
+          "actual_arrive_s": 154.80000000000095,
+          "actual_depart_s": 216.75000000001504,
+          "position_error_m": 3.122480349153193,
+          "arrival_speed_mps": 0.07665412457125365,
+          "dwell_s": 59.99999999999873,
+          "delay_s": 34.80000000000095,
+          "early_departure_s": 0.0
+        },
+        {
+          "name": "Edinburgh Waverley",
+          "node": "n382",
+          "scheduled_arrive_s": 420.0,
+          "actual_arrive_s": 500.15000000007944,
+          "actual_depart_s": 500.15000000007944,
+          "position_error_m": 3.663245050835485,
+          "arrival_speed_mps": 0.08291971669141229,
+          "dwell_s": 0.05,
+          "delay_s": 80.15000000007944,
+          "early_departure_s": 0.0
+        },
+        {
+          "name": "Edinburgh Waverley",
+          "node": "n397",
+          "scheduled_arrive_s": 1800.0,
+          "actual_arrive_s": 1523.9999999991617,
+          "actual_depart_s": 1801.0499999989097,
+          "position_error_m": 3.984932143705919,
+          "arrival_speed_mps": 0.06888988494609516,
+          "dwell_s": 276.1000000000285,
+          "delay_s": 0.0,
+          "early_departure_s": 0.0
+        },
+        {
+          "name": "Haymarket",
+          "node": "n211",
+          "scheduled_arrive_s": 1980.0,
+          "actual_arrive_s": 2065.89999999875,
+          "actual_depart_s": 2127.8499999989754,
+          "position_error_m": 4.12638881676321,
+          "arrival_speed_mps": 0.0992850457558401,
+          "dwell_s": 59.99999999999873,
+          "delay_s": 85.89999999874999,
+          "early_departure_s": 0.0
+        }
+      ]
+    }
+  },
+  "native_signals_gpu": {
+    "schema": 1,
+    "viewer_sha256": "e288614a5f270853bc8da165995cbdfa50da15df0295906a6b1d201ece994f1c",
+    "routes": [
+      {
+        "id": "mideast",
+        "scope": "original ACT/PAT and formation; circulation before manual runaround",
+        "captures": {
+          "cab": {
+            "passed": true,
+            "native_signal_programs": 9117,
+            "odometer_m": 0.0,
+            "peak_rss_mib": 1346.0,
+            "elapsed_s": 15.9,
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "gpu_tiles": 8,
+            "gpu_entities": 5993,
+            "unactivated_near_shapes": 0,
+            "pending_gpu_uploads": 0,
+            "pending_terrain_tiles": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "native_signal_errors": {},
+            "formation_validation": {
+              "cars": 3,
+              "maximum_spacing_error_m": 1.7033810248534564e-05,
+              "tolerance_m": 2.0,
+              "scope": "car centres versus path offsets; includes curve chord shortening"
+            },
+            "frame_timing": null,
+            "performance": {
+              "elapsed_s": 10.839928342,
+              "frame_p50_ms": 25,
+              "frame_p95_ms": 25,
+              "frame_p99_ms": 46,
+              "frames": 395,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 25,
+              "gameplay_frame_p99_ms": 25,
+              "gameplay_frames": 117,
+              "gameplay_hitches_over_100_ms": 0,
+              "gameplay_longest_frame_ms": 25.267221,
+              "hitches_over_100_ms": 1,
+              "loading_frames": 278,
+              "longest_frame_ms": 884.261214,
+              "peak_rss_mib": 1345.3984375,
+              "rss_mib": 1345.3984375,
+              "startup_longest_frame_ms": 884.261214
+            }
+          },
+          "exterior": {
+            "passed": true,
+            "native_signal_programs": 9117,
+            "odometer_m": 200.4076732565427,
+            "peak_rss_mib": 1427.3,
+            "elapsed_s": 26.5,
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "gpu_tiles": 9,
+            "gpu_entities": 6212,
+            "unactivated_near_shapes": 0,
+            "pending_gpu_uploads": 0,
+            "pending_terrain_tiles": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "native_signal_errors": {},
+            "formation_validation": {
+              "cars": 3,
+              "maximum_spacing_error_m": 0.006838496900030577,
+              "tolerance_m": 2.0,
+              "scope": "car centres versus path offsets; includes curve chord shortening"
+            },
+            "frame_timing": null,
+            "performance": {
+              "elapsed_s": 21.25903368999999,
+              "frame_p50_ms": 25,
+              "frame_p95_ms": 25,
+              "frame_p99_ms": 25,
+              "frames": 809,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 25,
+              "gameplay_frame_p99_ms": 25,
+              "gameplay_frames": 528,
+              "gameplay_hitches_over_100_ms": 0,
+              "gameplay_longest_frame_ms": 25.519981,
+              "hitches_over_100_ms": 1,
+              "loading_frames": 313,
+              "longest_frame_ms": 864.169796,
+              "peak_rss_mib": 1427.12890625,
+              "rss_mib": 1427.12890625,
+              "startup_longest_frame_ms": 864.169796
+            }
+          }
+        }
+      },
+      {
+        "id": "portugal",
+        "scope": "native PAT with full native SIGSCR import; derived circulation, not original ACT",
+        "captures": {
+          "cab": {
+            "passed": true,
+            "native_signal_programs": 1502,
+            "odometer_m": 0.0,
+            "peak_rss_mib": 1120.1,
+            "elapsed_s": 16.2,
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "gpu_tiles": 7,
+            "gpu_entities": 2136,
+            "unactivated_near_shapes": 0,
+            "pending_gpu_uploads": 0,
+            "pending_terrain_tiles": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "native_signal_errors": {},
+            "formation_validation": {
+              "cars": 6,
+              "maximum_spacing_error_m": 0.0005498571365549765,
+              "tolerance_m": 2.0,
+              "scope": "car centres versus path offsets; includes curve chord shortening"
+            },
+            "frame_timing": null,
+            "performance": {
+              "elapsed_s": 11.82657937,
+              "frame_p50_ms": 25,
+              "frame_p95_ms": 25,
+              "frame_p99_ms": 25,
+              "frames": 339,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 25,
+              "gameplay_frame_p99_ms": 25,
+              "gameplay_frames": 117,
+              "gameplay_hitches_over_100_ms": 0,
+              "gameplay_longest_frame_ms": 25.489856000000003,
+              "hitches_over_100_ms": 2,
+              "loading_frames": 222,
+              "longest_frame_ms": 2653.6207360000003,
+              "peak_rss_mib": 1113.2578125,
+              "rss_mib": 1113.2578125,
+              "startup_longest_frame_ms": 2653.6207360000003
+            }
+          },
+          "exterior": {
+            "passed": true,
+            "native_signal_programs": 1502,
+            "odometer_m": 212.80976249979568,
+            "peak_rss_mib": 1104.1,
+            "elapsed_s": 19.2,
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "gpu_tiles": 7,
+            "gpu_entities": 2198,
+            "unactivated_near_shapes": 0,
+            "pending_gpu_uploads": 0,
+            "pending_terrain_tiles": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "native_signal_errors": {},
+            "formation_validation": {
+              "cars": 6,
+              "maximum_spacing_error_m": 0.012529556723727353,
+              "tolerance_m": 2.0,
+              "scope": "car centres versus path offsets; includes curve chord shortening"
+            },
+            "frame_timing": null,
+            "performance": {
+              "elapsed_s": 14.848578711999997,
+              "frame_p50_ms": 25,
+              "frame_p95_ms": 25,
+              "frame_p99_ms": 319,
+              "frames": 375,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 83,
+              "gameplay_frame_p99_ms": 319,
+              "gameplay_frames": 151,
+              "gameplay_hitches_over_100_ms": 7,
+              "gameplay_longest_frame_ms": 327.230301,
+              "hitches_over_100_ms": 9,
+              "loading_frames": 243,
+              "longest_frame_ms": 3030.4067,
+              "peak_rss_mib": 1104.05078125,
+              "rss_mib": 1104.05078125,
+              "startup_longest_frame_ms": 3030.4067
+            }
+          }
+        }
+      },
+      {
+        "id": "coals-to-newcastle",
+        "scope": "native PAT with full native SIGSCR import; derived circulation, not original ACT",
+        "captures": {
+          "cab": {
+            "passed": true,
+            "native_signal_programs": 1722,
+            "odometer_m": 0.0,
+            "peak_rss_mib": 1052.4,
+            "elapsed_s": 12.9,
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "gpu_tiles": 7,
+            "gpu_entities": 4057,
+            "unactivated_near_shapes": 0,
+            "pending_gpu_uploads": 0,
+            "pending_terrain_tiles": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "native_signal_errors": {},
+            "formation_validation": {
+              "cars": 2,
+              "maximum_spacing_error_m": 5.3520445820964824e-05,
+              "tolerance_m": 2.0,
+              "scope": "car centres versus path offsets; includes curve chord shortening"
+            },
+            "frame_timing": null,
+            "performance": {
+              "elapsed_s": 8.735305113999997,
+              "frame_p50_ms": 25,
+              "frame_p95_ms": 25,
+              "frame_p99_ms": 25,
+              "frames": 336,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 25,
+              "gameplay_frame_p99_ms": 25,
+              "gameplay_frames": 117,
+              "gameplay_hitches_over_100_ms": 0,
+              "gameplay_longest_frame_ms": 25.362180000000002,
+              "hitches_over_100_ms": 1,
+              "loading_frames": 219,
+              "longest_frame_ms": 286.54679300000004,
+              "peak_rss_mib": 1049.2890625,
+              "rss_mib": 1049.2890625,
+              "startup_longest_frame_ms": 286.54679300000004
+            }
+          },
+          "exterior": {
+            "passed": true,
+            "native_signal_programs": 1722,
+            "odometer_m": 1007.9887115388743,
+            "peak_rss_mib": 1088.6,
+            "elapsed_s": 18.9,
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "gpu_tiles": 6,
+            "gpu_entities": 4125,
+            "unactivated_near_shapes": 0,
+            "pending_gpu_uploads": 0,
+            "pending_terrain_tiles": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "native_signal_errors": {},
+            "formation_validation": {
+              "cars": 2,
+              "maximum_spacing_error_m": 0.00045233206097350376,
+              "tolerance_m": 2.0,
+              "scope": "car centres versus path offsets; includes curve chord shortening"
+            },
+            "frame_timing": null,
+            "performance": {
+              "elapsed_s": 14.612720827999981,
+              "frame_p50_ms": 25,
+              "frame_p95_ms": 25,
+              "frame_p99_ms": 25,
+              "frames": 570,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 25,
+              "gameplay_frame_p99_ms": 25,
+              "gameplay_frames": 350,
+              "gameplay_hitches_over_100_ms": 0,
+              "gameplay_longest_frame_ms": 25.423202,
+              "hitches_over_100_ms": 1,
+              "loading_frames": 249,
+              "longest_frame_ms": 286.20358600000003,
+              "peak_rss_mib": 1086.28515625,
+              "rss_mib": 1086.28515625,
+              "startup_longest_frame_ms": 286.20358600000003
+            }
+          }
+        }
+      },
+      {
+        "id": "lirr",
+        "scope": "original ACT/PAT, seven original vehicles and corrected speed-post direction; this package has no native signal heads",
+        "captures": {
+          "cab": {
+            "passed": true,
+            "native_signal_programs": 0,
+            "odometer_m": 0.0,
+            "peak_rss_mib": 888.0,
+            "elapsed_s": 14.6,
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "gpu_tiles": 4,
+            "gpu_entities": 3876,
+            "unactivated_near_shapes": 0,
+            "pending_gpu_uploads": 0,
+            "pending_terrain_tiles": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "native_signal_errors": {},
+            "formation_validation": {
+              "cars": 7,
+              "maximum_spacing_error_m": 8.784876640710593e-05,
+              "tolerance_m": 2.0,
+              "scope": "car centres versus path offsets; includes curve chord shortening"
+            },
+            "frame_timing": null,
+            "performance": {
+              "elapsed_s": 10.88567040600001,
+              "frame_p50_ms": 25,
+              "frame_p95_ms": 25,
+              "frame_p99_ms": 32,
+              "frames": 430,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 25,
+              "gameplay_frame_p99_ms": 25,
+              "gameplay_frames": 117,
+              "gameplay_hitches_over_100_ms": 0,
+              "gameplay_longest_frame_ms": 25.291429,
+              "hitches_over_100_ms": 1,
+              "loading_frames": 313,
+              "longest_frame_ms": 109.596474,
+              "peak_rss_mib": 885.71484375,
+              "rss_mib": 885.71484375,
+              "startup_longest_frame_ms": 109.596474
+            }
+          },
+          "exterior": {
+            "passed": true,
+            "native_signal_programs": 0,
+            "odometer_m": 200.35428841631406,
+            "peak_rss_mib": 908.0,
+            "elapsed_s": 18.9,
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "gpu_tiles": 5,
+            "gpu_entities": 3942,
+            "unactivated_near_shapes": 0,
+            "pending_gpu_uploads": 0,
+            "pending_terrain_tiles": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "native_signal_errors": {},
+            "formation_validation": {
+              "cars": 7,
+              "maximum_spacing_error_m": 0.0030306057117268637,
+              "tolerance_m": 2.0,
+              "scope": "car centres versus path offsets; includes curve chord shortening"
+            },
+            "frame_timing": null,
+            "performance": {
+              "elapsed_s": 15.059575005000012,
+              "frame_p50_ms": 25,
+              "frame_p95_ms": 25,
+              "frame_p99_ms": 31,
+              "frames": 596,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 25,
+              "gameplay_frame_p99_ms": 25,
+              "gameplay_frames": 276,
+              "gameplay_hitches_over_100_ms": 0,
+              "gameplay_longest_frame_ms": 30.563439000000002,
+              "hitches_over_100_ms": 1,
+              "loading_frames": 374,
+              "longest_frame_ms": 107.119619,
+              "peak_rss_mib": 902.83984375,
+              "rss_mib": 902.83984375,
+              "startup_longest_frame_ms": 107.119619
+            }
+          }
+        }
+      }
+    ]
+  },
+  "native_signal_contexts": {
+    "schema": 1,
+    "cli_sha256": "4a581323fdab0028f0a625e1b9de87eeb5832d6c0cc9bc7475f4e47436814aee",
+    "probe_source_sha256": "c9eda60ddd7a266821183511ee1d756dbcf03c3cfc71503b31bdd2854906bfde",
+    "scope": "Isolated occupancy/reservation/release contexts on actual native graphs and PATs; call-on conditions are covered separately by session tests and original DLL oracles",
+    "routes": [
+      {
+        "id": "mideast",
+        "native_program_heads": 9117,
+        "normal_heads_on_path": 3,
+        "protected_first_head": "sig7288",
+        "release_restored": true,
+        "reserved_first_aspect": 0,
+        "restricted_by_occupancy": 2,
+        "scenario": "Firsby to Spilsby Return",
+        "states": {
+          "sig27860_r": {
+            "clear": 4,
+            "occupied": 4
+          },
+          "sig33508": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig7288": {
+            "clear": 7,
+            "occupied": 0
+          }
+        }
+      },
+      {
+        "id": "portugal",
+        "native_program_heads": 1502,
+        "normal_heads_on_path": 262,
+        "protected_first_head": "sig3403",
+        "release_restored": true,
+        "reserved_first_aspect": 0,
+        "restricted_by_occupancy": 262,
+        "scenario": "Portugal 79 native PAT circulation",
+        "states": {
+          "sig1700": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig1722": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2286": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2296_r": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2298": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2299": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2312": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2322": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2323": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2324_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2325": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2326": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2328": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2348": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2350": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2351": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2352": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2353": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2357": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2358": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2359": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2360": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2362": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2373": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2374": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2376": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2377": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2378": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2379": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2380": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2381": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2382": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2383": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2384": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2389": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2392": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2393": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2394": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2418": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2419": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2420": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2421": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2422": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2423": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2424": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2428": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2429": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2430": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2431": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2432": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2433_r": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2434_r": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2435": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2440_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2442": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2443": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2444": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2445": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2446": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2447": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2475": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2476": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2477": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2478": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2482": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2487": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2488": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2489": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2497_r": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2498_r": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2500_r": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2501_r": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2502_r": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2503_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2507": {
+            "clear": 6,
+            "occupied": 2
+          },
+          "sig2508": {
+            "clear": 6,
+            "occupied": 2
+          },
+          "sig2509": {
+            "clear": 6,
+            "occupied": 2
+          },
+          "sig2510": {
+            "clear": 6,
+            "occupied": 2
+          },
+          "sig2511": {
+            "clear": 6,
+            "occupied": 2
+          },
+          "sig2512": {
+            "clear": 6,
+            "occupied": 2
+          },
+          "sig2514": {
+            "clear": 6,
+            "occupied": 2
+          },
+          "sig2515": {
+            "clear": 6,
+            "occupied": 2
+          },
+          "sig2516": {
+            "clear": 6,
+            "occupied": 2
+          },
+          "sig2524": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2525_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2527": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2530": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2532": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2533": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2534": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2535_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2536": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2538": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2539": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2540": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2541": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2542": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2543": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2546": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2547": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2548": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2549": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2550": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2556": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2557": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2558": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2559": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2560": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2561": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2562": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2563": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2564": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2565": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2584_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2588": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2592": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2594": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2595": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2596": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2597": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2599": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2600": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2601": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2605": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2606": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2607": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2608": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2617_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2618": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2621": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2622": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2624": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2629": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2630": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2634": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2635": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2636": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2637": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2639": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2650_r": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2651_r": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2656_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2657": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2658": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2659": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2660": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2661": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2662": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2668_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2669_r": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2670_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2671": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2673": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2674": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2678": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2679": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2680": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2681": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2684": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2685": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2686": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2687": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2688": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2689": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2692": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2693": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2694": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2695": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2696": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2708": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2710": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2712": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2714": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2715": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2721_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2722": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2723": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2726": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2727": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2728": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2729": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2730": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2731": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2732": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2733": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2738_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2739_r": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2740_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2741": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2742": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2743": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2744": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2746": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2754_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2755": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2756": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2757": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2758": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2759": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2760": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2763": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2765": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2766": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2769_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2770_r": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2775_r": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2776_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2792": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2793": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2800": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2802": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2803": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2804": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2805": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2806": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2808": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2809": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2814": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2815": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2816": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig2818": {
+            "clear": 4,
+            "occupied": 0
+          },
+          "sig2845_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2846": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2850_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2851": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2856": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2863": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2867": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2870": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2874": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2956": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2958": {
+            "clear": 6,
+            "occupied": 2
+          },
+          "sig328_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig3383_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig3398_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig3403": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig3495": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig3498": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig3499": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig3531_r": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig3548_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig3552_r": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig3554_r": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig3635_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig3636_r": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig3637_r": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig3638_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig3639": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig3640": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig3641": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig3643": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig3644": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig372_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig3935": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig4003_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig408": {
+            "clear": 3,
+            "occupied": 0
+          },
+          "sig4327": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig5768_r": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig5773_r": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig5775_r": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig5777_r": {
+            "clear": 6,
+            "occupied": 1
+          },
+          "sig5783_r": {
+            "clear": 6,
+            "occupied": 0
+          }
+        }
+      },
+      {
+        "id": "coals-to-newcastle",
+        "native_program_heads": 1722,
+        "normal_heads_on_path": 121,
+        "protected_first_head": "sig7735_r",
+        "release_restored": true,
+        "reserved_first_aspect": 0,
+        "restricted_by_occupancy": 121,
+        "scenario": "Coals to Newcastle native PAT circulation",
+        "states": {
+          "sig124": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig2172_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig2871": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig2872": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig2881": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig2882": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig2885": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig2911_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig2925": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig2934_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig2944": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig2946": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig3004": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig3005": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig3028": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig3029": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig340_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig3761": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig3762": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig3763": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig3764": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig4177_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig4178_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig4188_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig4189_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig4192": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig4204": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig4207_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig4225_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig4231_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig4233_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig4237_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig4247_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig4258_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig4266_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig4275_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig4286_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig4298_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig4300_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig4307_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig4314_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig4326_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig4333_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig4349_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig4361_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig4363_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig4375_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig4381": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig4382_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig4393_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig4404_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig4410_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6285_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6290_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6291_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig6309_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6318_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6319_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig6337_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6341": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6342": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig6353_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6354_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig6359_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6395_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6398_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6400_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6401_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig6402_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig645": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6854_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6857_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6858_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6873": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6876_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6877_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6891_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6894_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6895_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6908_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6909_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6910_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6932_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6935_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6936_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6951_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6954": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6955": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6970_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6974": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig6975": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig7046": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig7203_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig7207_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig7208_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig7215_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig7219_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig7220_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig7226_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig7229": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig7230": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig7244_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig7246_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig7247_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig7256": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig7261_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig7262_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig7272": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig7275_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig7276_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig7295_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig7301_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig7302_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig7303_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig7735_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig7737_r": {
+            "clear": 6,
+            "occupied": 0
+          },
+          "sig7743_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig7746_r": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig796": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig94": {
+            "clear": 7,
+            "occupied": 0
+          },
+          "sig953": {
+            "clear": 7,
+            "occupied": 0
+          }
+        }
+      }
+    ]
+  },
+  "native_circulation_cases": [
+    {
+      "id": "portugal",
+      "route_root": "<player-data>/community-route-qa/2026-10-11/portugal-79-72a2afec7a2e8bf5/OR_CPV-56bce7499e6368bedd21c43e9f6bdb16acf783ea/ROUTES/CPV_PT79",
+      "scenario": "<checkout>/tmp/ten-options-20261011/native-signal-paths/portugal/scenario.toml",
+      "formation_cars": 6,
+      "path": "lisboa-porto1.pat",
+      "consist": "CP5600+IC2a.con",
+      "scope": "native PAT with full native SIGSCR import; derived circulation, not original ACT",
+      "path_sha256": "f6688851fbc64dcd9f11cb701301843e74f96ea0e1a8309e1211b8f05f9a336d"
+    },
+    {
+      "id": "coals-to-newcastle",
+      "route_root": "<player-data>/community-route-qa/2026-10-11/coals-to-newcastle-v7-4/Routes/AU_Coal_to_Newcastle",
+      "scenario": "<checkout>/tmp/ten-options-20261011/native-signal-paths/coals-to-newcastle/scenario.toml",
+      "formation_cars": 2,
+      "path": "Default.pat",
+      "consist": "Railcarx2.con",
+      "scope": "native PAT with full native SIGSCR import; derived circulation, not original ACT",
+      "path_sha256": "ad7ac391edd369babc3f9a2c4fac7a4cd8f3f186975730e8950345c46c2053fa"
+    }
+  ],
+  "weather_journey": {
+    "schema": 1,
+    "scenario": "Chiltern extendido: Northolt Park → Gerrards Cross",
+    "scenario_sha256": "faac5f908bfafd4a73ecf5be3e1c9601970c110b8926b7c80ac3221387baf5bf",
+    "viewer_sha256": "e288614a5f270853bc8da165995cbdfa50da15df0295906a6b1d201ece994f1c",
+    "resolution": [
+      1280,
+      720
+    ],
+    "speed_mul": 16.0,
+    "scope": "accelerated complete-service stress test",
+    "particle_budget": 2048,
+    "weather_seed": 4242,
+    "expected_stations": [
+      "Northolt Park",
+      "South Ruislip",
+      "West Ruislip",
+      "Denham",
+      "Denham Golf Course",
+      "Gerrards Cross"
+    ],
+    "results": {
+      "clear": {
+        "frame_ms": {
+          "p50": 25.078797,
+          "p95": 37.454344,
+          "p99": 65.915746
+        },
+        "cpu_main_ms": {
+          "p50": 7.312706,
+          "p95": 24.889644999999998,
+          "p99": 54.73331
+        },
+        "gpu_ms": {
+          "p50": 1.27148,
+          "p95": 1.547,
+          "p99": 1.62432
+        },
+        "input_queue_ms": {
+          "p50": 17.698584,
+          "p95": 21.643924,
+          "p99": 22.000104999999998
+        },
+        "cpu_percent_one_core": 125.05296450589769,
+        "gpu_busy_percent_mean": 21.38880918220947,
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 2.962697274031564,
+          "0000:03:00.0": 21.38880918220947
+        },
+        "selected_gpu_pci": "0000:03:00.0",
+        "process_vram_mib": 2523.91796875,
+        "peak_process_vram_mib": 2523.91796875,
+        "peak_rss_mib": 2435.9,
+        "hitches_over_100_ms": 5,
+        "weather_particles": {
+          "cpu_mesh_updates": 0,
+          "cpu_particles": 0,
+          "execution": "auto",
+          "gpu_backend": null,
+          "gpu_capacity": 0,
+          "gpu_mesh_updates": 0,
+          "gpu_particles": 0,
+          "gpu_seed_initializations": 0,
+          "gpu_simulation_delta_s": null,
+          "quality_level": 0,
+          "requested": "auto",
+          "seed_upload_capacity": 2048,
+          "shelter_refreshes": 0
+        },
+        "train_effects": {
+          "cpu_capacity": 0,
+          "cpu_live_particles": 0,
+          "cpu_mesh_updates": 0,
+          "cpu_obstacle_hits": 0,
+          "enabled": true,
+          "execution": "gpu",
+          "fallback_reason": null,
+          "gpu_backend": "bevy_hanabi 0.19.0",
+          "gpu_bounds_per_emitter": 8,
+          "gpu_capacity": 510,
+          "gpu_emitters": 6,
+          "gpu_simulation_delta_s": 0.0,
+          "gpu_spawn_requests": 11338,
+          "inherits_vehicle_velocity": true,
+          "live_particles": null,
+          "max_cpu_particle_speed_mps": 0.0,
+          "max_particle_speed_mps": null,
+          "native_emitters": 6,
+          "nearby_opaque_bounds": 184,
+          "particle_limit": 512,
+          "quality_level": 0,
+          "render_layers": [
+            0
+          ],
+          "requested": "gpu",
+          "simulation_clock_s": 2101.049999998878,
+          "steam_pulses_follow_wheels": true,
+          "wind_mps": [
+            0.800000011920929,
+            0.0,
+            0.30000001192092896
+          ]
+        },
+        "scenery": {
+          "generated": 0,
+          "groups": 0,
+          "hash_mismatches": 0,
+          "instances": 0,
+          "lod": "dense near, sparse/lower mid, dither to texture-only far",
+          "max_build_ms": 0.0,
+          "maximum_instances": 8192,
+          "profile": "authentic",
+          "quality": "medium",
+          "rejected_candidates": 0,
+          "rejections_infrastructure_rail_texture_slope": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "returned": 0,
+          "scope": "original TERRTEX green mask; unknown/unclassified content is excluded",
+          "shape_masks": 0,
+          "stable_hashes": [],
+          "texture_masks": 0,
+          "track_mask_radius_m": 1536.0,
+          "track_mask_segments": 0
+        },
+        "draw_calls": {
+          "grass": 0,
+          "opaque": 132,
+          "scope": "actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi",
+          "shadow": 79
+        },
+        "camera_journey": {
+          "complete": false,
+          "distance_m": 0.0,
+          "enabled": false,
+          "leg_duration_s": 20,
+          "minimum_ready_hold_s": 3,
+          "physics": "paused; only camera moves; fixed wall-time trajectory",
+          "stage": 0
+        },
+        "whole_journey": {
+          "elapsed_s": 171.05005927800008,
+          "frame_p50_ms": 25,
+          "frame_p95_ms": 25,
+          "frame_p99_ms": 57,
+          "frames": 6603,
+          "gameplay_frame_p50_ms": 25,
+          "gameplay_frame_p95_ms": 25,
+          "gameplay_frame_p99_ms": 55,
+          "gameplay_frames": 5315,
+          "gameplay_hitches_over_100_ms": 2,
+          "gameplay_longest_frame_ms": 246.93429799999998,
+          "hitches_over_100_ms": 5,
+          "loading_frames": 4598,
+          "longest_frame_ms": 1703.678484,
+          "peak_rss_mib": 2435.8828125,
+          "rss_mib": 2250.08984375,
+          "startup_longest_frame_ms": 1703.678484
+        },
+        "detailed_samples": 5255,
+        "detailed_scope": "last 12000 sampled gameplay frames, after 60 warmup frames",
+        "odometer_m": 15322.423422460834,
+        "service_complete": true,
+        "stops": [
+          {
+            "actual_arrive_s": 0.05,
+            "actual_depart_s": 22.000000000000178,
+            "arrival_speed_mps": 0.00021486943295134504,
+            "delay_s": 0.05,
+            "dwell_s": 20.00000000000015,
+            "early_departure_s": 0.0,
+            "name": "Northolt Park",
+            "node": "n97",
+            "position_error_m": 5.371735596781946e-06,
+            "scheduled_arrive_s": 0.0
+          },
+          {
+            "actual_arrive_s": 385.6500000000534,
+            "actual_depart_s": 511.0000000000819,
+            "arrival_speed_mps": 0.09993469381726,
+            "delay_s": 0.0,
+            "dwell_s": 123.39999999999513,
+            "early_departure_s": 0.0,
+            "name": "South Ruislip",
+            "node": "n101",
+            "position_error_m": 3.932097042098576,
+            "scheduled_arrive_s": 480.0
+          },
+          {
+            "actual_arrive_s": 852.5999999997723,
+            "actual_depart_s": 883.8999999997438,
+            "arrival_speed_mps": 0.09974817223901698,
+            "delay_s": 12.599999999772308,
+            "dwell_s": 30.00000000000029,
+            "early_departure_s": 0.0,
+            "name": "West Ruislip",
+            "node": "n105",
+            "position_error_m": 1.6552547767587384,
+            "scheduled_arrive_s": 840.0
+          },
+          {
+            "actual_arrive_s": 1221.4499999994368,
+            "actual_depart_s": 1253.3999999994078,
+            "arrival_speed_mps": 0.099664170442102,
+            "delay_s": 21.44999999943684,
+            "dwell_s": 30.00000000000029,
+            "early_departure_s": 0.0,
+            "name": "Denham",
+            "node": "n3668",
+            "position_error_m": 0.8681549121301941,
+            "scheduled_arrive_s": 1200.0
+          },
+          {
+            "actual_arrive_s": 1590.1499999991015,
+            "actual_depart_s": 1622.0999999990725,
+            "arrival_speed_mps": 0.09927513365016469,
+            "delay_s": 0.14999999910151018,
+            "dwell_s": 30.00000000000029,
+            "early_departure_s": 0.0,
+            "name": "Denham Golf Course",
+            "node": "n3669",
+            "position_error_m": 2.201429956819993,
+            "scheduled_arrive_s": 1590.0
+          },
+          {
+            "actual_arrive_s": 2035.7999999986962,
+            "actual_depart_s": 2101.049999998878,
+            "arrival_speed_mps": 0.09986911886828934,
+            "delay_s": 0.0,
+            "dwell_s": 63.29999999999854,
+            "early_departure_s": 0.0,
+            "name": "Gerrards Cross",
+            "node": "n3670",
+            "position_error_m": 0.2930827396994573,
+            "scheduled_arrive_s": 2070.0
+          }
+        ],
+        "renderer": {
+          "backend": "Vulkan",
+          "device_type": "DiscreteGpu",
+          "hardware": true,
+          "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+        }
+      },
+      "downpour": {
+        "frame_ms": {
+          "p50": 25.061696,
+          "p95": 37.785301,
+          "p99": 66.615147
+        },
+        "cpu_main_ms": {
+          "p50": 7.801474,
+          "p95": 25.090189,
+          "p99": 55.75673200000001
+        },
+        "gpu_ms": {
+          "p50": 1.23752,
+          "p95": 1.5144,
+          "p99": 1.59156
+        },
+        "input_queue_ms": {
+          "p50": 17.334,
+          "p95": 21.088725,
+          "p99": 21.826784
+        },
+        "cpu_percent_one_core": 130.2602782494045,
+        "gpu_busy_percent_mean": 36.383954154727796,
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 2.654727793696275,
+          "0000:03:00.0": 36.383954154727796
+        },
+        "selected_gpu_pci": "0000:03:00.0",
+        "process_vram_mib": 2794.0625,
+        "peak_process_vram_mib": 2794.0625,
+        "peak_rss_mib": 2324.6,
+        "hitches_over_100_ms": 5,
+        "weather_particles": {
+          "cpu_mesh_updates": 0,
+          "cpu_particles": 0,
+          "execution": "gpu",
+          "gpu_backend": "bevy_hanabi 0.19.0",
+          "gpu_capacity": 2048,
+          "gpu_mesh_updates": 0,
+          "gpu_particles": 2048,
+          "gpu_seed_initializations": 1,
+          "gpu_simulation_delta_s": 0.0,
+          "quality_level": 1,
+          "requested": "gpu",
+          "seed_upload_capacity": 4096,
+          "shelter_refreshes": 2686
+        },
+        "train_effects": {
+          "cpu_capacity": 0,
+          "cpu_live_particles": 0,
+          "cpu_mesh_updates": 0,
+          "cpu_obstacle_hits": 0,
+          "enabled": true,
+          "execution": "gpu",
+          "fallback_reason": null,
+          "gpu_backend": "bevy_hanabi 0.19.0",
+          "gpu_bounds_per_emitter": 8,
+          "gpu_capacity": 510,
+          "gpu_emitters": 6,
+          "gpu_simulation_delta_s": 0.0,
+          "gpu_spawn_requests": 11532,
+          "inherits_vehicle_velocity": true,
+          "live_particles": null,
+          "max_cpu_particle_speed_mps": 0.0,
+          "max_particle_speed_mps": null,
+          "native_emitters": 6,
+          "nearby_opaque_bounds": 184,
+          "particle_limit": 512,
+          "quality_level": 0,
+          "render_layers": [
+            0
+          ],
+          "requested": "gpu",
+          "simulation_clock_s": 2101.049999998878,
+          "steam_pulses_follow_wheels": true,
+          "wind_mps": [
+            3.799999952316284,
+            0.0,
+            1.2999999523162842
+          ]
+        },
+        "scenery": {
+          "generated": 0,
+          "groups": 0,
+          "hash_mismatches": 0,
+          "instances": 0,
+          "lod": "dense near, sparse/lower mid, dither to texture-only far",
+          "max_build_ms": 0.0,
+          "maximum_instances": 8192,
+          "profile": "authentic",
+          "quality": "medium",
+          "rejected_candidates": 0,
+          "rejections_infrastructure_rail_texture_slope": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "returned": 0,
+          "scope": "original TERRTEX green mask; unknown/unclassified content is excluded",
+          "shape_masks": 0,
+          "stable_hashes": [],
+          "texture_masks": 0,
+          "track_mask_radius_m": 1536.0,
+          "track_mask_segments": 0
+        },
+        "draw_calls": {
+          "grass": 0,
+          "opaque": 124,
+          "scope": "actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi",
+          "shadow": 79
+        },
+        "camera_journey": {
+          "complete": false,
+          "distance_m": 0.0,
+          "enabled": false,
+          "leg_duration_s": 20,
+          "minimum_ready_hold_s": 3,
+          "physics": "paused; only camera moves; fixed wall-time trajectory",
+          "stage": 0
+        },
+        "whole_journey": {
+          "elapsed_s": 171.13127974699992,
+          "frame_p50_ms": 25,
+          "frame_p95_ms": 25,
+          "frame_p99_ms": 58,
+          "frames": 6591,
+          "gameplay_frame_p50_ms": 25,
+          "gameplay_frame_p95_ms": 25,
+          "gameplay_frame_p99_ms": 56,
+          "gameplay_frames": 5308,
+          "gameplay_hitches_over_100_ms": 2,
+          "gameplay_longest_frame_ms": 243.587212,
+          "hitches_over_100_ms": 5,
+          "loading_frames": 4592,
+          "longest_frame_ms": 1691.807115,
+          "peak_rss_mib": 2324.63671875,
+          "rss_mib": 2285.76171875,
+          "startup_longest_frame_ms": 1691.807115
+        },
+        "detailed_samples": 5248,
+        "detailed_scope": "last 12000 sampled gameplay frames, after 60 warmup frames",
+        "odometer_m": 15322.820329291751,
+        "service_complete": true,
+        "stops": [
+          {
+            "actual_arrive_s": 0.05,
+            "actual_depart_s": 22.000000000000178,
+            "arrival_speed_mps": 0.00021486943295134504,
+            "delay_s": 0.05,
+            "dwell_s": 20.00000000000015,
+            "early_departure_s": 0.0,
+            "name": "Northolt Park",
+            "node": "n97",
+            "position_error_m": 5.371735596781946e-06,
+            "scheduled_arrive_s": 0.0
+          },
+          {
+            "actual_arrive_s": 393.1000000000551,
+            "actual_depart_s": 511.0000000000819,
+            "arrival_speed_mps": 0.09997773427930655,
+            "delay_s": 0.0,
+            "dwell_s": 115.94999999999555,
+            "early_departure_s": 0.0,
+            "name": "South Ruislip",
+            "node": "n101",
+            "position_error_m": 5.411074609886782,
+            "scheduled_arrive_s": 480.0
+          },
+          {
+            "actual_arrive_s": 865.9999999997601,
+            "actual_depart_s": 897.9499999997311,
+            "arrival_speed_mps": 0.09971662980622967,
+            "delay_s": 25.99999999976012,
+            "dwell_s": 30.00000000000029,
+            "early_departure_s": 0.0,
+            "name": "West Ruislip",
+            "node": "n105",
+            "position_error_m": 4.155842029264022,
+            "scheduled_arrive_s": 840.0
+          },
+          {
+            "actual_arrive_s": 1233.0499999994263,
+            "actual_depart_s": 1264.9999999993972,
+            "arrival_speed_mps": 0.09964755627444,
+            "delay_s": 33.04999999942629,
+            "dwell_s": 30.00000000000029,
+            "early_departure_s": 0.0,
+            "name": "Denham",
+            "node": "n3668",
+            "position_error_m": 0.36519903884254745,
+            "scheduled_arrive_s": 1200.0
+          },
+          {
+            "actual_arrive_s": 1613.84999999908,
+            "actual_depart_s": 1645.799999999051,
+            "arrival_speed_mps": 0.0990200783993643,
+            "delay_s": 23.849999999079955,
+            "dwell_s": 30.00000000000029,
+            "early_departure_s": 0.0,
+            "name": "Denham Golf Course",
+            "node": "n3669",
+            "position_error_m": 0.4734716146158462,
+            "scheduled_arrive_s": 1590.0
+          },
+          {
+            "actual_arrive_s": 2062.899999998739,
+            "actual_depart_s": 2101.049999998878,
+            "arrival_speed_mps": 0.09978594146911239,
+            "delay_s": 0.0,
+            "dwell_s": 36.20000000000008,
+            "early_departure_s": 0.0,
+            "name": "Gerrards Cross",
+            "node": "n3670",
+            "position_error_m": 0.06763405615129159,
+            "scheduled_arrive_s": 2070.0
+          }
+        ],
+        "renderer": {
+          "backend": "Vulkan",
+          "device_type": "DiscreteGpu",
+          "hardware": true,
+          "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+        }
+      },
+      "heavy_snow": {
+        "frame_ms": {
+          "p50": 25.043373,
+          "p95": 37.338624,
+          "p99": 68.515626
+        },
+        "cpu_main_ms": {
+          "p50": 8.279971,
+          "p95": 25.560583,
+          "p99": 55.918134
+        },
+        "gpu_ms": {
+          "p50": 1.16188,
+          "p95": 1.45612,
+          "p99": 1.56892
+        },
+        "input_queue_ms": {
+          "p50": 16.627108,
+          "p95": 21.042060000000003,
+          "p99": 21.638456
+        },
+        "cpu_percent_one_core": 145.35997237998563,
+        "gpu_busy_percent_mean": 35.65665236051502,
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 10.881258941344779,
+          "0000:03:00.0": 35.65665236051502
+        },
+        "selected_gpu_pci": "0000:03:00.0",
+        "process_vram_mib": 2606.17578125,
+        "peak_process_vram_mib": 2606.17578125,
+        "peak_rss_mib": 2491.1,
+        "hitches_over_100_ms": 7,
+        "weather_particles": {
+          "cpu_mesh_updates": 0,
+          "cpu_particles": 0,
+          "execution": "gpu",
+          "gpu_backend": "bevy_hanabi 0.19.0",
+          "gpu_capacity": 2048,
+          "gpu_mesh_updates": 0,
+          "gpu_particles": 2048,
+          "gpu_seed_initializations": 1,
+          "gpu_simulation_delta_s": 0.0,
+          "quality_level": 1,
+          "requested": "gpu",
+          "seed_upload_capacity": 4096,
+          "shelter_refreshes": 2692
+        },
+        "train_effects": {
+          "cpu_capacity": 0,
+          "cpu_live_particles": 0,
+          "cpu_mesh_updates": 0,
+          "cpu_obstacle_hits": 0,
+          "enabled": true,
+          "execution": "gpu",
+          "fallback_reason": null,
+          "gpu_backend": "bevy_hanabi 0.19.0",
+          "gpu_bounds_per_emitter": 8,
+          "gpu_capacity": 510,
+          "gpu_emitters": 6,
+          "gpu_simulation_delta_s": 0.0,
+          "gpu_spawn_requests": 11380,
+          "inherits_vehicle_velocity": true,
+          "live_particles": null,
+          "max_cpu_particle_speed_mps": 0.0,
+          "max_particle_speed_mps": null,
+          "native_emitters": 6,
+          "nearby_opaque_bounds": 184,
+          "particle_limit": 512,
+          "quality_level": 0,
+          "render_layers": [
+            0
+          ],
+          "requested": "gpu",
+          "simulation_clock_s": 2101.049999998878,
+          "steam_pulses_follow_wheels": true,
+          "wind_mps": [
+            3.5999999046325684,
+            0.0,
+            1.5
+          ]
+        },
+        "scenery": {
+          "generated": 0,
+          "groups": 0,
+          "hash_mismatches": 0,
+          "instances": 0,
+          "lod": "dense near, sparse/lower mid, dither to texture-only far",
+          "max_build_ms": 0.0,
+          "maximum_instances": 8192,
+          "profile": "authentic",
+          "quality": "medium",
+          "rejected_candidates": 0,
+          "rejections_infrastructure_rail_texture_slope": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "returned": 0,
+          "scope": "original TERRTEX green mask; unknown/unclassified content is excluded",
+          "shape_masks": 0,
+          "stable_hashes": [],
+          "texture_masks": 0,
+          "track_mask_radius_m": 1536.0,
+          "track_mask_segments": 0
+        },
+        "draw_calls": {
+          "grass": 0,
+          "opaque": 132,
+          "scope": "actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi",
+          "shadow": 79
+        },
+        "camera_journey": {
+          "complete": false,
+          "distance_m": 0.0,
+          "enabled": false,
+          "leg_duration_s": 20,
+          "minimum_ready_hold_s": 3,
+          "physics": "paused; only camera moves; fixed wall-time trajectory",
+          "stage": 0
+        },
+        "whole_journey": {
+          "elapsed_s": 171.56710447699993,
+          "frame_p50_ms": 25,
+          "frame_p95_ms": 26,
+          "frame_p99_ms": 59,
+          "frames": 6591,
+          "gameplay_frame_p50_ms": 25,
+          "gameplay_frame_p95_ms": 26,
+          "gameplay_frame_p99_ms": 57,
+          "gameplay_frames": 5285,
+          "gameplay_hitches_over_100_ms": 4,
+          "gameplay_longest_frame_ms": 268.76565800000003,
+          "hitches_over_100_ms": 8,
+          "loading_frames": 4631,
+          "longest_frame_ms": 1539.7392029999999,
+          "peak_rss_mib": 2491.12109375,
+          "rss_mib": 2491.12109375,
+          "startup_longest_frame_ms": 1539.7392029999999
+        },
+        "detailed_samples": 5225,
+        "detailed_scope": "last 12000 sampled gameplay frames, after 60 warmup frames",
+        "odometer_m": 15323.242569831931,
+        "service_complete": true,
+        "stops": [
+          {
+            "actual_arrive_s": 0.05,
+            "actual_depart_s": 22.000000000000178,
+            "arrival_speed_mps": 0.00021486943295134504,
+            "delay_s": 0.05,
+            "dwell_s": 20.00000000000015,
+            "early_departure_s": 0.0,
+            "name": "Northolt Park",
+            "node": "n97",
+            "position_error_m": 5.371735596781946e-06,
+            "scheduled_arrive_s": 0.0
+          },
+          {
+            "actual_arrive_s": 395.3500000000556,
+            "actual_depart_s": 511.0000000000819,
+            "arrival_speed_mps": 0.09998700653219274,
+            "delay_s": 0.0,
+            "dwell_s": 113.69999999999568,
+            "early_departure_s": 0.0,
+            "name": "South Ruislip",
+            "node": "n101",
+            "position_error_m": 5.310562481687157,
+            "scheduled_arrive_s": 480.0
+          },
+          {
+            "actual_arrive_s": 843.2999999997808,
+            "actual_depart_s": 875.2499999997517,
+            "arrival_speed_mps": 0.09964788359302647,
+            "delay_s": 3.2999999997807663,
+            "dwell_s": 30.00000000000029,
+            "early_departure_s": 0.0,
+            "name": "West Ruislip",
+            "node": "n105",
+            "position_error_m": 0.7482736186502734,
+            "scheduled_arrive_s": 840.0
+          },
+          {
+            "actual_arrive_s": 1213.3499999994442,
+            "actual_depart_s": 1245.2999999994151,
+            "arrival_speed_mps": 0.09986825055678555,
+            "delay_s": 13.349999999444208,
+            "dwell_s": 30.00000000000029,
+            "early_departure_s": 0.0,
+            "name": "Denham",
+            "node": "n3668",
+            "position_error_m": 0.6629232773575495,
+            "scheduled_arrive_s": 1200.0
+          },
+          {
+            "actual_arrive_s": 1583.2999999991077,
+            "actual_depart_s": 1620.9999999990735,
+            "arrival_speed_mps": 0.09861123190374807,
+            "delay_s": 0.0,
+            "dwell_s": 35.75000000000011,
+            "early_departure_s": 0.0,
+            "name": "Denham Golf Course",
+            "node": "n3669",
+            "position_error_m": 0.754355549459433,
+            "scheduled_arrive_s": 1590.0
+          },
+          {
+            "actual_arrive_s": 2036.5499999986955,
+            "actual_depart_s": 2101.049999998878,
+            "arrival_speed_mps": 0.0997857156614117,
+            "delay_s": 0.0,
+            "dwell_s": 62.54999999999858,
+            "early_departure_s": 0.0,
+            "name": "Gerrards Cross",
+            "node": "n3670",
+            "position_error_m": 0.5148771126878273,
+            "scheduled_arrive_s": 2070.0
+          }
+        ],
+        "renderer": {
+          "backend": "Vulkan",
+          "device_type": "DiscreteGpu",
+          "hardware": true,
+          "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+        }
+      }
+    }
+  },
+  "menu": {
+    "menu-final-1280": [
+      {
+        "page": "train",
+        "width": 1280,
+        "height": 720,
+        "scale": 1.0,
+        "elapsed_s": 9.124958685977617,
+        "peak_rss_mib": 479.55078125,
+        "exit_code": 0
+      },
+      {
+        "page": "route-map",
+        "width": 1280,
+        "height": 720,
+        "scale": 1.0,
+        "elapsed_s": 9.02088883201941,
+        "peak_rss_mib": 429.54296875,
+        "exit_code": 0
+      }
+    ],
+    "menu-final-640": [
+      {
+        "page": "train",
+        "width": 640,
+        "height": 480,
+        "scale": 1.0,
+        "elapsed_s": 9.02066893898882,
+        "peak_rss_mib": 498.1796875,
+        "exit_code": 0
+      },
+      {
+        "page": "route-map",
+        "width": 640,
+        "height": 480,
+        "scale": 1.0,
+        "elapsed_s": 9.021219343994744,
+        "peak_rss_mib": 445.9296875,
+        "exit_code": 0
+      }
+    ],
+    "menu-gray-final": [
+      {
+        "page": "train",
+        "width": 640,
+        "height": 480,
+        "scale": 1.0,
+        "elapsed_s": 9.02082595799584,
+        "peak_rss_mib": 433.8203125,
+        "exit_code": 0
+      }
+    ]
+  },
+  "oracles": {
+    "cab": {
+      "reference": "oracles/openrails-cab.json",
+      "sha256": "d9a55ba13a0c7f25253406a0aad3cf6412e2df04cbd65834ba457b109d4881e5",
+      "provenance": {
+        "reference_version": "1.6.1",
+        "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+        "sha256": {
+          "RunActivity.exe": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2",
+          "Orts.Simulation.dll": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679",
+          "Orts.Settings.dll": "fe0d8d81149f480f3972c80e64ffaf6012c7599e32c26c8e4d46510e3edbb2e7",
+          "Orts.Common.dll": "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212",
+          "Orts.Formats.Msts.dll": "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465",
+          "Orts.Parsers.Msts.dll": "8e0781c9f861ed95b4467d1bf948ea7aca896d634f21ac5952f97a9f630d0b36",
+          "MonoGame.Framework.dll": "c6a16c29705a4c847e0e4a2647bf432604cd9320cbc5d4125ab01ae7bb7e6542",
+          "Newtonsoft.Json.dll": "9af2e1c672afd67a291b8f2031a341a3788d4d9f683eaddc6ceab3a3a74c546e"
+        },
+        "helper_sha256": "58efaae1075b43175c99a9939032ff815b9323938d25f2dc69b8388f85590ed5",
+        "output_sha256": "d9a55ba13a0c7f25253406a0aad3cf6412e2df04cbd65834ba457b109d4881e5"
+      }
+    },
+    "parser": {
+      "reference": "oracles/openrails-parser.json",
+      "sha256": "da97cac6ae71c2b7efc693a306acf3ec5b09832a132f801726c6d3548361f42d",
+      "provenance": {
+        "reference_version": "1.6.1",
+        "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+        "sha256": {
+          "RunActivity.exe": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2",
+          "Orts.Simulation.dll": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679",
+          "Orts.Settings.dll": "fe0d8d81149f480f3972c80e64ffaf6012c7599e32c26c8e4d46510e3edbb2e7",
+          "Orts.Common.dll": "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212",
+          "Orts.Formats.Msts.dll": "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465",
+          "Orts.Parsers.Msts.dll": "8e0781c9f861ed95b4467d1bf948ea7aca896d634f21ac5952f97a9f630d0b36",
+          "MonoGame.Framework.dll": "c6a16c29705a4c847e0e4a2647bf432604cd9320cbc5d4125ab01ae7bb7e6542",
+          "Newtonsoft.Json.dll": "9af2e1c672afd67a291b8f2031a341a3788d4d9f683eaddc6ceab3a3a74c546e"
+        },
+        "helper_sha256": "2e388235dbcce186f1077a8a7d96f592bd0794d49bf6d186586ce3d7adb4f1f4",
+        "output_sha256": "da97cac6ae71c2b7efc693a306acf3ec5b09832a132f801726c6d3548361f42d"
+      }
+    },
+    "signals": {
+      "reference": "oracles/openrails-signals.json",
+      "sha256": "2b2e2b007575166fe017eb23b038ba483fdd51c308cea379206d5de31d7fabcb",
+      "provenance": {
+        "reference_version": "1.6.1",
+        "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+        "sha256": {
+          "RunActivity.exe": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2",
+          "Orts.Simulation.dll": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679",
+          "Orts.Settings.dll": "fe0d8d81149f480f3972c80e64ffaf6012c7599e32c26c8e4d46510e3edbb2e7",
+          "Orts.Common.dll": "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212",
+          "Orts.Formats.Msts.dll": "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465",
+          "Orts.Parsers.Msts.dll": "8e0781c9f861ed95b4467d1bf948ea7aca896d634f21ac5952f97a9f630d0b36",
+          "MonoGame.Framework.dll": "c6a16c29705a4c847e0e4a2647bf432604cd9320cbc5d4125ab01ae7bb7e6542",
+          "Newtonsoft.Json.dll": "9af2e1c672afd67a291b8f2031a341a3788d4d9f683eaddc6ceab3a3a74c546e"
+        },
+        "helper_sha256": "e764aeb110f9a1c05fb6112f6c5ebae2502aee6376bab49275db5ed248a21670",
+        "output_sha256": "2b2e2b007575166fe017eb23b038ba483fdd51c308cea379206d5de31d7fabcb"
+      }
+    },
+    "lirr-parameters": {
+      "reference": "oracles/openrails-lirr-parameters.json",
+      "sha256": "1bec75725480be057203e3f7f4a7f3c121a81eb82bd7a130cf6c797da78b0f3f",
+      "provenance": {
+        "reference_version": "1.6.1",
+        "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+        "sha256": {
+          "RunActivity.exe": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2",
+          "Orts.Simulation.dll": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679",
+          "Orts.Settings.dll": "fe0d8d81149f480f3972c80e64ffaf6012c7599e32c26c8e4d46510e3edbb2e7",
+          "Orts.Common.dll": "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212",
+          "Orts.Formats.Msts.dll": "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465",
+          "Orts.Parsers.Msts.dll": "8e0781c9f861ed95b4467d1bf948ea7aca896d634f21ac5952f97a9f630d0b36",
+          "MonoGame.Framework.dll": "c6a16c29705a4c847e0e4a2647bf432604cd9320cbc5d4125ab01ae7bb7e6542",
+          "Newtonsoft.Json.dll": "9af2e1c672afd67a291b8f2031a341a3788d4d9f683eaddc6ceab3a3a74c546e"
+        },
+        "helper_sha256": "aa396bca919c73a3defebd263eefb7f15e01c2240a9d06b28b9e96be50d982a0",
+        "loader_sha256": "c832f071a28f61178da2814d382069c3dc15cdb2aff7b89f40fe5974ffdb60a0",
+        "activity_sha256": "c667aeedf94b2b90283e801906f865e37d4e8a4b67cd83430bab74b94ac287ab",
+        "output_sha256": "1bec75725480be057203e3f7f4a7f3c121a81eb82bd7a130cf6c797da78b0f3f",
+        "source": "https://static.openrails.org/files/LIRR.zip",
+        "content_package_sha256": "4d33e3e0e6d8d103699d0302f97194d7dc82f8820e5cc5b2173d8a6180de36c5",
+        "independent_capture_output_sha256": "1bec75725480be057203e3f7f4a7f3c121a81eb82bd7a130cf6c797da78b0f3f"
+      }
+    }
+  },
+  "native_signal_inventory": {
+    "mideast": {
+      "native_heads": 9117,
+      "programs": 96,
+      "functions": [
+        "BLOCK_STATE",
+        "DEF_DRAW_STATE",
+        "DIST_MULTI_SIG_MR",
+        "NEXT_SIG_LR",
+        "ROUTE_SET",
+        "SIG_FEATURE",
+        "THIS_SIG_LR",
+        "TRAINHASCALLON"
+      ],
+      "program_source_sha256": {
+        "BANNERREPEATERDISTANT": "752a783e668f8543c746e4586bf1d2b55ab3c394d8eb1224f583e61a4ec1242c",
+        "BANNERREPEATERHOME": "e0f79fdcc2a5b77b2f2f6d62d8aec0bea830e3ad35ea60e0020514310381ecfd",
+        "BRDUMDISTSTOP": "3f7ae5a8a2b123cfa8cbaa4dab083f8e28fcce950fb00f1e5aa16cc6169f1957",
+        "BRDUMMY": "414af13c7d283391c1e0eb2c2cbf0100509c3adec260bbca5f3c4dadf92d2d7c",
+        "BRFIXEDSEMDIST": "897cccbee46c5f45699717c46448341c293ab39d793cde50559b6779241b98ec",
+        "BRSEMDIST": "6eb12b4f8d504ad06ac6fedeeb24be8a653b14100c6de74006cc689770468be1",
+        "BRSEMDISTCONTROL": "061b86f2995c459e152f6e693240b6feb1fe80d2eea3d5c0c180a13f9f547e8d",
+        "BRSEMHOME": "f10443e326728ad3d95e35848fd2a0ccbf1e8909f09ecf76e3f7d95d400a37ac",
+        "BRSEMHOMEDISTCOMB": "fbc8f86990bd68d113d2a25911269fc4c01a24ebed24807d6f075c58f6f9d3ca",
+        "BRSEMSIDE": "63c132f08e7f02dc0c0aa054a0807ac03f44006813325c05b5f9564272f021de",
+        "BR_E_1ASPECT&SUBSIDIARYTY": "b3c24696a522f54a42cab8e15bdf7a0a1414525b0fef9af42aa9ef4fb5608e96",
+        "BR_E_2ASPECT": "b84171b729722647d4b6ac4b657b77c81c32dcb747a9ed5ce74862f93958cffe",
+        "BR_E_2ASPECTSEARCHLIGHT": "03b0a221b3edbbdf6c2f33624a9d44ab0cccead8dc1889381c7bf1a4922d045f",
+        "BR_E_2ASPECTTY": "024db3aa72a95088427ba6eeb6a96a808f4fd8d6c9a856e3b466c7d935edec94",
+        "BR_E_3ASPECT": "79e68a20819fea38247978e42f5af8a4afd6966532d23aeb0b05b060c6d3f9b0",
+        "BR_E_3ASPECTSEARCHLIGHT": "fc855ff4b9b6ce8971d8241c6f17df5b2e5cb8ae493cc0f3e669922b0b3af4af",
+        "BR_E_4ASPECT": "d7a884454c0ea2f715d032364861ec10dfe97e341cbe0e6404e07c58c9f2b578",
+        "BR_E_4ASPECTSEARCHLIGHT": "d21f47bbd2efbe7e296f714aa67e515491b08298b1310f710842077b7ef073d8",
+        "BR_E_CALLING_ON_SIGNAL": "6c5ddb43082483b2f9ef54b112018b6927e712564b1b3df5cf3ae74b8b57c037",
+        "BR_E_L45F": "fa6049eb1c944338eedbe6105859afffc5395e13efea17b8e34f1d26a50cf3e5",
+        "BR_E_POSITION_LIGHT_SIGNAL": "7772d2e72fe26efef9ccc5542f9d3b7d8567ec8b60f6cf7ea626519614f5d678",
+        "BR_E_R45F": "866198a6016f2107279dfd156b40a215568dfc82e5d5c2e002c4106eb9926b3a",
+        "BR_M_GROUND_DOLLY": "9d7b0036284a4854faaad2824dcdd1d745089ded53abbfefdd4e43e4d595db52",
+        "BR_M_GROUND_DOLLYYELLOW": "484fa23e828ce629c0b047d70ca9f9fc9f463fedd026a095e878800b84c1fc71",
+        "CLACKBOX-1": "400569bbce58f5992cf3c744b7148e01003af471744a63af5fda47146a1a1075",
+        "CLACKBOX-2": "7022631f245928917a74a9270cedd933124fe7a009807851ecfcabf6d74349eb",
+        "CLACKBOX-3": "318b1ba8b7e7922684987777ede191a5624d452fcb633dbf437167e5308a12e2",
+        "CLACKBOX-4": "8361936b62af8b10b46aecc72c8730a65bf56599cc5d9d04d76b788a5660f522",
+        "CLACKBOX-5": "f4e9a6f56d793031af68cb04921188ccf57f9b2cc3a63f25948fe80048f562da",
+        "CLACKBOX-6": "4a6b912657036a09f2581598d95171f3ad9c6f974f57f996363c852ca32f64b4",
+        "CLACKBOX-7": "66155b89a5814a1fe456e239dc4344ee927b2311c24c3ce07114b7283b854e8a",
+        "CLACKBOX-8": "9e3317ae772a563b2f4be11f964b41149ce950e6f1ca2d551edff1c4e706e489",
+        "CLACKBOX-BAY": "81fefb702efe0acfbebdb5a756a07f44c0c32595597a8d602b1e7cb1a9c1325c",
+        "CLACKBOX-BR": "d6e019258ac6683e5bc3b075318a1eff329ce6b12310536e6108052ee77dbe98",
+        "CLACKBOX-CS": "753291dff3dad964beae069bf3756716dd489325ff2a274541558f2cb98f08d3",
+        "CLACKBOX-DM": "ea4b6e14c23417d1dc49e3b1de389d5207fe9366f3db91e0a4cdd5445927e630",
+        "CLACKBOX-DR": "4b353ab70e79520e9fbf09c83e74ff8f0063496001eb377dbc38f22f5b7f60b2",
+        "CLACKBOX-DS": "7cf9f93a8937a36f95b0a9fdcdb426be1bed33b66fbbdeb12a42efbe800ebbb2",
+        "CLACKBOX-SHED": "a52e82bae1a251e9be3cc709bdec8965601561706b7eb216fd3ccfb19a1a8d85",
+        "CLACKBOX-UM": "4a4ecac8fa7ac57e4be0023c8af9e3933798af545640b8d2504f2325fb28dedd",
+        "CLACKBOX-UR": "71b97cd6f03e17fd1df73e3d57c2f3cd426d53d611bc4c7c1a7dcd42055792e8",
+        "CLACKBOX-US": "bbff48970e1f9fb3a7dd72c12215c707e609fe2d18c2c71a717b29660e98493d",
+        "DISTANCECONTROL": "43222ab794c62a8f675e020b0daddb9c980098d9a75c34ef5ac6101118c9ef97",
+        "INTERMEDIATECONTROL": "faebc76973e17aee3a1e3e9c02e954277284bfbcf3b709c2d5e5253f512ce8b2",
+        "LNER_SEARCHLIGHTB": "139c7d0a1ee9642a582f8545802d2baf5e3e4deb6e2051c252235c17833a6e59",
+        "LNER_SEARCHLIGHTC": "54b4263feb14c3c6640d67caa9384d7014695ee3aaa11a2aedfc99372f238e80",
+        "RA-OFF-INDICATOR": "89328b1f0c6af9fbf212576845ad82f39d110a77d7f53fb490cc175396e398b3",
+        "RI-FEATHER": "4d0343be7ecb6762d3aa32e2e87cb7a9908937178bc0388497547cfb7b87bd3c",
+        "SIDINGARM": "4d8aa596e3f80615a930a4c67682d1894603e7702aca45b2fdeaa9ab0b771dec",
+        "THEATRE-1": "07eb19df9d2e05d1899edf8aa2b1192cbcd15e804c43fa783f5bea5059ab78ab",
+        "THEATRE-2": "a7a3229134376c77a253a9fbae02433b917bdaa874056d7039f17431e968695e",
+        "THEATRE-3": "7ce2798bd6e62ea1d8312bcd8d4488caf39335e2b6d1c75e7b34cf34163edb6b",
+        "THEATRE-4": "219c3ddbf5f16d772eff0017b8683522a15a3d3abeabefae96e008c46bca0679",
+        "THEATRE-5": "2081986fbfa333e8d97b0739b66286fc8907e8bd16a169f4df98e792d6d62a62",
+        "THEATRE-6": "b4672cd5bbc2175967aced7b3efe2db9a39f76d3456e9e74529228acdbfadb67",
+        "THEATRE-7": "a6c9003c2d2445b458f6b37106510b304967c80476b89b1a6448c967da617742",
+        "THEATRE-BAY": "755feb80f191cab38aac47ba6b8ad41f662c2ab35b249dba1957c72e4e402cda",
+        "THEATRE-BR": "191d93f24426e5fec7e9a1a5770b6c6aef6315bb34590e211a18e6df1b8f1e0d",
+        "THEATRE-CS": "220d0b0b531527b243149250fd324b7d9482a60e270fac7dda36adb043afd032",
+        "THEATRE-DM": "9f0c18fe622573493c77ee6fbe33b631ae1c1901fba7d625c6bf4d43d4183643",
+        "THEATRE-DR": "e1d6149b5cadd383f3572c5245be38ea62a4a3a29b7882229bd85c8f66fbc864",
+        "THEATRE-DS": "ee02ef3e71f62bea45d0dd3265698e16c29f1268bceec62f7a7f601a08bac517",
+        "THEATRE-SHED": "cc3baecf7c3889d68858b50b327007bb3a6ac52655e67b02f8078a6d3e4d5c1b",
+        "THEATRE-SQ-1": "7321f67cb5e88dbc7a7100c937a79559833f632fec0a8bd935de31cf7600bb86",
+        "THEATRE-SQ-10": "71ce5044d29b7839e444ec6669fd51f0fb2f6107f2437299a7d1ebe9e1e7119b",
+        "THEATRE-SQ-11": "d7cd6a73879f1ccf5df9fa137a121e034dd358266d15f78a21cde0f7d8239a22",
+        "THEATRE-SQ-12": "12171ae005c7453320699afd86da61dc70d31eea235a678c91dd428c530060f3",
+        "THEATRE-SQ-2": "24034eaab10066fa0c11227ddf8aca3296eb59923a97bfee9b9e3c79f8bac380",
+        "THEATRE-SQ-3": "098237a42887af6d4adf976c7fd75ee4add8a8b19bac208deddf29e9ce48cd3e",
+        "THEATRE-SQ-4": "90eb807ad8b789791ca1609100204e06ccdcbf61620fadd1b7f4627e1f58ec3d",
+        "THEATRE-SQ-5": "1482568fe025580362a72c109bb4ac249eea5599e83cad21fdf77b3e42a2c416",
+        "THEATRE-SQ-6": "9c1dfb2208cd249dfc451470cea62f6312f83f0f421647fa9b700ade2d53db42",
+        "THEATRE-SQ-7": "03c445f564800a01d39adf627676fa993a89247717627e86601e0b502dd7712d",
+        "THEATRE-SQ-8": "e2062c2679ab40d0f4c42099940cb2d21b4e6110891004dd7ab0fe1dbe2a2654",
+        "THEATRE-SQ-9": "7165addffb8b33f1ea2b580330592bf1825ce1574d9392cfe7c08d194429314c",
+        "THEATRE-SQ-DF": "261c9f6c589ceb7ca9e51d5b4528094201432028c4cbf9c2f668c6a1c66a840e",
+        "THEATRE-SQ-F1": "3a0e13a5b17bee251430496e3fbb465dbb637c3245d761a79a3e20b4d9a39cb1",
+        "THEATRE-SQ-F2": "fdd4ec14368623ce259161c384d1e52d0b85eaee8b892318a8d8398972637dad",
+        "THEATRE-SQ-LD": "9d6ccd27d84c752a3529477e4e6feebdb64e6a08f9372dd00e3cc8479b8bdc03",
+        "THEATRE-SQ-S1": "55620e51f30e6489191a002e455235bd4accf441b01579ad080bfa30e7da02b8",
+        "THEATRE-SQ-S2": "c761d0f3536e5b905bea63b0176ec7b17a896c7eed36b20f3a7d7a7f8fbfb8c0",
+        "THEATRE-SQ-SF": "d86e2a9f86e9888d30bf5972d40a3d352a9f0f618a89b7abac447a1c74177f08",
+        "THEATRE-SQ-SG": "e99f72ea9a12cb6f3e1308521ec2a62b2e5e3b3daec615b74a3635e44426384c",
+        "THEATRE-SQ-TH": "4404852ae912623ae06832b96775c29c2ddcf829685b5e3b2da9527c1daa2bc9",
+        "THEATRE-SQ-UF": "95e06c62c75908c011eb38f9b812cca393518fe7f33a6554165576279886456e",
+        "THEATRE-UM": "49523a3bccab06e01ce79760c5c081f9ba0c0f328954fd534a1a0bd92f87da5c",
+        "THEATRE-UR": "43982849cf1dee9d9ff22923d64aa48dec8ebf767137b6705ac67b5d96d7f1c8",
+        "THEATRE-US": "a55642545268cb94c8a2ee5ba74abb86e932871058a9479332384f220c244b16",
+        "TRACKSTART": "1b0b8fdb89026c1413551b3513908c22c4ee8a83a668c300aec6105c4ba45d19",
+        "UK3LIGHT": "a13c5067c32fd25ad7922d801521a6a1446b0ff16ae4604457f30538014cc340",
+        "UK3LIGHTRL": "d74b11907b534b13a449648479b3766d5bd9e5eccde120c44a65a787bfa38245",
+        "UK3LIGHTRR": "f006d4f9130dd96fdb2d328290f51a205899d1c3ba3c377cc66f479a9a016a5c",
+        "UK4LIGHT": "efeee3b21322a2cc277ece152471ff187c4f44728cdb6bd82ddfc8b4c3e67b5e",
+        "UK4LIGHTRL": "d7031045a99ea0208398bc2808d52e468b39bba1368f5382470e88c2c398d9af",
+        "UK4LIGHTRR": "3944ea7c9a87aa9f16e5246918977f7d1c17c961644dc3f7ee19e3b31692c3ab",
+        "UKGROUNDSIG": "b2ddfd0924dc26b20731e9ed81e8bdce2d03103c080e6ed3e91c87e02519ff97"
+      },
+      "scope": "programs referenced by native imported TDB heads; unused programs are not certified"
+    },
+    "portugal": {
+      "native_heads": 1502,
+      "programs": 87,
+      "functions": [
+        "BLOCK_STATE",
+        "DEF_DRAW_STATE",
+        "HASHEAD",
+        "NEXT_SIG_LR",
+        "ROUTE_SET",
+        "SWITCHSTAND",
+        "THIS_SIG_LR",
+        "TRAINHASCALLON"
+      ],
+      "program_source_sha256": {
+        "AA": "46f618e2248344b945bb369eb017ec62fa2099c4e81c1f55037387cafb6f9eee",
+        "AA11": "1d9260c87188621824ce93f1d2eb11247d271da98ee93352f29441cd7de95bd4",
+        "AA2SDA": "b22ed0a7a6e838263b0cb764b48a89b0723b410efa23cc78b0eb9af2ee17373c",
+        "AAAVN": "e07fbbf5b1bfdf59ad62c72ee2d441c9c86b93196cfb4d7f2fe5577f6205ab75",
+        "AASDA": "765e8c33ca0a1da5bc43581ee9ab2593b21087e235a316274acdeb044d1310bc",
+        "AASP": "3ff284991ce87b39a9076da9ffcd1205fe5d8f1562dc051d39e286ad47549c2c",
+        "AP": "06ef48275cc80f5c556bbd4123fe71d7b987c69950f1513fd80a91f4ca4eda0f",
+        "BA": "e586edcbf04926d35d1a17b916aea8f3021dc418e21439fc67a7b2fe14f4af38",
+        "BAAVN": "b92c940acfd59b43901f65160873e3d6af88ad4b7e0a0933b85dd05489f5fa70",
+        "BAAVNSDA": "0b119ad30c0707233b04cc3ac2a965d82949a551e1ff4d7f8290caa0232766a9",
+        "BAB": "b8441b9a4f13f9b9cd6a8b54dda5f509d2333b5b1298675a263008ff0a976d9d",
+        "BASDA": "0b119ad30c0707233b04cc3ac2a965d82949a551e1ff4d7f8290caa0232766a9",
+        "BP": "e50e31e5bcfa4e2383563023fb7803818ab4a3a71dff0f96a281780d38fa9aea",
+        "CAENT": "b47d91620d574d250961a20c5a23c25478b229c87f52f0fd5e4e121c656917e2",
+        "CP": "effd5b12fc25c55ee8579aec0ae0aa05368315573731d2574c4f3f7f7029d7e1",
+        "CPAMV": "cb8145324b9f68c2ec0c6eaf51de1ed0a5fa68a0460c40a68a13693ab8467c63",
+        "CPAMV1": "eea0f2ed7e1cfe4db9548d072d1c94fd67cba3a20a849791d645607bf902328f",
+        "CPPAL1": "8a554ed23f813a506c9f1d2bd260068a90a279e0a849f1d6942972ba26767238",
+        "CPPALSHUNT": "3525b771310d860cea1beede241e9011eab5bb9284cc0382fd835328f48a4895",
+        "CPSAME1": "382de8cd00193db1b5369f580da12c8e506a5c9a5ea478bf491fbb60a6887abb",
+        "CPSAME2": "921a37fd593019e6c764559c0372d9637205e813a5d3a79808dde3cae58269ec",
+        "CPSPE1": "2af79ee4702f01638adacde6920968c4dddfd45832a7adcc5b8a2b7e0893cec6",
+        "CPSPEMEC1": "670c9e4b4307e91ca79e5ccaae0d2b774062dc0aba7c1468268479bebb3e7b19",
+        "CPSPSCE1": "ac6319a0b6c176abad8b8e84383d326a06e3b15d002fcb0f0ad6f966ec6871a6",
+        "CPSPSCE2": "a737486acd708b6f9a1eb24e6088416315d1087fe9a2c8ec85450fdc727dae57",
+        "CSCMM": "c8af685376b626f962809a8b5dfbc1d3f2fe7ac54625b3384a295e814065c78f",
+        "CSCMS": "aa42e62e78bc88d9aa782d845eeaf72a27c37986e9c7cdab60dfcb05a35260f3",
+        "CVAVN": "8906e5eeaf0fdbb837202eeb8023f41425bf57f2ea09d619fa0fde61ba902134",
+        "CVPREC": "a20e7b2a8ac45e673c08a4b52cd5c376051201a88815179febb684e1749048db",
+        "DP": "45657c78f1134f5d3069701bca5a730134a42cce92ea9a671c05404e0addb0bd",
+        "IDDCV": "0799b473222660b97a5300c543685bf628b5c9eae9c348e45a91d0b24530a793",
+        "IDE": "0799b473222660b97a5300c543685bf628b5c9eae9c348e45a91d0b24530a793",
+        "II1": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II10": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II10CV": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II10R": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II11": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II11CV": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II1A": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II1CV": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II1R": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II2": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II2A": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II2CV": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II2R": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II3": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II3A": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II3CV": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II3R": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II4": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II4A": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II4CV": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II4R": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II5": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II5A": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II5CV": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II5R": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II6": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II6A": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II6CV": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II6R": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II7": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II7A": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II7CV": "ab50080935303821eae17ae02ae07a27781bc33409f7c37a7bdc895a9049abd5",
+        "II7R": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II8": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II8CV": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II8R": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II9": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II9CV": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "II9R": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "IIB": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "IIBCV": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "IIC": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "IICCV": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "IIL": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "IILCV": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "IILCVP": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "IIM": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "IIMCV": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "IIN": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "IINCV": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "IINCVP": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "IINP": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "IIO": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "IIP": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595",
+        "IIVCV": "64504849e2d2d7c0454449ec2a5f48932628e50a07535a8f8da016d69ea07595"
+      },
+      "scope": "programs referenced by native imported TDB heads; unused programs are not certified"
+    },
+    "coals-to-newcastle": {
+      "native_heads": 1722,
+      "programs": 36,
+      "functions": [
+        "BLOCK_STATE",
+        "DEF_DRAW_STATE",
+        "NEXT_SIG_LR",
+        "NEXT_SIG_MR",
+        "ROUTE_SET"
+      ],
+      "program_source_sha256": {
+        "CTNPOINTINDICATION-HEAD": "937c187db9772b7d992aff4a00911fad2715673e8b202f6ce7f7904e1fcb1c82",
+        "CTNPOINTINDICATION-LIGHT": "ee4404ee4e95017cf67de3a72e7147c7d21f74077ce4afce5c4bf810cdf6dde1",
+        "CTNSHUNT1": "d78724b37911765410a678eb05ec46150d45ce334e7d3de84e3005adb80a100d",
+        "CTNSHUNT2": "0ab89911783481774b084178b29542a74f52e290c8b953affcc8e35da61bf77f",
+        "NSWCOLLIGHT-01JUNCT": "a0f64679376b5f5183c0ccc8f8b472047967c2f9f891c7a43c229d735a44b3f3",
+        "NSWCOLLIGHT-05": "12d9e16a6e4f2f2daa23f6648d9ceee13a41fb91bc006489aef92dd098395618",
+        "NSWCOLLIGHT-06": "fdc1936cf6b7266b821cec0f5bee00ac1f4fe09155a2b159daf2647eaccfb845",
+        "NSWCOLLIGHT-09": "6097688fe5177821c7a40bf6b47d5e6a9b1f4e3e22de221827ca6c209caac84d",
+        "NSWCOLLIGHT-10": "8e803902c7396258eef9c23fe94797f762570d791514660815f9d4812f150e21",
+        "NSWCOLLIGHT-11": "7f90c5a68756f33ab51715b898f9469a641008f235cd1db228fc24d9d42284a4",
+        "NSWCOLLIGHT-12": "8455c9f7ad450368548c12b32d98b8e8e9ada9bc5fdc0612811592a6784492d5",
+        "NSWCOLLIGHT-13": "c9ff88f8eee250d77eefc374c8b4971c717a99db691a45543b02c40a5a5bd1cb",
+        "NSWCOLLIGHT-14": "b9c8cbe6c38a534096ea0968175e6e071dd98715d77a54766a0f794590b4c39d",
+        "NSWCOLLIGHT-15": "7828430caaaea878fbc00ba1246f85b7be1ba636aca4f809af10695990d336ad",
+        "NSWCOLLIGHT-16": "5d42a2d36e94132ea21a53465cbf558e9dd35d8b76152e0cacbedd5dd26969fc",
+        "NSWCOLLIGHT-17": "242b048b4b2a916fb11499ff644e0841f1856638c1753897d2eb386be4f4c1c5",
+        "NSWCOLLIGHT-18": "aa87db10b04471de97d29769f4c560f9c13528cd688258d3c82cc987becece95",
+        "NSWCOLLIGHT-19": "8751e47b45f201395807d1bb9089f82749d4b3c24b8f7704c71e0977f9664c0b",
+        "NSWCOLLIGHT-GANTRY-02": "7939d66c5d6b85c6c5cb126f7459f30e5855c650f84fd74de19aae70cdeef2e3",
+        "NSWCOLLIGHT-GANTRY-03": "c02082eee9cb3e6f0ff2b5479b926a2cf24f46af98a1849e5a0855c58495d33a",
+        "NSWCOLLIGHT1X2+1X2GANTRY": "d1a2a42fb4c6b668d54f83b5a3ac20ed74b0d7c3e511491126380167f76e8219",
+        "NSWCOLLIGHT2X3JUNCT": "68f9d1158b3a4392fe8e54f375e611ec3d7c11f361fa424eb9c8bdad40122d73",
+        "NSWCOLLIGHTSIG-03": "e95ecf952692f06f4123eb2697f0d2db3f2642c663a66cd1156c345686fce251",
+        "NSWCOLLIGHTSIG-04": "2f2cc0ba3a847b4458f4fd48fb9d6593f8d175d52547e802bafefa125d9e2a86",
+        "NSWCOLLIGHTSIG-07": "36c19cec9bb58c43c722d9e12a3237e477f445b8f3b83332424f166cb2099d15",
+        "NSWCOLLIGHTSIG-08": "d4262703c2ed62186b3c7f227d86c3b9bb72af0d4cf4e8c0b5f2a157e899d433",
+        "NSWLANDMARK": "70664c31e205fd35337fc5237186018ab497ca8a8127b9a3587ea5e29928e76b",
+        "NSW_SEMLQDIST": "5c600bce4ff1e598a994d0f68ae5b74840eb32cab09264946207c4e9e1c2f5dd",
+        "NSW_SEMLQDISTCOMB": "6586e3b818fb6e78e2c1affd7a3d1b6d71e8f4bd70a802f434e64b57630e4980",
+        "NSW_SEMLQDISTFGL": "f49b100171ef7de268df4ee6a918125b0be5caf9b7ba7f3b40d385994ae74581",
+        "NSW_SEMLQDWARF": "9504e5a3dc2ad6396d93c2d01cf4c985d60d02b6b76a71609c85d21bd5cf9553",
+        "NSW_SEMLQHOME": "6953e8672ca57f3bf941e52d6d97ba1340a52da0b0306119ffb5f8214e5a5829",
+        "NSW_SEMLQHOMEBRANCH": "31ed37b274ff24750900dad25e530ab01b4c14ecffa450fd7f8e764cc7b018b1",
+        "NSW_SEMLQLOOP": "0b1f14911b9ecbfdf8b06289833221dc3ec452121e2b9cff95208161a4cbe78c",
+        "NSW_SEMUQ2POS_DISTANT": "6b89b3f27f98fcd0e0ea8717307b0bf068411f7293b823e0ac9a1f88cc0b5628",
+        "NSW_SEMUQ3POS_HOME": "f02ee775842b2caf2db13b1ffa9e59bfabcb7ae74c19f098b880e4be1482854a"
+      },
+      "scope": "programs referenced by native imported TDB heads; unused programs are not certified"
+    }
+  },
+  "check": {
+    "command": "CARGO_BUILD_JOBS=2 ./check.sh",
+    "log_sha256": "429e80c409a3e507b77807e9fbfe9e65d623c03b4d9d0a63fa0fc177a6fd6708",
+    "rust_passed": 1793,
+    "rust_ignored": 46,
+    "python_passed": 93,
+    "passed": true,
+    "security_review": "No confirmed findings; eight adversarial native-input confinement checks pass."
+  },
+  "snap": {
+    "version": "0.1.0-alpha.4",
+    "size": 160522240,
+    "sha256": "4db105c16296a579674c754cbd2aec98364bf48de5a05ab52d4a61af2cd51c48",
+    "privacy_findings": [],
+    "build": {
+      "source_commit": null,
+      "source_dirty": null,
+      "architecture": "x86_64",
+      "build_libc": [
+        "glibc",
+        "2.39"
+      ],
+      "required_glibc": "2.39",
+      "downloaded_content_included": false,
+      "binary_sha256": {
+        "openrailsrs": "670536c2da35ff22c6ef356ef502f026f583f89aafec202346c5ba2c39427339",
+        "openrailsrs-viewer3d": "05269084917549ae51866ea9b418602f5f6c478756e1a1657554cc59df8db093",
+        "openrailsrs-prepare-content": "e7e84b68e2de63f727c307cc663a5df5270ad8933f2a733a6f7b87757919d112"
+      }
+    },
+    "source": {
+      "verified_files": 509,
+      "mismatches": []
+    },
+    "source_manifest_sha256": "50548f6cc84f2b08eec91cdfcaa4eb5d9fe021390070e4bb42ff35c05fcb7172",
+    "strict_qa": {
+      "user_privileged": false,
+      "renderer": "CPU software Vulkan/lavapipe in private Xvfb",
+      "cli": true,
+      "https": true,
+      "menu": true,
+      "scenes": {
+        "yard": {
+          "pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "cars": 3,
+          "weather_particles": {
+            "cpu_mesh_updates": 0,
+            "cpu_particles": 0,
+            "execution": "auto",
+            "gpu_backend": null,
+            "gpu_capacity": 0,
+            "gpu_mesh_updates": 0,
+            "gpu_particles": 0,
+            "gpu_seed_initializations": 0,
+            "gpu_simulation_delta_s": null,
+            "quality_level": 0,
+            "requested": "auto",
+            "seed_upload_capacity": 2048,
+            "shelter_refreshes": 0
+          },
+          "native_audio": null,
+          "capture_sha256": "bb6746a18babdbaa5046bd13078bdd985130300faef3e2ee4d0cfbee41e70609"
+        },
+        "rain": {
+          "pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "cars": 2,
+          "weather_particles": {
+            "cpu_mesh_updates": 53,
+            "cpu_particles": 1024,
+            "execution": "cpu",
+            "gpu_backend": null,
+            "gpu_capacity": 0,
+            "gpu_mesh_updates": 0,
+            "gpu_particles": 0,
+            "gpu_seed_initializations": 0,
+            "gpu_simulation_delta_s": 0.10000000149011612,
+            "quality_level": 1,
+            "requested": "cpu",
+            "seed_upload_capacity": 2048,
+            "shelter_refreshes": 10
+          },
+          "native_audio": null,
+          "capture_sha256": "2d9cf441053b564f3e379636a41da17a6a997e1006524cc5186602e7e4914c4f"
+        },
+        "snow": {
+          "pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "cars": 2,
+          "weather_particles": {
+            "cpu_mesh_updates": 53,
+            "cpu_particles": 1024,
+            "execution": "cpu",
+            "gpu_backend": null,
+            "gpu_capacity": 0,
+            "gpu_mesh_updates": 0,
+            "gpu_particles": 0,
+            "gpu_seed_initializations": 0,
+            "gpu_simulation_delta_s": 0.10000000149011612,
+            "quality_level": 1,
+            "requested": "cpu",
+            "seed_upload_capacity": 2048,
+            "shelter_refreshes": 13
+          },
+          "native_audio": null,
+          "capture_sha256": "f252cc9d8d2702df47b2679a698f48b7b11ebdf248e8d8382b25dfa51d1f4046"
+        },
+        "audio": {
+          "pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "cars": 2,
+          "weather_particles": {
+            "cpu_mesh_updates": 53,
+            "cpu_particles": 634,
+            "execution": "cpu",
+            "gpu_backend": null,
+            "gpu_capacity": 0,
+            "gpu_mesh_updates": 0,
+            "gpu_particles": 0,
+            "gpu_seed_initializations": 0,
+            "gpu_simulation_delta_s": 0.05000000074505806,
+            "quality_level": 1,
+            "requested": "cpu",
+            "seed_upload_capacity": 2048,
+            "shelter_refreshes": 11
+          },
+          "native_audio": {
+            "active_voices": 1,
+            "decoded_mib": 0.0,
+            "device": true,
+            "programs": 0,
+            "samples": 0,
+            "streams": 0,
+            "warnings": [],
+            "wiper_fallback": true
+          },
+          "capture_sha256": "f908d213e735f012b07243f983af3a62b8021228960f567e7d909e70978059c2"
+        }
+      },
+      "menu_capture_sha256": "f18cf1264b48f6564b02c641daf92a736accaf991a349be473f137f20854de8d"
+    },
+    "confinement": "strict",
+    "status": "strict unprivileged tests passed; channel receipt recorded separately"
+  },
+  "previous_gpu_checkpoints": {
+    "scope": "initial seven-route short captures before this update; hashes identify their older binaries",
+    "viewer_sha256": "42d65723f6760bf343812de2a7ac86d2e7e3d7ec18024a8c4e4c561902f2afef",
+    "captures": [
+      {
+        "id": "chiltern",
         "gpu": {
           "cab": {
             "passed": true,
@@ -85,83 +4129,10 @@
             },
             "frame_timing": null
           }
-        },
-        "scope": "installed stock, native import, optional player checkpoints",
-        "cli_sha256": "854ceaf6d4472884f7a070853d18456827941310025a2a16a3343a90d05599f9",
-        "viewer_sha256": "42d65723f6760bf343812de2a7ac86d2e7e3d7ec18024a8c4e4c561902f2afef",
-        "route_in_package": "Chiltern-Route-v4-8236df20ed9f596b8cf15720c43bfbdd0c43125d/ROUTES/Chiltern",
-        "package": "chiltern-v4-2fc79dd1c7f0eebc",
-        "activity": {
-          "name": "Test Paddington Suburban Down Daytime.act",
-          "consist": "Railcarx2.con",
-          "exit_code": 0,
-          "consist_override": false,
-          "stops": []
         }
       },
       {
         "id": "demo",
-        "name": "Demo Model 1 / Scottish Capital Express",
-        "source": "https://www.openrails.org/discover/get-started/",
-        "status": "gpu_checkpoints_passed",
-        "audit": {
-          "total": 23,
-          "content_valid": 15,
-          "player_ready": 12
-        },
-        "import": {
-          "exit_code": 0
-        },
-        "service": {
-          "exit_code": 0,
-          "outcome": {
-            "success": true,
-            "phase": "completed",
-            "scenario": "0930 Edinburgh-Glasgow Queen Street",
-            "time_s": 2090.149999998838,
-            "distance_m": 28075.62383365394,
-            "score": 1000.0,
-            "failure": null,
-            "stops": [
-              {
-                "name": "Edinburgh Waverley",
-                "node": "n217",
-                "scheduled_arrive_s": 0.0,
-                "actual_arrive_s": 0.05,
-                "actual_depart_s": 61.999999999998614,
-                "position_error_m": 0.0,
-                "arrival_speed_mps": 0.0,
-                "dwell_s": 59.99999999999873,
-                "delay_s": 0.05,
-                "early_departure_s": 0.0
-              },
-              {
-                "name": "Haymarket",
-                "node": "n211",
-                "scheduled_arrive_s": 300.0,
-                "actual_arrive_s": 405.0500000000578,
-                "actual_depart_s": 467.0000000000719,
-                "position_error_m": 4.151542244881966,
-                "arrival_speed_mps": 0.08968785857579467,
-                "dwell_s": 59.99999999999873,
-                "delay_s": 105.05000000005782,
-                "early_departure_s": 0.0
-              },
-              {
-                "name": "Linlithgow",
-                "node": "n62",
-                "scheduled_arrive_s": 1380.0,
-                "actual_arrive_s": 1488.1999999991942,
-                "actual_depart_s": 2090.149999998838,
-                "position_error_m": 3.618685151985119,
-                "arrival_speed_mps": 0.07016094561928746,
-                "dwell_s": 600.000000000002,
-                "delay_s": 108.19999999919423,
-                "early_departure_s": 0.0
-              }
-            ]
-          }
-        },
         "gpu": {
           "cab": {
             "passed": true,
@@ -221,41 +4192,10 @@
             },
             "frame_timing": null
           }
-        },
-        "scope": "installed stock, native import, optional player checkpoints",
-        "cli_sha256": "854ceaf6d4472884f7a070853d18456827941310025a2a16a3343a90d05599f9",
-        "viewer_sha256": "42d65723f6760bf343812de2a7ac86d2e7e3d7ec18024a8c4e4c561902f2afef",
-        "route_in_package": "Demo Model 1/ROUTES/SCE",
-        "package": "demo-model-1-5e4a64e1cd44e23e",
-        "activity": {
-          "name": "MT_MT_0930 Edinburgh-Glasgow Queen Street.act",
-          "consist": "MT_MT_Class 47 & 6 mk2 PP.con",
-          "exit_code": 0,
-          "consist_override": false,
-          "stops": [
-            "Edinburgh Waverley",
-            "Haymarket",
-            "Linlithgow"
-          ]
         }
       },
       {
         "id": "bnsf",
-        "name": "BNSF Starter Route",
-        "source": "https://ts-files.com/files/TS_STARTER_ROUTE.zip",
-        "status": "gpu_checkpoints_passed",
-        "audit": {
-          "total": 17,
-          "content_valid": 1,
-          "player_ready": 1
-        },
-        "import": {
-          "exit_code": 0
-        },
-        "service": {
-          "exit_code": 1,
-          "error": "Error: a station service needs a declared terminal stop"
-        },
         "gpu": {
           "cab": {
             "passed": true,
@@ -315,64 +4255,10 @@
             },
             "frame_timing": null
           }
-        },
-        "scope": "installed stock, native import, optional player checkpoints",
-        "cli_sha256": "854ceaf6d4472884f7a070853d18456827941310025a2a16a3343a90d05599f9",
-        "viewer_sha256": "42d65723f6760bf343812de2a7ac86d2e7e3d7ec18024a8c4e4c561902f2afef",
-        "route_in_package": "ROUTES/BNSF_Scenic",
-        "package": "bnsf-starter-route-1cc2a6dfbc7b5c6d",
-        "activity": {
-          "name": "5_wb_empirebuilder.act",
-          "consist": "amtrak empire builder wb.con",
-          "exit_code": 0,
-          "consist_override": false,
-          "stops": [
-            "Wenatchee",
-            "Skykomish Station",
-            "Everett Station"
-          ]
         }
       },
       {
         "id": "lirr",
-        "name": "Long Island Railroad",
-        "source": "https://static.openrails.org/files/LIRR.zip",
-        "status": "gpu_checkpoints_passed",
-        "audit": {
-          "total": 42,
-          "content_valid": 40,
-          "player_ready": 15
-        },
-        "import": {
-          "exit_code": 0
-        },
-        "service": {
-          "exit_code": 1,
-          "outcome": {
-            "success": false,
-            "phase": "failed",
-            "scenario": "01. BROOKLYN to HEMPSTEAD",
-            "time_s": 1560.0499999991289,
-            "distance_m": 18047.52043023468,
-            "score": 1000.0,
-            "failure": "Tiempo máximo del servicio agotado",
-            "stops": [
-              {
-                "name": "FLATBUSH TERMINAL",
-                "node": "n5462",
-                "scheduled_arrive_s": 0.0,
-                "actual_arrive_s": 0.05,
-                "actual_depart_s": 3.999999999999994,
-                "position_error_m": 2.842170943040401e-14,
-                "arrival_speed_mps": 0.0,
-                "dwell_s": 2.000000000000001,
-                "delay_s": 0.05,
-                "early_departure_s": 0.0
-              }
-            ]
-          },
-          "error": "{\n  \"success\": false,\n  \"phase\": \"failed\",\n  \"scenario\": \"01. BROOKLYN to HEMPSTEAD\",\n  \"time_s\": 1560.0499999991289,\n  \"distance_m\": 18047.52043023468,\n  \"score\": 1000.0,\n  \"failure\": \"Tiempo máximo del servicio agotado\",\n  \"stops\": [\n    {\n      \"name\": \"FLATBUSH TERMINAL\",\n      \"node\": \"n5462\",\n      \"scheduled_arrive_s\": 0.0,\n      \"actual_arrive_s\": 0.05,\n      \"actual_depart_s\": 3.999999999999994,\n      \"position_error_m\": 2.842170943040401e-14,\n      \"arrival_speed_mps\": 0.0,\n      \"dwell_s\": 2.000000000000001,\n      \"delay_s\": 0.05,\n      \"early_departure_s\": 0.0\n    }\n  ]\n}"
-        },
         "gpu": {
           "cab": {
             "passed": true,
@@ -432,82 +4318,10 @@
             },
             "frame_timing": null
           }
-        },
-        "scope": "installed stock, native import, optional player checkpoints",
-        "cli_sha256": "854ceaf6d4472884f7a070853d18456827941310025a2a16a3343a90d05599f9",
-        "viewer_sha256": "42d65723f6760bf343812de2a7ac86d2e7e3d7ec18024a8c4e4c561902f2afef",
-        "route_in_package": "ROUTES/LIRR",
-        "package": "long-island-railroad-4d33e3e0e6d8d103",
-        "activity": {
-          "name": "01Brooklyn-Hempstead.act",
-          "consist": "SFexpress-500.con",
-          "exit_code": 0,
-          "consist_override": false,
-          "stops": [
-            "FLATBUSH TERMINAL",
-            "HEMPSTEAD"
-          ]
         }
       },
       {
-        "id": "mideast",
-        "name": "MidEast Coast",
-        "source": "https://github.com/MECoast/MECoast",
-        "status": "blocked",
-        "audit": {
-          "total": 926,
-          "content_valid": 623,
-          "player_ready": 554
-        },
-        "import": {
-          "exit_code": 1,
-          "error": "Error: import route <player-data>/community-route-qa/2026-10-11/mideast-coast-dc2592a67727005f/MECoast-1c47480edb295aeb8eee5849e941da77d4ed0bf2/Routes/MidEastCoast: UK4LIGHTRL: unsupported function TRAINHASCALLON"
-        },
-        "service": null,
-        "gpu": {},
-        "scope": "installed stock, native import, optional player checkpoints",
-        "route_in_package": "MECoast-1c47480edb295aeb8eee5849e941da77d4ed0bf2/Routes/MidEastCoast",
-        "package": "mideast-coast-dc2592a67727005f",
-        "cli_sha256": "854ceaf6d4472884f7a070853d18456827941310025a2a16a3343a90d05599f9"
-      },
-      {
-        "id": "portugal",
-        "name": "Portugal 79",
-        "source": "https://github.com/cpvirtual/OR_CPV",
-        "status": "blocked",
-        "audit": {
-          "total": 1866,
-          "content_valid": 1081,
-          "player_ready": 1053
-        },
-        "import": {
-          "exit_code": 1,
-          "error": "Error: import route <player-data>/community-route-qa/2026-10-11/portugal-79-72a2afec7a2e8bf5/OR_CPV-56bce7499e6368bedd21c43e9f6bdb16acf783ea/ROUTES/CPV_PT79: AA2SDA: unsupported function TRAINHASCALLON"
-        },
-        "service": null,
-        "gpu": {},
-        "scope": "installed stock, native import, optional player checkpoints",
-        "route_in_package": "OR_CPV-56bce7499e6368bedd21c43e9f6bdb16acf783ea/ROUTES/CPV_PT79",
-        "package": "portugal-79-72a2afec7a2e8bf5",
-        "cli_sha256": "854ceaf6d4472884f7a070853d18456827941310025a2a16a3343a90d05599f9"
-      },
-      {
         "id": "zigzag",
-        "name": "Great Zig Zag NSW",
-        "source": "https://www.zigzag.coalstonewcastle.com.au/route/downloads/",
-        "status": "gpu_checkpoints_passed",
-        "audit": {
-          "total": 56,
-          "content_valid": 2,
-          "player_ready": 2
-        },
-        "import": {
-          "exit_code": 0
-        },
-        "service": {
-          "exit_code": 1,
-          "error": "Error: a station service needs a declared terminal stop"
-        },
         "gpu": {
           "cab": {
             "passed": true,
@@ -567,58 +4381,10 @@
             },
             "frame_timing": null
           }
-        },
-        "scope": "installed stock, native import, optional player checkpoints",
-        "cli_sha256": "854ceaf6d4472884f7a070853d18456827941310025a2a16a3343a90d05599f9",
-        "viewer_sha256": "42d65723f6760bf343812de2a7ac86d2e7e3d7ec18024a8c4e4c561902f2afef",
-        "route_in_package": "Routes/au_great_zig_zag",
-        "package": "zigzag-v1-6",
-        "activity": {
-          "name": "tutorial#2_basic_train_control.act",
-          "consist": "tutorial#6_player_train.con",
-          "exit_code": 0,
-          "consist_override": true,
-          "stops": []
         }
       },
       {
-        "id": "coals-to-newcastle",
-        "name": "Coals to Newcastle",
-        "source": "https://www.coalstonewcastle.com.au/route/downloads/",
-        "status": "blocked",
-        "audit": {
-          "total": 0,
-          "content_valid": 0,
-          "player_ready": 0
-        },
-        "import": {
-          "exit_code": 1,
-          "error": "Error: import route <player-data>/community-route-qa/2026-10-11/coals-to-newcastle-v7-4/Routes/AU_Coal_to_Newcastle: NSWCOLLIGHT-17: unsupported function NEXT_SIG_MR"
-        },
-        "service": null,
-        "gpu": {},
-        "scope": "installed stock, native import, optional player checkpoints",
-        "route_in_package": "Routes/AU_Coal_to_Newcastle",
-        "package": "coals-to-newcastle-v7-4",
-        "cli_sha256": "854ceaf6d4472884f7a070853d18456827941310025a2a16a3343a90d05599f9"
-      },
-      {
         "id": "burrinjuck",
-        "name": "Burrinjuck",
-        "source": "https://www.burrinjuck.coalstonewcastle.com.au/route/downloads/",
-        "status": "gpu_checkpoints_passed",
-        "audit": {
-          "total": 10,
-          "content_valid": 6,
-          "player_ready": 6
-        },
-        "import": {
-          "exit_code": 0
-        },
-        "service": {
-          "exit_code": 1,
-          "error": "Error: a station service needs a declared terminal stop"
-        },
         "gpu": {
           "cab": {
             "passed": true,
@@ -678,37 +4444,10 @@
             },
             "frame_timing": null
           }
-        },
-        "scope": "installed stock, native import, optional player checkpoints",
-        "cli_sha256": "854ceaf6d4472884f7a070853d18456827941310025a2a16a3343a90d05599f9",
-        "viewer_sha256": "42d65723f6760bf343812de2a7ac86d2e7e3d7ec18024a8c4e4c561902f2afef",
-        "route_in_package": "Routes/AU_Burrinjuck",
-        "package": "burrinjuck-v3",
-        "activity": {
-          "name": "Default.act",
-          "consist": "burr_jack_light.con",
-          "exit_code": 0,
-          "consist_override": false,
-          "stops": []
         }
       },
       {
         "id": "craven",
-        "name": "Craven Timber Railway",
-        "source": "https://www.craven.coalstonewcastle.com.au/route/downloads/",
-        "status": "gpu_checkpoints_passed",
-        "audit": {
-          "total": 11,
-          "content_valid": 9,
-          "player_ready": 9
-        },
-        "import": {
-          "exit_code": 0
-        },
-        "service": {
-          "exit_code": 1,
-          "error": "Error: a station service needs a declared terminal stop"
-        },
         "gpu": {
           "cab": {
             "passed": true,
@@ -768,158 +4507,20 @@
             },
             "frame_timing": null
           }
-        },
-        "scope": "installed stock, native import, optional player checkpoints",
-        "cli_sha256": "854ceaf6d4472884f7a070853d18456827941310025a2a16a3343a90d05599f9",
-        "viewer_sha256": "42d65723f6760bf343812de2a7ac86d2e7e3d7ec18024a8c4e4c561902f2afef",
-        "route_in_package": "Routes/au_craven",
-        "package": "craven-v1-2",
-        "activity": {
-          "name": "default.act",
-          "consist": "CT-No1-LightEngine.con",
-          "exit_code": 0,
-          "consist_override": false,
-          "stops": []
         }
       }
     ]
   },
-  "initial_failures": [
-    {
-      "id": "chiltern",
-      "status": "activity_blocked",
-      "activity": {
-        "name": "RS_Let's go to Birmingham.act",
-        "consist": "Birmingham Pullman.con",
-        "exit_code": 1,
-        "error": "✓ track.toml  — 28016 nodos, 19644 edges → <checkout>/tmp/community-routes-20261011/acceptance/chiltern/import/track.toml\nError: import activity <player-data>/official-content/chiltern-v4-2fc79dd1c7f0eebc/Chiltern-Route-v4-8236df20ed9f596b8cf15720c43bfbdd0c43125d/ROUTES/Chiltern/ACTIVITIES/RS_Let's go to Birmingham.act: Timetable item 11358 is not a native platform; use the activity and track database from the same route edition"
-      },
-      "service": null,
-      "gpu": {}
-    },
-    {
-      "id": "lirr",
-      "status": "gpu_checkpoint_failed",
-      "activity": {
-        "name": "04CentralPickups.act",
-        "consist": "1xNECX102.con",
-        "exit_code": 0,
-        "stops": []
-      },
-      "service": {
-        "exit_code": 1,
-        "error": "Error: no path from n1267 to n1265"
-      },
-      "gpu": {
-        "cab": {
-          "passed": false,
-          "error": "cab: capture timed out"
-        },
-        "exterior": {
-          "passed": false,
-          "error": "exterior: capture timed out"
-        }
-      }
-    },
-    {
-      "id": "zigzag",
-      "status": "activity_blocked",
-      "activity": {
-        "name": "tutorial#6_loading.act",
-        "consist": "tutorial#6_player_train.con",
-        "exit_code": 1,
-        "error": "✓ track.toml  — 884 nodos, 626 edges → <checkout>/tmp/community-routes-20261011/acceptance/zigzag/import/track.toml\nError: import activity <player-data>/community-route-qa/2026-10-11/zigzag-v1-6/Routes/au_great_zig_zag/ACTIVITIES/tutorial#6_loading.act: parse error: unclosed string starting at byte 10900"
-      },
-      "service": null,
-      "gpu": {}
-    }
-  ],
-  "installer_case_normalization": [
-    {
-      "id": "zigzag",
-      "merged_alias_files": 3,
-      "content_changed": false
-    },
-    {
-      "id": "burrinjuck",
-      "merged_alias_files": 594,
-      "content_changed": false
-    },
-    {
-      "id": "craven",
-      "merged_alias_files": 51,
-      "content_changed": false
-    },
-    {
-      "id": "coals-to-newcastle",
-      "merged_alias_files": 85,
-      "content_changed": false
-    }
-  ],
-  "checks": {
-    "check_sh": "passed",
-    "rust_tests": 1764,
-    "python_tests": 89,
-    "or_reference": "Open Rails 1.6.1",
-    "or_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
-    "final_viewer_sha256": "35fae18c9eae88fcc4da3950fb2ab3da671d9188e4238d7f118dc729002e9320",
-    "resource_confinement_regressions": "passed; shared references inside package accepted, paths outside rejected"
-  },
-  "menu": {
-    "menu-final": [
-      {
-        "page": "route",
-        "width": 1280,
-        "height": 720,
-        "scale": 1.0,
-        "elapsed_s": 9.02044800799922,
-        "peak_rss_mib": 457.44140625,
-        "exit_code": 0
-      },
-      {
-        "page": "train",
-        "width": 1280,
-        "height": 720,
-        "scale": 1.0,
-        "elapsed_s": 9.021468764985912,
-        "peak_rss_mib": 508.98828125,
-        "exit_code": 0
-      }
-    ],
-    "menu-gray": [
-      {
-        "page": "train",
-        "width": 640,
-        "height": 480,
-        "scale": 1.0,
-        "elapsed_s": 9.020068337995326,
-        "peak_rss_mib": 429.54296875,
-        "exit_code": 0
-      }
-    ],
-    "menu-global": [
-      {
-        "page": "train",
-        "width": 1280,
-        "height": 720,
-        "scale": 1.0,
-        "elapsed_s": 9.020616615016479,
-        "peak_rss_mib": 485.34765625,
-        "exit_code": 0
-      }
-    ],
-    "final_viewer_sha256": "35fae18c9eae88fcc4da3950fb2ab3da671d9188e4238d7f118dc729002e9320",
-    "checks": {
-      "gray_selected": true,
-      "mandatory_resources_block_start": true,
-      "optional_resources_allow_start": true,
-      "foreign_native_train_preview": true,
-      "footer_inside_window": true,
-      "visible_text_not_collapsed": true
-    }
-  },
-  "open_issues": [
-    "https://github.com/cavazquez/openrailsrs/issues/209",
-    "https://github.com/cavazquez/openrailsrs/issues/210"
-  ]
+  "images": {
+    "full-formation-preview.png": "3e25253dfbdb4e2ecdd7b756ec24f6dfc5c587e41ab54f225e4b8cd7a5cce7cf",
+    "service-map-preview.png": "0fa5f8d75a931b95682f2fd554350f48172b74c81f41c5b7fd405e7315cdc3a9",
+    "gray-selected-small.png": "4ff807e017a469541973c7b5df28e619f7ed1b0a658b49a4d4af8e401cb9afc5",
+    "mideast-native-signals.png": "026c8af8815c1869f479e4c0e00909297dd66ef2920f4d018b06e62e9fe296fe",
+    "portugal-native-signals.png": "2e1f78d2080207c96801ac8b994a33c84b57c9bdc5a20cda95ecc4baea072e0e",
+    "coals-native-signals.png": "00c97523e82ef6b872eb385d763271da8a5aabfebfb32efa0baa562ac3f110ce",
+    "lirr-original-cab.png": "90501ccb6bb25639a68c025e95f12e781e1797375a6e228ee7f51603fb5b630e",
+    "journey-clear.png": "4b3bb01a0614ae72672df7f17e36cfa789d02b73e68aae20e429e3c937609194",
+    "journey-downpour.png": "13d6ad38c5d5c754f0c93e97d9841665ac0a3f8e6ef243f627330ca741314a8c",
+    "journey-heavy_snow.png": "6a3c3f891eb2b58d694e1dbc699115575d5f7ddfd8c01f385824f869c9e4f3e4"
+  }
 }

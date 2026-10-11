@@ -13,7 +13,7 @@ use openrailsrs_track::TrackGraph;
 
 use crate::error::MstsError;
 
-type NativePathPolylines = HashMap<String, Vec<(f64, f64)>>;
+pub(crate) type NativePathPolylines = HashMap<String, Vec<(f64, f64)>>;
 
 /// Route start/destination hints derived from a player path and service file.
 #[derive(Debug, Clone)]
@@ -198,7 +198,7 @@ fn placement_from_world(
 
 /// Native section anchors distinguish curved/parallel tracks which share an
 /// inaccurate junction-to-junction chord. Keep synthetic graph-only PAT support.
-fn native_path_polylines(
+pub(crate) fn native_path_polylines(
     graph: &TrackGraph,
     aliases: &HashMap<u32, MstsAlias>,
     pat: &Path,
@@ -380,7 +380,7 @@ pub fn point_along_world_polyline(
 /// Snap a Bevy XZ point to the nearest graph edge; return start node + offset along travel.
 ///
 /// Uses `f64` throughout — Bevy/graph coords are ~1e7 m, where `f32` loses sub-metre precision.
-fn snap_world_to_edge(
+pub(crate) fn snap_world_to_edge(
     graph: &TrackGraph,
     px: f64,
     pz: f64,
@@ -513,7 +513,8 @@ pub fn compress_pat_waypoints(nodes: &[String]) -> Vec<String> {
 /// Graph node ids along the player `.pat` from `start` to `destination` (outbound leg).
 ///
 /// Native MSTS `TrackPDP` lines carry world coordinates; when present, waypoints are
-/// derived by snapping each PDP to the nearest graph node. Otherwise falls back to
+/// derived from junction PDPs. Intermediate points stay on their native vector;
+/// they must not introduce a neighbouring turnout or siding. Otherwise falls back to
 /// resolved TDB node ids (see [`TrPathPDP`] / `minimal.pat`).
 pub fn pat_waypoints(
     graph: &TrackGraph,
@@ -553,7 +554,7 @@ pub fn pat_waypoints_with_offset(
     pat_outbound_waypoints_from_compressed(&compressed, start_idx)
 }
 
-/// Snap native `TrackPDP` world positions to graph nodes and extract the outbound leg.
+/// Snap native junction `TrackPDP` positions and extract the outbound leg.
 ///
 /// Only appends a snapped node when it is reachable from the previous waypoint
 /// (switch-aware BFS), so noisy nearest-node snaps off the route are skipped.
@@ -567,12 +568,24 @@ pub fn pat_waypoints_from_world(
     let mut waypoints = vec![start.to_string()];
     let mut past_offset = start_offset_m <= 0.0;
     let mut walked = 0.0f64;
-    let world_pdps: Vec<_> = path_file.pdps.iter().filter_map(|p| p.world).collect();
-    for (i, w) in world_pdps.iter().enumerate() {
+    let world_pdps: Vec<_> = path_file
+        .pdps
+        .iter()
+        .filter(|p| p.world.is_some())
+        .collect();
+    for (i, pdp) in world_pdps.iter().enumerate() {
+        let w = pdp.world.as_ref().expect("filtered world PDP");
         if i > 0 {
-            let dx = w.graph_x_m() - world_pdps[i - 1].graph_x_m();
-            let dz = w.graph_z_m() - world_pdps[i - 1].graph_z_m();
+            let previous = world_pdps[i - 1].world.expect("filtered world PDP");
+            let dx = w.graph_x_m() - previous.graph_x_m();
+            let dz = w.graph_z_m() - previous.graph_z_m();
             walked += (dx * dx + dz * dz).sqrt();
+        }
+        // OR TrackPDP.IsJunction is exactly flag1 == 2. A flag1 == 1
+        // intermediate point (Coals Default.pat) can lie alongside the end of
+        // a siding; its nearest graph node is not part of the authored route.
+        if i == 0 || (i + 1 < world_pdps.len() && !pdp.is_junction()) {
+            continue;
         }
         if !past_offset {
             if walked >= start_offset_m {
@@ -975,9 +988,15 @@ fn switches_for_route(
     Ok(switches_for_edges(graph, &edge_ids))
 }
 
-fn switches_for_edges(graph: &TrackGraph, edge_ids: &[String]) -> Vec<SwitchDef> {
-    let mut out = Vec::new();
-    for (node_id, node) in graph.nodes_iter() {
+pub(crate) fn switches_for_edges(graph: &TrackGraph, edge_ids: &[String]) -> Vec<SwitchDef> {
+    let mut out = Vec::<SwitchDef>::new();
+    for pair in edge_ids.windows(2) {
+        let Some(incoming) = graph.edge(&pair[0]) else {
+            continue;
+        };
+        let Some(node) = graph.node(&incoming.to.0) else {
+            continue;
+        };
         let openrailsrs_track::NodeKind::Switch {
             stem_edge,
             diverging_edge,
@@ -985,19 +1004,24 @@ fn switches_for_edges(graph: &TrackGraph, edge_ids: &[String]) -> Vec<SwitchDef>
         else {
             continue;
         };
-        let uses_stem = edge_ids.iter().any(|e| e == &stem_edge.0);
-        let uses_div = edge_ids.iter().any(|e| e == &diverging_edge.0);
-        if uses_stem && !uses_div {
-            out.push(SwitchDef {
-                node: node_id.to_string(),
-                position: SwitchPositionDef::Straight,
-            });
-        } else if uses_div && !uses_stem {
-            out.push(SwitchDef {
-                node: node_id.to_string(),
-                position: SwitchPositionDef::Diverging,
-            });
-        }
+        let reverse = pair[0]
+            .strip_suffix("_r")
+            .map(str::to_owned)
+            .unwrap_or_else(|| format!("{}_r", pair[0]));
+        // A trailing traversal is determined by the incoming branch, not by
+        // the common exit. Using only outbound edges left these switches wrong.
+        let position = if pair[1] == stem_edge.0 || reverse == stem_edge.0 {
+            SwitchPositionDef::Straight
+        } else if pair[1] == diverging_edge.0 || reverse == diverging_edge.0 {
+            SwitchPositionDef::Diverging
+        } else {
+            continue;
+        };
+        out.retain(|switch| switch.node != node.id.0);
+        out.push(SwitchDef {
+            node: node.id.0.clone(),
+            position,
+        });
     }
     out
 }
@@ -1101,6 +1125,77 @@ mod tests {
     }
 
     #[test]
+    fn native_intermediate_pdp_does_not_select_a_nearby_siding() {
+        let mut graph = TrackGraph::new();
+        for (id, x, z) in [
+            ("start", 0.0, 0.0),
+            ("junction", 100.0, 0.0),
+            ("siding_end", 150.0, 0.1),
+            ("end", 300.0, 0.0),
+        ] {
+            graph
+                .insert_node(Node {
+                    id: NodeId(id.into()),
+                    x_m: x,
+                    y_m: z,
+                    kind: if id == "junction" {
+                        NodeKind::Switch {
+                            stem_edge: EdgeId("main".into()),
+                            diverging_edge: EdgeId("siding".into()),
+                        }
+                    } else {
+                        NodeKind::Plain
+                    },
+                })
+                .unwrap();
+        }
+        for (id, from, to, length_m) in [
+            ("lead", "start", "junction", 100.0),
+            ("main", "junction", "end", 200.0),
+            ("siding", "junction", "siding_end", 50.0),
+            ("siding_r", "siding_end", "junction", 50.0),
+        ] {
+            graph
+                .insert_edge(Edge {
+                    id: EdgeId(id.into()),
+                    from: NodeId(from.into()),
+                    to: NodeId(to.into()),
+                    length_m,
+                    speed_limit_mps: 20.0,
+                    grade_percent: 0.0,
+                })
+                .unwrap();
+        }
+        let path = PathFile {
+            name: "Main line beside a siding".into(),
+            node_flags: vec![0, 0, 4, 0],
+            pdps: [(0.0, 1), (100.0, 2), (150.0, 1), (300.0, 1)]
+                .into_iter()
+                .map(|(x, junction_flag)| openrailsrs_formats::PathDataPoint {
+                    node_id: None,
+                    junction_flag,
+                    invalid_flag: 1,
+                    world: Some(openrailsrs_formats::TrackVectorPoint {
+                        tile_x: 0,
+                        tile_z: 0,
+                        x,
+                        y: 0.0,
+                        z: 0.0,
+                    }),
+                })
+                .collect(),
+        };
+        assert_eq!(
+            pat_waypoints_from_world(&graph, &path, "start", "end", 0.0).unwrap(),
+            ["start", "junction", "end"]
+        );
+        let switches =
+            switches_from_pat(&path, &graph, &HashMap::new(), "start", "end", 0.0).unwrap();
+        assert_eq!(switches.len(), 1);
+        assert!(matches!(switches[0].position, SwitchPositionDef::Straight));
+    }
+
+    #[test]
     fn native_waypoints_align_switches_to_the_authored_branch() {
         let mut graph = TrackGraph::new();
         for (id, x, z) in [
@@ -1144,6 +1239,7 @@ mod tests {
                 .unwrap();
         }
         let path = PathFile {
+            node_flags: vec![],
             name: "Original branch".into(),
             pdps: [(0.0, 0.0), (100.0, 0.0), (200.0, -100.0), (300.0, 0.0)]
                 .into_iter()

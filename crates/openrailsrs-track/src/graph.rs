@@ -60,6 +60,15 @@ pub struct EdgePhysicsProfile {
     pub speed_posts: Vec<PositionSpeedLimit>,
     #[serde(default)]
     pub grades: Vec<PositionGrade>,
+    /// Original reciprocal TDB platforms, in directed edge metres.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub platforms: Vec<PositionPlatform>,
+}
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct PositionPlatform {
+    pub start_m: f64,
+    pub end_m: f64,
+    pub name: String,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PositionSpeedLimit {

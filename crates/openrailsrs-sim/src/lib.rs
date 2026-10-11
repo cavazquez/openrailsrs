@@ -3,6 +3,7 @@
 pub mod adhesion;
 pub mod brake;
 pub mod brake_circuit;
+pub mod cab_meter;
 pub mod coupler;
 pub mod csv_out;
 pub mod diesel_operation;
@@ -17,7 +18,9 @@ mod native_ep_brake;
 mod native_vacuum_brake;
 pub use live_traffic::{LiveTraffic, TrafficService, TrafficSnapshot};
 pub mod multi_runner;
+mod operational_path;
 pub mod operations;
+mod timetable_operations;
 pub use operations::{CarOperation, CarOperationState, FormationState, SessionSnapshot};
 pub mod native_dynamics;
 pub mod path;

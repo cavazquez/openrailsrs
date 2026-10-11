@@ -8,14 +8,38 @@ pub struct NativeSignalDef {
     pub name: String,
     pub function: String,
     pub source: String,
+    /// OR SH_update_basic when the original type has no SIGSCR or C# program.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub basic_update: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub draw_states: Option<[i32; 8]>,
     /// Original WORLD/SIGCFG feature types, separated for back-facing heads.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub feature_flags: Option<u16>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub head_flags: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub group: Option<String>,
     /// Activity FailedSignals must remain restrictive after a script update.
     #[serde(default, skip_serializing_if = "is_false")]
     pub forced_stop: bool,
+}
+
+/// OR returns STOP if a physical signal has no heads of the requested function.
+pub fn aggregate_signal_aspects(
+    heads: impl IntoIterator<Item = (u8, u8)>,
+    function: u8,
+    restrictive: bool,
+) -> u8 {
+    let values = heads
+        .into_iter()
+        .filter(|(kind, _)| *kind == function)
+        .map(|(_, aspect)| aspect);
+    if restrictive {
+        values.min().unwrap_or(0)
+    } else {
+        values.max().unwrap_or(0)
+    }
 }
 
 fn is_false(value: &bool) -> bool {
@@ -59,6 +83,11 @@ pub struct SignalContext {
     pub this_distance: u8,
     pub this_repeater: u8,
     pub call_on_restricted: bool,
+    pub call_on: bool,
+    pub next_mr: [u8; 5],
+    pub this_mr: [u8; 5],
+    pub head_flags: Option<u32>,
+    pub switch_diverging: bool,
 }
 impl Default for SignalContext {
     fn default() -> Self {
@@ -81,6 +110,11 @@ impl Default for SignalContext {
             this_distance: 0,
             this_repeater: 0,
             call_on_restricted: false,
+            call_on: false,
+            next_mr: [7, 0, 0, 0, 0],
+            this_mr: [7, 0, 0, 0, 0],
+            head_flags: None,
+            switch_diverging: false,
         }
     }
 }
@@ -88,6 +122,23 @@ impl Default for SignalContext {
 pub struct SignalResult {
     pub aspect: u8,
     pub draw_state: i32,
+}
+
+/// OR 1.6.1 SignalObject.TrainHasCallOn and the ordinary activity Train.TestCallOn.
+/// Timetable trains have additional platform/attach rules and must supply their
+/// own policy; this function never grants reservations or permission by itself.
+pub fn activity_call_on(
+    enabled: bool,
+    first_signal: bool,
+    route_exists: bool,
+    leads_into_platform: bool,
+    manually_allowed: bool,
+    allow_non_platform: bool,
+) -> bool {
+    enabled
+        && first_signal
+        && route_exists
+        && (manually_allowed || (allow_non_platform && !leads_into_platform))
 }
 
 fn tokens(source: &str) -> Result<Vec<String>, String> {
@@ -400,7 +451,14 @@ fn evaluate(e: &Expr, vars: &HashMap<String, f64>, c: SignalContext) -> Result<f
                 ("NEXT_SIG_LR", [2.]) => f64::from(c.next_repeater),
                 ("NEXT_SIG_LR", [3.]) => f64::from(c.next_shunting),
                 ("NEXT_SIG_LR", [4.]) => f64::from(c.next_info),
+                ("NEXT_SIG_MR", [v]) if v.fract() == 0. && (0.0..5.0).contains(v) => {
+                    f64::from(c.next_mr[*v as usize])
+                }
+                ("THIS_SIG_MR", [v]) if v.fract() == 0. && (0.0..5.0).contains(v) => {
+                    f64::from(c.this_mr[*v as usize])
+                }
                 ("DIST_MULTI_SIG_MR", [0., 1.]) => f64::from(c.distant_normal),
+                ("DIST_MULTI_SIG_MR", [0., 0.]) => f64::from(c.next_mr[0]),
                 ("DIST_MULTI_SIG_MR", [4., 0.]) => f64::from(c.distant_info),
                 ("THIS_SIG_LR", [0.]) => f64::from(c.this_normal),
                 ("THIS_SIG_LR", [1.]) => f64::from(c.this_distance),
@@ -412,6 +470,18 @@ fn evaluate(e: &Expr, vars: &HashMap<String, f64>, c: SignalContext) -> Result<f
                         .is_none_or(|flags| flags & (1 << *v as u16) != 0),
                 ),
                 ("TRAINHASCALLON_RESTRICTED", []) => f64::from(c.call_on_restricted),
+                ("TRAINHASCALLON", []) => f64::from(c.call_on),
+                ("HASHEAD", [v]) if v.fract() == 0. && (0.0..32.0).contains(v) => f64::from(
+                    c.head_flags
+                        .is_some_and(|flags| flags & (1 << *v as u32) != 0),
+                ),
+                ("SWITCHSTAND", [straight, diverging]) => {
+                    if c.switch_diverging {
+                        *diverging
+                    } else {
+                        *straight
+                    }
+                }
                 ("DEF_DRAW_STATE", [v]) if v.fract() == 0. && (0.0..8.0).contains(v) => {
                     f64::from(c.draw_states[*v as usize])
                 }
@@ -459,9 +529,10 @@ fn validate_expr(expr: &Expr, variables: &HashSet<String>) -> Result<(), String>
         Expr::Value(value) if !value.is_finite() => return Err("nonfinite literal".into()),
         Expr::Call(name, args) => {
             let arity = match name.as_str() {
-                "BLOCK_STATE" | "ROUTE_SET" | "TRAINHASCALLON_RESTRICTED" => 0,
-                "NEXT_SIG_LR" | "THIS_SIG_LR" | "DEF_DRAW_STATE" | "SIG_FEATURE" => 1,
-                "DIST_MULTI_SIG_MR" => 2,
+                "BLOCK_STATE" | "ROUTE_SET" | "TRAINHASCALLON_RESTRICTED" | "TRAINHASCALLON" => 0,
+                "NEXT_SIG_LR" | "NEXT_SIG_MR" | "THIS_SIG_LR" | "THIS_SIG_MR"
+                | "DEF_DRAW_STATE" | "SIG_FEATURE" | "HASHEAD" => 1,
+                "DIST_MULTI_SIG_MR" | "SWITCHSTAND" => 2,
                 _ => return Err(format!("unsupported function {name}")),
             };
             if args.len() != arity {
@@ -477,12 +548,16 @@ fn validate_expr(expr: &Expr, variables: &HashSet<String>) -> Result<(), String>
                 _ => false,
             };
             let valid = match name.as_str() {
-                "NEXT_SIG_LR" | "THIS_SIG_LR" => (0..5).any(|v| selector(&args[0], f64::from(v))),
+                "NEXT_SIG_LR" | "NEXT_SIG_MR" | "THIS_SIG_LR" | "THIS_SIG_MR" => {
+                    (0..5).any(|v| selector(&args[0], f64::from(v)))
+                }
                 "DIST_MULTI_SIG_MR" => {
                     (selector(&args[0], 0.) && selector(&args[1], 1.))
+                        || (selector(&args[0], 0.) && selector(&args[1], 0.))
                         || (selector(&args[0], 4.) && selector(&args[1], 0.))
                 }
                 "SIG_FEATURE" => (0..10).any(|v| selector(&args[0], f64::from(v))),
+                "HASHEAD" => (0..32).any(|v| selector(&args[0], f64::from(v))),
                 _ => true,
             };
             if !valid {

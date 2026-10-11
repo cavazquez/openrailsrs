@@ -15,6 +15,8 @@ pub struct Lexer<'a> {
     input: &'a [u8],
     pos: usize,
     semicolon_comments: bool,
+    /// TrPathNode's first value is hexadecimal, even when it looks like 1E02.
+    path_flag_pending: u8,
 }
 
 impl<'a> Lexer<'a> {
@@ -23,6 +25,7 @@ impl<'a> Lexer<'a> {
             input: input.as_bytes(),
             pos: 0,
             semicolon_comments: true,
+            path_flag_pending: 0,
         }
     }
 
@@ -71,7 +74,13 @@ impl<'a> Lexer<'a> {
     /// Returns the next token or `None` at end of input.
     pub fn next_token(&mut self) -> Result<Option<Token>, FormatError> {
         self.skip_ws_and_comments();
-        match self.peek_byte() {
+        if self.path_flag_pending == 1 {
+            self.path_flag_pending = 0;
+            if self.peek_byte().is_some_and(|b| b.is_ascii_hexdigit()) {
+                return Ok(Some(self.read_symbol()?));
+            }
+        }
+        let result: Result<Option<Token>, FormatError> = match self.peek_byte() {
             None => Ok(None),
             Some(b'(') => {
                 self.pos += 1;
@@ -98,7 +107,14 @@ impl<'a> Lexer<'a> {
                 Ok(Some(self.read_number_or_digit_symbol()?))
             }
             Some(_) => Ok(Some(self.read_symbol()?)),
-        }
+        };
+        let token = result?;
+        self.path_flag_pending = match &token {
+            Some(Token::Symbol(name)) if name.eq_ignore_ascii_case("TrPathNode") => 2,
+            Some(Token::LParen) if self.path_flag_pending == 2 => 1,
+            _ => 0,
+        };
+        Ok(token)
     }
 
     fn item_end_from(&self, start: usize) -> usize {
@@ -209,6 +225,11 @@ impl<'a> Lexer<'a> {
                 message: "invalid utf-8".into(),
             })?
             .to_string();
+        // STFReader also consumes a trailing quote if the opening quote is
+        // missing. The generic fixture lexer remains strict.
+        if !self.semicolon_comments && self.peek_byte() == Some(b'"') {
+            self.pos += 1;
+        }
         Ok(Token::Symbol(s))
     }
 }

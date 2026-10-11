@@ -17,6 +17,7 @@ pub struct ElectricCar {
 
 #[derive(Clone, Debug, Default)]
 pub struct ElectricTrainConfig {
+    pub length_m: f64,
     pub route: RouteElectricSupply,
     pub cars: Vec<ElectricCar>,
     pub fallback_cars: Vec<(usize, openrailsrs_train::TractiveCurve)>,
@@ -90,6 +91,7 @@ impl ElectricTrainConfig {
             }
         }
         let mut result = Self {
+            length_m: consist.vehicle_lengths_m().iter().sum(),
             route: supply,
             cars: vec![],
             fallback_cars: Self::fallback_curves(consist),
@@ -314,7 +316,18 @@ pub fn advance(state: &mut TrainSimState, path: &PathData, config: &ElectricTrai
     let supplies: Vec<_> = config
         .cars
         .iter()
-        .map(|c| config.supply_at(state, path, chainage - c.offset_m))
+        .map(|c| {
+            config.supply_at(
+                state,
+                path,
+                chainage
+                    + if state.path_reversed {
+                        -config.length_m + c.offset_m
+                    } else {
+                        -c.offset_m
+                    },
+            )
+        })
         .collect();
     for ((car, supply), current) in config
         .cars

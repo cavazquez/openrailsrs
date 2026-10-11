@@ -44,7 +44,7 @@ fn build_brake_system(
     )
 }
 
-fn apply_start_offset(state: &mut TrainSimState, path_data: &PathData, offset_m: f64) {
+pub(crate) fn apply_start_offset(state: &mut TrainSimState, path_data: &PathData, offset_m: f64) {
     let mut remaining = offset_m.max(0.0);
     state.pos_on_edge_m = 0.0;
     state.odometer_m = 0.0;
@@ -167,8 +167,18 @@ pub struct LiveDriveSession {
     pub traffic_brake_assistance: bool,
     pub(crate) consist: openrailsrs_train::Consist,
     pub(crate) original_physics: TrainPhysics,
+    pub(crate) cab_max_current_a: Option<f64>,
+    pub(crate) cab_vehicle_index: usize,
     pub(crate) content_signature: String,
     pub(crate) stop_offsets: HashMap<String, f64>,
+    pub(crate) operational_legs: Vec<openrailsrs_scenarios::model::RouteLeg>,
+    pub(crate) operational_leg: usize,
+    pub(crate) operational_operation: usize,
+    pub(crate) operational_prefix_m: f64,
+    pub(crate) operational_start_m: f64,
+    pub(crate) operational_wait_started: Option<f64>,
+    pub(crate) parked_path_data: Option<PathData>,
+    pub(crate) service_clock_start_s: f64,
     pub state: TrainSimState,
     pub physics: TrainPhysics,
     pub path_data: PathData,
@@ -511,6 +521,18 @@ impl LiveDriveSession {
             raw_curve
         };
         let partial_throttle_run_up_time_s = max_partial_throttle_run_up_time_s(&diesel_engines);
+        let (native_physics, cab_max_current_a) =
+            crate::native_dynamics::NativeTrainPhysics::load_with_cab(
+                &consist_path,
+                consist_root(&consist_path),
+                &consist,
+                scenario.simulation.native_physics.as_ref(),
+            )?;
+        let cab_vehicle_index = consist
+            .vehicles
+            .iter()
+            .position(|v| matches!(v, openrailsrs_train::Vehicle::Loco(_)))
+            .unwrap_or(0);
         let physics = TrainPhysics {
             power_supply: crate::power_supply::PowerTrainConfig::from_consist_with_loads(
                 &consist,
@@ -529,12 +551,7 @@ impl LiveDriveSession {
                 &consist,
                 &graph,
             )?,
-            native: crate::native_dynamics::NativeTrainPhysics::load(
-                &consist_path,
-                consist_root(&consist_path),
-                &consist,
-                scenario.simulation.native_physics.as_ref(),
-            )?,
+            native: native_physics,
             mass_kg: consist.total_mass_kg(),
             max_power_w: consist.total_max_power_w(),
             max_tractive_effort_n: consist.total_max_tractive_effort_n(),
@@ -598,7 +615,39 @@ impl LiveDriveSession {
         let signal_runtime = init_signal_runtime(&graph, assume_signals_clear);
         let native_signals = crate::native_signals::NativeSignalRuntime::from_graph(&graph)
             .map_err(crate::SimError::Msg)?;
-        let gameplay = build_live_gameplay(scenario, &graph, &path_edges)?;
+        let mut gameplay = if scenario.route.legs.is_empty() {
+            build_live_gameplay(scenario, &graph, &path_edges)?
+        } else {
+            let mut stops = vec![];
+            let mut prefix = 0.0;
+            for (i, leg) in scenario.route.legs.iter().enumerate() {
+                if ![leg.start_offset_m, leg.end_chainage_m, leg.wait_s]
+                    .iter()
+                    .all(|n| n.is_finite() && *n >= 0.0)
+                    || leg.end_chainage_m < leg.start_offset_m
+                {
+                    return Err(SimError::Msg("Invalid operational leg bounds".into()));
+                }
+                let mut sub = scenario.clone();
+                sub.route.start = leg.start.clone();
+                sub.route.destination = leg.destination.clone();
+                sub.route.stops = leg.stops.clone();
+                sub.route.start_offset_m = Some(leg.start_offset_m);
+                let g = build_live_gameplay(&sub, &graph, &leg.edges)?;
+                for mut stop in g.stop_targets {
+                    stop.cum_dist_m = prefix + stop.cum_dist_m - leg.start_offset_m;
+                    stop.is_terminal = i + 1 == scenario.route.legs.len() && stop.is_terminal;
+                    stops.push(stop);
+                }
+                prefix += leg.end_chainage_m - leg.start_offset_m;
+            }
+            LiveGameplay::new(
+                scenario.route.legs.last().unwrap().destination.clone(),
+                scenario.gameplay.penalty_per_second_late,
+                stops,
+            )
+        };
+        gameplay.shunting_steps = scenario.gameplay.shunting.clone();
         for goal in &gameplay.shunting_steps {
             use openrailsrs_scenarios::model::ShuntingKind;
             if matches!(goal.kind, ShuntingKind::Cut | ShuntingKind::PickUp)
@@ -649,6 +698,8 @@ impl LiveDriveSession {
             own_track_reservations: vec![],
             external_track_reservations: vec![],
             original_physics: physics.clone(),
+            cab_max_current_a,
+            cab_vehicle_index,
             content_signature: crate::operations::content_signature(
                 &graph,
                 scenario,
@@ -664,6 +715,14 @@ impl LiveDriveSession {
                 .collect(),
             state,
             physics,
+            operational_legs: scenario.route.legs.clone(),
+            operational_leg: 0,
+            operational_operation: 0,
+            operational_prefix_m: 0.0,
+            operational_start_m: start_chainage_m,
+            operational_wait_started: None,
+            parked_path_data: None,
+            service_clock_start_s: scenario.scenario.start_time_s.unwrap_or(0.0),
             path_data,
             graph,
             dt: scenario.simulation.time_step,
@@ -786,7 +845,7 @@ impl LiveDriveSession {
         PathData::position_at_odometer(
             &self.state.path_edges,
             &self.path_data.edges,
-            (head_chainage_m + offset_along_path_m).max(0.0),
+            (head_chainage_m + self.oriented_car_offset(offset_along_path_m)).max(0.0),
         )
     }
 
@@ -934,7 +993,7 @@ impl LiveDriveSession {
         self.gameplay
             .stop_targets
             .get(self.gameplay.next_stop_idx)
-            .map(|t| (t.cum_dist_m - self.head_chainage_m()).max(0.0))
+            .map(|t| (t.cum_dist_m - self.gameplay_chainage_m()).max(0.0))
     }
 
     pub fn head_chainage_m(&self) -> f64 {
@@ -950,6 +1009,22 @@ impl LiveDriveSession {
 
     /// Fraction of route distance travelled [0, 1].
     pub fn route_progress(&self) -> f64 {
+        if !self.operational_legs.is_empty() {
+            let remaining = self.operational_legs[self.operational_leg..]
+                .iter()
+                .enumerate()
+                .map(|(i, l)| {
+                    l.end_chainage_m
+                        - if i == 0 {
+                            self.head_chainage_m()
+                        } else {
+                            l.start_offset_m
+                        }
+                })
+                .sum::<f64>();
+            return (self.state.odometer_m / (self.state.odometer_m + remaining).max(1.0))
+                .clamp(0.0, 1.0);
+        }
         let end = self
             .gameplay
             .stop_targets
@@ -1271,17 +1346,54 @@ impl LiveDriveSession {
             brake_force_kn,
             diesel_rpm,
             boiler_bar,
-            traction_load_fraction: if self.physics.max_tractive_effort_n > 0.0 {
-                if self.state.diesel_traction_force_n.is_empty() {
-                    self.state.throttle
-                } else {
-                    (self.state.diesel_traction_force_n.iter().sum::<f64>()
-                        / self.physics.max_tractive_effort_n)
-                        .clamp(0.0, 1.0)
-                }
-            } else {
-                0.0
-            },
+            tractive_load_fraction: self
+                .consist
+                .vehicles
+                .get(self.cab_vehicle_index)
+                .and_then(|v| {
+                    if let openrailsrs_train::Vehicle::Loco(l) = v {
+                        Some(if l.max_tractive_effort_n > 0. {
+                            self.state
+                                .rail_force_n
+                                .get(self.cab_vehicle_index)
+                                .copied()
+                                .unwrap_or(0.)
+                                / l.max_tractive_effort_n
+                        } else {
+                            0.
+                        })
+                    } else {
+                        None
+                    }
+                })
+                .unwrap_or(0.),
+            // OR 1.6.1 MSTSLocomotive constructs one axle even without Pacha physics.
+            native_axles: matches!(
+                self.consist.vehicles.get(self.cab_vehicle_index),
+                Some(openrailsrs_train::Vehicle::Loco(_))
+            ),
+            max_current_a: self.cab_max_current_a,
+            traction_load_fraction: self
+                .consist
+                .vehicles
+                .get(self.cab_vehicle_index)
+                .and_then(|v| {
+                    if let openrailsrs_train::Vehicle::Loco(l) = v {
+                        Some(if l.max_tractive_effort_n > 0. {
+                            self.state
+                                .motor_force_n
+                                .get(self.cab_vehicle_index)
+                                .copied()
+                                .unwrap_or(0.)
+                                / l.max_tractive_effort_n
+                        } else {
+                            0.
+                        })
+                    } else {
+                        None
+                    }
+                })
+                .unwrap_or(0.),
             overspeed: self.gameplay.overspeed_active,
         }
     }
@@ -1320,6 +1432,9 @@ pub struct CabTelemetry {
     pub diesel_rpm: Option<f64>,
     pub boiler_bar: Option<f64>,
     pub traction_load_fraction: f64,
+    pub max_current_a: Option<f64>,
+    pub tractive_load_fraction: f64,
+    pub native_axles: bool,
     pub overspeed: bool,
 }
 
@@ -1415,9 +1530,9 @@ impl LiveDriveSession {
             let red_distance = self.distance_to_red_signal_m();
             let previous_odometer = self.state.odometer_m;
             self.previous_render_chainage_m = self.head_chainage_m();
-            let backwards = self.driver_direction <= 0.25;
+            let backwards = (self.driver_direction <= 0.25) != self.state.path_reversed;
             if let Some(rail) = &mut self.state.rail_adhesion {
-                rail.backwards = backwards;
+                rail.backwards = self.driver_direction <= 0.25;
             }
             let res = if backwards {
                 let previous = self.head_chainage_m();
@@ -1457,16 +1572,18 @@ impl LiveDriveSession {
             }
             self.tick_after_physics_step(dt, on_region_transition);
             self.update_shunting();
-            if res.arrived
+            let physical_end = res.arrived && self.operational_legs.is_empty();
+            if physical_end
                 && self.gameplay.shunting_completed_s.len() < self.gameplay.shunting_steps.len()
             {
                 self.gameplay
                     .fail("Maniobras incompletas al llegar al final");
             }
-            if res.arrived {
+            let operational_end = self.tick_operational_path(automatic.is_some());
+            if physical_end || operational_end {
                 self.gameplay.finish_at_route_end(
                     self.time_s(),
-                    self.head_chainage_m(),
+                    self.gameplay_chainage_m(),
                     self.velocity_mps(),
                 );
             }
@@ -1475,7 +1592,7 @@ impl LiveDriveSession {
                 self.arrived = true;
                 break;
             }
-            if res.arrived {
+            if physical_end {
                 self.gameplay.phase = ServicePhase::Completed;
                 self.arrived = true;
                 break;
@@ -1486,7 +1603,7 @@ impl LiveDriveSession {
 
     fn autodrive_inputs(&mut self, notch: f64) {
         use crate::exterior::DoorState;
-        self.driver_direction = 1.0;
+        self.driver_direction = if self.state.path_reversed { 0.0 } else { 1.0 };
         let v = self.velocity_mps();
         match self.gameplay.phase {
             ServicePhase::Boarding | ServicePhase::ReadyToDepart => {
@@ -1518,7 +1635,11 @@ impl LiveDriveSession {
             .reduce(f64::min)
             .map(|distance| (2.0 * 0.22 * (distance - 4.0).max(0.0)).sqrt())
             .unwrap_or(f64::INFINITY);
-        let cap = route_cap.min(stop_cap).min(signal_cap);
+        let cap = route_cap.min(stop_cap).min(signal_cap).min(
+            self.operational_distance_m()
+                .map(|d| (2.0 * 0.22 * (d - 4.0).max(0.0)).sqrt())
+                .unwrap_or(f64::INFINITY),
+        );
         if self
             .distance_to_next_stop_m()
             .is_some_and(|d| d <= STOP_POSITION_TOLERANCE_M)
@@ -1634,7 +1755,7 @@ impl LiveDriveSession {
 
         if let Some((off, on)) = self.gameplay.tick(
             self.time_s(),
-            self.head_chainage_m(),
+            self.gameplay_chainage_m(),
             self.velocity_mps(),
             self.exterior.door,
             step_dt,

@@ -6,7 +6,7 @@ use openrailsrs_msts::path_placement::{
 };
 use openrailsrs_route::load_route_from_dir;
 use openrailsrs_scenarios::model::RouteSection;
-use openrailsrs_sim::path::{edge_path, resolve_route_edges};
+use openrailsrs_sim::path::resolve_route_edges;
 use openrailsrs_track::SwitchPosition;
 
 fn birmingham_graph_pat_and_hints() -> Option<(
@@ -101,8 +101,19 @@ fn chiltern_pat_edges_leave_platform_via_reverse() {
         "outbound must leave the authored platform directly, got {:?}",
         &pat_edges[..pat_edges.len().min(8)]
     );
-    // Global BFS may shortcut the PAT; waypoint resolution must stay connected.
-    assert!(edge_path(&graph, &hints.start, &hints.destination).is_ok());
+    // Check the authored corridor itself: a global search may take a different
+    // branch and cannot validate the connections selected by this PAT.
+    let first = graph.edge(&pat_edges[0]).expect("first edge");
+    let last = graph.edge(pat_edges.last().unwrap()).expect("last edge");
+    assert_eq!(first.from.0, hints.start);
+    assert_eq!(last.to.0, hints.destination);
+    for pair in pat_edges.windows(2) {
+        assert_eq!(
+            graph.edge(&pair[0]).unwrap().to,
+            graph.edge(&pair[1]).unwrap().from,
+            "disconnected native PAT edges: {pair:?}"
+        );
+    }
 }
 
 #[test]
@@ -120,6 +131,7 @@ fn resolve_route_edges_uses_waypoints_when_present() {
     )
     .expect("wps");
     let route = RouteSection {
+        legs: vec![],
         electric_supply: None,
         path: ".".into(),
         start: hints.start.clone(),

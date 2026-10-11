@@ -40,6 +40,11 @@ pub struct PathDataPoint {
 }
 
 impl PathDataPoint {
+    /// Native OR TrackPDP.IsJunction; intermediate points remain on a vector.
+    pub fn is_junction(&self) -> bool {
+        self.junction_flag == 2
+    }
+
     /// True when Open Rails would treat this PDP as invalid (`invalidFlag == 9`).
     pub fn is_invalid(&self) -> bool {
         self.invalid_flag == 9
@@ -53,6 +58,8 @@ pub struct PathFile {
     pub name: String,
     /// Ordered sequence of path data points.
     pub pdps: Vec<PathDataPoint>,
+    /// TrPathNode flags in ordered main-path order (hexadecimal, as OR reads them).
+    pub node_flags: Vec<u32>,
 }
 
 impl PathFile {
@@ -60,10 +67,15 @@ impl PathFile {
     pub fn from_ast(ast: &Ast) -> Result<Self, FormatError> {
         let name = extract_path_name(ast).unwrap_or_default();
         let mut pdps = extract_pdps(ast);
+        let mut node_flags = vec![];
         if let Some(nodes) = find_path_node_table(ast) {
-            pdps = ordered_main_path(&pdps, nodes)?;
+            (pdps, node_flags) = ordered_main_path(&pdps, nodes)?;
         }
-        Ok(Self { name, pdps })
+        Ok(Self {
+            name,
+            pdps,
+            node_flags,
+        })
     }
 
     /// Convenience: read and parse a `.pat` file from disk.
@@ -130,7 +142,7 @@ fn path_index(value: Option<&Ast>) -> Option<u32> {
 fn ordered_main_path(
     points: &[PathDataPoint],
     table: &[Ast],
-) -> Result<Vec<PathDataPoint>, FormatError> {
+) -> Result<(Vec<PathDataPoint>, Vec<u32>), FormatError> {
     let count =
         path_index(table.get(1)).ok_or_else(|| path_link_error("an unsigned node count"))? as usize;
     let mut nodes = Vec::new();
@@ -147,16 +159,34 @@ fn ordered_main_path(
                 "unsigned nextMainNode and correspondingPDP indices",
             ));
         };
-        nodes.push((next, pdp));
+        let flags = items
+            .get(1)
+            .and_then(|a| {
+                if let Ast::Atom(atom) = a {
+                    match atom {
+                        Atom::Integer(n) if *n >= 0 => Some(n.to_string()),
+                        Atom::Number(n) if n.is_finite() && n.fract() == 0.0 && *n >= 0.0 => {
+                            Some(format!("{n:.0}"))
+                        }
+                        _ => atom_to_string(atom),
+                    }
+                } else {
+                    None
+                }
+            })
+            .and_then(|s| u32::from_str_radix(&s, 16).ok())
+            .ok_or_else(|| path_link_error("hexadecimal TrPathNode flags"))?;
+        nodes.push((next, pdp, flags));
     }
     if nodes.is_empty() || nodes.len() != count {
         return Err(path_link_error("the declared nonempty TrPathNode table"));
     }
     let mut ordered = Vec::new();
+    let mut flags = vec![];
     let mut visited = vec![false; nodes.len()];
     let mut index = 0usize;
     loop {
-        let Some(&(next, pdp)) = nodes.get(index) else {
+        let Some(&(next, pdp, flag)) = nodes.get(index) else {
             return Err(path_link_error("nextMainNode within the node table"));
         };
         if visited[index] {
@@ -165,6 +195,7 @@ fn ordered_main_path(
             ));
         }
         visited[index] = true;
+        flags.push(flag);
         ordered.push(
             points
                 .get(pdp as usize)
@@ -172,7 +203,7 @@ fn ordered_main_path(
                 .clone(),
         );
         if next == u32::MAX {
-            return Ok(ordered);
+            return Ok((ordered, flags));
         }
         index = next as usize;
     }
@@ -338,6 +369,18 @@ mod tests {
             TrPathNode ( 00000000 4294967295 4294967295 3 )
         ) )";
 
+    #[test]
+    fn native_path_keeps_hexadecimal_flags_in_main_link_order() {
+        let source = LINKED_NATIVE_PATH
+            .replace("00000000 3 4294967295 0", "000A0001 3 4294967295 0")
+            .replace(
+                "00000000 4294967295 4294967295 3",
+                "001E0002 4294967295 4294967295 3",
+            );
+        let ast = crate::parser::parse_named_stf(&source).unwrap();
+        let path = PathFile::from_ast(&ast).unwrap();
+        assert_eq!(path.node_flags, vec![0, 0x000A0001, 0x001E0002]);
+    }
     #[test]
     fn native_path_follows_main_links_from_node_zero_and_ignores_optional_siding() {
         let file = tempfile::NamedTempFile::new().unwrap();

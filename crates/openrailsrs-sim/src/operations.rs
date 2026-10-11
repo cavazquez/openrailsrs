@@ -38,6 +38,11 @@ pub struct FormationState {
     pub coupled_count: usize,
     /// Parked section uses the original head chainage and original car offsets.
     pub parked_head_chainage_m: Option<f64>,
+    /// The detached portion retains the path and orientation on which it stopped.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parked_path_edges: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parked_path_reversed: Option<bool>,
     pub parked_brakes: Vec<BrakeCylinder>,
     pub parked_vehicles: Vec<crate::VehicleState>,
     pub parked_couplers: Vec<CouplerState>,
@@ -73,6 +78,8 @@ impl FormationState {
             coupled_count: cars.len(),
             cars,
             parked_head_chainage_m: None,
+            parked_path_edges: vec![],
+            parked_path_reversed: None,
             parked_brakes: vec![],
             parked_vehicles: vec![],
             parked_couplers: vec![],
@@ -120,6 +127,16 @@ fn default_traffic_brake_assistance() -> bool {
 /// The snapshot contains mutable state, never GPU assets or source content.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SessionSnapshot {
+    #[serde(default)]
+    pub operational_operation: usize,
+    #[serde(default)]
+    pub operational_leg: usize,
+    #[serde(default)]
+    pub operational_prefix_m: f64,
+    #[serde(default)]
+    pub operational_start_m: f64,
+    #[serde(default)]
+    pub operational_wait_started: Option<f64>,
     pub version: u32,
     pub content_signature: String,
     pub state: TrainSimState,
@@ -209,6 +226,11 @@ impl LiveDriveSession {
 
     pub fn snapshot(&self) -> SessionSnapshot {
         SessionSnapshot {
+            operational_operation: self.operational_operation,
+            operational_leg: self.operational_leg,
+            operational_prefix_m: self.operational_prefix_m,
+            operational_start_m: self.operational_start_m,
+            operational_wait_started: self.operational_wait_started,
             version: 1,
             content_signature: self.content_signature.clone(),
             state: self.state.clone(),
@@ -274,6 +296,24 @@ impl LiveDriveSession {
             return Err(
                 "La partida pertenece a otra versión de la ruta, servicio o formación".into(),
             );
+        }
+        if (!self.operational_legs.is_empty()
+            && (saved.operational_leg >= self.operational_legs.len()
+                || saved.state.path_reversed
+                    != self.operational_legs[saved.operational_leg].reversed
+                || saved.operational_operation
+                    > self.operational_legs[saved.operational_leg]
+                        .operations
+                        .len()))
+            || (self.operational_legs.is_empty() && saved.operational_operation != 0)
+            || ![saved.operational_prefix_m, saved.operational_start_m]
+                .iter()
+                .all(|n| n.is_finite() && *n >= 0.0)
+            || saved
+                .operational_wait_started
+                .is_some_and(|n| !n.is_finite() || n < 0.0 || n > saved.state.time.0)
+        {
+            return Err("Tramo operativo guardado inválido".into());
         }
         let n = saved.formation.coupled_count;
         if saved.gameplay.shunting_steps != self.gameplay.shunting_steps
@@ -497,6 +537,31 @@ impl LiveDriveSession {
             previous_to = Some(edge.to.0.clone());
         }
         let pd = PathData::from_path(&saved.state.path_edges, &graph);
+        if saved.formation.parked_path_edges.len() > 50000
+            || (saved.formation.parked_head_chainage_m.is_none()
+                && (!saved.formation.parked_path_edges.is_empty()
+                    || saved.formation.parked_path_reversed.is_some()))
+        {
+            return Err("Itinerario de la sección estacionada inválido".into());
+        }
+        let mut previous = None;
+        for id in &saved.formation.parked_path_edges {
+            let edge = graph.edge(id).ok_or("Vía estacionada desconocida")?;
+            if previous.is_some_and(|node: &str| node != edge.from.0) {
+                return Err("La vía estacionada no es continua".into());
+            }
+            previous = Some(edge.to.0.as_str());
+        }
+        if !saved.formation.parked_path_edges.is_empty() {
+            let parked = PathData::from_path(&saved.formation.parked_path_edges, &graph);
+            if saved
+                .formation
+                .parked_head_chainage_m
+                .is_none_or(|head| head > parked.total_length_m())
+            {
+                return Err("La sección estacionada queda fuera de su vía".into());
+            }
+        }
         if saved.state.path_edges.is_empty()
             || saved.state.edge_index > pd.edges.len()
             || (saved.state.edge_index == pd.edges.len() && !saved.arrived)
@@ -557,6 +622,11 @@ impl LiveDriveSession {
         }
         let pd = PathData::from_path(&saved.state.path_edges, &graph);
         self.script_tcs = host;
+        self.operational_leg = saved.operational_leg;
+        self.operational_operation = saved.operational_operation;
+        self.operational_prefix_m = saved.operational_prefix_m;
+        self.operational_start_m = saved.operational_start_m;
+        self.operational_wait_started = saved.operational_wait_started;
         self.state = saved.state;
         if self.state.brake_system.circuits.is_empty() {
             self.state.brake_system.circuits = self
@@ -580,6 +650,19 @@ impl LiveDriveSession {
         self.refilling = None;
         self.gameplay = saved.gameplay;
         self.formation = saved.formation;
+        if self.formation.parked_head_chainage_m.is_some() {
+            if self.formation.parked_path_edges.is_empty() {
+                self.formation
+                    .parked_path_edges
+                    .clone_from(&self.state.path_edges);
+            }
+            self.parked_path_data = Some(PathData::from_path(
+                &self.formation.parked_path_edges,
+                &graph,
+            ));
+        } else {
+            self.parked_path_data = None;
+        }
         self.exterior = saved.exterior;
         self.signal_runtime = saved.signal_runtime;
         self.signal_overrides = saved.signal_overrides;
@@ -693,7 +776,23 @@ impl LiveDriveSession {
         }
         self.driver_throttle = 0.0;
         self.formation.parked_head_chainage_m = Some(self.head_chainage_m());
+        self.formation
+            .parked_path_edges
+            .clone_from(&self.state.path_edges);
+        self.formation.parked_path_reversed = Some(self.state.path_reversed);
+        self.parked_path_data = Some(PathData::from_path(&self.state.path_edges, &self.graph));
         self.formation.coupled_count = keep;
+        if self.state.path_reversed {
+            let anchor = self.head_chainage_m()
+                - self.formation.cars[keep..]
+                    .iter()
+                    .map(|car| car.length_m)
+                    .sum::<f64>();
+            let odometer = self.state.odometer_m;
+            crate::live_drive::apply_start_offset(&mut self.state, &self.path_data, anchor);
+            self.state.odometer_m = odometer;
+            self.previous_render_chainage_m = anchor;
+        }
         self.formation.parked_brakes = self.state.brake_system.cylinders.split_off(keep);
         if !self.state.vehicles.is_empty() {
             self.formation.parked_vehicles = self.state.vehicles.split_off(keep);
@@ -714,8 +813,63 @@ impl LiveDriveSession {
             .formation
             .parked_head_chainage_m
             .ok_or("No hay una sección separada")?;
-        if self.velocity_mps() > 0.1 || (self.head_chainage_m() - parked).abs() > 1.0 {
+        let prefix = self.formation.length_m();
+        let full_length = self.formation.cars.iter().map(|c| c.length_m).sum::<f64>();
+        let at = self.position_at_head_offset(-prefix);
+        let (edges, pd) = self.presentation_path_for_car(-prefix);
+        let target = PathData::position_at_odometer(
+            edges,
+            &pd.edges,
+            parked + self.parked_car_offset(-prefix),
+        );
+        let normalise = |(id, position): (String, f64)| {
+            let edge = self.graph.edge(&id).unwrap();
+            (
+                base_edge(&id).to_string(),
+                if id.ends_with("_r") {
+                    edge.length_m - position
+                } else {
+                    position
+                },
+            )
+        };
+        if self.velocity_mps() > 0.1
+            || !at.zip(target).is_some_and(|(a, b)| {
+                let a = normalise(a);
+                let b = normalise(b);
+                a.0 == b.0 && (a.1 - b.1).abs() <= 1.0
+            })
+        {
             return Err("Acercá el enganche a menos de 1 m y detené el tren para acoplar".into());
+        }
+        let anchor = self.head_chainage_m()
+            + if self.state.path_reversed {
+                full_length - prefix
+            } else {
+                0.0
+            };
+        for i in self.formation.coupled_count..self.formation.cars.len() {
+            let offset = self.formation.center_offset_m(i);
+            let old = self.presentation_position_for_car(offset, offset, 0.0);
+            let next = PathData::position_at_odometer(
+                &self.state.path_edges,
+                &self.path_data.edges,
+                anchor
+                    + if self.state.path_reversed {
+                        -full_length - offset
+                    } else {
+                        offset
+                    },
+            );
+            if !old.zip(next).is_some_and(|(a, b)| {
+                let a = normalise(a);
+                let b = normalise(b);
+                a.0 == b.0 && (a.1 - b.1).abs() <= 1.0
+            }) {
+                return Err(
+                    "La vía actual no conserva la posición de la sección estacionada".into(),
+                );
+            }
         }
         self.state
             .brake_system
@@ -739,6 +893,15 @@ impl LiveDriveSession {
         }
         self.formation.coupled_count = self.formation.cars.len();
         self.formation.parked_head_chainage_m = None;
+        self.formation.parked_path_edges.clear();
+        self.formation.parked_path_reversed = None;
+        self.parked_path_data = None;
+        if self.state.path_reversed {
+            let odometer = self.state.odometer_m;
+            crate::live_drive::apply_start_offset(&mut self.state, &self.path_data, anchor);
+            self.state.odometer_m = odometer;
+            self.previous_render_chainage_m = anchor;
+        }
         self.rebuild_formation_physics();
         self.sync_operating_brakes();
         self.update_shunting();
@@ -797,6 +960,7 @@ impl LiveDriveSession {
             }
         }
         p.electric.fallback_cars = crate::electric::ElectricTrainConfig::fallback_curves(&consist);
+        p.electric.length_m = self.formation.length_m();
         for car in &mut p.electric.cars {
             car.enabled = car.vehicle < n
                 && self.formation.cars.get(car.vehicle).is_some_and(|op| {
@@ -913,10 +1077,32 @@ impl LiveDriveSession {
         if car_offset <= first_parked + 0.001
             && let Some(head) = self.formation.parked_head_chainage_m
         {
-            head + offset
+            head + self.parked_car_offset(offset)
         } else {
-            self.render_head_chainage_m(remainder) + offset
+            self.render_head_chainage_m(remainder) + self.oriented_car_offset(offset)
         }
+    }
+
+    pub fn presentation_path_for_car(&self, car_offset: f64) -> (&[String], &PathData) {
+        if self.formation.parked_head_chainage_m.is_some()
+            && car_offset <= self.formation.offset_m(self.formation.coupled_count) + 0.001
+            && let Some(pd) = &self.parked_path_data
+        {
+            (&self.formation.parked_path_edges, pd)
+        } else {
+            (&self.state.path_edges, &self.path_data)
+        }
+    }
+
+    pub fn presentation_position_for_car(
+        &self,
+        offset: f64,
+        car_offset: f64,
+        remainder: f64,
+    ) -> Option<(String, f64)> {
+        let chainage = self.presentation_chainage_for_car(offset, car_offset, remainder);
+        let (edges, pd) = self.presentation_path_for_car(car_offset);
+        PathData::position_at_odometer(edges, &pd.edges, chainage.max(0.0))
     }
 
     pub fn occupied_edges(&self) -> HashMap<String, String> {
@@ -927,34 +1113,9 @@ impl LiveDriveSession {
 
     pub fn own_occupied_edges(&self) -> HashMap<String, String> {
         let mut occupied = HashMap::new();
-        for (i, car) in self.formation.cars.iter().enumerate() {
-            let head = if i < self.formation.coupled_count {
-                self.head_chainage_m()
-            } else {
-                self.formation
-                    .parked_head_chainage_m
-                    .unwrap_or(self.head_chainage_m())
-            };
-            let center = head + self.formation.center_offset_m(i);
-            let rear = (center - car.length_m * 0.5).max(0.0);
-            let front = center + car.length_m * 0.5;
-            let mut start = 0.0;
-            for (edge, data) in self.state.path_edges.iter().zip(&self.path_data.edges) {
-                let end = start + data.length_m;
-                // Intersect the full vehicle interval. Three point samples can
-                // skip a short crossover underneath the middle of a vehicle.
-                if end >= rear && start <= front {
-                    let owner = if i < self.formation.coupled_count {
-                        self.service_id.clone()
-                    } else {
-                        format!("{} · estacionado", self.service_id)
-                    };
-                    let base = edge.strip_suffix("_r").unwrap_or(edge);
-                    occupied.insert(base.to_string(), owner.clone());
-                    occupied.insert(format!("{base}_r"), owner);
-                }
-                start = end;
-            }
+        for interval in self.own_track_occupancy() {
+            occupied.insert(format!("{}_r", interval.edge), interval.owner.clone());
+            occupied.insert(interval.edge, interval.owner);
         }
         occupied
     }
@@ -1211,6 +1372,236 @@ impl LiveDriveSession {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn timetable_operations_require_station_alignment_and_survive_save() {
+        use openrailsrs_scenarios::model::{RouteLeg, TimetableAction, TimetableOperation};
+        let mut s = session("smoke");
+        s.state.path_edges = vec!["e1".into()];
+        s.path_data = PathData::from_path(&s.state.path_edges, &s.graph);
+        s.state.pos_on_edge_m = 2000.0;
+        s.previous_render_chainage_m = 2000.0;
+        let count = s.formation.coupled_count;
+        assert!(count > 1);
+        s.operational_legs = vec![RouteLeg {
+            service_id: None,
+            not_before_s: None,
+            start: "yard_a".into(),
+            destination: "mid".into(),
+            edges: vec!["e1".into()],
+            start_offset_m: 2000.0,
+            end_chainage_m: 4000.0,
+            reversed: false,
+            wait_s: 0.0,
+            stops: vec![],
+            switches: vec![],
+            operations: vec![
+                TimetableOperation {
+                    chainage_m: 2000.0,
+                    section: "tail".into(),
+                    manual: true,
+                    action: TimetableAction::Detach { keep: 1 },
+                },
+                TimetableOperation {
+                    chainage_m: 2000.0,
+                    section: "tail".into(),
+                    manual: false,
+                    action: TimetableAction::PickUp { count },
+                },
+            ],
+        }];
+        s.tick_timetable_operation(false);
+        assert_eq!(
+            s.formation.coupled_count, count,
+            "manual work must wait for F9"
+        );
+        for car in &mut s.formation.cars[1..] {
+            car.handbrake = true;
+        }
+        s.uncouple_after(0).unwrap();
+        s.state.pos_on_edge_m += 100.0;
+        s.tick_timetable_operation(false);
+        assert_eq!(
+            s.operational_operation, 0,
+            "a cut made elsewhere cannot satisfy the station task"
+        );
+        s.state.pos_on_edge_m -= 100.0;
+        s.tick_timetable_operation(false);
+        assert_eq!(s.operational_operation, 1);
+        let saved = s.snapshot();
+        s.restore_snapshot(saved).unwrap();
+        assert_eq!(s.operational_operation, 1);
+        s.state.pos_on_edge_m += 100.0;
+        s.tick_timetable_operation(true);
+        assert_eq!(
+            s.formation.coupled_count, 1,
+            "automatic pickup cannot teleport the tail"
+        );
+        s.state.pos_on_edge_m -= 100.0;
+        s.tick_timetable_operation(false);
+        assert_eq!(s.operational_operation, 2);
+        assert_eq!(s.formation.coupled_count, count);
+        assert!(
+            s.formation
+                .cars
+                .iter()
+                .all(|c| !c.handbrake && c.hose_connected)
+        );
+    }
+
+    #[test]
+    fn detached_tail_retains_its_track_during_reversal_save_and_rejoin() {
+        let mut s = session("smoke");
+        let mut reverse = s.graph.edge("e1").unwrap().clone();
+        let edge_length = reverse.length_m;
+        reverse.id = openrailsrs_core::EdgeId("e1_r".into());
+        std::mem::swap(&mut reverse.from, &mut reverse.to);
+        s.graph.insert_edge(reverse).unwrap();
+        s.state.path_edges = vec!["e1".into()];
+        s.path_data = PathData::from_path(&s.state.path_edges, &s.graph);
+        s.state.pos_on_edge_m = 2000.0;
+        s.previous_render_chainage_m = 2000.0;
+        let full = s.formation.length_m();
+        let poses = (0..s.formation.cars.len())
+            .map(|i| {
+                let offset = s.formation.center_offset_m(i);
+                s.presentation_position_for_car(offset, offset, 0.0)
+                    .unwrap()
+                    .1
+            })
+            .collect::<Vec<_>>();
+        for car in &mut s.formation.cars[1..] {
+            car.handbrake = true;
+        }
+        s.uncouple_after(0).unwrap();
+        let make =
+            |edges: Vec<String>, reversed, start, end| openrailsrs_scenarios::model::RouteLeg {
+                operations: vec![],
+                service_id: None,
+                not_before_s: None,
+                start: "yard_a".into(),
+                destination: "mid".into(),
+                edges,
+                start_offset_m: start,
+                end_chainage_m: end,
+                reversed,
+                wait_s: 0.0,
+                stops: vec![],
+                switches: vec![],
+            };
+        s.operational_legs = vec![
+            make(vec!["e1".into()], false, full, 2000.0),
+            make(
+                vec!["e1_r".into()],
+                true,
+                edge_length - 2000.0 + s.formation.length_m(),
+                edge_length - 500.0,
+            ),
+        ];
+        assert!(!s.tick_operational_path(true));
+        assert_eq!(s.operational_leg, 1);
+        assert_eq!(s.formation.parked_path_edges, ["e1"]);
+        let tail = s.formation.center_offset_m(1);
+        assert_eq!(
+            s.presentation_position_for_car(tail, tail, 0.0).unwrap().1,
+            poses[1]
+        );
+        assert!(
+            s.own_track_occupancy()
+                .iter()
+                .any(|o| o.owner.ends_with("estacionado")
+                    && o.start_m <= poses[1]
+                    && o.end_m >= poses[1])
+        );
+        let saved = s.snapshot();
+        s.restore_snapshot(saved).unwrap();
+        assert_eq!(
+            s.presentation_position_for_car(tail, tail, 0.0).unwrap().1,
+            poses[1]
+        );
+        s.recouple().unwrap();
+        assert_eq!(s.formation.length_m(), full);
+        for (i, old) in poses.iter().enumerate() {
+            let offset = s.formation.center_offset_m(i);
+            let (_, pos) = s
+                .presentation_position_for_car(offset, offset, 0.0)
+                .unwrap();
+            assert!((edge_length - pos - old).abs() < 1e-6);
+        }
+        assert!(s.parked_path_data.is_none());
+    }
+
+    #[test]
+    fn reversal_preserves_car_locations_fuel_brakes_odometer_and_save() {
+        let mut s = session("smoke");
+        let mut reverse = s.graph.edge("e1").unwrap().clone();
+        reverse.id = openrailsrs_core::EdgeId("e1_r".into());
+        std::mem::swap(&mut reverse.from, &mut reverse.to);
+        reverse.grade_percent = -reverse.grade_percent;
+        s.graph.insert_edge(reverse).unwrap();
+        let length = s.formation.length_m();
+        let make = |start: &str, dest: &str, edge: &str, offset, end, reversed| {
+            openrailsrs_scenarios::model::RouteLeg {
+                operations: vec![],
+                service_id: None,
+                not_before_s: None,
+                start: start.into(),
+                destination: dest.into(),
+                edges: vec![edge.into()],
+                start_offset_m: offset,
+                end_chainage_m: end,
+                reversed,
+                wait_s: 2.0,
+                stops: vec![],
+                switches: vec![],
+            }
+        };
+        s.operational_legs = vec![
+            make("yard_a", "mid", "e1", length, 2000.0, false),
+            make("mid", "yard_a", "e1_r", 3000.0 + length, 4900.0, true),
+        ];
+        s.state.path_edges = vec!["e1".into()];
+        s.path_data = PathData::from_path(&s.state.path_edges, &s.graph);
+        s.operational_start_m = length;
+        s.state.pos_on_edge_m = 1996.0;
+        s.state.odometer_m = 1996.0 - length;
+        s.state.time.0 = 20.0;
+        s.state.fuel_consumption_g = 1234.0;
+        s.driver_direction = 1.0;
+        let original_cylinders = format!("{:?}", s.state.brake_system.cylinders);
+        let positions = (0..s.formation.cars.len())
+            .map(|i| {
+                s.position_at_head_offset(s.formation.center_offset_m(i))
+                    .unwrap()
+                    .1
+            })
+            .collect::<Vec<_>>();
+        let before = s.state.odometer_m;
+        assert!(!s.tick_operational_path(false));
+        s.state.time.0 = 22.0;
+        assert!(!s.tick_operational_path(false));
+        assert_eq!(s.operational_leg, 0);
+        s.driver_direction = 0.0;
+        assert!(!s.tick_operational_path(false));
+        assert_eq!(s.operational_leg, 1);
+        assert!(s.state.path_reversed);
+        for (i, old) in positions.iter().enumerate() {
+            let (_, pos) = s
+                .position_at_head_offset(s.formation.center_offset_m(i))
+                .unwrap();
+            assert!((5000.0 - pos - old).abs() < 1e-7);
+        }
+        assert_eq!(s.state.odometer_m, before);
+        assert_eq!(s.state.fuel_consumption_g, 1234.0);
+        assert_eq!(
+            format!("{:?}", s.state.brake_system.cylinders),
+            original_cylinders
+        );
+        let snapshot = s.snapshot();
+        s.validate_snapshot(&snapshot).unwrap();
+        s.restore_snapshot(snapshot).unwrap();
+        assert_eq!(s.operational_leg, 1);
+        assert!((s.gameplay_chainage_m() - before).abs() < 1e-7);
+    }
     use super::*;
     use std::path::PathBuf;
     fn session(name: &str) -> LiveDriveSession {

@@ -241,6 +241,7 @@ fn control_type_from_matrix_prefix(prefix: &str) -> Option<ControlType> {
         "BRAKE CYL" => ControlType::BrakeCyl,
         "BRAKE PIPE" => ControlType::BrakePipe,
         "AMMETER" => ControlType::Ammeter,
+        "AMMETER_ABS" => ControlType::AmmeterAbs,
         "HORN" => ControlType::Generic("HORN".into()),
         "WIPERS" => ControlType::Generic("WIPERS".into()),
         "EXTERNALWIPERS" | "EXTERNAL WIPERS" => ControlType::Generic("EXTERNALWIPERS".into()),
@@ -325,7 +326,9 @@ pub fn control_value(control: &ControlType, tel: &CabTelemetry) -> f64 {
         ControlType::Generic(name) if name.contains("CABLIGHT") => {
             f64::from(u8::from(tel.cab_light))
         }
-        ControlType::Ammeter | ControlType::LoadMeter => tel.traction_load_fraction,
+        ControlType::Ammeter | ControlType::AmmeterAbs | ControlType::LoadMeter => {
+            tel.traction_load_fraction
+        }
         ControlType::Generic(name)
             if tel.steam.is_some()
                 && matches!(
@@ -422,12 +425,25 @@ pub fn dial_control_value(
                 bar
             }
         }
-        ControlType::Ammeter | ControlType::LoadMeter => {
-            let low = dial.scale_min.min(dial.scale_max);
-            let high = dial.scale_min.max(dial.scale_max);
-            let idle = 0.0_f64.clamp(low, high);
-            let full_load = if high > 0.0 { high } else { low };
-            idle + tel.traction_load_fraction * (full_load - idle)
+        ControlType::Ammeter | ControlType::AmmeterAbs | ControlType::LoadMeter => {
+            use openrailsrs_sim::cab_meter::{CurrentMeter, CurrentMeterInput, current_meter_a};
+            current_meter_a(
+                if matches!(control, ControlType::LoadMeter) {
+                    CurrentMeter::LoadMeter
+                } else if matches!(control, ControlType::AmmeterAbs) {
+                    CurrentMeter::AbsoluteAmmeter
+                } else {
+                    CurrentMeter::Ammeter
+                },
+                CurrentMeterInput {
+                    motor_force_n: tel.traction_load_fraction,
+                    rail_force_n: tel.tractive_load_fraction,
+                    max_force_n: 1.0,
+                    max_current_a: tel.max_current_a,
+                    native_axles: tel.native_axles,
+                },
+                dial.scale_max,
+            )
         }
         ControlType::Generic(name) if name.to_ascii_uppercase().contains("RPM") => {
             tel.diesel_rpm.unwrap_or(0.0)
@@ -1135,6 +1151,9 @@ mod tests {
             brake_force_kn: 80.0,
             diesel_rpm: Some(900.0),
             boiler_bar: None,
+            max_current_a: None,
+            native_axles: true,
+            tractive_load_fraction: 0.0,
             traction_load_fraction: 0.0,
             overspeed: false,
         };
@@ -1180,6 +1199,9 @@ mod tests {
             ..Default::default()
         };
         let loaded = CabTelemetry {
+            max_current_a: None,
+            native_axles: true,
+            tractive_load_fraction: 0.0,
             traction_load_fraction: 0.4,
             boiler_bar: Some(10.0),
             ..tel.clone()

@@ -215,6 +215,12 @@ pub fn step(
             .as_ref()
             .map_or(20.0, |n| n.environment.ambient_c),
     );
+    state
+        .motor_force_n
+        .resize(train.vehicle_lengths_m.len(), 0.);
+    state.motor_force_n.fill(0.);
+    state.rail_force_n.resize(train.vehicle_lengths_m.len(), 0.);
+    state.rail_force_n.fill(0.);
     let mut rail_motor_forces = Vec::with_capacity(train.diesel_engines.len());
     let mut contact_motor_forces = Vec::new();
     let steam_wheel_speed = train
@@ -407,6 +413,9 @@ pub fn step(
                         force_n.min((engine.engine_power_w(new_rpm) - load).max(0.0) / v.max(0.5));
                 }
                 state.diesel_traction_force_n[i] = force_n;
+                if let Some(slot) = state.motor_force_n.get_mut(vehicle_index) {
+                    *slot = force_n;
+                }
                 state.diesel_average_force_n[i] = engine.advance_average_force(
                     state.diesel_average_force_n.get(i).copied().unwrap_or(0.0),
                     force_n,
@@ -508,6 +517,57 @@ pub fn step(
         0.0
     };
 
+    if train.steam_params.is_some() || train.diesel_engines.is_empty() {
+        let weights = train
+            .electric
+            .fallback_cars
+            .iter()
+            .map(|(i, curve)| {
+                (
+                    *i,
+                    if state.electric.power_available(*i)
+                        && state.diesel.power_available(*i)
+                        && state.power_supply.power_available(*i)
+                    {
+                        curve.interpolate(v).unwrap_or(0.)
+                    } else {
+                        0.
+                    },
+                )
+            })
+            .collect::<Vec<_>>();
+        let sum = weights.iter().map(|(_, force)| force).sum::<f64>();
+        if sum > 0. && train.steam_params.is_none() {
+            for (i, force) in weights {
+                if let Some(slot) = state.motor_force_n.get_mut(i) {
+                    *slot = f_motor * force / sum;
+                }
+            }
+        } else if train.steam_params.is_some() {
+            let steam_weights = train
+                .rail_adhesion
+                .as_ref()
+                .map(|config| {
+                    config
+                        .vehicles
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, c)| c.enabled && c.steam)
+                        .map(|(i, c)| (i, c.profile.driven_mass_kg))
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default();
+            let total = steam_weights.iter().map(|(_, w)| w).sum::<f64>();
+            if total > 0.0 {
+                for (i, w) in steam_weights {
+                    if let Some(slot) = state.motor_force_n.get_mut(i) {
+                        *slot = f_motor * w / total;
+                    }
+                }
+            }
+        }
+    }
+
     // Steam stock can carry a legacy force table parsed as a fallback diesel
     // model. Its selected boiler branch still needs wheel/rail contact.
     if (train.steam_params.is_some() || train.diesel_engines.is_empty())
@@ -566,6 +626,18 @@ pub fn step(
         }
     }
 
+    state.rail_force_n.clone_from(&state.motor_force_n);
+    for (&index, &force) in train.diesel_vehicle_indices.iter().zip(&rail_motor_forces) {
+        if let Some(slot) = state.rail_force_n.get_mut(index) {
+            *slot = force;
+        }
+    }
+    for &(index, force) in &contact_motor_forces {
+        if let Some(slot) = state.rail_force_n.get_mut(index) {
+            *slot = force;
+        }
+    }
+
     // Advance the air-brake system and read the total cylinder force.
     // When no cylinders are registered (default state), fall back to the
     // instantaneous scalar model so existing single-mass simulations are unchanged.
@@ -608,7 +680,13 @@ pub fn step(
         .iter()
         .enumerate()
         .map(|(i, length)| {
-            let center = front - length / 2.;
+            let nominal = front - head - length / 2.;
+            let center = head
+                + if state.path_reversed {
+                    -train.vehicle_lengths_m.iter().sum::<f64>() - nominal
+                } else {
+                    nominal
+                };
             let span = train
                 .native
                 .as_ref()

@@ -41,7 +41,27 @@ pub fn resolve_route_edges(
     graph: &TrackGraph,
     route: &RouteSection,
 ) -> Result<Vec<String>, SimError> {
-    if route.waypoints.len() >= 2 {
+    if let Some(leg) = route.legs.first() {
+        if leg.edges.is_empty() {
+            return Err(SimError::Msg("Empty operational path leg".into()));
+        }
+        let mut from = leg.start.as_str();
+        for id in &leg.edges {
+            let edge = graph
+                .edge(id)
+                .ok_or_else(|| SimError::Msg(format!("Missing operational edge {id}")))?;
+            if edge.from.0 != from {
+                return Err(SimError::Msg("Disconnected operational leg".into()));
+            }
+            from = &edge.to.0;
+        }
+        if from != leg.destination {
+            return Err(SimError::Msg(
+                "Operational destination does not match its path".into(),
+            ));
+        }
+        Ok(leg.edges.clone())
+    } else if route.waypoints.len() >= 2 {
         let mut edges = openrailsrs_route::path::edge_path_via_waypoints(graph, &route.waypoints)
             .map_err(|e| SimError::Msg(e.to_string()))?;
         if route.waypoints.last().map(String::as_str) != Some(route.destination.as_str()) {

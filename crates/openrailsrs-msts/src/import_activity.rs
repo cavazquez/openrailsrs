@@ -76,10 +76,33 @@ fn import_activity_with_length(
     consist_length_m: Option<f64>,
 ) -> Result<(String, String, bool), MstsError> {
     let activity = ActivityFile::from_path(act_path)?;
+    import_activity_definition(
+        route_dir,
+        act_path,
+        imported_route_dir,
+        consist_length_m,
+        activity,
+    )
+}
+
+pub(crate) fn import_activity_definition(
+    route_dir: &Path,
+    act_path: &Path,
+    imported_route_dir: Option<&Path>,
+    consist_length_m: Option<f64>,
+    activity: ActivityFile,
+) -> Result<(String, String, bool), MstsError> {
     let pat_path = resolve_player_pat(route_dir, &activity);
     // A missing or unreadable player .pat is non-fatal: we proceed without
     // PAT-derived placement hints and rely on fallback node names.
-    let path_file_opt = PathFile::from_path(&pat_path).ok();
+    let path_file_opt = if pat_path.is_file() {
+        Some(
+            PathFile::from_path(&pat_path)
+                .map_err(|e| MstsError::msg(format!("Native PAT {}: {e}", pat_path.display())))?,
+        )
+    } else {
+        None
+    };
 
     let service_id = service_id_for_player(&activity);
     // DistanceDownPath is OR service metadata — never a silent alias for spawn offset (#132).
@@ -158,12 +181,10 @@ fn import_activity_with_length(
     // Use the consist path as-is; fall back to the player service `.srv` Train_Config name.
     let player_consist_str = resolve_player_consist(route_dir, &activity);
 
-    // Duration: use the activity's duration, fallback to 2 hours.
-    let duration_s = if activity.duration_s > 0.0 {
-        activity.duration_s
-    } else {
-        7200.0
-    };
+    // MSTS Duration is a menu estimate, not an activity failure timer. OR's
+    // Activity runtime does not enforce it. Keep a separate bounded headless
+    // execution horizon; explicit gameplay deadlines remain authoritative.
+    let duration_s = 7200.0_f64.max(activity.duration_s * 3.0);
 
     let extra_trains = build_extra_trains(route_dir, &activity, &player_consist_str);
     let stops = build_stops_from_objects(route_dir, &activity);
@@ -172,7 +193,11 @@ fn import_activity_with_length(
     let mut scenario = ScenarioFile {
         scenario: ScenarioMeta {
             name: activity.name.clone(),
-            description: format!("Imported from MSTS activity: {}", act_path.display()),
+            description: format!(
+                "Imported from MSTS activity: {}. Author's duration estimate: {} s (not a deadline).",
+                act_path.display(),
+                activity.duration_s
+            ),
             start_time_s: if activity.start_time_s > 0.0 {
                 Some(activity.start_time_s)
             } else {
@@ -181,6 +206,7 @@ fn import_activity_with_length(
             season: activity.season.as_ref().map(|s| s.to_ascii_lowercase()),
         },
         route: RouteSection {
+            legs: vec![],
             electric_supply: None,
             path: ".".to_string(),
             start: start_node,
@@ -236,6 +262,54 @@ fn import_activity_with_length(
         validate: None,
     };
 
+    if path_file_opt
+        .as_ref()
+        .is_some_and(|p| p.node_flags.iter().any(|f| f & 3 != 0))
+    {
+        let track_dir = imported_route_dir.ok_or_else(|| {
+            MstsError::msg("Import track.toml before a reversing native activity")
+        })?;
+        let length = match consist_length_m {
+            Some(length) => length,
+            None => {
+                let con = {
+                    let name = Path::new(&scenario.train.consist)
+                        .file_name()
+                        .ok_or_else(|| MstsError::msg("Missing formation name"))?;
+                    route_dir
+                        .ancestors()
+                        .take(4)
+                        .find_map(|base| {
+                            openrailsrs_formats::resolve_path_case_insensitive(
+                                &base.join("TRAINS/CONSISTS").join(name),
+                            )
+                        })
+                        .ok_or_else(|| {
+                            MstsError::msg("The original formation is required for PAT reversals")
+                        })?
+                };
+                let consist =
+                    openrailsrs_train::load_consist_with_asset_root(&con, con.parent().unwrap())
+                        .map_err(|e| MstsError::msg(e.to_string()))?;
+                consist.vehicle_lengths_m().iter().sum()
+            }
+        };
+        let loaded = load_route_from_dir(track_dir).map_err(|e| MstsError::msg(e.to_string()))?;
+        scenario.route.legs = crate::operational_path::operational_legs(
+            &loaded.graph,
+            &loaded.msts_aliases,
+            &pat_path,
+            length,
+        )?;
+        if let Some(first) = scenario.route.legs.first() {
+            scenario.route.start.clone_from(&first.start);
+            scenario.route.destination.clone_from(&first.destination);
+            scenario.route.start_offset_m = Some(first.start_offset_m);
+            scenario.route.switches.clone_from(&first.switches);
+            scenario.route.waypoints.clear();
+        }
+    }
+
     if !activity.player_stops.is_empty() {
         let track_dir = imported_route_dir.ok_or_else(|| {
             MstsError::msg("Import track.toml before importing a native passenger timetable")
@@ -244,7 +318,16 @@ fn import_activity_with_length(
             MstsError::msg("The passenger timetable requires its original track database")
         })?;
         let loaded = load_route_from_dir(track_dir).map_err(|e| MstsError::msg(e.to_string()))?;
-        crate::native_timetable::apply(&activity, &tdb, &loaded.graph, &mut scenario.route)?;
+        if scenario.route.legs.is_empty() {
+            crate::native_timetable::apply(&activity, &tdb, &loaded.graph, &mut scenario.route)?;
+        } else {
+            crate::native_timetable::apply_legs(
+                &activity,
+                &tdb,
+                &loaded.graph,
+                &mut scenario.route,
+            )?;
+        }
     }
 
     let mut overlay_applied = false;

@@ -252,10 +252,17 @@ enum UiCommand {
     Resume(usize),
     SelectRoute(usize),
     SelectChoice(ChoiceKind, usize),
+    PreviewRotate(f32),
+    PreviewZoom(f32),
+    PreviewCar(i32),
+    PreviewAll,
+    PreviewRouteView,
     ShowChoices(ChoiceKind),
     FocusSearch(ChoiceKind),
     ClearSearch(ChoiceKind),
     ChoicePage(ChoiceKind, i32),
+    ChoiceFilter(ChoiceKind, choices::ChoiceFilter),
+    ToggleFavorite(ChoiceKind, usize),
     NewGameStep(NewGameStep),
     NewGameAdvanced,
     LibraryTab(LibraryTab),
@@ -744,13 +751,18 @@ struct CameraForSave<'w, 's> {
         With<Camera3d>,
     >,
 }
+#[derive(SystemParam)]
+struct MenuOptions<'w> {
+    settings: ResMut<'w, PlayerSettings>,
+    previews: ResMut<'w, previews::Previews>,
+}
 fn handle_buttons(
     mut commands: Commands,
     buttons: Query<(&Interaction, &UiCommand), Changed<Interaction>>,
     mut ui: ResMut<PlayerUiState>,
     mut live: Option<ResMut<LiveDrive>>,
     mut menu: ResMut<PlayerLaunchMenu>,
-    mut settings: ResMut<PlayerSettings>,
+    options: MenuOptions,
     mut launch: ResMut<PlayerLaunchQueue>,
     mut content: ResMut<ActivePlayerContent>,
     mut downloads: ResMut<crate::official_content::OfficialContent>,
@@ -762,6 +774,10 @@ fn handle_buttons(
     refills: Option<Res<crate::world_operations::RefillTargets>>,
     mut weather: Option<ResMut<crate::weather_state::WeatherState>>,
 ) {
+    let MenuOptions {
+        mut settings,
+        mut previews,
+    } = options;
     for (interaction, command) in &buttons {
         if *interaction != Interaction::Pressed || !mouse.just_pressed(MouseButton::Left) {
             continue;
@@ -814,6 +830,11 @@ fn handle_buttons(
                 ui.new_game_advanced = !ui.new_game_advanced;
                 Ok(())
             },
+            UiCommand::PreviewRotate(delta) => { previews.pose.yaw += delta; Ok(()) },
+            UiCommand::PreviewZoom(delta) => { previews.pose.zoom = (previews.pose.zoom + delta).clamp(-2.0, 2.0); Ok(()) },
+            UiCommand::PreviewCar(delta) => { previews.move_focus(*delta); Ok(()) },
+            UiCommand::PreviewAll => { previews.pose = default(); Ok(()) },
+            UiCommand::PreviewRouteView => { previews.show_route_map = !previews.show_route_map; Ok(()) },
             UiCommand::SelectChoice(kind, index) => {
                 choices::select(&mut menu, *kind, *index);
                 ui.choice_focus = None;
@@ -826,12 +847,25 @@ fn handle_buttons(
             },
             UiCommand::FocusSearch(kind) => { ui.choice_focus = Some(*kind); Ok(()) },
             UiCommand::ClearSearch(kind) => {
-                ui.choice_search[kind.slot()] = default();
+                let search = &mut ui.choice_search[kind.slot()];
+                search.query.clear();search.page=0;search.cursor=None;
                 ui.choice_focus = Some(*kind);
                 Ok(())
             },
+            UiCommand::ChoiceFilter(kind,filter) => {
+                choices::cycle_filter(&mut ui.choice_search[kind.slot()],*filter);
+                ui.choice_focus=None; Ok(())
+            },
+            UiCommand::ToggleFavorite(kind,index) => {
+                let count=match kind {ChoiceKind::Route=>menu.routes.len(),ChoiceKind::Service=>menu.services.len(),ChoiceKind::Consist=>menu.consists.len()};
+                if *index>=count {Err("La biblioteca cambió; elegí el elemento otra vez".into())} else {
+                    let key=choices::favorite_key(&menu,*kind,*index);
+                    if !settings.library_favorites.remove(&key) { settings.library_favorites.insert(key); }
+                    Ok(())
+                }
+            },
             UiCommand::ChoicePage(kind, direction) => {
-                let count = choices::matching(&menu, *kind, &ui.choice_search[kind.slot()].query).len();
+                let count = choices::filtered(&menu, *kind, &ui.choice_search[kind.slot()], &settings).len();
                 let search = &mut ui.choice_search[kind.slot()];
                 search.page = cycle(search.page, count.div_ceil(choices::PAGE_SIZE), *direction);
                 search.cursor = None;
@@ -1045,7 +1079,7 @@ fn build_panel(
                 bottom: Val::Percent(6.0),
                 padding: UiRect::all(Val::Px(18.0)),
                 flex_direction: FlexDirection::Column,
-                row_gap: Val::Px(12.0),
+                row_gap: Val::Px(8.0),
                 border_radius: BorderRadius::all(Val::Px(8.0)),
                 ..default()
             },
@@ -1102,6 +1136,7 @@ fn build_panel(
                 },
                 ScrollPosition::default(),
                 PlayerScroll,
+                Name::new("player-scroll"),
             ))
             .with_children(|p| match panel {
                 PlayerPanel::Menu => launcher::build_home(p),
@@ -1604,6 +1639,9 @@ fn traction_text(s: &LiveDriveSession, settings: &PlayerSettings) -> String {
 }
 
 fn build_formation(p: &mut ChildSpawnerCommands<'_>, ui: &PlayerUiState, s: &LiveDriveSession) {
+    if let Some(instruction) = s.operational_status() {
+        label(p, instruction, 14.0, GOOD);
+    }
     if let Some(instruction) = s.shunting_instruction() {
         label(p, instruction, 14.0, GOOD);
     }
@@ -3281,6 +3319,7 @@ mod tests {
         app.add_plugins(bevy::state::app::StatesPlugin)
             .insert_state(ViewerAppState::Menu)
             .init_resource::<PlayerUiState>()
+            .init_resource::<previews::Previews>()
             .insert_resource(PlayerLaunchMenu::discover(
                 &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../.."),
                 None,
@@ -3751,6 +3790,7 @@ mod tests {
                 .insert_resource(l)
                 .init_resource::<PlayerUiState>()
                 .init_resource::<PlayerLaunchMenu>()
+                .init_resource::<previews::Previews>()
                 .init_resource::<crate::official_content::OfficialContent>()
                 .init_resource::<PlayerSettings>()
                 .init_resource::<PlayerLaunchQueue>()
@@ -3955,6 +3995,7 @@ mod tests {
             let mut app = App::new();
             app.init_resource::<PlayerUiState>()
                 .init_resource::<PlayerLaunchMenu>()
+                .init_resource::<previews::Previews>()
                 .init_resource::<crate::official_content::OfficialContent>()
                 .init_resource::<PlayerSettings>()
                 .init_resource::<PlayerLaunchQueue>()
@@ -4167,6 +4208,7 @@ mod tests {
             .insert_resource(l)
             .init_resource::<PlayerUiState>()
             .init_resource::<PlayerLaunchMenu>()
+            .init_resource::<previews::Previews>()
             .init_resource::<crate::official_content::OfficialContent>()
             .init_resource::<PlayerSettings>()
             .init_resource::<PlayerLaunchQueue>()

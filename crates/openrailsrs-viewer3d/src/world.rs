@@ -1367,7 +1367,7 @@ fn trackobj_procedural_segments(
         }
         return vec![crate::dyntrack::ProceduralTrackSegment {
             position: render_pos,
-            rotation,
+            rotation: rotation * Quat::from_rotation_y(std::f32::consts::PI),
             length_m: Some(crate::dyntrack::MSTS_DEFAULT_SECTION_LENGTH_M),
             half_gauge_m: Some(crate::dyntrack::MSTS_STANDARD_HALF_GAUGE_M),
             curve_radius_m: None,
@@ -1380,25 +1380,31 @@ fn trackobj_procedural_segments(
     }
     links
         .into_iter()
-        .map(|link| {
-            // `shape_local_offset` comes from tsection.dat and is in MSTS local space (+Z forward).
-            // It must be Z-flipped before being used as a Bevy-space offset vector.
-            let offset = msts_local_offset_to_bevy(
-                link.shape_local_offset[0] as f32,
-                link.shape_local_offset[1] as f32,
-                link.shape_local_offset[2] as f32,
-            );
-            let link_rot = Quat::from_rotation_y(link.shape_local_yaw_deg.to_radians() as f32);
-            crate::dyntrack::ProceduralTrackSegment {
-                position: render_pos + rotation * offset,
-                rotation: rotation * link_rot,
-                length_m: Some(link.dims.length_m as f32),
-                half_gauge_m: Some(link.dims.half_gauge_m as f32),
-                curve_radius_m: link.dims.curve_radius_m.map(|v| v as f32),
-                curve_angle_deg: link.dims.curve_angle_deg.map(|v| v as f32),
-            }
-        })
+        .map(|link| trackobj_segment_from_link(render_pos, rotation, link))
         .collect()
+}
+
+fn trackobj_segment_from_link(
+    render_pos: Vec3,
+    shape_rotation: Quat,
+    link: openrailsrs_formats::TrackProceduralLink,
+) -> crate::dyntrack::ProceduralTrackSegment {
+    // Offsets belong to the reflected WORLD shape frame. Procedural geometry
+    // grows along local +Z, whereas that frame's native forward is local -Z.
+    let offset = msts_local_offset_to_bevy(
+        link.shape_local_offset[0] as f32,
+        link.shape_local_offset[1] as f32,
+        link.shape_local_offset[2] as f32,
+    );
+    let forward = Quat::from_rotation_y((180.0 - link.shape_local_yaw_deg).to_radians() as f32);
+    crate::dyntrack::ProceduralTrackSegment {
+        position: render_pos + shape_rotation * offset,
+        rotation: shape_rotation * forward,
+        length_m: Some(link.dims.length_m as f32),
+        half_gauge_m: Some(link.dims.half_gauge_m as f32),
+        curve_radius_m: link.dims.curve_radius_m.map(|v| v as f32),
+        curve_angle_deg: link.dims.curve_angle_deg.map(|v| v as f32),
+    }
 }
 
 fn resolve_object_shape_path(obj: &WorldObject, assets: &RouteAssets) -> Option<PathBuf> {
@@ -4741,6 +4747,103 @@ mod tests {
     use super::*;
     use crate::shapes::ShapePartAsset;
     use openrailsrs_formats::Vec3 as FVec3;
+
+    #[test]
+    fn procedural_track_follows_native_traveller_instead_of_mirrored_world_heading() {
+        use openrailsrs_bevy_scenery::spawn::tdb_track::find_location_in_section_world;
+        use openrailsrs_formats::{
+            TSectionCatalog, TrVectorSectionRecord, TrackProceduralDims, TrackProceduralLink,
+            TrackVectorPoint, typed::TrackSectionDef,
+        };
+        for angle in [0.0_f64, 90.0, -45.0, 167.0] {
+            for curve in [None, Some(15.0), Some(-15.0)] {
+                let def = TrackSectionDef {
+                    gauge_m: 1.435,
+                    length_m: 25.0,
+                    curve_radius_m: curve.map(|_| 100.0),
+                    curve_angle_deg: curve,
+                    skew_deg: None,
+                };
+                let mut cat = TSectionCatalog::default();
+                cat.sections.insert(1, def);
+                let section = TrVectorSectionRecord {
+                    section_index: 1,
+                    shape_index: 1,
+                    header_tile_x: 0,
+                    header_tile_z: 0,
+                    start: TrackVectorPoint {
+                        tile_x: 0,
+                        tile_z: 0,
+                        x: 0.0,
+                        y: 0.0,
+                        z: 0.0,
+                    },
+                    ax: 0.0,
+                    ay: angle.to_radians(),
+                    az: 0.0,
+                };
+                let link = TrackProceduralLink {
+                    shape_local_offset: [0.0; 3],
+                    shape_local_yaw_deg: 0.0,
+                    dims: TrackProceduralDims {
+                        length_m: def.effective_length_m(),
+                        half_gauge_m: 0.7175,
+                        curve_radius_m: def.curve_radius_m,
+                        curve_angle_deg: curve,
+                    },
+                };
+                let segment = trackobj_segment_from_link(
+                    Vec3::ZERO,
+                    Quat::from_rotation_y(-angle.to_radians() as f32),
+                    link,
+                );
+                let visual_end = crate::dyntrack::segment_end_world(
+                    segment.position,
+                    segment.rotation,
+                    segment.length_m.unwrap(),
+                    segment.curve_radius_m,
+                    segment.curve_angle_deg,
+                );
+                let native_end = find_location_in_section_world(
+                    section,
+                    def.effective_length_m(),
+                    Some(&cat),
+                    None,
+                    25.0,
+                    1,
+                )
+                .unwrap();
+                assert!(
+                    (visual_end - native_end).length() < 0.001,
+                    "heading {angle}, curve {curve:?}: {visual_end:?} != {native_end:?}"
+                );
+            }
+        }
+        // A second path starts 25 m along the WORLD shape and faces native +X.
+        let link = TrackProceduralLink {
+            shape_local_offset: [0.0, 0.0, 25.0],
+            shape_local_yaw_deg: 90.0,
+            dims: TrackProceduralDims {
+                length_m: 10.0,
+                half_gauge_m: 0.7175,
+                curve_radius_m: None,
+                curve_angle_deg: None,
+            },
+        };
+        let segment = trackobj_segment_from_link(Vec3::ZERO, Quat::IDENTITY, link);
+        assert!((segment.position - Vec3::new(0.0, 0.0, -25.0)).length() < 0.001);
+        assert!(
+            (crate::dyntrack::segment_end_world(
+                segment.position,
+                segment.rotation,
+                10.0,
+                None,
+                None
+            ) - Vec3::new(10.0, 0.0, -25.0))
+            .length()
+                < 0.001
+        );
+    }
 
     #[test]
     fn native_long_route_does_not_align_its_midpoint_to_the_starting_station() {

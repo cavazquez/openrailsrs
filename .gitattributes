@@ -8,3 +8,8 @@ examples/brake_supply_native/** -text
 examples/brake_supply_native/vehicles/* -whitespace
 tools/openrails-reference/BrakePowerReference.cs -text
 oracles/openrails-brake-power*.json -text
+# New native DLL oracles also retain the captured bytes and their hashes.
+oracles/openrails-cab.json -text whitespace=cr-at-eol
+oracles/openrails-parser.json -text whitespace=cr-at-eol
+oracles/openrails-signals.json -text whitespace=cr-at-eol
+oracles/openrails-lirr-parameters.json -text whitespace=cr-at-eol

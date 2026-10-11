@@ -9,7 +9,9 @@
 pub mod error;
 pub mod import_activity;
 pub mod import_route;
+pub mod import_timetable;
 mod native_timetable;
+pub mod operational_path;
 pub mod path_placement;
 
 pub use error::MstsError;
@@ -19,6 +21,9 @@ pub use import_activity::{
 };
 pub use import_route::{
     import_route, import_route_with_activity, import_route_with_summary, patch_track_coordinates,
+};
+pub use import_timetable::{
+    import_native_timetable, import_native_timetable_with_consist, prepare_timetable_consist,
 };
 pub use path_placement::{
     consist_length_from_vehicle_lengths, head_offset_from_rear_snap, pat_edge_path,

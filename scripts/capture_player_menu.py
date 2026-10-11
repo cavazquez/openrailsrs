@@ -15,7 +15,7 @@ import time
 
 
 PAGES = (
-    "home", "route", "train", "weather", "weather-options", "continue",
+    "home", "route", "route-map", "train", "weather", "weather-options", "continue",
     "library", "downloads", "settings", "weather-settings", "controls",
 )
 
@@ -43,13 +43,21 @@ def check_layout(report, page, width, height):
         for before, after in zip(cards, cards[1:]):
             assert before["max"][1] <= after["min"][1], cards
         inside(nodes["ui-Exit"], root)
-    elif page in ("route", "train", "weather", "weather-options"):
+    elif page in ("route", "route-map", "train", "weather", "weather-options"):
         footer = nodes["launch-footer"]
         inside(footer, root)
         inside(nodes.get("ui-Start", nodes.get("launch-unavailable")), footer)
         for name, node in nodes.items():
             if name.startswith("ui-NewGameStep("):
                 inside(node, root)
+        if page == "train":
+            scroll = nodes["player-scroll"]
+            choices = [node for name, node in nodes.items() if name.startswith("choice-Consist-")]
+            if choices:
+                # A list that exists below the fold is still unusable on entry.
+                assert any(node["min"][1] >= scroll["min"][1] - 1
+                           and node["max"][1] <= scroll["max"][1] + 1
+                           for node in choices), "No complete formation choice is visible"
     elif page in ("settings", "weather-settings", "controls"):
         inside(nodes["ui-SaveSettings"], root)
     pipelines = report.get("shader_pipelines")

@@ -1222,7 +1222,12 @@ mod tests {
         catalog.sections.insert(2, catalog.sections[&1]);
         catalog.shapes.insert(9999, catalog.shapes[&1].clone());
         catalog.sections.insert(9999, catalog.sections[&1]);
-        assert!(NativePath::new(&node, Some(&catalog)).is_none());
+        // Geometry follows the owning TDB/RDB, independently of mesh filters.
+        // Rail TDBs also use placeholder RoadShape IDs for real rail sections.
+        assert_eq!(
+            NativePath::new(&node, Some(&catalog)).unwrap().length_m(),
+            100.0
+        );
         let mut db = TrackDbFile::default();
         db.nodes.push(node);
         let mut paths = vec![];

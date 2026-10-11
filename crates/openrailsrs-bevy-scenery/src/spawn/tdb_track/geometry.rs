@@ -347,6 +347,28 @@ pub fn section_path_spans(
     if !section_is_drawable(&section, tsection) {
         return Vec::new();
     }
+    section_centerline_spans(
+        section,
+        tsection,
+        near_hint,
+        node_length_m,
+        section_count,
+        next_section_anchor,
+    )
+}
+
+// Travel follows every TrackSection in the owning database. Native rail TDBs
+// can use a placeholder ShapeIndex which is also marked RoadShape in GLOBAL
+// (MidEast uses shape 1 for two 50 m rail sections). Mesh filtering must not
+// remove those metres from vehicle, signal or road-traffic chainage.
+fn section_centerline_spans(
+    section: TrVectorSectionRecord,
+    tsection: Option<&TSectionCatalog>,
+    near_hint: Option<Vec3>,
+    node_length_m: f64,
+    section_count: usize,
+    next_section_anchor: Option<Vec3>,
+) -> Vec<SectionPathSpan> {
     let anchor = section_world_vec3(section, near_hint);
     let (ay, ax, az) = section.orientation_yaw_pitch_roll();
     let bevy_yaw = bevy_yaw_deg_from_msts_ay(ay);
@@ -970,7 +992,7 @@ impl TrackVectorPath {
                 let next = local_sections.get(index + 1).map(|next| {
                     section_world_vec3(*next, Some(section_world_vec3(*section, None)))
                 });
-                spans.extend(section_path_spans(
+                spans.extend(section_centerline_spans(
                     *section,
                     tsection,
                     None,
@@ -1270,7 +1292,7 @@ pub fn tdb_node_track_pose(
                 let next_anchor = sections
                     .get(idx + 1)
                     .map(|s| section_world_vec3(*s, Some(section_world_vec3(*section, near_hint))));
-                let spans = section_path_spans(
+                let spans = section_centerline_spans(
                     *section,
                     tsection,
                     near_hint,
@@ -1389,7 +1411,7 @@ fn nearest_track_position_in_nodes(
             let next_anchor = sections
                 .get(idx + 1)
                 .map(|s| section_world_vec3(*s, Some(section_world_vec3(*section, near))));
-            let spans = section_path_spans(
+            let spans = section_centerline_spans(
                 *section,
                 tsection,
                 near,
@@ -1656,6 +1678,53 @@ mod tests {
         let beyond = tdb_node_track_pose(&tdb, 1, 101.0, Some(&catalog), None).unwrap();
         assert!((end.position - Vec3::new(0.0, 0.0, -100.254)).length() < 0.001);
         assert_eq!(end, beyond);
+    }
+
+    #[test]
+    fn rail_chainage_keeps_sections_with_road_shape_placeholder() {
+        let mut catalog = catalog_with_straight_shape(1, 50.0);
+        catalog.shapes.get_mut(&1).unwrap().road_shape = true;
+        catalog
+            .sections
+            .extend(catalog_with_straight_shape(2, 100.0).sections);
+        let sections = vec![
+            section_at(0.0, 0.0, 2),
+            section_at(0.0, 100.0, 1),
+            section_at(0.0, 150.0, 1),
+        ];
+        // The procedural mesh filter may omit road meshes, but the native TDB
+        // owns these rail sections and OR Traveller includes their lengths.
+        assert!(!section_is_drawable(&sections[1], Some(&catalog)));
+        let node = TrackDbNode {
+            id: 1,
+            position: Some(sections[0].start),
+            pin_refs: Vec::new(),
+            kind: TrackNodeKind::Vector {
+                length_m: 200.0,
+                speed_limit_mps: 0.0,
+                pins: (0, 0),
+                item_ids: Vec::new(),
+                sections,
+                geometry: None,
+            },
+        };
+        let path = TrackVectorPath::new(&node, Some(&catalog)).unwrap();
+        assert_eq!(path.length_m(), 200.0);
+        let tdb = TrackDbFile {
+            nodes: vec![node],
+            ..Default::default()
+        };
+        for (a, b) in [(92.0, 108.0), (142.0, 158.0), (192.0, 176.0)] {
+            let pa = path.pose_in_frame(a, DVec3::ZERO).position;
+            let pb = path.pose_in_frame(b, DVec3::ZERO).position;
+            assert!((pa.distance(pb) - 16.0).abs() < 0.001);
+            let legacy = tdb_node_track_pose(&tdb, 1, a, Some(&catalog), None).unwrap();
+            assert!(pa.distance(legacy.position) < 0.001);
+        }
+        let snapped =
+            nearest_track_position(&tdb, Vec2::new(0.1, -175.0), 1.0, Some(&catalog), None)
+                .unwrap();
+        assert!(snapped.position.distance(Vec3::new(0.0, 0.0, -175.0)) < 0.001);
     }
 
     #[test]

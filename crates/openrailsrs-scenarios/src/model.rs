@@ -106,6 +106,8 @@ pub enum SwitchPositionDef {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RouteSection {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub legs: Vec<RouteLeg>,
     /// Physical supply; overrides route metadata without changing wire meshes.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub electric_supply: Option<openrailsrs_core::electrification::RouteElectricSupply>,
@@ -134,6 +136,46 @@ pub struct RouteSection {
     /// Per-edge speed cap overrides (km/h); applied after `track.toml` defaults.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub edge_speed_limits: Vec<EdgeSpeedLimitDef>,
+}
+
+/// Native timetable operations on a named static portion of this formation.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct TimetableOperation {
+    pub chainage_m: f64,
+    pub section: String,
+    pub manual: bool,
+    pub action: TimetableAction,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum TimetableAction {
+    Detach { keep: usize },
+    PickUp { count: usize },
+}
+
+/// An authored PAT subpath; reversals keep the same vehicle reference and
+/// physical formation. Offsets refer to the complete native edge geometry.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct RouteLeg {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub operations: Vec<TimetableOperation>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub service_id: Option<String>,
+    /// Relative service clock for a reused formation's next departure.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub not_before_s: Option<f64>,
+    pub start: String,
+    pub destination: String,
+    pub edges: Vec<String>,
+    pub start_offset_m: f64,
+    pub end_chainage_m: f64,
+    pub reversed: bool,
+    pub wait_s: f64,
+    #[serde(default)]
+    pub stops: Vec<StopDef>,
+    #[serde(default)]
+    pub switches: Vec<SwitchDef>,
 }
 
 /// Override `speed_limit_kmh` on one track edge for this scenario.
@@ -401,6 +443,43 @@ impl Default for OutputSection {
 
 impl ScenarioFile {
     pub fn validate(&self) -> Result<(), ScenarioError> {
+        if self.route.legs.len() > 256
+            || self.route.legs.iter().any(|leg| {
+                leg.edges.is_empty()
+                    || leg.edges.len() > 50_000
+                    || ![leg.start_offset_m, leg.end_chainage_m, leg.wait_s]
+                        .iter()
+                        .all(|n| n.is_finite() && *n >= 0.0)
+                    || leg.end_chainage_m < leg.start_offset_m
+                    || leg.operations.len() > 256
+                    || leg.operations.iter().any(|op| {
+                        !op.chainage_m.is_finite()
+                            || op.chainage_m < leg.start_offset_m - 1.0
+                            || op.chainage_m > leg.end_chainage_m + 1.0
+                            || op.section.trim().is_empty()
+                            || op.section.len() > 256
+                            || match op.action {
+                                TimetableAction::Detach { keep } => !(1..=256).contains(&keep),
+                                TimetableAction::PickUp { count } => !(1..=256).contains(&count),
+                            }
+                    })
+                    || leg
+                        .operations
+                        .windows(2)
+                        .any(|ops| ops[0].chainage_m > ops[1].chainage_m)
+                    || leg
+                        .not_before_s
+                        .is_some_and(|n| !n.is_finite() || !(0.0..=172800.0).contains(&n))
+                    || leg
+                        .service_id
+                        .as_ref()
+                        .is_some_and(|id| id.trim().is_empty() || id.len() > 256)
+            })
+        {
+            return Err(ScenarioError::Validation(
+                "Invalid operational itinerary".into(),
+            ));
+        }
         if self.gameplay.shunting.len() > 100
             || self.gameplay.shunting.iter().any(|step| {
                 step.instruction.trim().is_empty()

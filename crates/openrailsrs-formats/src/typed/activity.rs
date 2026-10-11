@@ -185,7 +185,7 @@ impl ActivityFile {
     /// Convenience: read and parse a `.act` file from disk.
     pub fn from_path(path: impl AsRef<std::path::Path>) -> Result<Self, FormatError> {
         let text = crate::encoding::read_msts_file_to_string(path.as_ref())?;
-        let ast = parse_from_first_paren(&text)?;
+        let ast = crate::parse_activity_text(&text)?;
         let mut file = Self::from_ast(&ast)?;
         if file.name.is_empty() {
             file.name = extract_activity_name_from_text(&text).unwrap_or_default();

@@ -4849,6 +4849,7 @@ dependencies = [
  "openrailsrs-core",
  "pretty_assertions",
  "serde",
+ "serde_json",
  "tempfile",
  "thiserror 2.0.21",
 ]
@@ -4887,7 +4888,9 @@ dependencies = [
  "openrailsrs-route",
  "openrailsrs-scenarios",
  "openrailsrs-track",
+ "openrailsrs-train",
  "serde",
+ "serde_json",
  "tempfile",
  "thiserror 2.0.21",
  "toml",
@@ -4973,6 +4976,7 @@ dependencies = [
  "indexmap",
  "openrailsrs-core",
  "serde",
+ "serde_json",
  "tempfile",
  "thiserror 2.0.21",
 ]

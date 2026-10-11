@@ -207,6 +207,9 @@ pub fn service_instruction(session: &openrailsrs_sim::LiveDriveSession) -> Strin
     if let Some(instruction) = session.shunting_instruction() {
         return instruction;
     }
+    if let Some(instruction) = session.operational_status() {
+        return instruction;
+    }
     match gp.phase {
         ServicePhase::Boarding
             if session.exterior.door == DoorState::Closed && gp.remaining_boarding_s() > 0.0 =>

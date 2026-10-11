@@ -68,6 +68,7 @@ fn make_two_train_scenario(
             season: None,
         },
         route: RouteSection {
+            legs: vec![],
             electric_supply: None,
             path: "routes/test".into(),
             start: "yard_a".into(),

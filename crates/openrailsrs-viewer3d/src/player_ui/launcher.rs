@@ -179,16 +179,12 @@ pub(super) fn build_new_game(
                         ChoiceKind::Service,
                         ui.route_picker,
                     );
-                    choices::build(p, ui, menu, ui.route_picker, previews);
+                    choices::build(p, ui, menu, ui.route_picker, previews, settings);
                 },
                 |p| {
                     label(p, "Vista previa de la ruta", 17.0, TEXT);
                     if let Some(preview) = previews {
-                        super::previews::image_card(
-                            p,
-                            preview.route_image.as_ref(),
-                            &preview.route_status,
-                        );
+                        super::previews::route_card(p, preview);
                         if let Some(railway) = &preview.railway {
                             label(
                                 p,
@@ -267,16 +263,12 @@ pub(super) fn build_new_game(
             choice_columns(
                 p,
                 |p| {
-                    choices::build(p, ui, menu, ChoiceKind::Consist, previews);
+                    choices::build(p, ui, menu, ChoiceKind::Consist, previews, settings);
                 },
                 |p| {
                     label(p, menu.consist_label(), 17.0, TEXT);
                     if let Some(preview) = previews {
-                        super::previews::image_card(
-                            p,
-                            preview.train_image.as_ref(),
-                            &preview.train_status,
-                        );
+                        super::previews::train_card(p, preview);
                     }
                     card(p, |p| {
                         if let Some(audit) = menu
@@ -516,12 +508,6 @@ pub(super) fn build_launch_footer(
     menu: &PlayerLaunchMenu,
     settings: &PlayerSettings,
 ) {
-    let service = if menu.path == 0 {
-        menu.current()
-            .map_or("Sin servicio".into(), |s| s.name.clone())
-    } else {
-        format!("Exploración · {}", menu.path_label())
-    };
     let weather = match WeatherMode::selected(menu.environment, settings.weather_profile) {
         WeatherMode::Fixed if matches!(menu.weather, PlayerWeather::Rain | PlayerWeather::Snow) => {
             format!(
@@ -539,9 +525,9 @@ pub(super) fn build_launch_footer(
             flex_direction: FlexDirection::Column,
             flex_shrink: 0.0,
             min_width: Val::Px(0.0),
-            padding: UiRect::top(Val::Px(10.0)),
+            padding: UiRect::top(Val::Px(8.0)),
             border: UiRect::top(Val::Px(1.0)),
-            row_gap: Val::Px(8.0),
+            row_gap: Val::Px(6.0),
             ..default()
         },
         BorderColor::all(FIELD),
@@ -552,19 +538,18 @@ pub(super) fn build_launch_footer(
         label(
             p,
             format!(
-                "{} · {}\n{} · Salida {} · {}",
+                "{} · {}\nSalida {} · {}",
                 short(
                     menu.routes
                         .get(menu.route)
                         .map_or("Sin ruta", String::as_str),
-                    70
+                    40
                 ),
-                short(&service, 95),
-                short(&menu.consist_label(), 90),
+                short(&menu.consist_label(), 40),
                 clock(menu.start_time_s),
                 weather
             ),
-            13.0,
+            12.0,
             TEXT,
         );
         let (message, color, ready) = readiness(menu);
@@ -581,7 +566,7 @@ pub(super) fn build_launch_footer(
                     button(p, "← Ruta", UiCommand::NewGameStep(NewGameStep::Route));
                     button(
                         p,
-                        "Siguiente: hora y clima →",
+                        "Hora y clima →",
                         UiCommand::NewGameStep(NewGameStep::Environment),
                     );
                 }
@@ -604,7 +589,7 @@ pub(super) fn build_launch_footer(
                     Name::new("launch-unavailable"),
                 ))
                 .with_children(|p| {
-                    label(p, "Jugar · no disponible", 13.0, MUTED);
+                    label(p, "Jugar", 13.0, MUTED);
                 });
             }
             if !ready && !menu.selected_audit_pending() {
@@ -822,7 +807,7 @@ pub(super) fn build_settings_tabs(p: &mut ChildSpawnerCommands<'_>, selected: Se
 
 pub(super) fn capture_page(ui: &mut PlayerUiState, page: &str) {
     let (panel, step, advanced) = match page {
-        "route" => (PlayerPanel::NewGame, NewGameStep::Route, false),
+        "route" | "route-map" => (PlayerPanel::NewGame, NewGameStep::Route, false),
         "train" => (PlayerPanel::NewGame, NewGameStep::Train, false),
         "weather" => (PlayerPanel::NewGame, NewGameStep::Environment, false),
         "weather-options" => (PlayerPanel::NewGame, NewGameStep::Environment, true),

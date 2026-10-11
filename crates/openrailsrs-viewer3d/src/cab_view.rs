@@ -293,22 +293,14 @@ pub fn resolve_cab_shape_for_consist(
     consist: &TrainConsistScene,
     route_dir: &Path,
 ) -> Option<PathBuf> {
-    let lead_shape = consist
-        .vehicles_for("primary")
-        .first()
-        .and_then(|v| v.shape_file.as_deref());
+    let lead = consist.vehicles_for("primary").first()?;
     for root in cab_trainset_candidates(consist, route_dir) {
-        if let Some(shape_name) = lead_shape {
-            let stem = Path::new(shape_name).file_stem()?.to_str()?;
-            let eng_path = root.join(format!("{stem}.eng"));
-            let eng_path =
-                openrailsrs_formats::resolve_path_case_insensitive(&eng_path).unwrap_or(eng_path);
-            if let Ok(openrailsrs_formats::MstsFile::Engine(eng)) =
+        if let Some(eng_path) = crate::rolling_stock::vehicle_engine_path(lead, &root)
+            && let Ok(openrailsrs_formats::MstsFile::Engine(eng)) =
                 openrailsrs_formats::parse_msts_file(&eng_path)
-                && let Some(assets) = resolve_cab_assets_for_trainset(&root, &eng.cab)
-            {
-                return Some(assets.shape_path);
-            }
+            && let Some(assets) = resolve_cab_assets_for_trainset(&root, &eng.cab)
+        {
+            return Some(assets.shape_path);
         }
         if let Some(path) = resolve_cab_shape_path(&root) {
             return Some(path);
@@ -494,6 +486,21 @@ pub fn trainset_root_from_shape_path(shape_path: &Path) -> Option<PathBuf> {
 }
 
 /// Resolve ORTS 3D cab eyepoint for a lead vehicle (searches all trainset dirs).
+pub fn orts_3d_cab_for_consist_vehicle(
+    shape_dirs: &[&Path],
+    vehicle: &crate::rolling_stock::ConsistVehicleVisual,
+    route_dir: &Path,
+) -> Option<Orts3dCabConfig> {
+    if let Some(stock) = &vehicle.stock_file {
+        return stock
+            .extension()
+            .filter(|extension| extension.eq_ignore_ascii_case("eng"))
+            .and_then(|_| parse_orts_3d_cab_from_eng(stock));
+    }
+    orts_3d_cab_for_vehicle(shape_dirs, vehicle.shape_file.as_deref()?, route_dir)
+}
+
+/// Legacy visuals without a CON source use the shape-name convention.
 pub fn orts_3d_cab_for_vehicle(
     shape_dirs: &[&Path],
     shape_file: &str,
@@ -571,9 +578,24 @@ pub fn cab_transform_on_camera(head_msts: Vec3) -> Transform {
 /// Re-export for cab tuning docs / tests.
 pub use crate::shapes::cab_interior_albedo_boost;
 
+fn load_consist_2d_cab(
+    consist: &TrainConsistScene,
+    route_dir: &Path,
+    cvf: &mut cab_cvf::CabCvfState,
+) {
+    if let Some(trainset) = lead_trainset_root(consist, route_dir)
+        && let Some(lead) = consist.vehicles_for("primary").first()
+        && let Some(eng_path) = crate::rolling_stock::vehicle_engine_path(lead, &trainset)
+        && let Ok(openrailsrs_formats::MstsFile::Engine(eng)) =
+            openrailsrs_formats::parse_msts_file(&eng_path)
+    {
+        cab_cvf::load_cab_2d_cvf_runtime(cvf, &trainset, &eng.cab);
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn sync_cab_interior(
-    follow: Res<CameraFollowMode>,
+    mut follow: ResMut<CameraFollowMode>,
     consist: Res<TrainConsistScene>,
     assets: Res<RouteAssets>,
     mut state: ResMut<CabInteriorState>,
@@ -611,25 +633,7 @@ pub fn sync_cab_interior(
 
     // Classic sprite cabs are valid without a corresponding CABVIEW3D mesh.
     if cab2d {
-        if let Some(trainset) = lead_trainset_root(&consist, &assets.route_dir)
-            && let Some(shape_name) = consist
-                .vehicles_for("primary")
-                .first()
-                .and_then(|v| v.shape_file.as_deref())
-        {
-            let stem = Path::new(shape_name)
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or("engine");
-            let eng_path = trainset.join(format!("{stem}.eng"));
-            let eng_path =
-                openrailsrs_formats::resolve_path_case_insensitive(&eng_path).unwrap_or(eng_path);
-            if let Ok(openrailsrs_formats::MstsFile::Engine(eng)) =
-                openrailsrs_formats::parse_msts_file(&eng_path)
-            {
-                cab_cvf::load_cab_2d_cvf_runtime(&mut cvf_state, &trainset, &eng.cab);
-            }
-        }
+        load_consist_2d_cab(&consist, &assets.route_dir, &mut cvf_state);
         for entity in &existing {
             commands.entity(entity).despawn();
         }
@@ -653,6 +657,12 @@ pub fn sync_cab_interior(
     };
 
     let Some(cab_shape) = cab_shape else {
+        // A preference for 3D must still enter the authored 2D cab when the
+        // locomotive has no 3D interior, as Open Rails' cab-camera fallback does.
+        load_consist_2d_cab(&consist, &assets.route_dir, &mut cvf_state);
+        if cvf_state.runtime.is_some() {
+            *follow = CameraFollowMode::Cab2d;
+        }
         return;
     };
 
@@ -668,25 +678,22 @@ pub fn sync_cab_interior(
     } else {
         if state.preparation.is_none() {
             let trainset = lead_trainset_root(&consist, &assets.route_dir);
-            let shape_name = consist
-                .vehicles_for("primary")
-                .first()
-                .and_then(|v| v.shape_file.clone());
+            let eng_path = trainset.as_ref().and_then(|root| {
+                crate::rolling_stock::vehicle_engine_path(
+                    consist.vehicles_for("primary").first()?,
+                    root,
+                )
+            });
             let path = cab_shape.clone();
             let route_dir = assets.route_dir.clone();
             state.preparation = Some(AsyncComputeTaskPool::get().spawn(async move {
                 let started = std::time::Instant::now();
                 let mut cvf = cab_cvf::CabCvfState::default();
-                if let (Some(trainset), Some(shape_name)) = (trainset, shape_name) {
-                    let stem = Path::new(&shape_name).file_stem()?.to_str()?;
-                    let eng_path = trainset.join(format!("{stem}.eng"));
-                    let eng_path = openrailsrs_formats::resolve_path_case_insensitive(&eng_path)
-                        .unwrap_or(eng_path);
-                    if let Ok(openrailsrs_formats::MstsFile::Engine(eng)) =
+                if let (Some(trainset), Some(eng_path)) = (trainset, eng_path)
+                    && let Ok(openrailsrs_formats::MstsFile::Engine(eng)) =
                         openrailsrs_formats::parse_msts_file(&eng_path)
-                    {
-                        cab_cvf::load_cab_cvf_runtime(&mut cvf, &trainset, &eng.cab, &path);
-                    }
+                {
+                    cab_cvf::load_cab_cvf_runtime(&mut cvf, &trainset, &eng.cab, &path);
                 }
                 let shape = if let Some(rt) = cvf.runtime.as_ref() {
                     rt.shape.clone()
@@ -1140,6 +1147,7 @@ mod tests {
                 name: "DMBSA".into(),
                 shape_file: Some("RF_WP_DMBSA.s".into()),
                 asset_dir: None,
+                stock_file: None,
                 length_m: 20.879,
                 offset_m: 0.0,
                 flipped: false,
@@ -1162,6 +1170,7 @@ mod tests {
                 name: "DMBSA".into(),
                 shape_file: Some("RF_WP_DMBSA.s".into()),
                 asset_dir: None,
+                stock_file: None,
                 length_m: 20.879,
                 offset_m: 0.0,
                 flipped: false,
@@ -1387,6 +1396,7 @@ mod tests {
                 name: "DMBSA".into(),
                 shape_file: Some("RF_WP_DMBSA.s".into()),
                 asset_dir: None,
+                stock_file: None,
                 length_m: 20.879,
                 offset_m: 0.0,
                 flipped: false,

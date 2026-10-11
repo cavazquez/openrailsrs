@@ -200,6 +200,7 @@ mod tests {
                 season: None,
             },
             route: RouteSection {
+                legs: vec![],
                 electric_supply: None,
                 path: ".".into(),
                 start: "n1".into(),

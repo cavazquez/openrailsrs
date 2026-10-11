@@ -1,5 +1,5 @@
 //! Persisted player preferences and a single, validated key map.
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use bevy::prelude::*;
@@ -256,6 +256,8 @@ pub struct PlayerSettings {
     pub strict_service: bool,
     /// Conventional stock is driven manually unless the player requests this aid.
     pub traffic_brake_assistance: bool,
+    /// Stable choice identities; incomplete content can also be a favorite.
+    pub library_favorites: BTreeSet<String>,
     pub cab_profiles: BTreeMap<String, crate::cab_profile::CabProfile>,
     pub keys: BTreeMap<PlayerAction, String>,
 }
@@ -290,6 +292,7 @@ impl Default for PlayerSettings {
             quick_station_practice: false,
             strict_service: false,
             traffic_brake_assistance: false,
+            library_favorites: BTreeSet::new(),
             cab_profiles: BTreeMap::new(),
             keys: PlayerAction::ALL
                 .into_iter()

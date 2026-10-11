@@ -39,8 +39,12 @@ superposiciones que permiten seguir conduciendo. Esc cierra un panel o abre paus
    Pasá a **2 · Tren**: el buscador debe ofrecer formaciones de **todos los
    paquetes instalados** y ejemplos, con su procedencia. Cambiar de mapa debe
    conservar esa disponibilidad; los PAT siguen perteneciendo al mapa elegido.
-   La preview muestra el modelo y las texturas del **primer vehículo**; el
-   esquema de coches y la auditoría describen la formación completa.
+   La preview muestra los modelos y texturas de la **formación completa**.
+   Usá ↶/↷, +/−, **Todo** y **Vehículo** para girar, acercarte y enfocar coches.
+   **Filtros** abre país, trocha, tracción, recursos y favoritos. La estrella
+   guarda la formación elegida; salir y volver debe conservar el favorito.
+   **Imagen / Mapa** en la ruta alterna la imagen del autor con el itinerario,
+   sus paradas, longitud, pendientes y alimentación disponible por sector.
    **Ver detalles** abre archivos faltantes y sus ubicaciones.
 2. Volvé al servicio Chiltern local y pulsá **Jugar**. Debe aparecer la
    pantalla de carga y después el escenario original, el Pullman y la próxima parada.

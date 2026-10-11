@@ -39,6 +39,7 @@ pub enum ControlType {
     Throttle,
     TrainBrake,
     Ammeter,
+    AmmeterAbs,
     ThrottleDisplay,
     DirectionDisplay,
     DynamicBrakeDisplay,
@@ -64,7 +65,8 @@ impl ControlType {
         match joined.as_str() {
             "THROTTLE LEVER" | "THROTTLE" => return Self::Throttle,
             "TRAIN BRAKE LEVER" | "TRAIN BRAKE" => return Self::TrainBrake,
-            "AMMETER" | "AMMETER ABS" => return Self::Ammeter,
+            "AMMETER" => return Self::Ammeter,
+            "AMMETER ABS" | "AMMETER_ABS" => return Self::AmmeterAbs,
             _ => {}
         }
         for token in tokens {
@@ -93,6 +95,7 @@ impl ControlType {
             Self::Throttle => "THROTTLE",
             Self::TrainBrake => "TRAIN_BRAKE",
             Self::Ammeter => "AMMETER",
+            Self::AmmeterAbs => "AMMETER_ABS",
             Self::ThrottleDisplay => "THROTTLE_DISPLAY",
             Self::DirectionDisplay => "DIRECTION_DISPLAY",
             Self::DynamicBrakeDisplay => "DYNAMIC_BRAKE_DISPLAY",

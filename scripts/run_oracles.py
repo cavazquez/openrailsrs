@@ -13,12 +13,20 @@ from verify_chiltern_service_capture import BASELINE, verify_capture
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def verify(pin, source_root=None, installation_root=None):
+def verify(pin, source_root=None, installation_root=None, *, recapture=None):
     for entry in pin["files"]:
         path = ROOT / entry["path"]
         actual = hashlib.sha256(path.read_bytes()).hexdigest()
         if actual != entry["sha256"]:
             raise ValueError(f"Reference changed: {entry['path']}; recapture and review explicitly")
+    from test_cab_reference import CabReference
+    from test_signal_reference import SignalReference
+    from test_parser_reference import ParserReference
+    from test_activity_parameters import ActivityParametersReference
+    if recapture != "cab": CabReference().test_pinned_original_dll_capture()
+    if recapture != "signals": SignalReference().test_pinned_original_dll_capture()
+    if recapture != "parser": ParserReference().test_pinned_original_dll_capture()
+    if recapture != "activity_parameters": ActivityParametersReference().test_pinned_original_dll_capture()
     verify_capture(BASELINE)
     from verify_formation_capture import BASELINE as FORMATION_BASELINE, verify_capture as verify_formation
     verify_formation(FORMATION_BASELINE, pin)

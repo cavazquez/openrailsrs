@@ -1,0 +1,150 @@
+{
+  "include": [
+    "Wagon",
+    "(",
+    "car",
+    "Mass",
+    "(",
+    "42t",
+    ")",
+    "Size",
+    "(",
+    "3m",
+    "4m",
+    "20m",
+    ")",
+    ")"
+  ],
+  "trailing": [
+    "Tr_Activity",
+    "(",
+    "Tr_Activity_File",
+    "(",
+    "Events",
+    "(",
+    "EventCategoryTime",
+    "(",
+    "Outcomes",
+    "(",
+    "DisplayMessage",
+    "(",
+    "Legacy tutorial text at EOF"
+  ],
+  "late_quote": [
+    "Tr_Activity",
+    "(",
+    "Name",
+    "(",
+    "Legacy",
+    ")",
+    "Tr_Activity_File",
+    "(",
+    "Events",
+    "(",
+    "EventCategoryLocation",
+    "(",
+    "Outcomes",
+    "(",
+    "DisplayMessage",
+    "(",
+    "Legacy end text.\nReturn to depot.\n ) ) Name ( ",
+    "End",
+    ")",
+    "Location",
+    "(",
+    "0",
+    "0",
+    "0",
+    "0",
+    "10",
+    ")",
+    ")",
+    ")",
+    ")",
+    "ActivityObjects",
+    "(",
+    "ActivityObject",
+    "(",
+    "ObjectType",
+    "(",
+    "WagonsList",
+    ")",
+    "Name",
+    "(",
+    "Static",
+    ")",
+    ")",
+    ")",
+    ")"
+  ],
+  "flags": [
+    0,
+    655361,
+    1966082
+  ],
+  "absolute_waits": [
+    {
+      "encoded": 31701,
+      "clock_s": 61170,
+      "delay_s": 90
+    },
+    {
+      "encoded": 31701,
+      "clock_s": 61400,
+      "delay_s": 1
+    },
+    {
+      "encoded": 30001,
+      "clock_s": 86380,
+      "delay_s": 80
+    },
+    {
+      "encoded": 30001,
+      "clock_s": 120,
+      "delay_s": 1
+    },
+    {
+      "encoded": 30,
+      "clock_s": 61170,
+      "delay_s": 30
+    }
+  ],
+  "point_flags": [
+    {
+      "junction_flag": -1,
+      "invalid_flag": -1,
+      "is_junction": false,
+      "is_invalid": false
+    },
+    {
+      "junction_flag": 0,
+      "invalid_flag": 0,
+      "is_junction": false,
+      "is_invalid": false
+    },
+    {
+      "junction_flag": 1,
+      "invalid_flag": 1,
+      "is_junction": false,
+      "is_invalid": false
+    },
+    {
+      "junction_flag": 2,
+      "invalid_flag": 2,
+      "is_junction": true,
+      "is_invalid": false
+    },
+    {
+      "junction_flag": 3,
+      "invalid_flag": 3,
+      "is_junction": false,
+      "is_invalid": false
+    },
+    {
+      "junction_flag": 9,
+      "invalid_flag": 9,
+      "is_junction": false,
+      "is_invalid": true
+    }
+  ]
+}

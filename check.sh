@@ -55,6 +55,10 @@ cargo test --locked --workspace --all-features -- --test-threads=1
 echo "==> native service capture integrity and replay regressions"
 python3 -m unittest discover -s scripts -p test_service_capture.py
 python3 -m unittest discover -s scripts -p test_brake_supply_reference.py
+python3 -m unittest discover -s scripts -p test_signal_reference.py
+python3 -m unittest discover -s scripts -p test_cab_reference.py
+python3 -m unittest discover -s scripts -p test_parser_reference.py
+python3 -m unittest discover -s scripts -p test_activity_parameters.py
 python3 -m unittest discover -s scripts -p test_scenery_oracle.py
 python3 -m unittest discover -s scripts -p test_weather_execution.py
 python3 -m unittest discover -s scripts -p test_viewer_benchmark.py

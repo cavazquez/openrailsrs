@@ -47,6 +47,7 @@ pub struct ServiceChoice {
     pub route_dir: PathBuf,
     pub scenery_root: Option<PathBuf>,
     pub native_activity: bool,
+    pub native_timetable: Option<String>,
     pub edition: Option<String>,
 }
 
@@ -108,6 +109,7 @@ impl PlayerLaunchMenu {
                 .find(|s| s.scenery_root.as_ref() == Some(root))
                 .map(|s| s.route_dir.clone())
         {
+            services.extend(native_timetable_choices(root, &route_dir, None));
             for source in files_with_extension(&root.join("ACTIVITIES"), "act") {
                 let name = source
                     .file_stem()
@@ -120,11 +122,17 @@ impl PlayerLaunchMenu {
                     route_dir: route_dir.clone(),
                     scenery_root: Some(root.clone()),
                     native_activity: true,
+                    native_timetable: None,
                     edition: None,
                 });
             }
         }
         for route in crate::official_content::prepared_routes() {
+            services.extend(native_timetable_choices(
+                &route.native,
+                &route.imported,
+                route.edition.clone(),
+            ));
             for source in route.activities {
                 services.push(ServiceChoice {
                     name: format!(
@@ -135,6 +143,7 @@ impl PlayerLaunchMenu {
                     route_dir: route.imported.clone(),
                     scenery_root: Some(route.native.clone()),
                     native_activity: true,
+                    native_timetable: None,
                     edition: route.edition.clone(),
                 });
             }
@@ -414,6 +423,36 @@ impl PlayerLaunchMenu {
                 Some("winter") => 3,
                 _ => 0,
             };
+        } else if let Some(id) = &choice.native_timetable {
+            if let Some(root) = &choice.scenery_root {
+                match openrailsrs_msts::prepare_timetable_consist(
+                    root,
+                    &choice.source,
+                    id,
+                    &player_data_dir().join("cache/timetable"),
+                ) {
+                    Ok(consist) => self.consists.push(consist),
+                    Err(error) => self.preview.description = error.to_string(),
+                }
+                if let Ok(table) =
+                    openrailsrs_formats::timetable::NativeTimetable::from_path(&choice.source)
+                    && let Some(service) = table.services.iter().find(|s| s.id == *id)
+                {
+                    self.preview.stops = service
+                        .stops
+                        .iter()
+                        .map(|s| s.station.split('$').next().unwrap_or("").trim().to_string())
+                        .collect();
+                    self.start_time_s = openrailsrs_formats::timetable::timetable_time_s(
+                        service.start.split('$').next().unwrap_or("").trim(),
+                    )
+                    .unwrap_or(43200.0);
+                    if self.preview.description.is_empty() {
+                        self.preview.description =
+                            format!("Horario original · {}", table.description);
+                    }
+                }
+            }
         } else if choice.native_activity {
             self.preview.description =
                 "Actividad original. La libreta muestra el horario y las paradas al iniciar."
@@ -557,7 +596,28 @@ impl PlayerLaunchMenu {
         }
         let choice = self.current().ok_or("No hay un servicio seleccionado")?;
         let imported_dir = dispatch_network_dir(&choice.route_dir);
-        let (mut value, mut scenario) = if choice.native_activity {
+        let (mut value, mut scenario) = if let Some(id) = &choice.native_timetable {
+            let root = choice
+                .scenery_root
+                .as_deref()
+                .ok_or("Falta la ruta original")?;
+            let con = self
+                .consists
+                .get(self.consist)
+                .ok_or("Falta la formación del horario")?;
+            let scenario = openrailsrs_msts::import_native_timetable_with_consist(
+                root,
+                &choice.source,
+                id,
+                &imported_dir,
+                con,
+            )
+            .map_err(|e| e.to_string())?;
+            (
+                toml::Value::try_from(&scenario).map_err(|e| e.to_string())?,
+                scenario,
+            )
+        } else if choice.native_activity {
             let native = choice
                 .scenery_root
                 .as_deref()
@@ -663,7 +723,7 @@ impl PlayerLaunchMenu {
                 openrailsrs_train::Vehicle::Wagon(w) => w.length_m,
             })
             .sum();
-        if original_path && choice.native_activity {
+        if original_path && choice.native_activity && choice.native_timetable.is_none() {
             let imported = openrailsrs_msts::import_activity_with_consist_length(
                 choice
                     .scenery_root
@@ -846,6 +906,7 @@ fn discover_example_services(project: &Path, chiltern: Option<&Path>) -> Vec<Ser
             route_dir,
             scenery_root,
             native_activity: false,
+            native_timetable: None,
             edition: None,
         });
     }
@@ -906,6 +967,41 @@ pub fn absolute(p: &Path) -> PathBuf {
         std::env::current_dir().unwrap_or_default().join(p)
     }
 }
+fn native_timetable_choices(
+    root: &Path,
+    imported: &Path,
+    edition: Option<String>,
+) -> Vec<ServiceChoice> {
+    let mut files = files_with_extension(&root.join("ACTIVITIES"), "timetable_or");
+    files.extend(files_with_extension(
+        &root.join("ACTIVITIES/OpenRails"),
+        "timetable_or",
+    ));
+    files.sort();
+    files.dedup();
+    let mut choices = vec![];
+    for source in files.into_iter().take(64) {
+        if let Ok(table) = openrailsrs_formats::timetable::NativeTimetable::from_path(&source) {
+            for service in table.services {
+                choices.push(ServiceChoice {
+                    name: format!(
+                        "Horario · {} · {}",
+                        source.file_stem().unwrap_or_default().to_string_lossy(),
+                        service.id
+                    ),
+                    source: source.clone(),
+                    route_dir: imported.to_path_buf(),
+                    scenery_root: Some(root.to_path_buf()),
+                    native_activity: true,
+                    native_timetable: Some(service.id),
+                    edition: edition.clone(),
+                });
+            }
+        }
+    }
+    choices
+}
+
 fn files_with_extension(dir: &Path, extension: &str) -> Vec<PathBuf> {
     let dir = openrailsrs_formats::resolve_path_case_insensitive(dir)
         .unwrap_or_else(|| dir.to_path_buf());
@@ -1071,6 +1167,7 @@ mod tests {
             route_dir: track.clone(),
             scenery_root: Some(native.clone()),
             native_activity: true,
+            native_timetable: None,
             edition: None,
         }];
         menu.routes = vec!["SCE".into()];
@@ -1195,6 +1292,7 @@ mod tests {
                 route_dir: native.clone(),
                 scenery_root: Some(native),
                 native_activity: true,
+                native_timetable: None,
                 edition: None,
             });
         }

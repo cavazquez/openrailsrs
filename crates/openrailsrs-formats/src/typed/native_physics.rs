@@ -4,6 +4,7 @@ use crate::Ast;
 
 #[derive(Clone, Debug, Default)]
 pub struct NativeVehiclePhysics {
+    pub max_current_a: Option<f64>,
     pub roller_bearing: bool,
     pub legacy_friction: bool,
     pub wheel_radius_m: f64,
@@ -184,6 +185,9 @@ pub fn parse_native_vehicle_physics(ast: &Ast, engine: bool, mass_kg: f64) -> Na
         None
     };
     NativeVehiclePhysics {
+        max_current_a: scalar(ast, "MaxCurrent")
+            .and_then(|s| s.trim_end_matches(['A', 'a']).trim().parse::<f64>().ok())
+            .filter(|v| v.is_finite() && *v > 0.),
         roller_bearing: scalar(ast, "ORTSBearingType")
             .is_some_and(|v| v.eq_ignore_ascii_case("Roller")),
         legacy_friction: super::parse_orts_friction_fields(ast, engine, "")

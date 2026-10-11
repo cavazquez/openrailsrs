@@ -398,3 +398,37 @@ cargo test --locked -p openrailsrs-sim --test traction_operation -- --nocapture
 ## Frenos de vacío, EP antiguo y alimentación
 
 Los nuevos ensayos de las formaciones usadas añaden 1007 puntos/estados de las DLL originales 1.6.1: 320 de vacío, 384 EP y 303 de alimentación. Las tolerancias de presión son 0,0005/0,001 PSI, la fuerza admite 5 N y los estados de potencia exigen igualdad exacta. Dos capturas independientes fueron idénticas. No alteran las referencias o tolerancias del servicio Pullman ni de la Class 47. [Entradas, procedimiento y límites](NATIVE_BRAKES_POWER.md).
+
+## SIGSCR, instrumentos y lectura STF
+
+Las referencias `openrails-signals.json`, `openrails-cab.json` y
+`openrails-parser.json` proceden de consumidores de las DLL originales 1.6.1.
+Cada una conserva manifiesto de DLL, hash del consumidor y SHA-256 de la salida;
+dos capturas independientes dieron el mismo resultado. Los tests Rust y los
+controles de procedencia Python se ejecutan desde `check.sh`.
+
+- Señales: 419 contextos de funciones y 256 máscaras de ocho aspectos básicos.
+  Incluyen selectores MR/LR, FLAG, switchstand y autorización restringida de
+  maniobra. Las pruebas de sesión añaden ocupación, reserva y plataforma. Los
+  grafos y PAT originales de MidEast, Portugal y Coals añaden pruebas aisladas
+  de bloqueo por ocupación, señal protegida por reserva y liberación posterior.
+- Cabina: 48 estados de AMMETER, AMMETER_ABS y LOAD_METER, con esfuerzo motor,
+  velocidad de ejes y transformaciones del control. Los parámetros de dial
+  usan los valores predeterminados 1 del lector original.
+- Parser: Includes nativos, cierre de bloques al EOF, recuperación de comillas
+  tardías, orden/banderas hexadecimales de nodos PAT y seis clases de puntos
+  PDP, incluido `IsJunction`. Los Includes permanecen
+  confinados al paquete instalado y tienen presupuestos de tamaño y profundidad.
+
+Son comprobaciones aisladas; completar una actividad nueva no certifica sus
+horarios, eventos ni todos sus subsistemas. [Uso, inversiones, horarios nativos
+y pruebas manuales](NATIVE_CONTENT_UPDATE.md).
+
+El oráculo `openrails-lirr-parameters.json` carga `01Brooklyn-Hempstead.act`
+con las DLL originales: siete vehículos, 150 t, 6,526 MW, 1.301,3 kN de esfuerzo
+máximo y 350 kN de freno declarado. Sus 778 carteles contrastan la orientación
+de `Signals.AddSpeed`, incluidos giros; 776 tienen velocidad positiva. La
+captura inicial confirma 15 mph. La duración estimada del ACT es 1560 s y su
+horario marca Hempstead a 1575 s: no puede tratarse la estimación como un plazo.
+Este oráculo valida parámetros y orientación; no afirma paridad de la traza
+completa ni de la respuesta de todas las válvulas americanas.

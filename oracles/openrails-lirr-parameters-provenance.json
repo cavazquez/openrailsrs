@@ -1,0 +1,21 @@
+{
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "sha256": {
+    "RunActivity.exe": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2",
+    "Orts.Simulation.dll": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679",
+    "Orts.Settings.dll": "fe0d8d81149f480f3972c80e64ffaf6012c7599e32c26c8e4d46510e3edbb2e7",
+    "Orts.Common.dll": "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212",
+    "Orts.Formats.Msts.dll": "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465",
+    "Orts.Parsers.Msts.dll": "8e0781c9f861ed95b4467d1bf948ea7aca896d634f21ac5952f97a9f630d0b36",
+    "MonoGame.Framework.dll": "c6a16c29705a4c847e0e4a2647bf432604cd9320cbc5d4125ab01ae7bb7e6542",
+    "Newtonsoft.Json.dll": "9af2e1c672afd67a291b8f2031a341a3788d4d9f683eaddc6ceab3a3a74c546e"
+  },
+  "helper_sha256": "aa396bca919c73a3defebd263eefb7f15e01c2240a9d06b28b9e96be50d982a0",
+  "loader_sha256": "c832f071a28f61178da2814d382069c3dc15cdb2aff7b89f40fe5974ffdb60a0",
+  "activity_sha256": "c667aeedf94b2b90283e801906f865e37d4e8a4b67cd83430bab74b94ac287ab",
+  "output_sha256": "1bec75725480be057203e3f7f4a7f3c121a81eb82bd7a130cf6c797da78b0f3f",
+  "source": "https://static.openrails.org/files/LIRR.zip",
+  "content_package_sha256": "4d33e3e0e6d8d103699d0302f97194d7dc82f8820e5cc5b2173d8a6180de36c5",
+  "independent_capture_output_sha256": "1bec75725480be057203e3f7f4a7f3c121a81eb82bd7a130cf6c797da78b0f3f"
+}

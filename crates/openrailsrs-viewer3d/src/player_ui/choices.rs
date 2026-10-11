@@ -1,5 +1,8 @@
 //! Direct, searchable choices. Incomplete content remains selectable for diagnosis.
 use super::*;
+#[path = "choice_filters.rs"]
+mod filters;
+pub(super) use filters::{ChoiceFilter, cycle_filter, favorite_key, filtered};
 
 pub(super) const PAGE_SIZE: usize = 5;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -29,6 +32,12 @@ pub(super) struct ChoiceSearch {
     pub query: String,
     pub page: usize,
     pub cursor: Option<usize>,
+    pub country: usize,
+    pub gauge: usize,
+    pub traction: usize,
+    pub resources: usize,
+    pub favorites_only: bool,
+    pub filters_expanded: bool,
 }
 
 fn normalized(text: &str) -> String {
@@ -117,6 +126,7 @@ pub(super) fn build(
     menu: &PlayerLaunchMenu,
     kind: ChoiceKind,
     previews: Option<&super::previews::Previews>,
+    settings: &PlayerSettings,
 ) {
     let search = &ui.choice_search[kind.slot()];
     let focused = ui.choice_focus == Some(kind);
@@ -142,7 +152,8 @@ pub(super) fn build(
             button(p, "Limpiar", UiCommand::ClearSearch(kind));
         }
     });
-    let matches = matching(menu, kind, &search.query);
+    filters::build(p, search, menu, kind, settings);
+    let matches = filtered(menu, kind, search, settings);
     let pages = matches.len().div_ceil(PAGE_SIZE).max(1);
     let page = search.page.min(pages - 1);
     label(
@@ -220,8 +231,16 @@ pub(super) fn build(
                 label(
                     p,
                     format!(
-                        "{}{}",
+                        "{}{}{}",
                         if selected { "✓ " } else { "" },
+                        if settings
+                            .library_favorites
+                            .contains(&favorite_key(menu, kind, index))
+                        {
+                            "★ "
+                        } else {
+                            ""
+                        },
                         title(menu, kind, index)
                     ),
                     14.0,
@@ -293,6 +312,7 @@ pub(super) fn choice_keys(
     mut ui: ResMut<PlayerUiState>,
     mut menu: ResMut<PlayerLaunchMenu>,
     keys: Res<ButtonInput<KeyCode>>,
+    settings: Res<PlayerSettings>,
 ) {
     for input in events.read() {
         let Some(kind) = ui.choice_focus else {
@@ -309,7 +329,7 @@ pub(super) fn choice_keys(
                 search.cursor = None;
             }
             Key::ArrowUp | Key::ArrowDown => {
-                let count = matching(&menu, kind, &search.query).len();
+                let count = filtered(&menu, kind, search, &settings).len();
                 if count > 0 {
                     let cursor = search.cursor.unwrap_or(search.page * PAGE_SIZE);
                     search.cursor = Some(cycle(
@@ -325,7 +345,7 @@ pub(super) fn choice_keys(
                 }
             }
             Key::Enter => {
-                let index = matching(&menu, kind, &search.query)
+                let index = filtered(&menu, kind, search, &settings)
                     .get(search.cursor.unwrap_or(search.page * PAGE_SIZE))
                     .copied();
                 if let Some(index) = index {

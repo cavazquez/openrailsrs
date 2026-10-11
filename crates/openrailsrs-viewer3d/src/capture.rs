@@ -440,7 +440,8 @@ impl CaptureScene<'_, '_> {
             .map_or(serde_json::Value::Null, |journey| journey.report());
         report["ui_layout"] = serde_json::Value::Array(self.menu_nodes.iter().filter(|(name, _, _)| {
                 name.as_str().starts_with("ui-") || name.as_str().starts_with("home-")
-                    || matches!(name.as_str(), "player-menu" | "launch-footer" | "launch-unavailable")
+                    || name.as_str().starts_with("choice-")
+                    || matches!(name.as_str(), "player-menu" | "player-scroll" | "launch-footer" | "launch-unavailable")
             }).map(|(name, node, transform)| {
                 let center = transform.translation;
                 let size = node.size();

@@ -16,6 +16,7 @@ struct ServiceOutcome<'a> {
     distance_m: f64,
     score: f64,
     failure: Option<&'a str>,
+    completion_scope: &'a str,
     stops: &'a [openrailsrs_sim::ServiceStopResult],
 }
 
@@ -29,14 +30,6 @@ pub fn run(scenario_path: &Path, out_dir: &Path, frame_dt: f64) -> Result<bool> 
         .context("scenario has no directory")?;
     let scenario = openrailsrs_scenarios::load_scenario(scenario_path)?;
     let mut session = LiveDriveSession::from_scenario(scenario_dir, &scenario)?;
-    anyhow::ensure!(
-        session
-            .gameplay
-            .stop_targets
-            .last()
-            .is_some_and(|s| s.is_terminal),
-        "a station service needs a declared terminal stop"
-    );
     std::fs::create_dir_all(out_dir)?;
     let mut csv = RunCsvWriter::new(File::create(out_dir.join("run.csv"))?)?;
     csv.write_sample(&session.state)?;
@@ -87,6 +80,7 @@ pub fn run(scenario_path: &Path, out_dir: &Path, frame_dt: f64) -> Result<bool> 
         distance_m: session.state.odometer_m,
         score: (1000.0 - session.gameplay.accrued_penalty).max(0.0),
         failure: session.gameplay.failure.as_deref(),
+        completion_scope: "Resolved route and declared passenger stops; not arbitrary ACT scripted events",
         stops: &session.gameplay.stop_results,
     };
     let json = serde_json::to_string_pretty(&outcome)?;

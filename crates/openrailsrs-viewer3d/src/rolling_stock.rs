@@ -17,6 +17,8 @@ pub struct ConsistVehicleVisual {
     pub shape_file: Option<String>,
     /// Authored ENG/WAG directory, retaining identity when filenames are shared.
     pub asset_dir: Option<PathBuf>,
+    /// Original CON entry; an ENG filename need not match its WagonShape.
+    pub stock_file: Option<PathBuf>,
     pub length_m: f32,
     /// Metres behind the train head along the travel axis (negative X local).
     pub offset_m: f32,
@@ -132,6 +134,7 @@ pub fn vehicles_from_consist(consist: &Consist) -> Vec<ConsistVehicleVisual> {
                 name: l.name.clone(),
                 shape_file: l.wagon_shape.clone(),
                 asset_dir: None,
+                stock_file: None,
                 length_m: l.length_m as f32,
                 offset_m,
                 flipped: l.flipped,
@@ -140,6 +143,7 @@ pub fn vehicles_from_consist(consist: &Consist) -> Vec<ConsistVehicleVisual> {
                 name: w.name.clone(),
                 shape_file: w.wagon_shape.clone(),
                 asset_dir: None,
+                stock_file: None,
                 length_m: w.length_m as f32,
                 offset_m,
                 flipped: w.flipped,
@@ -164,6 +168,7 @@ pub fn try_load_consist_vehicles(
         for (visual, entry) in vehicles.iter_mut().zip(entries.entries) {
             let stock = openrailsrs_train::resolve_consist_entry_path(asset_root, entry.path());
             visual.asset_dir = stock.parent().map(Path::to_path_buf);
+            visual.stock_file = Some(stock);
         }
     }
     if vehicles.is_empty() {
@@ -171,6 +176,22 @@ pub fn try_load_consist_vehicles(
     } else {
         Some(vehicles)
     }
+}
+
+/// Resolve the locomotive definition by its CON identity before any legacy
+/// shape-name convention. A missing authored ENG must not select another cab.
+pub fn vehicle_engine_path(vehicle: &ConsistVehicleVisual, trainset: &Path) -> Option<PathBuf> {
+    let path = if let Some(stock) = &vehicle.stock_file {
+        if !stock.extension()?.eq_ignore_ascii_case("eng") {
+            return None;
+        }
+        trainset.join(stock.file_name()?)
+    } else {
+        let stem = Path::new(vehicle.shape_file.as_deref()?).file_stem()?;
+        trainset.join(stem).with_extension("eng")
+    };
+    openrailsrs_formats::resolve_path_case_insensitive(&path)
+        .or_else(|| path.is_file().then_some(path))
 }
 
 /// Resolve from the authored stock first; shared filenames must not select a
@@ -231,6 +252,7 @@ mod tests {
             name: "native".into(),
             shape_file: Some("shared.s".into()),
             asset_dir: Some(right.clone()),
+            stock_file: None,
             length_m: 20.0,
             offset_m: 0.0,
             flipped: false,
@@ -251,6 +273,29 @@ mod tests {
                 .as_ref()
                 .is_some_and(|p| p.ends_with("RF_Blue_Pullman"))
         }));
+        assert!(cars.iter().all(|car| car.stock_file.is_some()));
+    }
+
+    #[test]
+    fn cab_uses_the_con_engine_name_when_wagon_shape_has_another_name() {
+        let temp = tempfile::tempdir().unwrap();
+        let stock = temp.path().join("OR-84030T-B.eng");
+        std::fs::write(&stock, "authored engine").unwrap();
+        std::fs::write(temp.path().join("DR_BR_2MT_84030.eng"), "wrong engine").unwrap();
+        let mut car = ConsistVehicleVisual {
+            name: "Tank".into(),
+            shape_file: Some("DR_BR_2MT_84030.s".into()),
+            asset_dir: Some(temp.path().into()),
+            stock_file: Some(stock.clone()),
+            length_m: 12.0,
+            offset_m: -6.0,
+            flipped: false,
+        };
+        assert_eq!(vehicle_engine_path(&car, temp.path()), Some(stock.clone()));
+        std::fs::remove_file(stock).unwrap();
+        assert!(vehicle_engine_path(&car, temp.path()).is_none());
+        car.stock_file = Some(temp.path().join("trailer.wag"));
+        assert!(vehicle_engine_path(&car, temp.path()).is_none());
     }
 
     #[test]

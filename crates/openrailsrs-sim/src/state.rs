@@ -22,6 +22,8 @@ pub struct TrainSimState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rail_adhesion: Option<crate::adhesion::RailAdhesionState>,
     pub time: SimTime,
+    #[serde(default)]
+    pub path_reversed: bool,
     pub path_edges: Vec<String>,
     pub edge_index: usize,
     pub pos_on_edge_m: f64,
@@ -58,6 +60,12 @@ pub struct TrainSimState {
     pub diesel_motor_heat: Vec<f64>,
     /// Ramped tractive force per diesel engine (OR `TractionForceN`).
     pub diesel_traction_force_n: Vec<f64>,
+    /// Resolved motor effort before adhesion, in consist order. Read by the cab.
+    #[serde(default)]
+    pub motor_force_n: Vec<f64>,
+    /// Force transmitted at wheel/rail contact, in consist order.
+    #[serde(default)]
+    pub rail_force_n: Vec<f64>,
     /// Moving-average tractive load per diesel engine (OR `AverageForceN`).
     pub diesel_average_force_n: Vec<f64>,
     /// Effective curve throttle per diesel (`min(driver, apparent)` unless power-limited).
@@ -74,6 +82,7 @@ impl TrainSimState {
             native_dynamics: None,
             rail_adhesion: None,
             time: SimTime(0.0),
+            path_reversed: false,
             path_edges,
             edge_index: 0,
             pos_on_edge_m: 0.0,
@@ -95,6 +104,8 @@ impl TrainSimState {
             diesel_run_up: Vec::new(),
             diesel_motor_heat: Vec::new(),
             diesel_traction_force_n: Vec::new(),
+            motor_force_n: Vec::new(),
+            rail_force_n: Vec::new(),
             diesel_average_force_n: Vec::new(),
             diesel_apparent_throttle: Vec::new(),
         }

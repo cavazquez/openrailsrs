@@ -441,6 +441,9 @@ mod tests {
             brake_force_kn: 120.0,
             diesel_rpm: Some(900.0),
             boiler_bar: None,
+            max_current_a: None,
+            native_axles: true,
+            tractive_load_fraction: 0.0,
             traction_load_fraction: 0.0,
             overspeed: false,
         };
@@ -496,6 +499,9 @@ mod tests {
             brake_force_kn: 0.0,
             diesel_rpm: None,
             boiler_bar: Some(12.0),
+            max_current_a: None,
+            native_axles: true,
+            tractive_load_fraction: 0.0,
             traction_load_fraction: 0.0,
             overspeed: true,
         };

@@ -203,16 +203,16 @@ fn import_activity_produces_scenario() {
     let name = value["scenario"]["name"].as_str().unwrap_or_default();
     assert_eq!(name, "Minimal Test Activity");
 
-    // Duration from activity (1h30m = 5400s).
+    // Author duration is an estimate; it must not cut off a playable service.
     let duration = value["simulation"]["duration"].as_float().unwrap_or(0.0);
     assert!(
-        (duration - 5400.0).abs() < 1.0,
-        "expected 5400 s, got {duration}"
+        duration >= 5400.0 * 3.0,
+        "expected a separate execution horizon, got {duration}"
     );
 }
 
 #[test]
-fn native_timetable_rejects_a_signal_id_from_a_different_route_edition() {
+fn native_timetable_skips_obsolete_signal_ids_without_inventing_a_platform() {
     let dir = tempfile::tempdir().unwrap();
     let native = fixtures_dir().join("with_signals");
     std::fs::copy(native.join("route.tdb"), dir.path().join("route.tdb")).unwrap();
@@ -240,16 +240,14 @@ fn native_timetable_rejects_a_signal_id_from_a_different_route_edition() {
     )"#,
     )
     .unwrap();
-    let error =
+    let text =
         openrailsrs_msts::import_activity_with_track(dir.path(), &activity, Some(dir.path()))
-            .expect_err("a signal cannot become a station");
+            .unwrap();
+    let scenario: openrailsrs_scenarios::ScenarioFile = toml::from_str(&text).unwrap();
     assert!(
-        error
-            .to_string()
-            .contains("Timetable item 1 is not a native platform"),
-        "{error}"
+        scenario.route.stops.is_empty(),
+        "an obsolete signal ID must never become a guessed station"
     );
-    assert!(error.to_string().contains("same route edition"));
 }
 
 #[test]
@@ -587,7 +585,7 @@ fn import_route_applies_speed_post_limits() {
         (lim - 90.0).abs() < 1e-6,
         "speed post must not lower the preceding kilometre: {lim}"
     );
-    let posts = value["edge_profiles"]["e2_r"]["speed_posts"]
+    let posts = value["edge_profiles"]["e2"]["speed_posts"]
         .as_array()
         .unwrap();
     assert_eq!(posts.len(), 1);
@@ -851,20 +849,14 @@ fn chiltern_birmingham_import_checks_pat_placement_and_route_edition() {
     );
     let imported = import_activity_with_summary(route_dir, &act, Some(&out));
     let tdb = TrackDbFile::from_path(route_dir.join("Chiltern.tdb")).expect("native database");
-    // Some author editions retain this older activity after renumbering TDB
-    // items. Preserve the PAT placement check, but reject a signal used as a
-    // station rather than inventing a replacement platform from its position.
-    if let Some(stop) = activity.player_stops.iter().find(|stop| {
-        tdb.items.iter().any(|item| {
+    // OR logs and skips stale PlatformStartID entries. The native PAT placement
+    // must remain valid and no adjacent signal may become a guessed platform.
+    for stop in &activity.player_stops {
+        if tdb.items.iter().any(|item| {
             item.id == stop.platform_start_id && !matches!(item.kind, TrItemKind::Platform { .. })
-        })
-    }) {
-        let error = imported.expect_err("activity from a different TDB edition must fail");
-        assert!(error.to_string().contains(&format!(
-            "Timetable item {} is not a native platform",
-            stop.platform_start_id
-        )));
-        return;
+        }) {
+            assert!(imported.is_ok());
+        }
     }
     let (toml, _, overlay_applied) = imported.expect("import activity");
     assert!(

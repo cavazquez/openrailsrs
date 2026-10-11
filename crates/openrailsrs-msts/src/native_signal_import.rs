@@ -1,7 +1,7 @@
 //! Link authored SIGCFG/SIGSCR and WORLD features to directed imported signals.
 //! Unsupported programs remain an explicit import error, never a green fallback.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Component, Path, PathBuf};
 
 use openrailsrs_formats::{
@@ -147,6 +147,7 @@ fn programs(text: &str) -> Result<HashMap<String, String>, MstsError> {
 struct WorldHead {
     group: String,
     features: u16,
+    heads: u32,
 }
 
 fn world_heads(route: &Path, cfg: &Ast, tdb: &Ast) -> Result<HashMap<u32, WorldHead>, MstsError> {
@@ -255,6 +256,7 @@ fn world_heads(route: &Path, cfg: &Ast, tdb: &Ast) -> Result<HashMap<u32, WorldH
                 heads.entry(unit.tr_item_id).or_insert_with(|| WorldHead {
                     group: format!("{x}/{z}/{uid}/{back}"),
                     features: features[usize::from(*back)],
+                    heads: *signal_sub_obj,
                 });
             }
         }
@@ -277,6 +279,8 @@ pub(super) fn bind(
     let cfg = parse_named_stf(&bounded_text(&cfg_path, MAX_NATIVE_FILE_BYTES)?)?;
     let mut functions = HashMap::new();
     let mut script_aliases = HashMap::new();
+    let mut defaults = HashMap::new();
+    let mut draw_states = HashMap::new();
     for signal_type in blocks(&cfg, "SignalType") {
         if let (Some(name), Some(function)) = (
             atoms(signal_type).first().cloned(),
@@ -288,6 +292,47 @@ pub(super) fn bind(
             let script = field(signal_type, "ORTSScript")
                 .unwrap_or_else(|| name.clone())
                 .to_ascii_uppercase();
+            let aspect_names = [
+                "STOP",
+                "STOP_AND_PROCEED",
+                "RESTRICTING",
+                "APPROACH_1",
+                "APPROACH_2",
+                "APPROACH_3",
+                "CLEAR_1",
+                "CLEAR_2",
+            ];
+            let mut declared = Vec::new();
+            let mut states = [-1; 8];
+            let draws: HashMap<_, _> = blocks(signal_type, "SignalDrawState")
+                .into_iter()
+                .filter_map(|block| {
+                    let values = atoms(block);
+                    Some((
+                        values.get(1)?.to_ascii_uppercase(),
+                        values.first()?.parse::<i32>().ok()?,
+                    ))
+                })
+                .collect();
+            for block in blocks(signal_type, "SignalAspect") {
+                let values = atoms(block);
+                if let Some(index) = values.first().and_then(|name| {
+                    aspect_names
+                        .iter()
+                        .position(|a| name.eq_ignore_ascii_case(a))
+                }) {
+                    declared.push(index);
+                    states[index] = values
+                        .get(1)
+                        .and_then(|name| draws.get(&name.to_ascii_uppercase()))
+                        .copied()
+                        .unwrap_or(-1);
+                }
+            }
+            let most = declared.iter().copied().min().unwrap_or(0);
+            let least = declared.iter().copied().max().unwrap_or(0);
+            defaults.insert(name.clone(),format!("if (block_state() == BLOCK_CLEAR) state = {least}; else state = {most}; draw_state = DEF_DRAW_STATE(state);"));
+            draw_states.insert(name.clone(), states);
             script_aliases.insert(name.clone(), script);
             functions.insert(name, function.to_ascii_uppercase());
         }
@@ -346,6 +391,7 @@ pub(super) fn bind(
             )
         })
         .collect();
+    let mut compiled = HashSet::new();
     if let Some(signals) = track.get_mut("signals").and_then(toml::Value::as_array_mut) {
         for signal in signals {
             let id = signal["id"]
@@ -358,24 +404,55 @@ pub(super) fn bind(
             let Some((reverse, name)) = definitions.get(&id) else {
                 continue;
             };
-            let function = functions.get(name).ok_or_else(|| {
-                MstsError::msg(format!("Missing native SIGCFG function for {name}"))
-            })?;
+            let missing_type = !functions.contains_key(name);
+            let function = functions.get(name).map(String::as_str).unwrap_or("UNKNOWN");
+            let unknown_default="if (block_state()==BLOCK_CLEAR) state=SIGASP_CLEAR_2; else state=SIGASP_STOP; draw_state=-1;".to_string();
+
             if !matches!(
-                function.as_str(),
-                "NORMAL" | "DISTANCE" | "INFO" | "REPEATER" | "SHUNTING"
+                function,
+                "NORMAL" | "DISTANCE" | "INFO" | "REPEATER" | "SHUNTING" | "UNKNOWN"
             ) {
                 return Err(MstsError::msg(format!(
                     "Unsupported native signal function {function}"
                 )));
             }
             let program_name = script_aliases.get(name).unwrap_or(name);
-            let source = sources.get(program_name).ok_or_else(|| {
-                MstsError::msg(format!(
-                    "Missing native SIGSCR program {program_name} for signal type {name}"
-                ))
-            })?;
-            SignalProgram::compile(source).map_err(|e| MstsError::msg(format!("{name}: {e}")))?;
+            let basic_update = !sources.contains_key(program_name);
+            let source = if let Some(source) = sources.get(program_name) {
+                source
+            } else {
+                // OR tries C# before SH_update_basic. Never silently replace an
+                // existing original C# signal with the basic policy.
+                if [name.as_str(), program_name.as_str()].iter().any(|script| {
+                    [
+                        route.join("SignalScripts"),
+                        route.join("OpenRails/SignalScripts"),
+                    ]
+                    .iter()
+                    .any(|dir| {
+                        resolve_path_case_insensitive(&dir.join(format!("{script}.cs"))).is_some()
+                    })
+                }) {
+                    return Err(MstsError::msg(format!(
+                        "Original C# signal {name} requires a compatible signal host"
+                    )));
+                }
+                defaults.get(name).unwrap_or(&unknown_default)
+            };
+            if compiled.insert((program_name.clone(), basic_update)) {
+                SignalProgram::compile(source)
+                    .map_err(|e| MstsError::msg(format!("{name}: {e}")))?;
+                if missing_type {
+                    eprintln!(
+                        "Signal {name}: original SIGCFG type missing; using OR's unconfigured UNKNOWN head policy"
+                    );
+                }
+                if basic_update {
+                    eprintln!(
+                        "Signal {name}: original type has no program; using OR SH_update_basic"
+                    );
+                }
+            }
             let edge = signal["edge_id"]
                 .as_str()
                 .unwrap()
@@ -399,9 +476,12 @@ pub(super) fn bind(
             }
             let native = NativeSignalDef {
                 name: name.clone(),
-                function: function.clone(),
+                function: function.into(),
                 source: source.clone(),
+                basic_update,
+                draw_states: draw_states.get(name).copied(),
                 feature_flags: world.get(&id).map(|head| head.features),
+                head_flags: world.get(&id).map(|head| head.heads),
                 group: world.get(&id).map(|head| head.group.clone()),
                 forced_stop: failed_signals.contains(&id),
             };

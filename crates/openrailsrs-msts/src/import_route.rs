@@ -486,6 +486,50 @@ fn convert_tdb_to_toml(
     apply_tdb_world_positions(tdb, &node_map, &mut nodes);
 
     let mut signals = build_signals(&tdb.items, &item_to_edge);
+    let items: HashMap<_, _> = tdb.items.iter().map(|item| (item.id, item)).collect();
+    for item in &tdb.items {
+        let TrItemKind::Platform {
+            pair_id, station, ..
+        } = &item.kind
+        else {
+            continue;
+        };
+        if item.id >= *pair_id {
+            continue;
+        }
+        let Some(pair) = items.get(pair_id) else {
+            continue;
+        };
+        if !matches!(pair.kind, TrItemKind::Platform { pair_id: id, .. } if id == item.id) {
+            continue;
+        }
+        let Some(edge) = item_to_edge
+            .get(&item.id)
+            .filter(|edge| item_to_edge.get(pair_id) == Some(*edge))
+        else {
+            continue;
+        };
+        let Some(length) = edges.iter().find(|e| &e.id == edge).map(|e| e.length_m) else {
+            continue;
+        };
+        let start = item.distance_m.min(pair.distance_m);
+        let end = item.distance_m.max(pair.distance_m);
+        if !start.is_finite() || !end.is_finite() || start < 0.0 || end > length {
+            continue;
+        }
+        for (edge, start_m, end_m) in [
+            (edge.clone(), start, end),
+            (format!("{edge}_r"), length - end, length - start),
+        ] {
+            edge_profiles.entry(edge).or_default().platforms.push(
+                openrailsrs_track::PositionPlatform {
+                    start_m,
+                    end_m,
+                    name: station.clone(),
+                },
+            );
+        }
+    }
 
     if let Some(act) = activity {
         apply_failed_signals(&mut signals, &act.failed_signals);
@@ -768,25 +812,22 @@ fn apply_speed_posts(
             let mut before = 0.0;
             for (section, span) in sections.iter().zip(lengths) {
                 if item.distance_m <= before + span + 1e-6 {
-                    // OR Signals.AddSpeed: initial Traveller direction is Backward.
-                    // Convert its orientation comparison to the native forward AY.
+                    // OR Signals.AddSpeed starts with a Backward traveller.
+                    // Its facing comparison selects the reverse vector, not forward.
                     let curve_yaw = catalog
                         .and_then(|c| c.sections.get(&section.section_index))
                         .and_then(|d| d.curve_angle_deg)
                         .map_or(0.0, |a| {
                             a.to_radians() * ((item.distance_m - before) / span).clamp(0.0, 1.0)
                         });
-                    return Some(
-                        (section.ay + curve_yaw - (std::f64::consts::FRAC_PI_2 - angle)).cos()
-                            < 0.0,
-                    );
+                    return Some(native_speed_post_is_reverse(section.ay + curve_yaw, angle));
                 }
                 before += span;
             }
             None
         });
         for reverse in [false, true] {
-            if direction.is_some_and(|forward| forward == reverse) {
+            if direction.is_some_and(|native_reverse| native_reverse != reverse) {
                 continue;
             }
             let position = item.distance_m.clamp(0.0, edge.length_m);
@@ -807,6 +848,27 @@ fn apply_speed_posts(
             );
         }
     }
+}
+
+/// OR's `Signals.AddSpeed` compares a Backward traveller with the post angle.
+/// Keep its float rounding and strict pi/2 boundary; cos alone changes an
+/// exactly perpendicular post's direction due to precision at that boundary.
+fn native_speed_post_is_reverse(forward_heading_rad: f64, angle_rad: f64) -> bool {
+    fn wrap_angle(angle: f32) -> f32 {
+        let pi = std::f32::consts::PI;
+        let mut wrapped = angle % std::f32::consts::TAU;
+        if wrapped <= -pi {
+            wrapped += std::f32::consts::TAU;
+        } else if wrapped > pi {
+            wrapped -= std::f32::consts::TAU;
+        }
+        wrapped
+    }
+    let backward = wrap_angle(forward_heading_rad as f32 + std::f32::consts::PI);
+    let delta = wrap_angle(
+        (f64::from(backward) - (std::f64::consts::FRAC_PI_2 - f64::from(angle_rad as f32))) as f32,
+    );
+    f64::from(delta.abs()) < std::f64::consts::FRAC_PI_2
 }
 
 fn apply_restricted_zones(
@@ -1102,6 +1164,29 @@ mod tests {
         assert!(toml.contains("tdb_id = 2"));
         assert!(toml.contains("kind = \"edge\""));
         assert!(toml.contains("id = \"e2\""));
+    }
+
+    #[test]
+    fn native_speed_post_facing_matches_original_lirr_dll() {
+        let captured: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../oracles/openrails-lirr-parameters.json"
+        ))
+        .unwrap();
+        let posts = captured["speed_posts"].as_array().unwrap();
+        assert_eq!(posts.len(), 778);
+        for post in posts {
+            assert_eq!(
+                native_speed_post_is_reverse(
+                    post["forward_heading_rad"].as_f64().unwrap(),
+                    post["angle_rad"].as_f64().unwrap(),
+                ),
+                post["direction"].as_u64().unwrap() == 1,
+                "Native AddSpeed direction for {post}",
+            );
+        }
+        // OR converts delta to float before its strict double pi/2 comparison.
+        assert!(!native_speed_post_is_reverse(0., 0.));
+        assert!(!native_speed_post_is_reverse(std::f64::consts::PI, 0.));
     }
 
     #[test]

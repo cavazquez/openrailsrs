@@ -58,8 +58,9 @@ pub use msts_units::{
     parse_velocity_mps,
 };
 pub use parser::{
-    parse, parse_all_top_level, parse_all_top_level_lenient, parse_cab_view_text, parse_first,
-    parse_first_from_first_paren, parse_from_first_paren, parse_named_stf, parse_vehicle_text,
+    parse, parse_activity_text, parse_all_top_level, parse_all_top_level_lenient,
+    parse_cab_view_text, parse_first, parse_first_from_first_paren, parse_from_first_paren,
+    parse_named_stf, parse_vehicle_text,
 };
 pub use shape_binary_direct::{
     binary_shape_to_ast, is_binary_shape_payload, shape_from_binary_payload,
@@ -107,3 +108,9 @@ pub use vehicle_field_catalog::{
     lookup_field,
 };
 pub use vehicle_include::{read_msts_text_with_includes, read_vehicle_ast};
+
+pub mod timetable;
+pub use timetable::{
+    NativeTimetable, NativeTimetableService, NativeTimetableStop, TimetableCommand,
+    timetable_commands, timetable_time_s,
+};

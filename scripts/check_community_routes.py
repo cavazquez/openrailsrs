@@ -131,10 +131,12 @@ def exercise(case, args):
         record["activity"]["stops"] = [s["name"] for s in scenario["route"].get("stops", [])]
         if args.service:
             log = output / "service.log"
+            outcome = output / "service" / "outcome.json"
+            # A failed new process must not inherit a prior run's success.
+            outcome.unlink(missing_ok=True)
             code = command([args.cli, "play-service", scenario_path, "--out-dir", output / "service"],
                            log, args.timeout_s)
             record["service"] = {"exit_code": code}
-            outcome = output / "service" / "outcome.json"
             if outcome.is_file():
                 record["service"]["outcome"] = json.loads(outcome.read_text())
             if code:

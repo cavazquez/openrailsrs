@@ -579,6 +579,7 @@ mod tests {
     #[test]
     fn pat_world_interpolates_distance() {
         let path = PathFile {
+            node_flags: vec![],
             name: String::new(),
             pdps: vec![
                 PathDataPoint {

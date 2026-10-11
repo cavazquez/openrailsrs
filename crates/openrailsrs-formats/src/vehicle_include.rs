@@ -61,6 +61,86 @@ pub fn read_msts_text_with_includes(path: impl AsRef<Path>) -> Result<String, Fo
 pub fn read_vehicle_ast(path: impl AsRef<Path>) -> Result<Ast, FormatError> {
     parse_vehicle_text(&read_msts_text_with_includes(path)?)
 }
+/// Relocate a legacy Windows TRAINSET reference into this same author's
+/// installation. The complete suffix is preserved; no filename search occurs.
+fn portable_include(
+    path: &Path,
+    root: &Path,
+    reference: &str,
+) -> Result<(PathBuf, String), FormatError> {
+    let windows = reference
+        .as_bytes()
+        .first()
+        .is_some_and(u8::is_ascii_alphabetic)
+        && reference.as_bytes().get(1) == Some(&b':')
+        && reference.as_bytes().get(2) == Some(&b'/');
+    if windows {
+        let parts = reference[3..].split('/').collect::<Vec<_>>();
+        if parts
+            .iter()
+            .any(|part| part.is_empty() || *part == "." || *part == ".." || part.contains(':'))
+        {
+            return Err(error(path, "Include absoluto inválido"));
+        }
+        let indices = parts
+            .iter()
+            .enumerate()
+            .filter(|(_, p)| p.eq_ignore_ascii_case("TRAINSET"))
+            .map(|(i, _)| i)
+            .collect::<Vec<_>>();
+        if indices.len() != 1 || indices[0] + 1 >= parts.len() {
+            return Err(error(path, "Include absoluto no pertenece a TRAINSET"));
+        }
+        let suffix = parts[indices[0] + 1..].iter().collect::<PathBuf>();
+        let stock = if root
+            .file_name()
+            .is_some_and(|name| name.eq_ignore_ascii_case("TRAINSET"))
+        {
+            root.to_path_buf()
+        } else if root
+            .file_name()
+            .is_some_and(|name| name.eq_ignore_ascii_case("TRAINS"))
+        {
+            root.join("TRAINSET")
+        } else {
+            return Err(error(
+                path,
+                "Include absoluto sin instalación TRAINS/TRAINSET",
+            ));
+        };
+        let requested = stock.join(suffix);
+        let parent = path.parent().unwrap();
+        let depth = parent
+            .strip_prefix(root)
+            .map_err(|_| error(path, "Include fuera de la instalación"))?
+            .components()
+            .count();
+        let portable = std::iter::repeat_n("..", depth)
+            .chain(
+                requested
+                    .strip_prefix(root)
+                    .unwrap()
+                    .iter()
+                    .map(|s| s.to_str().unwrap_or("")),
+            )
+            .collect::<Vec<_>>()
+            .join("/");
+        return Ok((requested, portable));
+    }
+    // STFReader concatenates the containing directory before the authored
+    // name. A single leading slash in legacy /INCLUDE/foo is still local.
+    if reference.starts_with('/') && !reference.starts_with("//") {
+        return Ok((
+            path.parent().unwrap().join(&reference[1..]),
+            reference[1..].into(),
+        ));
+    }
+    if Path::new(reference).is_absolute() || reference.contains(':') {
+        return Err(error(path, "Include absoluto no permitido"));
+    }
+    Ok((path.parent().unwrap().join(reference), reference.into()))
+}
+
 fn expand(
     path: &Path,
     root: &Path,
@@ -133,11 +213,7 @@ fn expand(
                 if lexer.next_token()? != Some(Token::RParen) {
                     return Err(error(path, "Include debe contener un solo archivo"));
                 }
-                let relative_path = Path::new(&relative);
-                if relative_path.is_absolute() || relative.contains(':') {
-                    return Err(error(path, "Include absoluto no permitido"));
-                }
-                let requested = path.parent().unwrap().join(relative_path);
+                let (requested, relative) = portable_include(path, root, &relative)?;
                 // Reject a missing escape as well as an existing one: it must
                 // never be presented as an installation destination.
                 let mut normalized = PathBuf::new();
@@ -195,6 +271,38 @@ fn expand(
 }
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn legacy_drive_include_preserves_the_complete_trainset_suffix() {
+        let tmp = tempfile::tempdir().unwrap();
+        let trains = tmp.path().join("TRAINS");
+        let stock = trains.join("TRAINSET/1905/Stock");
+        std::fs::create_dir_all(&stock).unwrap();
+        std::fs::create_dir_all(trains.join("TRAINSET/Common.Include")).unwrap();
+        std::fs::write(
+            trains.join("TRAINSET/Common.Include/mass.inc"),
+            "Mass ( 42t )",
+        )
+        .unwrap();
+        let wagon = stock.join("car.wag");
+        let source = "Wagon ( car Size ( 3m 4m 20m ) Include ( \"D:/Old MSTS/TRAINS/TRAINSET/Common.Include/mass.inc\" ) )";
+        std::fs::write(&wagon, source).unwrap();
+        let ast = read_vehicle_ast(&wagon).unwrap();
+        assert_eq!(crate::WagonFile::from_ast(&ast).unwrap().mass_kg, 42_000.0);
+        assert_eq!(std::fs::read_to_string(&wagon).unwrap(), source);
+        for path in [
+            "D:/old/TRAINSET/../outside.inc",
+            "D:/old/TRAINSET/Common.Include/../outside.inc",
+            "D:/old/other/mass.inc",
+            "/tmp/mass.inc",
+            "//server/TRAINSET/mass.inc",
+        ] {
+            std::fs::write(&wagon, format!("Wagon ( car Include ( \"{path}\" ) )")).unwrap();
+            assert!(
+                read_vehicle_ast(&wagon).is_err(),
+                "Accepted unsafe include {path}"
+            );
+        }
+    }
     use super::*;
     #[test]
     fn openrails_override_uses_its_own_includes_and_later_values() {

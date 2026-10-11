@@ -2,9 +2,9 @@
 use crate::LiveDriveSession;
 use openrailsrs_track::{
     SignalAspect, TrackGraph,
-    sigscript::{SignalContext, SignalProgram},
+    sigscript::{SignalContext, SignalProgram, activity_call_on, aggregate_signal_aspects},
 };
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct TrackOccupancy {
@@ -15,7 +15,7 @@ pub struct TrackOccupancy {
 }
 #[derive(Default)]
 pub struct NativeSignalRuntime {
-    programs: HashMap<String, SignalProgram>,
+    programs: HashMap<String, Arc<SignalProgram>>,
     pub aspects: HashMap<String, u8>,
     pub errors: HashMap<String, String>,
     pub(crate) needs_refresh: bool,
@@ -26,38 +26,46 @@ impl NativeSignalRuntime {
             needs_refresh: true,
             ..Self::default()
         };
+        let mut compiled = HashMap::<String, Arc<SignalProgram>>::new();
         for signal in graph.signals() {
             if let Some(native) = signal.script.as_ref().and_then(|s| s.native.as_ref()) {
                 if !matches!(
                     native.function.to_ascii_uppercase().as_str(),
-                    "NORMAL" | "DISTANCE" | "INFO" | "REPEATER" | "SHUNTING"
+                    "NORMAL" | "DISTANCE" | "INFO" | "REPEATER" | "SHUNTING" | "UNKNOWN"
                 ) {
                     return Err(format!(
                         "{}: unsupported signal function {}",
                         native.name, native.function
                     ));
                 }
-                let program = SignalProgram::compile(&native.source)
-                    .map_err(|e| format!("{}: {e}", native.name))?;
-                // Validate all aspects used by the route, not just an easy clear branch.
-                for next in 0..8 {
-                    for clear in [false, true] {
-                        for enabled in [false, true] {
-                            for route_set in [false, true] {
-                                program
-                                    .evaluate(SignalContext {
-                                        enabled,
-                                        route_set,
-                                        next_normal: next,
-                                        distant_normal: next,
-                                        block_clear: clear,
-                                        ..Default::default()
-                                    })
-                                    .map_err(|e| format!("{}: {e}", native.name))?;
+                let program = if let Some(program) = compiled.get(&native.source) {
+                    Arc::clone(program)
+                } else {
+                    let program = SignalProgram::compile(&native.source)
+                        .map_err(|e| format!("{}: {e}", native.name))?;
+                    // Validate all aspects used by the route, not just an easy clear branch.
+                    for next in 0..8 {
+                        for clear in [false, true] {
+                            for enabled in [false, true] {
+                                for route_set in [false, true] {
+                                    program
+                                        .evaluate(SignalContext {
+                                            enabled,
+                                            route_set,
+                                            next_normal: next,
+                                            distant_normal: next,
+                                            block_clear: clear,
+                                            ..Default::default()
+                                        })
+                                        .map_err(|e| format!("{}: {e}", native.name))?;
+                                }
                             }
                         }
                     }
-                }
+                    let program = Arc::new(program);
+                    compiled.insert(native.source.clone(), Arc::clone(&program));
+                    program
+                };
                 runtime.programs.insert(signal.id.clone(), program);
             }
         }
@@ -78,11 +86,18 @@ impl LiveDriveSession {
                     .parked_head_chainage_m
                     .unwrap_or(self.head_chainage_m())
             };
-            let center = head + self.formation.center_offset_m(i);
+            let offset = self.formation.center_offset_m(i);
+            let center = head
+                + if i < self.formation.coupled_count {
+                    self.oriented_car_offset(offset)
+                } else {
+                    self.parked_car_offset(offset)
+                };
             let rear = (center - car.length_m * 0.5).max(0.0);
             let front = center + car.length_m * 0.5;
             let mut start = 0.0;
-            for (edge, data) in self.state.path_edges.iter().zip(&self.path_data.edges) {
+            let (edges, pd) = self.presentation_path_for_car(offset);
+            for (edge, data) in edges.iter().zip(&pd.edges) {
                 let end = start + data.length_m;
                 if end >= rear && start <= front {
                     let mut a = (rear - start).max(0.0);
@@ -127,6 +142,10 @@ impl LiveDriveSession {
             start += self.path_data.edges[index].length_m;
         }
         heads.sort_by(|a, b| a.0.total_cmp(&b.0).then_with(|| b.3.cmp(&a.3)));
+        let first_normal_position = heads
+            .iter()
+            .find(|h| h.3 && h.0 + 1.0 >= self.head_chainage_m())
+            .map(|h| h.0);
         let mut footprint = self.external_track_occupancy.clone();
         footprint.extend(self.external_track_reservations.iter().cloned());
         footprint.extend(
@@ -238,11 +257,15 @@ impl LiveDriveSession {
                     .as_ref()
                     .unwrap();
                 let same_group = |other: &str| {
-                    self.graph
-                        .signal(other)
-                        .and_then(|s| s.script.as_ref())
-                        .and_then(|s| s.native.as_ref())
-                        .is_some_and(|other| native.group.is_some() && native.group == other.group)
+                    other == id
+                        || self
+                            .graph
+                            .signal(other)
+                            .and_then(|s| s.script.as_ref())
+                            .and_then(|s| s.native.as_ref())
+                            .is_some_and(|other| {
+                                native.group.is_some() && native.group == other.group
+                            })
                 };
                 let group_aspect = |function: &str| {
                     heads
@@ -271,39 +294,128 @@ impl LiveDriveSession {
                         .max()
                         .unwrap_or(0)
                 };
-                let next_function = |function: &str| {
+                let next_function_state = |function: &str, restrictive: bool| {
+                    let first = heads.iter().find(|h| {
+                        h.0 > *position + 0.1
+                            && !same_group(&h.2)
+                            && self
+                                .graph
+                                .signal(&h.2)
+                                .unwrap()
+                                .script
+                                .as_ref()
+                                .unwrap()
+                                .native
+                                .as_ref()
+                                .unwrap()
+                                .function
+                                .eq_ignore_ascii_case(function)
+                    });
+                    let Some(first) = first else {
+                        return 0;
+                    };
+                    let group = self
+                        .graph
+                        .signal(&first.2)
+                        .and_then(|s| s.script.as_ref())
+                        .and_then(|s| s.native.as_ref())
+                        .and_then(|s| s.group.as_ref());
+                    let values = heads
+                        .iter()
+                        .filter(|h| {
+                            let Some(other) = self
+                                .graph
+                                .signal(&h.2)
+                                .and_then(|s| s.script.as_ref())
+                                .and_then(|s| s.native.as_ref())
+                            else {
+                                return false;
+                            };
+                            other.function.eq_ignore_ascii_case(function)
+                                && (h.2 == first.2
+                                    || group
+                                        .is_some_and(|group| other.group.as_ref() == Some(group)))
+                        })
+                        .filter_map(|h| {
+                            states
+                                .get(&h.2)
+                                .or_else(|| self.native_signals.aspects.get(&h.2))
+                                .copied()
+                        });
+                    aggregate_signal_aspects(values.map(|aspect| (0, aspect)), 0, restrictive)
+                };
+                let functions = ["NORMAL", "DISTANCE", "REPEATER", "SHUNTING", "INFO"];
+                let next_mr = functions.map(|function| next_function_state(function, true));
+                let this_mr = functions.map(|function| {
                     heads
                         .iter()
-                        .find(|h| {
-                            h.0 > *position + 0.1
+                        .filter(|h| {
+                            same_group(&h.2)
                                 && self
                                     .graph
                                     .signal(&h.2)
-                                    .unwrap()
-                                    .script
-                                    .as_ref()
-                                    .unwrap()
-                                    .native
-                                    .as_ref()
-                                    .unwrap()
-                                    .function
-                                    .eq_ignore_ascii_case(function)
+                                    .and_then(|s| s.script.as_ref())
+                                    .and_then(|s| s.native.as_ref())
+                                    .is_some_and(|s| s.function.eq_ignore_ascii_case(function))
                         })
-                        .and_then(|h| {
+                        .filter_map(|h| {
                             states
                                 .get(&h.2)
                                 .or_else(|| self.native_signals.aspects.get(&h.2))
                                 .copied()
                         })
+                        .min()
                         .unwrap_or(0)
-                };
+                });
+                let mut prefix = 0.0;
+                let mut into_platform = false;
+                for (edge, data) in self.state.path_edges.iter().zip(&self.path_data.edges) {
+                    if let Some(profile) = self.graph.physics_profile(edge) {
+                        into_platform |= profile.platforms.iter().any(|p| {
+                            prefix + p.end_m > *position && prefix + p.start_m < next_position
+                        });
+                    }
+                    prefix += data.length_m;
+                    if prefix >= next_position {
+                        break;
+                    }
+                }
+                let enabled = *position + 1.0 >= self.head_chainage_m()
+                    && !(self.dispatcher.protected_signal.as_ref() == Some(id)
+                        && !self.dispatcher.waiting_for.is_empty());
+                let first_signal =
+                    first_normal_position.is_some_and(|first| (*position - first).abs() < 3.0);
+                let switch_diverging = self.state.path_edges[*index..]
+                    .iter()
+                    .filter_map(|edge| self.graph.edge(edge))
+                    .find_map(|edge| {
+                        let node = self.graph.node(&edge.from.0)?;
+                        let openrailsrs_track::NodeKind::Switch {
+                            stem_edge,
+                            diverging_edge,
+                        } = &node.kind
+                        else {
+                            return None;
+                        };
+                        if edge.id.0 != stem_edge.0 && edge.id.0 != diverging_edge.0 {
+                            return None;
+                        }
+                        Some(
+                            self.graph.switch_position(&edge.from.0)
+                                == Some(openrailsrs_track::SwitchPosition::Diverging),
+                        )
+                    })
+                    .unwrap_or(false);
                 let c = SignalContext {
-                    enabled: *position + 1.0 >= self.head_chainage_m(),
+                    enabled,
+                    draw_states: native
+                        .draw_states
+                        .unwrap_or(SignalContext::default().draw_states),
                     route_set,
                     block_clear: !occupied(*position, next_position)
                         && !(self.dispatcher.protected_signal.as_ref() == Some(id)
                             && !self.dispatcher.waiting_for.is_empty()),
-                    next_normal: next_aspect,
+                    next_normal: next_function_state("NORMAL", false),
                     distant_normal: distant,
                     distant_info: heads
                         .iter()
@@ -331,15 +443,34 @@ impl LiveDriveSession {
                         .unwrap_or(0),
                     this_normal: this,
                     feature_flags: native.feature_flags,
+                    head_flags: native.head_flags,
+                    next_mr,
+                    this_mr,
+                    switch_diverging,
+                    call_on: activity_call_on(
+                        enabled,
+                        first_signal,
+                        route_set,
+                        into_platform,
+                        false,
+                        true,
+                    ),
+                    call_on_restricted: activity_call_on(
+                        enabled,
+                        first_signal,
+                        route_set,
+                        into_platform,
+                        false,
+                        false,
+                    ),
                     this_shunting: group_aspect("SHUNTING"),
                     this_info: group_aspect("INFO"),
-                    next_info: next_function("INFO"),
-                    next_distance: next_function("DISTANCE"),
-                    next_repeater: next_function("REPEATER"),
-                    next_shunting: next_function("SHUNTING"),
+                    next_info: next_function_state("INFO", false),
+                    next_distance: next_function_state("DISTANCE", false),
+                    next_repeater: next_function_state("REPEATER", false),
+                    next_shunting: next_function_state("SHUNTING", false),
                     this_distance: group_aspect("DISTANCE"),
                     this_repeater: group_aspect("REPEATER"),
-                    ..Default::default()
                 };
                 let aspect = match self.native_signals.programs[id].evaluate(c) {
                     Ok(r) => r.aspect,
@@ -358,6 +489,7 @@ impl LiveDriveSession {
                 };
                 states.insert(id.clone(), aspect);
                 let safety = match aspect {
+                    1 if c.call_on => SignalAspect::Caution,
                     0..=1 => SignalAspect::Stop,
                     2..=5 => SignalAspect::Caution,
                     _ => SignalAspect::Clear,
@@ -378,7 +510,7 @@ impl LiveDriveSession {
                     .is_some_and(|s| {
                         matches!(
                             s.function.to_ascii_uppercase().as_str(),
-                            "INFO" | "REPEATER" | "SHUNTING"
+                            "INFO" | "REPEATER" | "SHUNTING" | "UNKNOWN"
                         )
                     });
                 self.signal_runtime.insert(
@@ -413,6 +545,103 @@ impl LiveDriveSession {
 
 #[cfg(test)]
 mod tests {
+    fn native_fixture(specs: &[(&str, f64, &str, &str, &str)]) -> LiveDriveSession {
+        let directory = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke");
+        let scenario =
+            openrailsrs_scenarios::load_scenario(directory.join("scenario.toml")).unwrap();
+        let mut session = LiveDriveSession::from_scenario(&directory, &scenario).unwrap();
+        for &(id, position, group, function, source) in specs {
+            let native=serde_json::from_value(serde_json::json!({"name":id,"source":source,"function":function,"group":group,"head_flags":8})).unwrap();
+            session
+                .graph
+                .insert_signal(openrailsrs_track::TrackSignal {
+                    id: id.into(),
+                    edge_id: "e1".into(),
+                    position_m: position,
+                    aspect: SignalAspect::Stop,
+                    clear_after_s: None,
+                    script: Some(openrailsrs_track::SignalScript {
+                        native: Some(native),
+                        ..Default::default()
+                    }),
+                })
+                .unwrap();
+        }
+        session.native_signals = NativeSignalRuntime::from_graph(&session.graph).unwrap();
+        session.evaluate_native_signals();
+        session
+    }
+    #[test]
+    fn native_multi_head_most_restrictive_aspect_uses_the_physical_group() {
+        let session = native_fixture(&[
+            (
+                "upstream",
+                100.0,
+                "up",
+                "NORMAL",
+                "state=NEXT_SIG_MR(SIGFN_NORMAL);",
+            ),
+            ("green", 500.0, "next", "NORMAL", "state=SIGASP_CLEAR_2;"),
+            (
+                "warning",
+                501.0,
+                "next",
+                "NORMAL",
+                "state=SIGASP_APPROACH_1;",
+            ),
+            (
+                "other-function",
+                500.0,
+                "next",
+                "INFO",
+                "state=SIGASP_STOP;",
+            ),
+        ]);
+        assert_eq!(session.native_signal_aspect("upstream"), Some(3));
+        assert_eq!(
+            session.signal_runtime["other-function"],
+            SignalAspect::Clear
+        );
+        assert!(session.native_signals.errors.is_empty());
+    }
+    #[test]
+    fn call_on_is_limited_to_the_first_signal_and_not_granted_for_a_platform_or_reserved_route() {
+        let source = "if (TRAINHASCALLON()) state=SIGASP_STOP_AND_PROCEED; else state=SIGASP_STOP;";
+        let mut session = native_fixture(&[
+            ("first", 100.0, "first", "NORMAL", source),
+            ("later", 500.0, "later", "NORMAL", source),
+        ]);
+        session.state.pos_on_edge_m = 80.0;
+        session.external_track_occupancy = vec![TrackOccupancy {
+            edge: "e1".into(),
+            start_m: 200.0,
+            end_m: 250.0,
+            owner: "Other".into(),
+        }];
+        session.evaluate_native_signals();
+        assert_eq!(session.native_signal_aspect("first"), Some(1));
+        assert_eq!(session.native_signal_aspect("later"), Some(0));
+        assert_eq!(session.signal_runtime["first"], SignalAspect::Caution);
+        assert_eq!(session.signal_runtime["later"], SignalAspect::Stop);
+        let mut profile = session
+            .graph
+            .physics_profile("e1")
+            .cloned()
+            .unwrap_or_default();
+        profile.platforms.push(openrailsrs_track::PositionPlatform {
+            start_m: 200.0,
+            end_m: 300.0,
+            name: "Original platform".into(),
+        });
+        session.graph.set_physics_profile("e1", profile);
+        session.evaluate_native_signals();
+        assert_eq!(session.native_signal_aspect("first"), Some(0));
+        session.graph.set_physics_profile("e1", Default::default());
+        session.dispatcher.protected_signal = Some("first".into());
+        session.dispatcher.waiting_for = vec!["Other".into()];
+        session.evaluate_native_signals();
+        assert_eq!(session.native_signal_aspect("first"), Some(0));
+    }
     use super::*;
     use std::path::Path;
     fn extended() -> (LiveDriveSession, crate::LiveTraffic) {

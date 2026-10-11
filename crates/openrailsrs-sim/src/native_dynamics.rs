@@ -12,6 +12,7 @@ pub struct NativeTrainPhysics {
     pub vehicles: Vec<NativeVehiclePhysics>,
     pub vehicle_masses_kg: Vec<f64>,
     pub environment: NativePhysicsEnvironment,
+    pub control_vehicle_index: usize,
 }
 impl NativeTrainPhysics {
     pub fn load(
@@ -20,6 +21,15 @@ impl NativeTrainPhysics {
         consist: &Consist,
         environment: Option<&NativePhysicsEnvironment>,
     ) -> Result<Option<Self>, crate::SimError> {
+        Self::load_with_cab(path, base, consist, environment).map(|(physics, _)| physics)
+    }
+    /// Cab metadata is required even when optional native axle dynamics are off.
+    pub fn load_with_cab(
+        path: &Path,
+        base: &Path,
+        consist: &Consist,
+        environment: Option<&NativePhysicsEnvironment>,
+    ) -> Result<(Option<Self>, Option<f64>), crate::SimError> {
         let masses: Vec<_> = consist
             .vehicles
             .iter()
@@ -29,18 +39,29 @@ impl NativeTrainPhysics {
             })
             .collect();
         let vehicles = openrailsrs_train::load_consist_native_parameters(path, base, &masses)?;
+        let cab = consist
+            .vehicles
+            .iter()
+            .position(|v| matches!(v, Vehicle::Loco(_)));
+        let max_current_a = cab
+            .and_then(|index| vehicles.get(index))
+            .and_then(|v| v.max_current_a);
         if environment.is_none()
             && !vehicles
                 .iter()
                 .any(|v| v.roller_bearing || v.rigid_connection || v.traction_cutoff_bar.is_some())
         {
-            return Ok(None);
+            return Ok((None, max_current_a));
         }
-        Ok(Some(Self {
-            vehicles,
-            vehicle_masses_kg: masses,
-            environment: environment.cloned().unwrap_or_default(),
-        }))
+        Ok((
+            Some(Self {
+                vehicles,
+                vehicle_masses_kg: masses,
+                environment: environment.cloned().unwrap_or_default(),
+                control_vehicle_index: cab.unwrap_or(0),
+            }),
+            max_current_a,
+        ))
     }
     pub fn initial_state(&self, engines: usize) -> NativeDynamicsState {
         NativeDynamicsState {
@@ -50,7 +71,7 @@ impl NativeTrainPhysics {
         }
     }
     pub fn throttle(&self, command: f64, pressure_bar: f64) -> f64 {
-        let Some(lead) = self.vehicles.first() else {
+        let Some(lead) = self.vehicles.get(self.control_vehicle_index) else {
             return command;
         };
         if lead
@@ -156,6 +177,36 @@ impl NativeTrainPhysics {
         };
         let merge = running + davis.b_n_per_mps * 2.2352 + davis.c_n_per_mps2 * 2.2352f64.powi(2);
         start + (merge - start) * v / 2.2352
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn controller_uses_the_driven_cab_behind_a_leading_wagon() {
+        let parse = |text, engine| {
+            openrailsrs_formats::parse_native_vehicle_physics(
+                &openrailsrs_formats::parse(text).unwrap(),
+                engine,
+                80000.0,
+            )
+        };
+        let wagon = parse("(Wagon (Mass 80t))", false);
+        let loco = parse(
+            "(Engine (MaxCurrent 900A) (ORTSTractionCutOff 1.2bar))",
+            true,
+        );
+        let mut physics = NativeTrainPhysics {
+            vehicles: vec![wagon, loco],
+            vehicle_masses_kg: vec![80000.0; 2],
+            environment: Default::default(),
+            control_vehicle_index: 1,
+        };
+        physics.vehicles[1].traction_cutoff_bar = Some(1.2);
+        physics.vehicles[1].throttle_notches = vec![(0.0, false), (0.5, false), (1.0, false)];
+        assert_eq!(physics.throttle(0.8, 0.0), 1.0);
+        assert_eq!(physics.throttle(0.8, 1.3), 0.0);
     }
 }
 

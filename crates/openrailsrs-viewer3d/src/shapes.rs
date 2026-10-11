@@ -192,11 +192,16 @@ fn build_tdb_section_index(
     for (shape_idx, entries) in tdb.index_vector_sections_by_shape() {
         let mut anchors = Vec::new();
         for entry in entries {
-            let heading = entry.record.heading_deg().or_else(|| {
+            // This is the WORLD shape's frame, whose local vertices have
+            // already had Z reflected. Native AY therefore changes sign.
+            // A geometric direction is instead a +Z-forward frame and needs
+            // the half turn before it can replace the shape's rotation.
+            let heading = entry.record.heading_deg().map(|a| -a).or_else(|| {
                 geometry_by_node
                     .get(&entry.node_id)
                     .copied()
                     .and_then(heading_from_vector_geometry)
+                    .map(|a| a + 180.0)
             });
             let Some(heading_deg) = heading else {
                 continue;
@@ -2867,6 +2872,63 @@ mod tests {
     use super::*;
     use std::collections::HashMap;
     use std::path::PathBuf;
+
+    #[test]
+    fn native_track_anchor_heading_reflects_world_z_before_refining_shape_yaw() {
+        use openrailsrs_formats::{
+            TrVectorSectionRecord, TrackDbFile, TrackDbNode, TrackNodeKind, TrackVectorPoint,
+        };
+        let start = TrackVectorPoint {
+            tile_x: 0,
+            tile_z: 0,
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        };
+        for heading in [0.0_f64, 90.0, -45.0, 167.0] {
+            let tdb = TrackDbFile {
+                nodes: vec![TrackDbNode {
+                    id: 1,
+                    position: None,
+                    pin_refs: vec![],
+                    kind: TrackNodeKind::Vector {
+                        length_m: 25.0,
+                        speed_limit_mps: 20.0,
+                        pins: (0, 0),
+                        item_ids: vec![],
+                        geometry: Some(openrailsrs_formats::TrackVectorGeometry {
+                            start,
+                            end: TrackVectorPoint {
+                                x: 25.0 * heading.to_radians().sin(),
+                                z: 25.0 * heading.to_radians().cos(),
+                                ..start
+                            },
+                        }),
+                        sections: vec![TrVectorSectionRecord {
+                            section_index: 1,
+                            shape_index: 7,
+                            header_tile_x: 0,
+                            header_tile_z: 0,
+                            start,
+                            ax: 0.0,
+                            ay: heading.to_radians(),
+                            az: 0.0,
+                        }],
+                    },
+                }],
+                items: vec![],
+            };
+            let anchors = build_tdb_section_index(&tdb);
+            let rotation = Quat::from_rotation_y(anchors[&7][0].heading_deg.to_radians() as f32);
+            let native_forward = rotation * -Vec3::Z;
+            let expected = Vec3::new(
+                heading.to_radians().sin() as f32,
+                0.0,
+                -heading.to_radians().cos() as f32,
+            );
+            assert!((native_forward - expected).length() < 0.0001);
+        }
+    }
 
     #[test]
     fn cab_texture_lighting_keeps_authored_variations_and_native_fallbacks() {

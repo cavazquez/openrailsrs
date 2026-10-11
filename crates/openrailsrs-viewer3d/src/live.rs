@@ -10,7 +10,7 @@ use openrailsrs_scenarios::sound_regions::RegionTransition;
 use openrailsrs_scenarios::{ScenarioFile, apply_scenario_runtime_overlay_dir};
 use openrailsrs_sim::LiveDriveSession;
 
-use crate::cab_view::{CabLeadVehicle, CabTrainParent, orts_3d_cab_for_vehicle};
+use crate::cab_view::{CabLeadVehicle, CabTrainParent, orts_3d_cab_for_consist_vehicle};
 use crate::camera::{
     CHASE_PITCH, CameraFollowMode, LIVE_CHASE_DISTANCE, LiveDriverCab, OrbitDistanceLimit,
     OrbitState, PassengerSeatCatalog, PassengerViewpointAuthored,
@@ -197,16 +197,7 @@ impl LiveDrive {
         car_offset: f64,
     ) -> Option<(String, f64)> {
         let session = self.session_for_track(index)?;
-        let chainage = session.presentation_chainage_for_car(
-            offset,
-            car_offset,
-            self.render_frame_remainder_s,
-        );
-        openrailsrs_sim::path_data::PathData::position_at_odometer(
-            &session.state.path_edges,
-            &session.path_data.edges,
-            chainage.max(0.0),
-        )
+        session.presentation_position_for_car(offset, car_offset, self.render_frame_remainder_s)
     }
 
     pub fn visual_car_distance_for_service(&self, index: usize, offset: f64) -> f64 {
@@ -257,15 +248,10 @@ impl LiveDrive {
     }
 
     pub fn visual_position_for_car(&self, offset: f64, car_offset: f64) -> Option<(String, f64)> {
-        let chainage = self.session.presentation_chainage_for_car(
+        self.session.presentation_position_for_car(
             offset,
             car_offset,
             self.render_frame_remainder_s,
-        );
-        openrailsrs_sim::path_data::PathData::position_at_odometer(
-            &self.session.state.path_edges,
-            &self.session.path_data.edges,
-            chainage.max(0.0),
         )
     }
 
@@ -841,9 +827,7 @@ pub(crate) fn driver_cab_from_lead_vehicle(
         interior_placement: placement,
         ..Default::default()
     };
-    if let Some(shape_name) = vehicle.shape_file.as_deref()
-        && let Some(orts) = orts_3d_cab_for_vehicle(shape_dirs, shape_name, route_dir)
-    {
+    if let Some(orts) = orts_3d_cab_for_consist_vehicle(shape_dirs, vehicle, route_dir) {
         let mut eyepoints = Vec::new();
         for vp in &orts.viewpoints {
             eyepoints.push(crate::camera::DriverEyepoint {
@@ -986,9 +970,15 @@ pub(crate) fn build_passenger_seat_catalog(
 ) -> PassengerSeatCatalog {
     let by_car = vehicles
         .iter()
-        .map(|v| match v.shape_file.as_deref() {
-            Some(shape) => passenger_viewpoints_for_vehicle(shape_dirs, shape, route_dir),
-            None => Vec::new(),
+        .map(|v| {
+            if let Some(stock) = &v.stock_file {
+                parse_passenger_views_from_vehicle_file(stock)
+            } else {
+                match v.shape_file.as_deref() {
+                    Some(shape) => passenger_viewpoints_for_vehicle(shape_dirs, shape, route_dir),
+                    None => Vec::new(),
+                }
+            }
         })
         .collect();
     let catalog = PassengerSeatCatalog { by_car };
@@ -1010,16 +1000,14 @@ pub(crate) fn live_driver_cab_from_vehicles(
         height_m: (head_len * 0.14).clamp(2.4, 3.2),
         ..Default::default()
     };
-    if let Some(vehicle) = vehicles.first()
-        && let Some(shape_name) = vehicle.shape_file.as_deref()
-    {
+    if let Some(vehicle) = vehicles.first() {
         if let Some(shape_path) =
             crate::rolling_stock::resolve_consist_vehicle_shape_path(shape_dirs, vehicle, route_dir)
             && let Some(loaded) = load_shape_from_path(&shape_path, Some(LIVE_TRAIN_LOD_DISTANCE_M))
         {
             return driver_cab_from_lead_vehicle(vehicle, shape_dirs, route_dir, &loaded.mesh);
         }
-        if let Some(orts) = orts_3d_cab_for_vehicle(shape_dirs, shape_name, route_dir) {
+        if let Some(orts) = orts_3d_cab_for_consist_vehicle(shape_dirs, vehicle, route_dir) {
             cab.look_pitch = orts.look_pitch;
             cab.look_yaw = orts.look_yaw;
             if let Some(p) = orts.pitch_limit {
@@ -1681,6 +1669,7 @@ mod tests {
                 name: format!("car-{i}"),
                 shape_file: None,
                 asset_dir: None,
+                stock_file: None,
                 length_m: 20.0,
                 offset_m: -10.0 - (i as f32) * 20.0,
                 flipped: false,
@@ -1709,6 +1698,7 @@ mod tests {
                 name: "DMBSA".into(),
                 shape_file: Some("RF_WP_DMBSA.s".into()),
                 asset_dir: None,
+                stock_file: None,
                 length_m: 20.879,
                 offset_m: 0.0,
                 flipped: false,

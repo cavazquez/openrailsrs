@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use openrailsrs_formats::{ActivityFile, TrItemKind, TrackDbFile, TrackNodeKind};
-use openrailsrs_route::path::{edge_path_ignoring_switches, edge_path_via_waypoints};
+use openrailsrs_route::path::edge_path_ignoring_switches;
 use openrailsrs_scenarios::model::{RouteSection, StopDef, SwitchDef, SwitchPositionDef};
 use openrailsrs_track::{NodeKind, SwitchPosition, TrackGraph};
 
@@ -25,12 +25,28 @@ pub(crate) fn apply(
             .set_switch(&switch.node, position)
             .map_err(|e| MstsError::msg(e.to_string()))?;
     }
-    let mut edges = if route.waypoints.len() >= 2 {
-        edge_path_via_waypoints(&graph, &route.waypoints)
+    let mut edges = if let Some(leg) = route.legs.first() {
+        Ok(leg.edges.clone())
+    } else if route.waypoints.len() >= 2 {
+        route
+            .waypoints
+            .windows(2)
+            .try_fold(Vec::new(), |mut path, nodes| {
+                path.extend(edge_path_ignoring_switches(&graph, &nodes[0], &nodes[1])?);
+                Ok::<_, openrailsrs_route::RouteError>(path)
+            })
     } else {
         edge_path_ignoring_switches(&graph, &route.start, &route.destination)
     }
-    .map_err(|e| MstsError::msg(e.to_string()))?;
+    .map_err(|e| {
+        MstsError::msg(format!(
+            "Native timetable path {} to {} ({} waypoints, {} legs): {e}",
+            route.start,
+            route.destination,
+            route.waypoints.len(),
+            route.legs.len()
+        ))
+    })?;
     let items: HashMap<_, _> = tdb.items.iter().map(|item| (item.id, item)).collect();
     let mut hosts = HashMap::new();
     for node in &tdb.nodes {
@@ -50,9 +66,12 @@ pub(crate) fn apply(
     let start_chainage = route.start_offset_m.unwrap_or(0.0);
     for (index, record) in activity.player_stops.iter().enumerate() {
         let id = record.platform_start_id;
-        let item = items
-            .get(&id)
-            .ok_or_else(|| MstsError::msg(format!("Missing native platform {id}")))?;
+        let Some(item) = items.get(&id) else {
+            eprintln!(
+                "Native activity warning: PlatformStartID {id} is absent; omitted as in OR 1.6.1"
+            );
+            continue;
+        };
         let TrItemKind::Platform {
             pair_id,
             station,
@@ -60,9 +79,12 @@ pub(crate) fn apply(
             passengers_waiting,
         } = &item.kind
         else {
-            return Err(MstsError::msg(format!(
-                "Timetable item {id} is not a native platform; use the activity and track database from the same route edition"
-            )));
+            // OR Activity.cs logs and skips obsolete references. Do not guess
+            // a neighbouring platform or rewrite the author's timetable.
+            eprintln!(
+                "Native activity warning: PlatformStartID {id} is not a platform; omitted as in OR 1.6.1"
+            );
+            continue;
         };
         let pair = items
             .get(pair_id)
@@ -234,6 +256,100 @@ fn elapsed_time(time: f64, start: f64) -> f64 {
     } else {
         delta.max(0.0)
     }
+}
+
+/// Resolve repeated visits in itinerary order, retaining each native platform.
+pub(crate) fn apply_legs(
+    activity: &ActivityFile,
+    tdb: &TrackDbFile,
+    graph: &TrackGraph,
+    route: &mut RouteSection,
+) -> Result<(), MstsError> {
+    let mut previous = -1.0;
+    let mut boarded = 0u32;
+    for record in &activity.player_stops {
+        if !tdb.items.iter().any(|i| {
+            i.id == record.platform_start_id && matches!(i.kind, TrItemKind::Platform { .. })
+        }) {
+            eprintln!(
+                "Native activity warning: obsolete PlatformStartID {}; omitted as in OR 1.6.1",
+                record.platform_start_id
+            );
+            continue;
+        }
+        let mut prefix = 0.0;
+        let mut candidates = Vec::new();
+        for (index, leg) in route.legs.iter().enumerate() {
+            let mut sub = route.clone();
+            sub.legs = vec![leg.clone()];
+            sub.start = leg.start.clone();
+            sub.destination = leg.destination.clone();
+            sub.start_offset_m = Some(leg.start_offset_m);
+            sub.switches = leg.switches.clone();
+            sub.waypoints.clear();
+            sub.stops.clear();
+            let mut one = activity.clone();
+            one.player_stops = vec![record.clone()];
+            if apply(&one, tdb, graph, &mut sub).is_ok()
+                && let Some(stop) = sub.stops.first()
+            {
+                let mut distance = 0.0;
+                for id in &leg.edges {
+                    let edge = graph.edge(id).unwrap();
+                    distance += edge.length_m;
+                    if edge.to.0 == stop.node {
+                        break;
+                    }
+                }
+                distance += stop.offset_m;
+                let global = prefix + distance - leg.start_offset_m;
+                if global > previous + 0.01
+                    && distance >= leg.start_offset_m - 0.01
+                    && distance <= leg.end_chainage_m + 0.01
+                {
+                    candidates.push((global, index, stop.clone()));
+                }
+            }
+            prefix += leg.end_chainage_m - leg.start_offset_m;
+        }
+        let (distance, index, mut stop) = candidates
+            .into_iter()
+            .min_by(|a, b| a.0.total_cmp(&b.0))
+            .ok_or_else(|| {
+                MstsError::msg(format!(
+                    "Native platform {} is outside the ordered operational PAT",
+                    record.platform_start_id
+                ))
+            })?;
+        let terminal =
+            index + 1 == route.legs.len() && record == activity.player_stops.last().unwrap();
+        if terminal {
+            stop.passengers_off = boarded;
+            stop.passengers_on = 0;
+        } else {
+            stop.passengers_off = 0;
+            stop.passengers_on = tdb
+                .items
+                .iter()
+                .find(|item| item.id == record.platform_start_id)
+                .and_then(|item| {
+                    if let TrItemKind::Platform {
+                        passengers_waiting, ..
+                    } = item.kind
+                    {
+                        Some(passengers_waiting)
+                    } else {
+                        None
+                    }
+                })
+                .unwrap_or(0);
+            boarded = boarded.saturating_add(stop.passengers_on);
+        }
+        route.legs[index].stops.push(stop);
+        previous = distance;
+    }
+    route.stops = route.legs[0].stops.clone();
+    Ok(())
 }
 
 #[cfg(test)]

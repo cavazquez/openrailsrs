@@ -158,6 +158,60 @@ pub fn parse_from_first_paren(source: &str) -> Result<Ast, FormatError> {
     parse(from_paren)
 }
 
+/// Legacy ACT compatibility: OR's STFReader retains a trailing DisplayMessage
+/// at EOF and warns about missing ')' tokens. All route/resource fields before
+/// that message still parse normally. Other unterminated strings stay errors.
+pub fn parse_activity_text(source: &str) -> Result<Ast, FormatError> {
+    let trimmed = source.trim_start();
+    let start = trimmed.find('(').ok_or(FormatError::UnexpectedEof)?;
+    let body = &trimmed[start..];
+    let read = |text: &str| {
+        let mut lexer = Lexer::new_stf(text);
+        let ast = parse_expr(&mut lexer)?;
+        lexer.skip_ws_and_comments();
+        if lexer.position() < text.len() {
+            return Err(FormatError::TrailingInput(lexer.position()));
+        }
+        Ok(ast)
+    };
+    let parsed = read(body);
+    let mut recovered = body.to_string();
+    if let Err(FormatError::UnclosedString(offset)) = &parsed {
+        let prefix = &body[..*offset];
+        if !prefix
+            .trim_end()
+            .to_ascii_lowercase()
+            .ends_with("displaymessage (")
+        {
+            return parsed;
+        }
+        recovered.push('"');
+    } else if !matches!(parsed, Err(FormatError::UnexpectedEof)) {
+        return parsed;
+    }
+    let mut lexer = Lexer::new_stf(&recovered);
+    let mut depth = 0_i32;
+    while let Some(token) = lexer.next_token()? {
+        match token {
+            Token::LParen => depth += 1,
+            Token::RParen => depth -= 1,
+            _ => (),
+        }
+        if !(0..=64).contains(&depth) {
+            return parsed;
+        }
+    }
+    if depth <= 0 {
+        return parsed;
+    }
+    recovered.push_str(&")".repeat(depth as usize));
+    let ast = read(&recovered)?;
+    eprintln!(
+        "Legacy ACT: trailing DisplayMessage/closing blocks recovered at EOF, as OR STFReader warns; original file unchanged"
+    );
+    Ok(ast)
+}
+
 /// Parse every top-level S-expression in `source` (MSTS `tsection.dat`, route overlays, etc.).
 pub fn parse_all_top_level(source: &str) -> Result<Vec<Ast>, FormatError> {
     let mut out = Vec::new();
@@ -256,6 +310,15 @@ fn parse_expr(lexer: &mut Lexer<'_>) -> Result<Ast, FormatError> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn only_activity_eof_display_message_recovers_an_unclosed_quote() {
+        let text = "Tr_Activity ( Tr_Activity_File ( Events ( DisplayMessage ( \"Legacy tutorial text at EOF";
+        assert!(parse_activity_text(text).is_ok());
+        assert!(parse_from_first_paren(text).is_err());
+        assert!(parse_activity_text("Tr_Activity ( Name ( \"broken name").is_err());
+        assert!(parse_activity_text("Tr_Activity ( File ( \"broken path").is_err());
+        assert!(parse_activity_text("Tr_Activity ( ) )").is_err());
+    }
     use super::*;
     #[test]
     fn named_native_roots_preserve_exterior_cab_and_passenger_scopes() {

@@ -71,3 +71,40 @@ La fixture congela las salidas de las DLL; no se genera desde nuestras funciones
 El visor evalúa directamente la ecuación cada segundo de simulación,
 conservando esa mejora respecto de la tabla nativa, que interpola muestras
 tomadas cada 20 minutos.
+
+`SignalReference.cs`, `CabReference.cs` y `ParserReference.cs` consumen las mismas
+DLL originales sin recompilar OR. Sus resultados están congelados en
+`oracles/openrails-signals.json`, `openrails-cab.json` y `openrails-parser.json`,
+con manifiestos de DLL, consumidor y salida. La captura de cabina fija los
+valores predeterminados de UnitsScale y Exponent en 1, como el lector original;
+un amperímetro de referencia nulo ante esfuerzo positivo se rechaza.
+
+```bash
+python3 scripts/capture_signal_reference.py --out-dir tmp/senales-or-a
+python3 scripts/capture_cab_reference.py --out-dir tmp/cabina-or-a
+python3 scripts/capture_parser_reference.py --out-dir tmp/parser-or-a
+```
+
+Repetir cada captura en un segundo directorio nuevo y comparar SHA-256 antes de
+promoverla. Cada ejecución copia las DLL a una carpeta privada y utiliza un
+prefijo Wine separado; no escribe la instalación, el prefijo ni el contenido
+originales. Las referencias numéricas no incluyen rutas locales del usuario.
+El lector STF contrasta Includes, cierre de bloques al EOF, comillas tardías y
+banderas PAT hexadecimales. Los contextos sintéticos de señal/cabina validan las
+funciones aisladas; no certifican una actividad entera ni un modelo completo.
+
+`ActivityParameters.cs` carga un ACT original con el simulador y lector de OR,
+usando el cargador de `HeadlessCapture.cs`. Registra vehículos, potencia, freno
+máximo, controlador, horarios y orientación nativa de carteles. La referencia
+LIRR conserva 778 carteles, 776 con velocidad positiva. No es una traza del viaje
+ni una certificación de respuesta neumática de todas las formaciones.
+
+```bash
+python3 scripts/capture_activity_parameters.py \
+  --activity /ruta/ROUTES/LIRR/ACTIVITIES/01Brooklyn-Hempstead.act \
+  --out-dir tmp/lirr-or-a
+```
+
+Repetir en otro directorio nuevo y comparar hashes. En esa actividad OR conserva
+Duration = 1560 s como estimación y llegada a Hempstead = 1575 s. El servicio puede
+registrar retrasos; Duration no impone un fallo automático.

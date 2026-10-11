@@ -3,15 +3,109 @@
   "date": "2026-10-11",
   "selection": "Ten widely distributed routes recommended by Open Rails or their authors. Author download counts are a proxy; there is no verified global ranking of active players.",
   "routes": [
-    {"id": "chiltern", "name": "Chiltern v4", "package_glob": "chiltern-v4-*", "route_folder": "Chiltern", "source": "https://github.com/DocMartin7644/Chiltern-Route-v4", "revision": "8236df20ed9f596b8cf15720c43bfbdd0c43125d", "activity": "Test Paddington Suburban Down Daytime.act", "consist": "Railcarx2.con"},
-    {"id": "demo", "name": "Demo Model 1 / Scottish Capital Express", "package_glob": "demo-model-1-*", "route_folder": "SCE", "source": "https://www.openrails.org/discover/get-started/", "sha256": "5e4a64e1cd44e23ee7833230348b6b76c43fc555060b152f6c6547e832a5189b", "activity": "MT_MT_0930 Edinburgh-Glasgow Queen Street.act", "consist": "MT_MT_Class 47 & 6 mk2 PP.con"},
-    {"id": "bnsf", "name": "BNSF Starter Route", "package_glob": "bnsf-starter-route-*", "route_folder": "BNSF_Scenic", "source": "https://ts-files.com/files/TS_STARTER_ROUTE.zip", "sha256": "1cc2a6dfbc7b5c6d93a30e9e4d65723aa0ccae94afdb44671bbfadf751db99f5", "activity": "5_wb_empirebuilder.act", "consist": "amtrak empire builder wb.con"},
-    {"id": "lirr", "name": "Long Island Railroad", "package_glob": "long-island-railroad-*", "route_folder": "LIRR", "source": "https://static.openrails.org/files/LIRR.zip", "sha256": "4d33e3e0e6d8d103699d0302f97194d7dc82f8820e5cc5b2173d8a6180de36c5", "activity": "01Brooklyn-Hempstead.act", "consist": "SFexpress-500.con"},
-    {"id": "mideast", "name": "MidEast Coast", "package_glob": "mideast-coast-*", "route_folder": "MidEastCoast", "source": "https://github.com/MECoast/MECoast", "revision": "1c47480edb295aeb8eee5849e941da77d4ed0bf2", "activity": "Firsby to Spilsby Return.act", "consist": "OR-84030-BR2MT-Tank-B-2MK1CC.con"},
-    {"id": "portugal", "name": "Portugal 79", "package_glob": "portugal-79-*", "route_folder": "CPV_PT79", "source": "https://github.com/cpvirtual/OR_CPV", "revision": "56bce7499e6368bedd21c43e9f6bdb16acf783ea", "activity": null, "consist": null},
-    {"id": "zigzag", "name": "Great Zig Zag NSW", "package_glob": "zigzag-v1-6", "route_folder": "au_great_zig_zag", "source": "https://www.zigzag.coalstonewcastle.com.au/route/downloads/", "version": "1.6", "sha256": "4fb75de3f797a740203456bd69539e17ac9da1008568c21244710b96fe397bc9", "activity": "tutorial#2_basic_train_control.act", "consist": "tutorial#6_player_train.con", "consist_override": true},
-    {"id": "coals-to-newcastle", "name": "Coals to Newcastle", "package_glob": "coals-to-newcastle-v7-4", "route_folder": "AU_Coal_to_Newcastle", "source": "https://www.coalstonewcastle.com.au/route/downloads/", "version": "7(4)", "sha256": "d5740a8e2e0815e009b0900ec05a6ec89491e8e0763ccee23d5719848c0b6dcb", "activity": null, "consist": null},
-    {"id": "burrinjuck", "name": "Burrinjuck", "package_glob": "burrinjuck-v3", "route_folder": "AU_Burrinjuck", "source": "https://www.burrinjuck.coalstonewcastle.com.au/route/downloads/", "version": "3", "sha256": "d2a6405e1c6f4b0327c9f91caba8321fd02683087d6908475832fbed1f53db56", "activity": "Default.act", "consist": "burr_jack_light.con"},
-    {"id": "craven", "name": "Craven Timber Railway", "package_glob": "craven-v1-2", "route_folder": "au_craven", "source": "https://www.craven.coalstonewcastle.com.au/route/downloads/", "version": "1(2)", "sha256": "ea065fbb3150bcc5abbb37a25e34d0cdd543353c2d1e840fee0905e48642d336", "activity": "default.act", "consist": "CT-No1-LightEngine.con"}
+    {
+      "id": "chiltern",
+      "name": "Chiltern v4",
+      "package_glob": "chiltern-v4-*",
+      "route_folder": "Chiltern",
+      "source": "https://github.com/DocMartin7644/Chiltern-Route-v4",
+      "revision": "8236df20ed9f596b8cf15720c43bfbdd0c43125d",
+      "activity": "Test Paddington Suburban Down Daytime.act",
+      "consist": "Railcarx2.con"
+    },
+    {
+      "id": "demo",
+      "name": "Demo Model 1 / Scottish Capital Express",
+      "package_glob": "demo-model-1-*",
+      "route_folder": "SCE",
+      "source": "https://www.openrails.org/discover/get-started/",
+      "sha256": "5e4a64e1cd44e23ee7833230348b6b76c43fc555060b152f6c6547e832a5189b",
+      "activity": "MT_MT_0930 Edinburgh-Glasgow Queen Street.act",
+      "consist": "MT_MT_Class 47 & 6 mk2 PP.con"
+    },
+    {
+      "id": "bnsf",
+      "name": "BNSF Starter Route",
+      "package_glob": "bnsf-starter-route-*",
+      "route_folder": "BNSF_Scenic",
+      "source": "https://ts-files.com/files/TS_STARTER_ROUTE.zip",
+      "sha256": "1cc2a6dfbc7b5c6d93a30e9e4d65723aa0ccae94afdb44671bbfadf751db99f5",
+      "activity": "5_wb_empirebuilder.act",
+      "consist": "amtrak empire builder wb.con"
+    },
+    {
+      "id": "lirr",
+      "name": "Long Island Railroad",
+      "package_glob": "long-island-railroad-*",
+      "route_folder": "LIRR",
+      "source": "https://static.openrails.org/files/LIRR.zip",
+      "sha256": "4d33e3e0e6d8d103699d0302f97194d7dc82f8820e5cc5b2173d8a6180de36c5",
+      "activity": "01Brooklyn-Hempstead.act",
+      "consist": "SFexpress-500.con"
+    },
+    {
+      "id": "mideast",
+      "name": "MidEast Coast",
+      "package_glob": "mideast-coast-*",
+      "route_folder": "MidEastCoast",
+      "source": "https://github.com/MECoast/MECoast",
+      "revision": "1c47480edb295aeb8eee5849e941da77d4ed0bf2",
+      "activity": "Firsby to Spilsby Return.act",
+      "consist": "OR-84030-BR2MT-Tank-B-2MK1CC.con"
+    },
+    {
+      "id": "portugal",
+      "name": "Portugal 79",
+      "package_glob": "portugal-79-*",
+      "route_folder": "CPV_PT79",
+      "source": "https://github.com/cpvirtual/OR_CPV",
+      "revision": "56bce7499e6368bedd21c43e9f6bdb16acf783ea",
+      "activity": null,
+      "consist": null
+    },
+    {
+      "id": "zigzag",
+      "name": "Great Zig Zag NSW",
+      "package_glob": "zigzag-v1-6",
+      "route_folder": "au_great_zig_zag",
+      "source": "https://www.zigzag.coalstonewcastle.com.au/route/downloads/",
+      "version": "1.6",
+      "sha256": "4fb75de3f797a740203456bd69539e17ac9da1008568c21244710b96fe397bc9",
+      "activity": "tutorial#6_loading.act",
+      "consist": "tutorial#6_player_train.con"
+    },
+    {
+      "id": "coals-to-newcastle",
+      "name": "Coals to Newcastle",
+      "package_glob": "coals-to-newcastle-v7-4",
+      "route_folder": "AU_Coal_to_Newcastle",
+      "source": "https://www.coalstonewcastle.com.au/route/downloads/",
+      "version": "7(4)",
+      "sha256": "d5740a8e2e0815e009b0900ec05a6ec89491e8e0763ccee23d5719848c0b6dcb",
+      "activity": null,
+      "consist": null
+    },
+    {
+      "id": "burrinjuck",
+      "name": "Burrinjuck",
+      "package_glob": "burrinjuck-v3",
+      "route_folder": "AU_Burrinjuck",
+      "source": "https://www.burrinjuck.coalstonewcastle.com.au/route/downloads/",
+      "version": "3",
+      "sha256": "d2a6405e1c6f4b0327c9f91caba8321fd02683087d6908475832fbed1f53db56",
+      "activity": "Default.act",
+      "consist": "burr_jack_light.con"
+    },
+    {
+      "id": "craven",
+      "name": "Craven Timber Railway",
+      "package_glob": "craven-v1-2",
+      "route_folder": "au_craven",
+      "source": "https://www.craven.coalstonewcastle.com.au/route/downloads/",
+      "version": "1(2)",
+      "sha256": "ea065fbb3150bcc5abbb37a25e34d0cdd543353c2d1e840fee0905e48642d336",
+      "activity": "default.act",
+      "consist": "CT-No1-LightEngine.con"
+    }
   ]
 }
