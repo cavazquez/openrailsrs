@@ -53,7 +53,7 @@ Para un checkout con descargas/builds locales, prepará primero una copia limpia
 python3 scripts/package_snap.py --source-dir tmp/dist/snap-source
 cd tmp/dist/snap-source
 snapcraft pack --use-lxd
-sudo snap install --dangerous openrailsrs_0.1.0-alpha.3_amd64.snap
+sudo snap install --dangerous openrailsrs_0.1.0-alpha.4_amd64.snap
 openrailsrs.cli content --list
 openrailsrs
 ```
@@ -76,8 +76,32 @@ La revisión 3 incluye el puente ALSA–PulseAudio, el descubrimiento del socket
 
 ## Alpha disponible en Snap Store
 
-Actualmente **latest/edge** ofrece **0.1.0-alpha.3**, revisión **3**, publicada
-el **11 de octubre de 2026**. Incluye las [diez mejoras de conducción y operación](TRAIN_OPERATION_UPDATE.md):
+Actualmente **latest/edge** ofrece **0.1.0-alpha.4**, revisión **5**, publicada
+el **11 de octubre de 2026**. Incluye las [mejoras de contenido nativo](NATIVE_CONTENT_UPDATE.md):
+actividades y PAT originales, inversiones, horarios con reutilización de la
+formación y división/unión de una sección propia estática, funciones SIGSCR
+contrastadas con OR, instrumentos, filtros, previews y mapas de servicio.
+La revisión 5 sustituye a la 4 y corrige la dirección de los carteles de velocidad
+y la geometría de vías procedurales detectadas durante la validación final.
+
+El paquete mide **160.522.240 bytes** y su SHA-256 es
+`4db105c16296a579674c754cbd2aec98364bf48de5a05ab52d4a61af2cd51c48`.
+Se descargó la revisión 5 desde Snap Store: coincide byte por byte con el paquete
+probado. Los **509 archivos** de fuentes e insumos de empaquetado coinciden con
+el commit `7230f0e` y con la copia compilada en core24. Los binarios requieren
+glibc 2.39, provista por la base. El paquete no contiene las rutas descargadas,
+trazas locales ni datos personales examinados por la auditoría.
+
+CLI, HTTPS, menú, geometría del patio, lluvia/nieve intensas y audio del
+limpiaparabrisas pasaron con usuario sin privilegios y confinamiento estricto,
+X11 virtual y Vulkan por software. El viaje completo con Hanabi/GPU física
+se probó por separado con las mismas fuentes; esta prueba no certifica todos
+los sonidos WAV originales ni un recorrido original completo dentro del Snap.
+[Recibo, hashes y alcance de QA](fixtures/compatibility/community-routes-2026-10-11/release.json) ·
+[Resultados y capturas](fixtures/compatibility/community-routes-2026-10-11/README.md).
+
+La revisión **3**, publicada el **11 de octubre de 2026**, incorporó las
+[diez mejoras de conducción y operación](TRAIN_OPERATION_UPDATE.md):
 carga gradual de escenario, movimiento por coche, audio espacial, independiente
 y emergencia, depósito/compresor, cargas eléctricas, vapor sincronizado,
 temperatura diésel, tráfico curado y un patio guiado.
@@ -162,7 +186,7 @@ cuenta todavía no está autenticada, iniciá sesión:
 
 ```bash
 snapcraft login
-snapcraft upload openrailsrs_0.1.0-alpha.2_amd64.snap --release latest/edge
+snapcraft upload openrailsrs_0.1.0-alpha.4_amd64.snap --release latest/edge
 ```
 
 No se guardan credenciales de Snapcraft dentro del repositorio ni del paquete.

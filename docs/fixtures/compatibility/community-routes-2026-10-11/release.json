@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "recorded_at_utc": "2026-10-11T16:55:35.551616+00:00",
+  "store": "https://snapcraft.io/openrailsrs",
+  "channel": "latest/edge",
+  "architecture": "amd64",
+  "version": "0.1.0-alpha.4",
+  "revision": 5,
+  "supersedes_revision": 4,
+  "size_bytes": 160522240,
+  "sha256": "4db105c16296a579674c754cbd2aec98364bf48de5a05ab52d4a61af2cd51c48",
+  "official_store_roundtrip_matches": true,
+  "implementation_commit": "7230f0e10682c6730a80a1b3797d8a43e0a29086",
+  "verified_source_files": 509,
+  "source_manifest": "snap-source-sha256.json",
+  "source_manifest_sha256": "50548f6cc84f2b08eec91cdfcaa4eb5d9fe021390070e4bb42ff35c05fcb7172",
+  "confinement": "strict",
+  "base": "core24",
+  "grade": "devel",
+  "required_glibc": "2.39",
+  "downloaded_content_included": false,
+  "privacy_findings": [],
+  "binary_sha256": {
+    "openrailsrs": "670536c2da35ff22c6ef356ef502f026f583f89aafec202346c5ba2c39427339",
+    "openrailsrs-viewer3d": "05269084917549ae51866ea9b418602f5f6c478756e1a1657554cc59df8db093",
+    "openrailsrs-prepare-content": "e7e84b68e2de63f727c307cc663a5df5270ad8933f2a733a6f7b87757919d112"
+  },
+  "verification": "verification.json",
+  "scope": "CLI, HTTPS, menu, yard geometry, intense rain/snow and fallback wiper audio under an unprivileged strict Snap with software Vulkan/private Xvfb. Hardware GPU native routes and complete weather journeys were tested separately with the matching source build. This does not certify all native WAV sounds, hardware GPU or a complete original route inside Snap."
+}

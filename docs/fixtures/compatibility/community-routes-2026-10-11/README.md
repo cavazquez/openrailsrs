@@ -11,6 +11,11 @@ presenta como «las diez más jugadas».
 originales, extracciones, ajustes personales y CSV permanecen fuera de Git y del
 Snap. Las imágenes son capturas del juego.
 
+La alpha.4 está publicada en **latest/edge, revisión 5**. El archivo descargado
+de Snap Store coincide con el paquete probado. [Recibo de publicación](release.json)
+y [509 hashes de fuentes e insumos de empaquetado](snap-source-sha256.json) vinculan
+el paquete con el commit `7230f0e`. Las descargas de los autores se instalan aparte.
+
 ## Alcance comprobado
 
 - **Diez importaciones aprobadas**, conservando los SIGSCR donde el paquete los incluye.
