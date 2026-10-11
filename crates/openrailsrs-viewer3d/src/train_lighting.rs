@@ -48,6 +48,12 @@ fn original_engine(con: &std::path::Path, route: &RouteAssets) -> Option<PathBuf
         openrailsrs_train::consist_asset_root(con),
         &rel,
     );
+    if path.ancestors().any(|p| {
+        p.file_name()
+            .is_some_and(|n| n.eq_ignore_ascii_case("TRAINSET"))
+    }) {
+        return Some(path);
+    }
     let folder = path.parent()?.file_name()?.to_str()?;
     for root in crate::shapes::or_content_trainset_roots(&route.route_dir, folder) {
         if let Some(p) = resolve_path_case_insensitive(&root.join(path.file_name()?)) {

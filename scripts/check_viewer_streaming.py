@@ -335,6 +335,8 @@ def run_checkpoint(args, name, target, pause):
                         recent = diagnostics.read().decode("utf-8", errors="replace")
                     if renderer_failed(recent):
                         raise RuntimeError(f"{name}: renderer/shader failure; see {prefix.with_suffix('.log')}")
+                    if re.search(r"^error: (?:no path from |route load (?:thread|channel))", recent, re.MULTILINE):
+                        raise RuntimeError(f"{name}: native route loading failed; see {prefix.with_suffix('.log')}")
                     time.sleep(0.25)
                 if viewer.returncode:
                     raise RuntimeError(

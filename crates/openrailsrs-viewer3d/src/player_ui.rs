@@ -1,5 +1,7 @@
 //! Player menus and railway tools built with retained Bevy UI.
 use bevy::ecs::system::SystemParam;
+use bevy::input::ButtonState;
+use bevy::input::keyboard::{Key, KeyboardInput};
 use bevy::input::mouse::{MouseScrollUnit, MouseWheel};
 use bevy::prelude::*;
 use openrailsrs_sim::{CarOperation, LiveDriveSession, ServicePhase};
@@ -16,7 +18,10 @@ use crate::saved_game::{PendingSavedCamera, SavedCamera, SavedGame, slot_path};
 use crate::weather_journey::WeatherMode;
 use crate::weather_state::WeatherProfile;
 
+mod choices;
 mod launcher;
+mod previews;
+use choices::{ChoiceKind, ChoiceSearch, choice_keys};
 use launcher::{LibraryTab, NewGameStep, SettingsTab};
 
 const BG: Color = Color::srgb(0.045, 0.065, 0.095);
@@ -52,6 +57,7 @@ impl Plugin for PlayerUiPlugin {
         app.init_resource::<PlayerUiState>()
             .init_resource::<PlayerSettings>()
             .init_resource::<PlayerLaunchMenu>()
+            .init_resource::<previews::Previews>()
             .init_resource::<crate::official_content::OfficialContent>()
             .init_resource::<bevy_clipboard::Clipboard>()
             .init_resource::<PlayerLaunchQueue>()
@@ -76,10 +82,12 @@ impl Plugin for PlayerUiPlugin {
                 Update,
                 (
                     player_keys,
+                    choice_keys,
                     poll_content_download,
                     poll_menu_audits,
                     handle_buttons.in_set(EnvironmentControls),
                     capture_ui_pointer.in_set(UiPointerCaptureSet),
+                    previews::update,
                     build_panel,
                     update_panel_text,
                     scroll_panel,
@@ -146,6 +154,9 @@ pub struct PlayerUiState {
     navigation: Vec<PlayerPanel>,
     new_game_step: NewGameStep,
     new_game_advanced: bool,
+    choice_search: [ChoiceSearch; 3],
+    choice_focus: Option<ChoiceKind>,
+    route_picker: ChoiceKind,
     library_tab: LibraryTab,
     settings_tab: SettingsTab,
     pub(crate) notice: String,
@@ -171,6 +182,9 @@ impl Default for PlayerUiState {
             navigation: Vec::new(),
             new_game_step: NewGameStep::Route,
             new_game_advanced: false,
+            choice_search: default(),
+            choice_focus: None,
+            route_picker: ChoiceKind::Route,
             library_tab: LibraryTab::Installed,
             settings_tab: SettingsTab::General,
             notice: String::new(),
@@ -237,6 +251,11 @@ enum UiCommand {
     Load(usize),
     Resume(usize),
     SelectRoute(usize),
+    SelectChoice(ChoiceKind, usize),
+    ShowChoices(ChoiceKind),
+    FocusSearch(ChoiceKind),
+    ClearSearch(ChoiceKind),
+    ChoicePage(ChoiceKind, i32),
     NewGameStep(NewGameStep),
     NewGameAdvanced,
     LibraryTab(LibraryTab),
@@ -279,9 +298,6 @@ enum UiCommand {
 }
 #[derive(Clone, Copy, Debug)]
 enum MenuField {
-    Route,
-    Service,
-    Consist,
     Path,
     Time,
     Season,
@@ -429,7 +445,7 @@ fn target_screen_hud_camera(
         commands.entity(entity).insert(UiTargetCamera(camera));
     }
 }
-fn enter_menu(mut ui: ResMut<PlayerUiState>) {
+fn enter_menu(mut ui: ResMut<PlayerUiState>, mut menu: ResMut<PlayerLaunchMenu>) {
     ui.panel = PlayerPanel::Menu;
     ui.in_start_menu = true;
     ui.navigation.clear();
@@ -440,6 +456,15 @@ fn enter_menu(mut ui: ResMut<PlayerUiState>) {
         && let Ok(page) = std::env::var("OPENRAILSRS_SCREENSHOT_MENU_PAGE")
     {
         launcher::capture_page(&mut ui, &page);
+        if let Ok(name) = std::env::var("OPENRAILSRS_SCREENSHOT_MENU_CONSIST")
+            && let Some(index) = menu.consists.iter().position(|path| {
+                path.file_stem()
+                    .is_some_and(|stem| stem.eq_ignore_ascii_case(&name))
+            })
+        {
+            choices::select(&mut menu, ChoiceKind::Consist, index);
+            ui.choice_search[ChoiceKind::Consist.slot()].query = name;
+        }
     }
     ui.rebuild = true;
 }
@@ -583,6 +608,7 @@ fn open_panel(ui: &mut PlayerUiState, live: &mut Option<ResMut<LiveDrive>>, pane
     ui.panel = panel;
     ui.rebuild = true;
     ui.awaiting_key = None;
+    ui.choice_focus = None;
     ui.notice.clear();
     if let Some(l) = live {
         l.paused = if panel == PlayerPanel::Traction {
@@ -602,6 +628,7 @@ fn close_panel(ui: &mut PlayerUiState, live: &mut Option<ResMut<LiveDrive>>) {
         PlayerPanel::None
     };
     ui.awaiting_key = None;
+    ui.choice_focus = None;
     ui.notice.clear();
     ui.rebuild = true;
     if let Some(l) = live {
@@ -623,6 +650,13 @@ fn player_keys(
     teleport: Res<crate::teleport::TeleportDialog>,
 ) {
     if teleport.open {
+        return;
+    }
+    if ui.choice_focus.is_some() {
+        if keys.just_pressed(KeyCode::Escape) {
+            ui.choice_focus = None;
+            ui.rebuild = true;
+        }
         return;
     }
     if let Some(action) = ui.awaiting_key {
@@ -772,11 +806,36 @@ fn handle_buttons(
             UiCommand::NewGameStep(step) => {
                 ui.new_game_step = *step;
                 ui.new_game_advanced = false;
+                ui.choice_focus = None;
                 ui.notice.clear();
                 Ok(())
             },
             UiCommand::NewGameAdvanced => {
                 ui.new_game_advanced = !ui.new_game_advanced;
+                Ok(())
+            },
+            UiCommand::SelectChoice(kind, index) => {
+                choices::select(&mut menu, *kind, *index);
+                ui.choice_focus = None;
+                Ok(())
+            },
+            UiCommand::ShowChoices(kind) => {
+                ui.route_picker = *kind;
+                ui.choice_focus = None;
+                Ok(())
+            },
+            UiCommand::FocusSearch(kind) => { ui.choice_focus = Some(*kind); Ok(()) },
+            UiCommand::ClearSearch(kind) => {
+                ui.choice_search[kind.slot()] = default();
+                ui.choice_focus = Some(*kind);
+                Ok(())
+            },
+            UiCommand::ChoicePage(kind, direction) => {
+                let count = choices::matching(&menu, *kind, &ui.choice_search[kind.slot()].query).len();
+                let search = &mut ui.choice_search[kind.slot()];
+                search.page = cycle(search.page, count.div_ceil(choices::PAGE_SIZE), *direction);
+                search.cursor = None;
+                ui.choice_focus = None;
                 Ok(())
             },
             UiCommand::LibraryTab(tab) => {
@@ -824,8 +883,6 @@ fn handle_buttons(
                     .map(|()|{ui.notice="Partida restaurada y pausada; Continuar reanuda la conducción".into();})
             }else{Err("No hay una partida activa".into())},
             UiCommand::Cycle(field,delta)=>{match field {
-                MenuField::Route=>menu.cycle_route(*delta),MenuField::Service=>menu.cycle_service(*delta),
-                MenuField::Consist=>menu.cycle_consist(*delta),
                 MenuField::Path=>menu.path=cycle(menu.path,menu.paths.len()+1,*delta),
                 MenuField::Time=>menu.start_time_s=(menu.start_time_s+f64::from(*delta)*900.0).rem_euclid(86400.0),
                 MenuField::Season=>menu.season=cycle(menu.season,4,*delta),
@@ -958,6 +1015,7 @@ fn build_panel(
     live: Option<Res<LiveDrive>>,
     content: Res<ActivePlayerContent>,
     cab: Res<crate::cab_cvf::CabCvfState>,
+    previews: Option<Res<previews::Previews>>,
 ) {
     if !ui.rebuild {
         return;
@@ -1047,7 +1105,7 @@ fn build_panel(
             ))
             .with_children(|p| match panel {
                 PlayerPanel::Menu => launcher::build_home(p),
-                PlayerPanel::NewGame => launcher::build_new_game(p, &ui, &menu, &settings),
+                PlayerPanel::NewGame => launcher::build_new_game(p, &ui, &menu, &settings, previews.as_deref()),
                 PlayerPanel::Continue => launcher::build_continue(p),
                 PlayerPanel::Content => launcher::build_library(p, ui.library_tab, &downloads, &menu),
                 PlayerPanel::MissingResources => {
@@ -3242,8 +3300,12 @@ mod tests {
             .init_resource::<crate::teleport::TeleportDialog>()
             .init_resource::<ButtonInput<KeyCode>>()
             .init_resource::<ButtonInput<MouseButton>>()
+            .add_message::<KeyboardInput>()
             .add_message::<AppExit>()
-            .add_systems(Update, (player_keys, handle_buttons, build_panel).chain());
+            .add_systems(
+                Update,
+                (player_keys, choice_keys, handle_buttons, build_panel).chain(),
+            );
         let camera = app.world_mut().spawn_empty().id();
         let mut ui = app.world_mut().resource_mut::<PlayerUiState>();
         ui.panel = PlayerPanel::Menu;
@@ -3333,6 +3395,156 @@ mod tests {
         assert_eq!((menu.route, menu.service, menu.consist, menu.path), before);
         assert_eq!(menu.start_time_s, 12345.);
         assert_eq!(menu.weather, PlayerWeather::Snow);
+    }
+    fn type_search(app: &mut App, logical_key: Key, text: Option<&str>) {
+        let window = app.world().resource::<PlayerUiState>().camera.unwrap();
+        app.world_mut()
+            .resource_mut::<Messages<KeyboardInput>>()
+            .write(KeyboardInput {
+                key_code: KeyCode::KeyA,
+                logical_key,
+                state: ButtonState::Pressed,
+                text: text.map(Into::into),
+                repeat: false,
+                window,
+            });
+        app.update();
+    }
+    #[test]
+    fn searchable_routes_select_directly_and_escape_leaves_the_search_first() {
+        let mut app = menu_app();
+        app.update();
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::Open(PlayerPanel::NewGame))
+        });
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::FocusSearch(ChoiceKind::Route))
+        });
+        let chosen = app.world().resource::<PlayerLaunchMenu>().routes.len() - 1;
+        let name = app.world().resource::<PlayerLaunchMenu>().routes[chosen].to_uppercase();
+        type_search(&mut app, Key::Character(name.clone().into()), Some(&name));
+        let matches = choices::matching(
+            app.world().resource::<PlayerLaunchMenu>(),
+            ChoiceKind::Route,
+            &name,
+        );
+        assert!(matches.contains(&chosen));
+        click(
+            &mut app,
+            |cmd| matches!(cmd, UiCommand::SelectChoice(ChoiceKind::Route, i) if *i == chosen),
+        );
+        assert_eq!(app.world().resource::<PlayerLaunchMenu>().route, chosen);
+        assert_eq!(
+            app.world().resource::<PlayerUiState>().panel,
+            PlayerPanel::NewGame
+        );
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::FocusSearch(ChoiceKind::Route))
+        });
+        escape(&mut app);
+        assert!(
+            app.world()
+                .resource::<PlayerUiState>()
+                .choice_focus
+                .is_none()
+        );
+        assert_eq!(
+            app.world().resource::<PlayerUiState>().panel,
+            PlayerPanel::NewGame
+        );
+        escape(&mut app);
+        assert_eq!(
+            app.world().resource::<PlayerUiState>().panel,
+            PlayerPanel::Menu
+        );
+    }
+    #[test]
+    fn incomplete_formation_remains_selectable_in_the_filtered_list() {
+        let mut app = menu_app();
+        app.update();
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::Open(PlayerPanel::NewGame))
+        });
+        let chosen = 0;
+        let path = app.world().resource::<PlayerLaunchMenu>().consists[chosen].clone();
+        {
+            let mut menu = app.world_mut().resource_mut::<PlayerLaunchMenu>();
+            menu.consist_audits.insert(
+                path.clone(),
+                openrailsrs_train::ConsistAudit {
+                    vehicles: 3,
+                    powered_vehicles: 1,
+                    errors: vec!["Falta un modelo original".into()],
+                    ..default()
+                },
+            );
+        }
+        app.world_mut()
+            .resource_mut::<PlayerUiState>()
+            .choice_search[ChoiceKind::Consist.slot()]
+        .query = path.file_stem().unwrap().to_string_lossy().into_owned();
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::NewGameStep(NewGameStep::Train))
+        });
+        click(
+            &mut app,
+            |cmd| matches!(cmd, UiCommand::SelectChoice(ChoiceKind::Consist, i) if *i == chosen),
+        );
+        assert_eq!(app.world().resource::<PlayerLaunchMenu>().consist, chosen);
+        assert_eq!(
+            app.world().resource::<PlayerUiState>().panel,
+            PlayerPanel::NewGame
+        );
+        let mut commands = app.world_mut().query::<&UiCommand>();
+        assert!(
+            !commands
+                .iter(app.world())
+                .any(|cmd| matches!(cmd, UiCommand::Start))
+        );
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::Open(PlayerPanel::MissingResources))
+        });
+        assert_eq!(
+            app.world().resource::<PlayerUiState>().panel,
+            PlayerPanel::MissingResources
+        );
+    }
+    #[test]
+    fn typing_search_handles_accents_and_enter_without_opening_hotkey_panels() {
+        let mut app = menu_app();
+        app.update();
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::Open(PlayerPanel::NewGame))
+        });
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::FocusSearch(ChoiceKind::Route))
+        });
+        type_search(
+            &mut app,
+            Key::Character("Chíltern".into()),
+            Some("Chíltern"),
+        );
+        let menu = app.world().resource::<PlayerLaunchMenu>();
+        let matched = choices::matching(menu, ChoiceKind::Route, "CHILTERN");
+        assert!(!matched.is_empty());
+        type_search(&mut app, Key::Backspace, None);
+        assert_eq!(
+            app.world().resource::<PlayerUiState>().choice_search[0].query,
+            "Chílter"
+        );
+        type_search(&mut app, Key::Character("n".into()), Some("n"));
+        type_search(&mut app, Key::Enter, None);
+        assert_eq!(app.world().resource::<PlayerLaunchMenu>().route, matched[0]);
+        assert_eq!(
+            app.world().resource::<PlayerUiState>().panel,
+            PlayerPanel::NewGame
+        );
+        assert!(
+            app.world()
+                .resource::<PlayerUiState>()
+                .choice_focus
+                .is_none()
+        );
     }
     #[test]
     fn launch_and_save_actions_stay_outside_scrolling_content() {

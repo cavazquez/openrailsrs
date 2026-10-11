@@ -643,7 +643,18 @@ fn select_better_world_ast(raw: &Ast, normalized: &Ast) -> Ast {
         .iter()
         .filter(|i| i.uid().unwrap_or(0) != 0)
         .count();
-    if uids_raw >= uids_norm {
+    // A classic tile with a single Signal may also parse as an untyped Static
+    // in the raw tree. Prefer the tree retaining its specific authored type
+    // when both interpretations contain the same objects and valid identities.
+    let typed = |items: &[WorldItem]| {
+        items
+            .iter()
+            .filter(|item| !matches!(item, WorldItem::Static { .. } | WorldItem::Other { .. }))
+            .count()
+    };
+    if uids_raw == uids_norm && typed(&items_norm) > typed(&items_raw) {
+        normalized.clone()
+    } else if uids_raw >= uids_norm {
         raw.clone()
     } else {
         normalized.clone()
@@ -1105,6 +1116,12 @@ fn is_jinx_flat_alternating(items: &[Ast]) -> bool {
 }
 
 fn infer_object_tag(fields: &[Ast]) -> Option<String> {
+    // A single classic object can reach this fallback without its outer type.
+    // Head references are unique to Signals; retain them instead of treating
+    // a model with FileName as static scenery.
+    if fields.iter().any(|field| matches!(field, Ast::List(items) if matches!(items.first(), Some(Ast::Atom(Atom::Symbol(name))) if name.eq_ignore_ascii_case("SignalUnits") || name.eq_ignore_ascii_case("SignalSubObj")))) {
+        return Some("Signal".into());
+    }
     if find_named_f64(fields, "Width").is_some() && find_named_f64(fields, "Height").is_some() {
         return Some("Transfer".into());
     }
@@ -2048,6 +2065,13 @@ Tr_Worldfile (
 #[cfg(test)]
 mod scientific_notation_tests {
     use super::*;
+    #[test]
+    fn single_native_signal_keeps_its_head_reference() {
+        let source = "Tr_Worldfile ( Signal ( UiD ( 22 ) FileName ( test.s ) SignalSubObj ( 1 ) Position ( 0 0 0 ) QDirection ( 0 0 0 1 ) SignalUnits ( 1 SignalUnit ( 0 TrItemId ( 0 3 ) ) ) ) )";
+        let world = WorldFile::from_bytes(source.as_bytes(), None).unwrap();
+        assert_eq!(world.items[0].kind(), "Signal", "{world:?}");
+        assert_eq!(world.items[0].signal_units()[0].tr_item_id, 3);
+    }
 
     #[test]
     fn native_signal_objects_keep_distinct_first_field_uids() {

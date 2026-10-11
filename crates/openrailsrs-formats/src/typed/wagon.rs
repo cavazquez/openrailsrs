@@ -233,7 +233,7 @@ fn f64_triplet_from_field_list(pair: &[Ast]) -> Option<[f64; 3]> {
             _ => None,
         })
         .collect();
-    (values.len() >= 3).then_some([values[0], values[1], values[2]])
+    (values.len() >= 3).then(|| [values[0], values[1], values[2]])
 }
 
 fn atom_or_string(ast: &Ast) -> Option<String> {
@@ -253,12 +253,33 @@ fn f64_triplet_from_ast_value(ast: &Ast) -> Option<[f64; 3]> {
                     _ => None,
                 })
                 .collect();
-            (values.len() >= 3).then_some([values[0], values[1], values[2]])
+            (values.len() >= 3).then(|| [values[0], values[1], values[2]])
         }
         Ast::Atom(atom) => {
             // Bare "x y z" is unusual; require a list.
             let _ = atom;
             None
+        }
+    }
+}
+
+#[cfg(test)]
+mod incomplete_passenger_position_tests {
+    use super::*;
+    #[test]
+    fn empty_or_short_passenger_fields_are_ignored_without_panicking() {
+        for count in 0..3 {
+            let values = (0..count)
+                .map(|n| Ast::Atom(Atom::Number(n as f64)))
+                .collect();
+            assert_eq!(f64_triplet_from_ast_value(&Ast::List(values)), None);
+            assert_eq!(
+                f64_triplet_from_field_list(&[
+                    Ast::Atom(Atom::Symbol("PassengerCabinHeadPos".into())),
+                    Ast::List(vec![])
+                ]),
+                None
+            );
         }
     }
 }

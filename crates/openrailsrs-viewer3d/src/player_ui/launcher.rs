@@ -118,177 +118,243 @@ pub(super) fn build_steps(p: &mut ChildSpawnerCommands<'_>, selected: NewGameSte
     });
 }
 
+fn choice_columns(
+    p: &mut ChildSpawnerCommands<'_>,
+    choices: impl FnOnce(&mut ChildSpawnerCommands<'_>),
+    preview: impl FnOnce(&mut ChildSpawnerCommands<'_>),
+) {
+    p.spawn(Node {
+        flex_direction: FlexDirection::Row,
+        flex_wrap: FlexWrap::Wrap,
+        align_items: AlignItems::FlexStart,
+        column_gap: Val::Px(18.0),
+        row_gap: Val::Px(14.0),
+        flex_shrink: 0.0,
+        min_width: Val::Px(0.0),
+        ..default()
+    })
+    .with_children(|p| {
+        let column = || Node {
+            flex_basis: Val::Px(350.0),
+            flex_grow: 1.0,
+            min_width: Val::Px(0.0),
+            flex_direction: FlexDirection::Column,
+            row_gap: Val::Px(8.0),
+            ..default()
+        };
+        p.spawn(column()).with_children(choices);
+        p.spawn(column()).with_children(preview);
+    });
+}
+
 pub(super) fn build_new_game(
     p: &mut ChildSpawnerCommands<'_>,
     ui: &PlayerUiState,
     menu: &PlayerLaunchMenu,
     settings: &PlayerSettings,
+    previews: Option<&super::previews::Previews>,
 ) {
     match ui.new_game_step {
         NewGameStep::Route => {
             label(p, "¿Dónde querés conducir?", 21.0, TEXT);
-            selector(
+            choice_columns(
                 p,
-                "Ruta",
-                menu.routes
-                    .get(menu.route)
-                    .cloned()
-                    .unwrap_or_else(|| "Sin rutas".into()),
-                MenuField::Route,
-            );
-            selector(
-                p,
-                "Servicio",
-                menu.current()
-                    .map(|s| s.name.clone())
-                    .unwrap_or_else(|| "Sin servicios".into()),
-                MenuField::Service,
-            );
-            card(p, |p| {
-                if menu.path != 0 {
-                    label(
+                |p| {
+                    choices::selected(
                         p,
-                        format!("Exploración · {}", menu.path_label()),
-                        16.0,
-                        CAUTION,
+                        "Ruta",
+                        menu.routes
+                            .get(menu.route)
+                            .map(String::as_str)
+                            .unwrap_or("Sin rutas"),
+                        ChoiceKind::Route,
+                        ui.route_picker,
                     );
-                    label(
+                    choices::selected(
                         p,
-                        "Este recorrido termina en su destino y no usa las paradas del servicio.",
-                        13.0,
-                        MUTED,
+                        "Servicio",
+                        menu.current()
+                            .map(|s| s.name.as_str())
+                            .unwrap_or("Sin servicios"),
+                        ChoiceKind::Service,
+                        ui.route_picker,
                     );
-                } else {
-                    label(p, &menu.preview.description, 14.0, TEXT);
-                    if !menu.preview.stops.is_empty() {
-                        label(p, menu.preview.stops.join(" → "), 16.0, ACCENT);
+                    choices::build(p, ui, menu, ui.route_picker, previews);
+                },
+                |p| {
+                    label(p, "Vista previa de la ruta", 17.0, TEXT);
+                    if let Some(preview) = previews {
+                        super::previews::image_card(
+                            p,
+                            preview.route_image.as_ref(),
+                            &preview.route_status,
+                        );
+                        if let Some(railway) = &preview.railway {
+                            label(
+                                p,
+                                format!(
+                                    "Trocha {:.0} mm · {} · {:.0} V",
+                                    railway.gauge_m * 1000.0,
+                                    railway.supply.kind.label(),
+                                    railway.supply.voltage_v
+                                ),
+                                12.0,
+                                MUTED,
+                            );
+                            for missing in &railway.missing {
+                                label(p, missing, 13.0, CAUTION);
+                            }
+                        }
+                    }
+                    card(p, |p| {
+                        if menu.path != 0 {
+                            label(
+                                p,
+                                format!("Exploración · {}", menu.path_label()),
+                                16.0,
+                                CAUTION,
+                            );
+                            label(
+                                p,
+                                "Este recorrido termina en su destino y no usa las paradas del servicio.",
+                                13.0,
+                                MUTED,
+                            );
+                        } else {
+                            if !menu.preview.description.is_empty() {
+                                label(p, &menu.preview.description, 13.0, MUTED);
+                            }
+                            if !menu.preview.stops.is_empty() {
+                                label(p, menu.preview.stops.join(" → "), 15.0, TEXT);
+                            }
+                            if let Some(minutes) = menu.preview.scheduled_minutes {
+                                label(
+                                    p,
+                                    format!("Horario del servicio · {:.0} min", minutes),
+                                    13.0,
+                                    MUTED,
+                                );
+                            }
+                        }
                         label(
                             p,
-                            format!(
-                                "{} paradas{}",
-                                menu.preview.stops.len(),
-                                menu.preview
-                                    .scheduled_minutes
-                                    .filter(|m| m.is_finite() && *m > 0.)
-                                    .map(|m| format!(" · horario previsto: {m:.0} min"))
-                                    .unwrap_or_default()
-                            ),
-                            13.0,
+                            if menu.current().is_some_and(|s| s.native_activity) {
+                                "Actividad del autor · conserva su recorrido y horario"
+                            } else {
+                                "Escenario de ejemplo · ver recursos para comprobar el contenido 3D"
+                            },
+                            12.0,
                             MUTED,
                         );
+                    });
+                    button(
+                        p,
+                        if ui.new_game_advanced {
+                            "Ocultar recorrido alternativo"
+                        } else {
+                            "Cambiar recorrido (exploración)"
+                        },
+                        UiCommand::NewGameAdvanced,
+                    );
+                    if ui.new_game_advanced {
+                        selector(p, "Recorrido", menu.path_label(), MenuField::Path);
                     }
-                }
-                label(
-                    p,
-                    if menu.current().is_some_and(|s| s.scenery_root.is_some()) {
-                        "Escenografía original disponible"
-                    } else {
-                        "Escenario de ejemplo · ver recursos para comprobar el contenido 3D"
-                    },
-                    12.0,
-                    MUTED,
-                );
-            });
-            button(
-                p,
-                if ui.new_game_advanced {
-                    "Ocultar recorrido alternativo"
-                } else {
-                    "Cambiar recorrido (exploración)"
                 },
-                UiCommand::NewGameAdvanced,
             );
-            if ui.new_game_advanced {
-                selector(p, "Recorrido", menu.path_label(), MenuField::Path);
-                label(
-                    p,
-                    "Recorrido del servicio conserva sus paradas y horario.",
-                    12.0,
-                    MUTED,
-                );
-            }
         }
         NewGameStep::Train => {
             label(p, "¿Qué tren vas a llevar?", 21.0, TEXT);
-            selector(p, "Formación", menu.consist_label(), MenuField::Consist);
-            card(p, |p| {
-                if let Some(audit) = menu
-                    .consists
-                    .get(menu.consist)
-                    .and_then(|path| menu.consist_audits.get(path))
-                {
-                    // A lightweight diagram follows the audited consist, without
-                    // loading vehicle meshes or textures just to browse a menu.
-                    row(p, |p| {
-                        for _ in 0..audit.vehicles.min(10) {
-                            p.spawn((
-                                Node {
-                                    width: Val::Px(42.0),
-                                    height: Val::Px(22.0),
-                                    border_radius: BorderRadius::all(Val::Px(3.0)),
-                                    ..default()
-                                },
-                                BackgroundColor(MUTED),
-                            ));
-                        }
-                        if audit.vehicles > 10 {
-                            label(p, format!("+{}", audit.vehicles - 10), 13.0, MUTED);
-                        }
-                    });
-                    label(
-                        p,
-                        format!(
-                            "{} vehículos ({} con tracción) · {:.0} m · {:.0} t",
-                            audit.vehicles,
-                            audit.powered_vehicles,
-                            audit.length_m,
-                            audit.mass_kg / 1000.0
-                        ),
-                        16.0,
-                        TEXT,
-                    );
-                    label(
-                        p,
-                        format!(
-                            "Cabina 2D: {} · Cabina 3D: {}",
-                            yes(audit.cab_2d),
-                            yes(audit.cab_3d)
-                        ),
-                        14.0,
-                        MUTED,
-                    );
-                    let (message, color, _) = readiness(menu);
-                    label(p, message, 14.0, color);
-                    if !audit.warnings.is_empty() {
-                        label(
+            choice_columns(
+                p,
+                |p| {
+                    choices::build(p, ui, menu, ChoiceKind::Consist, previews);
+                },
+                |p| {
+                    label(p, menu.consist_label(), 17.0, TEXT);
+                    if let Some(preview) = previews {
+                        super::previews::image_card(
                             p,
-                            format!(
-                                "{} avisos de compatibilidad · Ver detalles",
-                                audit.warnings.len()
-                            ),
-                            12.0,
-                            CAUTION,
+                            preview.train_image.as_ref(),
+                            &preview.train_status,
                         );
                     }
-                } else {
-                    let (message, color, _) = readiness(menu);
-                    label(p, message, 14.0, color);
-                }
-                row(p, |p| {
-                    button(
-                        p,
-                        "Ver detalles",
-                        UiCommand::Open(PlayerPanel::MissingResources),
-                    );
-                    button(p, "Revisar archivos otra vez", UiCommand::MissingAudit);
-                });
-                label(
-                    p,
-                    "El esquema indica el tamaño de la formación. La revisión comprueba recursos; el detalle informa los límites de sus sistemas.",
-                    12.0,
-                    MUTED,
-                );
-            });
+                    card(p, |p| {
+                        if let Some(audit) = menu
+                            .consists
+                            .get(menu.consist)
+                            .and_then(|path| menu.consist_audits.get(path))
+                        {
+                            row(p, |p| {
+                                for _ in 0..audit.vehicles.min(10) {
+                                    p.spawn((
+                                        Node {
+                                            width: Val::Px(25.0),
+                                            height: Val::Px(15.0),
+                                            border_radius: BorderRadius::all(Val::Px(3.0)),
+                                            ..default()
+                                        },
+                                        BackgroundColor(MUTED),
+                                    ));
+                                }
+                                if audit.vehicles > 10 {
+                                    label(p, format!("+{}", audit.vehicles - 10), 13.0, MUTED);
+                                }
+                            });
+                            label(
+                                p,
+                                format!(
+                                    "{} vehículos ({} con tracción) · {:.0} m · {:.0} t",
+                                    audit.vehicles,
+                                    audit.powered_vehicles,
+                                    audit.length_m,
+                                    audit.mass_kg / 1000.0
+                                ),
+                                14.0,
+                                TEXT,
+                            );
+                            label(
+                                p,
+                                format!(
+                                    "Cabina 2D: {} · Cabina 3D: {}",
+                                    yes(audit.cab_2d),
+                                    yes(audit.cab_3d)
+                                ),
+                                13.0,
+                                MUTED,
+                            );
+                            if let Some(warning) = previews
+                                .and_then(|p| p.railway.as_ref())
+                                .and_then(|railway| {
+                                    super::previews::railway_warning(audit, railway)
+                                })
+                            {
+                                label(p, warning, 13.0, CAUTION);
+                            }
+                            if !audit.warnings.is_empty() {
+                                label(
+                                    p,
+                                    format!(
+                                        "{} avisos de compatibilidad · Ver detalles",
+                                        audit.warnings.len()
+                                    ),
+                                    12.0,
+                                    CAUTION,
+                                );
+                            }
+                        }
+                        let (message, color, _) = readiness(menu);
+                        label(p, message, 13.0, color);
+                        row(p, |p| {
+                            button(
+                                p,
+                                "Ver detalles",
+                                UiCommand::Open(PlayerPanel::MissingResources),
+                            );
+                            button(p, "Revisar archivos otra vez", UiCommand::MissingAudit);
+                        });
+                    });
+                },
+            );
         }
         NewGameStep::Environment => {
             let mode = WeatherMode::selected(menu.environment, settings.weather_profile);

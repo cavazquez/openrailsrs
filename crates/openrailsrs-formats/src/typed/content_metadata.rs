@@ -20,6 +20,8 @@ pub struct VehicleScriptReference {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct VehicleContentMetadata {
     pub engine_type: Option<String>,
+    #[serde(default)]
+    pub electric: Option<openrailsrs_core::electrification::ElectricVehicleParams>,
     pub brake_system: Option<String>,
     pub scripts: Vec<VehicleScriptReference>,
     pub sounds: Vec<String>,
@@ -32,32 +34,7 @@ pub fn parse_vehicle_content_metadata(ast: &Ast, is_engine: bool) -> VehicleCont
             .and_then(|v| v.first())
             .and_then(scalar_text)
     };
-    let engine_type = if is_engine {
-        field_values(ast, "Engine")
-            .first()
-            .and_then(|body| {
-                let engine = Ast::List(body.to_vec());
-                field_values(&engine, "Type")
-                    .first()
-                    .and_then(|v| v.first())
-                    .and_then(scalar_text)
-            })
-            .or_else(|| {
-                // Native parse_vehicle_text deliberately drops the separate root
-                // headers. Traction categories still disambiguate Engine.Type from
-                // Wagon.Type (Engine/Passenger/Freight/Tender).
-                field_values(ast, "Type")
-                    .iter()
-                    .filter_map(|v| v.first().and_then(scalar_text))
-                    .find(|v| {
-                        ["Diesel", "Electric", "Steam"]
-                            .iter()
-                            .any(|t| v.eq_ignore_ascii_case(t))
-                    })
-            })
-    } else {
-        None
-    };
+    let engine_type = is_engine.then(|| vehicle_engine_type(ast)).flatten();
     let mut scripts = vec![];
     for (key, system) in [
         ("ORTSTrainControlSystem", ScriptSystem::TrainControl),
@@ -85,6 +62,9 @@ pub fn parse_vehicle_content_metadata(ast: &Ast, is_engine: bool) -> VehicleCont
         .collect();
     VehicleContentMetadata {
         engine_type,
+        electric: is_engine
+            .then(|| super::parse_electric_vehicle(ast).ok().flatten())
+            .flatten(),
         brake_system: value("BrakeSystemType"),
         scripts,
         sounds,
@@ -100,4 +80,29 @@ pub fn sms_wave_references(ast: &Ast) -> Vec<String> {
     paths.sort();
     paths.dedup();
     paths
+}
+
+pub(crate) fn vehicle_engine_type(ast: &Ast) -> Option<String> {
+    field_values(ast, "Engine")
+        .first()
+        .and_then(|body| {
+            let engine = Ast::List(body.to_vec());
+            field_values(&engine, "Type")
+                .first()
+                .and_then(|v| v.first())
+                .and_then(scalar_text)
+        })
+        .or_else(|| {
+            // Native parse_vehicle_text deliberately drops the separate root
+            // headers. Traction categories still disambiguate Engine.Type from
+            // Wagon.Type (Engine/Passenger/Freight/Tender).
+            field_values(ast, "Type")
+                .iter()
+                .filter_map(|v| v.first().and_then(scalar_text))
+                .find(|v| {
+                    ["Diesel", "Electric", "Steam"]
+                        .iter()
+                        .any(|t| v.eq_ignore_ascii_case(t))
+                })
+        })
 }

@@ -120,7 +120,11 @@ fn native_emitters(
             let path = openrailsrs_train::resolve_consist_entry_path(base, entry.path());
             let authored = path.parent().unwrap_or(std::path::Path::new("."));
             let mut candidates = vec![];
-            if let Some(folder) = authored.file_name() {
+            let native = path.ancestors().any(|p| {
+                p.file_name()
+                    .is_some_and(|n| n.eq_ignore_ascii_case("TRAINSET"))
+            });
+            if !native && let Some(folder) = authored.file_name() {
                 for root in
                     crate::shapes::or_content_trainset_roots(route, &folder.to_string_lossy())
                 {

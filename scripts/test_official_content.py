@@ -184,6 +184,28 @@ class Installer(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     content.safe_members(z, maximum)
 
+    def test_directory_aliases_share_one_folder_without_overwriting_files(self):
+        source = self.root / 'aliases.zip'
+        source.write_bytes(archive([
+            ('Trains/CONSISTS/', b''), ('Trains/CONSISTS/a.con', b'a'),
+            ('Trains/Consists/', b''), ('Trains/Consists/b.con', b'b'),
+        ]))
+        destination = self.root / 'installed'
+        destination.mkdir()
+        with patch.object(content, 'emit'):
+            content.extract(source, destination, max_install=1024)
+        self.assertEqual((destination / 'Trains/CONSISTS/a.con').read_bytes(), b'a')
+        self.assertEqual((destination / 'Trains/CONSISTS/b.con').read_bytes(), b'b')
+        self.assertFalse((destination / 'Trains/Consists').exists())
+        for files in [
+            [('Trains/CONSISTS/a.con', 'a'), ('Trains/Consists/A.CON', 'b')],
+            [('Trains/Consists', 'file'), ('Trains/Consists/a.con', 'a')],
+            [('Trains/Consists/a.con', 'a'), ('Trains/CONSISTS', 'file')],
+        ]:
+            with zipfile.ZipFile(io.BytesIO(archive(files))) as z:
+                with self.assertRaises(ValueError):
+                    content.safe_members(z, 1024)
+
     def test_unicode_texture_names_remain_distinct_without_hiding_case_collisions(self):
         files = [('TEXTURES/DFußballfeld.ace', b'original sharp-s texture'),
                  ('TEXTURES/DFussballfeld.ace', b'original double-s texture')]

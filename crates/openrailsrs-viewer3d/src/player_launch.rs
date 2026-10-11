@@ -80,6 +80,8 @@ pub struct PlayerLaunchMenu {
     auditor: openrailsrs_train::ConsistAuditor,
     audits: crate::launch_audits::LaunchAudits,
     pending_reaudit: Option<PathBuf>,
+    stock_sources: Vec<(PathBuf, String)>,
+    consist_directories: HashMap<PathBuf, Vec<PathBuf>>,
 }
 
 impl Default for PlayerLaunchMenu {
@@ -146,6 +148,26 @@ impl PlayerLaunchMenu {
                 }
                 v
             });
+        let mut stock_sources = crate::official_content::installed_stock_sources();
+        // Examples also keep their formations when the player chooses another
+        // map. Discover their folders once, rather than reparsing TOML on clicks.
+        for service in &services {
+            if !service.native_activity
+                && let Ok(scenario) = load_scenario(&service.source)
+                && let Some(directory) = absolute(
+                    &service
+                        .source
+                        .parent()
+                        .unwrap()
+                        .join(&scenario.train.consist),
+                )
+                .parent()
+                .map(Path::to_path_buf)
+                && !stock_sources.iter().any(|(path, _)| path == &directory)
+            {
+                stock_sources.push((directory, format!("Ejemplo · {}", route_label(service))));
+            }
+        }
         let mut menu = Self {
             routes,
             services,
@@ -165,6 +187,8 @@ impl PlayerLaunchMenu {
             project_root: absolute(project),
             audits: crate::launch_audits::LaunchAudits::new(),
             pending_reaudit: None,
+            stock_sources,
+            consist_directories: HashMap::new(),
             auditor: openrailsrs_train::ConsistAuditor::new(
                 native
                     .as_deref()
@@ -405,6 +429,36 @@ impl PlayerLaunchMenu {
             }
             self.paths = files_with_extension(&root.join("PATHS"), "pat");
         }
+        // A content pack owns its stock files, not the maps they can drive on.
+        // List formations from every installed route; absolute CON paths keep
+        // editions with matching filenames separate and preserve provenance.
+        let mut content_roots = std::collections::HashSet::new();
+        let mut directories = vec![];
+        for service in &self.services {
+            if let Some(content) = service
+                .scenery_root
+                .as_deref()
+                .and_then(Path::parent)
+                .and_then(Path::parent)
+                && content_roots.insert(absolute(content))
+            {
+                directories.push(content.join("TRAINS/CONSISTS"));
+            }
+        }
+        directories.extend(self.stock_sources.iter().map(|(dir, _)| dir.clone()));
+        let mut seen: std::collections::HashSet<_> = self.consists.iter().cloned().collect();
+        for directory in directories {
+            let cached = self
+                .consist_directories
+                .entry(directory.clone())
+                .or_insert_with(|| files_with_extension(&directory, "con"));
+            self.consists.extend(
+                cached
+                    .iter()
+                    .filter(|path| seen.insert((*path).clone()))
+                    .cloned(),
+            );
+        }
         for con in files_with_extension(library, "con") {
             if !self.consists.contains(&con) {
                 self.consists.push(con);
@@ -429,6 +483,7 @@ impl PlayerLaunchMenu {
             .unwrap_or_else(|| "Formación de la actividad".into())
     }
     pub fn path_label(&self) -> String {
+        // Paths belong to the selected map; the stock library is independent.
         if self.path == 0 {
             "Recorrido del servicio".into()
         } else {
@@ -442,6 +497,43 @@ impl PlayerLaunchMenu {
                 })
                 .unwrap_or_default()
         }
+    }
+    pub fn consist_origin_label(&self, index: usize) -> String {
+        let Some(path) = self.consists.get(index) else {
+            return String::new();
+        };
+        if let Some((_, label)) = self
+            .stock_sources
+            .iter()
+            .find(|(directory, _)| path.parent() == Some(directory.as_path()))
+        {
+            return label.clone();
+        }
+        if let Some(root) = path.parent().and_then(Path::parent).and_then(Path::parent) {
+            if let Some(service) = self.services.iter().find(|s| {
+                s.scenery_root
+                    .as_deref()
+                    .and_then(Path::parent)
+                    .and_then(Path::parent)
+                    == Some(root)
+            }) {
+                return route_label(service);
+            }
+            return root
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .into_owned();
+        }
+        "Biblioteca de trenes".into()
+    }
+    pub fn route_scenery_root(&self, index: usize) -> Option<&Path> {
+        let label = self.routes.get(index)?;
+        self.services
+            .iter()
+            .find(|s| &route_label(s) == label)?
+            .scenery_root
+            .as_deref()
     }
     pub fn consist_status(&self) -> String {
         self.consists
@@ -815,6 +907,8 @@ pub fn absolute(p: &Path) -> PathBuf {
     }
 }
 fn files_with_extension(dir: &Path, extension: &str) -> Vec<PathBuf> {
+    let dir = openrailsrs_formats::resolve_path_case_insensitive(dir)
+        .unwrap_or_else(|| dir.to_path_buf());
     let mut files = std::fs::read_dir(dir)
         .into_iter()
         .flatten()
@@ -1071,6 +1165,51 @@ mod tests {
             ),
             selection
         );
+    }
+    #[test]
+    fn installed_formations_are_available_on_each_map_with_their_own_origin() {
+        let temp = tempfile::tempdir().unwrap();
+        let project = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let mut menu = PlayerLaunchMenu::discover(&project, None);
+        menu.services.clear();
+        let mut originals = vec![];
+        for name in ["route-a", "route-b"] {
+            let content = temp.path().join(name);
+            let native = content.join("ROUTES").join(name);
+            let stock = content.join("Trains/Trainset/SharedName");
+            let library = content.join("Trains/Consists");
+            std::fs::create_dir_all(&native).unwrap();
+            std::fs::create_dir_all(&stock).unwrap();
+            std::fs::create_dir_all(&library).unwrap();
+            let con = library.join("original.con");
+            std::fs::write(
+                &con,
+                "Train ( TrainCfg ( original Engine ( EngineData ( power SharedName ) ) ) )",
+            )
+            .unwrap();
+            std::fs::write(stock.join("power.eng"), "Wagon ( power Mass ( 40t ) Size ( 3m 4m 20m ) ) Engine ( power MaxPower ( 500kW ) )").unwrap();
+            originals.push(con);
+            menu.services.push(ServiceChoice {
+                name: name.into(),
+                source: native.join("activity.act"),
+                route_dir: native.clone(),
+                scenery_root: Some(native),
+                native_activity: true,
+                edition: None,
+            });
+        }
+        menu.routes = menu.services.iter().map(route_label).collect();
+        for service in 0..2 {
+            menu.service = service;
+            menu.refresh_choices_with_library(&temp.path().join("empty-library"));
+            wait_for_audits(&mut menu);
+            let example = absolute(&project.join("examples/routes/mitre/consists/caf_6000.con"));
+            assert!(menu.consists.contains(&example));
+            for con in &originals {
+                assert!(menu.consists.contains(con));
+                assert!(menu.consist_audits[con].player_ready());
+            }
+        }
     }
     #[test]
     fn launch_waits_for_the_selected_audit_and_rejects_an_incomplete_formation() {

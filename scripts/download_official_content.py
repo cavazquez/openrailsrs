@@ -161,8 +161,10 @@ def installed_match(entry, destination, revision=None, headers=None):
 
 
 def safe_members(archive, max_install):
-    members, paths, total = [], set(), 0
-    for info in archive.infolist():
+    members, paths, directories, total = [], set(), {}, 0
+    for index, info in enumerate(archive.infolist()):
+        if index >= 500000:
+            raise ValueError('El ZIP excede el número de recursos autorizado')
         name = info.filename.replace('\\', '/')
         path = PurePosixPath(name)
         mode = info.external_attr >> 16
@@ -174,15 +176,30 @@ def safe_members(archive, max_install):
             raise ValueError(f'El ZIP incluye metadatos reservados al importador: {name}')
         # casefold expands ß to ss, conflating distinct authored filenames.
         # Chiltern v4 supplies both DFußballfeld.ace and DFussballfeld.ace.
-        # Keep lowercase casing checks, and never overwrite during extraction.
+        # Authors sometimes split CONSISTS/Consists or OpenRails/Openrails
+        # into directory aliases. Merge directories only; reject any aliased
+        # file, or a file used as a directory, before writing any content.
+        normalized = PurePosixPath()
+        for part in path.parts[:-1]:
+            candidate = normalized / part
+            key = str(candidate).lower()
+            if key in paths:
+                raise ValueError(f'Archivo usado como carpeta en ZIP: {name}')
+            normalized = directories.setdefault(key, candidate)
+        path = normalized / path.name
         key = str(path).lower()
-        if key in paths:
+        if key in paths or (not info.is_dir() and key in directories):
             raise ValueError(f'Recurso duplicado o ambiguo por mayúsculas: {name}')
-        paths.add(key)
         if info.flag_bits & 1:
             raise ValueError('El ZIP requiere contraseña')
+        if info.is_dir():
+            if key in directories:
+                continue
+            directories[key] = path
+        else:
+            paths.add(key)
         total += info.file_size
-        if total > max_install or len(paths) > 500000:
+        if total > max_install:
             raise ValueError('El ZIP excede el tamaño de instalación autorizado')
         members.append((info, path))
     return members, total

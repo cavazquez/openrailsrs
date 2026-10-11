@@ -15,7 +15,9 @@ use openrailsrs_formats::{
     CabControl, MstsFile, audit_vehicle_file, parse_from_first_paren, parse_msts_file,
     resolve_cab_assets,
 };
-use openrailsrs_msts::{import_activity_with_summary, import_route_with_summary};
+use openrailsrs_msts::{
+    import_activity_with_consist_length, import_activity_with_summary, import_route_with_summary,
+};
 use openrailsrs_route::load_track_graph_from_route_dir;
 use openrailsrs_sim::{
     LiveMultiSim, ScriptedDriver, run_from_scenario_file, run_from_scenario_file_with_driver,
@@ -332,6 +334,9 @@ enum Commands {
         /// Path to an MSTS activity file (*.act).  If omitted, only track.toml is generated.
         #[arg(long)]
         activity: Option<PathBuf>,
+        /// Original .con to drive; validates resources and places the head from the native rear traveller.
+        #[arg(long, requires = "activity", conflicts_with = "patch_coords")]
+        consist: Option<PathBuf>,
         /// Only patch `x_m`/`y_m` on an existing `track.toml` (preserves edges/topology).
         #[arg(long)]
         patch_coords: bool,
@@ -986,6 +991,7 @@ fn main() -> anyhow::Result<()> {
             route_dir,
             out_dir,
             activity,
+            consist,
             patch_coords,
         } => {
             let out = out_dir.unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
@@ -1020,10 +1026,33 @@ fn main() -> anyhow::Result<()> {
 
             // 2. If an activity is given, import it: ACT + PAT → scenario.toml
             if let Some(act_path) = activity {
-                let (scenario_toml, act_name, overlay_applied) =
+                let (scenario_toml, act_name, overlay_applied) = if let Some(con) = consist {
+                    let con = con
+                        .canonicalize()
+                        .with_context(|| format!("original formation {}", con.display()))?;
+                    let report = openrailsrs_train::ConsistAuditor::new(vec![]).inspect(&con);
+                    anyhow::ensure!(
+                        report.player_ready(),
+                        "{}: {}",
+                        con.display(),
+                        report.label()
+                    );
+                    let text = import_activity_with_consist_length(
+                        &route_dir,
+                        &act_path,
+                        &out,
+                        report.length_m,
+                    )
+                    .map_err(|e| anyhow::anyhow!("import activity {}: {e}", act_path.display()))?;
+                    let mut scenario: openrailsrs_scenarios::ScenarioFile = toml::from_str(&text)?;
+                    scenario.train.consist = con.to_string_lossy().into_owned();
+                    let name = scenario.scenario.name.clone();
+                    (toml::to_string_pretty(&scenario)?, name, false)
+                } else {
                     import_activity_with_summary(&route_dir, &act_path, Some(&out)).map_err(
                         |e| anyhow::anyhow!("import activity {}: {e}", act_path.display()),
-                    )?;
+                    )?
+                };
                 let scenario_out = out.join("scenario.toml");
                 std::fs::write(&scenario_out, &scenario_toml)
                     .with_context(|| format!("write {}", scenario_out.display()))?;

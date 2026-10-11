@@ -3,8 +3,7 @@ use crate::{Ast, FormatError};
 use openrailsrs_core::electrification::{ElectricPickup, ElectricVehicleParams};
 
 pub fn parse_electric_vehicle(ast: &Ast) -> Result<Option<ElectricVehicleParams>, FormatError> {
-    if !super::parse_vehicle_content_metadata(ast, true)
-        .engine_type
+    if !super::content_metadata::vehicle_engine_type(ast)
         .is_some_and(|v| v.eq_ignore_ascii_case("electric"))
     {
         return Ok(None);

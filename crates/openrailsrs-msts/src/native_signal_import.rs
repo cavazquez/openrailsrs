@@ -119,9 +119,9 @@ fn programs(text: &str) -> Result<HashMap<String, String>, MstsError> {
                 .next()
                 .ok_or_else(|| MstsError::msg("Missing SIGSCR program name"))?;
             if parts.next().is_some()
-                || !name
-                    .chars()
-                    .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '/'))
+                || !name.chars().all(|c| {
+                    c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '/' | '+' | '&' | '.')
+                })
                 || out.len() >= 4096
             {
                 return Err(MstsError::msg(
@@ -149,7 +149,26 @@ struct WorldHead {
     features: u16,
 }
 
-fn world_heads(route: &Path, cfg: &Ast) -> Result<HashMap<u32, WorldHead>, MstsError> {
+fn world_heads(route: &Path, cfg: &Ast, tdb: &Ast) -> Result<HashMap<u32, WorldHead>, MstsError> {
+    let mut item_tiles = HashMap::new();
+    for table in blocks(tdb, "TrItemTable") {
+        let Ast::List(items) = table else { continue };
+        for item in items.iter().skip(1) {
+            let Some(id) = field(item, "TrItemId").and_then(|s| s.parse::<u32>().ok()) else {
+                continue;
+            };
+            let pose = blocks(item, "TrItemRData")
+                .first()
+                .map(|p| (atoms(p), 3))
+                .or_else(|| blocks(item, "TrItemPData").first().map(|p| (atoms(p), 2)));
+            if let Some((values, index)) = pose
+                && let (Some(x), Some(z)) = (values.get(index), values.get(index + 1))
+                && let (Ok(x), Ok(z)) = (x.parse::<i32>(), z.parse::<i32>())
+            {
+                item_tiles.insert(id, (x, z));
+            }
+        }
+    }
     let mut shapes = HashMap::new();
     for shape in blocks(cfg, "SignalShape") {
         let Some(name) = atoms(shape).first().cloned() else {
@@ -198,6 +217,17 @@ fn world_heads(route: &Path, cfg: &Ast) -> Result<HashMap<u32, WorldHead>, MstsE
             else {
                 continue;
             };
+            // OR 1.6.1 Signals.cs rejects the whole WORLD signal when a head
+            // is absent from TDB or farther than one tile away. Older routes
+            // can retain stale objects referencing reused TrItem ids.
+            if signal_units.iter().any(|unit| {
+                item_tiles.get(&unit.tr_item_id).is_none_or(|&(tx, tz)| {
+                    (i64::from(tx) - i64::from(x)).abs() > 1
+                        || (i64::from(tz) - i64::from(z)).abs() > 1
+                })
+            }) {
+                continue;
+            }
             let name = name
                 .replace('\\', "/")
                 .rsplit('/')
@@ -220,21 +250,12 @@ fn world_heads(route: &Path, cfg: &Ast) -> Result<HashMap<u32, WorldHead>, MstsE
                 let Some((_, back)) = subobjects.get(&unit.sub_obj) else {
                     continue;
                 };
-                if heads
-                    .insert(
-                        unit.tr_item_id,
-                        WorldHead {
-                            group: format!("{x}/{z}/{uid}/{back}"),
-                            features: features[usize::from(*back)],
-                        },
-                    )
-                    .is_some()
-                {
-                    return Err(MstsError::msg(format!(
-                        "Ambiguous WORLD signal head {}",
-                        unit.tr_item_id
-                    )));
-                }
+                // OR keeps the first valid WORLD reference to a head.
+                // scan_world_tile_files provides deterministic tile order.
+                heads.entry(unit.tr_item_id).or_insert_with(|| WorldHead {
+                    group: format!("{x}/{z}/{uid}/{back}"),
+                    features: features[usize::from(*back)],
+                });
             }
         }
     }
@@ -255,12 +276,20 @@ pub(super) fn bind(
     };
     let cfg = parse_named_stf(&bounded_text(&cfg_path, MAX_NATIVE_FILE_BYTES)?)?;
     let mut functions = HashMap::new();
+    let mut script_aliases = HashMap::new();
     for signal_type in blocks(&cfg, "SignalType") {
         if let (Some(name), Some(function)) = (
             atoms(signal_type).first().cloned(),
             field(signal_type, "SignalFnType"),
         ) {
-            functions.insert(name.to_ascii_uppercase(), function.to_ascii_uppercase());
+            let name = name.to_ascii_uppercase();
+            // OR SignalScripts.AllocateScriptToSignalType shares an authored
+            // program through SignalType.ORTSScript, e.g. Portugal IIL -> II.
+            let script = field(signal_type, "ORTSScript")
+                .unwrap_or_else(|| name.clone())
+                .to_ascii_uppercase();
+            script_aliases.insert(name.clone(), script);
+            functions.insert(name, function.to_ascii_uppercase());
         }
     }
     let mut sources = HashMap::new();
@@ -282,8 +311,8 @@ pub(super) fn bind(
     if sources.is_empty() {
         return Ok(imported.into());
     }
-    let world = world_heads(route, &cfg)?;
     let ast = parse_named_stf(&bounded_text(tdb, MAX_TRACK_DB_BYTES)?)?;
+    let world = world_heads(route, &cfg, &ast)?;
     let mut definitions = HashMap::new();
     for signal in blocks(&ast, "SignalItem") {
         let Some(id) = field(signal, "TrItemId").and_then(|s| s.parse::<u32>().ok()) else {
@@ -340,9 +369,12 @@ pub(super) fn bind(
                     "Unsupported native signal function {function}"
                 )));
             }
-            let source = sources
-                .get(name)
-                .ok_or_else(|| MstsError::msg(format!("Missing native SIGSCR program {name}")))?;
+            let program_name = script_aliases.get(name).unwrap_or(name);
+            let source = sources.get(program_name).ok_or_else(|| {
+                MstsError::msg(format!(
+                    "Missing native SIGSCR program {program_name} for signal type {name}"
+                ))
+            })?;
             SignalProgram::compile(source).map_err(|e| MstsError::msg(format!("{name}: {e}")))?;
             let edge = signal["edge_id"]
                 .as_str()
@@ -390,18 +422,76 @@ pub(super) fn bind(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn authored_signal_types_can_share_the_original_orts_script() {
+        let route = tempfile::tempdir().unwrap();
+        let tdb = route.path().join("test.tdb");
+        std::fs::write(&tdb, "TrackDB ( TrItemTable ( SignalItem ( TrItemId ( 3 ) TrSignalType ( 00000000 0 1 IIL ) ) ) )").unwrap();
+        std::fs::write(route.path().join("sigcfg.dat"), "SignalTypes ( SignalType ( IIL SignalFnType ( NORMAL ) ORTSScript ( II ) ) ) ScriptFiles ( ScriptFile ( sigscr.dat ) )").unwrap();
+        std::fs::write(
+            route.path().join("sigscr.dat"),
+            "SCRIPT II\nstate=SIGASP_CLEAR_2;",
+        )
+        .unwrap();
+        let original = "[[edges]]\nid='e1'\nlength_m=100.0\n[[signals]]\nid='sig3'\nedge_id='e1'\nposition_m=25.0\naspect='stop'\n";
+        let track: toml::Value =
+            toml::from_str(&bind(route.path(), &tdb, original, &[]).unwrap()).unwrap();
+        assert_eq!(
+            track["signals"][0]["script"]["native"]["name"].as_str(),
+            Some("IIL")
+        );
+        assert_eq!(
+            track["signals"][0]["script"]["native"]["source"].as_str(),
+            Some("state=SIGASP_CLEAR_2;\n")
+        );
+    }
+
+    #[test]
+    fn world_heads_ignore_stale_tiles_and_keep_first_valid_reference_like_or() {
+        let route = tempfile::tempdir().unwrap();
+        let directory = route.path().join("WORLD");
+        std::fs::create_dir(&directory).unwrap();
+        let signal = |uid: u32, units: &str| {
+            format!(
+                "Tr_Worldfile ( Signal ( UiD ( {uid} ) FileName ( test.s ) SignalSubObj ( 1 ) Position ( 0 0 0 ) QDirection ( 0 0 0 1 ) SignalUnits ( {units} ) ) )"
+            )
+        };
+        let head = "1 SignalUnit ( 0 TrItemId ( 0 3 ) )";
+        for (name, uid, units) in [
+            ("w+000000+000000.w", 11, head),
+            ("w+000009+000010.w", 22, head),
+            ("w+000010+000010.w", 33, head),
+            (
+                "w+000010+000011.w",
+                44,
+                "2 SignalUnit ( 0 TrItemId ( 0 4 ) ) SignalUnit ( 0 TrItemId ( 0 99 ) )",
+            ),
+        ] {
+            std::fs::write(directory.join(name), signal(uid, units)).unwrap();
+        }
+        let cfg = parse_named_stf("SignalShapes ( SignalShape ( test.s SignalSubObjs ( SignalSubObj ( 0 SigSubType ( SIGNAL_HEAD ) ) ) ) )").unwrap();
+        let tdb = parse_named_stf("TrackDB ( TrItemTable ( SignalItem ( TrItemId ( 3 ) TrItemRData ( 0 0 0 10 10 ) ) SignalItem ( TrItemId ( 4 ) TrItemPData ( 0 0 10 10 ) ) ) )").unwrap();
+        let heads = world_heads(route.path(), &cfg, &tdb).unwrap();
+        assert_eq!(heads.len(), 1);
+        assert_eq!(heads[&3].group, "9/10/22/false");
+        assert_eq!(heads[&3].features, 1 << 1);
+        // One absent head rejects its entire WORLD object, including head 4.
+        assert!(!heads.contains_key(&4));
+    }
 
     #[test]
     fn native_script_names_preserve_author_identifiers_and_reject_duplicates() {
         // These are program identifiers, not filesystem paths. OR preserves
         // LQ/UQ names used by Chiltern v4; script file paths remain confined.
         let definitions = programs(
-            "SCRIPT RI-Feather\nstate=1;\nSCRIPT UK_4_ASPECT\nstate=7;\nSCRIPT LQ/UQ_Headshunt\nstate=0;\nSCRIPT LQ/UQ_DummyDist\nstate=1;",
+            "SCRIPT RI-Feather\nstate=1;\nSCRIPT UK_4_ASPECT\nstate=7;\nSCRIPT LQ/UQ_Headshunt\nstate=0;\nSCRIPT LQ/UQ_DummyDist\nstate=1;\nSCRIPT NSWCollight1x2+1x2gantry\nstate=1;\nSCRIPT BR_E_1Aspect&SubsidiaryTY\nstate=1;",
         )
         .unwrap();
         assert!(definitions.contains_key("RI-FEATHER"));
         assert!(definitions.contains_key("LQ/UQ_HEADSHUNT"));
         assert!(definitions.contains_key("LQ/UQ_DUMMYDIST"));
+        assert!(definitions.contains_key("NSWCOLLIGHT1X2+1X2GANTRY"));
+        assert!(definitions.contains_key("BR_E_1ASPECT&SUBSIDIARYTY"));
         assert!(programs("SCRIPT signal\nstate=1;\nSCRIPT SIGNAL\nstate=7;").is_err());
     }
 

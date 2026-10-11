@@ -1,0 +1,925 @@
+{
+  "schema": 1,
+  "date": "2026-10-11",
+  "scope": "native content audit/import, short GPU travel checkpoints and selected complete player services; no global route certification or most-played ranking",
+  "routes": {
+    "schema": 1,
+    "date": "2026-10-11",
+    "selection": "Ten widely distributed routes recommended by Open Rails or their authors. Author download counts are a proxy; there is no verified global ranking of active players.",
+    "cli_sha256": "854ceaf6d4472884f7a070853d18456827941310025a2a16a3343a90d05599f9",
+    "viewer_sha256": "42d65723f6760bf343812de2a7ac86d2e7e3d7ec18024a8c4e4c561902f2afef",
+    "routes": [
+      {
+        "id": "chiltern",
+        "name": "Chiltern v4",
+        "source": "https://github.com/DocMartin7644/Chiltern-Route-v4",
+        "status": "gpu_checkpoints_passed",
+        "audit": {
+          "total": 188,
+          "content_valid": 157,
+          "player_ready": 153
+        },
+        "import": {
+          "exit_code": 0
+        },
+        "service": {
+          "exit_code": 1,
+          "error": "Error: a station service needs a declared terminal stop"
+        },
+        "gpu": {
+          "cab": {
+            "passed": true,
+            "odometer_m": 0.0,
+            "peak_rss_mib": 2638.6,
+            "elapsed_s": 65.2,
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "gpu_tiles": 5,
+            "gpu_entities": 33663,
+            "unactivated_near_shapes": 0,
+            "pending_gpu_uploads": 0,
+            "pending_terrain_tiles": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "native_signal_errors": {},
+            "formation_validation": {
+              "cars": 2,
+              "maximum_spacing_error_m": 1.2283016676661873e-05,
+              "tolerance_m": 2.0,
+              "scope": "car centres versus path offsets; includes curve chord shortening"
+            },
+            "frame_timing": null
+          },
+          "exterior": {
+            "passed": true,
+            "odometer_m": 204.2858452831693,
+            "peak_rss_mib": 2618.5,
+            "elapsed_s": 58.6,
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "gpu_tiles": 5,
+            "gpu_entities": 34501,
+            "unactivated_near_shapes": 0,
+            "pending_gpu_uploads": 0,
+            "pending_terrain_tiles": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "native_signal_errors": {},
+            "formation_validation": {
+              "cars": 2,
+              "maximum_spacing_error_m": 2.7686449737274188e-05,
+              "tolerance_m": 2.0,
+              "scope": "car centres versus path offsets; includes curve chord shortening"
+            },
+            "frame_timing": null
+          }
+        },
+        "scope": "installed stock, native import, optional player checkpoints",
+        "cli_sha256": "854ceaf6d4472884f7a070853d18456827941310025a2a16a3343a90d05599f9",
+        "viewer_sha256": "42d65723f6760bf343812de2a7ac86d2e7e3d7ec18024a8c4e4c561902f2afef",
+        "route_in_package": "Chiltern-Route-v4-8236df20ed9f596b8cf15720c43bfbdd0c43125d/ROUTES/Chiltern",
+        "package": "chiltern-v4-2fc79dd1c7f0eebc",
+        "activity": {
+          "name": "Test Paddington Suburban Down Daytime.act",
+          "consist": "Railcarx2.con",
+          "exit_code": 0,
+          "consist_override": false,
+          "stops": []
+        }
+      },
+      {
+        "id": "demo",
+        "name": "Demo Model 1 / Scottish Capital Express",
+        "source": "https://www.openrails.org/discover/get-started/",
+        "status": "gpu_checkpoints_passed",
+        "audit": {
+          "total": 23,
+          "content_valid": 15,
+          "player_ready": 12
+        },
+        "import": {
+          "exit_code": 0
+        },
+        "service": {
+          "exit_code": 0,
+          "outcome": {
+            "success": true,
+            "phase": "completed",
+            "scenario": "0930 Edinburgh-Glasgow Queen Street",
+            "time_s": 2090.149999998838,
+            "distance_m": 28075.62383365394,
+            "score": 1000.0,
+            "failure": null,
+            "stops": [
+              {
+                "name": "Edinburgh Waverley",
+                "node": "n217",
+                "scheduled_arrive_s": 0.0,
+                "actual_arrive_s": 0.05,
+                "actual_depart_s": 61.999999999998614,
+                "position_error_m": 0.0,
+                "arrival_speed_mps": 0.0,
+                "dwell_s": 59.99999999999873,
+                "delay_s": 0.05,
+                "early_departure_s": 0.0
+              },
+              {
+                "name": "Haymarket",
+                "node": "n211",
+                "scheduled_arrive_s": 300.0,
+                "actual_arrive_s": 405.0500000000578,
+                "actual_depart_s": 467.0000000000719,
+                "position_error_m": 4.151542244881966,
+                "arrival_speed_mps": 0.08968785857579467,
+                "dwell_s": 59.99999999999873,
+                "delay_s": 105.05000000005782,
+                "early_departure_s": 0.0
+              },
+              {
+                "name": "Linlithgow",
+                "node": "n62",
+                "scheduled_arrive_s": 1380.0,
+                "actual_arrive_s": 1488.1999999991942,
+                "actual_depart_s": 2090.149999998838,
+                "position_error_m": 3.618685151985119,
+                "arrival_speed_mps": 0.07016094561928746,
+                "dwell_s": 600.000000000002,
+                "delay_s": 108.19999999919423,
+                "early_departure_s": 0.0
+              }
+            ]
+          }
+        },
+        "gpu": {
+          "cab": {
+            "passed": true,
+            "odometer_m": 0.0,
+            "peak_rss_mib": 986.7,
+            "elapsed_s": 18.4,
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "gpu_tiles": 5,
+            "gpu_entities": 5747,
+            "unactivated_near_shapes": 0,
+            "pending_gpu_uploads": 0,
+            "pending_terrain_tiles": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "native_signal_errors": {},
+            "formation_validation": {
+              "cars": 7,
+              "maximum_spacing_error_m": 0.0007339920411446599,
+              "tolerance_m": 2.0,
+              "scope": "car centres versus path offsets; includes curve chord shortening"
+            },
+            "frame_timing": null
+          },
+          "exterior": {
+            "passed": true,
+            "odometer_m": 203.8545728713886,
+            "peak_rss_mib": 887.2,
+            "elapsed_s": 22.9,
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "gpu_tiles": 5,
+            "gpu_entities": 6090,
+            "unactivated_near_shapes": 0,
+            "pending_gpu_uploads": 0,
+            "pending_terrain_tiles": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "native_signal_errors": {},
+            "formation_validation": {
+              "cars": 7,
+              "maximum_spacing_error_m": 0.0032605392914533127,
+              "tolerance_m": 2.0,
+              "scope": "car centres versus path offsets; includes curve chord shortening"
+            },
+            "frame_timing": null
+          }
+        },
+        "scope": "installed stock, native import, optional player checkpoints",
+        "cli_sha256": "854ceaf6d4472884f7a070853d18456827941310025a2a16a3343a90d05599f9",
+        "viewer_sha256": "42d65723f6760bf343812de2a7ac86d2e7e3d7ec18024a8c4e4c561902f2afef",
+        "route_in_package": "Demo Model 1/ROUTES/SCE",
+        "package": "demo-model-1-5e4a64e1cd44e23e",
+        "activity": {
+          "name": "MT_MT_0930 Edinburgh-Glasgow Queen Street.act",
+          "consist": "MT_MT_Class 47 & 6 mk2 PP.con",
+          "exit_code": 0,
+          "consist_override": false,
+          "stops": [
+            "Edinburgh Waverley",
+            "Haymarket",
+            "Linlithgow"
+          ]
+        }
+      },
+      {
+        "id": "bnsf",
+        "name": "BNSF Starter Route",
+        "source": "https://ts-files.com/files/TS_STARTER_ROUTE.zip",
+        "status": "gpu_checkpoints_passed",
+        "audit": {
+          "total": 17,
+          "content_valid": 1,
+          "player_ready": 1
+        },
+        "import": {
+          "exit_code": 0
+        },
+        "service": {
+          "exit_code": 1,
+          "error": "Error: a station service needs a declared terminal stop"
+        },
+        "gpu": {
+          "cab": {
+            "passed": true,
+            "odometer_m": 0.0,
+            "peak_rss_mib": 951.8,
+            "elapsed_s": 7.9,
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "gpu_tiles": 4,
+            "gpu_entities": 2338,
+            "unactivated_near_shapes": 0,
+            "pending_gpu_uploads": 0,
+            "pending_terrain_tiles": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "native_signal_errors": {},
+            "formation_validation": {
+              "cars": 12,
+              "maximum_spacing_error_m": 0.006761347649760552,
+              "tolerance_m": 2.0,
+              "scope": "car centres versus path offsets; includes curve chord shortening"
+            },
+            "frame_timing": null
+          },
+          "exterior": {
+            "passed": true,
+            "odometer_m": 203.53003736812897,
+            "peak_rss_mib": 951.0,
+            "elapsed_s": 10.1,
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "gpu_tiles": 4,
+            "gpu_entities": 2400,
+            "unactivated_near_shapes": 0,
+            "pending_gpu_uploads": 0,
+            "pending_terrain_tiles": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "native_signal_errors": {},
+            "formation_validation": {
+              "cars": 12,
+              "maximum_spacing_error_m": 0.0023375506589324857,
+              "tolerance_m": 2.0,
+              "scope": "car centres versus path offsets; includes curve chord shortening"
+            },
+            "frame_timing": null
+          }
+        },
+        "scope": "installed stock, native import, optional player checkpoints",
+        "cli_sha256": "854ceaf6d4472884f7a070853d18456827941310025a2a16a3343a90d05599f9",
+        "viewer_sha256": "42d65723f6760bf343812de2a7ac86d2e7e3d7ec18024a8c4e4c561902f2afef",
+        "route_in_package": "ROUTES/BNSF_Scenic",
+        "package": "bnsf-starter-route-1cc2a6dfbc7b5c6d",
+        "activity": {
+          "name": "5_wb_empirebuilder.act",
+          "consist": "amtrak empire builder wb.con",
+          "exit_code": 0,
+          "consist_override": false,
+          "stops": [
+            "Wenatchee",
+            "Skykomish Station",
+            "Everett Station"
+          ]
+        }
+      },
+      {
+        "id": "lirr",
+        "name": "Long Island Railroad",
+        "source": "https://static.openrails.org/files/LIRR.zip",
+        "status": "gpu_checkpoints_passed",
+        "audit": {
+          "total": 42,
+          "content_valid": 40,
+          "player_ready": 15
+        },
+        "import": {
+          "exit_code": 0
+        },
+        "service": {
+          "exit_code": 1,
+          "outcome": {
+            "success": false,
+            "phase": "failed",
+            "scenario": "01. BROOKLYN to HEMPSTEAD",
+            "time_s": 1560.0499999991289,
+            "distance_m": 18047.52043023468,
+            "score": 1000.0,
+            "failure": "Tiempo máximo del servicio agotado",
+            "stops": [
+              {
+                "name": "FLATBUSH TERMINAL",
+                "node": "n5462",
+                "scheduled_arrive_s": 0.0,
+                "actual_arrive_s": 0.05,
+                "actual_depart_s": 3.999999999999994,
+                "position_error_m": 2.842170943040401e-14,
+                "arrival_speed_mps": 0.0,
+                "dwell_s": 2.000000000000001,
+                "delay_s": 0.05,
+                "early_departure_s": 0.0
+              }
+            ]
+          },
+          "error": "{\n  \"success\": false,\n  \"phase\": \"failed\",\n  \"scenario\": \"01. BROOKLYN to HEMPSTEAD\",\n  \"time_s\": 1560.0499999991289,\n  \"distance_m\": 18047.52043023468,\n  \"score\": 1000.0,\n  \"failure\": \"Tiempo máximo del servicio agotado\",\n  \"stops\": [\n    {\n      \"name\": \"FLATBUSH TERMINAL\",\n      \"node\": \"n5462\",\n      \"scheduled_arrive_s\": 0.0,\n      \"actual_arrive_s\": 0.05,\n      \"actual_depart_s\": 3.999999999999994,\n      \"position_error_m\": 2.842170943040401e-14,\n      \"arrival_speed_mps\": 0.0,\n      \"dwell_s\": 2.000000000000001,\n      \"delay_s\": 0.05,\n      \"early_departure_s\": 0.0\n    }\n  ]\n}"
+        },
+        "gpu": {
+          "cab": {
+            "passed": true,
+            "odometer_m": 0.0,
+            "peak_rss_mib": 860.3,
+            "elapsed_s": 13.4,
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "gpu_tiles": 4,
+            "gpu_entities": 3902,
+            "unactivated_near_shapes": 0,
+            "pending_gpu_uploads": 0,
+            "pending_terrain_tiles": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "native_signal_errors": {},
+            "formation_validation": {
+              "cars": 7,
+              "maximum_spacing_error_m": 8.784876640710593e-05,
+              "tolerance_m": 2.0,
+              "scope": "car centres versus path offsets; includes curve chord shortening"
+            },
+            "frame_timing": null
+          },
+          "exterior": {
+            "passed": true,
+            "odometer_m": 201.6942360241118,
+            "peak_rss_mib": 897.5,
+            "elapsed_s": 16.2,
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "gpu_tiles": 5,
+            "gpu_entities": 3939,
+            "unactivated_near_shapes": 0,
+            "pending_gpu_uploads": 0,
+            "pending_terrain_tiles": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "native_signal_errors": {},
+            "formation_validation": {
+              "cars": 7,
+              "maximum_spacing_error_m": 0.004700209747451112,
+              "tolerance_m": 2.0,
+              "scope": "car centres versus path offsets; includes curve chord shortening"
+            },
+            "frame_timing": null
+          }
+        },
+        "scope": "installed stock, native import, optional player checkpoints",
+        "cli_sha256": "854ceaf6d4472884f7a070853d18456827941310025a2a16a3343a90d05599f9",
+        "viewer_sha256": "42d65723f6760bf343812de2a7ac86d2e7e3d7ec18024a8c4e4c561902f2afef",
+        "route_in_package": "ROUTES/LIRR",
+        "package": "long-island-railroad-4d33e3e0e6d8d103",
+        "activity": {
+          "name": "01Brooklyn-Hempstead.act",
+          "consist": "SFexpress-500.con",
+          "exit_code": 0,
+          "consist_override": false,
+          "stops": [
+            "FLATBUSH TERMINAL",
+            "HEMPSTEAD"
+          ]
+        }
+      },
+      {
+        "id": "mideast",
+        "name": "MidEast Coast",
+        "source": "https://github.com/MECoast/MECoast",
+        "status": "blocked",
+        "audit": {
+          "total": 926,
+          "content_valid": 623,
+          "player_ready": 554
+        },
+        "import": {
+          "exit_code": 1,
+          "error": "Error: import route <player-data>/community-route-qa/2026-10-11/mideast-coast-dc2592a67727005f/MECoast-1c47480edb295aeb8eee5849e941da77d4ed0bf2/Routes/MidEastCoast: UK4LIGHTRL: unsupported function TRAINHASCALLON"
+        },
+        "service": null,
+        "gpu": {},
+        "scope": "installed stock, native import, optional player checkpoints",
+        "route_in_package": "MECoast-1c47480edb295aeb8eee5849e941da77d4ed0bf2/Routes/MidEastCoast",
+        "package": "mideast-coast-dc2592a67727005f",
+        "cli_sha256": "854ceaf6d4472884f7a070853d18456827941310025a2a16a3343a90d05599f9"
+      },
+      {
+        "id": "portugal",
+        "name": "Portugal 79",
+        "source": "https://github.com/cpvirtual/OR_CPV",
+        "status": "blocked",
+        "audit": {
+          "total": 1866,
+          "content_valid": 1081,
+          "player_ready": 1053
+        },
+        "import": {
+          "exit_code": 1,
+          "error": "Error: import route <player-data>/community-route-qa/2026-10-11/portugal-79-72a2afec7a2e8bf5/OR_CPV-56bce7499e6368bedd21c43e9f6bdb16acf783ea/ROUTES/CPV_PT79: AA2SDA: unsupported function TRAINHASCALLON"
+        },
+        "service": null,
+        "gpu": {},
+        "scope": "installed stock, native import, optional player checkpoints",
+        "route_in_package": "OR_CPV-56bce7499e6368bedd21c43e9f6bdb16acf783ea/ROUTES/CPV_PT79",
+        "package": "portugal-79-72a2afec7a2e8bf5",
+        "cli_sha256": "854ceaf6d4472884f7a070853d18456827941310025a2a16a3343a90d05599f9"
+      },
+      {
+        "id": "zigzag",
+        "name": "Great Zig Zag NSW",
+        "source": "https://www.zigzag.coalstonewcastle.com.au/route/downloads/",
+        "status": "gpu_checkpoints_passed",
+        "audit": {
+          "total": 56,
+          "content_valid": 2,
+          "player_ready": 2
+        },
+        "import": {
+          "exit_code": 0
+        },
+        "service": {
+          "exit_code": 1,
+          "error": "Error: a station service needs a declared terminal stop"
+        },
+        "gpu": {
+          "cab": {
+            "passed": true,
+            "odometer_m": 0.0,
+            "peak_rss_mib": 761.8,
+            "elapsed_s": 6.1,
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "gpu_tiles": 6,
+            "gpu_entities": 1006,
+            "unactivated_near_shapes": 0,
+            "pending_gpu_uploads": 0,
+            "pending_terrain_tiles": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "native_signal_errors": {},
+            "formation_validation": {
+              "cars": 1,
+              "maximum_spacing_error_m": 0.0,
+              "tolerance_m": 2.0,
+              "scope": "car centres versus path offsets; includes curve chord shortening"
+            },
+            "frame_timing": null
+          },
+          "exterior": {
+            "passed": true,
+            "odometer_m": 200.5237841227691,
+            "peak_rss_mib": 755.8,
+            "elapsed_s": 7.8,
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "gpu_tiles": 6,
+            "gpu_entities": 1013,
+            "unactivated_near_shapes": 0,
+            "pending_gpu_uploads": 0,
+            "pending_terrain_tiles": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "native_signal_errors": {},
+            "formation_validation": {
+              "cars": 1,
+              "maximum_spacing_error_m": 0.0,
+              "tolerance_m": 2.0,
+              "scope": "car centres versus path offsets; includes curve chord shortening"
+            },
+            "frame_timing": null
+          }
+        },
+        "scope": "installed stock, native import, optional player checkpoints",
+        "cli_sha256": "854ceaf6d4472884f7a070853d18456827941310025a2a16a3343a90d05599f9",
+        "viewer_sha256": "42d65723f6760bf343812de2a7ac86d2e7e3d7ec18024a8c4e4c561902f2afef",
+        "route_in_package": "Routes/au_great_zig_zag",
+        "package": "zigzag-v1-6",
+        "activity": {
+          "name": "tutorial#2_basic_train_control.act",
+          "consist": "tutorial#6_player_train.con",
+          "exit_code": 0,
+          "consist_override": true,
+          "stops": []
+        }
+      },
+      {
+        "id": "coals-to-newcastle",
+        "name": "Coals to Newcastle",
+        "source": "https://www.coalstonewcastle.com.au/route/downloads/",
+        "status": "blocked",
+        "audit": {
+          "total": 0,
+          "content_valid": 0,
+          "player_ready": 0
+        },
+        "import": {
+          "exit_code": 1,
+          "error": "Error: import route <player-data>/community-route-qa/2026-10-11/coals-to-newcastle-v7-4/Routes/AU_Coal_to_Newcastle: NSWCOLLIGHT-17: unsupported function NEXT_SIG_MR"
+        },
+        "service": null,
+        "gpu": {},
+        "scope": "installed stock, native import, optional player checkpoints",
+        "route_in_package": "Routes/AU_Coal_to_Newcastle",
+        "package": "coals-to-newcastle-v7-4",
+        "cli_sha256": "854ceaf6d4472884f7a070853d18456827941310025a2a16a3343a90d05599f9"
+      },
+      {
+        "id": "burrinjuck",
+        "name": "Burrinjuck",
+        "source": "https://www.burrinjuck.coalstonewcastle.com.au/route/downloads/",
+        "status": "gpu_checkpoints_passed",
+        "audit": {
+          "total": 10,
+          "content_valid": 6,
+          "player_ready": 6
+        },
+        "import": {
+          "exit_code": 0
+        },
+        "service": {
+          "exit_code": 1,
+          "error": "Error: a station service needs a declared terminal stop"
+        },
+        "gpu": {
+          "cab": {
+            "passed": true,
+            "odometer_m": 0.0,
+            "peak_rss_mib": 873.0,
+            "elapsed_s": 7.6,
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "gpu_tiles": 6,
+            "gpu_entities": 3017,
+            "unactivated_near_shapes": 0,
+            "pending_gpu_uploads": 0,
+            "pending_terrain_tiles": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "native_signal_errors": {},
+            "formation_validation": {
+              "cars": 1,
+              "maximum_spacing_error_m": 0.0,
+              "tolerance_m": 2.0,
+              "scope": "car centres versus path offsets; includes curve chord shortening"
+            },
+            "frame_timing": null
+          },
+          "exterior": {
+            "passed": true,
+            "odometer_m": 206.23158190996375,
+            "peak_rss_mib": 850.0,
+            "elapsed_s": 8.4,
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "gpu_tiles": 7,
+            "gpu_entities": 3080,
+            "unactivated_near_shapes": 0,
+            "pending_gpu_uploads": 0,
+            "pending_terrain_tiles": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "native_signal_errors": {},
+            "formation_validation": {
+              "cars": 1,
+              "maximum_spacing_error_m": 0.0,
+              "tolerance_m": 2.0,
+              "scope": "car centres versus path offsets; includes curve chord shortening"
+            },
+            "frame_timing": null
+          }
+        },
+        "scope": "installed stock, native import, optional player checkpoints",
+        "cli_sha256": "854ceaf6d4472884f7a070853d18456827941310025a2a16a3343a90d05599f9",
+        "viewer_sha256": "42d65723f6760bf343812de2a7ac86d2e7e3d7ec18024a8c4e4c561902f2afef",
+        "route_in_package": "Routes/AU_Burrinjuck",
+        "package": "burrinjuck-v3",
+        "activity": {
+          "name": "Default.act",
+          "consist": "burr_jack_light.con",
+          "exit_code": 0,
+          "consist_override": false,
+          "stops": []
+        }
+      },
+      {
+        "id": "craven",
+        "name": "Craven Timber Railway",
+        "source": "https://www.craven.coalstonewcastle.com.au/route/downloads/",
+        "status": "gpu_checkpoints_passed",
+        "audit": {
+          "total": 11,
+          "content_valid": 9,
+          "player_ready": 9
+        },
+        "import": {
+          "exit_code": 0
+        },
+        "service": {
+          "exit_code": 1,
+          "error": "Error: a station service needs a declared terminal stop"
+        },
+        "gpu": {
+          "cab": {
+            "passed": true,
+            "odometer_m": 0.0,
+            "peak_rss_mib": 617.8,
+            "elapsed_s": 5.1,
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "gpu_tiles": 6,
+            "gpu_entities": 1135,
+            "unactivated_near_shapes": 0,
+            "pending_gpu_uploads": 0,
+            "pending_terrain_tiles": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "native_signal_errors": {},
+            "formation_validation": {
+              "cars": 1,
+              "maximum_spacing_error_m": 0.0,
+              "tolerance_m": 2.0,
+              "scope": "car centres versus path offsets; includes curve chord shortening"
+            },
+            "frame_timing": null
+          },
+          "exterior": {
+            "passed": true,
+            "odometer_m": 203.66737940902834,
+            "peak_rss_mib": 626.8,
+            "elapsed_s": 5.8,
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "gpu_tiles": 6,
+            "gpu_entities": 1170,
+            "unactivated_near_shapes": 0,
+            "pending_gpu_uploads": 0,
+            "pending_terrain_tiles": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "native_signal_errors": {},
+            "formation_validation": {
+              "cars": 1,
+              "maximum_spacing_error_m": 0.0,
+              "tolerance_m": 2.0,
+              "scope": "car centres versus path offsets; includes curve chord shortening"
+            },
+            "frame_timing": null
+          }
+        },
+        "scope": "installed stock, native import, optional player checkpoints",
+        "cli_sha256": "854ceaf6d4472884f7a070853d18456827941310025a2a16a3343a90d05599f9",
+        "viewer_sha256": "42d65723f6760bf343812de2a7ac86d2e7e3d7ec18024a8c4e4c561902f2afef",
+        "route_in_package": "Routes/au_craven",
+        "package": "craven-v1-2",
+        "activity": {
+          "name": "default.act",
+          "consist": "CT-No1-LightEngine.con",
+          "exit_code": 0,
+          "consist_override": false,
+          "stops": []
+        }
+      }
+    ]
+  },
+  "initial_failures": [
+    {
+      "id": "chiltern",
+      "status": "activity_blocked",
+      "activity": {
+        "name": "RS_Let's go to Birmingham.act",
+        "consist": "Birmingham Pullman.con",
+        "exit_code": 1,
+        "error": "✓ track.toml  — 28016 nodos, 19644 edges → <checkout>/tmp/community-routes-20261011/acceptance/chiltern/import/track.toml\nError: import activity <player-data>/official-content/chiltern-v4-2fc79dd1c7f0eebc/Chiltern-Route-v4-8236df20ed9f596b8cf15720c43bfbdd0c43125d/ROUTES/Chiltern/ACTIVITIES/RS_Let's go to Birmingham.act: Timetable item 11358 is not a native platform; use the activity and track database from the same route edition"
+      },
+      "service": null,
+      "gpu": {}
+    },
+    {
+      "id": "lirr",
+      "status": "gpu_checkpoint_failed",
+      "activity": {
+        "name": "04CentralPickups.act",
+        "consist": "1xNECX102.con",
+        "exit_code": 0,
+        "stops": []
+      },
+      "service": {
+        "exit_code": 1,
+        "error": "Error: no path from n1267 to n1265"
+      },
+      "gpu": {
+        "cab": {
+          "passed": false,
+          "error": "cab: capture timed out"
+        },
+        "exterior": {
+          "passed": false,
+          "error": "exterior: capture timed out"
+        }
+      }
+    },
+    {
+      "id": "zigzag",
+      "status": "activity_blocked",
+      "activity": {
+        "name": "tutorial#6_loading.act",
+        "consist": "tutorial#6_player_train.con",
+        "exit_code": 1,
+        "error": "✓ track.toml  — 884 nodos, 626 edges → <checkout>/tmp/community-routes-20261011/acceptance/zigzag/import/track.toml\nError: import activity <player-data>/community-route-qa/2026-10-11/zigzag-v1-6/Routes/au_great_zig_zag/ACTIVITIES/tutorial#6_loading.act: parse error: unclosed string starting at byte 10900"
+      },
+      "service": null,
+      "gpu": {}
+    }
+  ],
+  "installer_case_normalization": [
+    {
+      "id": "zigzag",
+      "merged_alias_files": 3,
+      "content_changed": false
+    },
+    {
+      "id": "burrinjuck",
+      "merged_alias_files": 594,
+      "content_changed": false
+    },
+    {
+      "id": "craven",
+      "merged_alias_files": 51,
+      "content_changed": false
+    },
+    {
+      "id": "coals-to-newcastle",
+      "merged_alias_files": 85,
+      "content_changed": false
+    }
+  ],
+  "checks": {
+    "check_sh": "passed",
+    "rust_tests": 1764,
+    "python_tests": 89,
+    "or_reference": "Open Rails 1.6.1",
+    "or_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+    "final_viewer_sha256": "35fae18c9eae88fcc4da3950fb2ab3da671d9188e4238d7f118dc729002e9320",
+    "resource_confinement_regressions": "passed; shared references inside package accepted, paths outside rejected"
+  },
+  "menu": {
+    "menu-final": [
+      {
+        "page": "route",
+        "width": 1280,
+        "height": 720,
+        "scale": 1.0,
+        "elapsed_s": 9.02044800799922,
+        "peak_rss_mib": 457.44140625,
+        "exit_code": 0
+      },
+      {
+        "page": "train",
+        "width": 1280,
+        "height": 720,
+        "scale": 1.0,
+        "elapsed_s": 9.021468764985912,
+        "peak_rss_mib": 508.98828125,
+        "exit_code": 0
+      }
+    ],
+    "menu-gray": [
+      {
+        "page": "train",
+        "width": 640,
+        "height": 480,
+        "scale": 1.0,
+        "elapsed_s": 9.020068337995326,
+        "peak_rss_mib": 429.54296875,
+        "exit_code": 0
+      }
+    ],
+    "menu-global": [
+      {
+        "page": "train",
+        "width": 1280,
+        "height": 720,
+        "scale": 1.0,
+        "elapsed_s": 9.020616615016479,
+        "peak_rss_mib": 485.34765625,
+        "exit_code": 0
+      }
+    ],
+    "final_viewer_sha256": "35fae18c9eae88fcc4da3950fb2ab3da671d9188e4238d7f118dc729002e9320",
+    "checks": {
+      "gray_selected": true,
+      "mandatory_resources_block_start": true,
+      "optional_resources_allow_start": true,
+      "foreign_native_train_preview": true,
+      "footer_inside_window": true,
+      "visible_text_not_collapsed": true
+    }
+  },
+  "open_issues": [
+    "https://github.com/cavazquez/openrailsrs/issues/209",
+    "https://github.com/cavazquez/openrailsrs/issues/210"
+  ]
+}

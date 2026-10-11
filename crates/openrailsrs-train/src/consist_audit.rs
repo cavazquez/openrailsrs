@@ -397,14 +397,22 @@ impl ConsistAuditor {
                 (mass, length, powered, shape, cab, metadata)
             };
         let authored_root = path.parent().unwrap_or(Path::new("."));
-        let root = self
-            .trainset_roots
-            .iter()
-            .find_map(|r| {
-                let p = r.join(authored_root.file_name()?);
-                resolve_path_case_insensitive(&p).filter(|p| p.is_dir())
-            })
-            .unwrap_or_else(|| authored_root.into());
+        let root = if authored_root.ancestors().any(|p| {
+            p.file_name()
+                .is_some_and(|n| n.eq_ignore_ascii_case("TRAINSET"))
+        }) {
+            // A native formation retains the models/cabs of its own edition
+            // even when selected on a map whose pack reuses this folder name.
+            authored_root.into()
+        } else {
+            self.trainset_roots
+                .iter()
+                .find_map(|r| {
+                    let p = r.join(authored_root.file_name()?);
+                    resolve_path_case_insensitive(&p).filter(|p| p.is_dir())
+                })
+                .unwrap_or_else(|| authored_root.into())
+        };
         let mut stock = StockAudit {
             mass,
             length,
@@ -776,6 +784,43 @@ fn asset(dirs: &[PathBuf], name: &str, dds: bool) -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn native_formation_audit_keeps_its_stock_origin_on_another_route() {
+        let tmp = tempfile::tempdir().unwrap();
+        let own = tmp.path().join("pack-a/TRAINS");
+        let other = tmp.path().join("pack-b/TRAINS/TRAINSET");
+        let stock = own.join("TRAINSET/SharedName");
+        let cons = own.join("CONSISTS");
+        std::fs::create_dir_all(&stock).unwrap();
+        std::fs::create_dir_all(other.join("SharedName")).unwrap();
+        std::fs::create_dir_all(&cons).unwrap();
+        let con = cons.join("original.con");
+        std::fs::write(
+            &con,
+            "Train ( TrainCfg ( original Engine ( EngineData ( power SharedName ) ) ) )",
+        )
+        .unwrap();
+        std::fs::write(stock.join("power.eng"), "Wagon ( power Mass ( 40t ) Size ( 3m 4m 20m ) WagonShape ( body.s ) ) Engine ( power MaxPower ( 500kW ) )").unwrap();
+        std::fs::write(
+            other.join("SharedName/body.s"),
+            "(shape (texture_filenames 0))",
+        )
+        .unwrap();
+        let missing = ConsistAuditor::new(vec![other.clone()]).inspect(&con);
+        assert!(!missing.content_valid());
+        assert!(
+            missing
+                .missing_resources
+                .iter()
+                .any(|r| r.destinations.iter().any(|p| p.starts_with(&stock)))
+        );
+        std::fs::write(stock.join("body.s"), "(shape (texture_filenames 0))").unwrap();
+        assert!(
+            ConsistAuditor::new(vec![other])
+                .inspect(&con)
+                .player_ready()
+        );
+    }
     #[test]
     fn every_missing_texture_and_cab_graphic_has_its_original_destinations() {
         let tmp = tempfile::tempdir().unwrap();

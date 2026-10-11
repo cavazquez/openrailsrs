@@ -81,7 +81,9 @@ pub fn msts_tile_z_index_for_coord(z: f32) -> i32 {
 pub fn parse_world_w_tile_xz(path: &std::path::Path) -> Option<(i32, i32)> {
     let stem = path.file_stem()?.to_str()?;
     let rest = stem.strip_prefix(['w', 'W'])?;
-    if rest.len() < 14 {
+    // OR resolves the exact coordinate filename. Ignore author backup copies;
+    // slicing arbitrary UTF-8 names here could also split a character.
+    if rest.len() != 14 || !rest.is_ascii() {
         return None;
     }
     let (x_part, z_part) = rest.split_at(7);
@@ -114,6 +116,12 @@ mod tests {
         let (ox, oz) = msts_tile_world_origin(-6084, 14923);
         assert_eq!(ox, -6084.0 * 2048.0 - 1024.0);
         assert_eq!(oz, -14923.0 * 2048.0 - 1024.0);
+    }
+    #[test]
+    fn world_tile_backups_and_non_ascii_stems_are_not_coordinate_files() {
+        use std::path::Path;
+        assert!(parse_world_w_tile_xz(Path::new("w-006619+014319 - Cópia.w")).is_none());
+        assert!(parse_world_w_tile_xz(Path::new("w+0000é+000000.w")).is_none());
     }
 
     #[test]

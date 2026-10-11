@@ -71,6 +71,8 @@ def capture(args):
                OPENRAILSRS_WINDOW_WIDTH=str(args.width),
                OPENRAILSRS_WINDOW_HEIGHT=str(args.height),
                __EGL_VENDOR_LIBRARY_FILENAMES="/usr/share/glvnd/egl_vendor.d/50_mesa.json")
+    if args.consist:
+        env["OPENRAILSRS_SCREENSHOT_MENU_CONSIST"] = args.consist
     results = []
     with tempfile.TemporaryDirectory(prefix="openrailsrs-menu-qa-") as runtime:
         env.update(XDG_RUNTIME_DIR=runtime, WAYLAND_DISPLAY="openrailsrs-menu-qa")
@@ -89,6 +91,8 @@ def capture(args):
                 for page in args.pages:
                     data = output / (page + "-player-data")
                     data.mkdir(exist_ok=True)
+                    if args.content_dir and not (data / "official-content").exists():
+                        (data / "official-content").symlink_to(args.content_dir.resolve(), target_is_directory=True)
                     (data / "settings.json").write_text(json.dumps({
                         "ui_scale": args.scale, "weather_profile": args.weather_profile,
                         "weather_pace": args.weather_pace,
@@ -143,6 +147,8 @@ def main():
     parser.add_argument("--viewer", type=Path, default=Path("target/debug/openrailsrs-viewer3d"))
     parser.add_argument("--out-dir", type=Path, default=Path("tmp/player-menu-qa"))
     parser.add_argument("--route-root", type=Path)
+    parser.add_argument("--content-dir", type=Path, help="Read the installed library through an isolated player's symlink")
+    parser.add_argument("--consist", help="Select and filter this formation's file stem for a deterministic menu capture")
     parser.add_argument("--pages", nargs="+", choices=PAGES, default=list(PAGES))
     parser.add_argument("--width", type=int, default=1280)
     parser.add_argument("--height", type=int, default=720)

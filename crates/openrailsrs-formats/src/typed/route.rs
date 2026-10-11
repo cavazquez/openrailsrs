@@ -62,6 +62,8 @@ pub struct RouteFile {
     pub max_line_voltage_v: f64,
     pub route_id: String,
     pub name: String,
+    /// Author's route artwork, relative to the route directory.
+    pub loading_screen: Option<String>,
     /// Native `.trk` line speed (MSTS stores this in metres per second).
     pub speed_limit_mps: Option<f64>,
     pub route_start: Option<RouteStart>,
@@ -89,6 +91,7 @@ impl RouteFile {
                 .unwrap_or(0.),
             route_id,
             name,
+            loading_screen: find_string_field(ast, &["LoadingScreen"]),
             speed_limit_mps: super::named_blocks(ast, "SpeedLimit")
                 .first()
                 .and_then(|block| {

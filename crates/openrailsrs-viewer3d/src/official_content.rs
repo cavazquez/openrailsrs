@@ -407,6 +407,64 @@ pub fn prepared_routes() -> Vec<PreparedRoute> {
         .flat_map(|p| discover_prepared(p))
         .collect()
 }
+/// Stock belongs to its author package even if importing the map has failed.
+/// Reuse the same confined manifest paths as route preparation.
+pub(crate) fn installed_stock_sources() -> Vec<(PathBuf, String)> {
+    content_directories()
+        .iter()
+        .flat_map(|root| discover_stock_sources(root))
+        .collect()
+}
+fn discover_stock_sources(root: &Path) -> Vec<(PathBuf, String)> {
+    let Ok(root) = root.canonicalize() else {
+        return vec![];
+    };
+    let mut sources = vec![];
+    for package in std::fs::read_dir(&root)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter_map(|entry| canonical_inside(&entry.path(), &root))
+    {
+        let Some(manifest) = canonical_inside(&package.join("openrailsrs-content.json"), &package)
+            .and_then(|path| read_manifest(&path))
+        else {
+            continue;
+        };
+        for route in manifest["routes"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .take(2048)
+        {
+            let Some(native) = route
+                .as_str()
+                .and_then(|name| canonical_inside(&package.join(name), &package))
+            else {
+                continue;
+            };
+            let Some(content) = native
+                .parent()
+                .and_then(Path::parent)
+                .filter(|path| path.starts_with(&package))
+            else {
+                continue;
+            };
+            let Some(consists) = openrailsrs_formats::resolve_path_case_insensitive(
+                &content.join("TRAINS/CONSISTS"),
+            )
+            .and_then(|path| canonical_inside(&path, &package))
+            .filter(|path| path.is_dir()) else {
+                continue;
+            };
+            if !sources.iter().any(|(path, _)| path == &consists) {
+                sources.push((consists, edition_label(&native, &manifest)));
+            }
+        }
+    }
+    sources.sort_by(|a, b| a.0.cmp(&b.0));
+    sources
+}
 fn content_directories() -> Vec<PathBuf> {
     std::iter::once(player_data_dir())
         .chain(openrailsrs_content::legacy_data_dirs())
@@ -490,21 +548,24 @@ pub fn prepare_installed(directory: &Path, cancel: Option<&Path>) -> Result<Stri
         if !root.starts_with(directory) {
             return Err("Raíz de contenido fuera del paquete".into());
         }
+        // Route-only author packs can use the player's separate stock library.
+        // Missing trains are reported by formation audits, not a route ban.
         let trains = openrailsrs_formats::resolve_path_case_insensitive(&root.join("TRAINS"))
-            .ok_or("Paquete sin TRAINS")?;
+            .unwrap_or_else(|| root.join("TRAINS"));
         let trainset = openrailsrs_formats::resolve_path_case_insensitive(&trains.join("TRAINSET"))
-            .ok_or("Paquete sin TRAINSET")?;
+            .unwrap_or_else(|| trains.join("TRAINSET"));
         let consists = openrailsrs_formats::resolve_path_case_insensitive(&trains.join("CONSISTS"))
-            .ok_or("Paquete sin CONSISTS")?;
+            .unwrap_or_else(|| trains.join("CONSISTS"));
         if [&trains, &trainset, &consists]
             .iter()
-            .any(|p| canonical_inside(p, directory).is_none())
+            .any(|p| p.exists() && canonical_inside(p, directory).is_none())
         {
             return Err("Material rodante fuera del paquete".into());
         }
         let mut auditor = openrailsrs_train::ConsistAuditor::new(vec![trainset]);
         for file in std::fs::read_dir(consists)
-            .map_err(|e| e.to_string())?
+            .into_iter()
+            .flatten()
             .flatten()
             .map(|e| e.path())
             .filter(|p| p.extension().is_some_and(|e| e.eq_ignore_ascii_case("con")))
@@ -695,6 +756,58 @@ fn source_for_missing(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn original_stock_is_discovered_without_a_prepared_route_and_confined_to_its_package() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("official-content");
+        let package = root.join("author");
+        let native = package.join("Routes/Map");
+        let consists = package.join("Trains/Consists");
+        std::fs::create_dir_all(&native).unwrap();
+        std::fs::create_dir_all(&consists).unwrap();
+        std::fs::write(
+            package.join("openrailsrs-content.json"),
+            r#"{"package":"Author route","routes":["Routes/Map","../another-package/Routes/Map"]}"#,
+        )
+        .unwrap();
+        let found = discover_stock_sources(&root);
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].0, consists);
+        assert!(!package.join("openrailsrs-prepared.json").exists());
+        #[cfg(unix)]
+        {
+            let alias = temp.path().join("library-alias");
+            std::os::unix::fs::symlink(&root, &alias).unwrap();
+            assert_eq!(discover_stock_sources(&alias), found);
+            let outside = temp.path().join("outside");
+            std::fs::create_dir(&outside).unwrap();
+            std::fs::remove_dir(&consists).unwrap();
+            std::os::unix::fs::symlink(&outside, &consists).unwrap();
+            assert!(discover_stock_sources(&root).is_empty());
+        }
+    }
+    #[test]
+    fn route_only_author_package_can_use_the_players_separate_trains() {
+        let temp = tempfile::tempdir().unwrap();
+        let package = temp.path();
+        let native = package.join("ROUTES/Test");
+        std::fs::create_dir_all(&native).unwrap();
+        std::fs::write(
+            package.join("openrailsrs-content.json"),
+            r#"{"package":"Route only","routes":["ROUTES/Test"]}"#,
+        )
+        .unwrap();
+        std::fs::copy(
+            Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../openrailsrs-msts/tests/fixtures/minimal.tdb"),
+            native.join("Test.tdb"),
+        )
+        .unwrap();
+        let result = prepare_installed(package, None).unwrap();
+        assert!(result.contains("0/0 formaciones"));
+        assert!(package.join("openrailsrs-import/Test/track.toml").is_file());
+        assert!(package.join("openrailsrs-prepared.json").is_file());
+    }
     fn fixture(root: &Path) -> (PathBuf, PreparedRoute) {
         let package = root.join("official-content/package");
         let native = package.join("ROUTES/Route");

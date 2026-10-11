@@ -29,9 +29,19 @@ superposiciones que permiten seguir conduciendo. Esc cierra un panel o abre paus
 ## 1. Menú de inicio y selección de contenido
 
 1. Desde **Nueva partida**, elegí ruta y servicio en **1 · Ruta y servicio**.
+   Pulsá **Buscar rutas…**, escribí parte del nombre y elegí directamente una
+   fila. Podés usar ↑/↓ y Enter; Esc sale del buscador. **Limpiar** restaura la
+   lista completa y los botones de página permiten recorrerla. El botón
+   **Servicio: … · Elegir** abre su propia lista y buscador.
    Las paradas y el horario previsto deben corresponder al servicio elegido.
-   Pasá a **2 · Tren**; la lista de formaciones y su diagnóstico deben corresponder
-   a esa ruta. **Ver detalles** abre archivos faltantes y sus ubicaciones.
+   A la derecha debe aparecer la imagen de la ruta incluida por su autor, junto
+   con trocha y alimentación. Si no hay imagen instalada, se informa allí.
+   Pasá a **2 · Tren**: el buscador debe ofrecer formaciones de **todos los
+   paquetes instalados** y ejemplos, con su procedencia. Cambiar de mapa debe
+   conservar esa disponibilidad; los PAT siguen perteneciendo al mapa elegido.
+   La preview muestra el modelo y las texturas del **primer vehículo**; el
+   esquema de coches y la auditoría describen la formación completa.
+   **Ver detalles** abre archivos faltantes y sus ubicaciones.
 2. Volvé al servicio Chiltern local y pulsá **Jugar**. Debe aparecer la
    pantalla de carga y después el escenario original, el Pullman y la próxima parada.
 3. Volvé al menú desde la pausa y, en **3 · Hora y clima**, probá otra hora,
@@ -48,6 +58,23 @@ superposiciones que permiten seguir conduciendo. Esc cierra un panel o abre paus
    y elegí un PAT diferente en **Recorrido**. Debe indicarse que se iniciará una
    exploración por ese camino, hasta su destino; no deben conservarse las tres
    paradas del servicio local en un recorrido diferente.
+5. Buscá **caf_6000** o una formación que tenga un recurso ausente. Debe verse
+   en gris y poder seleccionarse con un clic o Enter. El resumen debe cambiar
+   al tren elegido; **Ver detalles** debe indicar qué archivo falta y dónde
+   colocarlo. Los recursos obligatorios ausentes impiden iniciar esa formación,
+   pero no impiden seleccionarla, consultar el diagnóstico o elegir otra.
+   Los recursos opcionales también se avisan y permiten iniciar si el resto
+   está completo. La preview puede mostrar el modelo disponible o su faltante.
+6. Elegí un tren eléctrico sobre una ruta sin alimentación, o un tren que
+   declare una trocha distinta. Debe aparecer un aviso amarillo específico;
+   debe seguir siendo seleccionable. **Jugar** conserva los requisitos de
+   recursos: un aviso de trocha/alimentación no deshabilita por sí solo el botón.
+   Un eléctrico sin una toma y tensión compatibles no tendrá tracción en la
+   partida. Cuando un archivo no declara su trocha, el menú no certifica su
+   compatibilidad física.
+7. Reducí la ventana a **640 × 480**. Las columnas deben pasar a una debajo de
+   la otra, el cuerpo debe desplazarse con la rueda y el resumen y **Jugar**
+   deben permanecer accesibles. Buscar texto no debe accionar controles del tren.
 
 Las actividades ACT usan el importador existente. La selección no incorpora un
 intérprete completo de todos los eventos ni scripts C# originales.
