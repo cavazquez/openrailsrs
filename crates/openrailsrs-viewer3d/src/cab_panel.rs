@@ -413,6 +413,9 @@ mod tests {
     #[test]
     fn cab_panel_formats_diesel_and_brake() {
         let tel = CabTelemetry {
+            cab_windows: [0.; 2],
+            cab_door: 0.,
+            washer_spraying: false,
             wheel_slip: false,
             engine_failure: false,
             thermal_limiting: false,
@@ -476,6 +479,9 @@ mod tests {
     #[test]
     fn cab_panel_marks_overspeed() {
         let tel = CabTelemetry {
+            cab_windows: [0.; 2],
+            cab_door: 0.,
+            washer_spraying: false,
             wheel_slip: false,
             engine_failure: false,
             thermal_limiting: false,

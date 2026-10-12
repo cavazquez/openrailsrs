@@ -13,6 +13,11 @@ pub struct SwitchLock {
 }
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct DispatcherStatus {
+    /// User preference; cannot bypass occupancy, a point lock or a held grant.
+    #[serde(default)]
+    pub priority: i8,
+    #[serde(default)]
+    pub grant_reason: String,
     pub own_locks: Vec<SwitchLock>,
     pub other_locks: Vec<SwitchLock>,
     pub waiting_for: Vec<String>,
@@ -97,6 +102,7 @@ fn point_position(
 }
 #[derive(Default)]
 struct Request {
+    priority: i8,
     owner: String,
     segments: Vec<TrackOccupancy>,
     locks: Vec<SwitchLock>,
@@ -108,6 +114,7 @@ struct Request {
 impl LiveDriveSession {
     fn next_block_request(&self) -> Request {
         let mut request = Request {
+            priority: self.dispatcher.priority,
             owner: self.service_id.clone(),
             wait_since: self.dispatcher.wait_since_s.unwrap_or(f64::MAX),
             ..Default::default()
@@ -338,8 +345,25 @@ pub(crate) fn coordinate(
             .map(|s| s.session.next_block_request()),
     );
     requests.sort_by(|a, b| {
+        let aged = |r: &Request| r.wait_since.is_finite() && now - r.wait_since >= 120.;
+        let score = |r: &Request| {
+            f64::from(r.priority) * 10.
+                + if r.wait_since.is_finite() {
+                    (now - r.wait_since).max(0.)
+                } else {
+                    0.
+                }
+        };
         b.retained
             .cmp(&a.retained)
+            .then_with(|| aged(b).cmp(&aged(a)))
+            .then_with(|| {
+                if aged(a) && aged(b) {
+                    a.wait_since.total_cmp(&b.wait_since)
+                } else {
+                    score(b).total_cmp(&score(a))
+                }
+            })
             .then_with(|| a.wait_since.total_cmp(&b.wait_since))
             .then_with(|| a.owner.cmp(&b.owner))
     });
@@ -392,7 +416,18 @@ pub(crate) fn coordinate(
     }
     let mut waits = HashMap::new();
     let mut protected = HashMap::new();
+    let mut reasons = HashMap::new();
     for request in requests {
+        let reason = if request.segments.is_empty() {
+            "Sin bloque pendiente"
+        } else if request.retained {
+            "Reserva previa mantenida"
+        } else if request.wait_since.is_finite() && now - request.wait_since >= 120. {
+            "Turno por espera prolongada"
+        } else {
+            "Preferencia y tiempo de espera; bloque libre"
+        };
+        reasons.insert(request.owner.clone(), reason.to_string());
         protected.insert(request.owner.clone(), request.signal);
         let mut conflicts = BTreeSet::new();
         for s in &request.segments {
@@ -425,6 +460,13 @@ pub(crate) fn coordinate(
             }
         }
         if !conflicts.is_empty() {
+            reasons.insert(
+                request.owner.clone(),
+                format!(
+                    "Espera por ocupación o enclavamiento: {}",
+                    conflicts.iter().cloned().collect::<Vec<_>>().join(", ")
+                ),
+            );
             waits.insert(request.owner, conflicts.into_iter().collect());
             continue;
         }
@@ -449,6 +491,10 @@ pub(crate) fn coordinate(
             Some(session.dispatcher.wait_since_s.unwrap_or(now))
         };
         session.dispatcher.waiting_for = waiting;
+        session.dispatcher.grant_reason = reasons
+            .get(&session.service_id)
+            .cloned()
+            .unwrap_or_default();
         session.dispatcher.protected_signal = protected.get(&session.service_id).cloned().flatten();
         session.dispatcher.own_locks = locked
             .iter()
@@ -603,6 +649,40 @@ mod tests {
         saved.track_reservations[0].end_m = f64::NAN;
         assert!(player.restore_snapshot(saved).is_err());
         assert_eq!(player.own_track_reservations[0].end_m, 900.);
+    }
+    #[test]
+    fn priority_selects_clear_block_but_cannot_take_existing_grant() {
+        let (mut player, mut traffic, _directory) = single_track();
+        traffic.services[0].session.dispatcher.priority = 5;
+        traffic.synchronize_occupancy(&mut player);
+        assert!(player.own_track_reservations.is_empty());
+        assert_eq!(traffic.services[0].session.own_track_reservations.len(), 1);
+        player.dispatcher.priority = 5;
+        traffic.services[0].session.dispatcher.priority = -5;
+        traffic.synchronize_occupancy(&mut player);
+        assert!(player.own_track_reservations.is_empty());
+        assert!(player.dispatcher.grant_reason.contains("ocupación"));
+        let saved = traffic.services[0].session.snapshot();
+        traffic.services[0].session.dispatcher.priority = 0;
+        traffic.services[0].session.restore_snapshot(saved).unwrap();
+        assert_eq!(traffic.services[0].session.dispatcher.priority, -5);
+    }
+    #[test]
+    fn aged_waiter_gets_clear_block_before_new_high_priority_request() {
+        let (mut player, mut traffic, _directory) = single_track();
+        player.state.time.0 = 150.;
+        player.dispatcher.priority = -5;
+        player.dispatcher.wait_since_s = Some(0.);
+        traffic.services[0].session.dispatcher.priority = 5;
+        traffic.synchronize_occupancy(&mut player);
+        assert_eq!(player.own_track_reservations.len(), 1);
+        assert!(player.dispatcher.grant_reason.contains("espera prolongada"));
+        assert!(
+            traffic.services[0]
+                .session
+                .own_track_reservations
+                .is_empty()
+        );
     }
     fn passing_loop() -> (LiveDriveSession, crate::LiveTraffic, tempfile::TempDir) {
         let project = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");

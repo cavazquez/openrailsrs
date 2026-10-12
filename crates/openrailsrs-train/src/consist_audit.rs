@@ -17,6 +17,7 @@ use crate::{consist_asset_root, resolve_consist_entry_path};
 
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct ConsistAudit {
+    pub dependencies: Vec<PathBuf>,
     pub path: PathBuf,
     pub vehicles: usize,
     pub powered_vehicles: usize,
@@ -249,6 +250,26 @@ pub fn source_fingerprint(path: &Path) -> Result<String, FormatError> {
     Ok(format!("{:x}", hasher.finalize()))
 }
 
+/// Streaming identity for author resources, without decoding models/audio or
+/// allocating a buffer the size of a content archive.
+pub fn content_file_sha256(path: &Path) -> Result<String, std::io::Error> {
+    use std::io::Read;
+    let mut file = std::fs::File::open(path)?;
+    let mut hash = Sha256::new();
+    let mut buffer = [0u8; 65536];
+    loop {
+        if openrailsrs_formats::cancellation::cancelled() {
+            return Err(std::io::Error::other("Comparación cancelada"));
+        }
+        let n = file.read(&mut buffer)?;
+        if n == 0 {
+            break;
+        }
+        hash.update(&buffer[..n]);
+    }
+    Ok(format!("{:x}", hash.finalize()))
+}
+
 #[derive(Clone, Debug)]
 struct ResourceFailure {
     message: String,
@@ -302,14 +323,162 @@ impl StockAudit {
 /// Additional TRAINSET roots mirror the viewer's preference for original models
 /// over the small project physics fixtures.
 #[derive(Clone, Debug, Default)]
+pub struct AuditWork {
+    pub parsed_stocks: u64,
+    pub parsed_shapes: u64,
+    pub parsed_cabs: u64,
+    pub reused_stocks: u64,
+    pub reused_shapes: u64,
+    pub reused_cabs: u64,
+}
+type Dependencies = std::collections::BTreeMap<PathBuf, FileMark>;
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct FileMark {
+    length: Option<u64>,
+    modified: Option<std::time::SystemTime>,
+    strong: bool,
+    sha: Option<String>,
+}
+impl FileMark {
+    fn read(path: &Path, strong: bool) -> Self {
+        let metadata = std::fs::metadata(path).ok();
+        let sha = if strong && metadata.as_ref().is_some_and(|m| m.is_file()) {
+            use std::io::Read;
+            let calculate = || -> std::io::Result<String> {
+                let mut file = std::fs::File::open(path)?;
+                let mut hash = Sha256::new();
+                let mut buffer = [0u8; 65536];
+                loop {
+                    if openrailsrs_formats::cancellation::cancelled() {
+                        return Err(std::io::Error::other("Audit cancelled"));
+                    }
+                    let n = file.read(&mut buffer)?;
+                    if n == 0 {
+                        break;
+                    }
+                    hash.update(&buffer[..n]);
+                }
+                Ok(format!("{:x}", hash.finalize()))
+            };
+            calculate().ok()
+        } else {
+            None
+        };
+        Self {
+            length: metadata.as_ref().map(|m| m.len()),
+            modified: metadata.and_then(|m| m.modified().ok()),
+            strong,
+            sha,
+        }
+    }
+}
+#[derive(Clone, Debug)]
+struct Cached<T> {
+    result: Result<T, ResourceFailure>,
+    dependencies: Dependencies,
+}
+impl<T> Cached<T> {
+    fn fresh(&self, verified: &mut HashMap<(PathBuf, bool), FileMark>) -> bool {
+        self.dependencies.iter().all(|(path, mark)| {
+            if openrailsrs_formats::cancellation::cancelled() {
+                return false;
+            }
+            let key = (path.clone(), mark.strong);
+            let current = FileMark::read(path, false);
+            let cached = verified
+                .get(&key)
+                .filter(|p| p.length == current.length && p.modified == current.modified);
+            let value = cached
+                .cloned()
+                .unwrap_or_else(|| FileMark::read(path, mark.strong));
+            let fresh = value == *mark;
+            verified.insert(key, value);
+            fresh
+        })
+    }
+}
+
+#[derive(Clone, Debug, Default)]
 pub struct ConsistAuditor {
     pub trainset_roots: Vec<PathBuf>,
-    stocks: HashMap<PathBuf, Result<StockAudit, ResourceFailure>>,
-    shapes: HashMap<PathBuf, Result<(), ResourceFailure>>,
-    cabs: HashMap<(PathBuf, bool), Result<(), ResourceFailure>>,
+    stocks: HashMap<PathBuf, Cached<StockAudit>>,
+    shapes: HashMap<PathBuf, Cached<()>>,
+    cabs: HashMap<(PathBuf, bool), Cached<()>>,
+    dependencies: Vec<Dependencies>,
+    pub work: AuditWork,
+    verified: HashMap<(PathBuf, bool), FileMark>,
+    batch: bool,
 }
 
 impl ConsistAuditor {
+    pub fn begin_batch(&mut self) {
+        self.verified.clear();
+        self.batch = true;
+    }
+    pub fn end_batch(&mut self) {
+        self.batch = false;
+    }
+    fn track(&mut self, path: &Path, strong: bool) {
+        let mark = FileMark::read(path, strong);
+        for dependencies in self.dependencies.iter_mut() {
+            if dependencies
+                .get(path)
+                .is_none_or(|old| !old.strong || strong)
+            {
+                dependencies.insert(path.into(), mark.clone());
+            }
+        }
+    }
+    fn merge_dependencies(&mut self, source: &Dependencies) {
+        for dependencies in self.dependencies.iter_mut() {
+            dependencies.extend(source.iter().map(|(p, m)| (p.clone(), m.clone())));
+        }
+    }
+    fn asset(&mut self, dirs: &[PathBuf], name: &str, dds: bool) -> Option<PathBuf> {
+        for directory in dirs {
+            self.track(directory, false);
+            let candidate = directory.join(name.replace('\\', "/"));
+            self.track(&candidate, false);
+            if dds {
+                self.track(&candidate.with_extension("dds"), false);
+                self.track(&candidate.with_extension("ktx2"), false);
+            }
+        }
+        let path = asset(dirs, name, dds);
+        if let Some(p) = &path {
+            self.track(p, false);
+        }
+        path
+    }
+    fn read_text(&mut self, path: &Path) -> Result<String, FormatError> {
+        self.track(path, true);
+        let result = openrailsrs_formats::read_msts_text_with_sources(path);
+        match result {
+            Ok((text, sources)) => {
+                for source in sources {
+                    self.track(&source, true);
+                }
+                Ok(text)
+            }
+            Err(error) => {
+                if let FormatError::MissingInclude {
+                    containing_file,
+                    reference,
+                } = &error
+                {
+                    let path = containing_file
+                        .parent()
+                        .unwrap_or(Path::new("."))
+                        .join(reference.replace('\\', "/"));
+                    self.track(&path, true);
+                    if let Some(parent) = path.parent() {
+                        self.track(parent, false);
+                    }
+                }
+                Err(error)
+            }
+        }
+    }
     pub fn new(trainset_roots: Vec<PathBuf>) -> Self {
         Self {
             trainset_roots,
@@ -317,8 +486,12 @@ impl ConsistAuditor {
         }
     }
     pub fn inspect(&mut self, con: &Path) -> ConsistAudit {
+        if !self.batch {
+            self.verified.clear();
+        }
         let mut report = ConsistAudit {
             path: con.into(),
+            dependencies: vec![con.into()],
             ..ConsistAudit::default()
         };
         let parsed = read_msts_file_to_string(con)
@@ -363,16 +536,43 @@ impl ConsistAuditor {
                 }
                 continue;
             }
-            if !self.stocks.contains_key(&path) {
+            if openrailsrs_formats::cancellation::cancelled() {
+                return report;
+            }
+            let reusable = self
+                .stocks
+                .get(&path)
+                .is_some_and(|entry| entry.fresh(&mut self.verified));
+            if !reusable {
+                self.dependencies.push(Dependencies::new());
+                self.track(&path, true);
                 let audit = self.inspect_stock(&path);
-                self.stocks.insert(path.clone(), audit);
+                let dependencies = self.dependencies.pop().unwrap();
+                if openrailsrs_formats::cancellation::cancelled() {
+                    return report;
+                }
+                self.work.parsed_stocks += 1;
+                self.stocks.insert(
+                    path.clone(),
+                    Cached {
+                        result: audit,
+                        dependencies,
+                    },
+                );
+            } else {
+                self.work.reused_stocks += 1;
+            }
+            for dependency in self.stocks[&path].dependencies.keys() {
+                if !report.dependencies.contains(dependency) {
+                    report.dependencies.push(dependency.clone());
+                }
             }
             let prefix = format!(
                 "Vehículo {} ({})",
                 index + 1,
                 path.file_name().unwrap_or_default().to_string_lossy()
             );
-            match &self.stocks[&path] {
+            match &self.stocks[&path].result {
                 Err(e) => {
                     report.errors.push(format!("{prefix}: {}", e.message));
                     for missing in &e.missing_resources {
@@ -416,6 +616,11 @@ impl ConsistAuditor {
         if !path.is_file() {
             return Err(ResourceFailure::message("Falta el archivo ENG/WAG"));
         }
+        self.track(
+            &path.parent().unwrap_or(Path::new(".")).join("OpenRails"),
+            false,
+        );
+        let _ = self.read_text(path);
         let (mass, length, powered, shape, cab, metadata) =
             if crate::steam_loader::is_toml_eng(path)
                 .map_err(|e| ResourceFailure::message(e.to_string()))?
@@ -478,7 +683,14 @@ impl ConsistAuditor {
             warnings: vec![],
             missing_resources: vec![],
             metadata,
-            source_sha256: source_fingerprint(path).unwrap_or_default(),
+            source_sha256: source_fingerprint(path)
+                .or_else(|_| {
+                    content_file_sha256(path).map_err(|e| FormatError::UnexpectedToken {
+                        offset: 0,
+                        message: e.to_string(),
+                    })
+                })
+                .unwrap_or_default(),
             limitations: vec![],
         };
         self.inspect_subsystems(path, &root, &mut stock);
@@ -486,7 +698,7 @@ impl ConsistAuditor {
             stock.errors.push("Masa o longitud inválida".into());
         }
         if let Some(shape) = shape {
-            match asset(&[root.clone(), root.join("SHAPES")], &shape, false) {
+            match self.asset(&[root.clone(), root.join("SHAPES")], &shape, false) {
                 Some(path) => {
                     if let Err(e) = self.inspect_shape(&path) {
                         stock.failure(e);
@@ -509,7 +721,7 @@ impl ConsistAuditor {
         }
         Ok(stock)
     }
-    fn inspect_subsystems(&self, path: &Path, root: &Path, stock: &mut StockAudit) {
+    fn inspect_subsystems(&mut self, path: &Path, root: &Path, stock: &mut StockAudit) {
         if let Some(kind) = &stock.metadata.engine_type {
             match kind.to_ascii_lowercase().as_str() {
                 "diesel" => {},
@@ -532,7 +744,7 @@ impl ConsistAuditor {
             } else {
                 script.name.clone()
             };
-            let available = asset(&script_dirs, &file, false).is_some();
+            let available = self.asset(&script_dirs, &file, false).is_some();
             // OR tries this filename then falls back to its default supply
             // when absent. An actual author-provided Default.cs remains custom.
             if !available
@@ -589,7 +801,7 @@ impl ConsistAuditor {
             }
         }
         for name in &stock.metadata.sounds {
-            let Some(sms) = asset(&dirs, name, false) else {
+            let Some(sms) = self.asset(&dirs, name, false) else {
                 stock
                     .missing_resources
                     .push(MissingResource::new(path, &dirs, name, false));
@@ -598,12 +810,12 @@ impl ConsistAuditor {
                     .push(format!("Falta el sonido opcional {name}"));
                 continue;
             };
-            match read_msts_file_to_string(&sms).and_then(|text| parse_named_stf(&text)) {
+            match self.read_text(&sms).and_then(|text| parse_named_stf(&text)) {
                 Ok(ast) => {
                     let mut waves = vec![sms.parent().unwrap_or(root).to_path_buf()];
                     waves.extend(dirs.iter().cloned());
                     for file in sms_wave_references(&ast) {
-                        if asset(&waves, &file, false).is_none() {
+                        if self.asset(&waves, &file, false).is_none() {
                             stock
                                 .missing_resources
                                 .push(MissingResource::new(&sms, &waves, &file, false));
@@ -621,9 +833,18 @@ impl ConsistAuditor {
         stock.warnings.extend(stock.limitations.iter().cloned());
     }
     fn inspect_shape(&mut self, path: &Path) -> Result<(), ResourceFailure> {
-        if let Some(result) = self.shapes.get(path) {
-            return result.clone();
+        if let Some(entry) = self
+            .shapes
+            .get(path)
+            .filter(|entry| entry.fresh(&mut self.verified))
+            .cloned()
+        {
+            self.merge_dependencies(&entry.dependencies);
+            self.work.reused_shapes += 1;
+            return entry.result.clone();
         }
+        self.dependencies.push(Dependencies::new());
+        self.track(path, true);
         let result = ShapeFile::from_path(path)
             .map_err(|e| ResourceFailure::message(format!("Modelo {}: {e}", path.display())))
             .and_then(|shape| {
@@ -638,7 +859,7 @@ impl ConsistAuditor {
                 }
                 let mut missing_resources = vec![];
                 for name in &shape.texture_filenames {
-                    if asset(&dirs, name, true).is_none() {
+                    if self.asset(&dirs, name, true).is_none() {
                         let missing = MissingResource::new(path, &dirs, name, true);
                         if !missing_resources.contains(&missing) {
                             missing_resources.push(missing);
@@ -664,7 +885,18 @@ impl ConsistAuditor {
                     })
                 }
             });
-        self.shapes.insert(path.into(), result.clone());
+        let dependencies = self.dependencies.pop().unwrap();
+        self.merge_dependencies(&dependencies);
+        self.work.parsed_shapes += 1;
+        if !openrailsrs_formats::cancellation::cancelled() {
+            self.shapes.insert(
+                path.into(),
+                Cached {
+                    result: result.clone(),
+                    dependencies,
+                },
+            );
+        }
         result
     }
     fn inspect_cab(
@@ -682,7 +914,7 @@ impl ConsistAuditor {
             root.to_path_buf(),
         ];
         if let Some(name) = &cab.cab_view_file {
-            match asset(&dirs, name, false) {
+            match self.asset(&dirs, name, false) {
                 Some(p) => match self.inspect_cvf(&p, true) {
                     Ok(()) => stock.cab_2d = true,
                     Err(e) => stock.failure(e),
@@ -696,7 +928,7 @@ impl ConsistAuditor {
             }
         }
         if let Some(name) = &cab.orts_3d_cab_shape {
-            match asset(&dirs, name, false) {
+            match self.asset(&dirs, name, false) {
                 Some(p) => {
                     if let Err(e) = self.inspect_shape(&p) {
                         stock.failure(e);
@@ -751,10 +983,20 @@ impl ConsistAuditor {
         }
     }
     fn inspect_cvf(&mut self, path: &Path, require_views: bool) -> Result<(), ResourceFailure> {
-        if let Some(result) = self.cabs.get(&(path.into(), require_views)) {
-            return result.clone();
+        if let Some(entry) = self
+            .cabs
+            .get(&(path.into(), require_views))
+            .filter(|entry| entry.fresh(&mut self.verified))
+            .cloned()
+        {
+            self.merge_dependencies(&entry.dependencies);
+            self.work.reused_cabs += 1;
+            return entry.result.clone();
         }
-        let result = read_msts_file_to_string(path)
+        self.dependencies.push(Dependencies::new());
+        self.track(path, true);
+        let result = self
+            .read_text(path)
             .and_then(|t| parse_cab_view_text(&t))
             .and_then(|a| CabViewFile::from_ast(&a))
             .map_err(|e| ResourceFailure::message(format!("Cabina {}: {e}", path.display())))
@@ -794,7 +1036,7 @@ impl ConsistAuditor {
                     .chain(graphics)
                     .filter(|s| !s.is_empty() && !s.eq_ignore_ascii_case("none"))
                 {
-                    if asset(&dirs, name, true).is_none() {
+                    if self.asset(&dirs, name, true).is_none() {
                         let missing = MissingResource::new(path, &dirs, name, true);
                         if !missing_resources.contains(&missing) {
                             missing_resources.push(missing);
@@ -814,8 +1056,18 @@ impl ConsistAuditor {
                     })
                 }
             });
-        self.cabs
-            .insert((path.into(), require_views), result.clone());
+        let dependencies = self.dependencies.pop().unwrap();
+        self.merge_dependencies(&dependencies);
+        self.work.parsed_cabs += 1;
+        if !openrailsrs_formats::cancellation::cancelled() {
+            self.cabs.insert(
+                (path.into(), require_views),
+                Cached {
+                    result: result.clone(),
+                    dependencies,
+                },
+            );
+        }
         result
     }
 }
@@ -840,6 +1092,79 @@ fn asset(dirs: &[PathBuf], name: &str, dds: bool) -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn incremental_audit_updates_includes_models_sound_and_missing_resources() {
+        let temp = tempfile::tempdir().unwrap();
+        let stock = temp.path().join("TRAINS/TRAINSET/Dmu");
+        let cons = temp.path().join("TRAINS/CONSISTS");
+        std::fs::create_dir_all(&stock).unwrap();
+        std::fs::create_dir_all(&cons).unwrap();
+        std::fs::write(stock.join("mass.inc"), "Mass ( 40t ) Size ( 3m 4m 20m )").unwrap();
+        std::fs::write(stock.join("Power.eng"),"Wagon ( power Include ( mass.inc ) WagonShape ( body.s ) Sound ( test.sms ) ) Engine ( power MaxPower ( 500kW ) )").unwrap();
+        std::fs::write(
+            stock.join("Coach.wag"),
+            "Wagon ( coach Mass ( 30t ) Size ( 3m 4m 20m ) )",
+        )
+        .unwrap();
+        std::fs::write(
+            stock.join("body.s"),
+            "(shape (texture_filenames 1 body.ace))",
+        )
+        .unwrap();
+        std::fs::write(stock.join("body.ace"), b"texture").unwrap();
+        std::fs::write(stock.join("test.sms"), "Wagon ( File ( first.wav ) )").unwrap();
+        let con = cons.join("train.con");
+        std::fs::write(&con,"Train ( TrainCfg ( test Engine ( EngineData ( Power Dmu ) ) Wagon ( WagonData ( Coach Dmu ) ) ) )").unwrap();
+        let mut a = ConsistAuditor::default();
+        let first = a.inspect(&con);
+        assert_eq!(first.mass_kg, 70000.);
+        assert_eq!(a.work.parsed_stocks, 2);
+        assert_eq!(a.work.parsed_shapes, 1);
+        assert!(
+            first
+                .missing_resources
+                .iter()
+                .any(|r| r.name == "first.wav")
+        );
+        a.inspect(&con);
+        assert_eq!(a.work.parsed_stocks, 2);
+        assert_eq!(a.work.parsed_shapes, 1);
+        std::fs::write(stock.join("mass.inc"), "Mass ( 45t ) Size ( 3m 4m 20m )").unwrap();
+        let changed = a.inspect(&con);
+        assert_eq!(changed.mass_kg, 75000.);
+        assert_eq!(a.work.parsed_stocks, 3);
+        assert_eq!(a.work.parsed_shapes, 1);
+        std::fs::write(stock.join("test.sms"), "Wagon ( File ( second.wav ) )").unwrap();
+        let changed = a.inspect(&con);
+        assert!(
+            changed
+                .missing_resources
+                .iter()
+                .any(|r| r.name == "second.wav")
+        );
+        assert!(
+            !changed
+                .missing_resources
+                .iter()
+                .any(|r| r.name == "first.wav")
+        );
+        std::fs::write(
+            stock.join("body.s"),
+            "(shape (texture_filenames 1 other.ace))",
+        )
+        .unwrap();
+        let changed = a.inspect(&con);
+        assert!(!changed.player_ready());
+        assert_eq!(a.work.parsed_shapes, 2);
+        assert!(
+            changed
+                .missing_resources
+                .iter()
+                .any(|r| r.name == "other.ace")
+        );
+        std::fs::write(stock.join("other.ace"), b"texture").unwrap();
+        assert!(a.inspect(&con).player_ready());
+    }
     #[test]
     fn native_formation_audit_keeps_its_stock_origin_on_another_route() {
         let tmp = tempfile::tempdir().unwrap();

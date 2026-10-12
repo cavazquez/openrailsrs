@@ -81,6 +81,8 @@ fn make_two_train_scenario(
             edge_speed_limits: vec![],
         },
         train: TrainSection {
+            vehicle_profiles: vec![],
+            cab_equipment: vec![],
             power_load: Default::default(),
             electric_pickups: vec![],
             consist: "consists/freight.con".into(),
@@ -95,6 +97,7 @@ fn make_two_train_scenario(
             penalty_per_second_late: 1.0,
         },
         simulation: SimulationSection {
+            weather_track: None,
             native_physics: None,
             duration,
             time_step: 0.5,

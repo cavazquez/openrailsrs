@@ -1,10 +1,12 @@
 //! Scenario file format (`scenario.toml`) and validation.
 
+pub mod cab_equipment;
 pub mod error;
 pub mod model;
 pub mod overlay;
 pub mod sound_regions;
 pub mod timetable;
+pub mod weather_track;
 
 pub use error::ScenarioError;
 pub use model::{

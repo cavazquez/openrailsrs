@@ -436,10 +436,11 @@ impl ShapeFile {
     /// Read and parse a `.s` file from disk (ASCII, zlib-compressed ASCII, or binary tokenized).
     pub fn from_path(path: impl AsRef<std::path::Path>) -> Result<Self, FormatError> {
         let path = path.as_ref();
-        let bytes = std::fs::read(path).map_err(|e| FormatError::UnexpectedToken {
-            offset: 0,
-            message: format!("failed to read {}: {e}", path.display()),
-        })?;
+        let bytes =
+            crate::cancellation::read_bytes(path).map_err(|e| FormatError::UnexpectedToken {
+                offset: 0,
+                message: format!("failed to read {}: {e}", path.display()),
+            })?;
         Self::from_bytes(&bytes)
     }
 

@@ -119,6 +119,30 @@ pub fn step(
     };
 
     let v = state.velocity_mps.max(0.0);
+    if let Some(program) = &state.weather_track
+        && let Some(config) = &train.rail_adhesion
+    {
+        let frame = program.at(state.time_s());
+        use crate::adhesion::{RailAdhesionState, RailWeather};
+        let weather = if frame.snow > 0.02 && frame.snow > frame.rain {
+            RailWeather::Snow
+        } else if frame.rain > 0.02 {
+            if frame.storm > 0.2 {
+                RailWeather::Storm
+            } else {
+                RailWeather::Rain
+            }
+        } else if frame.visibility_m < 1000. || frame.fog_density > 0.004 {
+            RailWeather::Fog
+        } else {
+            RailWeather::Dry
+        };
+        let rail = state
+            .rail_adhesion
+            .get_or_insert_with(|| RailAdhesionState::new(config, weather, v));
+        rail.weather = weather;
+        rail.weather_target_factor = Some(frame.rail_factor());
+    }
     crate::electric::advance(state, path_data, &train.electric, dt);
     let speed_cap = edge_data.speed_limit_at(state.pos_on_edge_m);
     let brake_frac = train.brake_mapping.command_to_sim_fraction(state.brake);
@@ -198,6 +222,7 @@ pub fn step(
     });
     let native_brake_forces = state.brake_system.cylinder_forces_n(v);
     crate::power_supply::advance(state, &train.power_supply);
+    crate::cab_equipment::advance(state, dt);
     state.fuel_consumption_g += crate::diesel_operation::advance_with_supply(
         &mut state.diesel,
         &train.diesel,
@@ -434,12 +459,27 @@ pub fn step(
                 {
                     let vehicle_index = train.diesel_vehicle_indices.get(i).copied().unwrap_or(i);
                     let profile = &native.vehicles[vehicle_index];
-                    let mass = state
+                    let base_mass = state
                         .vehicle_masses
                         .get(vehicle_index)
                         .copied()
                         .or_else(|| native.vehicle_masses_kg.get(vehicle_index).copied())
                         .unwrap_or(engine.adhesion_mass_kg);
+                    let mass = match (
+                        train
+                            .diesel
+                            .cars
+                            .iter()
+                            .find(|c| c.vehicle == vehicle_index),
+                        state.diesel.car(vehicle_index),
+                    ) {
+                        (Some(config), Some(fuel)) => crate::consumable_mass::diesel_mass_kg(
+                            base_mass,
+                            config.params.capacity_l,
+                            fuel.fuel_l,
+                        ),
+                        _ => base_mass,
+                    };
                     let speed = state
                         .vehicles
                         .get(vehicle_index)
@@ -447,7 +487,7 @@ pub fn step(
                     let force = dynamics.axles[i].step(
                         profile,
                         mass,
-                        engine.adhesion_mass_kg,
+                        engine.adhesion_mass_kg * mass / base_mass.max(1.0),
                         speed,
                         force_n,
                         native_brake_forces
@@ -641,7 +681,13 @@ pub fn step(
     // Advance the air-brake system and read the total cylinder force.
     // When no cylinders are registered (default state), fall back to the
     // instantaneous scalar model so existing single-mass simulations are unchanged.
-    let effective_mass = train.mass_kg + state.extra_mass_kg;
+    let effective_mass = crate::consumable_mass::total_mass_kg(train, state);
+    let effective_vehicle_masses: Vec<_> = state
+        .vehicle_masses
+        .iter()
+        .enumerate()
+        .map(|(i, m)| crate::consumable_mass::vehicle_mass_kg(train, state, i, *m))
+        .collect();
     let mut f_brake = if !state.brake_system.cylinders.is_empty() {
         state.brake_system.total_force_n(v)
     } else {
@@ -725,11 +771,11 @@ pub fn step(
             .vehicle_davis
             .iter()
             .enumerate()
-            .map(|(i, d)| resistance(i, state.vehicle_masses[i], d, v))
+            .map(|(i, d)| resistance(i, effective_vehicle_masses[i], d, v))
             .sum();
         let grade: f64 = vehicle_grades
             .iter()
-            .zip(&state.vehicle_masses)
+            .zip(&effective_vehicle_masses)
             .map(|(g, m)| m * G * g)
             .sum();
         let new_speed =
@@ -744,7 +790,7 @@ pub fn step(
         new_speed
     } else if !state.vehicles.is_empty() {
         let total_mass = effective_mass;
-        let masses = state.vehicle_masses.clone();
+        let masses = effective_vehicle_masses;
         let scalar_coast = train
             .multi_body_scalar_coast_below_v_mps
             .is_some_and(|threshold| state.throttle <= 0.0 && f_motor <= 1.0 && v < threshold);
@@ -817,11 +863,7 @@ pub fn step(
                 let mut brake_forces: Vec<f64> = if !state.brake_system.cylinders.is_empty() {
                     state.brake_system.cylinder_forces_n(coupling_v)
                 } else {
-                    state
-                        .vehicle_masses
-                        .iter()
-                        .map(|m| f_brake * m / total_mass)
-                        .collect()
+                    masses.iter().map(|m| f_brake * m / total_mass).collect()
                 };
                 if let Some(config) = &train.rail_adhesion {
                     crate::adhesion::cap_brakes(state, config, &mut brake_forces);
@@ -831,7 +873,7 @@ pub fn step(
                         .vehicles
                         .iter()
                         .zip(train.vehicle_davis.iter())
-                        .zip(state.vehicle_masses.iter())
+                        .zip(masses.iter())
                         .enumerate()
                         .map(|(i, ((veh, davis), mass))| {
                             resistance(i, *mass, davis, veh.velocity_mps)
@@ -841,8 +883,7 @@ pub fn step(
                         })
                         .collect()
                 } else {
-                    state
-                        .vehicle_masses
+                    masses
                         .iter()
                         .map(|m| (f_resist + f_grade) * m / total_mass)
                         .collect()
@@ -871,13 +912,23 @@ pub fn step(
                 .iter()
                 .zip(&train.vehicle_davis)
                 .enumerate()
-                .map(|(i, (mass, davis))| resistance(i, *mass, davis, v))
+                .map(|(i, (mass, davis))| {
+                    resistance(
+                        i,
+                        crate::consumable_mass::vehicle_mass_kg(train, state, i, *mass),
+                        davis,
+                        v,
+                    )
+                })
                 .sum();
             let grade = native
                 .vehicle_masses_kg
                 .iter()
                 .zip(&vehicle_grades)
-                .map(|(mass, grade)| mass * G * grade)
+                .enumerate()
+                .map(|(i, (mass, grade))| {
+                    crate::consumable_mass::vehicle_mass_kg(train, state, i, *mass) * G * grade
+                })
                 .sum();
             (resist, grade)
         } else {

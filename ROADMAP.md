@@ -4,7 +4,7 @@ Estado revisado el **11 de octubre de 2026**. El producto es un simulador ferrov
 
 ## Cómo leer este estado
 
-Las fases describen lo que ya se puede usar, dónde se comprueba y qué límites conserva. [El lote de treinta mejoras](docs/PLAN_30.md) contiene los issues seleccionados, criterios y pruebas manuales. El [plan abierto en GitHub](https://github.com/cavazquez/openrailsrs/issues?q=is%3Aissue%20is%3Aopen%20label%3Aplan-200) conserva los demás objetivos y sus etiquetas de tema/dificultad.
+Las fases describen lo que ya se puede usar, dónde se comprueba y qué límites conserva. [El lote de treinta mejoras](docs/PLAN_30.md) contiene los issues seleccionados, criterios y pruebas manuales. El [segundo lote](docs/PLAN_30_2.md) amplía prácticas, equipos compatibles, escenario y gestión de la biblioteca. El [plan abierto en GitHub](https://github.com/cavazquez/openrailsrs/issues?q=is%3Aissue%20is%3Aopen%20label%3Aplan-200) conserva los demás objetivos y sus etiquetas de tema/dificultad.
 
 ## 1. Elegir contenido e iniciar una partida
 

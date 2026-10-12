@@ -73,6 +73,7 @@ impl<'a> Lexer<'a> {
 
     /// Returns the next token or `None` at end of input.
     pub fn next_token(&mut self) -> Result<Option<Token>, FormatError> {
+        crate::cancellation::check()?;
         self.skip_ws_and_comments();
         if self.path_flag_pending == 1 {
             self.path_flag_pending = 0;

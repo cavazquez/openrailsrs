@@ -145,7 +145,7 @@ def run_checkpoint(args, name, target, pause):
             "OPENRAILSRS_AUTODRIVE": str(getattr(args, "autodrive", 0.75)),
             "OPENRAILSRS_SPEED_MUL": str(getattr(args, "speed_mul", 16)),
             "OPENRAILSRS_SCREENSHOT": str(prefix.with_suffix(".png")),
-            "OPENRAILSRS_SCREENSHOT_AFTER_READY": "1",
+            "OPENRAILSRS_SCREENSHOT_AFTER_READY": "1" if getattr(args,"after_ready",True) else "0",
             "OPENRAILSRS_SCREENSHOT_READY_FRAMES": str(
                 getattr(args, "ready_frames", 8)
             ),
@@ -155,6 +155,10 @@ def run_checkpoint(args, name, target, pause):
             "OPENRAILSRS_SCREENSHOT_DELAY_S": str(args.timeout_s - 10),
         }
     )
+    if getattr(args,"resources_dir",None) is not None:
+        env["OPENRAILSRS_RESOURCES"]=str(args.resources_dir)
+    if getattr(args,"capture_equipment",False):env["OPENRAILSRS_CAPTURE_EQUIPMENT"]="1"
+    if getattr(args,"capture_bug_report",False):env["OPENRAILSRS_CAPTURE_BUG_REPORT"]="1"
     if hasattr(args, "camera_yaw"):
         env.update(
             OPENRAILSRS_CAM_YAW=str(args.camera_yaw),

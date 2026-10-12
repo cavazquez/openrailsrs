@@ -20,7 +20,12 @@ use crate::weather_state::WeatherProfile;
 
 mod choices;
 mod launcher;
+mod library;
 mod previews;
+mod recommendations;
+mod study;
+mod vehicle_profiles;
+mod weather_editor;
 use choices::{ChoiceKind, ChoiceSearch, choice_keys};
 use launcher::{LibraryTab, NewGameStep, SettingsTab};
 
@@ -55,6 +60,9 @@ pub struct PlayerUiPlugin;
 impl Plugin for PlayerUiPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PlayerUiState>()
+            .init_resource::<crate::player_study::PlayerStudy>()
+            .init_resource::<crate::library_tools::LibraryTools>()
+            .init_resource::<crate::issue_report::Reports>()
             .init_resource::<PlayerSettings>()
             .init_resource::<crate::save_history::SaveHistory>()
             .init_resource::<PlayerLaunchMenu>()
@@ -77,6 +85,25 @@ impl Plugin for PlayerUiPlugin {
             )
             .add_systems(OnEnter(ViewerAppState::Playing), apply_weather)
             .add_systems(
+                OnEnter(ViewerAppState::Playing),
+                |mut menu: ResMut<PlayerLaunchMenu>| menu.cancel_unused_audits(),
+            )
+            .add_systems(
+                OnEnter(ViewerAppState::Playing),
+                study::spawn_hud.after(spawn_toolbar),
+            )
+            .add_systems(
+                Update,
+                (
+                    crate::player_study::activate,
+                    crate::player_study::checkpoint,
+                    study::update_hud,
+                )
+                    .chain()
+                    .after(crate::live::enable_live_defaults)
+                    .run_if(in_state(ViewerAppState::Playing)),
+            )
+            .add_systems(
                 Update,
                 apply_weather.run_if(in_state(ViewerAppState::Playing)),
             )
@@ -88,6 +115,7 @@ impl Plugin for PlayerUiPlugin {
                     crate::save_history::history_keys,
                     crate::save_history::poll_history,
                     poll_content_download,
+                    library::poll,
                     poll_menu_audits,
                     handle_buttons.in_set(EnvironmentControls),
                     capture_ui_pointer.in_set(UiPointerCaptureSet),
@@ -135,6 +163,12 @@ pub enum PlayerPanel {
     Traction,
     Settings,
     Help,
+    Practice,
+    Report,
+    WeatherEditor,
+    Water,
+    IssueReport,
+    VehicleProfile,
 }
 #[derive(Clone, Debug, PartialEq)]
 enum MapSelection {
@@ -167,6 +201,9 @@ pub struct PlayerUiState {
     pub(crate) rebuild: bool,
     pub(crate) history_focus: bool,
     pub(crate) history_query: String,
+    weather_phase: usize,
+    profile_car: usize,
+    weather_preview_s: f64,
     history_filter: crate::save_history::Filter,
     root: Option<Entity>,
     camera: Option<Entity>,
@@ -198,6 +235,9 @@ impl Default for PlayerUiState {
             rebuild: true,
             history_focus: false,
             history_query: String::new(),
+            weather_phase: 0,
+            profile_car: 0,
+            weather_preview_s: 0.,
             history_filter: default(),
             root: None,
             camera: None,
@@ -235,6 +275,7 @@ struct PlayerToolbar;
 struct PlayerScroll;
 #[derive(Component, Clone, Copy)]
 enum DynamicText {
+    IssueReport,
     Status,
     Content,
     Notebook,
@@ -311,10 +352,46 @@ enum UiCommand {
     ContentDownload,
     ContentAudit(usize),
     ContentCancel,
+    QueueCancel(u64),
+    QueueResume,
+    QueueClear,
+    BackupExport,
+    BackupImport(usize),
+    ApplyBackupSettings,
+    InspectRemoval(usize),
+    RemoveSelected,
+    RestoreContent(usize),
+    VersionBase(usize),
+    VersionCompare(usize),
+    BugPrepare,
+    BugCapture,
+    BugShare,
+    BugCopy,
+    ProfileCar(i32),
+    ProfileAdjust(u8, f64),
+    ProfileReset,
     ContentCatalogue,
     MissingOrigin,
     MissingUpdate,
     MissingAudit,
+    PlayMode(crate::journey_setup::PlayMode),
+    Lesson(openrailsrs_sim::learning::Lesson),
+    PracticeStop(i32),
+    PracticeApproach,
+    PracticeTraffic,
+    RepeatLesson(bool),
+    Coach,
+    DispatchPriority(usize, i8),
+    WeatherPhase(i32),
+    WeatherEdit(weather_editor::Field, f64),
+    WeatherAdd,
+    WeatherRemove,
+    WeatherPreview(f64),
+    WeatherProfileFile(bool),
+    WeatherActivate(bool),
+    Cab(openrailsrs_sim::cab_equipment::CabOperation),
+    WaterAnimate,
+    WaterFlow(String, u8, f32),
 }
 #[derive(Clone, Copy, Debug)]
 enum MenuField {
@@ -330,6 +407,7 @@ enum MenuField {
 }
 #[derive(Clone, Copy, Debug)]
 enum SettingField {
+    ContactShadows,
     QuickStations,
     Difficulty(crate::player_settings::DifficultyProfile),
     Temperature,
@@ -781,6 +859,9 @@ struct MenuOptions<'w> {
     settings: ResMut<'w, PlayerSettings>,
     previews: ResMut<'w, previews::Previews>,
     history: ResMut<'w, crate::save_history::SaveHistory>,
+    study: ResMut<'w, crate::player_study::PlayerStudy>,
+    tools: ResMut<'w, crate::library_tools::LibraryTools>,
+    reports: ResMut<'w, crate::issue_report::Reports>,
 }
 fn handle_buttons(
     mut commands: Commands,
@@ -804,6 +885,9 @@ fn handle_buttons(
         mut settings,
         mut previews,
         mut history,
+        mut study,
+        mut tools,
+        mut reports,
     } = options;
     for (interaction, command) in &buttons {
         if *interaction != Interaction::Pressed || !mouse.just_pressed(MouseButton::Left) {
@@ -819,6 +903,24 @@ fn handle_buttons(
             UiCommand::ContentDownload=>downloads.start(),
             UiCommand::ContentAudit(index)=>downloads.reaudit(*index),
             UiCommand::ContentCancel=>downloads.cancel(),
+            UiCommand::QueueCancel(id)=>downloads.cancel_job(*id),
+            UiCommand::BugPrepare=>{let audit=menu.consists.get(menu.consist).and_then(|p|menu.consist_audits.get(p));let diagnostic=crate::issue_report::Diagnostic::capture(&settings,live.as_deref(),audit);reports.prepare(diagnostic)},
+            UiCommand::BugCopy=>clipboard.as_mut().ok_or("Portapapeles no disponible".into()).and_then(|c|c.set_text(reports.preview.clone()).map_err(|e|e.to_string())),
+            UiCommand::BugShare=>reports.open_issue(),
+            UiCommand::BugCapture=>{if live.is_none(){Err("La captura requiere una partida activa".into())}else{reports.directory.as_ref().map(|p|p.join("screenshot.png")).ok_or("Prepará primero el informe".into()).map(|path|{close_panel(&mut ui,&mut live);commands.insert_resource(crate::issue_report::PendingCapture::new(path));})}},
+            UiCommand::ProfileCar(delta)=>{let n=vehicle_profiles::stocks(&menu).len();ui.profile_car=cycle(ui.profile_car,n,*delta);Ok(())},
+            UiCommand::ProfileAdjust(field,delta)=>vehicle_profiles::adjust(&menu,&mut settings,ui.profile_car,Some((*field,*delta))).map(|()|{ui.notice="Perfil propio para la próxima partida. Guardá ajustes para conservarlo.".into();}),
+            UiCommand::ProfileReset=>vehicle_profiles::adjust(&menu,&mut settings,ui.profile_car,None),
+            UiCommand::QueueResume=>{downloads.resume_queue();Ok(())},
+            UiCommand::QueueClear=>downloads.queue.clear_finished(),
+            UiCommand::BackupExport=>tools.request(crate::library_tools::Action::Export),
+            UiCommand::BackupImport(index)=>tools.backups.get(*index).cloned().ok_or("Respaldo inexistente".into()).and_then(|path|tools.request(crate::library_tools::Action::Import(path))),
+            UiCommand::ApplyBackupSettings=>tools.imported_settings.take().ok_or("No hay ajustes importados".into()).map(|s|{*settings=s;ui.notice="Ajustes restaurados en esta sesión. Guardalos en F10 si querés conservarlos.".into();}),
+            UiCommand::InspectRemoval(index)=>downloads.installed.get(*index).cloned().ok_or("Copia inexistente".into()).and_then(|path|tools.request(crate::library_tools::Action::Inspect(path))),
+            UiCommand::RemoveSelected=>{if live.is_some(){Err("Volvé al menú principal antes de retirar contenido".into())}else if downloads.busy() || downloads.queue.entries.iter().any(|e|e.phase.pending()){Err("Esperá que termine la cola de descargas y la auditoría".into())}else{tools.plan.as_ref().map(|p|p.path.clone()).ok_or("Revisá primero las dependencias".into()).and_then(|path|tools.request(crate::library_tools::Action::Remove(path))) }},
+            UiCommand::RestoreContent(index)=>tools.trash.get(*index).cloned().ok_or("Copia recuperable inexistente".into()).and_then(|entry|tools.request(crate::library_tools::Action::Restore(entry))),
+            UiCommand::VersionBase(index)=>downloads.installed.get(*index).cloned().ok_or("Copia inexistente".into()).map(|path|{tools.compare_base=Some(path);}),
+            UiCommand::VersionCompare(index)=>tools.compare_base.clone().zip(downloads.installed.get(*index).cloned()).ok_or("Elegí primero la versión de referencia".into()).and_then(|(a,b)|tools.request(crate::library_tools::Action::Compare(a,b))),
             UiCommand::ContentCatalogue=>crate::official_content::open_catalogue(),
             UiCommand::MissingOrigin=>crate::official_content::missing_source(&menu).ok_or("No hay un origen verificado".to_string()).and_then(|s|crate::official_content::open_source_url(&s.page)),
             UiCommand::MissingAudit=>menu.reaudit_selected().map(|message|{ui.notice=message;}),
@@ -836,7 +938,38 @@ fn handle_buttons(
                     Ok(())
                 })
             },
-            UiCommand::Start=>menu.prepare().map(|request|{launch.0=Some(request);ui.panel=PlayerPanel::None;ui.notice="Cargando la partida…".into();}),
+            UiCommand::Start=>{
+                let setup=settings.journey_setup.clone();
+                study::challenge_weather(&setup, &mut settings.weather_profile, &mut menu.weather);
+                if setup.weather_challenge(settings.weather_seed).is_some(){menu.environment.time=crate::environment::EnvironmentSource::Manual;menu.environment.weather=crate::environment::EnvironmentSource::Manual;}
+                menu.prepare_configured(&settings).map(|request|{launch.0=Some(request);ui.panel=PlayerPanel::None;ui.notice="Cargando la partida…".into();})
+            },
+            UiCommand::PlayMode(mode)=>{settings.journey_setup.mode = *mode;if *mode==crate::journey_setup::PlayMode::Challenge && !matches!(settings.journey_setup.lesson,openrailsrs_sim::learning::Lesson::Rain|openrailsrs_sim::learning::Lesson::Snow|openrailsrs_sim::learning::Lesson::Fog){settings.journey_setup.lesson=openrailsrs_sim::learning::Lesson::Rain;}Ok(())},
+            UiCommand::Lesson(lesson)=>{settings.journey_setup.lesson = *lesson;Ok(())},
+            UiCommand::PracticeStop(delta)=>{settings.journey_setup.start_stop=cycle(settings.journey_setup.start_stop,menu.preview.stops.len()+1,*delta);Ok(())},
+            UiCommand::PracticeApproach=>{settings.journey_setup.approach = !settings.journey_setup.approach;Ok(())},
+            UiCommand::PracticeTraffic=>{settings.journey_setup.traffic = !settings.journey_setup.traffic;Ok(())},
+            UiCommand::Coach=>{settings.braking_coach = !settings.braking_coach;Ok(())},
+            UiCommand::WaterAnimate=>{settings.animated_water = !settings.animated_water;Ok(())},
+            UiCommand::WaterFlow(key,field,delta)=>{let flow=settings.water_flows.entry(key.clone()).or_default();match field{0=>flow.heading_deg=(flow.heading_deg+delta).rem_euclid(360.),1=>flow.speed_mps=(flow.speed_mps+delta).clamp(0.,5.),_=>flow.waves = !flow.waves}Ok(())},
+            UiCommand::Cab(operation)=>live.as_mut().ok_or("No hay partida activa".into()).and_then(|l|l.session.operate_cab(*operation)),
+            UiCommand::WeatherPhase(delta)=>{ui.weather_phase=cycle(ui.weather_phase,settings.weather_track.phases.len(),*delta);Ok(())},
+            UiCommand::WeatherEdit(field,delta)=>weather_editor::edit(&mut settings.weather_track,ui.weather_phase,*field,*delta),
+            UiCommand::WeatherAdd=>weather_editor::add(&mut settings.weather_track).map(|()|{ui.weather_phase=settings.weather_track.phases.len()-1;}),
+            UiCommand::WeatherRemove=>weather_editor::remove(&mut settings.weather_track,ui.weather_phase).map(|()|{ui.weather_phase=ui.weather_phase.min(settings.weather_track.phases.len()-1);}),
+            UiCommand::WeatherPreview(delta)=>{ui.weather_preview_s=(ui.weather_preview_s+delta).clamp(0.,604800.);Ok(())},
+            UiCommand::WeatherProfileFile(import)=>weather_editor::profile_file(&mut settings.weather_track,*import).map(|path|{ui.weather_phase=0;ui.notice=format!("Perfil {}: {}",if *import{"importado"}else{"guardado"},path.display());}),
+            UiCommand::WeatherActivate(enabled)=>{
+                settings.weather_profile=if *enabled{WeatherProfile::Edited}else{WeatherProfile::Automatic};
+                settings.environment.weather=crate::environment::EnvironmentSource::Manual;menu.environment.weather=crate::environment::EnvironmentSource::Manual;
+                if let Some(l)=live.as_mut(){let program=enabled.then_some(settings.weather_track.clone());l.session.state.weather_track=program.clone();for service in &mut l.traffic.services{service.session.state.weather_track=program.clone();}}
+                Ok(())
+            },
+            UiCommand::DispatchPriority(index,delta)=>live.as_mut().ok_or("No hay partida activa".into()).and_then(|l|{
+                let session=if *index==0{Some(&mut l.session)}else{l.traffic.services.get_mut(index-1).map(|s|&mut s.session)}.ok_or("El servicio ya no está disponible")?;
+                session.dispatcher.priority=(session.dispatcher.priority+delta).clamp(-5,5);Ok(())
+            }),
+            UiCommand::RepeatLesson(whole)=>live.as_mut().ok_or("No hay una partida activa".into()).and_then(|l|study.repeat(l,*whole)).map(|()|close_panel(&mut ui,&mut live)),
             UiCommand::HistorySearch=>{ui.history_focus=true;Ok(())},
             UiCommand::HistoryFilter(filter)=>{ui.history_filter= *filter;ui.history_focus=false;Ok(())},
             UiCommand::HistoryRefresh=>{history.request(player_data_dir());Ok(())},
@@ -904,7 +1037,7 @@ fn handle_buttons(
             },
             UiCommand::LibraryTab(tab) => {
                 ui.library_tab = *tab;
-                Ok(())
+                if *tab==LibraryTab::Tools{tools.request(crate::library_tools::Action::Scan)}else{Ok(())}
             },
             UiCommand::SettingsTab(tab) => {
                 ui.settings_tab = *tab;
@@ -1014,6 +1147,7 @@ fn handle_buttons(
                 SettingField::Fov=>settings.cab_fov_deg=(settings.cab_fov_deg+step).clamp(35.0,90.0),
                 SettingField::Scale=>settings.ui_scale=(settings.ui_scale+step).clamp(0.8,1.5),
                 SettingField::AutomaticCant=>settings.automatic_cant= !settings.automatic_cant,
+                SettingField::ContactShadows=>settings.contact_shadow_quality=(settings.contact_shadow_quality+1)%3,
                 SettingField::Shadows=>settings.shadows= !settings.shadows,SettingField::Fog=>settings.fog= !settings.fog,
                 SettingField::Units=>settings.toggle_speed_units(),
                 SettingField::FogQuality=>settings.fog_quality=settings.fog_quality.next(),
@@ -1092,6 +1226,8 @@ fn build_panel(
     cab: Res<crate::cab_cvf::CabCvfState>,
     previews: Option<Res<previews::Previews>>,
     history: Res<crate::save_history::SaveHistory>,
+    tools: Res<crate::library_tools::LibraryTools>,
+    water: Query<&crate::water::WaterSurface>,
 ) {
     if !ui.rebuild {
         return;
@@ -1147,6 +1283,12 @@ fn build_panel(
                         PlayerPanel::Advanced => "HUD AVANZADO",
                         PlayerPanel::Traction => "VAPOR Y DIÉSEL · CONTROLES",
                         PlayerPanel::Settings => "AJUSTES",
+                        PlayerPanel::Practice => "CONDUCCIÓN Y PRÁCTICA",
+                        PlayerPanel::Report => "INFORME DEL VIAJE",
+                        PlayerPanel::WeatherEditor => "EVOLUCIÓN METEOROLÓGICA",
+                        PlayerPanel::Water => "CORRIENTES Y ONDAS",
+                        PlayerPanel::VehicleProfile=>"AJUSTES PROPIOS DEL TREN",
+                        PlayerPanel::IssueReport=>"INFORME DE ERROR",
                         _ => "AYUDA Y CONTROLES",
                     },
                     22.0,
@@ -1184,7 +1326,7 @@ fn build_panel(
                 PlayerPanel::Menu => launcher::build_home(p),
                 PlayerPanel::NewGame => launcher::build_new_game(p, &ui, &menu, &settings, previews.as_deref()),
                 PlayerPanel::Continue => launcher::build_continue(p,&ui,&history),
-                PlayerPanel::Content => launcher::build_library(p, ui.library_tab, &downloads, &menu),
+                PlayerPanel::Content => launcher::build_library(p, ui.library_tab, &downloads, &menu, &tools),
                 PlayerPanel::MissingResources => {
                     row(p, |p| {
                         button(p, "Reauditar esta formación", UiCommand::MissingAudit);
@@ -1225,6 +1367,7 @@ fn build_panel(
                     row(p, |p| {
                         button(p, "Ajustes", UiCommand::Open(PlayerPanel::Settings));
                         button(p, "Libreta", UiCommand::Open(PlayerPanel::Notebook));
+                        button(p,"Informe de error",UiCommand::Open(PlayerPanel::IssueReport));
                         button(p, "Menú de inicio", UiCommand::ReturnMenu);
                         button(p, "Salir", UiCommand::Exit);
                     });
@@ -1237,7 +1380,23 @@ fn build_panel(
                         }
                     });
                     dynamic(p, DynamicText::Notebook, 14.0);
+                    button(p, "Gráficas e incidencias", UiCommand::Open(PlayerPanel::Report));
+                    button(p, "Ejercicio y repetición", UiCommand::Open(PlayerPanel::Practice));
                 }
+                PlayerPanel::Practice => study::build_practice(p,&settings,&menu,live.as_deref()),
+                PlayerPanel::Report => study::build_report(p,live.as_deref(),&settings),
+                PlayerPanel::WeatherEditor => weather_editor::build(p,&ui,&settings),
+                PlayerPanel::Water => {
+                    button(p,format!("Animación del agua: {}",yes(settings.animated_water)),UiCommand::WaterAnimate);
+                    let keys:std::collections::BTreeSet<_>=water.iter().map(|s|s.key.clone()).collect();
+                    if keys.is_empty(){label(p,"Iniciá una partida cerca de un río o canal para elegir sus superficies.",14.,TEXT);}
+                    for key in keys.into_iter().take(32){let flow=settings.water_flows.get(&key).cloned().unwrap_or_default();
+                        label(p,key.rsplit('/').next().unwrap_or(&key),14.,ACCENT);
+                        row(p,|p|{label(p,format!("Dirección {:.0}° · velocidad {:.2} m/s",flow.heading_deg,flow.speed_mps),13.,TEXT);button(p,"Dirección −15°",UiCommand::WaterFlow(key.clone(),0,-15.));button(p,"+15°",UiCommand::WaterFlow(key.clone(),0,15.));button(p,"Velocidad −0.1",UiCommand::WaterFlow(key.clone(),1,-0.1));button(p,"+0.1",UiCommand::WaterFlow(key.clone(),1,0.1));button(p,format!("Ondas {}",yes(flow.waves)),UiCommand::WaterFlow(key,2,0.));});
+                    }
+                    button(p,"Guardar ajustes",UiCommand::SaveSettings);
+                    label(p,"Cada sector conserva altura y textura originales. Dirección y velocidad usan el mismo reloj durante pausa y cambios de origen.",13.,MUTED);
+                },
                 PlayerPanel::Formation => {
                     if let Some(l) = live.as_ref() {
                         build_formation(p, &ui, &l.session);
@@ -1273,6 +1432,13 @@ fn build_panel(
                 PlayerPanel::Help => {
                     dynamic(p, DynamicText::Help, 14.0);
                 }
+                PlayerPanel::VehicleProfile=>vehicle_profiles::build(p,&ui,&menu,&settings),
+                PlayerPanel::IssueReport=>{
+                    button(p,"Preparar diagnóstico",UiCommand::BugPrepare);
+                    dynamic(p,DynamicText::IssueReport,13.);
+                    row(p,|p|{button(p,"Tomar captura sin menú ni HUD",UiCommand::BugCapture);button(p,"Copiar texto revisado",UiCommand::BugCopy);button(p,"Abrir formulario en GitHub",UiCommand::BugShare);});
+                    label(p,"El formulario se abre en el navegador; revisá la descripción y adjuntá la captura antes de enviarlo.",13.,MUTED);
+                },
                 PlayerPanel::None => {}
             });
             match panel {
@@ -1691,6 +1857,50 @@ fn traction_text(s: &LiveDriveSession, settings: &PlayerSettings) -> String {
 }
 
 fn build_formation(p: &mut ChildSpawnerCommands<'_>, ui: &PlayerUiState, s: &LiveDriveSession) {
+    if let Some(cab) = s.cab_equipment() {
+        use openrailsrs_sim::cab_equipment::CabOperation;
+        row(p, |p| {
+            if cab.config.left_window {
+                button(
+                    p,
+                    format!("Ventana izquierda {:.0}%", cab.windows[0] * 100.),
+                    UiCommand::Cab(CabOperation::LeftWindow),
+                );
+            }
+            if cab.config.right_window {
+                button(
+                    p,
+                    format!("Ventana derecha {:.0}%", cab.windows[1] * 100.),
+                    UiCommand::Cab(CabOperation::RightWindow),
+                );
+            }
+            if cab.config.cab_door {
+                button(
+                    p,
+                    format!("Puerta de cabina {:.0}%", cab.door * 100.),
+                    UiCommand::Cab(CabOperation::Door),
+                );
+            }
+            if cab.config.washer_capacity_l > 0. {
+                button(
+                    p,
+                    format!(
+                        "Lavaparabrisas {} · {:.2} L",
+                        yes(cab.pump_command),
+                        cab.water_l
+                    ),
+                    UiCommand::Cab(CabOperation::Washer),
+                );
+            }
+        });
+    } else {
+        label(
+            p,
+            "Esta cabina no declara ventanas operables, puerta propia ni depósito lavaparabrisas.",
+            12.,
+            MUTED,
+        );
+    }
     if let Some(instruction) = s.operational_status() {
         label(p, instruction, 14.0, GOOD);
     }
@@ -1702,7 +1912,7 @@ fn build_formation(p: &mut ChildSpawnerCommands<'_>, ui: &PlayerUiState, s: &Liv
         format!(
             "{} coches acoplados · {:.1} t · {:.0} m · clic en un coche para seleccionarlo",
             s.formation.coupled_count,
-            s.physics.mass_kg / 1000.0,
+            s.effective_mass_kg() / 1000.0,
             s.formation.length_m()
         ),
         14.0,
@@ -1887,6 +2097,18 @@ fn build_settings(
         SettingsTab::Graphics => {
             button(
                 p,
+                format!(
+                    "Sombras de contacto: {}",
+                    match s.contact_shadow_quality {
+                        1 => "Bajo · 8 muestras",
+                        2 => "Medio · 16 muestras",
+                        _ => "Desactivadas",
+                    }
+                ),
+                UiCommand::Setting(SettingField::ContactShadows, 0.0),
+            );
+            button(
+                p,
                 format!("Escenografía: {}", s.scenery_profile.label()),
                 UiCommand::Setting(SettingField::SceneryProfile, 0.0),
             );
@@ -2062,6 +2284,16 @@ fn build_settings(
             );
         }
         SettingsTab::Environment => {
+            button(
+                p,
+                "Editor de evolución meteorológica",
+                UiCommand::Open(PlayerPanel::WeatherEditor),
+            );
+            button(
+                p,
+                "Corrientes y ondas del agua",
+                UiCommand::Open(PlayerPanel::Water),
+            );
             settings_row(
                 p,
                 format!("Fecha lunar: {} (hora manual)", s.sky_date),
@@ -2367,6 +2599,31 @@ fn map_marker(
     });
 }
 fn build_map(p: &mut ChildSpawnerCommands<'_>, ui: &PlayerUiState, live: &LiveDrive) {
+    label(
+        p,
+        "Preferencias del despachador · -5 a +5 · no anulan ocupación ni reservas",
+        13.,
+        MUTED,
+    );
+    for (index, session) in std::iter::once(&live.session)
+        .chain(live.traffic.services.iter().map(|s| &s.session))
+        .enumerate()
+    {
+        row(p, |p| {
+            label(
+                p,
+                format!(
+                    "{} · prioridad {}",
+                    session.service_id, session.dispatcher.priority
+                ),
+                13.,
+                TEXT,
+            );
+            button(p, "−", UiCommand::DispatchPriority(index, -1));
+            button(p, "+", UiCommand::DispatchPriority(index, 1));
+        });
+        label(p, &session.dispatcher.grant_reason, 12., MUTED);
+    }
     let s = &live.session;
     row(p, |p| {
         button(p, "+ Zoom", UiCommand::Zoom(1.5));
@@ -2576,11 +2833,12 @@ fn update_panel_text(
     sources: (
         Option<Res<crate::shapes::RouteAssets>>,
         Res<crate::official_content::OfficialContent>,
+        Res<crate::issue_report::Reports>,
     ),
     track_cache: Option<Res<crate::track_position::TrackPositionResolverCache>>,
     mut texts: Query<(&DynamicText, &mut Text)>,
 ) {
-    let (assets, downloads) = sources;
+    let (assets, downloads, reports) = sources;
     let (weather_particles, train_effects) = particle_effects;
     *elapsed += time.delta_secs();
     if *elapsed < 0.2 && !ui.is_changed() {
@@ -2589,7 +2847,39 @@ fn update_panel_text(
     *elapsed = 0.0;
     for (kind, mut text) in &mut texts {
         let value = match kind {
-            DynamicText::Content => downloads.status.clone(),
+            DynamicText::IssueReport => format!(
+                "{}\n{}\n{}",
+                reports.status,
+                reports.preview,
+                reports
+                    .directory
+                    .as_ref()
+                    .map_or(String::new(), |p| format!(
+                        "Archivos locales: {}",
+                        p.display()
+                    ))
+            ),
+            DynamicText::Content => {
+                let mut text = downloads.status.clone();
+                for job in &downloads.queue.entries {
+                    let name = downloads
+                        .packages
+                        .iter()
+                        .find(|p| p.id() == job.package)
+                        .map_or(job.package.as_str(), |p| p.name.as_str());
+                    text.push_str(&format!(
+                        "\n{name}: {} · {:.1} MiB{} · {}",
+                        job.phase.label(),
+                        job.done_bytes as f64 / 1048576.,
+                        job.total_bytes.map_or(String::new(), |n| format!(
+                            " / {:.1} MiB",
+                            n as f64 / 1048576.
+                        )),
+                        job.message
+                    ));
+                }
+                text
+            }
             DynamicText::Status => ui.notice.clone(),
             DynamicText::Help => help_text(&settings),
             _ => {
@@ -2936,7 +3226,8 @@ fn car_text(s: &LiveDriveSession, index: usize) -> String {
         "COCHE {} · {}\nMasa {:.1} t · longitud {:.1} m · {}\nFreno de mano: {} · manguera: {}\nLlaves delantera / trasera: {} / {}\nTracción: {} · batería: {} · mando múltiple: {}\nFuerza de frenado: {:.1} kN · tubería: {}",
         index + 1,
         c.name,
-        c.mass_kg / 1000.0,
+        openrailsrs_sim::consumable_mass::vehicle_mass_kg(&s.physics, &s.state, index, c.mass_kg)
+            / 1000.0,
         c.length_m,
         if index < s.formation.coupled_count {
             "Acoplado"
@@ -3151,7 +3442,7 @@ fn advanced_text(
                 state.diesel_traction_force_n.iter().sum::<f64>() / 1000.0,
                 s.wheel_rail_brake_forces_n().iter().sum::<f64>() / 1000.0,
                 p.davis.resistance_n(s.velocity_mps()) / 1000.0,
-                (p.mass_kg + state.extra_mass_kg) * 9.81 * grade / 100.0 / 1000.0,
+                s.effective_mass_kg() * 9.81 * grade / 100.0 / 1000.0,
                 grade
             );
             for (i, c) in state.couplers.iter().enumerate() {
@@ -3507,6 +3798,9 @@ mod tests {
             .init_resource::<PlayerUiState>()
             .init_resource::<previews::Previews>()
             .init_resource::<crate::save_history::SaveHistory>()
+            .init_resource::<crate::player_study::PlayerStudy>()
+            .init_resource::<crate::library_tools::LibraryTools>()
+            .init_resource::<crate::issue_report::Reports>()
             .insert_resource(PlayerLaunchMenu::discover(
                 &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../.."),
                 None,
@@ -3979,6 +4273,9 @@ mod tests {
                 .init_resource::<PlayerLaunchMenu>()
                 .init_resource::<previews::Previews>()
                 .init_resource::<crate::save_history::SaveHistory>()
+                .init_resource::<crate::player_study::PlayerStudy>()
+                .init_resource::<crate::library_tools::LibraryTools>()
+                .init_resource::<crate::issue_report::Reports>()
                 .init_resource::<crate::official_content::OfficialContent>()
                 .init_resource::<PlayerSettings>()
                 .init_resource::<PlayerLaunchQueue>()
@@ -4185,6 +4482,9 @@ mod tests {
                 .init_resource::<PlayerLaunchMenu>()
                 .init_resource::<previews::Previews>()
                 .init_resource::<crate::save_history::SaveHistory>()
+                .init_resource::<crate::player_study::PlayerStudy>()
+                .init_resource::<crate::library_tools::LibraryTools>()
+                .init_resource::<crate::issue_report::Reports>()
                 .init_resource::<crate::official_content::OfficialContent>()
                 .init_resource::<PlayerSettings>()
                 .init_resource::<PlayerLaunchQueue>()
@@ -4399,6 +4699,9 @@ mod tests {
             .init_resource::<PlayerLaunchMenu>()
             .init_resource::<previews::Previews>()
             .init_resource::<crate::save_history::SaveHistory>()
+            .init_resource::<crate::player_study::PlayerStudy>()
+            .init_resource::<crate::library_tools::LibraryTools>()
+            .init_resource::<crate::issue_report::Reports>()
             .init_resource::<crate::official_content::OfficialContent>()
             .init_resource::<PlayerSettings>()
             .init_resource::<PlayerLaunchQueue>()

@@ -88,6 +88,7 @@ struct Catalog {
     routes: Vec<OfficialPackage>,
 }
 struct Job {
+    download: Option<u64>,
     child: Option<Child>,
     cancel: PathBuf,
     events: Mutex<mpsc::Receiver<Value>>,
@@ -105,6 +106,7 @@ impl Drop for Job {
 }
 #[derive(Resource)]
 pub struct OfficialContent {
+    pub queue: crate::download_queue::Queue,
     pub packages: Vec<OfficialPackage>,
     pub selected: usize,
     pub status: String,
@@ -120,7 +122,15 @@ impl Default for OfficialContent {
             .iter()
             .position(|p| p.name == "Demo Model 1")
             .unwrap_or(0);
-        let mut resource=Self {packages:catalog.routes,selected,status:"Elegí un paquete. Se instala por separado y se audita antes de ofrecer sus actividades.".into(),installed:vec![],job:None};
+        let queue = crate::download_queue::Queue::load(
+            &player_data_dir(),
+            &catalog
+                .routes
+                .iter()
+                .map(OfficialPackage::id)
+                .collect::<Vec<_>>(),
+        );
+        let mut resource=Self {queue,packages:catalog.routes,selected,status:"Elegí un paquete. Se instala por separado y se audita antes de ofrecer sus actividades.".into(),installed:vec![],job:None};
         resource.refresh_installed();
         resource
     }
@@ -147,6 +157,7 @@ impl OfficialContent {
         std::thread::spawn(move || send_preparation(&sender, path, &cancel_worker));
         self.status = "Reauditando la copia elegida sin conexión ni descarga…".into();
         self.job = Some(Job {
+            download: None,
             child: None,
             cancel,
             events: Mutex::new(events),
@@ -164,24 +175,54 @@ impl OfficialContent {
             (self.selected as i32 + delta).rem_euclid(self.packages.len() as i32) as usize;
     }
     pub fn start(&mut self) -> Result<(), String> {
+        if !self.selected().automatic() {
+            return Err("Este paquete requiere visitar la página de su autor".into());
+        }
+        self.queue.enqueue(self.selected().id())?;
+        self.queue.held = false;
+        self.status = "Descarga agregada a la cola. Cada versión se instala por separado.".into();
+        Ok(())
+    }
+    pub fn cancel_job(&mut self, id: u64) -> Result<(), String> {
+        if self.job.as_ref().is_some_and(|j| j.download == Some(id)) {
+            self.cancel()?;
+            self.queue.update(
+                id,
+                crate::download_queue::Phase::CancelRequested,
+                "Cancelando y limpiando temporales",
+            );
+            self.queue.persist()
+        } else {
+            self.queue.cancel_waiting(id)
+        }
+    }
+    pub fn resume_queue(&mut self) {
+        self.queue.held = false;
+    }
+    fn start_download(&mut self, index: usize, id: u64) -> Result<(), String> {
+        let package = self
+            .packages
+            .get(index)
+            .cloned()
+            .ok_or("Paquete original no disponible")?;
         if self.busy() {
             return Err("Ya hay una descarga en curso".into());
         }
-        if !self.selected().automatic() {
+        if !package.automatic() {
             return Err("Este paquete requiere visitar la página de su autor".into());
         }
         let destination = player_data_dir().join("official-content");
         std::fs::create_dir_all(&destination).map_err(|e| e.to_string())?;
         let cancel = destination.join(format!(
-            ".cancel-{}-{}",
+            ".cancel-{}-{}-{id}",
             std::process::id(),
-            self.selected().id()
+            package.id()
         ));
         if cancel.exists() {
             std::fs::remove_file(&cancel).map_err(|e| e.to_string())?;
         }
         let mut child = openrailsrs_content::installer_command()?
-            .args(["--package", &self.selected().id()])
+            .args(["--package", &package.id()])
             .arg("--destination")
             .arg(destination)
             .arg("--cancel-file")
@@ -219,24 +260,53 @@ impl OfficialContent {
                 }
             }
         });
-        self.status = format!("Resolviendo {}…", self.selected().name);
+        self.status = format!("Resolviendo {}…", package.name);
         self.job = Some(Job {
+            download: Some(id),
             child: Some(child),
             cancel,
             events: Mutex::new(events),
         });
+        self.queue
+            .update(id, crate::download_queue::Phase::Running, &self.status);
+        let _ = self.queue.persist();
         Ok(())
     }
     pub fn cancel(&mut self) -> Result<(), String> {
         let job = self.job.as_ref().ok_or("No hay una descarga activa")?;
         std::fs::write(&job.cancel, b"cancel").map_err(|e| e.to_string())?;
         self.status = "Cancelando la descarga y limpiando sus archivos temporales…".into();
+        if let Some(id) = job.download {
+            self.queue.update(
+                id,
+                crate::download_queue::Phase::CancelRequested,
+                &self.status,
+            );
+            self.queue.persist()?;
+        }
         Ok(())
     }
     pub fn poll(&mut self) -> bool {
+        if self.job.is_none()
+            && let Some((id, package)) = self.queue.next_job()
+        {
+            let result = self
+                .packages
+                .iter()
+                .position(|p| p.id() == package)
+                .ok_or("El paquete ya no está en el catálogo original".to_string())
+                .and_then(|index| self.start_download(index, id));
+            if let Err(error) = result {
+                self.queue
+                    .update(id, crate::download_queue::Phase::Failed, &error);
+                self.status = error;
+                let _ = self.queue.persist();
+            }
+        }
         let Some(job) = &mut self.job else {
             return false;
         };
+        let download = job.download;
         let mut events = vec![];
         let mut disconnected = false;
         let receiver = job.events.lock().unwrap();
@@ -258,6 +328,13 @@ impl OfficialContent {
                 "download" | "extract" => {
                     let bytes = event["done_bytes"].as_f64().unwrap_or(0.);
                     let total = event["total_bytes"].as_f64();
+                    if let Some(id) = download {
+                        self.queue.progress(
+                            id,
+                            event["done_bytes"].as_u64().unwrap_or(0),
+                            event["total_bytes"].as_u64(),
+                        );
+                    }
                     self.status = format!(
                         "{}: {:.1} MiB{}",
                         if event["phase"] == "download" {
@@ -295,13 +372,36 @@ impl OfficialContent {
             self.status="El instalador terminó sin completar la preparación. Revisá Python 3 y los permisos de la carpeta de contenido.".into();
             done = true;
         }
+        if let Some(id) = download {
+            let cancelling =
+                self.queue.entries.iter().any(|e| {
+                    e.id == id && e.phase == crate::download_queue::Phase::CancelRequested
+                });
+            let phase = if ready {
+                crate::download_queue::Phase::Ready
+            } else if done {
+                if cancelling {
+                    crate::download_queue::Phase::Cancelled
+                } else {
+                    crate::download_queue::Phase::Failed
+                }
+            } else if cancelling {
+                crate::download_queue::Phase::CancelRequested
+            } else {
+                crate::download_queue::Phase::Running
+            };
+            self.queue.update(id, phase, &self.status);
+            if done {
+                let _ = self.queue.persist();
+            }
+        }
         if done {
             self.job = None;
             self.refresh_installed();
         }
         ready
     }
-    fn refresh_installed(&mut self) {
+    pub(crate) fn refresh_installed(&mut self) {
         self.installed = content_directories()
             .iter()
             .filter_map(|p| p.canonicalize().ok())

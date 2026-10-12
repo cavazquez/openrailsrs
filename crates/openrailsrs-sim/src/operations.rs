@@ -290,6 +290,25 @@ impl LiveDriveSession {
 
     /// Validate completely before mutating the current game.
     pub fn validate_snapshot(&self, saved: &SessionSnapshot) -> Result<(), String> {
+        if saved.state.cab_equipment.iter().any(|c| !c.valid())
+            || (!saved.state.cab_equipment.is_empty()
+                && saved
+                    .state
+                    .cab_equipment
+                    .iter()
+                    .map(|c| &c.config)
+                    .collect::<Vec<_>>()
+                    != self.original_cab_equipment.iter().collect::<Vec<_>>())
+            || saved
+                .state
+                .weather_track
+                .as_ref()
+                .is_some_and(|p| !p.valid())
+            || !saved.state.driving_report.valid()
+            || saved.state.learning.as_ref().is_some_and(|s| !s.valid())
+        {
+            return Err("Informe de conducción o progreso de práctica inválido".into());
+        }
         if !saved.state.ambient_temperature_c.is_finite()
             || !(-100.0..=65.0).contains(&saved.state.ambient_temperature_c)
         {
@@ -469,7 +488,9 @@ impl LiveDriveSession {
                 return Err("La dinámica nativa guardada no corresponde a la formación".into());
             }
         }
-        if saved.dispatcher.own_locks.len() > self.graph.nodes_iter().count()
+        if !(-5..=5).contains(&saved.dispatcher.priority)
+            || saved.dispatcher.grant_reason.len() > 4096
+            || saved.dispatcher.own_locks.len() > self.graph.nodes_iter().count()
             || saved.dispatcher.own_locks.iter().any(|l| {
                 l.owner != self.service_id
                     || self.graph.switch_position(&l.node).is_none()
@@ -636,6 +657,14 @@ impl LiveDriveSession {
         self.operational_start_m = saved.operational_start_m;
         self.operational_wait_started = saved.operational_wait_started;
         self.state = saved.state;
+        if self.state.cab_equipment.is_empty() {
+            self.state.cab_equipment = self
+                .original_cab_equipment
+                .iter()
+                .cloned()
+                .map(crate::cab_equipment::CabEquipmentState::new)
+                .collect();
+        }
         if self.state.brake_system.circuits.is_empty() {
             self.state.brake_system.circuits = self
                 .consist

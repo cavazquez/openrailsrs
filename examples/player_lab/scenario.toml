@@ -1,0 +1,29 @@
+[scenario]
+name = "Laboratorio de cabina y carteles"
+description = "Modelo sintético propio para verificar carteles, ventanas, puerta, lavaparabrisas y topes. No reproduce una locomotora real."
+[route]
+path = "route"
+start = "yard_a"
+start_offset_m = 80.0
+destination = "yard_b"
+assume_signals_clear = true
+[train]
+consist = "consists/lab.con"
+[[train.cab_equipment]]
+vehicle = 0
+left_window = true
+right_window = true
+cab_door = true
+washer_capacity_l = 2.0
+washer_flow_lps = 0.02
+[simulation]
+duration = 300.0
+time_step = 0.05
+seed = 42
+multi_body = true
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+[output]
+csv = "run.csv"
+metadata = "run.json"

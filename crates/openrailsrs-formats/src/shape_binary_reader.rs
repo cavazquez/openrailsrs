@@ -158,6 +158,7 @@ impl<'a> BinaryBlockReader<'a> {
     /// The parent's position is advanced past the header; the child's position
     /// starts at the first body byte.
     pub fn open_sub_block(&mut self) -> Result<BinaryBlockReader<'a>, FormatError> {
+        crate::cancellation::check()?;
         // Read header: u16 token, u16 flags, u32 remaining
         let raw_token = self.read_u16()? as u32;
         let token_id = i32::try_from(raw_token)

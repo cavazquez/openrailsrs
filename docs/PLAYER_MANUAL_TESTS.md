@@ -1754,3 +1754,8 @@ Los oráculos certifican los casos indicados en [NATIVE_BRAKES_POWER.md](NATIVE_
 ## 54. Diez objetivos de conducción y operación
 
 Seguí la [guía de los diez objetivos](TRAIN_OPERATION_UPDATE.md): incluye carga de sectores a ×1, Snap/audio, ruedas/bogies/enganches, audio de paso, independiente/emergencia, consumo de pasajeros, vapor, temperatura diésel, tráfico y patio guiado. Cada apartado indica servicio, controles y resultado esperado; el patio incluye todas las operaciones hasta el resumen final.
+
+
+## 50. Segunda entrega de treinta mejoras
+
+[Guía completa con una comprobación para cada issue](PLAN_30_2.md#cómo-probar-cada-cambio): prácticas y tutoriales, informe, ajustes propios, cabina, escenario, versiones, respaldos y reportes. El Laboratorio incluido permite probar equipos declarados sin descargar trenes.

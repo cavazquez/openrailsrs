@@ -452,6 +452,12 @@ pub fn spawn_train_markers(
                                             part_entity.insert(NotShadowCaster);
                                         }
                                         if let Some(shape) = shape_file.as_ref() {
+                                            crate::destination_boards::mark(
+                                                &mut part_entity,
+                                                shape,
+                                                part.prim_state_idx,
+                                                i,
+                                            );
                                             crate::rolling_stock_anim::insert_part_anim(
                                                 &mut part_entity,
                                                 shape,

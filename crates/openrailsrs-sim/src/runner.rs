@@ -194,12 +194,32 @@ pub fn run_scenario_headless_with_driver(
 
     let path_edges = resolve_route_edges(&graph, &scenario.route)?;
     let consist_path = scenario_dir.join(&scenario.train.consist);
-    let consist = load_consist_with_asset_root(&consist_path, consist_root(&consist_path))?;
-    let davis_override = scenario.train.davis.as_ref().map(|d| DavisCoefficients {
-        a_n: d.a_n,
-        b_n_per_mps: d.b_n_per_mps,
-        c_n_per_mps2: d.c_n_per_mps2,
-    });
+    let mut consist = load_consist_with_asset_root(&consist_path, consist_root(&consist_path))?;
+    let customized = openrailsrs_train::vehicle_profiles::apply_with_davis(
+        &consist_path,
+        &mut consist,
+        &scenario.train.vehicle_profiles,
+        scenario
+            .train
+            .davis
+            .as_ref()
+            .map(|d| DavisCoefficients {
+                a_n: d.a_n,
+                b_n_per_mps: d.b_n_per_mps,
+                c_n_per_mps2: d.c_n_per_mps2,
+            })
+            .as_ref(),
+    )?;
+    let davis_override = scenario
+        .train
+        .davis
+        .as_ref()
+        .filter(|_| !customized)
+        .map(|d| DavisCoefficients {
+            a_n: d.a_n,
+            b_n_per_mps: d.b_n_per_mps,
+            c_n_per_mps2: d.c_n_per_mps2,
+        });
     let davis = davis_override
         .clone()
         .unwrap_or_else(|| consist.davis.clone());
@@ -225,7 +245,15 @@ pub fn run_scenario_headless_with_driver(
             &consist,
             &scenario.train.power_load,
         ),
-        rail_adhesion: None,
+        rail_adhesion: if scenario.simulation.weather_track.is_some() {
+            Some(crate::adhesion::RailAdhesionConfig::load(
+                &consist_path,
+                consist_root(&consist_path),
+                &consist,
+            )?)
+        } else {
+            None
+        },
         diesel: crate::diesel_operation::DieselTrainConfig::from_consist(&consist),
         electric: crate::electric::ElectricTrainConfig::load(
             &route_dir,
@@ -291,6 +319,13 @@ pub fn run_scenario_headless_with_driver(
 
     let path_data = PathData::from_path(&path_edges, &graph);
     let mut state = TrainSimState::new(path_edges);
+    state.weather_track = scenario.simulation.weather_track.clone();
+    state.cab_equipment = crate::cab_equipment::load(
+        &consist_path,
+        &scenario.train.cab_equipment,
+        consist.vehicles.len(),
+    )
+    .map_err(SimError::Msg)?;
     if let Some(offset) = scenario.route.start_offset_m {
         apply_start_offset(&mut state, &path_data, offset);
     }

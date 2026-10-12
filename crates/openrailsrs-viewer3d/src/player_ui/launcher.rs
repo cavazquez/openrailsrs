@@ -11,6 +11,7 @@ pub(super) enum NewGameStep {
 pub(super) enum LibraryTab {
     Installed,
     Official,
+    Tools,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum SettingsTab {
@@ -24,7 +25,10 @@ pub(super) enum SettingsTab {
 #[derive(Component)]
 pub(super) struct LaunchFooter;
 
-fn card(p: &mut ChildSpawnerCommands<'_>, f: impl FnOnce(&mut ChildSpawnerCommands<'_>)) {
+pub(super) fn card(
+    p: &mut ChildSpawnerCommands<'_>,
+    f: impl FnOnce(&mut ChildSpawnerCommands<'_>),
+) {
     p.spawn((
         Node {
             padding: UiRect::all(Val::Px(14.0)),
@@ -154,9 +158,45 @@ pub(super) fn build_new_game(
     settings: &PlayerSettings,
     previews: Option<&super::previews::Previews>,
 ) {
+    if ui.new_game_step == NewGameStep::Environment
+        && let Some(preview) = previews
+    {
+        if let Some(inventory) = &preview.inventory {
+            let estimate = crate::resource_estimate::Estimate::from_inventory(
+                inventory,
+                if menu.consists.get(menu.consist) == preview.train_estimate_path.as_ref() {
+                    preview.train_bytes
+                } else {
+                    default()
+                },
+                settings,
+            );
+            card(p, |p| {
+                if menu.consists.get(menu.consist) != preview.train_estimate_path.as_ref() {
+                    label(
+                        p,
+                        "Tren: aún sin estimación del modelo; abrí su preview en Tren para incluirlo.",
+                        12.,
+                        CAUTION,
+                    );
+                }
+                label(p, estimate.text(settings), 12., MUTED);
+            });
+        } else {
+            label(p, "Estimando recursos de la ruta…", 13., MUTED);
+        }
+    }
     match ui.new_game_step {
         NewGameStep::Route => {
             label(p, "¿Dónde querés conducir?", 21.0, TEXT);
+            button(
+                p,
+                format!(
+                    "Modo: {} · cambiar o preparar ejercicio",
+                    settings.journey_setup.mode.label()
+                ),
+                UiCommand::Open(PlayerPanel::Practice),
+            );
             choice_columns(
                 p,
                 |p| {
@@ -260,10 +300,16 @@ pub(super) fn build_new_game(
         }
         NewGameStep::Train => {
             label(p, "¿Qué tren vas a llevar?", 21.0, TEXT);
+            button(
+                p,
+                "Ajustes propios por vehículo",
+                UiCommand::Open(PlayerPanel::VehicleProfile),
+            );
             choice_columns(
                 p,
                 |p| {
                     choices::build(p, ui, menu, ChoiceKind::Consist, previews, settings);
+                    super::recommendations::build(p, menu, previews);
                 },
                 |p| {
                     label(p, menu.consist_label(), 17.0, TEXT);
@@ -350,6 +396,11 @@ pub(super) fn build_new_game(
             );
         }
         NewGameStep::Environment => {
+            button(
+                p,
+                "Editar evolución del clima",
+                UiCommand::Open(PlayerPanel::WeatherEditor),
+            );
             label(
                 p,
                 crate::forecast::text(
@@ -708,6 +759,12 @@ pub(super) fn build_library_tabs(p: &mut ChildSpawnerCommands<'_>, selected: Lib
     row(p, |p| {
         tab(
             p,
+            "Copias y respaldos",
+            UiCommand::LibraryTab(LibraryTab::Tools),
+            selected == LibraryTab::Tools,
+        );
+        tab(
+            p,
             "Instalado",
             UiCommand::LibraryTab(LibraryTab::Installed),
             selected == LibraryTab::Installed,
@@ -726,8 +783,10 @@ pub(super) fn build_library(
     selected: LibraryTab,
     downloads: &crate::official_content::OfficialContent,
     menu: &PlayerLaunchMenu,
+    tools: &crate::library_tools::LibraryTools,
 ) {
     match selected {
+        LibraryTab::Tools => super::library::build(p, downloads, tools),
         LibraryTab::Installed => {
             label(p, "Rutas disponibles", 21.0, TEXT);
             for (index, name) in menu.routes.iter().enumerate() {
@@ -815,12 +874,9 @@ pub(super) fn build_library(
                 row(p, |p| {
                     if downloads.busy() {
                         button(p, "Cancelar operación", UiCommand::ContentCancel);
-                    } else if package.automatic() {
-                        button(
-                            p,
-                            "Buscar actualización e instalar",
-                            UiCommand::ContentDownload,
-                        );
+                    }
+                    if package.automatic() {
+                        button(p, "Agregar descarga a la cola", UiCommand::ContentDownload);
                     }
                     button(p, "Ver catálogo oficial", UiCommand::ContentCatalogue);
                 });
@@ -848,6 +904,24 @@ pub(super) fn build_library(
             );
         }
     }
+    if !downloads.queue.entries.is_empty() {
+        label(p, "Cola de descargas del autor", 17., ACCENT);
+        row(p, |p| {
+            if downloads.queue.held {
+                button(p, "Retomar cola", UiCommand::QueueResume);
+            }
+            button(p, "Limpiar terminadas", UiCommand::QueueClear);
+        });
+        for job in &downloads.queue.entries {
+            if job.phase.pending() {
+                button(
+                    p,
+                    format!("Cancelar {}", job.package),
+                    UiCommand::QueueCancel(job.id),
+                );
+            }
+        }
+    }
     dynamic(p, DynamicText::Content, 13.0);
     if downloads.busy() && selected == LibraryTab::Installed {
         button(p, "Cancelar operación", UiCommand::ContentCancel);
@@ -870,6 +944,15 @@ pub(super) fn build_settings_tabs(p: &mut ChildSpawnerCommands<'_>, selected: Se
 
 pub(super) fn capture_page(ui: &mut PlayerUiState, page: &str) {
     let (panel, step, advanced) = match page {
+        "vehicle-profile" => (PlayerPanel::VehicleProfile, NewGameStep::Train, false),
+        "bug-report" => (PlayerPanel::IssueReport, NewGameStep::Route, false),
+        "library-tools" => {
+            ui.library_tab = LibraryTab::Tools;
+            (PlayerPanel::Content, NewGameStep::Route, false)
+        }
+        "practice" => (PlayerPanel::Practice, NewGameStep::Route, false),
+        "weather-editor" => (PlayerPanel::WeatherEditor, NewGameStep::Environment, false),
+        "driving-report" => (PlayerPanel::Report, NewGameStep::Route, false),
         "route" | "route-map" => (PlayerPanel::NewGame, NewGameStep::Route, false),
         "train" => (PlayerPanel::NewGame, NewGameStep::Train, false),
         "weather" => (PlayerPanel::NewGame, NewGameStep::Environment, false),

@@ -167,6 +167,7 @@ pub struct LiveDriveSession {
     pub traffic_brake_assistance: bool,
     pub(crate) consist: openrailsrs_train::Consist,
     pub(crate) original_physics: TrainPhysics,
+    pub(crate) original_cab_equipment: Vec<openrailsrs_scenarios::cab_equipment::CabEquipmentDef>,
     pub(crate) cab_max_current_a: Option<f64>,
     pub(crate) cab_vehicle_index: usize,
     pub(crate) content_signature: String,
@@ -214,6 +215,12 @@ pub struct LiveDriveSession {
 }
 
 impl LiveDriveSession {
+    /// Includes actual remaining diesel and passengers; authored source masses
+    /// and saved kinematics stay immutable.
+    pub fn effective_mass_kg(&self) -> f64 {
+        crate::consumable_mass::total_mass_kg(&self.physics, &self.state)
+    }
+
     pub fn set_rail_weather(&mut self, weather: crate::adhesion::RailWeather) {
         self.set_rail_weather_contact(weather, None);
     }
@@ -519,7 +526,22 @@ impl LiveDriveSession {
 
         let path_edges = resolve_route_edges(&graph, &scenario.route)?;
         let consist_path = scenario_dir.join(&scenario.train.consist);
-        let consist = load_consist_with_asset_root(&consist_path, consist_root(&consist_path))?;
+        let mut consist = load_consist_with_asset_root(&consist_path, consist_root(&consist_path))?;
+        let customized = openrailsrs_train::vehicle_profiles::apply_with_davis(
+            &consist_path,
+            &mut consist,
+            &scenario.train.vehicle_profiles,
+            scenario
+                .train
+                .davis
+                .as_ref()
+                .map(|d| DavisCoefficients {
+                    a_n: d.a_n,
+                    b_n_per_mps: d.b_n_per_mps,
+                    c_n_per_mps2: d.c_n_per_mps2,
+                })
+                .as_ref(),
+        )?;
         let curve_parameters = openrailsrs_train::load_consist_curve_parameters(
             &consist_path,
             consist_root(&consist_path),
@@ -528,11 +550,16 @@ impl LiveDriveSession {
             &consist_path,
             consist_root(&consist_path),
         )?;
-        let davis_override = scenario.train.davis.as_ref().map(|d| DavisCoefficients {
-            a_n: d.a_n,
-            b_n_per_mps: d.b_n_per_mps,
-            c_n_per_mps2: d.c_n_per_mps2,
-        });
+        let davis_override = scenario
+            .train
+            .davis
+            .as_ref()
+            .filter(|_| !customized)
+            .map(|d| DavisCoefficients {
+                a_n: d.a_n,
+                b_n_per_mps: d.b_n_per_mps,
+                c_n_per_mps2: d.c_n_per_mps2,
+            });
         let davis = davis_override
             .clone()
             .unwrap_or_else(|| consist.davis.clone());
@@ -606,6 +633,13 @@ impl LiveDriveSession {
 
         let path_data = PathData::from_path(&path_edges, &graph);
         let mut state = TrainSimState::new(path_edges.clone());
+        state.weather_track = scenario.simulation.weather_track.clone();
+        state.cab_equipment = crate::cab_equipment::load(
+            &consist_path,
+            &scenario.train.cab_equipment,
+            consist.vehicles.len(),
+        )
+        .map_err(SimError::Msg)?;
         if let Some(offset) = scenario.route.start_offset_m {
             apply_start_offset(&mut state, &path_data, offset);
         }
@@ -727,6 +761,11 @@ impl LiveDriveSession {
             own_track_reservations: vec![],
             external_track_reservations: vec![],
             original_physics: physics.clone(),
+            original_cab_equipment: state
+                .cab_equipment
+                .iter()
+                .map(|c| c.config.clone())
+                .collect(),
             cab_max_current_a,
             cab_vehicle_index,
             content_signature: crate::operations::content_signature(
@@ -1016,6 +1055,50 @@ impl LiveDriveSession {
         None
     }
 
+    /// The active service leg owns its destination even before its next departure.
+    pub fn destination_display(&self) -> String {
+        let leg = self.operational_legs.get(self.operational_leg);
+        let node = leg.map_or(self.gameplay.destination_node.as_str(), |l| {
+            l.destination.as_str()
+        });
+        let destination = leg
+            .and_then(|l| {
+                l.stops
+                    .iter()
+                    .find(|s| s.node == node)
+                    .and_then(|s| s.name.as_deref())
+            })
+            .or_else(|| {
+                self.gameplay
+                    .stop_targets
+                    .iter()
+                    .find(|s| s.node_id == node)
+                    .map(|s| s.name.as_str())
+            })
+            .or_else(|| {
+                self.graph.node(node).and_then(|n| {
+                    if let openrailsrs_track::NodeKind::Station { name } = &n.kind {
+                        Some(name.as_str())
+                    } else {
+                        None
+                    }
+                })
+            })
+            .unwrap_or(node);
+        let service = leg
+            .and_then(|l| l.service_id.as_deref())
+            .unwrap_or(&self.scenario_name);
+        format!(
+            "{}\n{}{}",
+            destination,
+            if self.state.path_reversed {
+                "← "
+            } else {
+                "→ "
+            },
+            service
+        )
+    }
     pub fn next_stop_label(&self) -> Option<&str> {
         self.gameplay
             .stop_targets
@@ -1342,6 +1425,9 @@ impl LiveDriveSession {
             .first()
             .map_or(self.driver_brake * 4.5, |b| b.pressure_bar());
         CabTelemetry {
+            cab_windows: self.cab_equipment().map_or([0.; 2], |c| c.windows),
+            cab_door: self.cab_equipment().map_or(0., |c| c.door),
+            washer_spraying: self.cab_equipment().is_some_and(|c| c.spraying),
             wheel_slip: self
                 .state
                 .rail_adhesion
@@ -1468,6 +1554,9 @@ impl LiveDriveSession {
 /// Driver-facing gauges for the 3D cab panel.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CabTelemetry {
+    pub cab_windows: [f64; 2],
+    pub cab_door: f64,
+    pub washer_spraying: bool,
     pub wheel_slip: bool,
     pub engine_failure: bool,
     pub thermal_limiting: bool,
@@ -1835,6 +1924,13 @@ impl LiveDriveSession {
             self.state.extra_mass_kg =
                 self.state.passengers as f64 * crate::runner::KG_PER_PASSENGER;
         }
+        if let Some(mut lesson) = self.state.learning.take() {
+            lesson.observe(self);
+            self.state.learning = Some(lesson);
+        }
+        let mut report = std::mem::take(&mut self.state.driving_report);
+        report.observe(self);
+        self.state.driving_report = report;
     }
 }
 

@@ -46,6 +46,13 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
             shadow_mod = fetch_directional_shadow(light_id, in.world_position, n, view_z, in.position.xy);
             shadow_mod = shadow_mod * saturate(ambient * 5.0 - 2.0);
         }
+#ifdef CONTACT_SHADOWS
+#ifdef DEPTH_PREPASS
+        if view_bindings::contact_shadows_settings.linear_steps > 0u {
+            shadow_mod *= pbr_functions::calculate_contact_shadow(in.world_position.xyz, in.position.xy, light_dir, view_bindings::contact_shadows_settings.linear_steps);
+        }
+#endif
+#endif
         t = saturate(ambient * shadow_mod + params.image_texture_is_night);
     }
 

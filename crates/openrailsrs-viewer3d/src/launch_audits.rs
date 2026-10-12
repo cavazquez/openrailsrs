@@ -75,13 +75,21 @@ impl LaunchAudits {
                         });
                     if *revision != request.revision {
                         *revision = request.revision;
-                        *auditor = ConsistAuditor::new(request.roots.clone());
+                        // Preserve parsed dependencies; the auditor invalidates only changed files.
                     }
+                    auditor.begin_batch();
                     for path in request.paths {
                         if latest.load(Ordering::Relaxed) != request.generation {
                             break;
                         }
+                        let _cancel = openrailsrs_formats::cancellation::Scope::new(
+                            latest.clone(),
+                            request.generation,
+                        );
                         let audit = inspect(auditor, &path);
+                        if latest.load(Ordering::Relaxed) != request.generation {
+                            break;
+                        }
                         if outgoing
                             .send(Reply {
                                 generation: request.generation,
@@ -93,6 +101,7 @@ impl LaunchAudits {
                             return;
                         }
                     }
+                    auditor.end_batch();
                 }
             });
         Self {
@@ -118,13 +127,31 @@ impl LaunchAudits {
     pub fn request(&mut self, roots: Vec<PathBuf>, paths: &[PathBuf], refresh: bool) {
         self.poll();
         let revision = self.revisions.entry(roots.clone()).or_default();
+        let mut requested = paths.to_vec();
         if refresh {
             *revision += 1;
-            self.cache.remove(&roots);
+            if let Some(cache) = self.cache.get_mut(&roots) {
+                let dependencies: std::collections::HashSet<_> = paths
+                    .iter()
+                    .filter_map(|p| cache.get(p))
+                    .flat_map(|a| a.dependencies.iter().cloned())
+                    .collect();
+                requested.extend(
+                    cache
+                        .values()
+                        .filter(|a| a.dependencies.iter().any(|p| dependencies.contains(p)))
+                        .map(|a| a.path.clone()),
+                );
+                requested.sort();
+                requested.dedup();
+                for path in &requested {
+                    cache.remove(path);
+                }
+            }
         }
         let revision = *revision;
         self.generation = self.worker.generation.fetch_add(1, Ordering::Relaxed) + 1;
-        let paths: Vec<_> = paths
+        let paths: Vec<_> = requested
             .iter()
             .filter(|p| self.cached(&roots, p).is_none())
             .cloned()
@@ -139,6 +166,11 @@ impl LaunchAudits {
             self.error = Some(format!("No se pudo revisar el contenido: {e}"));
             self.pending = 0;
         }
+    }
+
+    pub fn cancel(&mut self) {
+        self.generation = self.worker.generation.fetch_add(1, Ordering::Relaxed) + 1;
+        self.pending = 0;
     }
 
     /// Drain completed reports without waiting for the worker or its filesystem I/O.

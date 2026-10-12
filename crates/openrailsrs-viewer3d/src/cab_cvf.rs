@@ -289,6 +289,32 @@ pub fn control_value(control: &ControlType, tel: &CabTelemetry) -> f64 {
         return control_value(&ControlType::Generic(original.into()), tel);
     }
     match control {
+        ControlType::Generic(name)
+            if matches!(
+                name.as_str(),
+                "LEFTWINDOW"
+                    | "2DEXTERNALLEFTWINDOW"
+                    | "EXTERNALLEFTWINDOWFRONT"
+                    | "EXTERNALLEFTWINDOWREAR"
+            ) =>
+        {
+            tel.cab_windows[0]
+        }
+        ControlType::Generic(name)
+            if matches!(
+                name.as_str(),
+                "RIGHTWINDOW"
+                    | "2DEXTERNALRIGHTWINDOW"
+                    | "EXTERNALRIGHTWINDOWFRONT"
+                    | "EXTERNALRIGHTWINDOWREAR"
+            ) =>
+        {
+            tel.cab_windows[1]
+        }
+        ControlType::Generic(name) if name == "CABDOOR" => tel.cab_door,
+        ControlType::Generic(name) if matches!(name.as_str(), "WASHER" | "WINDSCREENWASHER") => {
+            f64::from(tel.washer_spraying)
+        }
         ControlType::Generic(name) if matches!(name.as_str(), "SAND" | "SANDER" | "SANDERS") => {
             f64::from(tel.sander_on)
         }
@@ -1186,6 +1212,9 @@ mod tests {
     #[test]
     fn control_value_maps_throttle_and_brake() {
         let tel = CabTelemetry {
+            cab_windows: [0.; 2],
+            cab_door: 0.,
+            washer_spraying: false,
             wheel_slip: false,
             engine_failure: false,
             thermal_limiting: false,

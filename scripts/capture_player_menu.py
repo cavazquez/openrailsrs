@@ -17,6 +17,7 @@ import time
 PAGES = (
     "home", "route", "route-map", "train", "weather", "weather-options", "continue",
     "library", "downloads", "settings", "weather-settings", "controls",
+    "practice", "weather-editor", "vehicle-profile", "library-tools", "bug-report",
 )
 
 
@@ -162,7 +163,7 @@ def main():
     parser.add_argument("--height", type=int, default=720)
     parser.add_argument("--scale", type=float, default=1.0)
     parser.add_argument("--weather", choices=("clear", "rain", "fog", "snow", "overcast", "storm"), default="clear")
-    parser.add_argument("--weather-profile", choices=("automatic", "drizzle", "steady_rain", "downpour", "light_snow", "steady_snow", "heavy_snow", "after_snow", "storm_cycle", "random_journey"), default="automatic")
+    parser.add_argument("--weather-profile", choices=("automatic", "drizzle", "steady_rain", "downpour", "light_snow", "steady_snow", "heavy_snow", "after_snow", "storm_cycle", "random_journey", "edited"), default="automatic")
     parser.add_argument("--weather-pace", choices=("slow", "normal", "fast"), default="normal")
     args = parser.parse_args()
     if args.width < 640 or args.height < 360 or not 0.8 <= args.scale <= 1.5:

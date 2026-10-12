@@ -195,6 +195,10 @@ pub struct DavisSection {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct TrainSection {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub vehicle_profiles: Vec<openrailsrs_core::vehicle_profile::VehicleProfile>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub cab_equipment: Vec<crate::cab_equipment::CabEquipmentDef>,
     /// Optional declared electrical demand; no guessed HVAC consumption.
     #[serde(default)]
     pub power_load: PowerLoadSection,
@@ -373,6 +377,8 @@ impl Default for NativePhysicsEnvironment {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct SimulationSection {
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub weather_track: Option<crate::weather_track::WeatherTrack>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub native_physics: Option<NativePhysicsEnvironment>,
     pub duration: f64,
     pub time_step: f64,
@@ -443,6 +449,38 @@ impl Default for OutputSection {
 
 impl ScenarioFile {
     pub fn validate(&self) -> Result<(), ScenarioError> {
+        if self.train.vehicle_profiles.len() > 256
+            || self.train.vehicle_profiles.iter().any(|p| !p.valid())
+        {
+            return Err(ScenarioError::Validation(
+                "Perfil de vehículo inválido".into(),
+            ));
+        }
+        if self.train.cab_equipment.len() > 256
+            || self.train.cab_equipment.iter().any(|c| !c.valid())
+            || self
+                .train
+                .cab_equipment
+                .iter()
+                .map(|c| c.vehicle)
+                .collect::<std::collections::BTreeSet<_>>()
+                .len()
+                != self.train.cab_equipment.len()
+        {
+            return Err(ScenarioError::Validation(
+                "Equipo de cabina inválido o repetido".into(),
+            ));
+        }
+        if self
+            .simulation
+            .weather_track
+            .as_ref()
+            .is_some_and(|p| !p.valid())
+        {
+            return Err(ScenarioError::Validation(
+                "Evolución meteorológica inválida".into(),
+            ));
+        }
         if self.route.legs.len() > 256
             || self.route.legs.iter().any(|leg| {
                 leg.edges.is_empty()

@@ -313,7 +313,11 @@ fn update_driving_hud(
     mut debug: Query<&mut Visibility, (With<crate::hud::HudRoot>, Without<HudPanel>)>,
     time: Res<Time>,
     mut elapsed: Local<f32>,
+    capture: Option<Res<crate::issue_report::PendingCapture>>,
 ) {
+    if capture.is_some() {
+        return;
+    }
     *elapsed += time.delta_secs();
     if *elapsed < 0.05
         && !visibility.is_changed()
@@ -533,6 +537,40 @@ fn update_driving_hud(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn bug_capture_keeps_panel_backgrounds_hidden_until_restoration() {
+        let mut app = App::new();
+        app.insert_resource(
+            LiveDrive::from_scenario_path(&crate::test_harness::smoke_scenario_path()).unwrap(),
+        )
+        .insert_resource(Time::<()>::default())
+        .insert_resource(DrivingHudVisibility::default())
+        .insert_resource(crate::player_settings::PlayerSettings::default())
+        .insert_resource(crate::issue_report::PendingCapture::new(
+            "unused.png".into(),
+        ))
+        .add_systems(Update, update_driving_hud);
+        let panel = app
+            .world_mut()
+            .spawn((HudPanel::Driving, Visibility::Hidden))
+            .id();
+        app.update();
+        assert_eq!(
+            app.world().get::<Visibility>(panel),
+            Some(&Visibility::Hidden)
+        );
+        app.world_mut()
+            .remove_resource::<crate::issue_report::PendingCapture>();
+        app.world_mut()
+            .resource_mut::<DrivingHudVisibility>()
+            .driving = true;
+        app.update();
+        assert_eq!(
+            app.world().get::<Visibility>(panel),
+            Some(&Visibility::Inherited)
+        );
+    }
 
     #[test]
     fn activity_without_scheduled_stops_only_announces_arrival_when_completed() {

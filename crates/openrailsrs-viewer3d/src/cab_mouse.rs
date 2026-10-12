@@ -74,7 +74,7 @@ fn actionable(control: &ControlType) -> bool {
             | ControlType::ThrottleDisplay
             | ControlType::TrainBrake
             | ControlType::DirectionDisplay
-    ) || matches!(control,ControlType::Generic(name)if matches!(name.to_ascii_uppercase().as_str(),"HORN"|"WHISTLE"|"WIPERS"|"WIPER"|"EXTERNALWIPERS"|"DOORS"|"SAND"|"SANDER"|"SANDERS"|"PANTOGRAPH"|"PANTOGRAPHS"|"HEADLIGHT"|"HEADLIGHTS"|"CABLIGHT"|"CIRCUIT_BREAKER"|"CIRCUITBREAKER"|"CIRCUIT_BREAKER_DRIVER_CLOSING_ORDER"|"REGULATOR"|"CUTOFF"|"REVERSER_PLATE"|"DAMPERS_FRONT"|"WATER_INJECTOR1"|"WATER_INJECTOR2"|"STEAM_INJ1"|"STEAM_INJ2"|"BLOWER"|"CYL_COCKS"|"ENGINE_BRAKE"|"LOCOMOTIVE_BRAKE"|"BATTERY_SWITCH"|"POWER_ON"|"ELECTRIC_TRAIN_SUPPLY"|"ENGINE_START"|"ENGINE_STOP"|"DIESEL_ENGINE"|"PLAYER_DIESEL_ENGINE_STARTER"|"PLAYER_DIESEL_ENGINE_STOPPER"|"EMERGENCY_BRAKE"|"EMERGENCY_RESET"|"TCS_ACKNOWLEDGE"|"HAND_BRAKE"))
+    ) || matches!(control,ControlType::Generic(name)if matches!(name.to_ascii_uppercase().as_str(),"LEFTWINDOW"|"RIGHTWINDOW"|"2DEXTERNALLEFTWINDOW"|"2DEXTERNALRIGHTWINDOW"|"CABDOOR"|"WASHER"|"WINDSCREENWASHER"|"HORN"|"WHISTLE"|"WIPERS"|"WIPER"|"EXTERNALWIPERS"|"DOORS"|"SAND"|"SANDER"|"SANDERS"|"PANTOGRAPH"|"PANTOGRAPHS"|"HEADLIGHT"|"HEADLIGHTS"|"CABLIGHT"|"CIRCUIT_BREAKER"|"CIRCUITBREAKER"|"CIRCUIT_BREAKER_DRIVER_CLOSING_ORDER"|"REGULATOR"|"CUTOFF"|"REVERSER_PLATE"|"DAMPERS_FRONT"|"WATER_INJECTOR1"|"WATER_INJECTOR2"|"STEAM_INJ1"|"STEAM_INJ2"|"BLOWER"|"CYL_COCKS"|"ENGINE_BRAKE"|"LOCOMOTIVE_BRAKE"|"BATTERY_SWITCH"|"POWER_ON"|"ELECTRIC_TRAIN_SUPPLY"|"ENGINE_START"|"ENGINE_STOP"|"DIESEL_ENGINE"|"PLAYER_DIESEL_ENGINE_STARTER"|"PLAYER_DIESEL_ENGINE_STOPPER"|"EMERGENCY_BRAKE"|"EMERGENCY_RESET"|"TCS_ACKNOWLEDGE"|"HAND_BRAKE"))
 }
 fn control_name(control: &ControlType) -> &str {
     match control {
@@ -189,6 +189,26 @@ pub fn apply_cab_control(live: &mut LiveDrive, control: &ControlType, value: f64
                     };
                     let _ = live.session.steam_command(command);
                 }
+            }
+            "LEFTWINDOW" | "2DEXTERNALLEFTWINDOW" => {
+                let _ = live
+                    .session
+                    .operate_cab(openrailsrs_sim::cab_equipment::CabOperation::LeftWindow);
+            }
+            "RIGHTWINDOW" | "2DEXTERNALRIGHTWINDOW" => {
+                let _ = live
+                    .session
+                    .operate_cab(openrailsrs_sim::cab_equipment::CabOperation::RightWindow);
+            }
+            "CABDOOR" => {
+                let _ = live
+                    .session
+                    .operate_cab(openrailsrs_sim::cab_equipment::CabOperation::Door);
+            }
+            "WASHER" | "WINDSCREENWASHER" => {
+                let _ = live
+                    .session
+                    .operate_cab(openrailsrs_sim::cab_equipment::CabOperation::Washer);
             }
             "WIPERS" | "WIPER" | "EXTERNALWIPERS" => live.session.toggle_wiper(),
             "HEADLIGHT" | "HEADLIGHTS" => {

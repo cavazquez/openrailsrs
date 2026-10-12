@@ -2,6 +2,7 @@
 
 pub mod ast;
 pub mod cab_link;
+pub mod cancellation;
 pub mod dispatch;
 pub mod encoding;
 pub mod error;

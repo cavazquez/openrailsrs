@@ -92,6 +92,12 @@ pub struct SavedGame {
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SavedPlayerOptions {
+    #[serde(default)]
+    pub journey_setup: crate::journey_setup::JourneySetup,
+    #[serde(default)]
+    pub braking_coach: bool,
+    #[serde(default)]
+    pub weather_track: openrailsrs_scenarios::weather_track::WeatherTrack,
     pub quick_stations: bool,
     pub strict_service: bool,
     pub traffic_brake_assistance: bool,
@@ -102,6 +108,9 @@ pub struct SavedPlayerOptions {
 impl SavedPlayerOptions {
     pub fn capture(s: &crate::player_settings::PlayerSettings) -> Self {
         Self {
+            journey_setup: s.journey_setup.clone(),
+            braking_coach: s.braking_coach,
+            weather_track: s.weather_track.clone(),
             quick_stations: s.quick_station_practice,
             strict_service: s.strict_service,
             traffic_brake_assistance: s.traffic_brake_assistance,
@@ -110,6 +119,9 @@ impl SavedPlayerOptions {
         }
     }
     pub fn apply(&self, s: &mut crate::player_settings::PlayerSettings) {
+        s.journey_setup = self.journey_setup.clone();
+        s.braking_coach = self.braking_coach;
+        s.weather_track = self.weather_track.clone();
         s.quick_station_practice = self.quick_stations;
         s.strict_service = self.strict_service;
         s.traffic_brake_assistance = self.traffic_brake_assistance;
@@ -171,16 +183,24 @@ impl SavedGame {
         if std::fs::metadata(path).map_err(|e| e.to_string())?.len() > 16 * 1024 * 1024 {
             return Err("Partida demasiado grande".into());
         }
-        let game: Self = serde_json::from_slice(&std::fs::read(path).map_err(|e| e.to_string())?)
+        Self::from_bytes(&std::fs::read(path).map_err(|e| e.to_string())?)
+    }
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, String> {
+        if bytes.len() > 16 * 1024 * 1024 {
+            return Err("Partida demasiado grande".into());
+        }
+        let game: Self = serde_json::from_slice(bytes)
             .map_err(|e| format!("No se puede leer la partida: {e}"))?;
         if game.player_options.as_ref().is_some_and(|o| {
-            o.sky_date.as_ref().is_some_and(|d| {
-                d.parse::<chrono::NaiveDate>()
-                    .ok()
-                    .is_none_or(|d| !(1900..=2100).contains(&chrono::Datelike::year(&d)))
-            }) || o
-                .ambient_temperature_c
-                .is_some_and(|t| !t.is_finite() || !(-45.0..=45.0).contains(&t))
+            !o.journey_setup.valid()
+                || !o.weather_track.valid()
+                || o.sky_date.as_ref().is_some_and(|d| {
+                    d.parse::<chrono::NaiveDate>()
+                        .ok()
+                        .is_none_or(|d| !(1900..=2100).contains(&chrono::Datelike::year(&d)))
+                })
+                || o.ambient_temperature_c
+                    .is_some_and(|t| !t.is_finite() || !(-45.0..=45.0).contains(&t))
         }) || game.version != 1
             || game
                 .weather_checkpoint

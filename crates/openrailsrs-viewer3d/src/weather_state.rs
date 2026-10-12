@@ -19,9 +19,10 @@ pub enum WeatherProfile {
     AfterSnow,
     StormCycle,
     RandomJourney,
+    Edited,
 }
 impl WeatherProfile {
-    pub const ALL: [Self; 10] = [
+    pub const ALL: [Self; 11] = [
         Self::Automatic,
         Self::Drizzle,
         Self::SteadyRain,
@@ -32,6 +33,7 @@ impl WeatherProfile {
         Self::AfterSnow,
         Self::StormCycle,
         Self::RandomJourney,
+        Self::Edited,
     ];
     pub fn next(self) -> Self {
         Self::ALL[(Self::ALL.iter().position(|p| *p == self).unwrap_or(0) + 1) % Self::ALL.len()]
@@ -48,6 +50,7 @@ impl WeatherProfile {
             Self::AfterSnow => "Después de nevar",
             Self::StormCycle => "Tormenta: aproximación, actividad y despeje",
             Self::RandomJourney => "Aleatorio durante el recorrido",
+            Self::Edited => "Perfil propio · editor de clima",
         }
     }
     pub fn parse(value: &str) -> Option<Self> {
@@ -62,6 +65,7 @@ impl WeatherProfile {
             "after_snow" => Self::AfterSnow,
             "storm_cycle" => Self::StormCycle,
             "random" | "random_journey" => Self::RandomJourney,
+            "edited" => Self::Edited,
             _ => return None,
         })
     }
@@ -73,7 +77,7 @@ impl WeatherProfile {
     }
     pub fn weather(self) -> Option<PlayerWeather> {
         match self {
-            Self::Automatic | Self::RandomJourney => None,
+            Self::Automatic | Self::RandomJourney | Self::Edited => None,
             Self::Drizzle | Self::SteadyRain | Self::Downpour => Some(PlayerWeather::Rain),
             Self::LightSnow | Self::SteadySnow | Self::HeavySnow => Some(PlayerWeather::Snow),
             Self::AfterSnow => Some(PlayerWeather::Overcast),
@@ -171,6 +175,28 @@ impl Default for Atmosphere {
     }
 }
 impl Atmosphere {
+    pub fn from_track(frame: openrailsrs_scenarios::weather_track::WeatherFrame) -> Self {
+        Self {
+            rain: frame.rain,
+            snow: frame.snow,
+            snow_cover: frame.snow,
+            flake_size: 0.7 + frame.snow * 0.65,
+            cloud_cover: frame.cloud,
+            overcast: frame.cloud,
+            storm: frame.storm,
+            visibility_m: frame.visibility_m,
+            fog_density: frame.fog_density,
+            wind_mps: Vec3::new(frame.wind_mps[0], 0., frame.wind_mps[1]),
+            phase: if frame.storm > 0.5 {
+                StormPhase::Active
+            } else if frame.storm > 0. {
+                StormPhase::Approaching
+            } else {
+                StormPhase::Calm
+            },
+            ..default()
+        }
+    }
     /// Share the same continuous atmosphere with wheel/rail contact. This is
     /// a normalized gameplay model, not measured adhesion or an ice model.
     pub fn rail_factor(self) -> f64 {
@@ -567,6 +593,16 @@ pub fn update(
         environment.current_sample(content.environment),
         journey,
     );
+    if let Some(program) = live
+        .as_ref()
+        .and_then(|l| l.session.state.weather_track.as_ref())
+    {
+        state.atmosphere = Atmosphere::from_track(program.at(clock));
+        state.live = false;
+    } else if profile == WeatherProfile::Edited {
+        state.atmosphere = Atmosphere::from_track(settings.weather_track.at(clock));
+        state.live = false;
+    }
     // The reproducible phase is independent of the start time of the service.
     if !state.live
         && state.last_s == Some(clock + offset)
@@ -598,7 +634,13 @@ pub fn update(
             service.session.state.ambient_temperature_c = f64::from(state.atmosphere.temperature_c);
         }
     }
-    let effective = if profile == WeatherProfile::RandomJourney && !state.live {
+    let effective = if (profile == WeatherProfile::RandomJourney
+        || profile == WeatherProfile::Edited
+        || live
+            .as_ref()
+            .is_some_and(|l| l.session.state.weather_track.is_some()))
+        && !state.live
+    {
         state.atmosphere.weather()
     } else if !state.live {
         profile.weather().unwrap_or(initial)

@@ -4176,6 +4176,7 @@ pub fn update_world_scenery_lod(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     cache: Option<Res<WorldShapeLodCache>>,
+    mut silhouettes: Option<ResMut<crate::scenery_lod::Silhouettes>>,
     progress: Option<Res<WorldSpawnProgress>>,
     camera: Query<&GlobalTransform, With<Camera3d>>,
     focus: Option<Res<RouteFocus>>,
@@ -4261,7 +4262,14 @@ pub fn update_world_scenery_lod(
             continue;
         }
         let instance_dist = world_lod_distance_m(cam_pos, gt.translation());
-        let new_lod = stable_lod_level(shape, instance_dist, lod.lod_idx).min(lod_assets.len() - 1);
+        let desired = stable_lod_level(shape, instance_dist, lod.lod_idx).min(lod_assets.len() - 1);
+        let new_lod = if anim_binding.is_none() && lod.bank.is_none() {
+            silhouettes
+                .as_mut()
+                .map_or(desired, |s| s.choose(&lod.shape_path, shape, desired))
+        } else {
+            desired
+        };
         if new_lod == lod.lod_idx {
             continue;
         }

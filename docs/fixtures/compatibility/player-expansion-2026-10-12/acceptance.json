@@ -1,0 +1,3562 @@
+{
+  "schema": 1,
+  "date": "2026-10-12",
+  "base_commit": "4520fe2054b84eccad85f0218d153ed112ae3164",
+  "content": {
+    "repository": "DocMartin7644/Chiltern-Route-v4",
+    "revision": "8236df20ed9f596b8cf15720c43bfbdd0c43125d",
+    "downloaded_files_versioned": false,
+    "own_fixture": "examples/player_lab"
+  },
+  "checks": {
+    "check_sh_passed": true,
+    "workspace_rust_passed": 1862,
+    "native_rust_passed": 4,
+    "python_passed": 94,
+    "clippy_warnings_denied": true,
+    "fmt": true,
+    "workspace_build": true,
+    "pinned_reference": "Open Rails 1.6.1",
+    "bevy": "0.19.1",
+    "hanabi": "0.19.0",
+    "mass_oracle_points": 5,
+    "mass_tolerance_kg": 0.02,
+    "existing_oracle_tolerances_changed": false,
+    "service_oracle_passed": true,
+    "class47_oracle_passed": true
+  },
+  "issues": [
+    {
+      "number": 231,
+      "title": "Plan 021: Variar masa del vehículo al consumir o reponer combustible",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "consumable_mass::tests::fuel_mass_and_driven_weight_match_the_pinned_native_oracle",
+        "consumable_mass::tests::reserve_consumption_does_not_accumulate_roundoff_or_negative_mass",
+        "consumable_mass::tests::reserve_mass_matches_original_diesel_density_and_refill_is_reversible",
+        "consumed_and_refilled_fuel_changes_actual_inertia_and_survives_resume"
+      ]
+    },
+    {
+      "number": 246,
+      "title": "Plan 036: Animar compresión de topes según fuerzas entre vehículos",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "coupler::tests::force_cap_limits_passenger_coupler",
+        "coupler::tests::passenger_preset_is_stable_under_one_second_step",
+        "coupler::tests::pullman_preset_survives_hard_brake_jerk",
+        "native::tests::plan30_coupler_contacts_generate_one_native_event_per_physical_change",
+        "rolling_stock_anim::tests::couplers_ignore_authored_flips_and_share_curve_angle_without_wrapping_jumps",
+        "rolling_stock_anim::tests::declared_buffer_and_cab_parts_keep_authored_stroke_and_rigid_body",
+        "single_vehicle_no_couplers"
+      ]
+    },
+    {
+      "number": 252,
+      "title": "Plan 042: Actualizar carteles de destino según servicio y sentido",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "both_trains_reach_destination",
+        "consist_audit::tests::every_missing_texture_and_cab_graphic_has_its_original_destinations",
+        "content_management::tests::removal_is_reversible_and_rejects_unmanaged_or_overlapping_destination",
+        "destination_boards::tests::changing_service_changes_pixels_but_render_is_bounded",
+        "destination_uses_declared_service_and_actual_direction",
+        "live_drive::tests::live_session_reaches_chiltern_destination_with_throttle",
+        "smoke_run_example_scenario_reaches_destination"
+      ]
+    },
+    {
+      "number": 263,
+      "title": "Plan 053: Agregar lavaparabrisas y depósito en material equipado",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "washer_conserves_reserve_stops_without_battery_and_resume_keeps_apertures"
+      ]
+    },
+    {
+      "number": 264,
+      "title": "Plan 054: Permitir abrir ventanas y puertas de cabina compatibles",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "rolling_stock_anim::tests::declared_buffer_and_cab_parts_keep_authored_stroke_and_rigid_body",
+        "washer_conserves_reserve_stops_without_battery_and_resume_keeps_apertures"
+      ]
+    },
+    {
+      "number": 274,
+      "title": "Plan 064: Conservar silueta de edificios al cambiar LOD",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "scenery_lod::tests::missing_bridge_deck_or_roof_keeps_complete_source_level"
+      ]
+    },
+    {
+      "number": 275,
+      "title": "Plan 065: Suavizar apariencia de bosques a diferentes distancias",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "app_spawn::tests::spawn_forest_patches_smoke_route",
+        "forest::tests::billboard_mesh_has_one_quad_per_tree",
+        "forest::tests::forest_cpu_bounds_enclose_top_and_all_billboard_yaws",
+        "forest::tests::rng_is_deterministic_per_tree",
+        "forest::tests::scatter_avoids_track_centreline",
+        "forest::tests::scatter_fallback_y_keeps_absolute_anchor_y",
+        "forest::tests::scatter_places_trees_when_track_fills_patch",
+        "forest::tests::scatter_respects_population_without_obstacles",
+        "forest::tests::scatter_uses_terrain_height",
+        "forest::tests::smoke_route_has_forest_patch",
+        "forest::tests::tree_size_does_not_scale_with_route_extent",
+        "objects::tests::smoke_world_tile_parses_forest_and_hwater",
+        "scenery::tests::forest_rng_is_deterministic",
+        "shapes::tests::new_forest_jinx_tunnel_and_chalk_parts_use_distinct_textures",
+        "shapes::tests::new_forest_untextured_parts_audit",
+        "spawn::forest::tests::billboard_mesh_has_one_quad_per_tree",
+        "spawn::forest::tests::rng_is_deterministic",
+        "spawn::forest::tests::scatter_respects_population",
+        "tdb_track::tests::new_forest_central_tile_gets_tdb_ukfs_instances",
+        "tdb_track::tests::new_forest_tdb_loads_and_has_chords_near_tile",
+        "terrain::tests::new_forest_tiles_subdir_loads_geometry",
+        "textures::tests::new_forest_night_subdir_when_flagged",
+        "textures::tests::new_forest_spring_subdir_when_flagged",
+        "transfer::tests::new_forest_transfer_tile_parses",
+        "typed::tsection::tests::new_forest_route_tsection_merges_global_shapes",
+        "world_spawn::tests::new_forest_trackobj_resolves_when_route_present"
+      ]
+    },
+    {
+      "number": 279,
+      "title": "Plan 069: Mejorar sombras de contacto bajo ruedas, bogies y durmientes",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "contact_shadows::tests::cab_disable_restores_only_the_depth_pass_owned_by_contact_shadows",
+        "typed::superelevation::tests::balance_formula_and_zero_cant_turnout",
+        "typed::superelevation::tests::defaults_follow_pinned_code_including_freight_not_the_older_pdf",
+        "typed::superelevation::tests::imperial_gauge_and_explicit_cant_deficiency_are_preserved"
+      ]
+    },
+    {
+      "number": 287,
+      "title": "Plan 077: Mejorar puentes desde arriba, abajo y a distancia",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "scenery_lod::tests::missing_bridge_deck_or_roof_keeps_complete_source_level",
+        "shapes::tests::world_snow_policy_preserves_buildings_and_regular_season_night_variants"
+      ]
+    },
+    {
+      "number": 289,
+      "title": "Plan 079: Incorporar corrientes y ondas en ríos y canales",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "water::tests::explicit_y_overrides_terrain",
+        "water::tests::higher_water_gets_more_negative_depth_bias",
+        "water::tests::plan30_water_uses_rail_clock_through_pause_and_retains_rebased_horizontal_pose",
+        "water::tests::samples_terrain_when_y_zero",
+        "water::tests::smoke_route_has_water_patch",
+        "water::tests::update_water_uses_render_local_y_not_msl",
+        "water::tests::water_wave_oscillates"
+      ]
+    },
+    {
+      "number": 337,
+      "title": "Plan 127: Configurar prioridades del despachador",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "track_reservations::tests::aged_waiter_gets_clear_block_before_new_high_priority_request",
+        "track_reservations::tests::blocked_service_diverts_through_passing_loop_and_locks_points_atomically",
+        "track_reservations::tests::canonical_intervals_conflict_in_both_directions_but_not_adjacent_blocks",
+        "track_reservations::tests::corrupt_saved_reservation_is_rejected_before_state_changes",
+        "track_reservations::tests::dispatcher_reports_cycles_without_releasing_occupied_points",
+        "track_reservations::tests::opposite_trains_cannot_reserve_the_same_clear_block_and_grant_survives_restore",
+        "track_reservations::tests::priority_selects_clear_block_but_cannot_take_existing_grant",
+        "track_reservations::tests::shared_restore_rejects_two_owners_of_one_grant_or_point",
+        "track_reservations::tests::stationary_train_far_from_points_does_not_lock_the_whole_adjacent_edge"
+      ]
+    },
+    {
+      "number": 352,
+      "title": "Plan 142: Crear tutorial guiado de conducción básica desde cabina",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "lesson_reads_physical_doors_and_neutral_and_never_commands_train",
+        "player_study::tests::loaded_lesson_checkpoints_restore_controls_reserves_and_progress"
+      ]
+    },
+    {
+      "number": 353,
+      "title": "Plan 143: Crear tutorial guiado de alimentación y cortes eléctricos",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "electric_lesson_tracks_actual_pantograph_breaker_cut_and_recovery",
+        "native_supply_delays_survive_save_and_battery_gates_cab_lights"
+      ]
+    },
+    {
+      "number": 355,
+      "title": "Plan 145: Incorporar ejercicios de diagnóstico y respuesta a emergencias",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "cab_cvf::tests::plan30_native_status_displays_follow_engine_emergency_and_recovery",
+        "cab_panel::tests::cab_panel_formats_diesel_and_brake",
+        "chiltern_dmbsh_legacy_diesel_standalone",
+        "chiltern_startup_diesel_audit_0_40s",
+        "consumable_mass::tests::reserve_mass_matches_original_diesel_density_and_refill_is_reversible",
+        "csv_out::tests::writes_diesel_telemetry_columns",
+        "default_chiltern_player_formation_exposes_both_diesel_motors",
+        "diesel::tests::adhesion_caps_stall_force",
+        "diesel::tests::advance_average_force_low_pass",
+        "diesel::tests::advance_rpm_orts_matches_diesel_engine_cs_dmb_sa",
+        "diesel::tests::apparent_throttle_limits_force_at_low_rpm",
+        "diesel::tests::build_reverse_throttle_tab_endpoints",
+        "diesel::tests::continuous_force_limit_derates_at_high_average",
+        "diesel::tests::effective_power_scales_with_throttle_when_engine_present",
+        "diesel::tests::effort_scale_reduces_stall_force",
+        "diesel::tests::electric_train_supply_keeps_engine_rpm_without_applying_traction",
+        "diesel::tests::from_lead_orts_scaled_calibrates_stall_to_max_force",
+        "diesel::tests::from_power_and_effort_stall_force",
+        "diesel::tests::interpolates_between_notches",
+        "diesel::tests::or_rpm_sqrt_differs_from_exponential_lag",
+        "diesel::tests::rail_power_cap_scales_with_effective_throttle",
+        "diesel::tests::target_traction_force_limited_by_rail_power_at_speed",
+        "diesel::tests::update_force_with_ramp_limits_rise_rate",
+        "diesel::tests::zero_throttle_is_zero_force",
+        "diesel_idle_burns_authored_fuel_and_stopping_cuts_traction",
+        "diesel_operation_matches_the_pinned_original_dll_checkpoints",
+        "diesel_start_needs_closed_regulator_battery_and_fuel_and_takes_time",
+        "dry_native_contact_preserves_the_pinned_diesel_dynamics_without_double_limiting",
+        "each_diesel_keeps_identity_and_fuel_when_another_motor_is_isolated",
+        "electric_supply_mixed_formation_keeps_diesel_and_other_pickups_powered",
+        "empty_diesel_tank_is_finite_and_cannot_be_restarted_or_reset_in_a_save",
+        "explicit_diesel_thermal_protection_is_visible_and_optional",
+        "four_diesel_cooling_modes_match_200_unmodified_or161_checkpoints",
+        "golden_class47_diesel_power_tab_points",
+        "independent_emergency_and_main_reservoir_are_physical_and_saved",
+        "native_audio::tests::diesel_with_default_rpm_parameters_keeps_diesel_sound_scale",
+        "native_supply_delays_survive_save_and_battery_gates_cab_lights",
+        "operations::tests::plan30_ambient_temperature_affects_compatible_diesel_heat_without_changing_fuel_or_phase",
+        "prepared_emergency_requires_real_stop_rearm_and_pipe_recharge",
+        "refill::tests::finite_diesel_supply_waits_for_connection_and_preserves_consumption_and_save",
+        "steam_mechanics_and_boiler_continue_with_battery_off",
+        "train_effects::tests::stopped_diesel_and_empty_boiler_do_not_emit_exhaust_or_whistle_steam",
+        "typed::engine::tests::parse_chiltern_dmbsa_stub_diesel_engine_params",
+        "typed::engine::tests::parse_msts_diesel_engine_with_units",
+        "typed::engine::tests::parse_ortsdieselengines_block",
+        "typed::engine::tests::parse_ortsdieselengines_flat_msts",
+        "typed::traction_operation::tests::diesel_native_gallons_are_us_and_tables_and_start_thresholds_are_authored",
+        "washer_conserves_reserve_stops_without_battery_and_resume_keeps_apertures"
+      ]
+    },
+    {
+      "number": 356,
+      "title": "Plan 146: Crear desafíos con condiciones meteorológicas adversas",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "weather_journey::tests::snow_uses_the_selected_season_and_can_also_start_in_snow",
+        "weather_journey::tests::starts_with_chosen_weather_and_changes_without_a_repeating_cycle",
+        "weather_journey::tests::transitions_are_continuous_and_do_not_depend_on_sampling_or_camera",
+        "weather_journey_telemetry::tests::paused_telemetry_does_not_accumulate_and_long_journeys_remain_bounded",
+        "weather_track::tests::rejects_corrupt_and_overlapping_timelines",
+        "weather_track::tests::transition_is_continuous_reproducible_and_keeps_grip_bounded"
+      ]
+    },
+    {
+      "number": 357,
+      "title": "Plan 147: Mostrar informe de conducción detallado",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "report_counts_short_brake_events_and_resume_preserves_graph_and_totals"
+      ]
+    },
+    {
+      "number": 358,
+      "title": "Plan 148: Ofrecer instructor opcional de frenado",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "braking_coach_accounts_for_grade_grip_and_tuned_mass_without_driving",
+        "braking_coach_announces_insufficient_braking_and_has_no_advice_without_target"
+      ]
+    },
+    {
+      "number": 362,
+      "title": "Plan 152: Iniciar prácticas en estaciones o situaciones preparadas",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "journey_setup::tests::explicit_exploration_removes_activity_goals_but_preserves_rail_rules_and_stock",
+        "journey_setup::tests::prepared_station_changes_only_disposable_start_and_future_schedule",
+        "player_study::tests::loaded_lesson_checkpoints_restore_controls_reserves_and_progress"
+      ]
+    },
+    {
+      "number": 364,
+      "title": "Plan 154: Seleccionar exploración libre sin objetivos de actividad",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "journey_setup::tests::explicit_exploration_removes_activity_goals_but_preserves_rail_rules_and_stock",
+        "journey_setup::tests::prepared_station_changes_only_disposable_start_and_future_schedule"
+      ]
+    },
+    {
+      "number": 366,
+      "title": "Plan 156: Crear perfiles de ajustes separados de vehículos originales",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "vehicle_profiles::tests::tuning_changes_loaded_physics_only_and_never_follows_another_author_version"
+      ]
+    },
+    {
+      "number": 368,
+      "title": "Plan 158: Sugerir formaciones apropiadas para el recorrido",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "player_ui::recommendations::tests::author_stock_is_explained_but_missing_stock_stays_selectable"
+      ]
+    },
+    {
+      "number": 370,
+      "title": "Plan 160: Estimar disco, RAM y VRAM antes de jugar",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "resource_estimate::tests::distance_quality_and_separate_ranges_follow_inventory"
+      ]
+    },
+    {
+      "number": 371,
+      "title": "Plan 161: Mostrar cambios entre versiones descargadas de rutas",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "content_management::tests::removal_is_reversible_and_rejects_unmanaged_or_overlapping_destination",
+        "content_management::tests::version_comparison_counts_changed_added_and_removed_original_files"
+      ]
+    },
+    {
+      "number": 372,
+      "title": "Plan 162: Reauditar sólo recursos modificados",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "consist_audit::tests::a_working_cab_does_not_require_the_alternative_mode",
+        "consist_audit::tests::every_missing_texture_and_cab_graphic_has_its_original_destinations",
+        "consist_audit::tests::incremental_audit_updates_includes_models_sound_and_missing_resources",
+        "consist_audit::tests::intact_models_do_not_hide_scripts_brake_electrical_or_sound_limitations",
+        "consist_audit::tests::native_formation_audit_keeps_its_stock_origin_on_another_route",
+        "consist_audit::tests::native_layout_case_flip_missing_stock_and_unpowered_formations",
+        "consist_audit::tests::native_service_content_validation_matches_effective_original_sources",
+        "consist_audit::tests::nested_missing_include_is_reported_relative_to_the_containing_include",
+        "consist_audit::tests::none_graphic_is_a_valid_control_without_a_sprite",
+        "consist_audit::tests::plan30_content_fingerprint_tracks_includes_and_survives_install_relocation",
+        "consist_audit::tests::playable_steam_toml_example_passes_the_same_menu_audit_as_native_stock",
+        "consist_audit::tests::three_dimensional_cvf_does_not_require_unused_two_dimensional_graphics"
+      ]
+    },
+    {
+      "number": 375,
+      "title": "Plan 165: Gestionar desinstalación con dependencias visibles",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "content_management::tests::removal_is_reversible_and_rejects_unmanaged_or_overlapping_destination",
+        "content_management::tests::version_comparison_counts_changed_added_and_removed_original_files"
+      ]
+    },
+    {
+      "number": 376,
+      "title": "Plan 166: Exportar e importar respaldos de partidas y ajustes",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "player_backup::tests::backup_whitelists_settings_and_import_preserves_original_files",
+        "player_backup::tests::shared_backup_rejects_malformed_weather_before_writing_any_save",
+        "player_backup::tests::valid_save_backup_creates_a_new_resumable_history_copy_and_strips_unknown_fields"
+      ]
+    },
+    {
+      "number": 379,
+      "title": "Plan 169: Gestionar cola de descargas de repositorios originales",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "download_queue::tests::jobs_cancel_independently_and_restart_requires_resume"
+      ]
+    },
+    {
+      "number": 382,
+      "title": "Plan 172: Cancelar trabajo obsoleto al cambiar ruta o selección",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "cancellation::tests::cancel_is_thread_local_and_nested_scope_restores_parent",
+        "launch_audits::tests::blocked_io_does_not_block_polling_or_switches_and_stale_results_are_discarded",
+        "launch_audits::tests::dropping_the_menu_cancels_its_remaining_batch",
+        "launch_audits::tests::revisiting_a_route_reuses_reports_but_other_content_roots_are_distinct"
+      ]
+    },
+    {
+      "number": 395,
+      "title": "Plan 185: Crear editor de evolución meteorológica de actividades",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "player_backup::tests::shared_backup_rejects_malformed_weather_before_writing_any_save",
+        "weather_track::tests::rejects_corrupt_and_overlapping_timelines",
+        "weather_track::tests::transition_is_continuous_reproducible_and_keeps_grip_bounded"
+      ]
+    },
+    {
+      "number": 400,
+      "title": "Plan 190: Preparar reporte desde el juego con captura y diagnóstico",
+      "criteria_implemented": true,
+      "manual_test": "../../../PLAN_30_2.md",
+      "passed_tests": [
+        "driving_hud::tests::bug_capture_keeps_panel_backgrounds_hidden_until_restoration",
+        "issue_report::tests::capture_restores_ui_visibility_and_previous_pause_state",
+        "issue_report::tests::report_does_not_include_paths_or_environment_secrets"
+      ]
+    }
+  ],
+  "captures": {
+    "baseline-northolt-exterior": {
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 42.0,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [
+          -12463382.0,
+          72.63854217529297,
+          -30571412.0
+        ],
+        "rotation_xyzw": [
+          -0.09722062200307846,
+          0.7103374600410461,
+          0.10010210424661636,
+          0.6898901462554932
+        ],
+        "target_world": [
+          -12463422.0,
+          61.0316047668457,
+          -30571412.0
+        ],
+        "yaw_rad": 1.600000023841858
+      },
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "floating_origin_shift": [
+        -297.279296875,
+        0.0,
+        102.0225830078125
+      ],
+      "gpu_tiles": 4,
+      "gpu_entities": 1884,
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "odometer_m": 0.0,
+      "peak_rss_mib": 1217.9,
+      "elapsed_s": 15.1,
+      "performance": {
+        "elapsed_s": 10.713248692999995,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 56,
+        "frames": 356,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 36,
+        "gameplay_frames": 57,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 35.872383,
+        "hitches_over_100_ms": 1,
+        "loading_frames": 299,
+        "longest_frame_ms": 1662.822537,
+        "peak_rss_mib": 1216.30078125,
+        "rss_mib": 1215.48046875,
+        "startup_longest_frame_ms": 1662.822537
+      },
+      "graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 1681.6171875,
+        "peak_process_vram_mib": 819.515625,
+        "process_gtt_mib": 84.171875,
+        "process_vram_mib": 819.515625,
+        "source": "linux_drm_fdinfo"
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 168.72204844127967,
+        "gpu_busy_percent_mean": 15.76271186440678,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 2.4237288135593222,
+          "0000:03:00.0": 15.76271186440678
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes"
+      },
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.2199999988079071,
+          "flake_size": 1.0,
+          "fog_density": 3.9999998989515007e-05,
+          "overcast": 0.0,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "temperature_c": 20.3685359954834,
+          "visibility_m": 20000.0,
+          "wind_mps": [
+            0.6820047497749329,
+            0.0,
+            0.27491018176078796
+          ]
+        },
+        "elapsed_s": 0.0,
+        "journey": {
+          "pace": "normal",
+          "winter": false
+        },
+        "live": false,
+        "profile": "automatic",
+        "seed": 42
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": null,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 0
+      },
+      "camera_journey": {
+        "complete": false,
+        "distance_m": 0.0,
+        "enabled": false,
+        "leg_duration_s": 20,
+        "minimum_ready_hold_s": 3,
+        "physics": "paused; only camera moves; fixed wall-time trajectory",
+        "stage": 0
+      },
+      "train_animated_parts": 339
+    },
+    "northolt-exterior": {
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 42.0,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [
+          -12463382.0,
+          72.63854217529297,
+          -30571412.0
+        ],
+        "rotation_xyzw": [
+          -0.09722062945365906,
+          0.7103374600410461,
+          0.10010211169719696,
+          0.6898900866508484
+        ],
+        "target_world": [
+          -12463422.0,
+          61.0316047668457,
+          -30571412.0
+        ],
+        "yaw_rad": 1.600000023841858
+      },
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "contact_shadow_steps": [
+        8
+      ],
+      "floating_origin_shift": [
+        -297.279296875,
+        0.0,
+        102.0225830078125
+      ],
+      "gpu_tiles": 4,
+      "gpu_entities": 1884,
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "odometer_m": 0.0,
+      "peak_rss_mib": 1301.6,
+      "elapsed_s": 15.1,
+      "performance": {
+        "elapsed_s": 10.516539844000004,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 63,
+        "frames": 354,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 26,
+        "gameplay_frame_p99_ms": 26,
+        "gameplay_frames": 57,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 26.107564,
+        "hitches_over_100_ms": 1,
+        "loading_frames": 297,
+        "longest_frame_ms": 1494.768966,
+        "peak_rss_mib": 1296.8359375,
+        "rss_mib": 1296.8359375,
+        "startup_longest_frame_ms": 1494.768966
+      },
+      "graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 2100.953125,
+        "peak_process_vram_mib": 1122.296875,
+        "process_gtt_mib": 84.20703125,
+        "process_vram_mib": 1122.296875,
+        "source": "linux_drm_fdinfo"
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 117.28573438674661,
+        "gpu_busy_percent_mean": 16.53448275862069,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 15.224137931034482,
+          "0000:03:00.0": 16.53448275862069
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes"
+      },
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.2199999988079071,
+          "flake_size": 1.0,
+          "fog_density": 3.9999998989515007e-05,
+          "overcast": 0.0,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "temperature_c": 20.3685359954834,
+          "visibility_m": 20000.0,
+          "wind_mps": [
+            0.6820047497749329,
+            0.0,
+            0.27491018176078796
+          ]
+        },
+        "elapsed_s": 0.0,
+        "journey": {
+          "pace": "normal",
+          "winter": false
+        },
+        "live": false,
+        "profile": "automatic",
+        "seed": 42
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": null,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 0
+      },
+      "camera_journey": {
+        "complete": false,
+        "distance_m": 0.0,
+        "enabled": false,
+        "leg_duration_s": 20,
+        "minimum_ready_hold_s": 3,
+        "physics": "paused; only camera moves; fixed wall-time trajectory",
+        "stage": 0
+      },
+      "destination_displays": [],
+      "cab_equipment": [],
+      "train_animated_parts": 339
+    },
+    "northolt-cab": {
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 42.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [
+          -12463419.0,
+          63.92218017578125,
+          -30571412.0
+        ],
+        "rotation_xyzw": [
+          -0.07096271216869354,
+          0.8383246064186096,
+          0.112522654235363,
+          0.5286916494369507
+        ],
+        "target_world": [
+          -12463421.0,
+          61.03791809082031,
+          -30571412.0
+        ],
+        "yaw_rad": -2.6960983276367188
+      },
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "contact_shadow_steps": [],
+      "floating_origin_shift": [
+        -297.279296875,
+        0.0,
+        102.0225830078125
+      ],
+      "gpu_tiles": 4,
+      "gpu_entities": 1884,
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "odometer_m": 0.0,
+      "peak_rss_mib": 1914.0,
+      "elapsed_s": 16.4,
+      "performance": {
+        "elapsed_s": 11.798473759999995,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 67,
+        "frames": 389,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 25,
+        "gameplay_frames": 57,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 25.275760000000002,
+        "hitches_over_100_ms": 2,
+        "loading_frames": 332,
+        "longest_frame_ms": 1483.013471,
+        "peak_rss_mib": 1799.4453125,
+        "rss_mib": 1799.4453125,
+        "startup_longest_frame_ms": 1483.013471
+      },
+      "graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 2131.3203125,
+        "peak_process_vram_mib": 1115.91015625,
+        "process_gtt_mib": 84.20703125,
+        "process_vram_mib": 1115.91015625,
+        "source": "linux_drm_fdinfo"
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 118.19533764874295,
+        "gpu_busy_percent_mean": 16.365079365079364,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 16.61904761904762,
+          "0000:03:00.0": 16.365079365079364
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes"
+      },
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.2199999988079071,
+          "flake_size": 1.0,
+          "fog_density": 3.9999998989515007e-05,
+          "overcast": 0.0,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "temperature_c": 20.3685359954834,
+          "visibility_m": 20000.0,
+          "wind_mps": [
+            0.6820047497749329,
+            0.0,
+            0.27491018176078796
+          ]
+        },
+        "elapsed_s": 0.0,
+        "journey": {
+          "pace": "normal",
+          "winter": false
+        },
+        "live": false,
+        "profile": "automatic",
+        "seed": 42
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": null,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 0
+      },
+      "camera_journey": {
+        "complete": false,
+        "distance_m": 0.0,
+        "enabled": false,
+        "leg_duration_s": 20,
+        "minimum_ready_hold_s": 3,
+        "physics": "paused; only camera moves; fixed wall-time trajectory",
+        "stage": 0
+      },
+      "destination_displays": [],
+      "cab_equipment": [],
+      "train_animated_parts": 339
+    },
+    "south-ruislip-exterior": {
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 48.0,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [
+          -12466735.0,
+          55.88077163696289,
+          -30571124.0
+        ],
+        "rotation_xyzw": [
+          -0.09722062945365906,
+          0.7103374600410461,
+          0.10010211169719696,
+          0.6898900866508484
+        ],
+        "target_world": [
+          -12466781.0,
+          42.615699768066406,
+          -30571124.0
+        ],
+        "yaw_rad": 1.600000023841858
+      },
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "contact_shadow_steps": [
+        8
+      ],
+      "floating_origin_shift": [
+        296.3870849609375,
+        0.0,
+        395.4971923828125
+      ],
+      "gpu_tiles": 4,
+      "gpu_entities": 3409,
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "odometer_m": 0.0,
+      "peak_rss_mib": 1414.2,
+      "elapsed_s": 19.9,
+      "performance": {
+        "elapsed_s": 15.332920074999992,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 68,
+        "frames": 539,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 25,
+        "gameplay_frames": 57,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 25.321181000000003,
+        "hitches_over_100_ms": 1,
+        "loading_frames": 482,
+        "longest_frame_ms": 1555.59264,
+        "peak_rss_mib": 1414.04296875,
+        "rss_mib": 1253.875,
+        "startup_longest_frame_ms": 1555.59264
+      },
+      "graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 2135.99609375,
+        "peak_process_vram_mib": 1124.37890625,
+        "process_gtt_mib": 84.20703125,
+        "process_vram_mib": 1124.37890625,
+        "source": "linux_drm_fdinfo"
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 105.21360136071915,
+        "gpu_busy_percent_mean": 15.545454545454545,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 2.090909090909091,
+          "0000:03:00.0": 15.545454545454545
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes"
+      },
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.2199999988079071,
+          "flake_size": 1.0,
+          "fog_density": 3.9999998989515007e-05,
+          "overcast": 0.0,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "temperature_c": 20.36928939819336,
+          "visibility_m": 20000.0,
+          "wind_mps": [
+            0.6820047497749329,
+            0.0,
+            0.27491018176078796
+          ]
+        },
+        "elapsed_s": 0.0,
+        "journey": {
+          "pace": "normal",
+          "winter": false
+        },
+        "live": false,
+        "profile": "automatic",
+        "seed": 42
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": null,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 0
+      },
+      "camera_journey": {
+        "complete": false,
+        "distance_m": 0.0,
+        "enabled": false,
+        "leg_duration_s": 20,
+        "minimum_ready_hold_s": 3,
+        "physics": "paused; only camera moves; fixed wall-time trajectory",
+        "stage": 0
+      },
+      "destination_displays": [],
+      "cab_equipment": [],
+      "train_animated_parts": 339
+    },
+    "south-ruislip-cab": {
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 42.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [
+          -12466779.0,
+          45.490699768066406,
+          -30571120.0
+        ],
+        "rotation_xyzw": [
+          -0.12106288224458694,
+          0.37062814831733704,
+          0.04879412055015564,
+          0.9195638298988342
+        ],
+        "target_world": [
+          -12466780.0,
+          42.615699768066406,
+          -30571122.0
+        ],
+        "yaw_rad": 2.3370583057403564
+      },
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "contact_shadow_steps": [],
+      "floating_origin_shift": [
+        296.3870849609375,
+        0.0,
+        395.4971923828125
+      ],
+      "gpu_tiles": 4,
+      "gpu_entities": 3409,
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "odometer_m": 0.0,
+      "peak_rss_mib": 1814.4,
+      "elapsed_s": 21.7,
+      "performance": {
+        "elapsed_s": 17.379431731,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 71,
+        "frames": 603,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 25,
+        "gameplay_frames": 57,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 25.26735,
+        "hitches_over_100_ms": 2,
+        "loading_frames": 546,
+        "longest_frame_ms": 1501.019644,
+        "peak_rss_mib": 1704.5703125,
+        "rss_mib": 1545.0,
+        "startup_longest_frame_ms": 1501.019644
+      },
+      "graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 2317.6171875,
+        "peak_process_vram_mib": 1372.6015625,
+        "process_gtt_mib": 84.20703125,
+        "process_vram_mib": 1372.6015625,
+        "source": "linux_drm_fdinfo"
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 111.52089811431193,
+        "gpu_busy_percent_mean": 15.611764705882353,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 0.0,
+          "0000:03:00.0": 15.611764705882353
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes"
+      },
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.2199999988079071,
+          "flake_size": 1.0,
+          "fog_density": 3.9999998989515007e-05,
+          "overcast": 0.0,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "temperature_c": 20.36928939819336,
+          "visibility_m": 20000.0,
+          "wind_mps": [
+            0.6820047497749329,
+            0.0,
+            0.27491018176078796
+          ]
+        },
+        "elapsed_s": 0.0,
+        "journey": {
+          "pace": "normal",
+          "winter": false
+        },
+        "live": false,
+        "profile": "automatic",
+        "seed": 42
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": null,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 0
+      },
+      "camera_journey": {
+        "complete": false,
+        "distance_m": 0.0,
+        "enabled": false,
+        "leg_duration_s": 20,
+        "minimum_ready_hold_s": 3,
+        "physics": "paused; only camera moves; fixed wall-time trajectory",
+        "stage": 0
+      },
+      "destination_displays": [],
+      "cab_equipment": [],
+      "train_animated_parts": 339
+    },
+    "gerrards-cross-exterior": {
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 80.0,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [
+          -12477424.0,
+          87.75175476074219,
+          -30575630.0
+        ],
+        "rotation_xyzw": [
+          -0.09722062200307846,
+          0.7103374600410461,
+          0.10010210424661636,
+          0.6898901462554932
+        ],
+        "target_world": [
+          -12477500.0,
+          65.64330291748047,
+          -30575628.0
+        ],
+        "yaw_rad": 1.600000023841858
+      },
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "contact_shadow_steps": [
+        8
+      ],
+      "floating_origin_shift": [
+        -59.190185546875,
+        0.0,
+        309.89117431640625
+      ],
+      "gpu_tiles": 4,
+      "gpu_entities": 1993,
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "odometer_m": 0.0,
+      "peak_rss_mib": 1381.2,
+      "elapsed_s": 14.9,
+      "performance": {
+        "elapsed_s": 10.647896049999998,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 71,
+        "frames": 357,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 25,
+        "gameplay_frames": 57,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 25.260005,
+        "hitches_over_100_ms": 1,
+        "loading_frames": 300,
+        "longest_frame_ms": 1455.21776,
+        "peak_rss_mib": 1377.00390625,
+        "rss_mib": 1377.00390625,
+        "startup_longest_frame_ms": 1455.21776
+      },
+      "graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 2013.67578125,
+        "peak_process_vram_mib": 1123.078125,
+        "process_gtt_mib": 84.20703125,
+        "process_vram_mib": 1123.078125,
+        "source": "linux_drm_fdinfo"
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 112.30450093432485,
+        "gpu_busy_percent_mean": 18.637931034482758,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 6.431034482758621,
+          "0000:03:00.0": 18.637931034482758
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes"
+      },
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.2199999988079071,
+          "flake_size": 1.0,
+          "fog_density": 3.9999998989515007e-05,
+          "overcast": 0.0,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "temperature_c": 20.35708236694336,
+          "visibility_m": 20000.0,
+          "wind_mps": [
+            0.6820047497749329,
+            0.0,
+            0.27491018176078796
+          ]
+        },
+        "elapsed_s": 0.0,
+        "journey": {
+          "pace": "normal",
+          "winter": false
+        },
+        "live": false,
+        "profile": "automatic",
+        "seed": 42
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": null,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 0
+      },
+      "camera_journey": {
+        "complete": false,
+        "distance_m": 0.0,
+        "enabled": false,
+        "leg_duration_s": 20,
+        "minimum_ready_hold_s": 3,
+        "physics": "paused; only camera moves; fixed wall-time trajectory",
+        "stage": 0
+      },
+      "destination_displays": [],
+      "cab_equipment": [],
+      "train_animated_parts": 339
+    },
+    "gerrards-cross-cab": {
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 42.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [
+          -12477498.0,
+          68.51830291748047,
+          -30575626.0
+        ],
+        "rotation_xyzw": [
+          -0.11223697662353516,
+          0.5061274170875549,
+          0.066632941365242,
+          0.8525243997573853
+        ],
+        "target_world": [
+          -12477499.0,
+          65.64330291748047,
+          -30575628.0
+        ],
+        "yaw_rad": 2.6423165798187256
+      },
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "contact_shadow_steps": [],
+      "floating_origin_shift": [
+        -59.190185546875,
+        0.0,
+        309.89117431640625
+      ],
+      "gpu_tiles": 4,
+      "gpu_entities": 1993,
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "odometer_m": 0.0,
+      "peak_rss_mib": 1840.5,
+      "elapsed_s": 16.4,
+      "performance": {
+        "elapsed_s": 12.060151611000006,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 26,
+        "frame_p99_ms": 76,
+        "frames": 394,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 25,
+        "gameplay_frames": 57,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 25.27937,
+        "hitches_over_100_ms": 2,
+        "loading_frames": 337,
+        "longest_frame_ms": 1447.784698,
+        "peak_rss_mib": 1792.74609375,
+        "rss_mib": 1708.51953125,
+        "startup_longest_frame_ms": 1447.784698
+      },
+      "graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 2424.0078125,
+        "peak_process_vram_mib": 1369.8671875,
+        "process_gtt_mib": 84.20703125,
+        "process_vram_mib": 1369.8671875,
+        "source": "linux_drm_fdinfo"
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 122.24414623676478,
+        "gpu_busy_percent_mean": 16.984375,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 2.4375,
+          "0000:03:00.0": 16.984375
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes"
+      },
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.2199999988079071,
+          "flake_size": 1.0,
+          "fog_density": 3.9999998989515007e-05,
+          "overcast": 0.0,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "temperature_c": 20.35708236694336,
+          "visibility_m": 20000.0,
+          "wind_mps": [
+            0.6820047497749329,
+            0.0,
+            0.27491018176078796
+          ]
+        },
+        "elapsed_s": 0.0,
+        "journey": {
+          "pace": "normal",
+          "winter": false
+        },
+        "live": false,
+        "profile": "automatic",
+        "seed": 42
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": null,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 0
+      },
+      "camera_journey": {
+        "complete": false,
+        "distance_m": 0.0,
+        "enabled": false,
+        "leg_duration_s": 20,
+        "minimum_ready_hold_s": 3,
+        "physics": "paused; only camera moves; fixed wall-time trajectory",
+        "stage": 0
+      },
+      "destination_displays": [],
+      "cab_equipment": [],
+      "train_animated_parts": 339
+    },
+    "contact-off": {
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 24.0,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [
+          -12463399.0,
+          67.66413879394531,
+          -30571412.0
+        ],
+        "rotation_xyzw": [
+          -0.09722061455249786,
+          0.7103374600410461,
+          0.10010209679603577,
+          0.6898900866508484
+        ],
+        "target_world": [
+          -12463422.0,
+          61.0316047668457,
+          -30571412.0
+        ],
+        "yaw_rad": 1.600000023841858
+      },
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "contact_shadow_steps": [],
+      "floating_origin_shift": [
+        -297.279296875,
+        0.0,
+        102.0225830078125
+      ],
+      "gpu_tiles": 4,
+      "gpu_entities": 1884,
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "odometer_m": 0.0,
+      "peak_rss_mib": 1283.0,
+      "elapsed_s": 14.9,
+      "performance": {
+        "elapsed_s": 10.438344371000005,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 65,
+        "frames": 351,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 26,
+        "gameplay_frames": 57,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 26.042504,
+        "hitches_over_100_ms": 1,
+        "loading_frames": 294,
+        "longest_frame_ms": 1522.617698,
+        "peak_rss_mib": 1276.77734375,
+        "rss_mib": 1276.77734375,
+        "startup_longest_frame_ms": 1522.617698
+      },
+      "graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 2018.63671875,
+        "peak_process_vram_mib": 1117.70703125,
+        "process_gtt_mib": 84.20703125,
+        "process_vram_mib": 1117.70703125,
+        "source": "linux_drm_fdinfo"
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 114.11346546020269,
+        "gpu_busy_percent_mean": 16.46551724137931,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 0.0,
+          "0000:03:00.0": 16.46551724137931
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes"
+      },
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.2199999988079071,
+          "flake_size": 1.0,
+          "fog_density": 3.9999998989515007e-05,
+          "overcast": 0.0,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "temperature_c": 20.3685359954834,
+          "visibility_m": 20000.0,
+          "wind_mps": [
+            0.6820047497749329,
+            0.0,
+            0.27491018176078796
+          ]
+        },
+        "elapsed_s": 0.0,
+        "journey": {
+          "pace": "normal",
+          "winter": false
+        },
+        "live": false,
+        "profile": "automatic",
+        "seed": 42
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": null,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 0
+      },
+      "camera_journey": {
+        "complete": false,
+        "distance_m": 0.0,
+        "enabled": false,
+        "leg_duration_s": 20,
+        "minimum_ready_hold_s": 3,
+        "physics": "paused; only camera moves; fixed wall-time trajectory",
+        "stage": 0
+      },
+      "destination_displays": [],
+      "cab_equipment": [],
+      "train_animated_parts": 339
+    },
+    "contact-high": {
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 24.0,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [
+          -12463399.0,
+          67.66413879394531,
+          -30571412.0
+        ],
+        "rotation_xyzw": [
+          -0.09722062945365906,
+          0.7103374600410461,
+          0.10010211169719696,
+          0.6898900866508484
+        ],
+        "target_world": [
+          -12463422.0,
+          61.0316047668457,
+          -30571412.0
+        ],
+        "yaw_rad": 1.600000023841858
+      },
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "contact_shadow_steps": [
+        16
+      ],
+      "floating_origin_shift": [
+        -297.279296875,
+        0.0,
+        102.0225830078125
+      ],
+      "gpu_tiles": 4,
+      "gpu_entities": 1884,
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "odometer_m": 0.0,
+      "peak_rss_mib": 1249.5,
+      "elapsed_s": 14.9,
+      "performance": {
+        "elapsed_s": 10.409429479999995,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 51,
+        "frames": 352,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 26,
+        "gameplay_frames": 57,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 25.747263,
+        "hitches_over_100_ms": 1,
+        "loading_frames": 295,
+        "longest_frame_ms": 1484.056284,
+        "peak_rss_mib": 1244.57421875,
+        "rss_mib": 1244.57421875,
+        "startup_longest_frame_ms": 1484.056284
+      },
+      "graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 1889.33984375,
+        "peak_process_vram_mib": 1124.91015625,
+        "process_gtt_mib": 84.20703125,
+        "process_vram_mib": 1124.91015625,
+        "source": "linux_drm_fdinfo"
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 112.63073465955064,
+        "gpu_busy_percent_mean": 15.298245614035087,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 4.947368421052632,
+          "0000:03:00.0": 15.298245614035087
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes"
+      },
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.2199999988079071,
+          "flake_size": 1.0,
+          "fog_density": 3.9999998989515007e-05,
+          "overcast": 0.0,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "temperature_c": 20.3685359954834,
+          "visibility_m": 20000.0,
+          "wind_mps": [
+            0.6820047497749329,
+            0.0,
+            0.27491018176078796
+          ]
+        },
+        "elapsed_s": 0.0,
+        "journey": {
+          "pace": "normal",
+          "winter": false
+        },
+        "live": false,
+        "profile": "automatic",
+        "seed": 42
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": null,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 0
+      },
+      "camera_journey": {
+        "complete": false,
+        "distance_m": 0.0,
+        "enabled": false,
+        "leg_duration_s": 20,
+        "minimum_ready_hold_s": 3,
+        "physics": "paused; only camera moves; fixed wall-time trajectory",
+        "stage": 0
+      },
+      "destination_displays": [],
+      "cab_equipment": [],
+      "train_animated_parts": 339
+    },
+    "forest-far": {
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 320.0,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [
+          -12463115.0,
+          149.4654083251953,
+          -30571420.0
+        ],
+        "rotation_xyzw": [
+          -0.09722062200307846,
+          0.7103374600410461,
+          0.10010210424661636,
+          0.6898901462554932
+        ],
+        "target_world": [
+          -12463422.0,
+          61.0316047668457,
+          -30571412.0
+        ],
+        "yaw_rad": 1.600000023841858
+      },
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "contact_shadow_steps": [
+        8
+      ],
+      "floating_origin_shift": [
+        -297.279296875,
+        0.0,
+        102.0225830078125
+      ],
+      "gpu_tiles": 4,
+      "gpu_entities": 1884,
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "odometer_m": 0.0,
+      "peak_rss_mib": 1256.5,
+      "elapsed_s": 14.6,
+      "performance": {
+        "elapsed_s": 10.315137854000008,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 52,
+        "frames": 352,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 27,
+        "gameplay_frames": 57,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 26.952482,
+        "hitches_over_100_ms": 1,
+        "loading_frames": 295,
+        "longest_frame_ms": 1420.4787890000002,
+        "peak_rss_mib": 1253.0546875,
+        "rss_mib": 1253.0546875,
+        "startup_longest_frame_ms": 1420.4787890000002
+      },
+      "graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 2032.68359375,
+        "peak_process_vram_mib": 1118.6796875,
+        "process_gtt_mib": 84.20703125,
+        "process_vram_mib": 1118.6796875,
+        "source": "linux_drm_fdinfo"
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 108.09704366450357,
+        "gpu_busy_percent_mean": 17.666666666666668,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 0.0,
+          "0000:03:00.0": 17.666666666666668
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes"
+      },
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.2199999988079071,
+          "flake_size": 1.0,
+          "fog_density": 3.9999998989515007e-05,
+          "overcast": 0.0,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "temperature_c": 20.368507385253906,
+          "visibility_m": 20000.0,
+          "wind_mps": [
+            0.6820047497749329,
+            0.0,
+            0.27491018176078796
+          ]
+        },
+        "elapsed_s": 0.0,
+        "journey": {
+          "pace": "normal",
+          "winter": false
+        },
+        "live": false,
+        "profile": "automatic",
+        "seed": 42
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": null,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 0
+      },
+      "camera_journey": {
+        "complete": false,
+        "distance_m": 0.0,
+        "enabled": false,
+        "leg_duration_s": 20,
+        "minimum_ready_hold_s": 3,
+        "physics": "paused; only camera moves; fixed wall-time trajectory",
+        "stage": 0
+      },
+      "destination_displays": [],
+      "cab_equipment": [],
+      "train_animated_parts": 339
+    },
+    "bridge-low": {
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 23.927080154418945,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.06267591565847397,
+        "position_world": [
+          -12466757.0,
+          44.11437225341797,
+          -30571124.0
+        ],
+        "rotation_xyzw": [
+          -0.021829798817634583,
+          0.7170038819313049,
+          0.02247680351138115,
+          0.6963645815849304
+        ],
+        "target_world": [
+          -12466781.0,
+          42.615699768066406,
+          -30571124.0
+        ],
+        "yaw_rad": 1.600000023841858
+      },
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "contact_shadow_steps": [
+        8
+      ],
+      "floating_origin_shift": [
+        296.3870849609375,
+        0.0,
+        395.4971923828125
+      ],
+      "gpu_tiles": 4,
+      "gpu_entities": 3409,
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "odometer_m": 0.0,
+      "peak_rss_mib": 1406.4,
+      "elapsed_s": 19.9,
+      "performance": {
+        "elapsed_s": 15.323570306999986,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 66,
+        "frames": 543,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 25,
+        "gameplay_frames": 57,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 25.433592,
+        "hitches_over_100_ms": 1,
+        "loading_frames": 486,
+        "longest_frame_ms": 1456.730364,
+        "peak_rss_mib": 1390.1875,
+        "rss_mib": 1235.53125,
+        "startup_longest_frame_ms": 1456.730364
+      },
+      "graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 2038.9453125,
+        "peak_process_vram_mib": 1124.30078125,
+        "process_gtt_mib": 84.20703125,
+        "process_vram_mib": 1124.30078125,
+        "source": "linux_drm_fdinfo"
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 103.81039747258637,
+        "gpu_busy_percent_mean": 15.285714285714286,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 1.7532467532467533,
+          "0000:03:00.0": 15.285714285714286
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes"
+      },
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.2199999988079071,
+          "flake_size": 1.0,
+          "fog_density": 3.9999998989515007e-05,
+          "overcast": 0.0,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "temperature_c": 20.36928939819336,
+          "visibility_m": 20000.0,
+          "wind_mps": [
+            0.6820047497749329,
+            0.0,
+            0.27491018176078796
+          ]
+        },
+        "elapsed_s": 0.0,
+        "journey": {
+          "pace": "normal",
+          "winter": false
+        },
+        "live": false,
+        "profile": "automatic",
+        "seed": 42
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": null,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 0
+      },
+      "camera_journey": {
+        "complete": false,
+        "distance_m": 0.0,
+        "enabled": false,
+        "leg_duration_s": 20,
+        "minimum_ready_hold_s": 3,
+        "physics": "paused; only camera moves; fixed wall-time trajectory",
+        "stage": 0
+      },
+      "destination_displays": [],
+      "cab_equipment": [],
+      "train_animated_parts": 339
+    },
+    "baseline-drive": {
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 42.0,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [
+          -12463471.0,
+          72.12646484375,
+          -30571368.0
+        ],
+        "rotation_xyzw": [
+          -0.09722062200307846,
+          0.7103374600410461,
+          0.10010210424661636,
+          0.6898901462554932
+        ],
+        "target_world": [
+          -12463512.0,
+          60.519527435302734,
+          -30571366.0
+        ],
+        "yaw_rad": 1.600000023841858
+      },
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "floating_origin_shift": [
+        -297.279296875,
+        0.0,
+        102.0225830078125
+      ],
+      "gpu_tiles": 4,
+      "gpu_entities": 2056,
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "odometer_m": 100.07680822321223,
+      "peak_rss_mib": 1272.8,
+      "elapsed_s": 62.5,
+      "performance": {
+        "elapsed_s": 58.11432683100002,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 25,
+        "frames": 2251,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 25,
+        "gameplay_frames": 1955,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 37.32236399999999,
+        "hitches_over_100_ms": 1,
+        "loading_frames": 325,
+        "longest_frame_ms": 1452.6071709999999,
+        "peak_rss_mib": 1272.61328125,
+        "rss_mib": 1272.61328125,
+        "startup_longest_frame_ms": 1452.6071709999999
+      },
+      "graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 1613.07421875,
+        "peak_process_vram_mib": 1096.24609375,
+        "process_gtt_mib": 84.171875,
+        "process_vram_mib": 1096.24609375,
+        "source": "linux_drm_fdinfo"
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 96.71536292886924,
+        "gpu_busy_percent_mean": 25.242914979757085,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 30.74493927125506,
+          "0000:03:00.0": 25.242914979757085
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes"
+      },
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.2199999988079071,
+          "flake_size": 1.0,
+          "fog_density": 3.9999998989515007e-05,
+          "overcast": 0.0,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "temperature_c": 20.380916595458984,
+          "visibility_m": 20000.0,
+          "wind_mps": [
+            0.8012431263923645,
+            0.0,
+            0.36530980467796326
+          ]
+        },
+        "elapsed_s": 47.69999999999943,
+        "journey": {
+          "pace": "normal",
+          "winter": false
+        },
+        "live": false,
+        "profile": "automatic",
+        "seed": 42
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": null,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 0
+      },
+      "camera_journey": {
+        "complete": false,
+        "distance_m": 0.0,
+        "enabled": false,
+        "leg_duration_s": 20,
+        "minimum_ready_hold_s": 3,
+        "physics": "paused; only camera moves; fixed wall-time trajectory",
+        "stage": 0
+      },
+      "train_animated_parts": 339,
+      "viewer_sha256": "73e19970fd03c74e3b77d05ea5e300861802253b29c765ec3b98eb07b8151004"
+    },
+    "current-drive": {
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 42.0,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [
+          -12463471.0,
+          72.1260986328125,
+          -30571368.0
+        ],
+        "rotation_xyzw": [
+          -0.09722060710191727,
+          0.7103374600410461,
+          0.10010208934545517,
+          0.6898901462554932
+        ],
+        "target_world": [
+          -12463512.0,
+          60.519161224365234,
+          -30571366.0
+        ],
+        "yaw_rad": 1.600000023841858
+      },
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "contact_shadow_steps": [
+        8
+      ],
+      "floating_origin_shift": [
+        -297.279296875,
+        0.0,
+        102.0225830078125
+      ],
+      "gpu_tiles": 4,
+      "gpu_entities": 2056,
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "odometer_m": 100.07725034129216,
+      "peak_rss_mib": 1335.1,
+      "elapsed_s": 62.7,
+      "performance": {
+        "elapsed_s": 58.170027357,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 25,
+        "frames": 2254,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 25,
+        "gameplay_frames": 1955,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 35.459953000000006,
+        "hitches_over_100_ms": 1,
+        "loading_frames": 328,
+        "longest_frame_ms": 1453.912247,
+        "peak_rss_mib": 1327.890625,
+        "rss_mib": 1327.890625,
+        "startup_longest_frame_ms": 1453.912247
+      },
+      "graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 1615.84765625,
+        "peak_process_vram_mib": 1099.01953125,
+        "process_gtt_mib": 84.171875,
+        "process_vram_mib": 1099.01953125,
+        "source": "linux_drm_fdinfo"
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 90.94557044111997,
+        "gpu_busy_percent_mean": 24.955465587044536,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 40.30769230769231,
+          "0000:03:00.0": 24.955465587044536
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes"
+      },
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.2199999988079071,
+          "flake_size": 1.0,
+          "fog_density": 3.9999998989515007e-05,
+          "overcast": 0.0,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "temperature_c": 20.380916595458984,
+          "visibility_m": 20000.0,
+          "wind_mps": [
+            0.8012431263923645,
+            0.0,
+            0.36530980467796326
+          ]
+        },
+        "elapsed_s": 47.69999999999943,
+        "journey": {
+          "pace": "normal",
+          "winter": false
+        },
+        "live": false,
+        "profile": "automatic",
+        "seed": 42
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": null,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 0
+      },
+      "camera_journey": {
+        "complete": false,
+        "distance_m": 0.0,
+        "enabled": false,
+        "leg_duration_s": 20,
+        "minimum_ready_hold_s": 3,
+        "physics": "paused; only camera moves; fixed wall-time trajectory",
+        "stage": 0
+      },
+      "destination_displays": [],
+      "cab_equipment": [],
+      "equipment_poses": [],
+      "train_animated_parts": 339,
+      "viewer_sha256": "ba4c7d35aad553fde1a54877b734593604aa042e70b2e14e9a0f8636087fa3e5"
+    },
+    "lab-equipment-report": {
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 26.0,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.10000000149011612,
+        "position_world": [
+          95.85907745361328,
+          2.8956689834594727,
+          -0.055389404296875
+        ],
+        "rotation_xyzw": [
+          -0.03482082486152649,
+          0.7164595723152161,
+          0.035852864384651184,
+          0.6958360075950623
+        ],
+        "target_world": [
+          70.0,
+          0.29999998211860657,
+          0.7000045776367188
+        ],
+        "yaw_rad": 1.600000023841858
+      },
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "contact_shadow_steps": [
+        8
+      ],
+      "floating_origin_shift": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "gpu_tiles": 1,
+      "gpu_entities": 3,
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "odometer_m": 0.0,
+      "peak_rss_mib": 428.9,
+      "elapsed_s": 43.3,
+      "performance": {
+        "elapsed_s": 40.005235302,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 25,
+        "frames": 1591,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 25,
+        "gameplay_frames": 1577,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 26.4857,
+        "hitches_over_100_ms": 0,
+        "loading_frames": 14,
+        "longest_frame_ms": 46.212942,
+        "peak_rss_mib": 425.27734375,
+        "rss_mib": 425.27734375,
+        "startup_longest_frame_ms": 46.212942
+      },
+      "graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 1078.58203125,
+        "peak_process_vram_mib": 561.7578125,
+        "process_gtt_mib": 84.171875,
+        "process_vram_mib": 561.7578125,
+        "source": "linux_drm_fdinfo"
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 45.272330596037115,
+        "gpu_busy_percent_mean": 10.264705882352942,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 0.0,
+          "0000:03:00.0": 10.264705882352942
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes"
+      },
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.2199999988079071,
+          "flake_size": 1.0,
+          "fog_density": 3.9999998989515007e-05,
+          "overcast": 0.0,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "temperature_c": 16.793331146240234,
+          "visibility_m": 20000.0,
+          "wind_mps": [
+            0.8021538853645325,
+            0.0,
+            0.2858825922012329
+          ]
+        },
+        "elapsed_s": 6.0499999999999865,
+        "journey": {
+          "pace": "normal",
+          "winter": false
+        },
+        "live": false,
+        "profile": "automatic",
+        "seed": 42
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": null,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 0
+      },
+      "camera_journey": {
+        "complete": false,
+        "distance_m": 0.0,
+        "enabled": false,
+        "leg_duration_s": 20,
+        "minimum_ready_hold_s": 3,
+        "physics": "paused; only camera moves; fixed wall-time trajectory",
+        "stage": 0
+      },
+      "destination_displays": [
+        "yard_b\n→ Laboratorio de cabina y carteles"
+      ],
+      "cab_equipment": [
+        {
+          "config": {
+            "cab_door": true,
+            "left_window": true,
+            "right_window": true,
+            "vehicle": 0,
+            "washer_capacity_l": 2.0,
+            "washer_flow_lps": 0.02
+          },
+          "door": 1.0,
+          "door_target": true,
+          "pump_command": true,
+          "spraying": true,
+          "used_l": 0.1210000000000001,
+          "water_l": 1.8790000000000133,
+          "window_targets": [
+            true,
+            true
+          ],
+          "windows": [
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "equipment_poses": [
+        {
+          "key": 10.0,
+          "kind": "LeftWindow",
+          "rotation": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "translation": [
+            0.0,
+            -0.75,
+            0.0
+          ]
+        },
+        {
+          "key": 10.0,
+          "kind": "RightWindow",
+          "rotation": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "translation": [
+            0.0,
+            -0.75,
+            0.0
+          ]
+        },
+        {
+          "key": 10.0,
+          "kind": "CabDoor",
+          "rotation": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "translation": [
+            0.0,
+            0.0,
+            -0.8999999761581421
+          ]
+        },
+        {
+          "key": 0.0,
+          "kind": "Buffer",
+          "rotation": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "translation": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "key": 0.0,
+          "kind": "LeftWindow",
+          "rotation": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "translation": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "key": 0.0,
+          "kind": "RightWindow",
+          "rotation": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "translation": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "key": 0.0,
+          "kind": "CabDoor",
+          "rotation": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "translation": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "key": 0.0,
+          "kind": "Buffer",
+          "rotation": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "translation": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "train_animated_parts": 8,
+      "formation_validation": {
+        "cars": 2,
+        "maximum_spacing_error_m": 0.0009999826302760084,
+        "tolerance_m": 2.0,
+        "scope": "car centres versus path offsets; includes curve chord shortening"
+      },
+      "report_package": {
+        "files": [
+          "diagnostic.json",
+          "report.txt",
+          "screenshot.png"
+        ],
+        "diagnostic": {
+          "schema": 1,
+          "application": "openrailsrs",
+          "version": "0.1.0",
+          "binary_sha256": "ba4c7d35aad553fde1a54877b734593604aa042e70b2e14e9a0f8636087fa3e5",
+          "bevy": "0.19.1",
+          "openrails_reference": "1.6.1",
+          "renderer": "Automático",
+          "view_distance_m": 450.0,
+          "weather": "Según el clima elegido",
+          "weather_budget": 8192,
+          "physics": {
+            "seconds": 5.04999999999999,
+            "distance_m": 0.0,
+            "speed_mps": 0.0,
+            "throttle": 0.0,
+            "brake": 0.0,
+            "reverser": 0.5,
+            "mass_kg": 69999.9785173,
+            "brake_pipe_bar": 5.0,
+            "brake_cylinder_bar": 0.0,
+            "main_power": true,
+            "doors": "Closed",
+            "stops_served": 0,
+            "stops_missed": 0
+          },
+          "missing_files": []
+        }
+      },
+      "viewer_sha256": "ba4c7d35aad553fde1a54877b734593604aa042e70b2e14e9a0f8636087fa3e5"
+    },
+    "edited-rain-cab": {
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 42.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [
+          -12466849.0,
+          45.48408126831055,
+          -30571192.0
+        ],
+        "rotation_xyzw": [
+          -0.1214831992983818,
+          0.3706181049346924,
+          0.048900049179792404,
+          0.919506847858429
+        ],
+        "target_world": [
+          -12466849.0,
+          42.615699768066406,
+          -30571194.0
+        ],
+        "yaw_rad": 2.337066888809204
+      },
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "contact_shadow_steps": [],
+      "floating_origin_shift": [
+        296.3870849609375,
+        0.0,
+        395.4971923828125
+      ],
+      "gpu_tiles": 4,
+      "gpu_entities": 3543,
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "odometer_m": 100.14136896060259,
+      "peak_rss_mib": 1881.2,
+      "elapsed_s": 49.8,
+      "performance": {
+        "elapsed_s": 45.468344993000024,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 48,
+        "frames": 1722,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 25,
+        "gameplay_frames": 1160,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 50.809568,
+        "hitches_over_100_ms": 2,
+        "loading_frames": 594,
+        "longest_frame_ms": 1442.206015,
+        "peak_rss_mib": 1881.22265625,
+        "rss_mib": 1867.6953125,
+        "startup_longest_frame_ms": 1442.206015
+      },
+      "graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 1908.28515625,
+        "peak_process_vram_mib": 1374.2421875,
+        "process_gtt_mib": 84.20703125,
+        "process_vram_mib": 1374.2421875,
+        "source": "linux_drm_fdinfo"
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 104.84673899652906,
+        "gpu_busy_percent_mean": 26.091370558375633,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 0.0,
+          "0000:03:00.0": 26.091370558375633
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes"
+      },
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.937999963760376,
+          "flake_size": 0.699999988079071,
+          "fog_density": 0.0005050000036135316,
+          "overcast": 0.937999963760376,
+          "phase": "calm",
+          "rain": 0.8500000238418579,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "temperature_c": 17.376468658447266,
+          "visibility_m": 4350.0,
+          "wind_mps": [
+            2.765597105026245,
+            0.0,
+            0.921865701675415
+          ]
+        },
+        "elapsed_s": 27.650000000000258,
+        "journey": {
+          "pace": "normal",
+          "winter": false
+        },
+        "live": false,
+        "profile": "edited",
+        "seed": 42
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 2048,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 1740,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 4096,
+        "shelter_refreshes": 51
+      },
+      "camera_journey": {
+        "complete": false,
+        "distance_m": 0.0,
+        "enabled": false,
+        "leg_duration_s": 20,
+        "minimum_ready_hold_s": 3,
+        "physics": "paused; only camera moves; fixed wall-time trajectory",
+        "stage": 0
+      },
+      "destination_displays": [],
+      "cab_equipment": [],
+      "equipment_poses": [],
+      "train_animated_parts": 339,
+      "viewer_sha256": "ba4c7d35aad553fde1a54877b734593604aa042e70b2e14e9a0f8636087fa3e5"
+    },
+    "edited-snow-exterior": {
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 48.0,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [
+          -12466804.0,
+          55.88086700439453,
+          -30571196.0
+        ],
+        "rotation_xyzw": [
+          -0.09722062945365906,
+          0.7103374600410461,
+          0.10010211169719696,
+          0.6898900866508484
+        ],
+        "target_world": [
+          -12466850.0,
+          42.61579513549805,
+          -30571194.0
+        ],
+        "yaw_rad": 1.600000023841858
+      },
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "contact_shadow_steps": [
+        8
+      ],
+      "floating_origin_shift": [
+        67.38755798339844,
+        0.0,
+        217.3094482421875
+      ],
+      "gpu_tiles": 4,
+      "gpu_entities": 6560,
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "odometer_m": 100.13017429538102,
+      "peak_rss_mib": 1752.1,
+      "elapsed_s": 112.4,
+      "performance": {
+        "elapsed_s": 107.89355357200026,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 43,
+        "frame_p99_ms": 61,
+        "frames": 3887,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 43,
+        "gameplay_frame_p99_ms": 54,
+        "gameplay_frames": 3403,
+        "gameplay_hitches_over_100_ms": 4,
+        "gameplay_longest_frame_ms": 203.587789,
+        "hitches_over_100_ms": 5,
+        "loading_frames": 2411,
+        "longest_frame_ms": 1554.294965,
+        "peak_rss_mib": 1752.0546875,
+        "rss_mib": 1647.58984375,
+        "startup_longest_frame_ms": 1554.294965
+      },
+      "graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 2143.75390625,
+        "peak_process_vram_mib": 1626.921875,
+        "process_gtt_mib": 84.20703125,
+        "process_vram_mib": 1626.921875,
+        "source": "linux_drm_fdinfo"
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 116.65452750042012,
+        "gpu_busy_percent_mean": 19.615730337078652,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 2.8741573033707866,
+          "0000:03:00.0": 19.615730337078652
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes"
+      },
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.8380000591278076,
+          "flake_size": 1.252500057220459,
+          "fog_density": 0.0006949999951757491,
+          "overcast": 0.8380000591278076,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 0.8500000238418579,
+          "snow_cover": 0.8500000238418579,
+          "storm": 0.0,
+          "temperature_c": -1.0,
+          "visibility_m": 800.0,
+          "wind_mps": [
+            2.765597105026245,
+            0.0,
+            0.921865701675415
+          ]
+        },
+        "elapsed_s": 27.650000000000258,
+        "journey": {
+          "pace": "normal",
+          "winter": false
+        },
+        "live": false,
+        "profile": "edited",
+        "seed": 42
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 2048,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 1740,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 4096,
+        "shelter_refreshes": 1633
+      },
+      "camera_journey": {
+        "complete": true,
+        "distance_m": 8293.978515625,
+        "enabled": true,
+        "leg_duration_s": 20,
+        "minimum_ready_hold_s": 3,
+        "physics": "paused; only camera moves; fixed wall-time trajectory",
+        "stage": 4
+      },
+      "destination_displays": [],
+      "cab_equipment": [],
+      "equipment_poses": [],
+      "train_animated_parts": 339,
+      "viewer_sha256": "ba4c7d35aad553fde1a54877b734593604aa042e70b2e14e9a0f8636087fa3e5"
+    },
+    "edited-fog-cab": {
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 42.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [
+          -12466849.0,
+          45.48424530029297,
+          -30571192.0
+        ],
+        "rotation_xyzw": [
+          -0.12148142606019974,
+          0.3706178367137909,
+          0.04890213906764984,
+          0.9195070862770081
+        ],
+        "target_world": [
+          -12466849.0,
+          42.615699768066406,
+          -30571194.0
+        ],
+        "yaw_rad": 2.337066888809204
+      },
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "contact_shadow_steps": [],
+      "floating_origin_shift": [
+        296.3870849609375,
+        0.0,
+        395.4971923828125
+      ],
+      "gpu_tiles": 4,
+      "gpu_entities": 3543,
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "odometer_m": 100.13756370000814,
+      "peak_rss_mib": 1853.0,
+      "elapsed_s": 49.8,
+      "performance": {
+        "elapsed_s": 45.358155858999986,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 50,
+        "frames": 1711,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 25,
+        "gameplay_frames": 1161,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 28.815877999999998,
+        "hitches_over_100_ms": 2,
+        "loading_frames": 582,
+        "longest_frame_ms": 1514.746326,
+        "peak_rss_mib": 1707.734375,
+        "rss_mib": 1640.8359375,
+        "startup_longest_frame_ms": 1514.746326
+      },
+      "graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 1852.50390625,
+        "peak_process_vram_mib": 1335.67578125,
+        "process_gtt_mib": 84.171875,
+        "process_vram_mib": 1335.67578125,
+        "source": "linux_drm_fdinfo"
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 101.8560521368252,
+        "gpu_busy_percent_mean": 27.908629441624367,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 8.192893401015228,
+          "0000:03:00.0": 27.908629441624367
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes"
+      },
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.800000011920929,
+          "flake_size": 0.699999988079071,
+          "fog_density": 0.05525600165128708,
+          "overcast": 0.800000011920929,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 0.0,
+          "snow_cover": 0.0,
+          "storm": 0.0,
+          "temperature_c": 20.376468658447266,
+          "visibility_m": 852.0,
+          "wind_mps": [
+            2.765597105026245,
+            0.0,
+            0.921865701675415
+          ]
+        },
+        "elapsed_s": 27.650000000000258,
+        "journey": {
+          "pace": "normal",
+          "winter": false
+        },
+        "live": false,
+        "profile": "edited",
+        "seed": 42
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": null,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 0
+      },
+      "camera_journey": {
+        "complete": false,
+        "distance_m": 0.0,
+        "enabled": false,
+        "leg_duration_s": 20,
+        "minimum_ready_hold_s": 3,
+        "physics": "paused; only camera moves; fixed wall-time trajectory",
+        "stage": 0
+      },
+      "destination_displays": [],
+      "cab_equipment": [],
+      "equipment_poses": [],
+      "train_animated_parts": 339,
+      "viewer_sha256": "ba4c7d35aad553fde1a54877b734593604aa042e70b2e14e9a0f8636087fa3e5"
+    }
+  },
+  "images": {
+    "northolt-exterior.png": {
+      "sha256": "7ea7898e666d3d8bcfd4f84b9d9ae6c04bbad3f32e735a2a3d7409775a033b65",
+      "bytes": 1366456
+    },
+    "south-ruislip-exterior.png": {
+      "sha256": "0079e0ceadb40dfd45f6b1c1e7ae3ba0029febb5c4e5a96c75b4b5ee0b995578",
+      "bytes": 1379825
+    },
+    "gerrards-cross-exterior.png": {
+      "sha256": "cac8914475b25156741f75fd384d1d45f543b562f098759bac5ba1e7a15691ab",
+      "bytes": 1432020
+    },
+    "rain-cab.png": {
+      "sha256": "d2adddef13e72f62e1128a88dbe5c0a6d7e4bbb39e616ed84f1ebcedab311ab4",
+      "bytes": 792677
+    },
+    "snow-exterior.png": {
+      "sha256": "edcf75b5e9bc2514b8decd6b379cc0a3938c0eb95362bac18607eb025ee089e4",
+      "bytes": 1257145
+    },
+    "fog-cab.png": {
+      "sha256": "0f5b0507c9f64f43fc38127e911550ce89007eaf32be9b3f21c0a6cd56f54f30",
+      "bytes": 628641
+    },
+    "report-without-ui.png": {
+      "sha256": "6b4f5448c16e33c4b04ddbad2e329b787dc5257ef3eb1a74a19e87cc24ffce8b",
+      "bytes": 412551
+    }
+  },
+  "menus": [
+    {
+      "page": "practice",
+      "width": 800,
+      "height": 600,
+      "scale": 1.0,
+      "elapsed_s": 9.020888532000754,
+      "peak_rss_mib": 473.0390625,
+      "exit_code": 0
+    },
+    {
+      "page": "weather-editor",
+      "width": 800,
+      "height": 600,
+      "scale": 1.0,
+      "elapsed_s": 9.019705793998583,
+      "peak_rss_mib": 478.734375,
+      "exit_code": 0
+    },
+    {
+      "page": "vehicle-profile",
+      "width": 800,
+      "height": 600,
+      "scale": 1.0,
+      "elapsed_s": 8.920099938999556,
+      "peak_rss_mib": 473.41796875,
+      "exit_code": 0
+    },
+    {
+      "page": "library-tools",
+      "width": 800,
+      "height": 600,
+      "scale": 1.0,
+      "elapsed_s": 8.919184063999637,
+      "peak_rss_mib": 467.015625,
+      "exit_code": 0
+    },
+    {
+      "page": "bug-report",
+      "width": 800,
+      "height": 600,
+      "scale": 1.0,
+      "elapsed_s": 9.019412126999669,
+      "peak_rss_mib": 462.4921875,
+      "exit_code": 0
+    },
+    {
+      "page": "train",
+      "width": 800,
+      "height": 600,
+      "scale": 1.0,
+      "elapsed_s": 9.020995629000026,
+      "peak_rss_mib": 489.30078125,
+      "exit_code": 0
+    },
+    {
+      "page": "weather",
+      "width": 800,
+      "height": 600,
+      "scale": 1.0,
+      "elapsed_s": 9.020623702999728,
+      "peak_rss_mib": 486.44140625,
+      "exit_code": 0
+    }
+  ],
+  "shader_regression": {
+    "single": {
+      "result": "passed",
+      "comparison": [
+        "WORLD region 0 silhouette overlap: 1.000000 (minimum 0.98)",
+        "WORLD region 1 silhouette overlap: 1.000000 (minimum 0.98)",
+        "WORLD region 2 silhouette overlap: 1.000000 (minimum 0.98)",
+        "WORLD matched-pixel mean RGB difference: 6.904850 (maximum 25)"
+      ]
+    },
+    "zero-moon": {
+      "result": "passed",
+      "comparison": [
+        "WORLD region 0 silhouette overlap: 1.000000 (minimum 0.98)",
+        "WORLD region 1 silhouette overlap: 1.000000 (minimum 0.98)",
+        "WORLD region 2 silhouette overlap: 1.000000 (minimum 0.98)",
+        "WORLD matched-pixel mean RGB difference: 6.904850 (maximum 25)"
+      ]
+    },
+    "two-lights": {
+      "result": "passed",
+      "comparison": [
+        "WORLD region 0 silhouette overlap: 1.000000 (minimum 0.98)",
+        "WORLD region 1 silhouette overlap: 1.000000 (minimum 0.98)",
+        "WORLD region 2 silhouette overlap: 1.000000 (minimum 0.98)",
+        "WORLD matched-pixel mean RGB difference: 6.749501 (maximum 25)"
+      ]
+    },
+    "smoke": {
+      "result": "passed",
+      "golden": "docs/fixtures/visual/smoke_orbit.png",
+      "tolerance_unchanged": true
+    }
+  },
+  "performance": {
+    "reference_commit": "4520fe2054b84eccad85f0218d153ed112ae3164",
+    "reference_viewer_sha256": "73e19970fd03c74e3b77d05ea5e300861802253b29c765ec3b98eb07b8151004",
+    "drive_cases": {
+      "baseline-drive": {
+        "camera": {
+          "aspect_ratio": 1.7777777910232544,
+          "distance_m": 42.0,
+          "fov_y_rad": 0.7853981852531433,
+          "indirect_drawing": false,
+          "pitch_rad": 0.2800000011920929,
+          "position_world": [
+            -12463471.0,
+            72.12646484375,
+            -30571368.0
+          ],
+          "rotation_xyzw": [
+            -0.09722062200307846,
+            0.7103374600410461,
+            0.10010210424661636,
+            0.6898901462554932
+          ],
+          "target_world": [
+            -12463512.0,
+            60.519527435302734,
+            -30571366.0
+          ],
+          "yaw_rad": 1.600000023841858
+        },
+        "renderer": {
+          "backend": "Vulkan",
+          "device_type": "DiscreteGpu",
+          "hardware": true,
+          "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+        },
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "floating_origin_shift": [
+          -297.279296875,
+          0.0,
+          102.0225830078125
+        ],
+        "gpu_tiles": 4,
+        "gpu_entities": 2056,
+        "pending_gpu_uploads": 0,
+        "pending_terrain_tiles": 0,
+        "unactivated_near_shapes": 0,
+        "odometer_m": 100.07680822321223,
+        "peak_rss_mib": 1272.8,
+        "elapsed_s": 62.5,
+        "performance": {
+          "elapsed_s": 58.11432683100002,
+          "frame_p50_ms": 25,
+          "frame_p95_ms": 25,
+          "frame_p99_ms": 25,
+          "frames": 2251,
+          "gameplay_frame_p50_ms": 25,
+          "gameplay_frame_p95_ms": 25,
+          "gameplay_frame_p99_ms": 25,
+          "gameplay_frames": 1955,
+          "gameplay_hitches_over_100_ms": 0,
+          "gameplay_longest_frame_ms": 37.32236399999999,
+          "hitches_over_100_ms": 1,
+          "loading_frames": 325,
+          "longest_frame_ms": 1452.6071709999999,
+          "peak_rss_mib": 1272.61328125,
+          "rss_mib": 1272.61328125,
+          "startup_longest_frame_ms": 1452.6071709999999
+        },
+        "graphics_memory": {
+          "device_total_mib": 8688.0,
+          "device_used_mib": 1613.07421875,
+          "peak_process_vram_mib": 1096.24609375,
+          "process_gtt_mib": 84.171875,
+          "process_vram_mib": 1096.24609375,
+          "source": "linux_drm_fdinfo"
+        },
+        "host_usage": {
+          "cpu_percent_one_core": 96.71536292886924,
+          "gpu_busy_percent_mean": 25.242914979757085,
+          "selected_gpu_pci": "0000:03:00.0",
+          "gpu_busy_percent_by_device": {
+            "0000:0e:00.0": 30.74493927125506,
+            "0000:03:00.0": 25.242914979757085
+          },
+          "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes"
+        },
+        "weather_state": {
+          "atmosphere": {
+            "cloud_cover": 0.2199999988079071,
+            "flake_size": 1.0,
+            "fog_density": 3.9999998989515007e-05,
+            "overcast": 0.0,
+            "phase": "calm",
+            "rain": 0.0,
+            "snow": 0.0,
+            "snow_cover": 0.0,
+            "storm": 0.0,
+            "temperature_c": 20.380916595458984,
+            "visibility_m": 20000.0,
+            "wind_mps": [
+              0.8012431263923645,
+              0.0,
+              0.36530980467796326
+            ]
+          },
+          "elapsed_s": 47.69999999999943,
+          "journey": {
+            "pace": "normal",
+            "winter": false
+          },
+          "live": false,
+          "profile": "automatic",
+          "seed": 42
+        },
+        "weather_particles": {
+          "cpu_mesh_updates": 0,
+          "cpu_particles": 0,
+          "execution": "auto",
+          "gpu_backend": null,
+          "gpu_capacity": 0,
+          "gpu_mesh_updates": 0,
+          "gpu_particles": 0,
+          "gpu_seed_initializations": 0,
+          "gpu_simulation_delta_s": null,
+          "quality_level": 0,
+          "requested": "auto",
+          "seed_upload_capacity": 2048,
+          "shelter_refreshes": 0
+        },
+        "camera_journey": {
+          "complete": false,
+          "distance_m": 0.0,
+          "enabled": false,
+          "leg_duration_s": 20,
+          "minimum_ready_hold_s": 3,
+          "physics": "paused; only camera moves; fixed wall-time trajectory",
+          "stage": 0
+        },
+        "train_animated_parts": 339,
+        "viewer_sha256": "73e19970fd03c74e3b77d05ea5e300861802253b29c765ec3b98eb07b8151004"
+      },
+      "current-drive": {
+        "camera": {
+          "aspect_ratio": 1.7777777910232544,
+          "distance_m": 42.0,
+          "fov_y_rad": 0.7853981852531433,
+          "indirect_drawing": false,
+          "pitch_rad": 0.2800000011920929,
+          "position_world": [
+            -12463471.0,
+            72.1260986328125,
+            -30571368.0
+          ],
+          "rotation_xyzw": [
+            -0.09722060710191727,
+            0.7103374600410461,
+            0.10010208934545517,
+            0.6898901462554932
+          ],
+          "target_world": [
+            -12463512.0,
+            60.519161224365234,
+            -30571366.0
+          ],
+          "yaw_rad": 1.600000023841858
+        },
+        "renderer": {
+          "backend": "Vulkan",
+          "device_type": "DiscreteGpu",
+          "hardware": true,
+          "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+        },
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "contact_shadow_steps": [
+          8
+        ],
+        "floating_origin_shift": [
+          -297.279296875,
+          0.0,
+          102.0225830078125
+        ],
+        "gpu_tiles": 4,
+        "gpu_entities": 2056,
+        "pending_gpu_uploads": 0,
+        "pending_terrain_tiles": 0,
+        "unactivated_near_shapes": 0,
+        "odometer_m": 100.07725034129216,
+        "peak_rss_mib": 1335.1,
+        "elapsed_s": 62.7,
+        "performance": {
+          "elapsed_s": 58.170027357,
+          "frame_p50_ms": 25,
+          "frame_p95_ms": 25,
+          "frame_p99_ms": 25,
+          "frames": 2254,
+          "gameplay_frame_p50_ms": 25,
+          "gameplay_frame_p95_ms": 25,
+          "gameplay_frame_p99_ms": 25,
+          "gameplay_frames": 1955,
+          "gameplay_hitches_over_100_ms": 0,
+          "gameplay_longest_frame_ms": 35.459953000000006,
+          "hitches_over_100_ms": 1,
+          "loading_frames": 328,
+          "longest_frame_ms": 1453.912247,
+          "peak_rss_mib": 1327.890625,
+          "rss_mib": 1327.890625,
+          "startup_longest_frame_ms": 1453.912247
+        },
+        "graphics_memory": {
+          "device_total_mib": 8688.0,
+          "device_used_mib": 1615.84765625,
+          "peak_process_vram_mib": 1099.01953125,
+          "process_gtt_mib": 84.171875,
+          "process_vram_mib": 1099.01953125,
+          "source": "linux_drm_fdinfo"
+        },
+        "host_usage": {
+          "cpu_percent_one_core": 90.94557044111997,
+          "gpu_busy_percent_mean": 24.955465587044536,
+          "selected_gpu_pci": "0000:03:00.0",
+          "gpu_busy_percent_by_device": {
+            "0000:0e:00.0": 40.30769230769231,
+            "0000:03:00.0": 24.955465587044536
+          },
+          "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes"
+        },
+        "weather_state": {
+          "atmosphere": {
+            "cloud_cover": 0.2199999988079071,
+            "flake_size": 1.0,
+            "fog_density": 3.9999998989515007e-05,
+            "overcast": 0.0,
+            "phase": "calm",
+            "rain": 0.0,
+            "snow": 0.0,
+            "snow_cover": 0.0,
+            "storm": 0.0,
+            "temperature_c": 20.380916595458984,
+            "visibility_m": 20000.0,
+            "wind_mps": [
+              0.8012431263923645,
+              0.0,
+              0.36530980467796326
+            ]
+          },
+          "elapsed_s": 47.69999999999943,
+          "journey": {
+            "pace": "normal",
+            "winter": false
+          },
+          "live": false,
+          "profile": "automatic",
+          "seed": 42
+        },
+        "weather_particles": {
+          "cpu_mesh_updates": 0,
+          "cpu_particles": 0,
+          "execution": "auto",
+          "gpu_backend": null,
+          "gpu_capacity": 0,
+          "gpu_mesh_updates": 0,
+          "gpu_particles": 0,
+          "gpu_seed_initializations": 0,
+          "gpu_simulation_delta_s": null,
+          "quality_level": 0,
+          "requested": "auto",
+          "seed_upload_capacity": 2048,
+          "shelter_refreshes": 0
+        },
+        "camera_journey": {
+          "complete": false,
+          "distance_m": 0.0,
+          "enabled": false,
+          "leg_duration_s": 20,
+          "minimum_ready_hold_s": 3,
+          "physics": "paused; only camera moves; fixed wall-time trajectory",
+          "stage": 0
+        },
+        "destination_displays": [],
+        "cab_equipment": [],
+        "equipment_poses": [],
+        "train_animated_parts": 339,
+        "viewer_sha256": "ba4c7d35aad553fde1a54877b734593604aa042e70b2e14e9a0f8636087fa3e5"
+      }
+    },
+    "audit_reference": [
+      {
+        "elapsed_ms": 8292.709362,
+        "formations": 188,
+        "player_ready": 153,
+        "round": "cold"
+      },
+      {
+        "elapsed_ms": 8419.499473,
+        "formations": 188,
+        "player_ready": 153,
+        "round": "explicit_reaudit"
+      }
+    ],
+    "audit_candidate": [
+      {
+        "elapsed_ms": 14422.180465,
+        "formations": 188,
+        "parsed_cabs": 78,
+        "parsed_shapes": 367,
+        "parsed_stocks": 467,
+        "player_ready": 153,
+        "reused_cabs": 12,
+        "reused_shapes": 106,
+        "reused_stocks": 1545,
+        "round": "cold"
+      },
+      {
+        "elapsed_ms": 5089.124618999999,
+        "formations": 188,
+        "parsed_cabs": 0,
+        "parsed_shapes": 0,
+        "parsed_stocks": 0,
+        "player_ready": 153,
+        "reused_cabs": 0,
+        "reused_shapes": 0,
+        "reused_stocks": 2012,
+        "round": "warm"
+      }
+    ],
+    "audit_scope": "Same 188 installed formations. Reference auditor from the reference commit, recreated for explicit re-audit as its menu worker did. Candidate retains dependency cache; the warm round is equivalent to explicit re-audit. Does not compare a stale reference cache with a validated candidate. Cold strong hashing costs more.",
+    "menu_switch_ms": [
+      11.794,
+      21.585,
+      14.255,
+      17.376,
+      15.359,
+      16.786
+    ],
+    "conditions": {
+      "window_px": [
+        1280,
+        720
+      ],
+      "seed": 42,
+      "date": "2000-01-21",
+      "weather": "clear",
+      "follow": "orbit",
+      "view_radius_m": 450,
+      "target_odometer_m": 100,
+      "speed_mul": 1,
+      "reference_contact_steps": 0,
+      "candidate_contact_steps": 8,
+      "frame_profile": "40 fps private Weston; this is not maximum throughput",
+      "limitations": "One paired drive; startup and gameplay counters are separate. CPU percentage covers the full launch; device busy includes compositor and other processes. RAM/VRAM are residency measurements, not a sum. Additional features may increase resident memory."
+    }
+  },
+  "security": {
+    "confirmed_findings_fixed": 2,
+    "tests": [
+      "shared_backup_rejects_malformed_weather_before_writing_any_save",
+      "removal_is_reversible_and_rejects_unmanaged_or_overlapping_destination"
+    ],
+    "scope": "Security Review of the batch; malformed saved player options rejected and recovery metadata stored outside author files."
+  }
+}

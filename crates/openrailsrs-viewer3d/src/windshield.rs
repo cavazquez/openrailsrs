@@ -97,10 +97,11 @@ fn sync_windshield(
         wipe.last_wipe_s = Some(clock);
     }
     let visible = (*follow == CameraFollowMode::DriverCam || follow.is_cab2d())
-        && matches!(
-            weather.weather,
-            PlayerWeather::Rain | PlayerWeather::Snow | PlayerWeather::Storm
-        );
+        && (live.session.cab_equipment().is_some_and(|c| c.spraying)
+            || matches!(
+                weather.weather,
+                PlayerWeather::Rain | PlayerWeather::Snow | PlayerWeather::Storm
+            ));
     for (e, mut camera, projection, view, camera_transform, current) in &mut cameras {
         // Sample the resolved main-pass depth, without introducing a separate
         // prepass that would use the wrong alpha bindings for original materials.
@@ -185,9 +186,18 @@ fn sync_windshield(
         let settings = WindshieldSettings {
             time_s: clock as f32,
             rain: if *follow == CameraFollowMode::DriverCam || follow.is_cab2d() {
-                atmosphere.as_ref().map_or(f32::from(visible), |s| {
-                    s.atmosphere.rain.max(s.atmosphere.snow)
-                })
+                atmosphere
+                    .as_ref()
+                    .map_or(f32::from(visible), |s| {
+                        s.atmosphere.rain.max(s.atmosphere.snow)
+                    })
+                    .max(
+                        if live.session.cab_equipment().is_some_and(|c| c.spraying) {
+                            0.9
+                        } else {
+                            0.
+                        },
+                    )
             } else {
                 0.0
             },

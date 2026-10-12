@@ -26,11 +26,50 @@ pub fn water_surface_y(
         .unwrap_or(focus.height_origin)
 }
 
-#[derive(Component, Clone, Copy, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+pub struct WaterFlow {
+    pub heading_deg: f32,
+    pub speed_mps: f32,
+    pub waves: bool,
+}
+impl Default for WaterFlow {
+    fn default() -> Self {
+        Self {
+            heading_deg: 0.,
+            speed_mps: 0.25,
+            waves: true,
+        }
+    }
+}
+impl WaterFlow {
+    pub fn valid(&self) -> bool {
+        self.heading_deg.is_finite()
+            && (0.0..360.).contains(&self.heading_deg)
+            && self.speed_mps.is_finite()
+            && (0.0..=5.).contains(&self.speed_mps)
+    }
+    pub fn uv_offset(&self, time: f64) -> Vec2 {
+        let radians = f64::from(self.heading_deg).to_radians();
+        let flow = f64::from(self.speed_mps) * time / 64.;
+        let ripple = if self.waves {
+            (time * 1.65).sin() * 0.0015
+        } else {
+            0.
+        };
+        Vec2::new(
+            (radians.cos() * flow + ripple).rem_euclid(1.) as f32,
+            (radians.sin() * flow + ripple).rem_euclid(1.) as f32,
+        )
+    }
+}
+#[derive(Component, Clone, Debug, Default)]
 pub(crate) struct WaterSurface {
+    pub key: String,
+    uv_base: Vec2,
+    uv_scale: Vec2,
     /// Surface height in render space (after [`crate::world::RouteFocus::to_render_surface`]).
     render_base_y: f32,
-    phase: f32,
     is_reflection: bool,
 }
 
@@ -47,10 +86,12 @@ fn water_material(
     materials: &mut Assets<StandardMaterial>,
     texture: Option<Handle<Image>>,
     surface_y: f32,
+    normal: Handle<Image>,
 ) -> Handle<StandardMaterial> {
     materials.add(StandardMaterial {
         base_color: COLOR_WATER,
         base_color_texture: texture,
+        normal_map_texture: Some(normal),
         emissive: LinearRgba::from(Color::srgb(0.08, 0.24, 0.42)) * 0.45,
         perceptual_roughness: 0.06,
         metallic: 0.05,
@@ -133,6 +174,7 @@ pub fn spawn_water_objects(
 
     let mut spawned = 0usize;
     let mut textured = 0usize;
+    let normal = images.add(wave_normal_image());
     for obj in patches {
         let patch = obj.water.as_ref().expect("filtered");
         let y = water_surface_y(obj.position, terrain, patch.surface_y, focus);
@@ -141,7 +183,6 @@ pub fn spawn_water_objects(
         let mesh = meshes.add(Plane3d::default().mesh().size(width, depth));
         let lift = track.bounds.edge_radius() * 0.05;
         let base_y = y + lift;
-        let phase = (patch.uid as f32 * 0.73).fract() * std::f32::consts::TAU;
 
         let texture = patch.texture_file.as_ref().and_then(|name| {
             if !name.to_ascii_lowercase().ends_with(".ace") {
@@ -158,19 +199,30 @@ pub fn spawn_water_objects(
 
         let material = if texture.is_some() {
             textured += 1;
-            water_material(materials, texture, base_y)
+            water_material(materials, texture, base_y, normal.clone())
         } else {
-            water_material(materials, None, base_y)
+            water_material(materials, None, base_y, normal.clone())
         };
         let reflect_mat = reflection_material(materials, base_y);
 
         let render = focus.to_render_surface(Vec3::new(obj.position.x, base_y, obj.position.z))
             + obj.position_precision_offset;
+        let key = format!(
+            "{}:{},{}/{}",
+            assets.route_dir.display(),
+            obj.tile_x,
+            obj.tile_z,
+            patch.uid
+        );
+        let uv_base = Vec2::new(render.x - width * 0.5, render.z - depth * 0.5) / 64.;
+        let uv_scale = Vec2::new(width, depth) / 64.;
         commands.spawn((
             crate::world::WorldTileBound::new(obj.tile_x, obj.tile_z),
             WaterSurface {
+                key: key.clone(),
+                uv_base,
+                uv_scale,
                 render_base_y: render.y,
-                phase,
                 is_reflection: false,
             },
             Mesh3d(mesh.clone()),
@@ -185,8 +237,10 @@ pub fn spawn_water_objects(
         commands.spawn((
             crate::world::WorldTileBound::new(obj.tile_x, obj.tile_z),
             WaterSurface {
+                key,
+                uv_base,
+                uv_scale,
                 render_base_y: reflect_render.y,
-                phase: phase + 1.1,
                 is_reflection: true,
             },
             Mesh3d(mesh),
@@ -215,16 +269,86 @@ pub fn spawn_water_objects(
 pub(crate) fn update_water_patches(
     time: Res<Time>,
     live: Option<Res<crate::live::LiveDrive>>,
-    mut surfaces: Query<(&mut Transform, &WaterSurface)>,
+    replay: Option<Res<crate::train::ReplayState>>,
+    settings: Option<Res<crate::player_settings::PlayerSettings>>,
+    origin: Option<Res<crate::floating_origin::FloatingOrigin>>,
+    mut materials: Option<ResMut<Assets<StandardMaterial>>>,
+    mut surfaces: Query<(
+        &mut Transform,
+        &WaterSurface,
+        Option<&MeshMaterial3d<StandardMaterial>>,
+    )>,
 ) {
-    let t = live
-        .as_ref()
-        .map_or(time.elapsed_secs(), |l| l.session.time_s() as f32);
-    for (mut transform, surface) in &mut surfaces {
-        let amp = if surface.is_reflection { 0.018 } else { 0.07 };
-        let wave = (t * 1.65 + surface.phase).sin() * amp;
-        transform.translation.y = surface.render_base_y + wave;
+    let t = live.as_ref().map_or_else(
+        || {
+            replay
+                .as_ref()
+                .filter(|r| r.is_active())
+                .map_or(time.elapsed_secs_f64(), |r| r.t_sim)
+        },
+        |l| l.session.time_s(),
+    );
+    for (mut transform, surface, material) in &mut surfaces {
+        // Keep neighbouring water planes at their authored elevation. Whole-
+        // patch bobbing produced seams; ripples now modulate texture coordinates.
+        transform.translation.y = surface.render_base_y - origin.as_ref().map_or(0., |o| o.shift.y);
+        let flow = settings
+            .as_ref()
+            .and_then(|s| s.water_flows.get(&surface.key))
+            .cloned()
+            .unwrap_or_default();
+        let offset = if settings.as_ref().is_none_or(|s| s.animated_water) {
+            flow.uv_offset(t)
+        } else {
+            Vec2::ZERO
+        };
+        let scale = if surface.is_reflection {
+            surface.uv_scale * Vec2::new(1., -1.)
+        } else {
+            surface.uv_scale
+        };
+        let next =
+            bevy::math::Affine2::from_scale_angle_translation(scale, 0., surface.uv_base + offset);
+        if let Some(handle) = material
+            && let Some(materials) = materials.as_mut()
+            && materials
+                .get(&handle.0)
+                .is_some_and(|m| m.uv_transform != next)
+            && let Some(mut material) = materials.get_mut(&handle.0)
+        {
+            material.uv_transform = next;
+        }
     }
+}
+
+fn wave_normal_image() -> Image {
+    use bevy::{
+        asset::RenderAssetUsages,
+        render::render_resource::{Extent3d, TextureDimension, TextureFormat},
+    };
+    let mut pixels = Vec::with_capacity(64 * 64 * 4);
+    for y in 0..64 {
+        for x in 0..64 {
+            let u = x as f32 / 64. * std::f32::consts::TAU;
+            let v = y as f32 / 64. * std::f32::consts::TAU;
+            let n = Vec3::new((u * 3. + v).cos() * 0.14, (v * 2. - u).cos() * 0.1, 1.).normalize();
+            for value in [n.x, n.y, n.z] {
+                pixels.push(((value * 0.5 + 0.5) * 255.).round() as u8);
+            }
+            pixels.push(255);
+        }
+    }
+    Image::new(
+        Extent3d {
+            width: 64,
+            height: 64,
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        pixels,
+        TextureFormat::Rgba8Unorm,
+        RenderAssetUsages::RENDER_WORLD,
+    )
 }
 
 #[cfg(test)]
@@ -298,8 +422,8 @@ mod tests {
 
         let surface = WaterSurface {
             render_base_y: render_y,
-            phase: 0.0,
             is_reflection: false,
+            ..Default::default()
         };
         let mut tf = Transform::from_translation(Vec3::new(0.0, render_y, 0.0));
         let wave = 0.05_f32;
@@ -316,12 +440,12 @@ mod tests {
     fn water_wave_oscillates() {
         let surface = WaterSurface {
             render_base_y: 5.0,
-            phase: 0.0,
             is_reflection: false,
+            ..Default::default()
         };
-        let wave_a = (0.5_f32 * 1.65 + surface.phase).sin() * 0.07;
-        let wave_b = (1.0_f32 * 1.65 + surface.phase).sin() * 0.07;
-        assert_ne!(wave_a, wave_b);
+        let flow = WaterFlow::default();
+        assert_ne!(flow.uv_offset(0.5), flow.uv_offset(1.));
+        assert_eq!(surface.render_base_y, 5.);
     }
 
     #[test]
@@ -340,8 +464,8 @@ mod tests {
                 Transform::from_xyz(-5., 12., -7.),
                 WaterSurface {
                     render_base_y: 12.,
-                    phase: 0.2,
                     is_reflection: false,
+                    ..Default::default()
                 },
             ))
             .id();

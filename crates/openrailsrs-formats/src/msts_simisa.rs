@@ -123,9 +123,10 @@ fn inflate_simisa_body(bytes: &[u8]) -> Result<Vec<u8>, FormatError> {
 
     let mut last_error = None;
     for start in starts {
+        crate::cancellation::check()?;
         let mut decoder = flate2::read::ZlibDecoder::new(&bytes[start..]);
         let mut out = Vec::new();
-        match decoder.read_to_end(&mut out) {
+        match crate::cancellation::Reader(&mut decoder).read_to_end(&mut out) {
             Ok(_) if !out.is_empty() => return Ok(out),
             Ok(_) => {
                 last_error = Some(std::io::Error::new(

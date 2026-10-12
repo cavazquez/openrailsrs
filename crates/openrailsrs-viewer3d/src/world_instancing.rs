@@ -1243,6 +1243,7 @@ pub fn update_world_instanced_lod(
     mut commands: Commands,
     cache: Option<Res<crate::world::WorldShapeLodCache>>,
     meshes: Res<Assets<Mesh>>,
+    mut silhouettes: Option<ResMut<crate::scenery_lod::Silhouettes>>,
     camera: Query<&GlobalTransform, With<Camera3d>>,
     mut groups: Query<
         (
@@ -1287,12 +1288,15 @@ pub fn update_world_instanced_lod(
         if assets.is_empty() {
             continue;
         }
-        let new_lod = crate::world::stable_lod_level(
+        let desired = crate::world::stable_lod_level(
             shape,
             nearest_instance_distance_m(cam.translation(), gt, instances),
             group.lod_idx,
         )
         .min(assets.len() - 1);
+        let new_lod = silhouettes
+            .as_mut()
+            .map_or(desired, |s| s.choose(&group.shape_path, shape, desired));
         if new_lod == group.lod_idx {
             continue;
         }

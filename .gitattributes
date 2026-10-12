@@ -13,3 +13,5 @@ oracles/openrails-cab.json -text whitespace=cr-at-eol
 oracles/openrails-parser.json -text whitespace=cr-at-eol
 oracles/openrails-signals.json -text whitespace=cr-at-eol
 oracles/openrails-lirr-parameters.json -text whitespace=cr-at-eol
+oracles/openrails-consumable-mass.json -text whitespace=cr-at-eol
+tools/openrails-reference/ConsumableMassReference.cs -text

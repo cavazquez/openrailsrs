@@ -177,6 +177,9 @@ pub struct OrSceneryMaterial {
 }
 
 impl Material for OrSceneryMaterial {
+    fn prepass_fragment_shader() -> ShaderRef {
+        "shaders/or_scenery_prepass.wgsl".into()
+    }
     fn fragment_shader() -> ShaderRef {
         OR_SCENERY_SHADER_PATH.into()
     }

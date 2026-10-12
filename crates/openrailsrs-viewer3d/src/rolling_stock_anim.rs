@@ -35,6 +35,35 @@ pub const DEFAULT_WHEEL_RADIUS_M: f32 = 0.46;
 /// Max |relative yaw| applied to a bogie (radians).
 pub const BOGIE_YAW_CLAMP: f32 = 0.35;
 
+/// Compression moves only the authored buffer's position keys. Stroke is read
+/// from that node and bounded to 150 mm; the rigid car body is never scaled.
+pub fn buffer_compression_fraction(shape: &ShapeFile, matrix: usize, compression_m: f64) -> f32 {
+    let Some(name) = shape.matrices.get(matrix).map(|m| m.name.as_str()) else {
+        return 0.;
+    };
+    let stroke = shape
+        .animations
+        .first()
+        .into_iter()
+        .flat_map(|a| &a.nodes)
+        .filter(|n| n.name.eq_ignore_ascii_case(name))
+        .flat_map(|n| &n.controllers)
+        .filter_map(|c| {
+            if let openrailsrs_formats::AnimController::LinearPos { keys } = c {
+                keys.first()
+                    .zip(keys.last())
+                    .map(|(a, b)| Vec3::from(b.1).distance(Vec3::from(a.1)))
+            } else {
+                None
+            }
+        })
+        .fold(0., f32::max);
+    if !stroke.is_finite() || stroke < 0.001 || !compression_m.is_finite() {
+        return 0.;
+    }
+    (compression_m.max(0.) as f32).min(stroke.min(0.15)) / stroke
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RollingStockPartKind {
     Wheel,
@@ -43,6 +72,10 @@ pub enum RollingStockPartKind {
     Pantograph,
     RunningGear,
     Coupler,
+    Buffer,
+    LeftWindow,
+    RightWindow,
+    CabDoor,
     Other,
 }
 
@@ -54,6 +87,18 @@ pub fn classify_matrix_name(name: &str) -> RollingStockPartKind {
     }
     if n == "BOGIE" || n.starts_with("BOGIE") || n.starts_with("BOGEY") {
         return RollingStockPartKind::Bogie;
+    }
+    if n.starts_with("BUFFER") {
+        return RollingStockPartKind::Buffer;
+    }
+    if n.starts_with("CABDOOR") {
+        return RollingStockPartKind::CabDoor;
+    }
+    if n.starts_with("LEFTWINDOW") || n.starts_with("WINDOWLEFT") {
+        return RollingStockPartKind::LeftWindow;
+    }
+    if n.starts_with("RIGHTWINDOW") || n.starts_with("WINDOWRIGHT") {
+        return RollingStockPartKind::RightWindow;
     }
     if n.starts_with("DOOR") {
         return RollingStockPartKind::Door;
@@ -513,6 +558,10 @@ pub fn part_anim_bundle(
             | RollingStockPartKind::Pantograph
             | RollingStockPartKind::RunningGear
             | RollingStockPartKind::Coupler
+            | RollingStockPartKind::Buffer
+            | RollingStockPartKind::LeftWindow
+            | RollingStockPartKind::RightWindow
+            | RollingStockPartKind::CabDoor
     )
     .then(|| TrainKeyedAnim {
         matrix_idx,
@@ -853,6 +902,48 @@ pub fn update_rolling_stock_part_anim(
             .map(|s| &s.exterior)
             .or(exterior);
         let mut frac = resolve_keyed_frac(keyed_anim.kind, exterior);
+        if let Some(session) = live_ref.and_then(|l| l.session_for_track(service))
+            && let Some(index) = vehicle_index
+        {
+            if let Some(cab) = session
+                .state
+                .cab_equipment
+                .iter()
+                .find(|c| c.config.vehicle == index)
+            {
+                match keyed_anim.kind {
+                    RollingStockPartKind::LeftWindow => frac = cab.windows[0] as f32,
+                    RollingStockPartKind::RightWindow => frac = cab.windows[1] as f32,
+                    RollingStockPartKind::CabDoor => frac = cab.door as f32,
+                    _ => {}
+                }
+            }
+            if keyed_anim.kind == RollingStockPartKind::Buffer {
+                let name = matrix_name(&binding.shape, keyed_anim.matrix_idx).to_ascii_uppercase();
+                let front = name.contains("FRONT")
+                    || (!name.contains("REAR")
+                        && binding.shape.matrices[keyed_anim.matrix_idx].matrix.rows[3][2] < 0.);
+                let flipped = cars.get(parent.parent()).is_ok_and(|c| c.0.flipped);
+                let coupler = if front != flipped {
+                    index.checked_sub(1)
+                } else {
+                    Some(index)
+                }
+                .and_then(|i| session.state.couplers.get(i));
+                frac = buffer_compression_fraction(
+                    &binding.shape,
+                    keyed_anim.matrix_idx,
+                    coupler.map_or(0., |c| {
+                        if c.broken {
+                            0.
+                        } else {
+                            (-c.extension_m - c.free_play_m).max(0.)
+                        }
+                    }),
+                );
+            }
+        }
+
         if keyed_anim.kind == RollingStockPartKind::Pantograph
             && env_key_frac("OPENRAILSRS_DEBUG_PANTO_KEY").is_none()
             && let Some(session) = live_ref.and_then(|l| l.session_for_track(service))
@@ -1700,5 +1791,26 @@ mod tests {
             1.0
         );
         assert_eq!(resolve_keyed_frac(RollingStockPartKind::Door, None), 0.0);
+    }
+    #[test]
+    fn declared_buffer_and_cab_parts_keep_authored_stroke_and_rigid_body() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/player_lab/vehicles/lab.s");
+        let shape = ShapeFile::from_path(&path).unwrap();
+        assert_eq!(
+            classify_matrix_name(matrix_name(&shape, 2)),
+            RollingStockPartKind::LeftWindow
+        );
+        assert_eq!(
+            classify_matrix_name(matrix_name(&shape, 4)),
+            RollingStockPartKind::CabDoor
+        );
+        assert_eq!(buffer_compression_fraction(&shape, 5, -1.), 0.);
+        assert!((buffer_compression_fraction(&shape, 5, 0.05) - 0.5).abs() < 1e-6);
+        assert_eq!(buffer_compression_fraction(&shape, 5, 1.), 1.);
+        assert_eq!(buffer_compression_fraction(&shape, 0, 1.), 0.);
+        assert_eq!(buffer_compression_fraction(&shape, 5, f64::NAN), 0.);
+        assert!(crate::destination_boards::compatible(&shape, 1));
+        assert!(!crate::destination_boards::compatible(&shape, 0));
     }
 }

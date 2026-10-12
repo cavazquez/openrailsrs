@@ -8,6 +8,7 @@ pub mod error;
 pub mod from_ast;
 pub mod model;
 pub mod steam_loader;
+pub mod vehicle_profiles;
 
 pub use consist_audit::{ConsistAudit, ConsistAuditor, MissingResource};
 pub use diesel::{

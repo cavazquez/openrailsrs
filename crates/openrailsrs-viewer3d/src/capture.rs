@@ -184,15 +184,7 @@ pub fn capture_system(
             let should_capture = distance_ok
                 && lightning_ok
                 && if state.after_ready {
-                    if scenery_ready(progress)
-                        && scene.terrain_progress.is_none()
-                        && scene
-                            .terrain_stream
-                            .as_ref()
-                            .is_none_or(|stream| stream.pending_work() == 0)
-                        && scene.pipelines.as_ref().is_none_or(|p| p.ready())
-                        && scene.lod_fades.is_empty()
-                    {
+                    if scenery_ready(progress) && scene.ready() {
                         state.ready_frames = state.ready_frames.saturating_add(1);
                     } else {
                         state.ready_frames = 0;
@@ -210,6 +202,11 @@ pub fn capture_system(
             {
                 viewer_log!(
                     "openrailsrs-viewer3d: screenshot checkpoint timed out before reaching distance/readiness"
+                );
+                let report = scene.report(live.as_deref());
+                let _ = std::fs::write(
+                    state.path.with_extension("stream.json"),
+                    serde_json::to_vec_pretty(&report).unwrap(),
                 );
                 exit.write(AppExit::Error(std::num::NonZeroU8::new(1).unwrap()));
                 return;
@@ -280,6 +277,16 @@ pub struct CaptureScene<'w, 's> {
     pipelines: Option<Res<'w, crate::performance::ScenePipelineStatus>>,
     audio: Option<Res<'w, crate::native_audio::NativeAudio>>,
     effects: Option<Res<'w, crate::train_effects::TrainEffects>>,
+    boards: Option<Res<'w, crate::destination_boards::Boards>>,
+    contact: Query<'w, 's, &'static bevy::pbr::ContactShadows>,
+    equipment_poses: Query<
+        'w,
+        's,
+        (
+            &'static crate::rolling_stock_anim::TrainKeyedAnim,
+            &'static Transform,
+        ),
+    >,
     fog: Option<Res<'w, crate::ground_fog::FogDiagnostics>>,
     electric_contacts: Option<Res<'w, crate::electric_contact::ElectricContacts>>,
     motion: Option<Res<'w, crate::train_motion::TrainMotion>>,
@@ -335,6 +342,15 @@ pub struct CaptureScene<'w, 's> {
 }
 
 impl CaptureScene<'_, '_> {
+    pub(crate) fn ready(&self) -> bool {
+        self.terrain_progress.is_none()
+            && self
+                .terrain_stream
+                .as_ref()
+                .is_none_or(|stream| stream.pending_work() == 0)
+            && self.pipelines.as_ref().is_none_or(|p| p.ready())
+            && self.lod_fades.is_empty()
+    }
     fn report(&self, live: Option<&crate::live::LiveDrive>) -> serde_json::Value {
         let deferred = self
             .world
@@ -376,6 +392,14 @@ impl CaptureScene<'_, '_> {
             .iter()
             .map(|binding| std::sync::Arc::as_ptr(&binding.shape) as usize)
             .collect();
+        let extras = serde_json::json!({
+            "destination_displays":self.boards.as_ref().map(|b|b.report()),
+            "contact_shadow_steps":self.contact.iter().map(|c|c.linear_steps).collect::<Vec<_>>(),
+            "learning":live.and_then(|l|l.session.state.learning.as_ref()),
+            "cab_equipment":live.map(|l|&l.session.state.cab_equipment),
+            "driving_report":live.map(|l|&l.session.state.driving_report),
+            "equipment_poses":self.equipment_poses.iter().filter(|(a,_)|matches!(a.kind,crate::rolling_stock_anim::RollingStockPartKind::LeftWindow|crate::rolling_stock_anim::RollingStockPartKind::RightWindow|crate::rolling_stock_anim::RollingStockPartKind::CabDoor|crate::rolling_stock_anim::RollingStockPartKind::Buffer)).map(|(a,t)|serde_json::json!({"kind":format!("{:?}",a.kind),"key":a.key,"translation":t.translation.to_array(),"rotation":t.rotation.to_array()})).collect::<Vec<_>>(),
+        });
         let mut report = serde_json::json!({
             "odometer_m": live.map(|live| live.session.state.odometer_m),
             "service_complete": live.map(|live| live.session.arrived),
@@ -463,6 +487,10 @@ impl CaptureScene<'_, '_> {
         report["ui_text"] = serde_json::Value::Array(self.ui_text.iter().filter(|(text, _, _, _)| !text.0.trim().is_empty()).map(|(text, node, style, visibility)| {
             serde_json::json!({"text": text.0, "size": node.size().to_array(), "visible": style.display != Display::None && visibility.is_none_or(|visibility| visibility.get())})
         }).collect());
+        if let (Some(out), Some(extra)) = (report.as_object_mut(), extras.as_object()) {
+            out.extend(extra.clone());
+        }
+
         if let Some(environment) = self.environment.as_ref()
             && let Some(content) = self.content.as_ref()
         {

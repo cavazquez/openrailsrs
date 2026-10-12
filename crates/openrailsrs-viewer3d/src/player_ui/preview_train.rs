@@ -15,6 +15,7 @@ pub(super) fn load(key: &TrainKey) -> Result<TrainResult, String> {
     let mut model_paths = HashMap::new();
     let mut textures = HashMap::new();
     let mut texture_bytes = 0;
+    let mut texture_files = std::collections::HashSet::new();
     let mut geometry_bytes = 0usize;
     let mut last_error = String::new();
     let mut vehicles = vec![];
@@ -22,6 +23,7 @@ pub(super) fn load(key: &TrainKey) -> Result<TrainResult, String> {
     let mut minimum = Vec3::splat(f32::INFINITY);
     let mut maximum = Vec3::splat(f32::NEG_INFINITY);
     for vehicle in source.iter().take(256) {
+        openrailsrs_formats::cancellation::check().map_err(|e| e.to_string())?;
         let transform = Transform::from_xyz(0.0, 0.0, -vehicle.offset_m).with_rotation(
             Quat::from_rotation_y(if vehicle.flipped {
                 std::f32::consts::PI
@@ -88,6 +90,7 @@ pub(super) fn load(key: &TrainKey) -> Result<TrainResult, String> {
             .filter(|(min, max)| min.is_finite() && max.is_finite())
             .ok_or("Modelo sin dimensiones válidas")?;
             for part in &mut parts {
+                openrailsrs_formats::cancellation::check().map_err(|e| e.to_string())?;
                 let Some(name) = part.texture_file.as_ref() else {
                     continue;
                 };
@@ -98,6 +101,9 @@ pub(super) fn load(key: &TrainKey) -> Result<TrainResult, String> {
                 ]
                 .iter()
                 .find_map(|p| confined_resource(p, scope));
+                if let Some(path) = &texture_path {
+                    texture_files.insert(path.clone());
+                }
                 let identity = texture_path
                     .as_ref()
                     .map(|p| p.to_string_lossy().into_owned())
@@ -149,7 +155,22 @@ pub(super) fn load(key: &TrainKey) -> Result<TrainResult, String> {
     if models.is_empty() {
         return Err(format!("Sin vista previa 3D: {last_error}"));
     }
+    let mut seen = std::collections::HashSet::new();
+    let disk = source
+        .iter()
+        .filter_map(|v| v.stock_file.as_ref())
+        .chain(model_paths.keys())
+        .chain(texture_files.iter())
+        .filter(|p| seen.insert((*p).clone()))
+        .filter_map(|p| std::fs::metadata(p).ok())
+        .map(|m| m.len())
+        .sum();
     Ok(TrainResult {
+        bytes: crate::resource_estimate::TrainBytes {
+            disk,
+            geometry: geometry_bytes as u64,
+            textures: texture_bytes as u64,
+        },
         models,
         textures,
         vehicles,

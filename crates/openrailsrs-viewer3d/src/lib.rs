@@ -20,6 +20,8 @@ pub mod cab_screen;
 pub mod cab_view;
 pub mod camera;
 pub mod capture;
+mod contact_shadows;
+mod content_management;
 pub mod content_validation;
 pub mod etcs;
 mod visual_fault;
@@ -42,18 +44,23 @@ pub mod or_shader {
 }
 pub mod cab_mouse;
 mod cab_profile;
+mod destination_boards;
 #[cfg(feature = "dev-tools")]
 pub mod dev_camera;
 #[cfg(feature = "dev-inspector")]
 pub mod dev_inspector;
 #[cfg(any(feature = "dev-tools", feature = "experimental-framepace"))]
 pub mod dev_metrics;
+mod download_queue;
 mod effect_obstacles;
 pub mod electric_contact;
 pub mod gpu_memory;
 pub mod ground_fog;
+mod issue_report;
 mod journey_environment;
+pub mod journey_setup;
 mod launch_audits;
+mod library_tools;
 pub mod moon;
 pub mod native_audio;
 pub mod night_sky;
@@ -62,10 +69,13 @@ pub mod overhead_wire;
 pub mod overspeed_flash;
 pub mod performance;
 pub mod placement_audit;
+mod player_backup;
 pub mod player_launch;
 pub mod player_settings;
+pub mod player_study;
 pub mod player_ui;
 pub mod precipitation;
+mod resource_estimate;
 pub mod road_cars;
 pub mod rolling_stock;
 pub mod rolling_stock_anim;
@@ -75,6 +85,7 @@ pub mod save_history;
 pub mod saved_game;
 pub mod scene;
 pub mod scenery_audit;
+mod scenery_lod;
 pub mod shapes;
 pub mod signal_animation;
 pub mod signal_lamps;
@@ -203,6 +214,24 @@ impl Plugin for ViewerPlugin {
         }
         app.add_plugins(driving_hud::DrivingHudPlugin);
         app.add_plugins(player_ui::PlayerUiPlugin);
+        #[cfg(feature = "dev-tools")]
+        app.add_systems(
+            Update,
+            issue_report::regression_capture.run_if(in_state(ViewerAppState::Playing)),
+        );
+        app.init_resource::<destination_boards::Boards>()
+            .add_systems(
+                Update,
+                destination_boards::update.run_if(in_state(ViewerAppState::Playing)),
+            );
+        app.add_systems(
+            Update,
+            issue_report::capture.run_if(in_state(ViewerAppState::Playing)),
+        );
+        app.add_systems(
+            Update,
+            contact_shadows::update.run_if(in_state(ViewerAppState::Playing)),
+        );
         app.add_plugins(windshield::WindshieldPlugin);
         app.init_resource::<environment::LiveEnvironment>()
             .init_resource::<weather_state::WeatherState>()
@@ -464,6 +493,7 @@ impl Plugin for ViewerPlugin {
             .init_resource::<floating_origin::FloatingOrigin>()
             .init_resource::<world::WorldSceneryStreamState>()
             .init_resource::<world::WorldShapeLodCache>()
+            .init_resource::<scenery_lod::Silhouettes>()
             .init_resource::<world::WorldLodCameraState>()
             .init_resource::<track_position::TrackPositionResolverCache>()
             .init_resource::<world_tile_index::WorldTileEntityIndex>()

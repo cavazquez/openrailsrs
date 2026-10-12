@@ -70,6 +70,8 @@ Guías: [`docs/CHILTERN.md`](docs/CHILTERN.md) · [`docs/VIEWER3D_TESTING.md`](d
 
 El lote de [treinta mejoras de octubre](docs/PLAN_30.md) amplía luces originales y marcadores de cola, arena visible, movimiento de cabina, modos de limpiaparabrisas, iluminación por sector, luna, temperatura y pronóstico. Incorpora mezcla SMS continua entre cámaras, cinco grupos de volumen, diagnósticos físicos/sonoros, perfiles de dificultad e historial con buscador. La guía indica cómo probar cada cambio a mano y qué recursos necesita.
 
+El [segundo lote de treinta mejoras](docs/PLAN_30_2.md) incorpora tutoriales con repetición, prácticas en estaciones, exploración libre, desafíos meteorológicos, informe de conducción y asesor de frenado. Añade equipos de cabina y carteles compatibles, ajustes por versión de vehículo, sombras de contacto, agua animada y una biblioteca con cola, comparación de ediciones, recuperación, respaldos y reportes revisables. Cada punto tiene instrucciones de prueba y límites concretos.
+
 ### Partida, contenido y controles
 
 - Inicio con **Nueva partida, Continuar, Biblioteca y Ajustes**. Nueva partida se organiza en **Ruta y servicio → Tren → Hora y clima**, con resumen y **Jugar** siempre visibles. El detalle de recursos, los recorridos alternativos y las opciones de hora/clima del lugar se abren por separado. Ajustes tiene pestañas y guardado visible; las auditorías de formaciones se hacen en segundo plano. [Cómo probar cada pantalla](docs/PLAYER_MANUAL_TESTS.md#40-inicio-con-cuatro-opciones-y-nueva-partida-en-tres-pasos).

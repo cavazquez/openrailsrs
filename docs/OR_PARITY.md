@@ -432,3 +432,10 @@ captura inicial confirma 15 mph. La duración estimada del ACT es 1560 s y su
 horario marca Hempstead a 1575 s: no puede tratarse la estimación como un plazo.
 Este oráculo valida parámetros y orientación; no afirma paridad de la traza
 completa ni de la respuesta de todas las válvulas americanas.
+
+
+## Masa efectiva del combustible — OR 1.6.1
+
+`openrails-consumable-mass.json` contiene cinco invocaciones de `MSTSWagon.UpdateLocomotiveLoadPhysics` en las DLL originales: 5.000, 2.500, 1 y 0 litros, y recarga a 5.000. El tren de prueba tiene masa llena de 80.000 kg, vacía de 75.746 kg, sin agua de calefacción ni arena. Se contrasta masa y peso adherente con 0,02 kg de tolerancia por precisión float de OR. [Proveniencia](../oracles/openrails-consumable-mass-provenance.json) y [capturador](../scripts/capture_consumable_mass_reference.py).
+
+OR exige animación de carga continua para activar este método; la implementación Rust aplica reserva diésel efectiva también al material sin esa declaración. Es una extensión intencional. No se afirma aquí masa completa de arena, agua auxiliar o reservas de vapor. Las referencias y tolerancias existentes de velocidad, posición, frenos y alimentación siguen fijadas.

@@ -90,8 +90,15 @@ fn build_brake_system(consist: &openrailsrs_train::Consist) -> BrakeSystem {
     BrakeSystem::from_vehicle_specs(&specs, BRAKE_PIPE_SPEED_MPS, false, 3.0)
 }
 
-fn build_brake_from_path(consist_path: &Path) -> BrakeSystem {
+fn build_brake_from_path(
+    consist_path: &Path,
+    profiles: &[openrailsrs_core::vehicle_profile::VehicleProfile],
+) -> BrakeSystem {
     load_consist_with_asset_root(consist_path, consist_root(consist_path))
+        .and_then(|mut c| {
+            openrailsrs_train::vehicle_profiles::apply(consist_path, &mut c, profiles)?;
+            Ok(c)
+        })
         .map(|c| build_brake_system(&c))
         .unwrap_or_default()
 }
@@ -108,6 +115,8 @@ fn build_physics(
     davis_override: Option<&openrailsrs_scenarios::DavisSection>,
     brake_mapping: openrailsrs_validate::BrakeCommandMapping,
     legacy_power_cap: bool,
+    profiles: &[openrailsrs_core::vehicle_profile::VehicleProfile],
+    weather_track: bool,
     electric_context: (
         &Path,
         Option<&openrailsrs_core::electrification::RouteElectricSupply>,
@@ -115,12 +124,26 @@ fn build_physics(
         &TrackGraph,
     ),
 ) -> Result<TrainPhysics, SimError> {
-    let consist = load_consist_with_asset_root(consist_path, consist_root(consist_path))?;
-    let davis_override = davis_override.map(|d| DavisCoefficients {
-        a_n: d.a_n,
-        b_n_per_mps: d.b_n_per_mps,
-        c_n_per_mps2: d.c_n_per_mps2,
-    });
+    let mut consist = load_consist_with_asset_root(consist_path, consist_root(consist_path))?;
+    let customized = openrailsrs_train::vehicle_profiles::apply_with_davis(
+        consist_path,
+        &mut consist,
+        profiles,
+        davis_override
+            .map(|d| DavisCoefficients {
+                a_n: d.a_n,
+                b_n_per_mps: d.b_n_per_mps,
+                c_n_per_mps2: d.c_n_per_mps2,
+            })
+            .as_ref(),
+    )?;
+    let davis_override = davis_override
+        .filter(|_| !customized)
+        .map(|d| DavisCoefficients {
+            a_n: d.a_n,
+            b_n_per_mps: d.b_n_per_mps,
+            c_n_per_mps2: d.c_n_per_mps2,
+        });
     let davis = davis_override
         .clone()
         .unwrap_or_else(|| consist.davis.clone());
@@ -140,7 +163,15 @@ fn build_physics(
     let partial_throttle_run_up_time_s = max_partial_throttle_run_up_time_s(&diesel_engines);
     Ok(TrainPhysics {
         power_supply: crate::power_supply::PowerTrainConfig::from_consist(&consist),
-        rail_adhesion: None,
+        rail_adhesion: if weather_track {
+            Some(crate::adhesion::RailAdhesionConfig::load(
+                consist_path,
+                consist_root(consist_path),
+                &consist,
+            )?)
+        } else {
+            None
+        },
         diesel: crate::diesel_operation::DieselTrainConfig::from_consist(&consist),
         electric: crate::electric::ElectricTrainConfig::load(
             electric_context.0,
@@ -209,6 +240,8 @@ pub fn run_scenario_multi_train(
             scenario.train.davis.as_ref(),
             scenario.brake_mapping(),
             scenario.simulation.legacy_power_cap,
+            &scenario.train.vehicle_profiles,
+            scenario.simulation.weather_track.is_some(),
             (
                 &route_dir,
                 scenario.route.electric_supply.as_ref(),
@@ -219,9 +252,23 @@ pub fn run_scenario_multi_train(
         physics.power_supply.loads = scenario.train.power_load.clone();
         let path_data = PathData::from_path(&path_edges, &graph);
         let mut state = TrainSimState::new(path_edges);
-        state.brake_system = build_brake_from_path(&consist_path);
-        let loaded_consist =
+        state.weather_track = scenario.simulation.weather_track.clone();
+        let mut loaded_consist =
             load_consist_with_asset_root(&consist_path, consist_root(&consist_path)).ok();
+        if let Some(c) = &mut loaded_consist {
+            openrailsrs_train::vehicle_profiles::apply(
+                &consist_path,
+                c,
+                &scenario.train.vehicle_profiles,
+            )?;
+            state.brake_system = build_brake_system(c);
+            state.cab_equipment = crate::cab_equipment::load(
+                &consist_path,
+                &scenario.train.cab_equipment,
+                c.vehicles.len(),
+            )
+            .map_err(SimError::Msg)?;
+        }
         state.boiler_state = loaded_consist
             .as_ref()
             .and_then(|c| c.aggregate_steam_params())
@@ -305,6 +352,8 @@ pub fn run_scenario_multi_train(
             entry.davis.as_ref(),
             scenario.brake_mapping(),
             scenario.simulation.legacy_power_cap,
+            &scenario.train.vehicle_profiles,
+            scenario.simulation.weather_track.is_some(),
             (
                 &route_dir,
                 scenario.route.electric_supply.as_ref(),
@@ -314,9 +363,19 @@ pub fn run_scenario_multi_train(
         )?;
         let path_data = PathData::from_path(&path_edges, &g2);
         let mut state = TrainSimState::new(path_edges);
-        state.brake_system = build_brake_from_path(&consist_path);
-        let loaded_consist2 =
+        state.weather_track = scenario.simulation.weather_track.clone();
+        let mut loaded_consist2 =
             load_consist_with_asset_root(&consist_path, consist_root(&consist_path)).ok();
+        if let Some(c) = &mut loaded_consist2 {
+            openrailsrs_train::vehicle_profiles::apply(
+                &consist_path,
+                c,
+                &scenario.train.vehicle_profiles,
+            )?;
+            state.brake_system = build_brake_system(c);
+            state.cab_equipment = crate::cab_equipment::load(&consist_path, &[], c.vehicles.len())
+                .map_err(SimError::Msg)?;
+        }
         state.boiler_state = loaded_consist2
             .as_ref()
             .and_then(|c| c.aggregate_steam_params())
@@ -733,6 +792,8 @@ impl LiveMultiSim {
                 scenario.train.davis.as_ref(),
                 scenario.brake_mapping(),
                 scenario.simulation.legacy_power_cap,
+                &scenario.train.vehicle_profiles,
+                scenario.simulation.weather_track.is_some(),
                 (
                     &route_dir,
                     scenario.route.electric_supply.as_ref(),
@@ -747,15 +808,22 @@ impl LiveMultiSim {
                 .sum();
             let path_data = PathData::from_path(&path_edges, &graph);
             let mut state = TrainSimState::new(path_edges);
-            state.brake_system = build_brake_from_path(&consist_path);
+            state.weather_track = scenario.simulation.weather_track.clone();
+            state.brake_system =
+                build_brake_from_path(&consist_path, &scenario.train.vehicle_profiles);
             state.boiler_state =
                 load_consist_with_asset_root(&consist_path, consist_root(&consist_path))
                     .ok()
                     .and_then(|c| c.aggregate_steam_params())
                     .map(|p| crate::steam::BoilerState::from_params(&p));
-            if let Ok(consist) =
+            if let Ok(mut consist) =
                 load_consist_with_asset_root(&consist_path, consist_root(&consist_path))
             {
+                openrailsrs_train::vehicle_profiles::apply(
+                    &consist_path,
+                    &mut consist,
+                    &scenario.train.vehicle_profiles,
+                )?;
                 state.init_multi_body_if_enabled(
                     &consist,
                     scenario.simulation.multi_body,
@@ -792,6 +860,8 @@ impl LiveMultiSim {
                 entry.davis.as_ref(),
                 scenario.brake_mapping(),
                 scenario.simulation.legacy_power_cap,
+                &scenario.train.vehicle_profiles,
+                scenario.simulation.weather_track.is_some(),
                 (
                     &route_dir,
                     scenario.route.electric_supply.as_ref(),
@@ -806,15 +876,22 @@ impl LiveMultiSim {
                 .sum();
             let path_data = PathData::from_path(&path_edges, &g2);
             let mut state = TrainSimState::new(path_edges);
-            state.brake_system = build_brake_from_path(&consist_path);
+            state.weather_track = scenario.simulation.weather_track.clone();
+            state.brake_system =
+                build_brake_from_path(&consist_path, &scenario.train.vehicle_profiles);
             state.boiler_state =
                 load_consist_with_asset_root(&consist_path, consist_root(&consist_path))
                     .ok()
                     .and_then(|c| c.aggregate_steam_params())
                     .map(|p| crate::steam::BoilerState::from_params(&p));
-            if let Ok(consist) =
+            if let Ok(mut consist) =
                 load_consist_with_asset_root(&consist_path, consist_root(&consist_path))
             {
+                openrailsrs_train::vehicle_profiles::apply(
+                    &consist_path,
+                    &mut consist,
+                    &scenario.train.vehicle_profiles,
+                )?;
                 state.init_multi_body_if_enabled(
                     &consist,
                     scenario.simulation.multi_body,
@@ -880,6 +957,8 @@ impl LiveMultiSim {
                 None,
                 openrailsrs_validate::BrakeCommandMapping::default(),
                 true,
+                &[],
+                false,
                 (&route_dir, None, &[], &graph),
             )?;
             let total_dist_m: f64 = path_edges
@@ -889,7 +968,8 @@ impl LiveMultiSim {
                 .sum();
             let path_data = PathData::from_path(&path_edges, &graph);
             let mut state = TrainSimState::new(path_edges);
-            state.brake_system = build_brake_from_path(&consist_path);
+
+            state.brake_system = build_brake_from_path(&consist_path, &[]);
             state.boiler_state =
                 load_consist_with_asset_root(&consist_path, consist_root(&consist_path))
                     .ok()

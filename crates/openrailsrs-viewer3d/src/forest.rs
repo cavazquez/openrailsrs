@@ -26,6 +26,25 @@ pub use openrailsrs_bevy_scenery::{
 const COLOR_TREE_FALLBACK: Color = Color::srgb(0.18, 0.62, 0.22);
 const DEFAULT_PATCH_HALF_M: f32 = 128.0;
 
+/// CPU bounds include the billboard's shader expansion in every camera yaw.
+/// Using only tree bases incorrectly culled visible canopies and entire patches.
+pub fn forest_billboard_bounds(
+    trees: &[TreePlacement],
+    width: f32,
+    height: f32,
+) -> Option<bevy::camera::primitives::Aabb> {
+    let mut min = Vec3::splat(f32::INFINITY);
+    let mut max = Vec3::splat(f32::NEG_INFINITY);
+    for tree in trees {
+        let half = width * tree.scale * 0.5;
+        let top = height * tree.scale;
+        min = min.min(tree.position - Vec3::new(half, 0., half));
+        max = max.max(tree.position + Vec3::new(half, top, half));
+    }
+    min.is_finite()
+        .then_some(bevy::camera::primitives::Aabb::from_min_max(min, max))
+}
+
 /// Default half-extent of a forest patch when `.w` has no `Area`.
 pub fn default_patch_half(bounds: &SceneBounds) -> f32 {
     DEFAULT_PATCH_HALF_M.min(bounds.ground_half().max(DEFAULT_PATCH_HALF_M))
@@ -233,13 +252,16 @@ pub fn spawn_forest_objects(
             fallback_material.clone()
         };
 
-        commands.spawn((
+        let mut entity = commands.spawn((
             Mesh3d(mesh),
             MeshMaterial3d(material),
             Transform::from_translation(-crate::floating_origin::horizontal_shift(origin.shift)),
             crate::world::WorldTileBound::new(obj.tile_x, obj.tile_z),
             Name::new(format!("forest:{}:{}", obj.label, patch.uid)),
         ));
+        if let Some(bounds) = forest_billboard_bounds(&trees, base_w, base_h) {
+            entity.insert(bounds);
+        }
     }
 
     viewer_log!("openrailsrs-viewer3d: {patch_count} forest patch(es), {tree_count} tree(s)");
@@ -491,5 +513,18 @@ mod tests {
         assert_eq!(patch.scale_min, 0.8);
         assert!((forest.position.x - 180.0).abs() < 0.1);
         assert!((forest.position.z - (-55.0)).abs() < 0.1);
+    }
+    #[test]
+    fn forest_cpu_bounds_enclose_top_and_all_billboard_yaws() {
+        let trees = vec![TreePlacement {
+            position: Vec3::new(102400., 30., -204800.),
+            scale: 2.,
+        }];
+        let a = forest_billboard_bounds(&trees, 6., 10.).unwrap();
+        let center = Vec3::from(a.center);
+        let half = Vec3::from(a.half_extents);
+        assert_eq!(center - half, Vec3::new(102394., 30., -204806.));
+        assert_eq!(center + half, Vec3::new(102406., 50., -204794.));
+        assert!(forest_billboard_bounds(&[], 6., 10.).is_none());
     }
 }

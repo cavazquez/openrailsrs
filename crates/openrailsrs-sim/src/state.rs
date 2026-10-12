@@ -8,6 +8,14 @@ use crate::steam::BoilerState;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TrainSimState {
+    #[serde(default)]
+    pub cab_equipment: Vec<crate::cab_equipment::CabEquipmentState>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub weather_track: Option<openrailsrs_scenarios::weather_track::WeatherTrack>,
+    #[serde(default)]
+    pub learning: Option<crate::learning::LearningState>,
+    #[serde(default)]
+    pub driving_report: crate::driving_report::DrivingReport,
     /// Finite WORLD supplies already delivered, indexed by tile and native UID.
     #[serde(default)]
     pub refill_used_kg: std::collections::BTreeMap<String, f64>,
@@ -77,6 +85,8 @@ pub struct TrainSimState {
 impl TrainSimState {
     pub fn new(path_edges: Vec<String>) -> Self {
         Self {
+            learning: None,
+            driving_report: Default::default(),
             refill_used_kg: Default::default(),
             diesel: Default::default(),
             electric: Default::default(),
@@ -85,6 +95,8 @@ impl TrainSimState {
             rail_adhesion: None,
             ambient_temperature_c: default_ambient(),
             time: SimTime(0.0),
+            weather_track: None,
+            cab_equipment: vec![],
             path_reversed: false,
             path_edges,
             edge_index: 0,

@@ -195,6 +195,12 @@ pub fn spawn_traffic(
                                 if !crate::train::train_part_casts_shadow(part.is_transparent) {
                                     entity.insert(NotShadowCaster);
                                 }
+                                crate::destination_boards::mark(
+                                    &mut entity,
+                                    &shape,
+                                    part.prim_state_idx,
+                                    index + 1,
+                                );
                                 crate::rolling_stock_anim::insert_part_anim(
                                     &mut entity,
                                     &shape,

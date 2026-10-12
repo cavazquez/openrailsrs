@@ -2,6 +2,8 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum FormatError {
+    #[error("Trabajo cancelado por una nueva selección")]
+    Cancelled,
     #[error("unexpected end of input")]
     UnexpectedEof,
 

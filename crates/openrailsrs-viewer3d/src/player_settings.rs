@@ -226,6 +226,8 @@ impl PlayerAction {
 #[derive(Resource, Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PlayerSettings {
+    pub journey_setup: crate::journey_setup::JourneySetup,
+    pub braking_coach: bool,
     pub view_distance_m: f32,
     pub cab_fov_deg: f32,
     pub shadows: bool,
@@ -235,6 +237,11 @@ pub struct PlayerSettings {
     pub weather_execution: crate::weather_execution::WeatherExecution,
     pub weather_profile: crate::weather_state::WeatherProfile,
     pub weather_seed: u32,
+    pub weather_track: openrailsrs_scenarios::weather_track::WeatherTrack,
+    pub animated_water: bool,
+    pub contact_shadow_quality: u8,
+    pub water_flows: BTreeMap<String, crate::water::WaterFlow>,
+    pub vehicle_profiles: BTreeMap<String, openrailsrs_core::vehicle_profile::VehicleProfile>,
     pub weather_pace: crate::weather_journey::WeatherPace,
     pub weather_quality: crate::weather_execution::WeatherQuality,
     pub weather_particle_budget: usize,
@@ -271,6 +278,8 @@ pub struct PlayerSettings {
 impl Default for PlayerSettings {
     fn default() -> Self {
         Self {
+            journey_setup: Default::default(),
+            braking_coach: false,
             view_distance_m: 2000.0,
             cab_fov_deg: 60.0,
             shadows: true,
@@ -280,6 +289,11 @@ impl Default for PlayerSettings {
             weather_execution: crate::weather_execution::WeatherExecution::Auto,
             weather_profile: default(),
             weather_seed: 1,
+            weather_track: default(),
+            animated_water: true,
+            water_flows: default(),
+            vehicle_profiles: default(),
+            contact_shadow_quality: 1,
             weather_pace: default(),
             weather_quality: default(),
             weather_particle_budget: 8192,
@@ -392,6 +406,31 @@ impl PlayerSettings {
         Ok(())
     }
     pub fn validate(&self) -> Result<(), String> {
+        if self.vehicle_profiles.len() > 256
+            || self
+                .vehicle_profiles
+                .iter()
+                .any(|(key, p)| !p.valid() || key != &p.source_sha256)
+        {
+            return Err("Perfiles de vehículos inválidos".into());
+        }
+        if !self.journey_setup.valid() {
+            return Err("Preparación de partida inválida".into());
+        }
+        if !self.weather_track.valid() {
+            return Err("Perfil meteorológico inválido".into());
+        }
+        if self.contact_shadow_quality > 2 {
+            return Err("Detalle de sombras de contacto inválido".into());
+        }
+        if self.water_flows.len() > 4096
+            || self
+                .water_flows
+                .iter()
+                .any(|(k, v)| k.len() > 4096 || !v.valid())
+        {
+            return Err("Corrientes de agua inválidas".into());
+        }
         if self
             .sky_date
             .parse::<chrono::NaiveDate>()

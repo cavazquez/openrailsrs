@@ -54,6 +54,7 @@ pub struct ServiceChoice {
 /// Small menu metadata, read with the service choices, without importing scenery.
 #[derive(Debug, Default)]
 pub struct ServicePreview {
+    pub author_consist: Option<PathBuf>,
     pub description: String,
     pub stops: Vec<String>,
     pub scheduled_minutes: Option<f64>,
@@ -313,11 +314,11 @@ impl PlayerLaunchMenu {
             .get(self.consist)
             .cloned()
             .ok_or("No hay una formación seleccionada")?;
-        self.auditor = openrailsrs_train::ConsistAuditor::new(self.auditor.trainset_roots.clone());
+
         if self.audits.error().is_some() {
             self.audits = crate::launch_audits::LaunchAudits::new();
         }
-        self.consist_audits.clear();
+        self.consist_audits.remove(&path);
         self.pending_reaudit = Some(path.clone());
         self.audits
             .request(self.auditor.trainset_roots.clone(), &[path], true);
@@ -332,6 +333,10 @@ impl PlayerLaunchMenu {
         self.consists
             .get(self.consist)
             .is_some_and(|p| !self.consist_audits.contains_key(p))
+    }
+    pub(crate) fn cancel_unused_audits(&mut self) {
+        self.audits.cancel();
+        self.pending_reaudit = None;
     }
     pub fn audit_error(&self) -> Option<&str> {
         self.audits.error()
@@ -359,9 +364,7 @@ impl PlayerLaunchMenu {
     }
     fn restore_cached_audits(&mut self) {
         for path in &self.consists {
-            if !self.consist_audits.contains_key(path)
-                && let Some(audit) = self.audits.cached(&self.auditor.trainset_roots, path)
-            {
+            if let Some(audit) = self.audits.cached(&self.auditor.trainset_roots, path) {
                 self.consist_audits.insert(path.clone(), audit.clone());
             }
         }
@@ -404,6 +407,9 @@ impl PlayerLaunchMenu {
             && let Ok(s) = load_scenario(&choice.source)
         {
             self.preview = ServicePreview {
+                author_consist: Some(absolute(
+                    &choice.source.parent().unwrap().join(&s.train.consist),
+                )),
                 description: s.scenario.description.clone(),
                 stops: s
                     .route
@@ -431,7 +437,10 @@ impl PlayerLaunchMenu {
                     id,
                     &player_data_dir().join("cache/timetable"),
                 ) {
-                    Ok(consist) => self.consists.push(consist),
+                    Ok(consist) => {
+                        self.preview.author_consist = Some(consist.clone());
+                        self.consists.push(consist);
+                    }
                     Err(error) => self.preview.description = error.to_string(),
                 }
                 if let Ok(table) =
@@ -590,7 +599,43 @@ impl PlayerLaunchMenu {
     pub fn prepare(&self) -> Result<QueuedPlayerLaunch, String> {
         self.prepare_in(&player_data_dir())
     }
+    pub fn prepare_with_setup(
+        &self,
+        setup: &crate::journey_setup::JourneySetup,
+    ) -> Result<QueuedPlayerLaunch, String> {
+        self.prepare_setup_in(&player_data_dir(), setup, None, &[])
+    }
     fn prepare_in(&self, data_dir: &Path) -> Result<QueuedPlayerLaunch, String> {
+        self.prepare_setup_in(data_dir, &Default::default(), None, &[])
+    }
+    pub fn prepare_configured(
+        &self,
+        settings: &crate::player_settings::PlayerSettings,
+    ) -> Result<QueuedPlayerLaunch, String> {
+        let challenge = settings
+            .journey_setup
+            .weather_challenge(settings.weather_seed);
+        self.prepare_setup_in(
+            &player_data_dir(),
+            &settings.journey_setup,
+            challenge.as_ref().or_else(|| {
+                (settings.weather_profile == crate::weather_state::WeatherProfile::Edited)
+                    .then_some(&settings.weather_track)
+            }),
+            &settings
+                .vehicle_profiles
+                .values()
+                .cloned()
+                .collect::<Vec<_>>(),
+        )
+    }
+    fn prepare_setup_in(
+        &self,
+        data_dir: &Path,
+        setup: &crate::journey_setup::JourneySetup,
+        weather: Option<&openrailsrs_scenarios::weather_track::WeatherTrack>,
+        profiles: &[openrailsrs_core::vehicle_profile::VehicleProfile],
+    ) -> Result<QueuedPlayerLaunch, String> {
         if self.selected_audit_pending() {
             return Err("La formación todavía se está revisando; esperá su diagnóstico".into());
         }
@@ -778,6 +823,20 @@ impl PlayerLaunchMenu {
         scenario.output.csv = "player-data/run.csv".into();
         scenario.output.metadata = "player-data/run.json".into();
         scenario.simulation.time_step = 0.05;
+        setup.apply(&mut scenario)?;
+        for profile in profiles {
+            scenario
+                .train
+                .vehicle_profiles
+                .retain(|p| p.source_sha256 != profile.source_sha256);
+            scenario.train.vehicle_profiles.push(profile.clone());
+        }
+        if let Some(track) = weather {
+            if !track.valid() {
+                return Err("Perfil meteorológico inválido".into());
+            }
+            scenario.simulation.weather_track = Some(track.clone());
+        }
         // Validate content and stopping order before submitting a background scene load.
         openrailsrs_sim::LiveDriveSession::from_scenario(Path::new("."), &scenario)
             .map_err(|e| e.to_string())?;
@@ -788,6 +847,10 @@ impl PlayerLaunchMenu {
                 .ok_or("Servicio inválido")?
                 .insert(key.clone(), entry.clone());
         }
+        value.as_table_mut().ok_or("Servicio inválido")?.insert(
+            "player_setup".into(),
+            toml::Value::try_from(setup).map_err(|e| e.to_string())?,
+        );
         let text = toml::to_string_pretty(&value).map_err(|e| e.to_string())?;
         let path = absolute(&data_dir.join("launch.toml"));
         atomic_write(&path, text.as_bytes())?;
@@ -1067,7 +1130,17 @@ mod tests {
     fn wait_for_audits(menu: &mut PlayerLaunchMenu) {
         let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
         while menu.consist_audits.len() < menu.consists.len() {
-            assert!(std::time::Instant::now() < deadline, "{}", menu.status);
+            assert!(
+                std::time::Instant::now() < deadline,
+                "{} · {}/{} · pendientes {:?}",
+                menu.status,
+                menu.consist_audits.len(),
+                menu.consists.len(),
+                menu.consists
+                    .iter()
+                    .filter(|p| !menu.consist_audits.contains_key(*p))
+                    .collect::<Vec<_>>()
+            );
             menu.poll_consist_audits();
             std::thread::sleep(std::time::Duration::from_millis(1));
         }
@@ -1229,7 +1302,16 @@ mod tests {
         let project = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
         let mut menu = PlayerLaunchMenu::discover(&project, None);
         menu.refresh_choices_with_library(&library);
-        wait_for_audits(&mut menu);
+        // Select the fixture first; this unit test must not wait for every
+        // unrelated multi-gigabyte native formation in the user's library.
+        let index = menu.consists.iter().position(|p| p == &consist).unwrap();
+        menu.cycle_consist(index as i32 - menu.consist as i32);
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        while menu.selected_audit_pending() {
+            assert!(std::time::Instant::now() < deadline, "{}", menu.status);
+            menu.poll_consist_audits();
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
         assert!(menu.consists.contains(&consist));
         assert!(menu.consist_audits[&consist].player_ready());
         menu.consist = menu.consists.iter().position(|p| p == &consist).unwrap();

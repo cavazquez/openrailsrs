@@ -17,22 +17,46 @@ const PREVIEW_LAYER: usize = 31;
 const MAX_FILE_BYTES: u64 = 32 * 1024 * 1024;
 
 struct Worker<K, T> {
-    tx: mpsc::Sender<K>,
+    tx: mpsc::Sender<(u64, K)>,
     rx: Mutex<mpsc::Receiver<(K, Result<T, String>)>>,
+    generation: std::sync::Arc<std::sync::atomic::AtomicU64>,
+}
+impl<K, T> Worker<K, T> {
+    fn cancel(&self) {
+        self.generation
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    }
+    fn request(&self, key: K) {
+        use std::sync::atomic::Ordering;
+        let generation = self.generation.fetch_add(1, Ordering::Relaxed) + 1;
+        let _ = self.tx.send((generation, key));
+    }
+}
+impl<K, T> Drop for Worker<K, T> {
+    fn drop(&mut self) {
+        self.generation
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    }
 }
 fn worker<K: Send + 'static, T: Send + 'static>(load: fn(&K) -> Result<T, String>) -> Worker<K, T> {
-    let (tx, requests) = mpsc::channel::<K>();
+    let (tx, requests) = mpsc::channel::<(u64, K)>();
     let (results, rx) = mpsc::channel();
+    let generation = std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0));
+    let latest = generation.clone();
     std::thread::spawn(move || {
-        while let Ok(mut key) = requests.recv() {
-            // Browsing rapidly only queues the latest selection, not many loaders.
+        while let Ok(mut request) = requests.recv() {
             for newer in requests.try_iter() {
-                key = newer;
+                request = newer;
             }
+            let (epoch, key) = request;
+            let _scope = openrailsrs_formats::cancellation::Scope::new(latest.clone(), epoch);
             let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| load(&key)))
                 .unwrap_or_else(|_| {
                     Err("No se pudo interpretar el recurso de la vista previa".into())
                 });
+            if latest.load(std::sync::atomic::Ordering::Relaxed) != epoch {
+                continue;
+            }
             if results.send((key, result)).is_err() {
                 break;
             }
@@ -41,6 +65,7 @@ fn worker<K: Send + 'static, T: Send + 'static>(load: fn(&K) -> Result<T, String
     Worker {
         tx,
         rx: Mutex::new(rx),
+        generation,
     }
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -66,11 +91,13 @@ pub(super) struct RailwayInfo {
     pub missing: Vec<String>,
 }
 struct RouteResult {
+    inventory: crate::resource_estimate::Inventory,
     railway: RailwayInfo,
     image: Option<Image>,
     map: Result<(Image, String), String>,
 }
 struct TrainResult {
+    bytes: crate::resource_estimate::TrainBytes,
     models: Vec<Vec<crate::shapes::LoadedShapePart>>,
     textures: HashMap<String, (Image, u8, bool)>,
     vehicles: Vec<PreviewVehicle>,
@@ -117,6 +144,9 @@ pub(super) struct Previews {
     pub train_image: Option<Handle<Image>>,
     pub railway: Option<RailwayInfo>,
     pub route_status: String,
+    pub inventory: Option<crate::resource_estimate::Inventory>,
+    pub train_bytes: crate::resource_estimate::TrainBytes,
+    pub train_estimate_path: Option<PathBuf>,
     pub train_status: String,
     pub route_missing: HashMap<PathBuf, bool>,
     scene: Option<PreviewScene>,
@@ -136,6 +166,9 @@ impl Default for Previews {
             train_image: None,
             railway: None,
             route_status: String::new(),
+            inventory: None,
+            train_bytes: default(),
+            train_estimate_path: None,
             train_status: String::new(),
             route_missing: HashMap::new(),
             scene: None,
@@ -144,6 +177,7 @@ impl Default for Previews {
     }
 }
 fn bounded(path: &Path) -> Result<(), String> {
+    openrailsrs_formats::cancellation::check().map_err(|e| e.to_string())?;
     let bytes = std::fs::metadata(path).map_err(|e| e.to_string())?.len();
     if bytes > MAX_FILE_BYTES {
         return Err("Recurso demasiado grande para la vista previa".into());
@@ -203,17 +237,18 @@ fn confined_resource(path: &Path, scope: &Path) -> Option<PathBuf> {
     path.starts_with(scope.canonicalize().ok()?).then_some(path)
 }
 fn load_route(key: &RouteKey) -> Result<RouteResult, String> {
-    let native = RouteFile::from_route_dir(&key.root).map_err(|e| e.to_string())?;
+    openrailsrs_formats::cancellation::check().map_err(|e| e.to_string())?;
+    let native = RouteFile::from_route_dir(&key.root).ok();
     let mut railway = RailwayInfo {
-        gauge_m: f64::from(native.cant.gauge_m),
+        gauge_m: native.as_ref().map_or(0., |n| f64::from(n.cant.gauge_m)),
         supply: ElectricSupply {
-            kind: if native.overhead_wire.electrified {
+            kind: if native.as_ref().is_some_and(|n| n.overhead_wire.electrified) {
                 ElectricPickup::Overhead
             } else {
                 ElectricPickup::None
             },
-            voltage_v: if native.overhead_wire.electrified {
-                native.max_line_voltage_v
+            voltage_v: if native.as_ref().is_some_and(|n| n.overhead_wire.electrified) {
+                native.as_ref().map_or(0., |n| n.max_line_voltage_v)
             } else {
                 0.0
             },
@@ -228,18 +263,22 @@ fn load_route(key: &RouteKey) -> Result<RouteResult, String> {
         railway.supply = supply.supply;
         railway.section_supplies = supply.sections.into_iter().map(|s| s.supply).collect();
     }
-    for folder in ["WORLD", "TILES", "PATHS"] {
+    for folder in ["WORLD", "TILES", "PATHS"]
+        .into_iter()
+        .filter(|_| native.is_some())
+    {
         if !resolve_path_case_insensitive(&key.root.join(folder)).is_some_and(|p| p.is_dir()) {
             railway.missing.push(format!("Falta la carpeta {folder}"));
         }
     }
     let image = native
-        .loading_screen
-        .as_deref()
+        .as_ref()
+        .and_then(|n| n.loading_screen.as_deref())
         .and_then(|name| route_artwork(&key.root, name))
         .and_then(|path| load_texture(&path).ok().map(|texture| texture.0));
     let map = route::load(key);
     Ok(RouteResult {
+        inventory: crate::resource_estimate::Inventory::scan(&key.root)?,
         railway,
         image,
         map,
@@ -253,7 +292,7 @@ pub(super) fn railway_warning(
         .compatibility
         .iter()
         .filter_map(|v| v.declared.curve.track_gauge_m)
-        .find(|gauge| (*gauge - railway.gauge_m).abs() > 0.025)
+        .find(|gauge| railway.gauge_m > 0. && (*gauge - railway.gauge_m).abs() > 0.025)
     {
         return Some(format!(
             "Trocha incompatible: tren {:.0} mm · ruta {:.0} mm",
@@ -304,6 +343,12 @@ pub(super) fn update(
     mut cameras: Query<&mut Transform, With<PreviewCamera>>,
 ) {
     if ui.panel != PlayerPanel::NewGame {
+        if previews.train_key.take().is_some() {
+            previews.train_worker.cancel();
+        }
+        if previews.route_key.take().is_some() {
+            previews.route_worker.cancel();
+        }
         for root in &roots {
             commands.entity(root).despawn();
         }
@@ -325,9 +370,8 @@ pub(super) fn update(
         ui.choice_search[ChoiceKind::Consist.slot()].query = name;
         ui.rebuild = true;
     }
-    if let Some(service) = menu.current()
-        && let Some(root) = &service.scenery_root
-    {
+    if let Some(service) = menu.current() {
+        let root = service.scenery_root.as_ref().unwrap_or(&service.route_dir);
         let key = RouteKey {
             root: root.clone(),
             scenario: (!service.native_activity).then(|| service.source.clone()),
@@ -336,18 +380,19 @@ pub(super) fn update(
             native_activity: service.native_activity,
             native_timetable: service.native_timetable.clone(),
             path: menu
-                .paths
-                .get(menu.path)
-                .filter(|_| menu.path != 0)
+                .path
+                .checked_sub(1)
+                .and_then(|i| menu.paths.get(i))
                 .cloned(),
         };
         if previews.route_key.as_ref() != Some(&key) {
+            previews.inventory = None;
             previews.route_image = None;
             previews.route_map = None;
             previews.route_map_summary = "Preparando el mapa del servicio…".into();
             previews.railway = None;
             previews.route_status = "Cargando imagen de la ruta…".into();
-            let _ = previews.route_worker.tx.send(key.clone());
+            previews.route_worker.request(key.clone());
             previews.route_key = Some(key);
             ui.rebuild = true;
         }
@@ -397,6 +442,7 @@ pub(super) fn update(
                         previews.route_map_summary = format!("Mapa no disponible: {error}");
                     }
                 }
+                previews.inventory = Some(result.inventory);
                 previews.railway = Some(result.railway);
             }
             Err(error) => {
@@ -407,6 +453,9 @@ pub(super) fn update(
         ui.rebuild = true;
     }
     if ui.new_game_step != NewGameStep::Train {
+        if previews.train_key.take().is_some() {
+            previews.train_worker.cancel();
+        }
         for root in &roots {
             commands.entity(root).despawn();
         }
@@ -431,7 +480,7 @@ pub(super) fn update(
             previews.train_image = None;
             previews.scene = None;
             previews.train_status = "Cargando la formación original…".into();
-            let _ = previews.train_worker.tx.send(key.clone());
+            previews.train_worker.request(key.clone());
             previews.train_key = Some(key);
             ui.rebuild = true;
         }
@@ -459,6 +508,8 @@ pub(super) fn update(
                     TextureFormat::Rgba8Unorm,
                     Some(TextureFormat::Rgba8UnormSrgb),
                 ));
+                previews.train_estimate_path = Some(key.path.clone());
+                previews.train_bytes = result.bytes;
                 let scene = train::spawn(
                     &mut commands,
                     result,

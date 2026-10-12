@@ -3,14 +3,18 @@
 pub mod adhesion;
 pub mod brake;
 pub mod brake_circuit;
+pub mod cab_equipment;
 pub mod cab_meter;
+pub mod consumable_mass;
 pub mod coupler;
 pub mod csv_out;
 pub mod diesel_operation;
+pub mod driving_report;
 pub mod electric;
 pub mod error;
 pub mod etcs;
 pub mod exterior;
+pub mod learning;
 mod legacy_ep_brake;
 pub mod live_drive;
 pub mod live_traffic;

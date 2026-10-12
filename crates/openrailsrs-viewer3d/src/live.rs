@@ -1295,6 +1295,7 @@ pub fn spawn_live_train(
                                         ) {
                                             entity.insert(NotShadowCaster);
                                         }
+                                        crate::destination_boards::mark(&mut entity,&shape_file,part.prim_state_idx,0);
                                         // Exterior only (`LiveTrainBody`); cab interior is separate.
                                         crate::rolling_stock_anim::insert_part_anim(
                                             &mut entity,
