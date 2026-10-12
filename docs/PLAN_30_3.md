@@ -4,7 +4,7 @@ Se conservan los criterios originales. Un issue se cierra después de implementa
 
 ## Aceptación
 
-Implementación integrada y `check.sh` local aprobado. Hay 26 issues verificados para cierre; #237, #309, #310 y #312 conservan pendiente la escucha manual pedida por sus criterios. El usuario informó el 12 de octubre que todavía no pudo escuchar las muestras. No se considera esa respuesta una aprobación.
+Implementación integrada y `check.sh` local aprobado. Se completaron y cerraron 26 issues; #237, #309, #310 y #312 conservan pendiente la escucha manual pedida por sus criterios. El usuario informó el 12 de octubre que todavía no pudo escuchar las muestras. No se considera esa respuesta una aprobación.
 
 [Guía para probar los 30 cambios](PLAYER_30_3_MANUAL.md) · [Resultados y condiciones](PLAYER_30_3_QA.md).
 

@@ -1,6 +1,6 @@
 # Aceptación de la tercera entrega
 
-12 de octubre de 2026. Referencias conservadas: Open Rails 1.6.1, Bevy 0.19.1 y Hanabi 0.19.0. La implementación abarca los 30 issues de [PLAN_30_3.md](PLAN_30_3.md). Se verificaron 26 para cierre; cuatro de audio siguen abiertos hasta completar su escucha manual. La [guía manual](PLAYER_30_3_MANUAL.md) indica cómo probar cada uno.
+12 de octubre de 2026. Referencias conservadas: Open Rails 1.6.1, Bevy 0.19.1 y Hanabi 0.19.0. La implementación abarca los 30 issues de [PLAN_30_3.md](PLAN_30_3.md). Se completaron y cerraron 26; cuatro de audio siguen abiertos hasta completar su escucha manual. La [guía manual](PLAYER_30_3_MANUAL.md) indica cómo probar cada uno.
 
 ## Verificación integrada
 
