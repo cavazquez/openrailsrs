@@ -4,11 +4,11 @@
 
 ## Verificación integrada
 
-`check.sh` pasó formato, Clippy sin advertencias, pruebas Rust/Python, construcción, ensayos nativos del contenido instalado, oráculo de escenario y servicio de estaciones. Se registraron 1895 ejecuciones de pruebas Rust, incluidas las nativas habilitadas; 718 corresponden al visor. Las pruebas que necesitan otras instalaciones originales siguen ignoradas: no se cuentan como cobertura del contenido ausente.
+`check.sh` pasó formato, Clippy sin advertencias, pruebas Rust/Python, construcción, ensayos nativos del contenido instalado, oráculo de escenario y servicio de estaciones. Se registraron 1896 ejecuciones de pruebas Rust, incluidas las nativas habilitadas; 718 corresponden al visor. Las pruebas que necesitan otras instalaciones originales siguen ignoradas: no se cuentan como cobertura del contenido ausente.
 
 Los seis oráculos físicos conservan sus tolerancias. Pullman completo: RMS de velocidad 0,2081 m/s, pico 1,0921 m/s y diferencia máxima de odómetro 39,61 m. Class 47: 0,2382 m/s, 1,9415 m/s y 25,79 m. Sus límites siguen siendo 0,75 m/s, 2 m/s y 45 m. Los cuatro ensayos cortos también pasaron. No son una certificación global de todas las locomotoras.
 
-Las regresiones cubren conexión perdida con espera finita y guardado; obra temporal hasta despejar la cola; cierre con señal SIGSCR restrictiva y desvío por apartadero existente; decisión de incidente; nueve pasos físicos del tutorial de vapor; retroceso con todo el estado del tráfico; campañas con estado material entre jornadas; CON propio con orden/inversión sin modificar fuentes; servicios con horarios, deshacer y persistencia; recursos compartidos confinados; traslado de partida a otra carpeta con contenido idéntico y rechazo de modificación; reproducción de comandos con diagnóstico del primer resultado diferente; desconexión y devolución del mando al teclado.
+Las regresiones cubren conexión perdida con espera finita y guardado; obra temporal hasta despejar la cola; cierre con señal SIGSCR restrictiva y desvío por apartadero existente; fin de cierre sin reactivación por otro tren y comparación de pasos largos/cortos; decisión de incidente; nueve pasos físicos del tutorial de vapor; retroceso con todo el estado del tráfico; campañas con estado material entre jornadas; CON propio con orden/inversión sin modificar fuentes; servicios con horarios, deshacer y persistencia; recursos compartidos confinados; traslado de partida a otra carpeta con contenido idéntico y rechazo de modificación; reproducción de comandos con diagnóstico del primer resultado diferente; desconexión y devolución del mando al teclado.
 
 El ejemplo `rust_vehicle_extension` se ejecutó: reloj final 3 s y 2 s acumulados sin suministro de baja tensión, incluyendo guardado/restauración. No necesitó .NET.
 
@@ -24,7 +24,7 @@ La aguanieve se capturó con lluvia 0,25, nieve 0,25 y temperatura 0,5 °C en CP
 
 ## Rendimiento comparable
 
-Referencia ejecutable `ac9ec45` frente al visor de esta entrega, mismo equipo, GPU/driver, 1280×720, recorrido, formación Pullman, cámara, semilla 42, lluvia y calidad. Cada ejecución condujo 100,1 m. P50/P95: 25/25 ms en ambas; P99: 27 → 25 ms. Ningún cuadro de conducción superó 100 ms. RAM del informe: 1277,18 → 1283,89 MiB; VRAM máxima del proceso: 1381,48 → 1124,87 MiB. Todo quedó dentro del presupuesto fijado. Inicio separado: cuadro más largo 1565,09 → 1455,64 ms. Estos resultados describen este ensayo y no predicen el FPS de otro equipo.
+Referencia ejecutable `ac9ec45` frente al visor del commit `50f87bc`, antes del ajuste de obras vencidas (este tramo no contiene obras), mismo equipo, GPU/driver, 1280×720, recorrido, formación Pullman, cámara, semilla 42, lluvia y calidad. Cada ejecución condujo 100,1 m. P50/P95: 25/25 ms en ambas; P99: 27 → 25 ms. Ningún cuadro de conducción superó 100 ms. RAM del informe: 1277,18 → 1283,89 MiB; VRAM máxima del proceso: 1381,48 → 1124,87 MiB. Todo quedó dentro del presupuesto fijado. Inicio separado: cuadro más largo 1565,09 → 1455,64 ms. Estos resultados describen este ensayo y no predicen el FPS de otro equipo.
 
 [Contrato, hardware, hashes y métricas](fixtures/third30-2026-10-12/performance.json). El comparador también rechaza condiciones diferentes, menos de 300 cuadros y valores no finitos; ausencia de VRAM sigue siendo desconocida.
 

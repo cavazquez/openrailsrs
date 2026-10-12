@@ -5,7 +5,7 @@
   "bevy": "0.19.1",
   "hanabi": "0.19.0",
   "local_check_passed": true,
-  "rust_test_executions_including_native_checks": 1895,
+  "rust_test_executions_including_native_checks": 1896,
   "viewer_tests_passed": 718,
   "menus": [
     {
@@ -666,5 +666,6 @@
     310,
     312
   ],
-  "physical_joystick_tested": false
+  "physical_joystick_tested": false,
+  "expired_work_reentry_and_frame_cadence_verified": true
 }

@@ -792,14 +792,84 @@ mod tests {
             end_m: 810.,
             owner: "Parked".into(),
         };
-        assert_eq!(player.closed_work_occupancy(&[tail]).len(), 1);
+        assert_eq!(
+            player
+                .closed_work_occupancy(std::slice::from_ref(&tail))
+                .len(),
+            1
+        );
         assert!(player.closed_work_occupancy(&[]).is_empty());
+        assert!(
+            player.closed_work_occupancy(&[tail]).is_empty(),
+            "A newly entering train cannot reactivate expired works"
+        );
         traffic.synchronize_occupancy(&mut player);
         assert!(
             player
                 .external_track_occupancy
                 .iter()
                 .all(|p| !p.owner.starts_with("Obra:"))
+        );
+    }
+    #[test]
+    fn closure_expiry_uses_physics_quanta_without_ai_and_cannot_reappear_under_a_new_train() {
+        let (mut one, mut traffic, _dir) = passing_loop();
+        traffic.services.clear();
+        one.state.rail_operations.definition.works.push(
+            openrailsrs_scenarios::rail_operations::TrackWorkDef {
+                id: "brief-main-work".into(),
+                edge: "main".into(),
+                start_m: 100.,
+                end_m: 800.,
+                start_s: 0.,
+                end_s: 1.,
+                direction: 0,
+                speed_kmh: 18.,
+                closed: true,
+            },
+        );
+        let scenario = one.snapshot();
+        let (mut many, mut other, _second_dir) = passing_loop();
+        other.services.clear();
+        many.state.rail_operations.definition = one.state.rail_operations.definition.clone();
+        many.restore_snapshot(scenario).unwrap();
+        for session in [&mut one, &mut many] {
+            session.driver_direction = 1.;
+            session.driver_brake = 0.;
+            session.driver_throttle = 0.5;
+            session.state.velocity_mps = 8.;
+            for vehicle in &mut session.state.vehicles {
+                vehicle.velocity_mps = 8.;
+            }
+        }
+        traffic.advance(&mut one, 10., None, |_| {});
+        for _ in 0..200 {
+            other.advance(&mut many, 0.05, None, |_| {});
+        }
+        assert!(!one.gameplay.is_finished());
+        assert!(one.state.rail_operations.closed_works.is_empty());
+        // A signal behind the tail may correctly return to red for the block
+        // now occupied by this train; it must match across frame cadences.
+        assert_eq!(
+            one.native_signal_aspect("entry"),
+            many.native_signal_aspect("entry")
+        );
+        assert!(
+            !one.external_track_occupancy
+                .iter()
+                .any(|p| p.owner.starts_with("Obra:"))
+        );
+        assert!(
+            !one.dispatcher
+                .waiting_for
+                .iter()
+                .any(|p| p.starts_with("Obra:"))
+        );
+        assert!((one.head_chainage_m() - many.head_chainage_m()).abs() < 1e-8);
+        assert!((one.velocity_mps() - many.velocity_mps()).abs() < 1e-8);
+        assert_eq!(
+            one.state.rail_operations.closed_works,
+            many.state.rail_operations.closed_works
         );
     }
     #[test]

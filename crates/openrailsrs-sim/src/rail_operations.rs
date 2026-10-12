@@ -9,6 +9,7 @@ pub struct RailOperationsState {
     pub connection_started: BTreeMap<usize, f64>,
     pub connections: BTreeMap<usize, String>,
     pub active_works: BTreeSet<String>,
+    pub closed_works: BTreeSet<String>,
     pub pending_incident: Option<String>,
     pub decisions: BTreeMap<String, IncidentChoice>,
     pub decision_started: BTreeMap<String, f64>,
@@ -37,6 +38,7 @@ impl RailOperationsState {
             && self
                 .active_works
                 .iter()
+                .chain(&self.closed_works)
                 .all(|id| self.definition.works.iter().any(|w| &w.id == id))
             && self
                 .pending_incident
@@ -50,16 +52,18 @@ impl RailOperationsState {
 }
 impl LiveDriveSession {
     pub(crate) fn closed_work_occupancy(
-        &self,
+        &mut self,
         traffic_footprints: &[crate::native_signals::TrackOccupancy],
     ) -> Vec<crate::native_signals::TrackOccupancy> {
+        let now = self.time_s();
+        let remembered = &mut self.state.rail_operations.closed_works;
         self.state
             .rail_operations
             .definition
             .works
             .iter()
             .filter_map(|work| {
-                if !work.closed || self.time_s() < work.start_s {
+                if !work.closed || now < work.start_s {
                     return None;
                 }
                 let edge = self.graph.edge(&work.edge)?;
@@ -76,11 +80,17 @@ impl LiveDriveSession {
                 };
                 // Ending the timetable window cannot remove protection underneath
                 // any vehicle, including a parked section or the other service's tail.
-                (self.time_s() < work.end_s
-                    || traffic_footprints
-                        .iter()
-                        .any(|p| crate::track_reservations::overlaps(&interval, p)))
-                .then_some(interval)
+                let active = now < work.end_s;
+                let occupied = traffic_footprints
+                    .iter()
+                    .any(|p| crate::track_reservations::overlaps(&interval, p));
+                let retain = remembered.contains(&work.id) && occupied;
+                if active {
+                    remembered.insert(work.id.clone());
+                } else if !occupied {
+                    remembered.remove(&work.id);
+                }
+                (active || retain).then_some(interval)
             })
             .collect()
     }

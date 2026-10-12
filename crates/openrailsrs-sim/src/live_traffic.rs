@@ -213,17 +213,14 @@ impl LiveTraffic {
         F: FnMut(&openrailsrs_scenarios::sound_regions::RegionTransition),
     {
         crate::rail_operations::coordinate(player, self);
-        if self.services.is_empty() {
-            if player
-                .state
-                .rail_operations
-                .definition
-                .works
-                .iter()
-                .any(|w| w.closed)
-            {
-                self.synchronize_occupancy(player);
-            }
+        let timed_closures = player
+            .state
+            .rail_operations
+            .definition
+            .works
+            .iter()
+            .any(|w| w.closed);
+        if self.services.is_empty() && !timed_closures {
             if let Some(notch) = automatic {
                 player.step_autodrive(real_dt, notch, transition);
             } else {
