@@ -91,6 +91,7 @@ impl Plugin for PlayerUiPlugin {
                 Update,
                 crate::building_windows::update
                     .after(crate::world::update_world_scenery_lod)
+                    .run_if(crate::live::live_mode_active)
                     .run_if(in_state(ViewerAppState::Playing)),
             )
             .init_resource::<crate::train_presentation::TrainPresentation>()
@@ -102,6 +103,7 @@ impl Plugin for PlayerUiPlugin {
                 PostUpdate,
                 crate::train_presentation::update
                     .after(bevy::transform::TransformSystems::Propagate)
+                    .run_if(crate::live::live_mode_active)
                     .run_if(in_state(ViewerAppState::Playing)),
             )
             .init_resource::<crate::gamepad_controls::AnalogControls>()
