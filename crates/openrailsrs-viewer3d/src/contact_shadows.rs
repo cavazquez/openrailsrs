@@ -5,6 +5,7 @@ pub(crate) struct OwnedDepth;
 pub fn update(
     mut commands: Commands,
     settings: Res<crate::player_settings::PlayerSettings>,
+    quality: Option<Res<crate::adaptive_graphics::AdaptiveGraphics>>,
     follow: Option<Res<crate::camera::CameraFollowMode>>,
     cameras: Query<
         (
@@ -22,7 +23,13 @@ pub fn update(
             .as_ref()
             .is_none_or(|f| !(**f == crate::camera::CameraFollowMode::DriverCam || f.is_cab2d()))
     {
-        match settings.contact_shadow_quality {
+        match if quality.as_ref().is_some_and(|q| q.level >= 2) {
+            0
+        } else if quality.as_ref().is_some_and(|q| q.level > 0) {
+            settings.contact_shadow_quality.min(1)
+        } else {
+            settings.contact_shadow_quality
+        } {
             1 => 8,
             2 => 16,
             _ => 0,

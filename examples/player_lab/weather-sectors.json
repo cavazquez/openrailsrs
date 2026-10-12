@@ -1,0 +1,36 @@
+{
+  "seed": 42,
+  "phases": [
+    {
+      "start_s": 0.0,
+      "transition_s": 0.0,
+      "kind": "rain",
+      "intensity": 0.5,
+      "wind_mps": [
+        2.0,
+        0.0
+      ],
+      "temperature_c": 3.0
+    }
+  ],
+  "sectors": [
+    {
+      "edge": "e1",
+      "start_m": 150.0,
+      "end_m": 3500.0,
+      "blend_m": 150.0,
+      "weather": {
+        "start_s": 0.0,
+        "transition_s": 0.0,
+        "kind": "snow",
+        "intensity": 0.5,
+        "wind_mps": [
+          2.0,
+          0.0
+        ],
+        "temperature_c": 0.5
+      }
+    }
+  ],
+  "schema": 1
+}

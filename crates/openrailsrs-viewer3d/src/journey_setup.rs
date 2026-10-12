@@ -62,11 +62,13 @@ impl JourneySetup {
         Some(WeatherTrack {
             schema: 1,
             seed,
+            sectors: vec![],
             phases: vec![WeatherPhase {
                 start_s: 0.,
                 transition_s: 0.,
                 kind,
                 intensity: 0.9,
+                temperature_c: None,
                 wind_mps: [3., 1.],
             }],
         })
@@ -102,6 +104,12 @@ impl JourneySetup {
             && probe.physics.diesel.cars.is_empty()
         {
             return Err("Este ejercicio necesita un tren diésel; elegí traction_operation.".into());
+        }
+        if self.mode == PlayMode::Tutorial
+            && self.lesson == Lesson::Steam
+            && probe.state.boiler_state.is_none()
+        {
+            return Err("Este tutorial necesita una locomotora de vapor; elegí traction_operation/scenario_steam.".into());
         }
         if matches!(self.mode, PlayMode::Practice | PlayMode::Explore) && self.start_stop > 0 {
             let stop = probe

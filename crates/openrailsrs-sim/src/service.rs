@@ -73,6 +73,8 @@ pub struct ServiceStopResult {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LiveGameplay {
     #[serde(default)]
+    pub departure_hold: bool,
+    #[serde(default)]
     pub shunting_steps: Vec<openrailsrs_scenarios::model::ShuntingStep>,
     #[serde(default)]
     pub shunting_completed_s: Vec<f64>,
@@ -109,6 +111,7 @@ impl LiveGameplay {
             .unwrap_or_else(|| destination_node.clone());
         Self {
             shunting_steps: vec![],
+            departure_hold: false,
             shunting_completed_s: vec![],
             destination,
             destination_node,
@@ -267,7 +270,10 @@ impl LiveGameplay {
                 self.phase = ServicePhase::ReadyToDepart;
             }
         }
-        if self.phase != ServicePhase::ReadyToDepart || door != DoorState::Closed {
+        if self.departure_hold
+            || self.phase != ServicePhase::ReadyToDepart
+            || door != DoorState::Closed
+        {
             return None;
         }
         self.finish_stop(time_s, false)

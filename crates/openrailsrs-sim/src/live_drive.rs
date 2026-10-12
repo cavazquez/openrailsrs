@@ -634,6 +634,14 @@ impl LiveDriveSession {
         let path_data = PathData::from_path(&path_edges, &graph);
         let mut state = TrainSimState::new(path_edges.clone());
         state.weather_track = scenario.simulation.weather_track.clone();
+        state.announcements.package = scenario.train.announcements.clone();
+        state.announcements.package.root.clear();
+        state.rail_operations.definition = scenario.simulation.rail_operations.clone();
+        if !state.rail_operations.definition.valid() {
+            return Err(crate::SimError::Msg(
+                "Operaciones ferroviarias inválidas".into(),
+            ));
+        }
         state.cab_equipment = crate::cab_equipment::load(
             &consist_path,
             &scenario.train.cab_equipment,
@@ -747,6 +755,51 @@ impl LiveDriveSession {
         exterior.set_pantograph_up(physics.electric.cars.iter().any(|c| {
             c.params.pickup == openrailsrs_core::electrification::ElectricPickup::Overhead
         }));
+        if let Some(track) = &scenario.simulation.weather_track {
+            for sector in &track.sectors {
+                if graph
+                    .edge(&sector.edge)
+                    .is_none_or(|e| sector.end_m > e.length_m + 1e-6)
+                {
+                    return Err(SimError::Msg(format!(
+                        "Sector meteorológico {} fuera de una vía válida",
+                        sector.edge
+                    )));
+                }
+            }
+        }
+        for w in &scenario.simulation.rail_operations.works {
+            if graph
+                .edge(&w.edge)
+                .is_none_or(|e| w.end_m > e.length_m + 1e-6)
+            {
+                return Err(SimError::Msg(format!(
+                    "Obra {} fuera de una vía válida",
+                    w.id
+                )));
+            }
+        }
+        for c in &scenario.simulation.rail_operations.connections {
+            if c.stop >= gameplay.stop_targets.len()
+                || !scenario
+                    .extra_trains
+                    .iter()
+                    .any(|t| t.id == c.service && c.service_stop < t.stops.len())
+            {
+                return Err(SimError::Msg(
+                    "Conexión ferroviaria con estación o servicio inexistente".into(),
+                ));
+            }
+        }
+        for i in &scenario.simulation.rail_operations.incidents {
+            if i.stop >= gameplay.stop_targets.len()
+                || !scenario.extra_trains.iter().any(|t| t.id == i.service)
+            {
+                return Err(SimError::Msg(
+                    "Incidente con estación o servicio inexistente".into(),
+                ));
+            }
+        }
         let mut session = Self {
             scenario_name: scenario.scenario.name.clone(),
             formation: crate::FormationState::new(&consist),
@@ -877,6 +930,10 @@ impl LiveDriveSession {
         self.time_s() < self.horn_pressed_until_s
     }
 
+    pub fn stop_horn(&mut self) {
+        self.horn_pressed_until_s = self.time_s();
+    }
+
     pub fn trigger_horn(&mut self, hold_s: f64) {
         self.horn_pressed_until_s = self.time_s() + hold_s.max(0.05);
     }
@@ -963,7 +1020,7 @@ impl LiveDriveSession {
 
     /// Effective limit including caution signals on the current edge.
     pub fn effective_speed_limit_mps(&self) -> f64 {
-        let base = self.speed_limit_mps();
+        let base = self.temporary_speed_limit(self.speed_limit_mps());
         let Some(edge) = self.current_edge_id() else {
             return base;
         };
@@ -994,7 +1051,23 @@ impl LiveDriveSession {
     }
 
     pub fn signal_aspect(&self, signal_id: &str) -> Option<SignalAspect> {
-        self.signal_runtime.get(signal_id).copied()
+        let aspect = self.signal_runtime.get(signal_id).copied()?;
+        let now = self.time_s();
+        let work = self.graph.signal(signal_id).is_some_and(|s| {
+            self.state.rail_operations.definition.works.iter().any(|w| {
+                w.edge == s.edge_id
+                    && w.start_m >= s.position_m
+                    && now >= w.start_s
+                    && now < w.end_s
+                    && (w.direction == 0
+                        || w.direction == if self.driver_direction <= 0.25 { -1 } else { 1 })
+            })
+        });
+        Some(if work && aspect == SignalAspect::Clear {
+            SignalAspect::Caution
+        } else {
+            aspect
+        })
     }
 
     pub fn next_signal_ahead(&self) -> Option<(f64, SignalAspect)> {
@@ -1658,6 +1731,7 @@ impl LiveDriveSession {
             self.state.throttle = if (self.driver_direction >= 0.75
                 || self.driver_direction <= 0.25)
                 && self.exterior.door == crate::exterior::DoorState::Closed
+                && !self.gameplay.departure_hold
             {
                 self.driver_throttle
             } else {
@@ -1700,11 +1774,24 @@ impl LiveDriveSession {
                 let mut edge = self.path_data.edges[self.state.edge_index].clone();
                 edge.length_m = 1.0e12;
                 edge.grade_percent = -edge.grade_percent;
+                for grade in &mut edge.profile.grades {
+                    grade.grade_percent = -grade.grade_percent;
+                }
+                let source_edge = self
+                    .state
+                    .path_edges
+                    .get(self.state.edge_index)
+                    .cloned()
+                    .unwrap_or_default();
+                // The velocity calculation uses a virtual long edge; retain the
+                // native position for spatial weather and grade evaluation.
                 self.state.edge_index = 0;
-                self.state.pos_on_edge_m = 0.0;
                 step(
                     &mut self.state,
-                    &PathData { edges: vec![edge] },
+                    &PathData {
+                        edges: vec![edge],
+                        edge_ids: vec![source_edge],
+                    },
                     &self.physics,
                     dt,
                 );
@@ -1730,6 +1817,7 @@ impl LiveDriveSession {
             {
                 self.gameplay.fail("Señal de parada rebasada");
             }
+            self.update_work_occupancy();
             self.tick_after_physics_step(dt, on_region_transition);
             self.update_shunting();
             let physical_end = res.arrived && self.operational_legs.is_empty();
@@ -1826,6 +1914,7 @@ impl LiveDriveSession {
         self.tick_refill(step_dt);
         self.exterior.tick(step_dt);
         self.tick_signals(step_dt);
+        self.tick_announcements();
         self.tick_gameplay(step_dt);
         if self.script_tcs.is_some() {
             let context = self.script_context(step_dt);

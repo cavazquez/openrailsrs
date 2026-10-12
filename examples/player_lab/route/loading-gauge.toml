@@ -1,0 +1,5 @@
+source = "openrailsrs own synthetic laboratory: declared dimensions, straight track"
+max_width_m = 3.4
+max_height_m = 4.5
+radius_m = 0.0
+raised_collectors_verified = false

@@ -229,6 +229,10 @@ pub struct PlayerSettings {
     pub journey_setup: crate::journey_setup::JourneySetup,
     pub braking_coach: bool,
     pub view_distance_m: f32,
+    pub projected_lod: bool,
+    pub quality_limits: crate::adaptive_graphics::QualityLimits,
+    pub lod_pixels_cab: f32,
+    pub lod_pixels_exterior: f32,
     pub cab_fov_deg: f32,
     pub shadows: bool,
     pub automatic_cant: bool,
@@ -272,6 +276,8 @@ pub struct PlayerSettings {
     /// Stable choice identities; incomplete content can also be a favorite.
     pub library_favorites: BTreeSet<String>,
     pub cab_profiles: BTreeMap<String, crate::cab_profile::CabProfile>,
+    pub shared_installations: Vec<PathBuf>,
+    pub gamepad: crate::gamepad_controls::GamepadPreferences,
     pub keys: BTreeMap<PlayerAction, String>,
 }
 
@@ -281,6 +287,10 @@ impl Default for PlayerSettings {
             journey_setup: Default::default(),
             braking_coach: false,
             view_distance_m: 2000.0,
+            projected_lod: true,
+            quality_limits: default(),
+            lod_pixels_cab: 96.,
+            lod_pixels_exterior: 72.,
             cab_fov_deg: 60.0,
             shadows: true,
             automatic_cant: true,
@@ -320,6 +330,8 @@ impl Default for PlayerSettings {
             traffic_brake_assistance: false,
             library_favorites: BTreeSet::new(),
             cab_profiles: BTreeMap::new(),
+            shared_installations: vec![],
+            gamepad: default(),
             keys: PlayerAction::ALL
                 .into_iter()
                 .map(|a| (a, format!("{:?}", a.default_key())))
@@ -406,6 +418,26 @@ impl PlayerSettings {
         Ok(())
     }
     pub fn validate(&self) -> Result<(), String> {
+        if self.shared_installations.len() > 8
+            || self
+                .shared_installations
+                .iter()
+                .any(|p| !p.is_absolute() || p.to_string_lossy().len() > 4096)
+        {
+            return Err("Instalaciones compartidas inválidas".into());
+        }
+        if !self.gamepad.valid() {
+            return Err("Perfil de mando inválido".into());
+        }
+        if !self.quality_limits.valid() {
+            return Err("Límites de calidad inválidos".into());
+        }
+        if ![self.lod_pixels_cab, self.lod_pixels_exterior]
+            .iter()
+            .all(|p| p.is_finite() && (24. ..=512.).contains(p))
+        {
+            return Err("Umbral de LOD inválido".into());
+        }
         if self.vehicle_profiles.len() > 256
             || self
                 .vehicle_profiles

@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "author": "openrailsrs contributors",
+  "license": "GPL-3.0-only",
+  "source": "https://github.com/cavazquez/openrailsrs/tree/main/examples/traction_operation/announcements",
+  "synthesis": {
+    "tool": "ffmpeg flite filter",
+    "voice": "kal (built-in English demo voice)",
+    "engine_source": "https://github.com/festvox/flite",
+    "engine_license": "https://github.com/festvox/flite/blob/master/COPYING",
+    "note": "Original project texts and generated demonstration clips; engine/voice model is not redistributed."
+  },
+  "files": {
+    "arrival.wav": "7437bfb280ecc7ed30ce9e0c206938f2386415ad50ce73d2cedf950bee4bc400",
+    "approach.wav": "269b24900cd78c84008c40b3669bc021723ce21ae929fe4238e44aa34ee4ded4",
+    "departure.wav": "44410ae1c1614c59a5badfba9b6ed834de30fb203b740c7a16cfe41faa920930"
+  }
+}

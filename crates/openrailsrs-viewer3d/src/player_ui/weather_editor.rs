@@ -9,6 +9,7 @@ pub(super) enum Field {
     WindX,
     WindZ,
     Seed,
+    Temperature,
 }
 pub(super) fn edit(
     track: &mut WeatherTrack,
@@ -40,6 +41,19 @@ pub(super) fn edit(
             Field::Intensity => phase.intensity = (phase.intensity + delta as f32).clamp(0., 1.),
             Field::WindX => phase.wind_mps[0] += delta as f32,
             Field::WindZ => phase.wind_mps[1] += delta as f32,
+            Field::Temperature => {
+                phase.temperature_c = Some(
+                    (phase
+                        .temperature_c
+                        .unwrap_or(if phase.kind == WeatherKind::Snow {
+                            -5.
+                        } else {
+                            15.
+                        })
+                        + delta as f32)
+                        .clamp(-60., 60.),
+                )
+            }
             Field::Seed => {}
         }
     }
@@ -57,6 +71,7 @@ pub(super) fn add(track: &mut WeatherTrack) -> Result<(), String> {
         transition_s: 60.,
         kind: WeatherKind::Clear,
         intensity: 0.5,
+        temperature_c: None,
         wind_mps: [1., 0.],
     });
     if !candidate.valid() {
@@ -169,6 +184,14 @@ pub(super) fn build(
             "Viento norte",
             format!("{:.1} m/s", phase.wind_mps[1]),
             Field::WindZ,
+            1.,
+        ),
+        (
+            "Temperatura",
+            phase
+                .temperature_c
+                .map_or("Tipo original".into(), |t| format!("{t:.0} °C")),
+            Field::Temperature,
             1.,
         ),
         ("Semilla", track.seed.to_string(), Field::Seed, 1.),

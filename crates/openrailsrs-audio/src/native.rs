@@ -43,6 +43,7 @@ pub struct SoundState {
     pub blower: bool,
     pub damper: f32,
     pub cylinder_cocks: bool,
+    pub air_leak: bool,
     pub horn: bool,
     pub wiper: bool,
     pub wiper_rate: f32,
@@ -210,18 +211,37 @@ pub struct TrainSoundFrame {
 pub struct SoundPlacement {
     pub pan: f32,
     pub doppler: f32,
+    pub horn_gain: f32,
+    pub blocked: bool,
+    pub horn_source: Option<EmitterPlacement>,
+    pub leak_source: Option<EmitterPlacement>,
+}
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct EmitterPlacement {
+    pub pan: f32,
+    pub distance_m: f32,
+    pub doppler: f32,
+    pub blocked: bool,
 }
 impl Default for SoundPlacement {
     fn default() -> Self {
         Self {
             pan: 0.0,
             doppler: 1.0,
+            horn_gain: 1.0,
+            blocked: false,
+            horn_source: None,
+            leak_source: None,
         }
     }
 }
 impl SoundPlacement {
     pub fn from_radial_velocity(pan: f32, receding_mps: f32) -> Self {
         Self {
+            horn_gain: 1.0,
+            blocked: false,
+            horn_source: None,
+            leak_source: None,
             pan: if pan.is_finite() {
                 pan.clamp(-1.0, 1.0)
             } else {
@@ -261,6 +281,9 @@ pub struct SoundFrame {
     pub mix: crate::mix::SoundMix,
     /// Presentation delta controls crossfades; zero preserves offline oracles.
     pub presentation_dt_s: f32,
+    pub window_opening: f32,
+    pub announcements: Vec<(String, String)>,
+    pub cover: f32,
     pub rain_surface: crate::weather::RainSurface,
     pub trains: Vec<TrainSoundFrame>,
 }
@@ -970,6 +993,7 @@ impl Playback {
             .copied()
             // Open Rails UserSettings.ExternalSoundPassThruPercent defaults to 50.
             .unwrap_or(0.5);
+        let interior_gain = crate::acoustics::window_gain(interior_gain, frame.window_opening);
         let mut frame_events = HashMap::new();
         for ((bank, voices), active) in self
             .bank
@@ -1051,7 +1075,7 @@ impl Playback {
                     1.0
                 };
             for (stream, voice) in bank.program.streams.iter().zip(voices) {
-                let placement = if external && !bank.program.ignore_3d && !bank.program.stereo {
+                let mut placement = if external && !bank.program.ignore_3d && !bank.program.stereo {
                     train
                         .vehicle_placement
                         .get(bank.vehicle)
@@ -1060,6 +1084,30 @@ impl Playback {
                 } else {
                     SoundPlacement::default()
                 };
+                let horn_stream = stream
+                    .triggers
+                    .iter()
+                    .any(|t| matches!(t.kind, TriggerKind::Discrete(8 | 9)));
+                let leak_stream=stream.triggers.iter().flat_map(|t|&t.commands).any(|c| matches!(c,Command::Play{files,..} if files.iter().any(|f|f.to_ascii_lowercase().contains("leak"))));
+                let emitter = if horn_stream {
+                    placement.horn_source
+                } else if leak_stream {
+                    placement.leak_source
+                } else {
+                    None
+                };
+                let source_distance = emitter.map_or(source_distance, |e| e.distance_m);
+                let distance_gain = emitter.map_or(distance_gain, |e| {
+                    placement.pan = e.pan;
+                    placement.doppler = e.doppler;
+                    placement.blocked = e.blocked;
+                    inverse_distance_gain(e.distance_m, bank.program.deactivation_distance_m)
+                        * if frame.cab || frame.passenger {
+                            interior_gain
+                        } else {
+                            1.
+                        }
+                });
                 voice.pan.store(placement.pan.to_bits(), Ordering::Relaxed);
                 for (i, trigger) in stream.triggers.iter().enumerate() {
                     if !voice.enabled[i] {
@@ -1196,7 +1244,18 @@ impl Playback {
                     .iter()
                     .map(|c| c.value(state.control(c.control, source_distance)))
                     .product::<f32>();
-                let target = if audible { distance_gain } else { 0.0 };
+                let spatial = if horn_stream {
+                    placement.horn_gain
+                } else if placement.blocked {
+                    0.55
+                } else {
+                    1.
+                };
+                let target = if audible && (!leak_stream || state.air_leak) {
+                    distance_gain * spatial
+                } else {
+                    0.0
+                };
                 voice.mix_gain = if self.initial || frame.presentation_dt_s <= 0.0 {
                     target
                 } else {
@@ -1379,10 +1438,16 @@ fn mix_limit() -> rodio::source::LimitSettings {
 }
 impl NativeAudioEngine {
     pub fn start(specs: Vec<ConsistSoundSpec>) -> Option<Self> {
+        Self::start_with_announcements(specs, vec![])
+    }
+    pub fn start_with_announcements(
+        specs: Vec<ConsistSoundSpec>,
+        announcements: Vec<crate::announcements::LicensedSample>,
+    ) -> Option<Self> {
         if std::env::var_os("OPENRAILSRS_DISABLE_AUDIO").is_some() {
             return None;
         }
-        let (tx, rx) = mpsc::sync_channel(2);
+        let (tx, rx) = mpsc::sync_channel::<SoundFrame>(2);
         let (thunder_tx, thunder_rx) = mpsc::sync_channel::<crate::thunder::ThunderEvent>(2);
         let (weather_tx, weather_rx) = mpsc::sync_channel::<(f32, f32)>(2);
         let report = Arc::new(Mutex::new(SoundReport::default()));
@@ -1399,8 +1464,13 @@ impl NativeAudioEngine {
                 output.config().channel_count(),
                 output.config().sample_rate(),
             );
-            output.mixer().add(source.limit(mix_limit()));
+            let covered = Arc::new(AtomicU32::new(0.0f32.to_bits()));
+            output.mixer().add(
+                crate::acoustics::CoveredSource::new(source, covered.clone()).limit(mix_limit()),
+            );
             let mut playback = Playback::new(bank, &mixer);
+            let mut announcements =
+                crate::announcements::AnnouncementPlayer::new(announcements, &mixer);
             let mut thunder_voices: Vec<(Player, f32)> = vec![];
             let rain: [Player; 4] = std::array::from_fn(|_| Player::connect_new(&mixer));
             let wind = Player::connect_new(&mixer);
@@ -1422,7 +1492,23 @@ impl NativeAudioEngine {
             let mut atmosphere = (0., 0.);
             let mut surface_gains = [0.0; 4];
             for frame in rx {
+                covered.store(
+                    (frame.cover.clamp(0., 1.)
+                        * if frame.cab || frame.passenger {
+                            0.035
+                        } else {
+                            0.22
+                        })
+                    .to_bits(),
+                    Ordering::Relaxed,
+                );
                 playback.update(&frame);
+                announcements.update(
+                    frame.time_s,
+                    frame.paused,
+                    frame.volume * frame.mix.gain(crate::mix::SoundGroup::Announcements),
+                    &frame.announcements,
+                );
                 for latest in weather_rx.try_iter() {
                     atmosphere = latest;
                 }
@@ -1481,6 +1567,8 @@ impl NativeAudioEngine {
                     }
                 }
                 let mut r = playback.report();
+                r.warnings.extend(announcements.warnings.iter().cloned());
+                r.decoded_mib += announcements.decoded_mib;
                 r.device = true;
                 *shared.lock().unwrap() = r;
             }
@@ -1518,10 +1606,12 @@ pub fn render_oracle(
         std::num::NonZeroU16::new(2).unwrap(),
         std::num::NonZeroU32::new(44100).unwrap(),
     );
-    let mut source = source.limit(mix_limit());
+    let wet = Arc::new(AtomicU32::new(0.0f32.to_bits()));
+    let mut source = crate::acoustics::CoveredSource::new(source, wet.clone()).limit(mix_limit());
     let mut playback = Playback::new(NativeSoundBank::load(specs), &mixer);
     let mut pcm = vec![];
     for pair in frames.windows(2) {
+        wet.store(pair[0].cover.clamp(0., 0.28).to_bits(), Ordering::Relaxed);
         playback.update(&pair[0]);
         let samples = ((pair[1].time_s - pair[0].time_s).max(0.0) * 44100.0) as usize;
         for _ in 0..samples * 2 {
@@ -1861,6 +1951,60 @@ mod tests {
         assert!(!source_active(true, 2001.0, &program));
     }
 
+    #[test]
+    fn window_opening_changes_native_pass_through_without_duplicate_voices() {
+        let program = SmsProgram::parse("Tr_SMS ( ScalabiltyGroup ( 5 Activation ( ExternalCam () PassengerCam () CabCam () Distance (100) ) Streams ( 1 Stream ( Triggers ( 1 Initial_Trigger ( StartLoop ( 1 File ( tone.wav -1 ) ) ) ) ) ) ) )").unwrap();
+        let (mut playback, _) = test_playback(vec![test_bank(0, program)]);
+        playback.bank.external_pass_through.insert((0, 0), 0.2);
+        let mut frame = test_frame();
+        frame.cab = true;
+        for (opening, gain) in [(0., 0.2), (0.5, 0.6), (1., 1.), (0., 0.2)] {
+            frame.window_opening = opening;
+            playback.update(&frame);
+            assert!((playback.voices[0][0].player.volume() - gain).abs() < 1e-6);
+            assert_eq!(playback.voices[0][0].player.len(), 1);
+        }
+        frame.cab = false;
+        playback.update(&frame);
+        assert_eq!(playback.voices[0][0].player.volume(), 1.);
+        frame.passenger = true;
+        frame.window_opening = 0.5;
+        playback.update(&frame);
+        assert!((playback.voices[0][0].player.volume() - 0.6).abs() < 1e-6);
+    }
+    #[test]
+    fn leak_emitter_does_not_move_engine_and_repair_silences_only_leak() {
+        let program = SmsProgram::parse("Tr_SMS ( ScalabiltyGroup ( 5 Streams ( 2 Stream ( Triggers ( 1 Initial_Trigger ( StartLoop ( 1 File ( tone.wav -1 ) ) ) ) ) Stream ( Triggers ( 1 Initial_Trigger ( StartLoop ( 1 File ( air_leak.wav -1 ) ) ) ) ) ) ) )").unwrap();
+        let mut bank = test_bank(0, program);
+        bank.samples.insert("air_leak.wav".into(), test_wave());
+        let (mut playback, _) = test_playback(vec![bank]);
+        let mut frame = test_frame();
+        frame.trains[0].state.air_leak = true;
+        frame.trains[0].vehicle_placement = vec![SoundPlacement {
+            pan: -0.75,
+            leak_source: Some(EmitterPlacement {
+                pan: 0.8,
+                distance_m: 0.,
+                doppler: 1.,
+                blocked: false,
+            }),
+            ..Default::default()
+        }];
+        playback.update(&frame);
+        assert_eq!(
+            f32::from_bits(playback.voices[0][0].pan.load(Ordering::Relaxed)),
+            -0.75
+        );
+        assert_eq!(
+            f32::from_bits(playback.voices[0][1].pan.load(Ordering::Relaxed)),
+            0.8
+        );
+        assert!(playback.voices[0][1].player.volume() > 0.);
+        frame.trains[0].state.air_leak = false;
+        playback.update(&frame);
+        assert_eq!(playback.voices[0][1].player.volume(), 0.);
+        assert!(playback.voices[0][0].player.volume() > 0.);
+    }
     #[test]
     fn external_sound_uses_the_listening_car_override_including_other_services() {
         let program = SmsProgram::parse("Tr_SMS ( ScalabiltyGroup ( 5 Activation ( ExternalCam () PassengerCam () CabCam () Distance (100) ) Streams ( 1 Stream ( Triggers ( 1 Initial_Trigger ( StartLoop ( 1 File ( tone.wav -1 ) ) ) ) ) ) ) )").unwrap();

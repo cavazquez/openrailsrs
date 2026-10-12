@@ -8,10 +8,12 @@ fn main() {
     if args.len() < 3
         || args.len() > 5
         || args.get(3).is_some_and(|s| s != "cab" && s != "exterior")
-        || args.get(4).is_some_and(|s| s != "--probe-device")
+        || args
+            .get(4)
+            .is_some_and(|s| s != "--probe-device" && s != "--presentation")
     {
         eprintln!(
-            "Usage: native_oracle CONSIST.con ROUTE OUTPUT.wav [cab|exterior] [--probe-device]"
+            "Usage: native_oracle CONSIST.con ROUTE OUTPUT.wav [cab|exterior] [--probe-device|--presentation]"
         );
         std::process::exit(2);
     }
@@ -62,6 +64,7 @@ fn main() {
         })
     });
     let cab = args.get(3).is_some_and(|s| s == "cab");
+    let presentation = args.get(4).is_some_and(|s| s == "--presentation");
     let frames: Vec<_> = (0..=1200)
         .map(|i| {
             let seconds = i as f64 / 100.0;
@@ -76,12 +79,35 @@ fn main() {
                 time_s: seconds,
                 cab,
                 volume: 0.4,
+                window_opening: if presentation {
+                    ((seconds - 3.0) / 2.0).clamp(0., 1.) as f32
+                } else {
+                    0.0
+                },
+                cover: if presentation && seconds >= 5.0 {
+                    0.22
+                } else {
+                    0.0
+                },
                 trains: vec![TrainSoundFrame {
                     id: 0,
                     distance_m: if cab { 0.0 } else { 25.0 },
                     vehicle_distances_m: offsets.iter().map(|x| x.hypot(25.0)).collect(),
                     vehicle_states: vec![],
-                    vehicle_placement: vec![],
+                    vehicle_placement: if presentation {
+                        offsets
+                            .iter()
+                            .map(|_| openrailsrs_audio::native::SoundPlacement {
+                                horn_gain: openrailsrs_audio::acoustics::horn_gain(
+                                    if seconds < 8.0 { 1.0 } else { -1.0 },
+                                    seconds >= 8.25,
+                                ),
+                                ..Default::default()
+                            })
+                            .collect()
+                    } else {
+                        vec![]
+                    },
                     state: SoundState {
                         speed: ((seconds - 2.0).max(0.0) * 2.0) as f32,
                         distance: (seconds * seconds) as f32,
@@ -124,7 +150,7 @@ fn main() {
         eprintln!("{e}");
         std::process::exit(1);
     });
-    if args.get(4).is_some() {
+    if args.get(4).is_some_and(|s| s == "--probe-device") {
         let engine = NativeAudioEngine::start(vec![spec]).unwrap_or_else(|| {
             eprintln!("Device probe needs OPENRAILSRS_DISABLE_AUDIO unset");
             std::process::exit(1);

@@ -48,6 +48,7 @@ fn chiltern_pullman_freeroll_deceleration() {
     };
 
     let path_data = PathData {
+        edge_ids: vec![],
         edges: vec![PathEdgeData {
             profile: Default::default(),
             length_m: 10_000.0,

@@ -162,6 +162,9 @@ impl LiveTraffic {
                 footprints.extend(service.session.own_track_occupancy());
             }
         }
+        let works = player.closed_work_occupancy(&footprints);
+        blocks.extend(works.iter().map(|w| (w.edge.clone(), w.owner.clone())));
+        footprints.extend(works);
         let other_blocks = |id: &str| -> HashMap<_, _> {
             blocks
                 .iter()
@@ -209,7 +212,18 @@ impl LiveTraffic {
     ) where
         F: FnMut(&openrailsrs_scenarios::sound_regions::RegionTransition),
     {
+        crate::rail_operations::coordinate(player, self);
         if self.services.is_empty() {
+            if player
+                .state
+                .rail_operations
+                .definition
+                .works
+                .iter()
+                .any(|w| w.closed)
+            {
+                self.synchronize_occupancy(player);
+            }
             if let Some(notch) = automatic {
                 player.step_autodrive(real_dt, notch, transition);
             } else {
@@ -248,6 +262,7 @@ impl LiveTraffic {
                 }
             }
             self.synchronize_occupancy(player);
+            crate::rail_operations::coordinate(player, self);
             if let Some(notch) = automatic {
                 player.step_autodrive(dt, notch, &mut transition);
             } else {
@@ -271,6 +286,12 @@ fn service_scenario(player: &ScenarioFile, entry: &TrainEntryDef) -> ScenarioFil
     let mut ai = player.clone();
     ai.scenario.name.clone_from(&entry.id);
     ai.extra_trains.clear();
+    ai.simulation.rail_operations.connections.clear();
+    ai.simulation.rail_operations.incidents.clear();
+    ai.train
+        .announcements
+        .events
+        .retain(|e| e.service.as_deref() == Some(entry.id.as_str()));
     ai.route.start.clone_from(&entry.start);
     ai.route.destination.clone_from(&entry.destination);
     ai.route.start_offset_m = Some(entry.start_offset_m);

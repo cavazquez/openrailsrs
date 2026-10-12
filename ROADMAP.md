@@ -1,10 +1,10 @@
 # Desarrollo de openrailsrs
 
-Estado revisado el **11 de octubre de 2026**. El producto es un simulador ferroviario jugable en Rust y Bevy, con un núcleo que también se ejecuta sin gráficos. La referencia de compatibilidad sigue fijada en **Open Rails 1.6.1**. Cada comprobación tiene su propio contenido, condiciones y tolerancia; terminar una fase no certifica todos los sistemas de Open Rails.
+Estado revisado el **12 de octubre de 2026**. El producto es un simulador ferroviario jugable en Rust y Bevy, con un núcleo que también se ejecuta sin gráficos. La referencia de compatibilidad sigue fijada en **Open Rails 1.6.1**. Cada comprobación tiene su propio contenido, condiciones y tolerancia; terminar una fase no certifica todos los sistemas de Open Rails.
 
 ## Cómo leer este estado
 
-Las fases describen lo que ya se puede usar, dónde se comprueba y qué límites conserva. [El lote de treinta mejoras](docs/PLAN_30.md) contiene los issues seleccionados, criterios y pruebas manuales. El [segundo lote](docs/PLAN_30_2.md) amplía prácticas, equipos compatibles, escenario y gestión de la biblioteca. El [plan abierto en GitHub](https://github.com/cavazquez/openrailsrs/issues?q=is%3Aissue%20is%3Aopen%20label%3Aplan-200) conserva los demás objetivos y sus etiquetas de tema/dificultad.
+Las fases describen lo que ya se puede usar, dónde se comprueba y qué límites conserva. [El lote de treinta mejoras](docs/PLAN_30.md) contiene los issues seleccionados, criterios y pruebas manuales. El [segundo lote](docs/PLAN_30_2.md) amplía prácticas, equipos compatibles, escenario y gestión de la biblioteca. El [tercer lote](docs/PLAN_30_3.md) integra creación de formaciones/servicios, campañas, operaciones, acústica, clima y rendimiento; su seguimiento conserva la evidencia de aceptación. El [plan abierto en GitHub](https://github.com/cavazquez/openrailsrs/issues?q=is%3Aissue%20is%3Aopen%20label%3Aplan-200) conserva los demás objetivos y sus etiquetas de tema/dificultad.
 
 ## 1. Elegir contenido e iniciar una partida
 
@@ -12,7 +12,7 @@ Implementado: menú de cuatro entradas, listas con buscador, previews de ruta/fo
 
 Código: `player_ui/`, `player_launch.rs`, `content_validation.rs`, `openrailsrs-content` y `consist_audit.rs`. Verificación: [contenido nativo](docs/NATIVE_CONTENT_UPDATE.md), [biblioteca y descargas](docs/OFFICIAL_CONTENT.md), pruebas de launcher/auditoría y [diez rutas de comunidad](docs/fixtures/compatibility/community-routes-2026-10-11/README.md).
 
-Límite: los trenes pueden elegirse en otros mapas, pero trocha, suministro y recursos se comprueban aparte. El catálogo no es una clasificación universal de popularidad ni garantiza que cualquier actividad termine. Continúan abiertos [armado visual de formaciones #365](https://github.com/cavazquez/openrailsrs/issues/365) y [estimación previa de disco/RAM/VRAM #370](https://github.com/cavazquez/openrailsrs/issues/370).
+Límite: los trenes pueden elegirse en otros mapas, pero trocha, suministro y recursos se comprueban aparte. El catálogo no es una clasificación universal de popularidad ni garantiza que cualquier actividad termine. El armado visual crea CON propios y el editor de servicios usa recorridos existentes en un sentido. Sigue pendiente la [estimación previa de disco/RAM/VRAM #370](https://github.com/cavazquez/openrailsrs/issues/370).
 
 ## 2. Conducir y completar servicios
 
@@ -20,7 +20,7 @@ Implementado: cabinas 2D/3D, ratón sobre controles originales, conducción exte
 
 Código: `openrailsrs-sim/live_drive.rs`, `operations.rs`, `live_traffic.rs`, `saved_game.rs` y `save_history.rs`. Verificación: [pruebas manuales del jugador](docs/PLAYER_MANUAL_TESTS.md), regresiones de servicios, inversiones y snapshots; [las treinta mejoras](docs/PLAN_30.md) documentan los nuevos controles y el historial.
 
-Límite: se admiten operaciones concretas de horarios e inversiones; no todo evento ACT, pool, división entre formaciones independientes o maniobra general de OR. Pendientes: [rodear/reacoplar y terminar MidEast #211](https://github.com/cavazquez/openrailsrs/issues/211), [eventos originales de carga/descarga #212](https://github.com/cavazquez/openrailsrs/issues/212) y [retroceder una práctica #360](https://github.com/cavazquez/openrailsrs/issues/360).
+Límite: se admiten operaciones concretas de horarios e inversiones; no todo evento ACT, pool, división entre formaciones independientes o maniobra general de OR. Pendientes: [rodear/reacoplar y terminar MidEast #211](https://github.com/cavazquez/openrailsrs/issues/211), [eventos originales de carga/descarga #212](https://github.com/cavazquez/openrailsrs/issues/212).
 
 ## 3. Física, energía y seguridad
 

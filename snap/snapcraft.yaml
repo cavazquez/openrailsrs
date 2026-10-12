@@ -21,7 +21,7 @@ apps:
     command: bin/openrailsrs-viewer3d --menu
     command-chain: [bin/desktop-launch]
     desktop: share/applications/openrailsrs.desktop
-    plugs: [network, home, removable-media, opengl, x11, wayland, desktop, desktop-legacy, audio-playback]
+    plugs: [network, home, removable-media, opengl, x11, wayland, desktop, desktop-legacy, audio-playback, joystick]
   cli:
     command: bin/openrailsrs
     command-chain: [bin/desktop-launch]
@@ -31,8 +31,8 @@ parts:
     plugin: rust
     source: .
     rust-channel: stable
-    build-packages: [pkg-config, libx11-dev, libxcursor-dev, libxrandr-dev, libxi-dev, libasound2-dev, libwayland-dev, libxkbcommon-dev, libxkbcommon-x11-dev, python3, git]
-    stage-packages: [python3, ca-certificates, libasound2t64, libasound2-plugins, libpulse0, libx11-6, libxcursor1, libxrandr2, libxi6, libwayland-client0, libwayland-cursor0, libxkbcommon0, libxkbcommon-x11-0, xkb-data, libvulkan1, mesa-vulkan-drivers, xdg-utils]
+    build-packages: [pkg-config, libx11-dev, libxcursor-dev, libxrandr-dev, libxi-dev, libasound2-dev, libwayland-dev, libxkbcommon-dev, libxkbcommon-x11-dev, libudev-dev, python3, git]
+    stage-packages: [python3, ca-certificates, libasound2t64, libasound2-plugins, libpulse0, libudev1, libx11-6, libxcursor1, libxrandr2, libxi6, libwayland-client0, libwayland-cursor0, libxkbcommon0, libxkbcommon-x11-0, xkb-data, libvulkan1, mesa-vulkan-drivers, xdg-utils]
     override-build: |
       export CARGO_BUILD_JOBS=2
       export RUSTUP_TOOLCHAIN=stable

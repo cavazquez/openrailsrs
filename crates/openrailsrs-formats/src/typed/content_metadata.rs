@@ -19,6 +19,8 @@ pub struct VehicleScriptReference {
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct VehicleContentMetadata {
+    #[serde(default)]
+    pub size_m: Option<[f64; 3]>,
     pub engine_type: Option<String>,
     #[serde(default)]
     pub electric: Option<openrailsrs_core::electrification::ElectricVehicleParams>,
@@ -60,7 +62,17 @@ pub fn parse_vehicle_content_metadata(ast: &Ast, is_engine: bool) -> VehicleCont
         .filter_map(|v| v.first().and_then(scalar_text))
         .filter(|v| !v.is_empty() && !v.eq_ignore_ascii_case("none"))
         .collect();
+    let size_m = field_values(ast, "Size").first().and_then(|v| {
+        let dims = v
+            .iter()
+            .filter_map(scalar_text)
+            .filter_map(|v| crate::msts_units::parse_length_m(&v))
+            .collect::<Vec<_>>();
+        (dims.len() == 3 && dims.iter().all(|v| v.is_finite() && *v > 0.))
+            .then(|| [dims[0], dims[1], dims[2]])
+    });
     VehicleContentMetadata {
+        size_m,
         engine_type,
         electric: is_engine
             .then(|| super::parse_electric_vehicle(ast).ok().flatten())

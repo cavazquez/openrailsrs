@@ -1,0 +1,670 @@
+{
+  "schema": 1,
+  "date": "2026-10-12",
+  "open_rails": "1.6.1",
+  "bevy": "0.19.1",
+  "hanabi": "0.19.0",
+  "local_check_passed": true,
+  "rust_test_executions_including_native_checks": 1895,
+  "viewer_tests_passed": 718,
+  "menus": [
+    {
+      "page": "home",
+      "width": 800,
+      "height": 600,
+      "scale": 1.0,
+      "elapsed_s": 9.121935051000037,
+      "peak_rss_mib": 454.9375,
+      "exit_code": 0
+    },
+    {
+      "page": "route",
+      "width": 800,
+      "height": 600,
+      "scale": 1.0,
+      "elapsed_s": 9.12076345400419,
+      "peak_rss_mib": 463.3046875,
+      "exit_code": 0
+    },
+    {
+      "page": "train",
+      "width": 800,
+      "height": 600,
+      "scale": 1.0,
+      "elapsed_s": 9.121209894998174,
+      "peak_rss_mib": 466.84375,
+      "exit_code": 0
+    },
+    {
+      "page": "weather",
+      "width": 800,
+      "height": 600,
+      "scale": 1.0,
+      "elapsed_s": 9.12257782400411,
+      "peak_rss_mib": 457.0234375,
+      "exit_code": 0
+    },
+    {
+      "page": "controls",
+      "width": 800,
+      "height": 600,
+      "scale": 1.0,
+      "elapsed_s": 9.121527338997112,
+      "peak_rss_mib": 430.96875,
+      "exit_code": 0
+    },
+    {
+      "page": "library-tools",
+      "width": 800,
+      "height": 600,
+      "scale": 1.0,
+      "elapsed_s": 9.12387970200507,
+      "peak_rss_mib": 445.39453125,
+      "exit_code": 0
+    },
+    {
+      "page": "campaigns",
+      "width": 800,
+      "height": 600,
+      "scale": 1.0,
+      "elapsed_s": 9.121667384002649,
+      "peak_rss_mib": 427.12890625,
+      "exit_code": 0
+    },
+    {
+      "page": "formation-editor",
+      "width": 800,
+      "height": 600,
+      "scale": 1.0,
+      "elapsed_s": 9.12497387300391,
+      "peak_rss_mib": 447.92578125,
+      "exit_code": 0
+    },
+    {
+      "page": "service-editor",
+      "width": 800,
+      "height": 600,
+      "scale": 1.0,
+      "elapsed_s": 9.122761061997153,
+      "peak_rss_mib": 434.5859375,
+      "exit_code": 0
+    }
+  ],
+  "graphics": {
+    "night-home": {
+      "building_windows": {
+        "bright": 2,
+        "changes": 2,
+        "controlled_windows": 2,
+        "seed": 42
+      },
+      "adaptive_graphics": {
+        "changes": 1,
+        "filtered_ms": 25.172138214111328,
+        "level": 1
+      },
+      "train_lamps": [
+        {
+          "intensity": 3141592.75,
+          "passenger": false,
+          "range": 220.0,
+          "service": 0,
+          "shadows": true,
+          "vehicle": 0
+        },
+        {
+          "intensity": 3141592.75,
+          "passenger": false,
+          "range": 220.0,
+          "service": 0,
+          "shadows": true,
+          "vehicle": 0
+        },
+        {
+          "intensity": 240.0,
+          "passenger": true,
+          "range": 5.0,
+          "service": null,
+          "shadows": true,
+          "vehicle": 1
+        },
+        {
+          "intensity": 240.0,
+          "passenger": true,
+          "range": 5.0,
+          "service": null,
+          "shadows": true,
+          "vehicle": 1
+        }
+      ],
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": null,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 0
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "fog": {
+        "density_factor": 0.0,
+        "punctual_light_attenuation_corrected": true,
+        "visibility_m": 20000.0,
+        "volumetric": false
+      },
+      "clock_time_s": 75617.55,
+      "precipitation": {
+        "rain": 0.0,
+        "snow": 0.0,
+        "temperature_c": 10.660840034484863
+      }
+    },
+    "night-late": {
+      "building_windows": {
+        "bright": 1,
+        "changes": 2,
+        "controlled_windows": 2,
+        "seed": 42
+      },
+      "adaptive_graphics": {
+        "changes": 1,
+        "filtered_ms": 25.194120407104492,
+        "level": 1
+      },
+      "train_lamps": [
+        {
+          "intensity": 3141592.75,
+          "passenger": false,
+          "range": 220.0,
+          "service": 0,
+          "shadows": true,
+          "vehicle": 0
+        },
+        {
+          "intensity": 3141592.75,
+          "passenger": false,
+          "range": 220.0,
+          "service": 0,
+          "shadows": true,
+          "vehicle": 0
+        },
+        {
+          "intensity": 240.0,
+          "passenger": true,
+          "range": 5.0,
+          "service": null,
+          "shadows": true,
+          "vehicle": 1
+        },
+        {
+          "intensity": 240.0,
+          "passenger": true,
+          "range": 5.0,
+          "service": null,
+          "shadows": true,
+          "vehicle": 1
+        }
+      ],
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": null,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 0
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "fog": {
+        "density_factor": 0.0,
+        "punctual_light_attenuation_corrected": true,
+        "visibility_m": 20000.0,
+        "volumetric": false
+      },
+      "clock_time_s": 10817.55,
+      "precipitation": {
+        "rain": 0.0,
+        "snow": 0.0,
+        "temperature_c": 7.669759750366211
+      }
+    },
+    "night-cab": {
+      "building_windows": {
+        "bright": 2,
+        "changes": 2,
+        "controlled_windows": 2,
+        "seed": 42
+      },
+      "adaptive_graphics": {
+        "changes": 1,
+        "filtered_ms": 25.174516677856445,
+        "level": 1
+      },
+      "train_lamps": [
+        {
+          "intensity": 3141592.75,
+          "passenger": false,
+          "range": 220.0,
+          "service": 0,
+          "shadows": true,
+          "vehicle": 0
+        },
+        {
+          "intensity": 3141592.75,
+          "passenger": false,
+          "range": 220.0,
+          "service": 0,
+          "shadows": true,
+          "vehicle": 0
+        },
+        {
+          "intensity": 240.0,
+          "passenger": true,
+          "range": 5.0,
+          "service": null,
+          "shadows": true,
+          "vehicle": 1
+        },
+        {
+          "intensity": 240.0,
+          "passenger": true,
+          "range": 5.0,
+          "service": null,
+          "shadows": true,
+          "vehicle": 1
+        }
+      ],
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": null,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 0
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "fog": {
+        "density_factor": 0.0,
+        "punctual_light_attenuation_corrected": true,
+        "visibility_m": 20000.0,
+        "volumetric": false
+      },
+      "clock_time_s": 75617.55,
+      "precipitation": {
+        "rain": 0.0,
+        "snow": 0.0,
+        "temperature_c": 10.660840034484863
+      }
+    },
+    "traffic-fog": {
+      "building_windows": {
+        "bright": 2,
+        "changes": 2,
+        "controlled_windows": 2,
+        "seed": 42
+      },
+      "adaptive_graphics": {
+        "changes": 0,
+        "filtered_ms": 0.0,
+        "level": 0
+      },
+      "train_lamps": [
+        {
+          "intensity": 3141592.75,
+          "passenger": false,
+          "range": 220.0,
+          "service": 0,
+          "shadows": true,
+          "vehicle": 0
+        },
+        {
+          "intensity": 3141592.75,
+          "passenger": false,
+          "range": 220.0,
+          "service": 0,
+          "shadows": true,
+          "vehicle": 0
+        },
+        {
+          "intensity": 3141592.75,
+          "passenger": false,
+          "range": 220.0,
+          "service": 1,
+          "shadows": true,
+          "vehicle": 0
+        },
+        {
+          "intensity": 3141592.75,
+          "passenger": false,
+          "range": 220.0,
+          "service": 1,
+          "shadows": true,
+          "vehicle": 0
+        },
+        {
+          "intensity": 240.0,
+          "passenger": true,
+          "range": 5.0,
+          "service": null,
+          "shadows": true,
+          "vehicle": 1
+        },
+        {
+          "intensity": 240.0,
+          "passenger": true,
+          "range": 5.0,
+          "service": null,
+          "shadows": true,
+          "vehicle": 1
+        }
+      ],
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": null,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 0,
+        "snow_fraction": 0.0
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "fog": {
+        "density_factor": 0.06499999761581421,
+        "punctual_light_attenuation_corrected": true,
+        "visibility_m": 120.0,
+        "volumetric": true
+      },
+      "clock_time_s": 75634.6,
+      "precipitation": {
+        "rain": 0.0,
+        "snow": 0.0,
+        "temperature_c": 10.656009674072266
+      }
+    },
+    "sleet-cpu": {
+      "building_windows": {
+        "bright": 1,
+        "changes": 2,
+        "controlled_windows": 2,
+        "seed": 42
+      },
+      "adaptive_graphics": {
+        "changes": 1,
+        "filtered_ms": 25.18633460998535,
+        "level": 1
+      },
+      "train_lamps": [
+        {
+          "intensity": 3141592.75,
+          "passenger": false,
+          "range": 220.0,
+          "service": 0,
+          "shadows": true,
+          "vehicle": 0
+        },
+        {
+          "intensity": 3141592.75,
+          "passenger": false,
+          "range": 220.0,
+          "service": 0,
+          "shadows": true,
+          "vehicle": 0
+        }
+      ],
+      "weather_particles": {
+        "cpu_mesh_updates": 714,
+        "cpu_particles": 1024,
+        "execution": "cpu",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": 0.05000000074505806,
+        "quality_level": 0,
+        "requested": "cpu",
+        "seed_upload_capacity": 2048,
+        "shelter_refreshes": 36,
+        "snow_fraction": 0.5
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "fog": {
+        "density_factor": 0.00044999999227002263,
+        "punctual_light_attenuation_corrected": true,
+        "visibility_m": 1500.0,
+        "volumetric": true
+      },
+      "clock_time_s": 43217.55,
+      "precipitation": {
+        "rain": 0.25,
+        "snow": 0.25,
+        "temperature_c": 0.5
+      }
+    },
+    "sleet-gpu": {
+      "building_windows": {
+        "bright": 1,
+        "changes": 2,
+        "controlled_windows": 2,
+        "seed": 42
+      },
+      "adaptive_graphics": {
+        "changes": 1,
+        "filtered_ms": 25.17967987060547,
+        "level": 1
+      },
+      "train_lamps": [
+        {
+          "intensity": 3141592.75,
+          "passenger": false,
+          "range": 220.0,
+          "service": 0,
+          "shadows": true,
+          "vehicle": 0
+        },
+        {
+          "intensity": 3141592.75,
+          "passenger": false,
+          "range": 220.0,
+          "service": 0,
+          "shadows": true,
+          "vehicle": 0
+        }
+      ],
+      "weather_particles": {
+        "cpu_mesh_updates": 2,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 2048,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 1024,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 4096,
+        "shelter_refreshes": 36,
+        "snow_fraction": 0.5
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "fog": {
+        "density_factor": 0.00044999999227002263,
+        "punctual_light_attenuation_corrected": true,
+        "visibility_m": 1500.0,
+        "volumetric": true
+      },
+      "clock_time_s": 43217.6,
+      "precipitation": {
+        "rain": 0.25,
+        "snow": 0.25,
+        "temperature_c": 0.5
+      }
+    },
+    "sleet-hybrid": {
+      "building_windows": {
+        "bright": 1,
+        "changes": 2,
+        "controlled_windows": 2,
+        "seed": 42
+      },
+      "adaptive_graphics": {
+        "changes": 1,
+        "filtered_ms": 25.14499855041504,
+        "level": 1
+      },
+      "train_lamps": [
+        {
+          "intensity": 3141592.75,
+          "passenger": false,
+          "range": 220.0,
+          "service": 0,
+          "shadows": true,
+          "vehicle": 0
+        },
+        {
+          "intensity": 3141592.75,
+          "passenger": false,
+          "range": 220.0,
+          "service": 0,
+          "shadows": true,
+          "vehicle": 0
+        }
+      ],
+      "weather_particles": {
+        "cpu_mesh_updates": 714,
+        "cpu_particles": 256,
+        "execution": "hybrid",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 2048,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 768,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.05000000074505806,
+        "quality_level": 0,
+        "requested": "hybrid",
+        "seed_upload_capacity": 4096,
+        "shelter_refreshes": 36,
+        "snow_fraction": 0.5
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "fog": {
+        "density_factor": 0.00044999999227002263,
+        "punctual_light_attenuation_corrected": true,
+        "visibility_m": 1500.0,
+        "volumetric": true
+      },
+      "clock_time_s": 43217.55,
+      "precipitation": {
+        "rain": 0.25,
+        "snow": 0.25,
+        "temperature_c": 0.5
+      }
+    }
+  },
+  "audio_original_renders": [
+    {
+      "formation": "Birmingham Pullman.con",
+      "view": "exterior",
+      "status": "pass",
+      "warnings": [],
+      "rms": 0.17987423212856427,
+      "clipped_percent": 0.0
+    },
+    {
+      "formation": "Birmingham Pullman.con",
+      "view": "cab",
+      "status": "pass",
+      "warnings": [],
+      "rms": 0.10113676284383274,
+      "clipped_percent": 0.0
+    },
+    {
+      "formation": "RS_Football Special.con",
+      "view": "exterior",
+      "status": "pass",
+      "warnings": [],
+      "rms": 0.16109368699787172,
+      "clipped_percent": 0.0
+    },
+    {
+      "formation": "RS_Football Special.con",
+      "view": "cab",
+      "status": "pass",
+      "warnings": [],
+      "rms": 0.08054358884052173,
+      "clipped_percent": 0.0
+    },
+    {
+      "formation": "1960CentralWR8Car.con",
+      "view": "exterior",
+      "status": "pass",
+      "warnings": [],
+      "rms": 0.19246928585285958,
+      "clipped_percent": 0.0
+    },
+    {
+      "formation": "1960CentralWR8Car.con",
+      "view": "cab",
+      "status": "pass",
+      "warnings": [],
+      "rms": 0.14432420108963298,
+      "clipped_percent": 0.0
+    }
+  ],
+  "manual_listening_pending": [
+    237,
+    309,
+    310,
+    312
+  ],
+  "physical_joystick_tested": false
+}

@@ -87,6 +87,7 @@ pub struct WeatherParticles {
     live_wind: Option<WindDrift>,
     hanabi: GpuWeather,
     gpu_delta_s: Option<f32>,
+    snow_fraction: f32,
     pub execution: WeatherExecution,
     pub requested: WeatherExecution,
     pub gpu_particles: usize,
@@ -127,7 +128,7 @@ impl WeatherParticles {
             "gpu_backend":self.hanabi.entity.map(|_|"bevy_hanabi 0.19.0"),
             "gpu_capacity":self.hanabi.configuration.map_or(0,|(_,n)|n),
             "gpu_seed_initializations":self.hanabi.seed_initializations,
-            "gpu_simulation_delta_s":self.gpu_delta_s})
+            "gpu_simulation_delta_s":self.gpu_delta_s,"snow_fraction":self.snow_fraction})
     }
     pub fn hud_text(&self) -> String {
         format!(
@@ -154,9 +155,13 @@ fn wrap(value: f32, period: f32) -> f32 {
 
 /// Parameters match the WGSL vertex path. The camera only recycles particles at
 /// volume boundaries; moving it does not translate the snow field with the eye.
+fn particle_is_snow(seed: Vec4, snow_fraction: f32) -> bool {
+    (seed.w * 91.73).fract() < snow_fraction
+}
+
 pub fn particle_position(seed: Vec4, p: &ParticleUniforms) -> Vec3 {
     let t = p.wind_time.w;
-    let snow = p.up.w > 0.5;
+    let snow = particle_is_snow(seed, p.up.w);
     let fall = if snow {
         0.7 + seed.w * 1.2
     } else {
@@ -182,7 +187,7 @@ pub fn particle_position(seed: Vec4, p: &ParticleUniforms) -> Vec3 {
         )
 }
 fn particle_corner(seed: Vec4, uv: Vec2, p: &ParticleUniforms) -> Vec3 {
-    if p.up.w <= 0.5 {
+    if !particle_is_snow(seed, p.up.w) {
         return p.right.truncate() * ((uv.x - 0.5) * 0.025)
             + Vec3::new(p.motion.x / 32.0, -1.0, p.motion.y / 32.0).normalize()
                 * ((uv.y - 0.5) * (0.8 + seed.w * 0.65));
@@ -367,6 +372,7 @@ pub struct WeatherDraw<'w, 's> {
     materials: ResMut<'w, Assets<ParticleMaterial>>,
 }
 pub fn update(
+    quality_limits: Option<Res<crate::adaptive_graphics::AdaptiveGraphics>>,
     mut commands: Commands,
     time: Res<Time<Real>>,
     live: Option<Res<crate::live::LiveDrive>>,
@@ -453,7 +459,10 @@ pub fn update(
             .is_some_and(|c| c.supported && c.hardware);
     let mode = requested.resolved(compatible, memory.pressure() || state.adaptive.level > 0);
     let (mut gpu_count, mut cpu_count) = state.adaptive.counts(mode);
-    let preferred = preferences.weather_particle_budget / [1, 2, 4][state.adaptive.level.min(2)];
+    let preferred = (preferences.weather_particle_budget
+        / [1, 2, 4][state.adaptive.level.min(2)]
+        / quality_limits.as_ref().map_or(1, |q| q.factor()))
+    .max(64);
     let total = gpu_count + cpu_count;
     if total > preferred {
         gpu_count = gpu_count * preferred / total;
@@ -478,12 +487,12 @@ pub fn update(
         .zip(content.as_ref())
         .and_then(|(e, c)| e.current_sample(c.environment));
     let gpu_capacity = gpu_count;
+    let mut snow_fraction = f32::from(precipitation.snow);
     if let Some(atmosphere) = atmosphere.as_ref() {
-        let scale = if precipitation.snow {
-            atmosphere.atmosphere.snow
-        } else {
-            atmosphere.atmosphere.rain
-        };
+        let scale = (atmosphere.atmosphere.snow + atmosphere.atmosphere.rain).clamp(0., 1.);
+        if scale > 0. {
+            snow_fraction = atmosphere.atmosphere.snow / scale;
+        }
         gpu_count = (gpu_count as f32 * scale) as usize;
         cpu_count = (cpu_count as f32 * scale) as usize;
     } else if let Some(sample) = sample {
@@ -500,6 +509,7 @@ pub fn update(
     state.gpu_particles = gpu_count;
     state.cpu_particles = cpu_count;
     state.gpu_delta_s = gpu_time.as_ref().map(|t| t.delta_secs());
+    state.snow_fraction = snow_fraction;
     let clock_s = live.map_or_else(|| time.elapsed_secs_f64(), |l| l.session.time_s());
     let clock = clock_s as f32;
     let desired_wind = atmosphere.as_ref().map_or_else(
@@ -534,7 +544,7 @@ pub fn update(
             HEIGHT,
         ),
         right: camera.right().as_vec3().extend(1.0),
-        up: camera.up().as_vec3().extend(f32::from(precipitation.snow)),
+        up: camera.up().as_vec3().extend(snow_fraction),
         wind_time: wind,
         grid: Vec4::new(state.shelter_center.x, state.shelter_center.y, HALF, 0.0),
         motion: Vec4::new(
@@ -694,7 +704,7 @@ pub fn update(
             &mut commands,
             assets,
             shelter,
-            precipitation.snow,
+            false, // One persistent field carries both subtypes, without duplicate budgets.
             gpu_capacity,
         );
     } else {
@@ -771,6 +781,20 @@ fn raster_roof(values: &mut [f32], grid_center: Vec2, center: Vec3, extent: Vec3
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sleet_shares_one_seeded_budget_and_preserves_pure_rain_and_snow() {
+        let mut snow = 0;
+        for id in 1..=8192 {
+            let seed = seed_values(id);
+            assert!(!particle_is_snow(seed, 0.));
+            assert!(particle_is_snow(seed, 1.));
+            if particle_is_snow(seed, 0.5) {
+                snow += 1;
+            }
+        }
+        assert!((3900..4300).contains(&snow), "mixed quota: {snow}");
+    }
     #[test]
     fn cpu_and_gpu_shelter_uploads_both_include_the_shared_station_roof() {
         use bevy::ecs::system::RunSystemOnce;

@@ -56,6 +56,7 @@ mod effect_obstacles;
 pub mod electric_contact;
 pub mod gpu_memory;
 pub mod ground_fog;
+mod incident_recording;
 mod issue_report;
 mod journey_environment;
 pub mod journey_setup;
@@ -74,6 +75,7 @@ pub mod player_launch;
 pub mod player_settings;
 pub mod player_study;
 pub mod player_ui;
+mod portable_save;
 pub mod precipitation;
 mod resource_estimate;
 pub mod road_cars;
@@ -891,3 +893,21 @@ impl Plugin for ViewerPlugin {
             );
     }
 }
+
+mod shared_geometry;
+
+mod adaptive_graphics;
+
+mod gamepad_controls;
+
+mod train_presentation;
+
+mod building_windows;
+
+mod formation_builder;
+
+mod service_builder;
+
+mod clearance;
+
+mod campaign_play;

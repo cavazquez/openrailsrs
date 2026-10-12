@@ -9,6 +9,10 @@ use crate::steam::BoilerState;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TrainSimState {
     #[serde(default)]
+    pub announcements: crate::announcements::AnnouncementState,
+    #[serde(default)]
+    pub rail_operations: crate::rail_operations::RailOperationsState,
+    #[serde(default)]
     pub cab_equipment: Vec<crate::cab_equipment::CabEquipmentState>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub weather_track: Option<openrailsrs_scenarios::weather_track::WeatherTrack>,
@@ -97,6 +101,8 @@ impl TrainSimState {
             time: SimTime(0.0),
             weather_track: None,
             cab_equipment: vec![],
+            rail_operations: Default::default(),
+            announcements: Default::default(),
             path_reversed: false,
             path_edges,
             edge_index: 0,

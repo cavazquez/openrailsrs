@@ -117,3 +117,5 @@ pub use timetable::{
     NativeTimetable, NativeTimetableService, NativeTimetableStop, TimetableCommand,
     timetable_commands, timetable_time_s,
 };
+
+pub mod resource_links;

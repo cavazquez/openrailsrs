@@ -24,6 +24,23 @@ pub(super) fn build_practice(
     live: Option<&LiveDrive>,
 ) {
     if let Some(l) = live {
+        if settings.journey_setup.mode == PlayMode::Practice {
+            label(
+                p,
+                "Retroceder restaura controles, tráfico y clima. Conserva hasta dos minutos dentro de un presupuesto de 64 MiB.",
+                13.,
+                MUTED,
+            );
+            row(p, |p| {
+                for seconds in [15., 30., 60.] {
+                    button(
+                        p,
+                        format!("Retroceder {seconds:.0} s"),
+                        UiCommand::RewindPractice(seconds),
+                    );
+                }
+            });
+        }
         if let Some(lesson) = &l.session.state.learning {
             label(
                 p,
@@ -38,6 +55,9 @@ pub(super) fn build_practice(
                 ACCENT,
             );
             label(p, lesson.instruction(), 16., TEXT);
+            if let Some(hint) = lesson.hint(&l.session) {
+                label(p, hint, 13., CAUTION);
+            }
             row(p, |p| {
                 button(p, "Repetir este paso", UiCommand::RepeatLesson(false));
                 button(p, "Repetir desde el inicio", UiCommand::RepeatLesson(true));
@@ -364,6 +384,10 @@ pub(super) fn update_hud(
                 lesson.lesson.steps().len(),
                 lesson.instruction()
             );
+            if let Some(hint) = lesson.hint(&l.session) {
+                value.push('\n');
+                value.push_str(hint);
+            }
         }
         if settings.braking_coach
             && let Some(a) = braking_advice(&l.session)

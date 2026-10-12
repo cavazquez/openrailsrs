@@ -80,8 +80,8 @@ pub(super) fn load(key: &TrainKey) -> Result<TrainResult, String> {
                             .map_or(0, |indices| indices.len().saturating_mul(4))
                 })
                 .sum::<usize>();
-            if geometry_bytes.saturating_add(bytes) > 96 * 1024 * 1024 {
-                return Err("Geometría fuera del presupuesto de 96 MiB".into());
+            if geometry_bytes.saturating_add(bytes) > 256 * 1024 * 1024 {
+                return Err("Geometría fuera del presupuesto de 256 MiB".into());
             }
             geometry_bytes += bytes;
             let (min, max) = crate::shapes::union_meshes_aabb(
@@ -213,7 +213,7 @@ pub(super) fn spawn(
                         part.shader_name.as_deref(),
                         part.alpha_test_mode,
                     );
-                    let mesh = meshes.add(part.mesh);
+                    let mesh = crate::shared_geometry::add(meshes, part.mesh);
                     passes
                         .into_iter()
                         .map(|pass| {

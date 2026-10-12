@@ -1853,9 +1853,13 @@ fn release_shape_render_asset_gpu(
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
 ) {
-    meshes.remove(asset.combined_mesh.id());
+    if !crate::shared_geometry::owns(&asset.combined_mesh) {
+        meshes.remove(asset.combined_mesh.id());
+    }
     for part in &asset.parts {
-        meshes.remove(part.mesh.id());
+        if !crate::shared_geometry::owns(&part.mesh) {
+            meshes.remove(part.mesh.id());
+        }
         materials.remove(part.material.id());
     }
 }
@@ -4178,9 +4182,12 @@ pub fn update_world_scenery_lod(
     cache: Option<Res<WorldShapeLodCache>>,
     mut silhouettes: Option<ResMut<crate::scenery_lod::Silhouettes>>,
     progress: Option<Res<WorldSpawnProgress>>,
-    camera: Query<&GlobalTransform, With<Camera3d>>,
+    camera: Query<(&GlobalTransform, Option<&Projection>, Option<&Camera>), With<Camera3d>>,
+    settings: Option<Res<crate::player_settings::PlayerSettings>>,
+    mode: Option<Res<crate::camera::CameraFollowMode>>,
     focus: Option<Res<RouteFocus>>,
     mut lod_cam: ResMut<WorldLodCameraState>,
+    mut last_lens: Local<Option<Vec4>>,
     mut parts: Query<(
         Entity,
         &GlobalTransform,
@@ -4198,10 +4205,16 @@ pub fn update_world_scenery_lod(
         Option<&ViewVisibility>,
     )>,
 ) {
+    let fallback = crate::player_settings::PlayerSettings::default();
+    let settings = settings.as_deref().unwrap_or(&fallback);
+    let mode = mode
+        .as_deref()
+        .copied()
+        .unwrap_or(crate::camera::CameraFollowMode::Off);
     let Some(cache) = cache else {
         return;
     };
-    let Ok(cam_gt) = camera.single() else {
+    let Ok((cam_gt, projection, camera)) = camera.single() else {
         return;
     };
     let cam_pos = cam_gt.translation();
@@ -4218,9 +4231,35 @@ pub fn update_world_scenery_lod(
         return;
     }
 
-    if !lod_camera_needs_update(&lod_cam, cam_pos, focus_pos, WORLD_LOD_EPS_M) {
+    let lens = Vec4::new(
+        projection
+            .and_then(|p| {
+                if let Projection::Perspective(p) = p {
+                    Some(p.fov)
+                } else {
+                    None
+                }
+            })
+            .unwrap_or(1.),
+        camera
+            .and_then(|c| c.physical_viewport_size())
+            .map_or(1080., |s| s.y as f32),
+        if matches!(
+            mode,
+            crate::camera::CameraFollowMode::DriverCam | crate::camera::CameraFollowMode::Cab2d
+        ) {
+            settings.lod_pixels_cab
+        } else {
+            settings.lod_pixels_exterior
+        },
+        if settings.projected_lod { 1. } else { 0. },
+    );
+    if *last_lens == Some(lens)
+        && !lod_camera_needs_update(&lod_cam, cam_pos, focus_pos, WORLD_LOD_EPS_M)
+    {
         return;
     }
+    *last_lens = Some(lens);
     let initializing = lod_cam.last_cam.is_none() && lod_cam.last_focus.is_none();
     lod_cam.last_cam = Some(cam_pos);
     lod_cam.last_focus = Some(focus_pos);
@@ -4262,7 +4301,46 @@ pub fn update_world_scenery_lod(
             continue;
         }
         let instance_dist = world_lod_distance_m(cam_pos, gt.translation());
-        let desired = stable_lod_level(shape, instance_dist, lod.lod_idx).min(lod_assets.len() - 1);
+        let desired = if settings.projected_lod
+            && let Some(Projection::Perspective(projection)) = projection
+        {
+            let threshold = if matches!(
+                mode,
+                crate::camera::CameraFollowMode::DriverCam | crate::camera::CameraFollowMode::Cab2d
+            ) {
+                settings.lod_pixels_cab
+            } else {
+                settings.lod_pixels_exterior
+            };
+            silhouettes.as_mut().map_or_else(
+                || {
+                    crate::scenery_lod::projected_level(
+                        shape,
+                        instance_dist,
+                        lod.lod_idx,
+                        projection.fov,
+                        lens.y,
+                        gt.to_scale_rotation_translation().0.abs().max_element(),
+                        threshold,
+                    )
+                },
+                |s| {
+                    s.projected(
+                        &lod.shape_path,
+                        shape,
+                        instance_dist,
+                        lod.lod_idx,
+                        projection.fov,
+                        lens.y,
+                        gt.to_scale_rotation_translation().0.abs().max_element(),
+                        threshold,
+                    )
+                },
+            )
+        } else {
+            stable_lod_level(shape, instance_dist, lod.lod_idx)
+        }
+        .min(lod_assets.len() - 1);
         let new_lod = if anim_binding.is_none() && lod.bank.is_none() {
             silhouettes
                 .as_mut()

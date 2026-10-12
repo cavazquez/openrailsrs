@@ -18,11 +18,14 @@ use crate::saved_game::{PendingSavedCamera, SavedCamera, SavedGame, slot_path};
 use crate::weather_journey::WeatherMode;
 use crate::weather_state::WeatherProfile;
 
+mod campaigns;
 mod choices;
+mod formation_editor;
 mod launcher;
 mod library;
 mod previews;
 mod recommendations;
+mod service_editor;
 mod study;
 mod vehicle_profiles;
 mod weather_editor;
@@ -64,6 +67,54 @@ impl Plugin for PlayerUiPlugin {
             .init_resource::<crate::library_tools::LibraryTools>()
             .init_resource::<crate::issue_report::Reports>()
             .init_resource::<PlayerSettings>()
+            .init_resource::<crate::service_builder::ServiceBuilder>()
+            .init_resource::<crate::campaign_play::CampaignPlay>()
+            .init_resource::<crate::incident_recording::IncidentRecording>()
+            .add_systems(Update, crate::incident_recording::poll)
+            .add_systems(
+                OnEnter(ViewerAppState::Menu),
+                crate::campaign_play::enter.after(enter_menu),
+            )
+            .add_systems(
+                Update,
+                crate::campaign_play::update
+                    .after(crate::live::enable_live_defaults)
+                    .run_if(in_state(ViewerAppState::Playing)),
+            )
+            .init_resource::<crate::formation_builder::FormationBuilder>()
+            .init_resource::<crate::building_windows::WindowSchedules>()
+            .add_systems(
+                OnEnter(ViewerAppState::Playing),
+                crate::building_windows::prepare,
+            )
+            .add_systems(
+                Update,
+                crate::building_windows::update
+                    .after(crate::world::update_world_scenery_lod)
+                    .run_if(in_state(ViewerAppState::Playing)),
+            )
+            .init_resource::<crate::train_presentation::TrainPresentation>()
+            .add_systems(
+                OnEnter(ViewerAppState::Playing),
+                crate::train_presentation::prepare,
+            )
+            .add_systems(
+                PostUpdate,
+                crate::train_presentation::update
+                    .after(bevy::transform::TransformSystems::Propagate)
+                    .run_if(in_state(ViewerAppState::Playing)),
+            )
+            .init_resource::<crate::gamepad_controls::AnalogControls>()
+            .add_systems(
+                PreUpdate,
+                crate::gamepad_controls::configure.before(bevy::input::InputSystems),
+            )
+            .add_systems(
+                Update,
+                crate::gamepad_controls::update.after(crate::live::live_driver_input),
+            )
+            .init_resource::<crate::adaptive_graphics::AdaptiveGraphics>()
+            .add_systems(Update, crate::adaptive_graphics::update)
             .init_resource::<crate::save_history::SaveHistory>()
             .init_resource::<PlayerLaunchMenu>()
             .init_resource::<previews::Previews>()
@@ -73,9 +124,22 @@ impl Plugin for PlayerUiPlugin {
             .init_resource::<PlayerLaunchQueue>()
             .init_resource::<ActivePlayerContent>()
             .init_resource::<UiPointerCapture>()
-            .add_systems(Startup, spawn_ui_camera)
+            .add_systems(Startup, (spawn_ui_camera, activate_resource_links))
+            .add_systems(
+                Update,
+                activate_resource_links.run_if(resource_changed::<PlayerSettings>),
+            )
             .add_systems(Update, target_screen_hud_camera)
-            .add_systems(OnEnter(ViewerAppState::Menu), enter_menu)
+            .add_systems(Update, prepare_capture_editor.before(previews::update))
+            .add_systems(
+                OnEnter(ViewerAppState::Menu),
+                (
+                    enter_menu,
+                    |mut study: ResMut<crate::player_study::PlayerStudy>| {
+                        *study = default();
+                    },
+                ),
+            )
             .add_systems(
                 OnEnter(ViewerAppState::Playing),
                 (spawn_toolbar, apply_settings)
@@ -169,6 +233,9 @@ pub enum PlayerPanel {
     Water,
     IssueReport,
     VehicleProfile,
+    FormationEditor,
+    ServiceEditor,
+    Campaigns,
 }
 #[derive(Clone, Debug, PartialEq)]
 enum MapSelection {
@@ -198,6 +265,7 @@ pub struct PlayerUiState {
     library_tab: LibraryTab,
     settings_tab: SettingsTab,
     pub(crate) notice: String,
+    pub(crate) gamepad_devices: Vec<String>,
     pub(crate) rebuild: bool,
     pub(crate) history_focus: bool,
     pub(crate) history_query: String,
@@ -232,6 +300,7 @@ impl Default for PlayerUiState {
             library_tab: LibraryTab::Installed,
             settings_tab: SettingsTab::General,
             notice: String::new(),
+            gamepad_devices: vec![],
             rebuild: true,
             history_focus: false,
             history_query: String::new(),
@@ -355,7 +424,27 @@ enum UiCommand {
     QueueCancel(u64),
     QueueResume,
     QueueClear,
+    RecordStart,
+    RecordStop,
+    RecordVerify,
+    CampaignSelect(usize),
+    CampaignStart(usize),
+    ServiceEditorStart,
+    ServiceChoice(bool, i32),
+    ServiceStation(bool, usize),
+    ServiceStopEdit(usize, u8, f64),
+    ServiceToggleStop(usize),
+    ServiceGenerate,
+    ServiceUndo,
+    ServiceSave,
+    FormationEditorStart,
+    FormationEdit(u8, usize),
+    FormationCatalogue(i32),
+    FormationUndo,
+    FormationSave,
     BackupExport,
+    PortableExport,
+    LinkInstallation(usize),
     BackupImport(usize),
     ApplyBackupSettings,
     InspectRemoval(usize),
@@ -379,7 +468,13 @@ enum UiCommand {
     PracticeStop(i32),
     PracticeApproach,
     PracticeTraffic,
+    Incident(openrailsrs_sim::rail_operations::IncidentChoice),
     RepeatLesson(bool),
+    RewindPractice(f64),
+    GamepadEnable,
+    GamepadProfile,
+    GamepadDevice(i32),
+    GamepadAxis(usize, u8, f32),
     Coach,
     DispatchPriority(usize, i8),
     WeatherPhase(i32),
@@ -408,6 +503,13 @@ enum MenuField {
 #[derive(Clone, Copy, Debug)]
 enum SettingField {
     ContactShadows,
+    ProjectedLod,
+    AdaptiveGraphics,
+    QualityTarget,
+    QualityMin,
+    QualityMax,
+    CabLodPixels,
+    ExteriorLodPixels,
     QuickStations,
     Difficulty(crate::player_settings::DifficultyProfile),
     Temperature,
@@ -575,6 +677,50 @@ fn enter_menu(mut ui: ResMut<PlayerUiState>, mut menu: ResMut<PlayerLaunchMenu>)
     }
     ui.rebuild = true;
 }
+fn prepare_capture_editor(
+    mut ui: ResMut<PlayerUiState>,
+    mut menu: ResMut<PlayerLaunchMenu>,
+    mut formation: ResMut<crate::formation_builder::FormationBuilder>,
+    mut service: ResMut<crate::service_builder::ServiceBuilder>,
+    mut initialized: Local<bool>,
+) {
+    if *initialized
+        || !crate::capture::capture_enabled()
+        || std::env::var("OPENRAILSRS_SCREENSHOT_MENU").is_err()
+    {
+        return;
+    }
+    if !matches!(
+        ui.panel,
+        PlayerPanel::FormationEditor | PlayerPanel::ServiceEditor
+    ) {
+        return;
+    }
+    let source = menu
+        .project_path()
+        .join("examples/player_lab/scenario.toml");
+    if let Some(index) = menu.services.iter().position(|s| s.source == source)
+        && menu.service != index
+    {
+        menu.service = index;
+        menu.route = menu
+            .routes
+            .iter()
+            .position(|r| r == "route")
+            .unwrap_or(menu.route);
+        menu.refresh_choices();
+    }
+    let result = if ui.panel == PlayerPanel::FormationEditor {
+        formation.load(&menu)
+    } else {
+        service.load(&menu)
+    };
+    if result.is_ok() {
+        *initialized = true;
+        ui.rebuild = true;
+    }
+}
+
 fn spawn_toolbar(
     mut commands: Commands,
     mut ui: ResMut<PlayerUiState>,
@@ -862,6 +1008,10 @@ struct MenuOptions<'w> {
     study: ResMut<'w, crate::player_study::PlayerStudy>,
     tools: ResMut<'w, crate::library_tools::LibraryTools>,
     reports: ResMut<'w, crate::issue_report::Reports>,
+    formation: ResMut<'w, crate::formation_builder::FormationBuilder>,
+    campaigns: ResMut<'w, crate::campaign_play::CampaignPlay>,
+    recording: ResMut<'w, crate::incident_recording::IncidentRecording>,
+    service: ResMut<'w, crate::service_builder::ServiceBuilder>,
 }
 fn handle_buttons(
     mut commands: Commands,
@@ -888,6 +1038,10 @@ fn handle_buttons(
         mut study,
         mut tools,
         mut reports,
+        mut formation,
+        mut service,
+        mut campaigns,
+        mut recording,
     } = options;
     for (interaction, command) in &buttons {
         if *interaction != Interaction::Pressed || !mouse.just_pressed(MouseButton::Left) {
@@ -913,8 +1067,33 @@ fn handle_buttons(
             UiCommand::ProfileReset=>vehicle_profiles::adjust(&menu,&mut settings,ui.profile_car,None),
             UiCommand::QueueResume=>{downloads.resume_queue();Ok(())},
             UiCommand::QueueClear=>downloads.queue.clear_finished(),
+            UiCommand::RecordStart=>live.as_deref().ok_or("Iniciá una partida para grabar".into()).and_then(|l|recording.start(l)),
+            UiCommand::RecordStop=>recording.stop(),
+            UiCommand::RecordVerify=>recording.verify(),
+            UiCommand::CampaignSelect(index)=>campaigns.select(*index),
+            UiCommand::CampaignStart(index)=>{if live.is_some(){Err("Volvé al menú para iniciar una jornada".into())}else{campaigns.start(*index,&menu).map(|request|{launch.0=Some(request);ui.panel=PlayerPanel::None;})}},
+            UiCommand::ServiceEditorStart=>{if live.is_some(){Err("Volvé al menú principal para editar servicios".into())}else{service.load(&menu).map(|()|open_panel(&mut ui,&mut live,PlayerPanel::ServiceEditor))}},
+            UiCommand::ServiceStation(origin,index)=>{if *index>=service.candidates.len(){Err("Estación no disponible".into())}else{if *origin{service.origin= *index;}else{service.destination= *index;}Ok(())}},
+            UiCommand::ServiceChoice(origin,delta)=>{let n=service.candidates.len();if *origin{service.origin=cycle(service.origin,n,*delta);}else{service.destination=cycle(service.destination,n,*delta);}Ok(())},
+            UiCommand::ServiceStopEdit(i,field,delta)=>service.edit_stop(*i,*field,*delta),
+            UiCommand::ServiceToggleStop(i)=>service.toggle_stop(*i),
+            UiCommand::ServiceGenerate=>service.generate(),
+            UiCommand::ServiceUndo=>service.undo(),
+            UiCommand::ServiceSave=>service.save(&player_data_dir()).map(|_|menu.refresh_installed_content()),
+            UiCommand::FormationEditorStart=>{
+                if live.is_some(){Err("Volvé al menú principal para armar una nueva formación".into())}else{formation.load(&menu).map(|()|{ui.new_game_step=NewGameStep::Train;open_panel(&mut ui,&mut live,PlayerPanel::FormationEditor);})}
+            },
+            UiCommand::FormationCatalogue(delta)=>{formation.selected=cycle(formation.selected,formation.catalogue.len(),*delta);Ok(())},
+            UiCommand::FormationEdit(operation,index)=>formation.edit(*operation,*index).and_then(|()|formation.save(&player_data_dir())).map(|path|menu.select_custom_consist(path)),
+            UiCommand::FormationUndo=>formation.undo().and_then(|()|formation.save(&player_data_dir())).map(|path|menu.select_custom_consist(path)),
+            UiCommand::FormationSave=>formation.save(&player_data_dir()).map(|path|menu.select_custom_consist(path)),
+            UiCommand::LinkInstallation(index)=>menu.original_installations().get(*index).map(|(root,_)|root.clone()).ok_or("Instalación no disponible".into()).and_then(|root|{
+                let mut roots=settings.shared_installations.clone();if let Some(i)=roots.iter().position(|r|r==&root){roots.remove(i);}else{roots.push(root);}
+                openrailsrs_formats::resource_links::configure(&roots)?;settings.shared_installations=roots;menu.refresh_choices();Ok(())
+            }),
+            UiCommand::PortableExport=>{let mut roots=menu.original_installations().into_iter().map(|(r,_)|r).collect::<Vec<_>>();roots.push(menu.project_path().join("examples"));roots.extend(settings.shared_installations.clone());tools.request(crate::library_tools::Action::ExportPortable(roots))},
             UiCommand::BackupExport=>tools.request(crate::library_tools::Action::Export),
-            UiCommand::BackupImport(index)=>tools.backups.get(*index).cloned().ok_or("Respaldo inexistente".into()).and_then(|path|tools.request(crate::library_tools::Action::Import(path))),
+            UiCommand::BackupImport(index)=>tools.backups.get(*index).cloned().ok_or("Respaldo inexistente".into()).and_then(|path|{let mut roots=menu.original_installations().into_iter().map(|(r,_)|r).collect::<Vec<_>>();roots.push(menu.project_path().join("examples"));roots.extend(settings.shared_installations.clone());tools.request(crate::library_tools::Action::ImportPortable(path,roots))}),
             UiCommand::ApplyBackupSettings=>tools.imported_settings.take().ok_or("No hay ajustes importados".into()).map(|s|{*settings=s;ui.notice="Ajustes restaurados en esta sesión. Guardalos en F10 si querés conservarlos.".into();}),
             UiCommand::InspectRemoval(index)=>downloads.installed.get(*index).cloned().ok_or("Copia inexistente".into()).and_then(|path|tools.request(crate::library_tools::Action::Inspect(path))),
             UiCommand::RemoveSelected=>{if live.is_some(){Err("Volvé al menú principal antes de retirar contenido".into())}else if downloads.busy() || downloads.queue.entries.iter().any(|e|e.phase.pending()){Err("Esperá que termine la cola de descargas y la auditoría".into())}else{tools.plan.as_ref().map(|p|p.path.clone()).ok_or("Revisá primero las dependencias".into()).and_then(|path|tools.request(crate::library_tools::Action::Remove(path))) }},
@@ -969,6 +1148,14 @@ fn handle_buttons(
                 let session=if *index==0{Some(&mut l.session)}else{l.traffic.services.get_mut(index-1).map(|s|&mut s.session)}.ok_or("El servicio ya no está disponible")?;
                 session.dispatcher.priority=(session.dispatcher.priority+delta).clamp(-5,5);Ok(())
             }),
+            UiCommand::RewindPractice(seconds)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|study.rewind(l,*seconds).map(|checkpoint|{
+                if let Some(c)=checkpoint {c.apply_settings(&mut settings);if let Some(w)=weather.as_mut(){**w=c.restore(l.session.time_s());}}
+            })).map(|()|{close_panel(&mut ui,&mut live);}),
+            UiCommand::GamepadEnable=>{settings.gamepad.enabled= !settings.gamepad.enabled;Ok(())},
+            UiCommand::GamepadProfile=>{let keys=settings.gamepad.profiles.keys().cloned().collect::<Vec<_>>();let i=keys.iter().position(|s|s==&settings.gamepad.selected).unwrap_or(0);settings.gamepad.selected=keys[(i+1)%keys.len()].clone();Ok(())},
+            UiCommand::GamepadDevice(delta)=>{let index=settings.gamepad.device.as_ref().and_then(|s|ui.gamepad_devices.iter().position(|d|d==s)).map_or(0,|i|i+1);let index=cycle(index,ui.gamepad_devices.len()+1,*delta);settings.gamepad.device=index.checked_sub(1).and_then(|i|ui.gamepad_devices.get(i).cloned());Ok(())},
+            UiCommand::GamepadAxis(i,field,delta)=>settings.gamepad.edit(*i,*field,*delta),
+            UiCommand::Incident(choice)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.decide_incident(*choice)),
             UiCommand::RepeatLesson(whole)=>live.as_mut().ok_or("No hay una partida activa".into()).and_then(|l|study.repeat(l,*whole)).map(|()|close_panel(&mut ui,&mut live)),
             UiCommand::HistorySearch=>{ui.history_focus=true;Ok(())},
             UiCommand::HistoryFilter(filter)=>{ui.history_filter= *filter;ui.history_focus=false;Ok(())},
@@ -1147,6 +1334,13 @@ fn handle_buttons(
                 SettingField::Fov=>settings.cab_fov_deg=(settings.cab_fov_deg+step).clamp(35.0,90.0),
                 SettingField::Scale=>settings.ui_scale=(settings.ui_scale+step).clamp(0.8,1.5),
                 SettingField::AutomaticCant=>settings.automatic_cant= !settings.automatic_cant,
+                SettingField::AdaptiveGraphics=>settings.quality_limits.enabled= !settings.quality_limits.enabled,
+                SettingField::QualityTarget=>settings.quality_limits.target_fps=match settings.quality_limits.target_fps{n if n<30=>30,n if n<60=>60,n if n<90=>90,_=>30},
+                SettingField::QualityMin=>settings.quality_limits.min_level=(settings.quality_limits.min_level as f32+step).clamp(0.,settings.quality_limits.max_level as f32) as u8,
+                SettingField::QualityMax=>settings.quality_limits.max_level=(settings.quality_limits.max_level as f32+step).clamp(settings.quality_limits.min_level as f32,3.) as u8,
+                SettingField::ProjectedLod=>settings.projected_lod= !settings.projected_lod,
+                SettingField::CabLodPixels=>settings.lod_pixels_cab=(settings.lod_pixels_cab+step).clamp(24.,512.),
+                SettingField::ExteriorLodPixels=>settings.lod_pixels_exterior=(settings.lod_pixels_exterior+step).clamp(24.,512.),
                 SettingField::ContactShadows=>settings.contact_shadow_quality=(settings.contact_shadow_quality+1)%3,
                 SettingField::Shadows=>settings.shadows= !settings.shadows,SettingField::Fog=>settings.fog= !settings.fog,
                 SettingField::Units=>settings.toggle_speed_units(),
@@ -1215,6 +1409,12 @@ fn capture_ui_pointer(
     }
 }
 
+#[derive(SystemParam)]
+struct EditorPanels<'w> {
+    service: Res<'w, crate::service_builder::ServiceBuilder>,
+    campaigns: Res<'w, crate::campaign_play::CampaignPlay>,
+    recording: Res<'w, crate::incident_recording::IncidentRecording>,
+}
 fn build_panel(
     mut commands: Commands,
     mut ui: ResMut<PlayerUiState>,
@@ -1227,8 +1427,15 @@ fn build_panel(
     previews: Option<Res<previews::Previews>>,
     history: Res<crate::save_history::SaveHistory>,
     tools: Res<crate::library_tools::LibraryTools>,
+    formation: Res<crate::formation_builder::FormationBuilder>,
+    editor: EditorPanels,
     water: Query<&crate::water::WaterSurface>,
 ) {
+    let EditorPanels {
+        service,
+        campaigns,
+        recording,
+    } = editor;
     if !ui.rebuild {
         return;
     }
@@ -1287,6 +1494,9 @@ fn build_panel(
                         PlayerPanel::Report => "INFORME DEL VIAJE",
                         PlayerPanel::WeatherEditor => "EVOLUCIÓN METEOROLÓGICA",
                         PlayerPanel::Water => "CORRIENTES Y ONDAS",
+                        PlayerPanel::ServiceEditor=>"CREAR Y EDITAR SERVICIOS",
+                        PlayerPanel::Campaigns=>"CAMPAÑAS Y JORNADAS",
+                        PlayerPanel::FormationEditor=>"ARMAR FORMACIÓN",
                         PlayerPanel::VehicleProfile=>"AJUSTES PROPIOS DEL TREN",
                         PlayerPanel::IssueReport=>"INFORME DE ERROR",
                         _ => "AYUDA Y CONTROLES",
@@ -1324,9 +1534,18 @@ fn build_panel(
             ))
             .with_children(|p| match panel {
                 PlayerPanel::Menu => launcher::build_home(p),
+                PlayerPanel::Campaigns => campaigns::build(p,&campaigns),
                 PlayerPanel::NewGame => launcher::build_new_game(p, &ui, &menu, &settings, previews.as_deref()),
                 PlayerPanel::Continue => launcher::build_continue(p,&ui,&history),
-                PlayerPanel::Content => launcher::build_library(p, ui.library_tab, &downloads, &menu, &tools),
+                PlayerPanel::Content => {
+                    if ui.library_tab==LibraryTab::Tools {
+                        label(p,"Instalaciones originales compartidas",18.,TEXT);
+                        label(p,"Se usan sólo al faltar una referencia nativa. No se buscan archivos fuera de estas instalaciones ni se descargan reemplazos.",12.,MUTED);
+                        for (index,(root,name)) in menu.original_installations().iter().enumerate(){button(p,format!("{} {name} · {}",if settings.shared_installations.contains(root){"●"}else{"○"},root.display()),UiCommand::LinkInstallation(index));}
+                        for root in &settings.shared_installations{if !root.is_dir(){label(p,format!("Instalación no disponible: {}",root.display()),12.,CAUTION);}}
+                    }
+                    launcher::build_library(p, ui.library_tab, &downloads, &menu, &tools);
+                },
                 PlayerPanel::MissingResources => {
                     row(p, |p| {
                         button(p, "Reauditar esta formación", UiCommand::MissingAudit);
@@ -1373,12 +1592,28 @@ fn build_panel(
                     });
                 }
                 PlayerPanel::Notebook => {
+                    row(p,|p|{if recording.active(){button(p,"Detener y guardar registro",UiCommand::RecordStop);}else{button(p,"Grabar incidencia",UiCommand::RecordStart);}
+                    if recording.latest.is_some()&&!recording.busy(){button(p,"Reproducir último registro",UiCommand::RecordVerify);}});
+                    label(p,&recording.status,12.,MUTED);
                     row(p, |p| {
                         for (tab, name) in ["Briefing", "Horarios", "Evaluación"].iter().enumerate()
                         {
                             button(p, *name, UiCommand::NoteTab(tab));
                         }
                     });
+                    if let Some(l)=live.as_deref(){
+                        let announcements=&l.session.state.announcements;
+                        if !announcements.package.events.is_empty(){label(p,format!("Anuncios: {} · {} · {}",announcements.package.author,announcements.package.license,announcements.package.source),12.,MUTED);}
+                        for a in &announcements.recent{label(p,format!("{:.0} s · {}",a.time_s,a.text),13.,TEXT);}
+                        let ops=&l.session.state.rail_operations;
+                        label(p,&ops.notice,14.,CAUTION);
+                        for (i,state) in &ops.connections{label(p,format!("Conexión {}: {state}",i+1),13.,TEXT);}
+                        if ops.pending_incident.is_some(){row(p,|p|{
+                            button(p,"Esperar al servicio",UiCommand::Incident(openrailsrs_sim::rail_operations::IncidentChoice::Wait));
+                            button(p,"Continuar con penalización",UiCommand::Incident(openrailsrs_sim::rail_operations::IncidentChoice::Continue));
+                        });}
+                        for work in &ops.definition.works{label(p,format!("Obra {} · {}: {:.0}–{:.0} m · límite {:.0} km/h · {:.0}–{:.0} s · sentido {}",work.id,work.edge,work.start_m,work.end_m,work.speed_kmh,work.start_s,work.end_s,work.direction),12.,CAUTION);}
+                    }
                     dynamic(p, DynamicText::Notebook, 14.0);
                     button(p, "Gráficas e incidencias", UiCommand::Open(PlayerPanel::Report));
                     button(p, "Ejercicio y repetición", UiCommand::Open(PlayerPanel::Practice));
@@ -1386,6 +1621,8 @@ fn build_panel(
                 PlayerPanel::Practice => study::build_practice(p,&settings,&menu,live.as_deref()),
                 PlayerPanel::Report => study::build_report(p,live.as_deref(),&settings),
                 PlayerPanel::WeatherEditor => weather_editor::build(p,&ui,&settings),
+                PlayerPanel::ServiceEditor => service_editor::build(p,&service),
+                PlayerPanel::FormationEditor => formation_editor::build(p,&formation,&menu,previews.as_deref()),
                 PlayerPanel::Water => {
                     button(p,format!("Animación del agua: {}",yes(settings.animated_water)),UiCommand::WaterAnimate);
                     let keys:std::collections::BTreeSet<_>=water.iter().map(|s|s.key.clone()).collect();
@@ -2098,6 +2335,64 @@ fn build_settings(
             button(
                 p,
                 format!(
+                    "Calidad adaptativa general: {}",
+                    yes(s.quality_limits.enabled)
+                ),
+                UiCommand::Setting(SettingField::AdaptiveGraphics, 0.),
+            );
+            button(
+                p,
+                format!("Objetivo: {} FPS", s.quality_limits.target_fps),
+                UiCommand::Setting(SettingField::QualityTarget, 0.),
+            );
+            for (name, value, field) in [
+                (
+                    "Degradación mínima",
+                    s.quality_limits.min_level,
+                    SettingField::QualityMin,
+                ),
+                (
+                    "Degradación máxima",
+                    s.quality_limits.max_level,
+                    SettingField::QualityMax,
+                ),
+            ] {
+                row(p, |p| {
+                    label(p, format!("{name}: {value}/3"), 13., TEXT);
+                    button(p, "−", UiCommand::Setting(field, -1.));
+                    button(p, "+", UiCommand::Setting(field, 1.));
+                });
+            }
+            label(
+                p,
+                "Reduce partículas, volumen de niebla, sombras de contacto y vegetación. Reacciona a presión sostenida; conserva los límites elegidos y la física.",
+                12.,
+                MUTED,
+            );
+
+            button(
+                p,
+                format!("LOD por tamaño en pantalla: {}", yes(s.projected_lod)),
+                UiCommand::Setting(SettingField::ProjectedLod, 0.),
+            );
+            for (name, value, field) in [
+                ("Cabina", s.lod_pixels_cab, SettingField::CabLodPixels),
+                (
+                    "Exterior",
+                    s.lod_pixels_exterior,
+                    SettingField::ExteriorLodPixels,
+                ),
+            ] {
+                row(p, |p| {
+                    label(p, format!("LOD {name}: {value:.0} píxeles"), 14., TEXT);
+                    button(p, "−", UiCommand::Setting(field, -12.));
+                    button(p, "+", UiCommand::Setting(field, 12.));
+                });
+            }
+
+            button(
+                p,
+                format!(
                     "Sombras de contacto: {}",
                     match s.contact_shadow_quality {
                         1 => "Bajo · 8 muestras",
@@ -2447,6 +2742,90 @@ fn build_settings(
             );
         }
         SettingsTab::Controls => {
+            button(
+                p,
+                format!("Mando analógico: {}", yes(s.gamepad.enabled)),
+                UiCommand::GamepadEnable,
+            );
+            button(
+                p,
+                format!(
+                    "Dispositivo: {}",
+                    s.gamepad
+                        .device
+                        .as_deref()
+                        .unwrap_or("Primer mando conectado")
+                ),
+                UiCommand::GamepadDevice(1),
+            );
+            button(
+                p,
+                format!("Perfil: {}", s.gamepad.selected),
+                UiCommand::GamepadProfile,
+            );
+            if let Some(profile) = s.gamepad.profiles.get(&s.gamepad.selected) {
+                for (i, a) in profile.axes.iter().enumerate() {
+                    row(p, |p| {
+                        label(p, ["Regulador", "Freno", "Inversor"][i], 14., TEXT);
+                        button(
+                            p,
+                            format!(
+                                "Eje {}",
+                                [
+                                    "L X",
+                                    "L Y",
+                                    "R X",
+                                    "R Y",
+                                    "L Z",
+                                    "R Z",
+                                    "Gatillo L",
+                                    "Gatillo R"
+                                ][a.axis as usize]
+                            ),
+                            UiCommand::GamepadAxis(i, 0, 1.),
+                        );
+                        button(
+                            p,
+                            format!("Invertido: {}", yes(a.inverted)),
+                            UiCommand::GamepadAxis(i, 2, 0.),
+                        );
+                        label(
+                            p,
+                            format!("Zona muerta {:.0}%", a.deadzone * 100.),
+                            12.,
+                            TEXT,
+                        );
+                        button(p, "−", UiCommand::GamepadAxis(i, 1, -0.05));
+                        button(p, "+", UiCommand::GamepadAxis(i, 1, 0.05));
+                        button(
+                            p,
+                            format!(
+                                "Pasos {}",
+                                if a.steps == 0 {
+                                    "Continuo".into()
+                                } else {
+                                    a.steps.to_string()
+                                }
+                            ),
+                            UiCommand::GamepadAxis(i, 3, 0.),
+                        );
+                        if i < 2 {
+                            button(
+                                p,
+                                format!("Recorrido completo: {}", yes(a.full_range)),
+                                UiCommand::GamepadAxis(i, 4, 0.),
+                            );
+                        }
+                    });
+                }
+            }
+            label(
+                p,
+                "Mové un eje para tomar su control. Centro del inversor: neutro. Botón sur: bocina; este: emergencia. Al desconectarse corta el regulador que controlaba y libera la bocina; el freno conserva su aplicación.",
+                12.,
+                MUTED,
+            );
+
             label(
                 p,
                 "CONTROLES · clic en una asignación y pulsá la nueva tecla",
@@ -3788,6 +4167,23 @@ pub(crate) fn apply_weather(
     );
 }
 
+fn activate_resource_links(
+    settings: Res<PlayerSettings>,
+    mut ui: ResMut<PlayerUiState>,
+    mut previous: Local<Option<Vec<std::path::PathBuf>>>,
+) {
+    if previous.as_ref() == Some(&settings.shared_installations) {
+        return;
+    }
+    *previous = Some(settings.shared_installations.clone());
+    if let Err(error) =
+        openrailsrs_formats::resource_links::configure(&settings.shared_installations)
+    {
+        ui.notice = format!("Recursos compartidos: {error}");
+        ui.rebuild = true;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -3796,11 +4192,19 @@ mod tests {
         app.add_plugins(bevy::state::app::StatesPlugin)
             .insert_state(ViewerAppState::Menu)
             .init_resource::<PlayerUiState>()
+            .init_resource::<crate::formation_builder::FormationBuilder>()
+            .init_resource::<crate::service_builder::ServiceBuilder>()
+            .init_resource::<crate::campaign_play::CampaignPlay>()
+            .init_resource::<crate::incident_recording::IncidentRecording>()
             .init_resource::<previews::Previews>()
             .init_resource::<crate::save_history::SaveHistory>()
             .init_resource::<crate::player_study::PlayerStudy>()
             .init_resource::<crate::library_tools::LibraryTools>()
             .init_resource::<crate::issue_report::Reports>()
+            .init_resource::<crate::formation_builder::FormationBuilder>()
+            .init_resource::<crate::service_builder::ServiceBuilder>()
+            .init_resource::<crate::campaign_play::CampaignPlay>()
+            .init_resource::<crate::incident_recording::IncidentRecording>()
             .insert_resource(PlayerLaunchMenu::discover(
                 &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../.."),
                 None,
@@ -4276,6 +4680,10 @@ mod tests {
                 .init_resource::<crate::player_study::PlayerStudy>()
                 .init_resource::<crate::library_tools::LibraryTools>()
                 .init_resource::<crate::issue_report::Reports>()
+                .init_resource::<crate::formation_builder::FormationBuilder>()
+                .init_resource::<crate::service_builder::ServiceBuilder>()
+                .init_resource::<crate::campaign_play::CampaignPlay>()
+                .init_resource::<crate::incident_recording::IncidentRecording>()
                 .init_resource::<crate::official_content::OfficialContent>()
                 .init_resource::<PlayerSettings>()
                 .init_resource::<PlayerLaunchQueue>()
@@ -4485,6 +4893,10 @@ mod tests {
                 .init_resource::<crate::player_study::PlayerStudy>()
                 .init_resource::<crate::library_tools::LibraryTools>()
                 .init_resource::<crate::issue_report::Reports>()
+                .init_resource::<crate::formation_builder::FormationBuilder>()
+                .init_resource::<crate::service_builder::ServiceBuilder>()
+                .init_resource::<crate::campaign_play::CampaignPlay>()
+                .init_resource::<crate::incident_recording::IncidentRecording>()
                 .init_resource::<crate::official_content::OfficialContent>()
                 .init_resource::<PlayerSettings>()
                 .init_resource::<PlayerLaunchQueue>()
@@ -4702,6 +5114,10 @@ mod tests {
             .init_resource::<crate::player_study::PlayerStudy>()
             .init_resource::<crate::library_tools::LibraryTools>()
             .init_resource::<crate::issue_report::Reports>()
+            .init_resource::<crate::formation_builder::FormationBuilder>()
+            .init_resource::<crate::service_builder::ServiceBuilder>()
+            .init_resource::<crate::campaign_play::CampaignPlay>()
+            .init_resource::<crate::incident_recording::IncidentRecording>()
             .init_resource::<crate::official_content::OfficialContent>()
             .init_resource::<PlayerSettings>()
             .init_resource::<PlayerLaunchQueue>()

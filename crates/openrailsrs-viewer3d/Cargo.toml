@@ -31,6 +31,7 @@ experimental-framepace = ["dep:bevy_framepace"]
 
 [dependencies]
 openrailsrs-core = { path = "../openrailsrs-core" }
+openrailsrs-campaign = { path = "../openrailsrs-campaign" }
 openrailsrs-content = { path = "../openrailsrs-content" }
 openrailsrs-msts = { path = "../openrailsrs-msts" }
 openrailsrs-bevy-scenery = { path = "../openrailsrs-bevy-scenery" }
@@ -44,6 +45,7 @@ openrailsrs-train = { path = "../openrailsrs-train" }
 openrailsrs-sim = { path = "../openrailsrs-sim" }
 openrailsrs-audio = { path = "../openrailsrs-audio" }
 csv = "1.3"
+sha2 = "0.10"
 rayon.workspace = true
 serde = { workspace = true }
 serde_json = { workspace = true }

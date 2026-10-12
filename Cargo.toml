@@ -47,6 +47,7 @@ indexmap = "2.7"
 # Bevy pin — see docs/BEVY.md.
 bevy = { version = "0.19.1", default-features = false, features = [
     "bevy_winit",
+    "bevy_gilrs",
     "x11",
     # Native Wayland: XWayland + RADV often hits `Surface::configure → Invalid surface`.
     "wayland",

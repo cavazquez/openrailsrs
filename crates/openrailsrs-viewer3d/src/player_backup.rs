@@ -11,13 +11,13 @@ pub struct ContentReference {
     pub old_root: PathBuf,
 }
 #[derive(Serialize, Deserialize)]
-struct Backup {
-    schema: u32,
-    created_utc: i64,
-    settings: Option<PlayerSettings>,
-    saves: Vec<SavedGame>,
-    content: Vec<ContentReference>,
-    skipped: Vec<String>,
+pub(crate) struct Backup {
+    pub(crate) schema: u32,
+    pub(crate) created_utc: i64,
+    pub(crate) settings: Option<PlayerSettings>,
+    pub(crate) saves: Vec<SavedGame>,
+    pub(crate) content: Vec<ContentReference>,
+    pub(crate) skipped: Vec<String>,
 }
 pub struct Imported {
     pub settings: Option<PlayerSettings>,
@@ -135,6 +135,17 @@ pub fn export(data: &Path) -> Result<PathBuf, String> {
                         toml::Value::try_from(setup).map_err(|e| e.to_string())?,
                     );
                 }
+                if let Some(context) = original.get("player_campaign") {
+                    let context: crate::campaign_play::CampaignContext =
+                        context.clone().try_into().map_err(|e| e.to_string())?;
+                    if !crate::campaign_play::valid_context(&context) {
+                        return Err("Campaña guardada inválida".into());
+                    }
+                    clean.as_table_mut().unwrap().insert(
+                        "player_campaign".into(),
+                        toml::Value::try_from(context).map_err(|e| e.to_string())?,
+                    );
+                }
                 game.scenario_toml = toml::to_string(&clean).map_err(|e| e.to_string())?;
                 saves.push(game);
             }
@@ -187,6 +198,9 @@ fn write_new(path: &Path, bytes: &[u8]) -> Result<(), String> {
 pub fn import(data: &Path, path: &Path) -> Result<Imported, String> {
     let backup: Backup = serde_json::from_slice(&bounded(path, MAX_BYTES)?)
         .map_err(|e| format!("Respaldo inválido: {e}"))?;
+    import_backup(data, backup)
+}
+pub(crate) fn import_backup(data: &Path, backup: Backup) -> Result<Imported, String> {
     if backup.schema != 1
         || backup.saves.len() > 64
         || backup.content.len() > 512
@@ -276,18 +290,31 @@ pub fn import(data: &Path, path: &Path) -> Result<Imported, String> {
         missing,
     })
 }
-fn rebase(game: &mut SavedGame, mapping: &[(PathBuf, PathBuf)]) -> Result<(), String> {
+pub(crate) fn rebase(game: &mut SavedGame, mapping: &[(PathBuf, PathBuf)]) -> Result<(), String> {
     let replace = |path: &Path| {
         mapping
             .iter()
             .find_map(|(old, new)| path.strip_prefix(old).ok().map(|suffix| new.join(suffix)))
             .unwrap_or_else(|| path.into())
     };
+    if let Some(options) = game.player_options.as_mut() {
+        for root in &mut options.shared_installations {
+            *root = replace(root);
+        }
+    }
     if let Some(root) = &mut game.route_root {
         *root = replace(root);
     }
     let mut value: toml::Value =
         toml::from_str(&game.scenario_toml).map_err(|e| format!("Escenario inválido: {e}"))?;
+    if let Some(root) = value
+        .get_mut("train")
+        .and_then(|t| t.get_mut("announcements"))
+        .and_then(|t| t.get_mut("root"))
+        && let Some(s) = root.as_str()
+    {
+        *root = toml::Value::String(replace(Path::new(s)).to_string_lossy().into_owned());
+    }
     for (section, field) in [("route", "path"), ("train", "consist")] {
         if let Some(path) = value.get_mut(section).and_then(|s| s.get_mut(field))
             && let Some(source) = path.as_str()

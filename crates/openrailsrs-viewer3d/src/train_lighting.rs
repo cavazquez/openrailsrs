@@ -424,7 +424,8 @@ fn lamp_state(lamp: &VehicleLight, time: f64) -> LampState {
 pub fn update_train_lights(
     live: Res<LiveDrive>,
     settings: Res<crate::player_settings::PlayerSettings>,
-    cab: Res<crate::camera::LiveDriverCab>,
+    _cab: Res<crate::camera::LiveDriverCab>,
+    quality: Option<Res<crate::adaptive_graphics::AdaptiveGraphics>>,
     atmosphere: (
         Option<Res<crate::route_lighting::RouteSunState>>,
         Option<Res<crate::weather_state::WeatherState>>,
@@ -439,6 +440,7 @@ pub fn update_train_lights(
     >,
     camera: Query<&GlobalTransform, (With<Camera3d>, Without<Headlamp>)>,
     mut lamps: Query<(
+        Entity,
         &Headlamp,
         &mut Transform,
         &mut Visibility,
@@ -447,7 +449,36 @@ pub fn update_train_lights(
     )>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    for (lamp, mut transform, mut visibility, spot, material) in &mut lamps {
+    let observer = camera.iter().next().map_or(Vec3::ZERO, |c| c.translation());
+    let limit = if quality.as_ref().is_some_and(|q| q.level >= 2) {
+        2
+    } else if quality.as_ref().is_some_and(|q| q.level == 1) {
+        4
+    } else {
+        8
+    };
+    let mut ranked = lamps
+        .iter()
+        .filter_map(|(entity, lamp, _, _, spot, _)| {
+            spot?;
+            let (_, _, pose) = cars.iter().find(|(o, i, _)| {
+                o.track_index == lamp.service_index && i.0 == lamp.vehicle_index
+            })?;
+            let distance = pose.translation().distance_squared(observer);
+            (lamp.service_index == 0 || distance < 300f32.powi(2)).then_some((
+                entity,
+                lamp.service_index == 0,
+                distance,
+            ))
+        })
+        .collect::<Vec<_>>();
+    ranked.sort_by(|a, b| {
+        b.1.cmp(&a.1)
+            .then(a.2.total_cmp(&b.2))
+            .then(a.0.to_bits().cmp(&b.0.to_bits()))
+    });
+    ranked.truncate(limit);
+    for (entity, lamp, mut transform, mut visibility, spot, material) in &mut lamps {
         let session = if lamp.service_index == 0 {
             Some(&live.session)
         } else {
@@ -476,8 +507,7 @@ pub fn update_train_lights(
         };
         let index = lamp.vehicle_index;
         let count = session.formation.coupled_count;
-        let reversed = session.driver_direction <= 0.25
-            || (lamp.service_index == 0 && cab.look_yaw.cos() < 0.);
+        let reversed = session.driver_direction <= 0.25;
         let level = session.effective_headlights().min(2);
         let powered = session
             .state
@@ -551,6 +581,7 @@ pub fn update_train_lights(
         let rotation = base.rotation();
         let point = base.transform_point(Vec3::new(position[0], position[1], -position[2]));
         if let Some(mut spot) = spot {
+            enabled &= ranked.iter().any(|(e, _, _)| *e == entity);
             *visibility = Visibility::Visible;
             let low = level == 1;
             let aim = Quat::from_rotation_y(-azimuth.to_radians())
@@ -568,7 +599,10 @@ pub fn update_train_lights(
             spot.range = if low { 120. } else { 220. };
             spot.outer_angle = angle.to_radians().clamp(0.12, 1.2);
             spot.inner_angle = spot.outer_angle * 0.55;
-            spot.shadow_maps_enabled = settings.shadows && enabled && rgba[3] > 0.001;
+            spot.shadow_maps_enabled = settings.shadows
+                && enabled
+                && rgba[3] > 0.001
+                && ranked.iter().take(4).any(|(e, _, _)| *e == entity);
         } else {
             *visibility = if enabled && rgba[3] > 0.001 {
                 Visibility::Visible

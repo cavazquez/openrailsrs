@@ -103,6 +103,26 @@ impl PlayerLaunchMenu {
             })
             .or_else(default_chiltern_root);
         services.extend(discover_example_services(project, native.as_deref()));
+        for source in files_with_extension(&player_data_dir().join("custom-services"), "toml") {
+            if let Ok(s) = openrailsrs_scenarios::load_scenario(&source)
+                && let Ok(text) = std::fs::read_to_string(&source)
+            {
+                let root = toml::from_str::<toml::Value>(&text).ok().and_then(|v| {
+                    v.get("player_native_root")
+                        .and_then(toml::Value::as_str)
+                        .map(PathBuf::from)
+                });
+                services.push(ServiceChoice {
+                    name: s.scenario.name,
+                    route_dir: PathBuf::from(s.route.path),
+                    source,
+                    scenery_root: root,
+                    native_activity: false,
+                    native_timetable: None,
+                    edition: Some("Servicios propios".into()),
+                });
+            }
+        }
         // Native activities use the existing importer and the pinned route graph.
         if let Some(root) = native.as_ref()
             && let Some(route_dir) = services
@@ -211,6 +231,9 @@ impl PlayerLaunchMenu {
         menu.refresh_choices();
         menu
     }
+    pub fn project_path(&self) -> &Path {
+        &self.project_root
+    }
     pub fn current(&self) -> Option<&ServiceChoice> {
         self.services.get(self.service)
     }
@@ -303,6 +326,54 @@ impl PlayerLaunchMenu {
             .request(self.auditor.trainset_roots.clone(), &paths, false);
         self.restore_cached_audits();
         self.update_audit_status();
+    }
+    pub fn select_custom_consist(&mut self, path: PathBuf) {
+        if let Some(parent) = path.parent() {
+            self.consist_directories.remove(parent);
+        }
+        self.refresh_choices();
+        if !self.consists.contains(&path) {
+            self.consists.push(path.clone());
+        }
+        if let Some(index) = self.consists.iter().position(|p| p == &path) {
+            self.cycle_consist(index as i32 - self.consist as i32);
+        }
+    }
+    pub fn original_installations(&self) -> Vec<(PathBuf, String)> {
+        let mut result = vec![];
+        for (directory, label) in &self.stock_sources {
+            if directory.parent().is_some_and(|p| {
+                p.file_name()
+                    .is_some_and(|n| n.eq_ignore_ascii_case("TRAINS"))
+            }) && let Some(root) = directory
+                .parent()
+                .and_then(Path::parent)
+                .and_then(|p| p.canonicalize().ok())
+                && !result.iter().any(|(p, _)| p == &root)
+            {
+                result.push((root, label.clone()));
+            }
+        }
+        for service in &self.services {
+            if let Some(root) = service
+                .scenery_root
+                .as_deref()
+                .and_then(Path::parent)
+                .and_then(Path::parent)
+                .and_then(|p| p.canonicalize().ok())
+                && root.join("TRAINS/TRAINSET").is_dir()
+                && !result.iter().any(|(p, _)| p == &root)
+            {
+                result.push((
+                    root,
+                    service
+                        .edition
+                        .clone()
+                        .unwrap_or_else(|| "Instalación original".into()),
+                ));
+            }
+        }
+        result
     }
     pub fn refresh_choices(&mut self) {
         self.refresh_choices_with_library(&player_data_dir().join("rolling-stock/TRAINS/CONSISTS"));
@@ -400,6 +471,11 @@ impl PlayerLaunchMenu {
                 .map(|p| vec![p.join("TRAINS/TRAINSET")])
                 .unwrap_or_default(),
         );
+        self.auditor.trainset_roots.extend(
+            openrailsrs_formats::resource_links::configured()
+                .into_iter()
+                .map(|r| r.join("TRAINS/TRAINSET")),
+        );
         self.consist_audits.clear();
         // Original author packages may supply rolling stock independently of a
         // route. Keep their native TRAINS layout in the user's writable library.
@@ -494,6 +570,7 @@ impl PlayerLaunchMenu {
             }
         }
         directories.extend(self.stock_sources.iter().map(|(dir, _)| dir.clone()));
+        directories.push(crate::player_settings::player_data_dir().join("custom-consists"));
         let mut seen: std::collections::HashSet<_> = self.consists.iter().cloned().collect();
         for directory in directories {
             let cached = self
@@ -692,6 +769,13 @@ impl PlayerLaunchMenu {
         }
         .to_string_lossy()
         .into_owned();
+        if !scenario.train.announcements.events.is_empty() {
+            let source = choice.source.parent().unwrap_or(std::path::Path::new("."));
+            scenario.train.announcements.root =
+                absolute(&source.join(&scenario.train.announcements.root))
+                    .to_string_lossy()
+                    .into_owned();
+        }
         for service in &mut scenario.extra_trains {
             if !choice.native_activity
                 && service.consist == "../chiltern/consists/birmingham_pullman.con"

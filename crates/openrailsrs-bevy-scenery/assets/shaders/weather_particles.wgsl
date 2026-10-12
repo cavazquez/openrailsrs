@@ -16,7 +16,7 @@ fn wrap(v: f32, period: f32) -> f32 {
 }
 fn particle_position(seed: vec4<f32>) -> vec3<f32> {
     let t = weather.wind_time.w;
-    let snow = weather.up.w > 0.5;
+    let snow = fract(seed.w * 91.73) < weather.up.w;
     let fall = select(20.0 + seed.w * 16.0, 0.7 + seed.w * 1.2, snow);
     let flutter = select(vec2(0.0), vec2(sin(t * 0.73 + seed.x * 31.0), cos(t * 0.51 + seed.z * 27.0)) * 0.65, snow);
     let span = weather.center.w * 2.0;
@@ -27,7 +27,7 @@ fn particle_position(seed: vec4<f32>) -> vec3<f32> {
     return weather.center.xyz + vec3(wrap(x - weather.phase.x, span), wrap(y - weather.phase.y, weather.phase.w), wrap(z - weather.phase.z, span));
 }
 fn particle_corner(seed: vec4<f32>, uv: vec2<f32>) -> vec3<f32> {
-    if weather.up.w < 0.5 {
+    if fract(seed.w * 91.73) >= weather.up.w {
         return weather.right.xyz * ((uv.x - 0.5) * 0.025) + normalize(vec3(weather.motion.x / 32.0, -1.0, weather.motion.y / 32.0)) * (uv.y - 0.5) * (0.8 + seed.w * 0.65);
     }
     let angle = seed.w * 6.283185307 + weather.wind_time.w * (0.35 + seed.x);
@@ -79,7 +79,7 @@ fn flake_mask(uv: vec2<f32>, variation: f32) -> f32 {
 }
 @fragment fn fragment(in: VertexOutput, @builtin(front_facing) front: bool) -> FragmentOutput {
     var alpha = flake_mask(in.uv, in.uv_b.x);
-    if weather.up.w < 0.5 {
+    if fract(in.uv_b.x * 91.73) >= weather.up.w {
         alpha = (1.0 - smoothstep(0.18, 0.5, abs(in.uv.x - 0.5)))
             * (1.0 - smoothstep(0.3, 0.5, abs(in.uv.y - 0.5))) * 0.48;
     }

@@ -12,7 +12,8 @@ use std::{
 pub enum Action {
     Scan,
     Export,
-    Import(PathBuf),
+    ExportPortable(Vec<PathBuf>),
+    ImportPortable(PathBuf, Vec<PathBuf>),
     Inspect(PathBuf),
     Remove(PathBuf),
     Restore(TrashEntry),
@@ -76,9 +77,25 @@ impl LibraryTools {
                     crate::player_backup::list(&data),
                     crate::content_management::trash(&data),
                 )),
+                Action::ExportPortable(roots) => {
+                    crate::portable_save::export(&data, &roots).map(Reply::Exported)
+                }
+                Action::ImportPortable(path, roots) => {
+                    if std::fs::metadata(&path).map_err(|e| e.to_string())?.len() > 64 * 1024 * 1024
+                    {
+                        return Err("Respaldo demasiado grande".into());
+                    }
+                    let v: serde_json::Value =
+                        serde_json::from_slice(&std::fs::read(&path).map_err(|e| e.to_string())?)
+                            .map_err(|e| e.to_string())?;
+                    (if v["schema"] == 2 {
+                        crate::portable_save::import(&data, &path, &roots)
+                    } else {
+                        crate::player_backup::import(&data, &path)
+                    })
+                    .map(|r| Reply::Imported(Box::new(r)))
+                }
                 Action::Export => crate::player_backup::export(&data).map(Reply::Exported),
-                Action::Import(path) => crate::player_backup::import(&data, &path)
-                    .map(|result| Reply::Imported(Box::new(result))),
                 Action::Inspect(path) => {
                     crate::content_management::inspect_removal(&data, &path).map(Reply::Plan)
                 }

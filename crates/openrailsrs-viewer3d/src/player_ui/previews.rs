@@ -85,6 +85,7 @@ struct TrainKey {
 }
 #[derive(Clone, Debug)]
 pub(super) struct RailwayInfo {
+    pub clearance: Option<crate::clearance::InfrastructureEnvelope>,
     pub gauge_m: f64,
     pub supply: ElectricSupply,
     pub section_supplies: Vec<ElectricSupply>,
@@ -240,6 +241,7 @@ fn load_route(key: &RouteKey) -> Result<RouteResult, String> {
     openrailsrs_formats::cancellation::check().map_err(|e| e.to_string())?;
     let native = RouteFile::from_route_dir(&key.root).ok();
     let mut railway = RailwayInfo {
+        clearance: crate::clearance::load(&key.root),
         gauge_m: native.as_ref().map_or(0., |n| f64::from(n.cant.gauge_m)),
         supply: ElectricSupply {
             kind: if native.as_ref().is_some_and(|n| n.overhead_wire.electrified) {
@@ -288,6 +290,11 @@ pub(super) fn railway_warning(
     audit: &openrailsrs_train::ConsistAudit,
     railway: &RailwayInfo,
 ) -> Option<String> {
+    if let crate::clearance::Assessment::Incompatible(message) =
+        crate::clearance::compare(audit, railway.clearance.as_ref())
+    {
+        return Some(message);
+    }
     if let Some(gauge) = audit
         .compatibility
         .iter()
@@ -342,7 +349,10 @@ pub(super) fn update(
     roots: Query<Entity, With<PreviewRoot>>,
     mut cameras: Query<&mut Transform, With<PreviewCamera>>,
 ) {
-    if ui.panel != PlayerPanel::NewGame {
+    if !matches!(
+        ui.panel,
+        PlayerPanel::NewGame | PlayerPanel::FormationEditor
+    ) {
         if previews.train_key.take().is_some() {
             previews.train_worker.cancel();
         }
@@ -452,7 +462,7 @@ pub(super) fn update(
         }
         ui.rebuild = true;
     }
-    if ui.new_game_step != NewGameStep::Train {
+    if ui.new_game_step != NewGameStep::Train && ui.panel != PlayerPanel::FormationEditor {
         if previews.train_key.take().is_some() {
             previews.train_worker.cancel();
         }
@@ -674,6 +684,7 @@ mod tests {
     #[test]
     fn railway_badges_distinguish_missing_power_wrong_gauge_and_partial_coverage() {
         let mut route = RailwayInfo {
+            clearance: None,
             gauge_m: 1.435,
             supply: ElectricSupply::default(),
             section_supplies: vec![],

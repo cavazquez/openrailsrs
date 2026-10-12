@@ -29,3 +29,5 @@ Hora y clima actuales del lugar, respaldo manual, zona horaria y rayos: [LIVE_EN
 Perfiles de clima, escenografía opcional, inspector y mediciones del renderer: [WEATHER_RENDERER_QA.md](WEATHER_RENDERER_QA.md).
 
 Treinta ampliaciones de tren/cabina, entorno, sonido e historial, con criterios y prueba manual por issue: [PLAN_30.md](PLAN_30.md).
+
+Tercera entrega: [seguimiento por issue](PLAN_30_3.md), [pruebas manuales](PLAYER_30_3_MANUAL.md), [contrato de rendimiento](PERFORMANCE_CONTRACT.md) y [API Rust de vehículos](RUST_VEHICLE_API.md).

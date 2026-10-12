@@ -46,7 +46,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libx11-dev libxcursor-dev libxrandr-dev libxi-dev \
-            libasound2-dev libwayland-dev libxkbcommon-dev libxkbcommon-x11-dev
+            libasound2-dev libwayland-dev libxkbcommon-dev libxkbcommon-x11-dev libudev-dev
 
       - name: Visual analysis dependencies
         run: python3 -m pip install -r scripts/requirements-visual.txt
@@ -75,7 +75,7 @@ jobs:
           # mesa-vulkan-drivers = lavapipe (Vulkan CPU); libgl1-mesa-dri = llvmpipe (GL).
           # Sin esto Bevy 0.19 paniquea: "Unable to find a GPU!" en runners sin GPU.
           sudo apt-get install -y libx11-dev libxcursor-dev libxrandr-dev libxi-dev \
-            libasound2-dev libwayland-dev libxkbcommon-dev libxkbcommon-x11-dev xvfb \
+            libasound2-dev libwayland-dev libxkbcommon-dev libxkbcommon-x11-dev libudev-dev xvfb \
             libgl1-mesa-dri mesa-vulkan-drivers libvulkan1
 
       - name: GPU instance placement oracle
@@ -123,7 +123,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libx11-dev libxcursor-dev libxrandr-dev libxi-dev \
-            libasound2-dev libwayland-dev libxkbcommon-dev libxkbcommon-x11-dev
+            libasound2-dev libwayland-dev libxkbcommon-dev libxkbcommon-x11-dev libudev-dev
 
       - uses: taiki-e/install-action@cargo-llvm-cov
 

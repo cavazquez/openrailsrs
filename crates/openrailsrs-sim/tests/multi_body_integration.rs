@@ -17,6 +17,7 @@ fn smoke_freight_consist() -> Option<(openrailsrs_train::Consist, std::path::Pat
 
 fn flat_path() -> PathData {
     PathData {
+        edge_ids: vec![],
         edges: vec![PathEdgeData {
             profile: Default::default(),
             length_m: 10_000.0,

@@ -177,6 +177,7 @@ impl Default for Atmosphere {
 impl Atmosphere {
     pub fn from_track(frame: openrailsrs_scenarios::weather_track::WeatherFrame) -> Self {
         Self {
+            temperature_c: frame.temperature_c,
             rain: frame.rain,
             snow: frame.snow,
             snow_cover: frame.snow,
@@ -194,7 +195,6 @@ impl Atmosphere {
             } else {
                 StormPhase::Calm
             },
-            ..default()
         }
     }
     /// Share the same continuous atmosphere with wheel/rail contact. This is
@@ -597,7 +597,19 @@ pub fn update(
         .as_ref()
         .and_then(|l| l.session.state.weather_track.as_ref())
     {
-        state.atmosphere = Atmosphere::from_track(program.at(clock));
+        state.atmosphere = Atmosphere::from_track(
+            program.at_position(
+                clock,
+                live.as_ref()
+                    .unwrap()
+                    .session
+                    .path_data
+                    .edge_ids
+                    .get(live.as_ref().unwrap().session.state.edge_index)
+                    .map_or("", String::as_str),
+                live.as_ref().unwrap().session.pos_on_edge_m(),
+            ),
+        );
         state.live = false;
     } else if profile == WeatherProfile::Edited {
         state.atmosphere = Atmosphere::from_track(settings.weather_track.at(clock));
@@ -605,6 +617,10 @@ pub fn update(
     }
     // The reproducible phase is independent of the start time of the service.
     if !state.live
+        && profile != WeatherProfile::Edited
+        && live
+            .as_ref()
+            .is_none_or(|l| l.session.state.weather_track.is_none())
         && state.last_s == Some(clock + offset)
         && state.elapsed_s(clock + offset) == 0.
         && offset > 0.
@@ -618,7 +634,12 @@ pub fn update(
     }
     // All consumers receive the same temperature and pause-safe gust. Manual
     // temperature is explicitly an estimate, never a live observation.
-    if !state.live {
+    if !state.live
+        && profile != WeatherProfile::Edited
+        && live
+            .as_ref()
+            .is_none_or(|l| l.session.state.weather_track.is_none())
+    {
         state.atmosphere.temperature_c = settings.ambient_temperature_c.unwrap_or_else(|| {
             crate::journey_environment::temperature(
                 environment.location,

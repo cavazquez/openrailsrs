@@ -223,6 +223,8 @@ pub(crate) fn import_activity_definition(
             edge_speed_limits: vec![],
         },
         train: TrainSection {
+            announcements: Default::default(),
+            presentation: vec![],
             vehicle_profiles: vec![],
             cab_equipment: vec![],
             power_load: Default::default(),
@@ -239,6 +241,7 @@ pub(crate) fn import_activity_definition(
             penalty_per_second_late: 0.0,
         },
         simulation: SimulationSection {
+            rail_operations: Default::default(),
             weather_track: None,
             native_physics: None,
             duration: duration_s,

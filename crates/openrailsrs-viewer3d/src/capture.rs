@@ -290,6 +290,17 @@ pub struct CaptureScene<'w, 's> {
     fog: Option<Res<'w, crate::ground_fog::FogDiagnostics>>,
     electric_contacts: Option<Res<'w, crate::electric_contact::ElectricContacts>>,
     motion: Option<Res<'w, crate::train_motion::TrainMotion>>,
+    windows_schedule: Option<Res<'w, crate::building_windows::WindowSchedules>>,
+    adaptive: Option<Res<'w, crate::adaptive_graphics::AdaptiveGraphics>>,
+    train_lamps: Query<
+        'w,
+        's,
+        (
+            &'static bevy::light::SpotLight,
+            Option<&'static crate::train_lighting::Headlamp>,
+            Option<&'static crate::train_presentation::PassengerLight>,
+        ),
+    >,
     cab_diagnostic: Option<Res<'w, crate::cab_render::CabRenderDiagnostic>>,
     wet_surfaces: Option<Res<'w, crate::wet_surfaces::WetSurfaces>>,
     lod_fades: Query<'w, 's, &'static crate::world_lod_fade::LodFade>,
@@ -516,6 +527,13 @@ impl CaptureScene<'_, '_> {
         {
             report["camera_journey"] = self.camera_journey.report();
         }
+        report["building_windows"] = self
+            .windows_schedule
+            .as_ref()
+            .map_or(serde_json::Value::Null, |s| s.report());
+        report["shared_geometry"] = crate::shared_geometry::report();
+        report["adaptive_graphics"]=self.adaptive.as_ref().map_or(serde_json::Value::Null,|s|serde_json::json!({"level":s.level,"changes":s.changes,"filtered_ms":s.filtered_ms}));
+        report["train_lamps"]=serde_json::json!(self.train_lamps.iter().filter(|(l,_,_)|l.intensity>0.).map(|(l,h,p)|serde_json::json!({"service":h.map(|h|h.service_index),"vehicle":h.map(|h|h.vehicle_index).or_else(||p.map(|p|p.vehicle)),"passenger":p.is_some(),"intensity":l.intensity,"shadows":l.shadow_maps_enabled,"range":l.range})).collect::<Vec<_>>());
         report["draw_calls"] = self.world_draws.report();
         report["enhanced_scenery"] = self.enhanced_scenery.report();
         report["weather_state"] = self.weather_state.as_ref().map_or(serde_json::Value::Null,|s|serde_json::json!({"atmosphere":s.atmosphere,"profile":s.profile,"seed":s.seed,"live":s.live,"journey":s.journey,"elapsed_s":s.timeline_elapsed_s()}));

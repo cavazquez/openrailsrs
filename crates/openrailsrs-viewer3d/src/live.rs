@@ -391,6 +391,7 @@ pub fn enable_live_defaults(
 }
 
 pub fn advance_live_sim(
+    mut recording: Option<ResMut<crate::incident_recording::IncidentRecording>>,
     loading: Option<Res<crate::route_bootstrap::ViewerLoadingScreen>>,
     time: Res<Time<Fixed>>,
     mut live: ResMut<LiveDrive>,
@@ -441,6 +442,13 @@ pub fn advance_live_sim(
             apply_region_transition(a, t);
         }
     };
+    if let Some(recording) = recording.as_mut() {
+        recording.before(
+            &live,
+            time.delta_secs_f64(),
+            autodrive_enabled().then(autodrive_notch),
+        );
+    }
     let live = &mut *live;
     live.traffic.advance(
         &mut live.session,
@@ -449,6 +457,9 @@ pub fn advance_live_sim(
         &mut on_transition,
     );
     live.audio = audio;
+    if let Some(recording) = recording.as_mut() {
+        recording.after(live);
+    }
     if live.session.gameplay.missed_stops.len() > missed_count
         && let Some(stop) = live.session.gameplay.missed_stops.last()
         && let Some(ui) = ui.as_mut()

@@ -195,6 +195,10 @@ pub struct DavisSection {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct TrainSection {
+    #[serde(default)]
+    pub announcements: crate::announcements::AnnouncementPackage,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub presentation: Vec<crate::presentation::VehiclePresentation>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub vehicle_profiles: Vec<openrailsrs_core::vehicle_profile::VehicleProfile>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -376,6 +380,8 @@ impl Default for NativePhysicsEnvironment {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct SimulationSection {
+    #[serde(default)]
+    pub rail_operations: crate::rail_operations::RailOperationsDef,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub weather_track: Option<crate::weather_track::WeatherTrack>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -449,6 +455,31 @@ impl Default for OutputSection {
 
 impl ScenarioFile {
     pub fn validate(&self) -> Result<(), ScenarioError> {
+        if !self.train.announcements.valid() {
+            return Err(ScenarioError::Validation(
+                "Paquete de anuncios sin procedencia/licencia o inválido".into(),
+            ));
+        }
+        if self.train.presentation.len() > 256
+            || self.train.presentation.iter().any(|v| !v.valid())
+            || self
+                .train
+                .presentation
+                .iter()
+                .map(|v| v.vehicle)
+                .collect::<std::collections::BTreeSet<_>>()
+                .len()
+                != self.train.presentation.len()
+        {
+            return Err(ScenarioError::Validation(
+                "Presentación de vehículo inválida".into(),
+            ));
+        }
+        if !self.simulation.rail_operations.valid() {
+            return Err(ScenarioError::Validation(
+                "Operaciones ferroviarias inválidas".into(),
+            ));
+        }
         if self.train.vehicle_profiles.len() > 256
             || self.train.vehicle_profiles.iter().any(|p| !p.valid())
         {

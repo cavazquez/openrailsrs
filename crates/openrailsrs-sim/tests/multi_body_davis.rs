@@ -8,6 +8,7 @@ use openrailsrs_train::{Consist, TractiveCurve, load_consist_with_asset_root};
 
 fn flat_path() -> PathData {
     PathData {
+        edge_ids: vec![],
         edges: vec![PathEdgeData {
             profile: Default::default(),
             length_m: 10_000.0,

@@ -43,6 +43,7 @@ impl PathEdgeData {
 ///
 /// Built once before the simulation loop; indexed by `state.edge_index`.
 pub struct PathData {
+    pub edge_ids: Vec<String>,
     pub edges: Vec<PathEdgeData>,
 }
 
@@ -110,7 +111,10 @@ impl PathData {
                     })
             })
             .collect();
-        Self { edges }
+        Self {
+            edges,
+            edge_ids: path_edges.to_vec(),
+        }
     }
 
     /// Increases apply only after the complete train has cleared the old limit.

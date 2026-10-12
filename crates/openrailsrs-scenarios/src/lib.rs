@@ -35,3 +35,9 @@ pub fn load_scenario(path: impl AsRef<Path>) -> Result<ScenarioFile, ScenarioErr
     file.validate()?;
     Ok(file)
 }
+
+pub mod rail_operations;
+
+pub mod presentation;
+
+pub mod announcements;

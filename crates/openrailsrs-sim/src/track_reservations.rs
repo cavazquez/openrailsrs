@@ -751,6 +751,58 @@ mod tests {
         (player, traffic, dir)
     }
     #[test]
+    fn scheduled_work_protects_native_signal_diverts_and_waits_for_any_tail() {
+        let (mut player, mut traffic, _dir) = passing_loop();
+        traffic.services.clear();
+        player.state.rail_operations.definition.works.push(
+            openrailsrs_scenarios::rail_operations::TrackWorkDef {
+                id: "main-renewal".into(),
+                edge: "main".into(),
+                start_m: 100.,
+                end_m: 800.,
+                start_s: 0.,
+                end_s: 20.,
+                direction: 0,
+                speed_kmh: 18.,
+                closed: true,
+            },
+        );
+        traffic.synchronize_occupancy(&mut player);
+        assert_eq!(player.native_signal_aspect("entry"), Some(0));
+        assert_eq!(player.dispatcher.waiting_for, vec!["Obra: main-renewal"]);
+        player.state.time.0 = 6.;
+        traffic.synchronize_occupancy(&mut player);
+        traffic.synchronize_occupancy(&mut player);
+        assert_eq!(
+            player.state.path_edges,
+            vec!["approach", "loop_a", "loop_b", "exit"]
+        );
+        assert_eq!(player.native_signal_aspect("entry"), Some(7));
+        assert_eq!(
+            player.graph.switch_position("J"),
+            Some(SwitchPosition::Diverging)
+        );
+        let saved = player.snapshot();
+        player.restore_snapshot(saved).unwrap();
+        assert!(player.state.rail_operations.definition.works[0].closed);
+        player.state.time.0 = 21.;
+        let tail = TrackOccupancy {
+            edge: "main".into(),
+            start_m: 790.,
+            end_m: 810.,
+            owner: "Parked".into(),
+        };
+        assert_eq!(player.closed_work_occupancy(&[tail]).len(), 1);
+        assert!(player.closed_work_occupancy(&[]).is_empty());
+        traffic.synchronize_occupancy(&mut player);
+        assert!(
+            player
+                .external_track_occupancy
+                .iter()
+                .all(|p| !p.owner.starts_with("Obra:"))
+        );
+    }
+    #[test]
     fn blocked_service_diverts_through_passing_loop_and_locks_points_atomically() {
         let (mut player, mut traffic, _dir) = passing_loop();
         traffic.synchronize_occupancy(&mut player);

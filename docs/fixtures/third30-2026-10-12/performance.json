@@ -1,0 +1,99 @@
+{
+  "schema": 1,
+  "contract": {
+    "machine": {
+      "cpu": "AMD Ryzen 5 9600X 6-Core Processor",
+      "kernel": "7.0.0-38-generic",
+      "architecture": "x86_64",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      }
+    },
+    "resolution": [
+      1280,
+      720
+    ],
+    "route_sha256": "97aad2e510b01017370c7d7735604c574745b4bf9a58ff8c362ab9a0fdefd94e",
+    "consist_sha256": "b267ebba70000bdb53eb90f78b3e48fdd40bfb303013fa50aa3d745eed91e9f6",
+    "camera": {
+      "follow": "orbit",
+      "yaw": 1.6,
+      "pitch": 0.28,
+      "distance_m": 42,
+      "fov_y_rad": 0.7853981852531433
+    },
+    "seed": 42,
+    "quality": {
+      "weather": "rain",
+      "particles": 2048,
+      "view_distance_m": 450,
+      "shadows": true,
+      "contact_shadows": 1,
+      "target_m": 100.0
+    }
+  },
+  "baseline_binary": "ba4c7d35aad553fde1a54877b734593604aa042e70b2e14e9a0f8636087fa3e5",
+  "current_binary": "326b9818a4a0f666524289af501d06a5dd274d671d16b9c82e98afd101a3590a",
+  "baseline_version": "reference-ac9ec45",
+  "current_version": "third30-working-tree",
+  "metrics": {
+    "gameplay_frame_p50_ms": {
+      "before": 25,
+      "after": 25,
+      "delta": 0,
+      "allowed_delta": 3.75,
+      "status": "within_budget"
+    },
+    "gameplay_frame_p95_ms": {
+      "before": 25,
+      "after": 25,
+      "delta": 0,
+      "allowed_delta": 3.75,
+      "status": "within_budget"
+    },
+    "gameplay_frame_p99_ms": {
+      "before": 27,
+      "after": 25,
+      "delta": -2,
+      "allowed_delta": 4.05,
+      "status": "within_budget"
+    },
+    "gameplay_hitches_over_100_ms": {
+      "before": 0,
+      "after": 0,
+      "delta": 0,
+      "allowed_delta": 3,
+      "status": "within_budget"
+    },
+    "rss_mib": {
+      "before": 1277.17578125,
+      "after": 1283.89453125,
+      "delta": 6.71875,
+      "allowed_delta": 191.5763671875,
+      "status": "within_budget"
+    },
+    "peak_rss_mib": {
+      "before": 1277.17578125,
+      "after": 1283.89453125,
+      "delta": 6.71875,
+      "allowed_delta": 191.5763671875,
+      "status": "within_budget"
+    },
+    "vram_mib": {
+      "before": 1381.4765625,
+      "after": 1124.8671875,
+      "status": "within_budget"
+    }
+  },
+  "regressions": [],
+  "passed": true,
+  "startup": {
+    "before_longest_ms": 1565.086139,
+    "after_longest_ms": 1455.636067,
+    "before_loading_frames": 327,
+    "after_loading_frames": 319
+  }
+}

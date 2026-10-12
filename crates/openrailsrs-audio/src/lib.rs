@@ -16,6 +16,7 @@ use std::time::Duration;
 
 use rodio::{DeviceSinkBuilder, Player, Source, source::SineWave};
 
+pub mod acoustics;
 pub mod mix;
 pub mod native;
 pub mod sms;
@@ -157,3 +158,5 @@ fn frequency_for_kind(kind: &str) -> f32 {
         _ => 200.0,
     }
 }
+
+pub mod announcements;

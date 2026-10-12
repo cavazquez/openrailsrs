@@ -1713,7 +1713,7 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
         .iter()
         .map(|p| mesh_position_count(&p.mesh) / 3)
         .sum();
-    let combined_mesh = meshes.add(loaded.mesh);
+    let combined_mesh = crate::shared_geometry::add(meshes, loaded.mesh);
 
     let mut has_any_texture = false;
     let mut parts = Vec::with_capacity(loaded.parts.len().max(1));
@@ -1828,7 +1828,7 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
             );
         }
         has_any_texture |= has_texture;
-        let mesh_handle = meshes.add(mesh);
+        let mesh_handle = crate::shared_geometry::add(meshes, mesh);
         parts.push(ShapePartAsset {
             prim_state_idx: part.prim_state_idx,
             sub_object_idx: part.sub_object_idx,

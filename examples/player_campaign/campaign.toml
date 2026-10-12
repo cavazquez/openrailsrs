@@ -1,0 +1,17 @@
+[campaign]
+name = "Dos jornadas · material propio"
+description = "Campaña sintética corta para comprobar progreso y conservación del diésel, reservas, frenos y averías. El material y los modelos son propios; no reproduce una línea comercial."
+version = "1.0"
+[[missions]]
+id = "day1"
+name = "Primera jornada · 08:00"
+scenario = "day1.toml"
+min_pass_score = 60
+bonus_threshold = 90
+[[missions]]
+id = "day2"
+name = "Segunda jornada · 09:00"
+scenario = "day2.toml"
+requires = ["day1"]
+min_pass_score = 60
+bonus_threshold = 90

@@ -41,6 +41,7 @@ pub(super) fn build(
     label(p, "Respaldos de ajustes y partidas", 18., TEXT);
     row(p, |p| {
         button(p, "Crear respaldo de lo guardado", UiCommand::BackupExport);
+        button(p, "Exportar partidas portátiles", UiCommand::PortableExport);
         if tools.imported_settings.is_some() {
             button(p, "Usar ajustes importados", UiCommand::ApplyBackupSettings);
         }

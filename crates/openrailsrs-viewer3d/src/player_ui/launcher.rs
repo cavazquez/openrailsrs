@@ -188,6 +188,16 @@ pub(super) fn build_new_game(
     }
     match ui.new_game_step {
         NewGameStep::Route => {
+            button(
+                p,
+                "Campañas y jornadas",
+                UiCommand::Open(PlayerPanel::Campaigns),
+            );
+            button(
+                p,
+                "Crear o editar un servicio propio",
+                UiCommand::ServiceEditorStart,
+            );
             label(p, "¿Dónde querés conducir?", 21.0, TEXT);
             button(
                 p,
@@ -300,6 +310,30 @@ pub(super) fn build_new_game(
         }
         NewGameStep::Train => {
             label(p, "¿Qué tren vas a llevar?", 21.0, TEXT);
+            if let Some(preview) = previews
+                && let Some(rail) = &preview.railway
+                && let Some(audit) = menu
+                    .consists
+                    .get(menu.consist)
+                    .and_then(|path| menu.consist_audits.get(path))
+            {
+                let assessment = crate::clearance::compare(audit, rail.clearance.as_ref());
+                label(
+                    p,
+                    assessment.text(),
+                    13.,
+                    if matches!(assessment, crate::clearance::Assessment::Incompatible(_)) {
+                        CAUTION
+                    } else {
+                        MUTED
+                    },
+                );
+            }
+            button(
+                p,
+                "Armar una formación propia",
+                UiCommand::FormationEditorStart,
+            );
             button(
                 p,
                 "Ajustes propios por vehículo",
@@ -950,6 +984,9 @@ pub(super) fn capture_page(ui: &mut PlayerUiState, page: &str) {
             ui.library_tab = LibraryTab::Tools;
             (PlayerPanel::Content, NewGameStep::Route, false)
         }
+        "campaigns" => (PlayerPanel::Campaigns, NewGameStep::Route, false),
+        "formation-editor" => (PlayerPanel::FormationEditor, NewGameStep::Train, false),
+        "service-editor" => (PlayerPanel::ServiceEditor, NewGameStep::Route, false),
         "practice" => (PlayerPanel::Practice, NewGameStep::Route, false),
         "weather-editor" => (PlayerPanel::WeatherEditor, NewGameStep::Environment, false),
         "driving-report" => (PlayerPanel::Report, NewGameStep::Route, false),

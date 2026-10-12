@@ -122,7 +122,15 @@ pub fn step(
     if let Some(program) = &state.weather_track
         && let Some(config) = &train.rail_adhesion
     {
-        let frame = program.at(state.time_s());
+        let frame = program.at_position(
+            state.time_s(),
+            path_data
+                .edge_ids
+                .get(state.edge_index)
+                .map_or("", String::as_str),
+            state.pos_on_edge_m,
+        );
+        state.ambient_temperature_c = f64::from(frame.temperature_c);
         use crate::adhesion::{RailAdhesionState, RailWeather};
         let weather = if frame.snow > 0.02 && frame.snow > frame.rain {
             RailWeather::Snow

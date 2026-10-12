@@ -104,6 +104,8 @@ pub struct SavedPlayerOptions {
     pub ambient_temperature_c: Option<f32>,
     #[serde(default)]
     pub sky_date: Option<String>,
+    #[serde(default)]
+    pub shared_installations: Vec<PathBuf>,
 }
 impl SavedPlayerOptions {
     pub fn capture(s: &crate::player_settings::PlayerSettings) -> Self {
@@ -116,9 +118,11 @@ impl SavedPlayerOptions {
             traffic_brake_assistance: s.traffic_brake_assistance,
             ambient_temperature_c: s.ambient_temperature_c,
             sky_date: Some(s.sky_date.clone()),
+            shared_installations: s.shared_installations.clone(),
         }
     }
     pub fn apply(&self, s: &mut crate::player_settings::PlayerSettings) {
+        s.shared_installations = self.shared_installations.clone();
         s.journey_setup = self.journey_setup.clone();
         s.braking_coach = self.braking_coach;
         s.weather_track = self.weather_track.clone();
@@ -244,6 +248,9 @@ impl SavedGame {
     pub fn prepare_resume(path: &Path) -> Result<QueuedPlayerLaunch, String> {
         let game = Self::read(path)?;
         game.validate_route_available()?;
+        if let Some(options) = &game.player_options {
+            openrailsrs_formats::resource_links::configure(&options.shared_installations)?;
+        }
         let scenario = crate::player_launch::absolute(&player_data_dir().join("resume.toml"));
         atomic_write(&scenario, game.scenario_toml.as_bytes())?;
         Ok(QueuedPlayerLaunch {
@@ -347,7 +354,7 @@ pub fn restore_camera(
     commands.remove_resource::<PendingSavedCamera>();
 }
 
-fn canonical_scenario(path: &Path) -> Result<String, String> {
+pub(crate) fn canonical_scenario(path: &Path) -> Result<String, String> {
     let source = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
     let mut value: toml::Value = toml::from_str(&source).map_err(|e| e.to_string())?;
     let dir = path.parent().ok_or("Servicio sin directorio")?;

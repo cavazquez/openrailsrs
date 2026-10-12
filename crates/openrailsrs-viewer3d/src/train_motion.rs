@@ -147,6 +147,7 @@ fn suspension_pose(roll: f32, pitch: f32, bounce: f32) -> Transform {
 pub fn update(
     live: Res<crate::live::LiveDrive>,
     settings: Res<crate::player_settings::PlayerSettings>,
+    presentation: Option<Res<crate::train_presentation::TrainPresentation>>,
     mut motion: ResMut<TrainMotion>,
     parents: Query<&Transform, (Without<TrainCarTrackOffset>, Without<TrainExteriorAnimPart>)>,
     mut cars: Query<
@@ -181,7 +182,11 @@ pub fn update(
         motion.level = level;
     }
     let scale = level.scale();
-    if scale == 0.0 {
+    if scale == 0.0
+        && presentation
+            .as_ref()
+            .is_none_or(|p| p.vehicles.iter().all(|v| v.suspension.is_none()))
+    {
         motion.cars.clear();
         motion.running_gear.clear();
         return;
@@ -233,15 +238,42 @@ pub fn update(
             } else {
                 1.0
             };
+        let base_mass = session.formation.cars[index].mass_kg;
+        let passenger_mass = if index < session.formation.coupled_count {
+            session.state.extra_mass_kg / session.formation.coupled_count.max(1) as f64
+        } else {
+            0.
+        };
+        let mass = openrailsrs_sim::consumable_mass::vehicle_mass_kg(
+            &session.physics,
+            &session.state,
+            index,
+            base_mass,
+        ) + passenger_mass;
+        let suspension = presentation
+            .as_ref()
+            .filter(|_| offset.track_index == 0)
+            .and_then(|p| p.vehicles.iter().find(|v| v.vehicle == index))
+            .and_then(|v| v.suspension.as_ref());
+        let depression = suspension.map_or(0., |s| -s.depression(mass) as f32);
+        let omega = suspension.map_or(7., |s| {
+            (s.natural_frequency(mass) * s.damping_ratio).clamp(1., 30.) as f32
+        });
         let car = motion.cars.entry(entity).or_default();
+        if car.clock.is_none() {
+            car.bounce.position = depression;
+            car.pose = suspension_pose(0., 0., depression);
+        }
         if car
             .clock
             .is_some_and(|previous| clock < previous || clock - previous > 1.0)
         {
             *car = CarMotion::default();
+            car.bounce.position = depression;
+            car.pose = suspension_pose(0., 0., depression);
         }
         let dt = (clock - car.clock.unwrap_or(clock)).max(0.0) as f32;
-        if !live.paused && dt > 0.0 && scale > 0.0 {
+        if !live.paused && dt > 0.0 && (scale > 0.0 || suspension.is_some()) {
             let acceleration = ((speed - car.speed) / dt).clamp(-2.0, 2.0);
             let angle = heading - car.heading.unwrap_or(heading);
             let change = (angle + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU)
@@ -257,10 +289,13 @@ pub fn update(
             car.vehicle = index;
             let roll = (-lateral * 0.014 + response.y) * scale;
             let pitch = (-acceleration * 0.006 + response.x) * scale;
-            let bounce = response.z * scale;
+            let load_response = suspension.map_or(1., |s| {
+                (s.empty_mass_kg / mass.max(s.empty_mass_kg)).sqrt() as f32
+            });
+            let bounce = depression + response.z * scale * load_response;
             car.roll.advance(roll, dt, 4.0);
             car.pitch.advance(pitch, dt, 4.5);
-            car.bounce.advance(bounce, dt, 7.0);
+            car.bounce.advance(bounce, dt, omega);
             car.pose = suspension_pose(car.roll.position, car.pitch.position, car.bounce.position);
         }
         car.clock = Some(clock);

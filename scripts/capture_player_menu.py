@@ -18,6 +18,7 @@ PAGES = (
     "home", "route", "route-map", "train", "weather", "weather-options", "continue",
     "library", "downloads", "settings", "weather-settings", "controls",
     "practice", "weather-editor", "vehicle-profile", "library-tools", "bug-report",
+    "campaigns", "formation-editor", "service-editor",
 )
 
 

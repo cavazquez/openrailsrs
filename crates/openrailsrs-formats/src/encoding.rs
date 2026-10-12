@@ -54,6 +54,10 @@ pub fn read_msts_file_to_string(path: &Path) -> Result<String, FormatError> {
 /// Returns the resolved path if every component could be matched, or `None`
 /// if any component does not exist even after the case-insensitive scan.
 pub fn resolve_path_case_insensitive(path: &Path) -> Option<std::path::PathBuf> {
+    resolve_path_case_insensitive_direct(path)
+        .or_else(|| crate::resource_links::resolve_missing(path))
+}
+pub(crate) fn resolve_path_case_insensitive_direct(path: &Path) -> Option<std::path::PathBuf> {
     use std::path::Component;
     let mut resolved = std::path::PathBuf::new();
     for comp in path.components() {

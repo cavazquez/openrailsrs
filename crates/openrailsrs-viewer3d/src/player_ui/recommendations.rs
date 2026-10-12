@@ -31,6 +31,11 @@ fn suggestions(menu: &PlayerLaunchMenu, previews: Option<&previews::Previews>) -
         let origin = menu.consist_origin_label(index);
         reason.push(origin);
         if let Some(rail) = previews.and_then(|p| p.railway.as_ref()) {
+            reason.push(
+                crate::clearance::compare(audit, rail.clearance.as_ref())
+                    .text()
+                    .to_string(),
+            );
             if let Some(warning) = previews::railway_warning(audit, rail) {
                 score -= 60;
                 reason.push(warning);

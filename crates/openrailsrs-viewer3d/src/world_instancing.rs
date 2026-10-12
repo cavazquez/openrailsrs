@@ -1241,10 +1241,13 @@ pub fn update_world_lod_fades(
 #[allow(clippy::type_complexity)]
 pub fn update_world_instanced_lod(
     mut commands: Commands,
+    mut max_scales: Local<std::collections::HashMap<Entity, (usize, f32)>>,
     cache: Option<Res<crate::world::WorldShapeLodCache>>,
     meshes: Res<Assets<Mesh>>,
     mut silhouettes: Option<ResMut<crate::scenery_lod::Silhouettes>>,
-    camera: Query<&GlobalTransform, With<Camera3d>>,
+    camera: Query<(&GlobalTransform, Option<&Projection>, Option<&Camera>), With<Camera3d>>,
+    settings: Option<Res<crate::player_settings::PlayerSettings>>,
+    mode: Option<Res<crate::camera::CameraFollowMode>>,
     mut groups: Query<
         (
             Entity,
@@ -1253,7 +1256,7 @@ pub fn update_world_instanced_lod(
             &mut WorldInstancedGroup,
             &mut Mesh3d,
             &mut Visibility,
-            &WorldInstanceBuffer,
+            Ref<WorldInstanceBuffer>,
             &mut bevy::camera::primitives::Aabb,
             &mut WorldInstanceAppearance,
             &crate::world::WorldTileBound,
@@ -1261,8 +1264,19 @@ pub fn update_world_instanced_lod(
         Without<WorldLodFade>,
     >,
 ) {
+    if max_scales.len() > 8192 {
+        max_scales.clear();
+    }
+    let fallback = crate::player_settings::PlayerSettings::default();
+    let settings = settings.as_deref().unwrap_or(&fallback);
+    let mode = mode
+        .as_deref()
+        .copied()
+        .unwrap_or(crate::camera::CameraFollowMode::Off);
     let Some(cache) = cache else { return };
-    let Ok(cam) = camera.single() else { return };
+    let Ok((cam, projection, camera)) = camera.single() else {
+        return;
+    };
     for (
         entity,
         tf,
@@ -1288,11 +1302,71 @@ pub fn update_world_instanced_lod(
         if assets.is_empty() {
             continue;
         }
-        let desired = crate::world::stable_lod_level(
-            shape,
-            nearest_instance_distance_m(cam.translation(), gt, instances),
-            group.lod_idx,
-        )
+        let distance = nearest_instance_distance_m(cam.translation(), gt, &instances);
+        let desired = if settings.projected_lod
+            && let Some(Projection::Perspective(p)) = projection
+        {
+            let threshold = if matches!(
+                mode,
+                crate::camera::CameraFollowMode::DriverCam | crate::camera::CameraFollowMode::Cab2d
+            ) {
+                settings.lod_pixels_cab
+            } else {
+                settings.lod_pixels_exterior
+            };
+            // Instanced matrices may include nonuniform scaling; use the largest.
+            let recompute = instances.is_changed()
+                || max_scales
+                    .get(&entity)
+                    .is_none_or(|(count, _)| *count != instances.0.len());
+            if recompute {
+                let scale = instances
+                    .0
+                    .iter()
+                    .map(|i| {
+                        Mat4::from_cols_array_2d(&[i.col0, i.col1, i.col2, i.col3])
+                            .to_scale_rotation_translation()
+                            .0
+                            .abs()
+                            .max_element()
+                    })
+                    .fold(1f32, f32::max);
+                max_scales.insert(entity, (instances.0.len(), scale));
+            }
+            let scale =
+                max_scales[&entity].1 * gt.to_scale_rotation_translation().0.abs().max_element();
+            silhouettes.as_mut().map_or_else(
+                || {
+                    crate::scenery_lod::projected_level(
+                        shape,
+                        distance,
+                        group.lod_idx,
+                        p.fov,
+                        camera
+                            .and_then(|c| c.physical_viewport_size())
+                            .map_or(1080., |s| s.y as f32),
+                        scale,
+                        threshold,
+                    )
+                },
+                |s| {
+                    s.projected(
+                        &group.shape_path,
+                        shape,
+                        distance,
+                        group.lod_idx,
+                        p.fov,
+                        camera
+                            .and_then(|c| c.physical_viewport_size())
+                            .map_or(1080., |s| s.y as f32),
+                        scale,
+                        threshold,
+                    )
+                },
+            )
+        } else {
+            crate::world::stable_lod_level(shape, distance, group.lod_idx)
+        }
         .min(assets.len() - 1);
         let new_lod = silhouettes
             .as_mut()
@@ -1310,7 +1384,7 @@ pub fn update_world_instanced_lod(
                 *tf,
                 mesh.clone(),
                 Visibility::Inherited,
-                instances.clone(),
+                (*instances).clone(),
                 old,
                 *aabb,
                 *bound,
@@ -1335,7 +1409,7 @@ pub fn update_world_instanced_lod(
         group.part_index = index;
         *visible = Visibility::Inherited;
         *aabb = instances_aabb(
-            instances,
+            &instances,
             meshes
                 .get(&part.mesh)
                 .and_then(bevy::camera::primitives::MeshAabb::compute_aabb)

@@ -304,6 +304,10 @@ impl LiveDriveSession {
                 .weather_track
                 .as_ref()
                 .is_some_and(|p| !p.valid())
+            || !saved.state.announcements.valid()
+            || saved.state.announcements.package != self.state.announcements.package
+            || !saved.state.rail_operations.valid()
+            || saved.state.rail_operations.definition != self.state.rail_operations.definition
             || !saved.state.driving_report.valid()
             || saved.state.learning.as_ref().is_some_and(|s| !s.valid())
         {
@@ -723,7 +727,11 @@ impl LiveDriveSession {
         self.previous_render_chainage_m = saved.previous_render_chainage_m;
         self.signal_steps = saved.signal_steps;
         self.arrived = saved.arrived;
+        // Rebuild immutable active-car configuration without advancing/initializing
+        // saved electric equipment. Undeparted AI can legitimately be uninitialized.
+        let saved_electric = self.state.electric.clone();
         self.rebuild_formation_physics();
+        self.state.electric = saved_electric;
         self.evaluate_native_signals();
         // Traffic footprints are restored separately; recompute after that sync,
         // including when the player remains paused on the loaded frame.
@@ -731,6 +739,32 @@ impl LiveDriveSession {
         Ok(())
     }
 
+    /// Open disconnected hose that is actually venting pressure. Train-end
+    /// cocks are not treated as broken hoses; use the same adjacent cock rules
+    /// as the distributed brake pipe.
+    pub fn leaking_hose(&self, index: usize) -> Option<bool> {
+        let car = self.formation.cars.get(index)?;
+        let pressure = self
+            .state
+            .brake_system
+            .cylinders
+            .get(index)
+            .and_then(|c| c.pipe_pressure_bar())
+            .unwrap_or(self.cab_telemetry().brake_pipe_bar);
+        if pressure < 0.1 {
+            return None;
+        }
+        if index > 0 && !car.hose_connected && car.front_cock_open {
+            return Some(true);
+        }
+        if index + 1 < self.formation.cars.len()
+            && car.rear_cock_open
+            && !self.formation.cars[index + 1].hose_connected
+        {
+            return Some(false);
+        }
+        None
+    }
     pub fn operate_car(&mut self, index: usize, action: CarOperation) -> Result<(), String> {
         if self.velocity_mps() > 0.1 {
             return Err("Detené el tren antes de operar la formación".into());
@@ -1366,10 +1400,17 @@ pub(crate) fn content_signature(
     };
     let mut route = scenario.route.clone();
     route.path.clear(); // Absolute launch copies and source-relative scenarios describe the same content.
-    feed(&format!(
-        "{:?}{:?}{:?}",
-        scenario.scenario, route, scenario.simulation
-    ));
+    let mut simulation = format!("{:?}", scenario.simulation);
+    // Empty extensions keep the previous alpha's save identity. Authored work /
+    // connections are included in the signature when they change operations.
+    if scenario.simulation.rail_operations == Default::default() {
+        simulation = simulation.replacen(
+            "rail_operations: RailOperationsDef { connections: [], works: [], incidents: [] }, ",
+            "",
+            1,
+        );
+    }
+    feed(&format!("{:?}{:?}{}", scenario.scenario, route, simulation));
     for (_, e) in graph.edges_iter() {
         feed(&format!("{e:?}"));
     }

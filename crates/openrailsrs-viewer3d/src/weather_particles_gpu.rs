@@ -138,12 +138,12 @@ const ATTRIBUTES: &[Attribute] = &[
     Attribute::F32X4_1,
     Attribute::U32_0,
     Attribute::U32_1,
+    Attribute::U32_2,
 ];
 
 #[derive(Clone, Debug, Reflect)]
 struct WeatherMotion {
     init: bool,
-    snow: bool,
 }
 impl Modifier for WeatherMotion {
     fn context(&self) -> ModifierContext {
@@ -178,32 +178,28 @@ particle.u32_1 = particle_counter;
 "#);
         }
         context.extra_code.push_str("fn weather_wrap(v: f32, span: f32) -> f32 { return v - floor((v + span * 0.5) / span) * span; }\n");
-        let snow = self.snow;
-        context.main_code.push_str(&format!(r#"
+        context.main_code.push_str(r#"
 let wp = properties[properties_array_index];
 particle.f32x4_1 = vec4(wp.grid.xyz, wp.shelter_base);
 let ws = particle.f32x4_0;
 let wt = wp.wind_time.w;
-let fall = {fall};
-let flutter = {flutter};
+let snow = fract(ws.w * 91.73) < wp.up.w;
+particle.u32_2 = select(0u, 1u, snow);
+let fall = select(20.0 + ws.w * 16.0, 0.7 + ws.w * 1.2, snow);
+let flutter = select(vec2(0.0), vec2(sin(wt * 0.73 + ws.x * 31.0), cos(wt * 0.51 + ws.z * 27.0)) * 0.65, snow);
 let drift = select(wt, 1.0, wp.wind_time.y > 0.5);
 let span = wp.center.w * 2.0;
 let raw = vec3(ws.x * span + wp.wind_time.x * drift + flutter.x,
     ws.y * wp.phase.w - fall * wt,
     ws.z * span + wp.wind_time.z * drift + flutter.y) - wp.phase.xyz;
 particle.position = wp.center.xyz + vec3(weather_wrap(raw.x, span), weather_wrap(raw.y, wp.phase.w), weather_wrap(raw.z, span));
-"#,
-            fall = if snow { "0.7 + ws.w * 1.2" } else { "20.0 + ws.w * 16.0" },
-            flutter = if snow { "vec2(sin(wt * 0.73 + ws.x * 31.0), cos(wt * 0.51 + ws.z * 27.0)) * 0.65" } else { "vec2(0.0)" },
-        ));
+"#);
         Ok(())
     }
 }
 
 #[derive(Clone, Debug, Reflect)]
-struct WeatherRender {
-    snow: bool,
-}
+struct WeatherRender {}
 impl Modifier for WeatherRender {
     fn context(&self) -> ModifierContext {
         ModifierContext::Render
@@ -240,7 +236,10 @@ impl RenderModifier for WeatherRender {
         context
             .vertex_code
             .push_str("let wp = properties[particle.u32_0];\n");
-        if self.snow {
+        context
+            .vertex_code
+            .push_str("let snow = particle.u32_2 != 0u;\nif snow {\n");
+        {
             context.vertex_code.push_str(
                 r#"
 let angle = particle.f32x4_0.w * tau + wp.wind_time.w * (0.35 + particle.f32x4_0.x);
@@ -249,9 +248,12 @@ axis_y = -wp.right.xyz * sin(angle) + wp.up.xyz * cos(angle);
 size = vec3(vec2(0.036 + particle.f32x4_0.w * 0.080) * wp.motion.z, 1.0);
 "#,
             );
-        } else {
+        }
+        context.vertex_code.push_str("} else {\n");
+        {
             context.vertex_code.push_str("axis_x = wp.right.xyz; axis_y = normalize(vec3(wp.motion.x / 32.0, -1.0, wp.motion.y / 32.0)); size = vec3(0.025, 0.8 + particle.f32x4_0.w * 0.65, 1.0);\n");
         }
+        context.vertex_code.push_str("}\n");
         context.vertex_code.push_str(r#"
 let weather_world = particle.position;
 let radial = 1.0 - smoothstep(wp.center.w * 0.72, wp.center.w, length(weather_world.xz - wp.center.xz));
@@ -262,11 +264,9 @@ let beam = min(1.8, wp.lamp_position.w / distance2) * cone;
 let air = exp(-wp.fog.w * distance(weather_world, view.world_from_view[3].xyz));
 color = vec4(mix(wp.fog.rgb, vec3(0.86, 0.91, 0.96) * (wp.light + beam), air), radial * select(0.0, 1.0, particle.u32_1 < wp.visible_count));
 "#);
-        context.fragment_code.push_str(if self.snow {
-            "let snow = true;\n"
-        } else {
-            "let snow = false;\n"
-        });
+        context
+            .fragment_code
+            .push_str("let snow = particle.u32_2 != 0u;\n");
         context.fragment_code.push_str(include_str!(
             "../../openrailsrs-bevy-scenery/assets/shaders/hanabi_weather_fragment.wgsl"
         ));
@@ -304,9 +304,9 @@ fn weather_asset(snow: bool, count: u32) -> EffectAsset {
         .with_simulation_space(SimulationSpace::Global)
         .with_simulation_condition(SimulationCondition::Always)
         .with_motion_integration(MotionIntegration::None)
-        .init(WeatherMotion { init: true, snow })
-        .update(WeatherMotion { init: false, snow })
-        .render(WeatherRender { snow })
+        .init(WeatherMotion { init: true })
+        .update(WeatherMotion { init: false })
+        .render(WeatherRender {})
 }
 
 #[cfg(test)]

@@ -12,17 +12,19 @@ pub enum Lesson {
     Emergency,
     Battery,
     Diesel,
+    Steam,
     Rain,
     Snow,
     Fog,
 }
 impl Lesson {
-    pub const ALL: [Self; 8] = [
+    pub const ALL: [Self; 9] = [
         Self::Basic,
         Self::Electric,
         Self::Emergency,
         Self::Battery,
         Self::Diesel,
+        Self::Steam,
         Self::Rain,
         Self::Snow,
         Self::Fog,
@@ -34,6 +36,7 @@ impl Lesson {
             Self::Emergency => "Freno de emergencia",
             Self::Battery => "Diagnóstico de batería",
             Self::Diesel => "Diagnóstico del motor diésel",
+            Self::Steam => "Conductor y fogonero de vapor",
             Self::Rain => "Lluvia y adherencia",
             Self::Snow => "Nieve y frenado",
             Self::Fog => "Visibilidad con niebla",
@@ -81,6 +84,17 @@ impl Lesson {
                 "Esperá el arranque real del motor.",
                 "Iniciá marcha y comprobá entrega de potencia.",
             ],
+            Self::Steam => &[
+                "Cerrá regulador y poné neutro. Revisá presión, agua y carbón reales en B.",
+                "Desactivá el fogonero automático en B; regulá pala y tiro sin perder agua.",
+                "Aumentá fuego y tiro: comprobá evaporación y consumo real de carbón.",
+                "Activá un inyector: comprobá transferencia de agua desde el ténder, con presión disponible.",
+                "Cerrá inyectores y prepará corte de 40–65%. El ténder debe conservar agua y carbón.",
+                "Conducí suavemente: el regulador usa presión real de la caldera.",
+                "Reducí corte a menos de 35% al avanzar: observá demanda de vapor y presión.",
+                "Cerrá regulador y frená hasta detenerte; conservá agua sobre el nivel seguro.",
+                "Activá asistencia del fogonero para recuperar presión con las reservas restantes.",
+            ],
             Self::Rain | Self::Snow | Self::Fog => &[
                 "Revisá el clima, agarre y visibilidad antes de partir.",
                 "Conducí por debajo del límite de velocidad.",
@@ -120,6 +134,43 @@ impl LearningState {
             .get(self.stage)
             .copied()
             .unwrap_or("Ejercicio completado. Podés repetirlo o continuar conduciendo.")
+    }
+    pub fn hint(&self, s: &LiveDriveSession) -> Option<&'static str> {
+        if self.lesson != Lesson::Steam || s.time_s() - self.entered_s < 15. {
+            return None;
+        }
+        let b = s.state.boiler_state.as_ref()?;
+        if b.low_water_failure {
+            return Some(
+                "La caldera tiene un fallo por bajo nivel: la asistencia no la repara. En práctica podés repetir el punto anterior; en servicio necesitás detener y revisar el equipo.",
+            );
+        }
+        if b.coal_kg <= 0. || b.tender_water_kg <= 0. {
+            return Some(
+                "El ténder no tiene reservas suficientes. Un inyector o el fogonero no crean agua/carbón; hace falta abastecimiento compatible.",
+            );
+        }
+        match self.stage {
+            2 => Some(
+                "Revisá fuego y tiro en B: pala/tiro superiores a 30%, combustión y evaporación mayores que cero.",
+            ),
+            3 if b.water_kg >= b.initial_water_kg * 0.99 => Some(
+                "La caldera está llena. El inyector necesita espacio para transferir agua; observá el consumo real antes de volver a inyectar.",
+            ),
+            3 => Some(
+                "Elegí un inyector en B y comprobá caudal mayor que cero. Necesita presión y agua real en el ténder.",
+            ),
+            5 => Some(
+                "Cerrá puertas, seleccioná adelante, soltá frenos y abrí regulador suavemente. Revisá presión, corte y frenos por coche.",
+            ),
+            6 => Some(
+                "Con velocidad mayor que 2 m/s, reducí corte por debajo de 35%; no basta cerrar el regulador.",
+            ),
+            8 => Some(
+                "Activá el fogonero automático estando frenado. La recuperación exige reservas y evaporación superior al uso de vapor.",
+            ),
+            _ => None,
+        }
     }
     pub fn valid(&self) -> bool {
         self.stage <= self.lesson.steps().len()
@@ -206,6 +257,56 @@ impl LearningState {
                 .as_ref()
                 .is_some_and(|d| d.phase == crate::diesel_operation::EnginePhase::Running),
             (Lesson::Diesel, 3) => running,
+            (Lesson::Steam, 0) => closed && neutral && s.state.boiler_state.is_some(),
+            (Lesson::Steam, 1) => s.state.boiler_state.as_ref().is_some_and(|b| {
+                !b.controls.automatic_fireman && b.coal_kg > 0. && b.tender_water_kg > 0.
+            }),
+            (Lesson::Steam, 2) => s.state.boiler_state.as_ref().is_some_and(|b| {
+                b.controls.firing > 0.3
+                    && b.controls.damper > 0.3
+                    && b.coal_burn_kg_s > 0.
+                    && b.evaporation_kg_s > 0.
+            }),
+            (Lesson::Steam, 3) => s.state.boiler_state.as_ref().is_some_and(|b| {
+                b.injection_kg_s > 0. && (b.controls.injector1 || b.controls.injector2)
+            }),
+            (Lesson::Steam, 4) => s.state.boiler_state.as_ref().is_some_and(|b| {
+                !b.controls.injector1
+                    && !b.controls.injector2
+                    && (0.4..=0.65).contains(&b.controls.cutoff)
+                    && b.coal_kg > 0.
+                    && b.tender_water_kg > 0.
+            }),
+            (Lesson::Steam, 5) => {
+                running
+                    && s.state
+                        .boiler_state
+                        .as_ref()
+                        .is_some_and(|b| b.tractive_force_n > 0. && !b.low_water_failure)
+            }
+            (Lesson::Steam, 6) => {
+                s.velocity_mps() > 2.
+                    && s.state
+                        .boiler_state
+                        .as_ref()
+                        .is_some_and(|b| b.controls.cutoff < 0.35 && b.steam_usage_kg_s > 0.)
+            }
+            (Lesson::Steam, 7) => {
+                closed
+                    && stopped
+                    && s.driver_brake > 0.2
+                    && s.state
+                        .boiler_state
+                        .as_ref()
+                        .is_some_and(|b| !b.low_water_failure)
+            }
+            (Lesson::Steam, 8) => s.state.boiler_state.as_ref().is_some_and(|b| {
+                b.controls.automatic_fireman
+                    && b.coal_kg > 0.
+                    && b.tender_water_kg > 0.
+                    && b.evaporation_kg_s > b.steam_usage_kg_s
+                    && !b.low_water_failure
+            }),
             (Lesson::Rain | Lesson::Snow | Lesson::Fog, 0) => s.time_s() > self.entered_s + 1.,
             (Lesson::Rain | Lesson::Snow | Lesson::Fog, 1) => {
                 s.velocity_mps() > 1. && s.velocity_mps() <= s.effective_speed_limit_mps()
@@ -280,4 +381,70 @@ pub fn braking_advice(s: &LiveDriveSession) -> Option<BrakingAdvice> {
         grip,
         message: message.into(),
     })
+}
+
+#[cfg(test)]
+mod steam_tutorial_acceptance {
+    use super::*;
+    fn reach(s: &mut LiveDriveSession, stage: usize) {
+        for _ in 0..600 {
+            if s.state.learning.as_ref().unwrap().stage >= stage {
+                return;
+            }
+            s.step_realtime(0.05, |_| {});
+        }
+        panic!(
+            "Tutorial quedó en paso {} antes de {stage}: {}",
+            s.state.learning.as_ref().unwrap().stage,
+            s.state.boiler_state.as_ref().unwrap().status()
+        );
+    }
+    #[test]
+    fn steam_lesson_uses_actual_fire_injection_cutoff_and_braking() {
+        let p = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/steam/scenario.toml");
+        let scenario = openrailsrs_scenarios::load_scenario(&p).unwrap();
+        let mut s = LiveDriveSession::from_scenario(p.parent().unwrap(), &scenario).unwrap();
+        s.state.learning = Some(LearningState::new(Lesson::Steam, &s));
+        reach(&mut s, 1);
+        s.steam_command(crate::steam::SteamCommand::AutomaticFireman)
+            .unwrap();
+        reach(&mut s, 2);
+        s.steam_command(crate::steam::SteamCommand::Firing(0.6))
+            .unwrap();
+        s.steam_command(crate::steam::SteamCommand::Damper(0.6))
+            .unwrap();
+        reach(&mut s, 3);
+        let water = s.state.boiler_state.as_ref().unwrap().tender_water_kg;
+        s.steam_command(crate::steam::SteamCommand::Injector1)
+            .unwrap();
+        reach(&mut s, 4);
+        assert!(s.state.boiler_state.as_ref().unwrap().tender_water_kg < water);
+        s.steam_command(crate::steam::SteamCommand::Injector1)
+            .unwrap();
+        s.steam_command(crate::steam::SteamCommand::Cutoff(-0.25))
+            .unwrap();
+        reach(&mut s, 5);
+        s.set_direction(1.).unwrap();
+        s.driver_throttle = 0.4;
+        reach(&mut s, 6);
+        s.steam_command(crate::steam::SteamCommand::Cutoff(-0.2))
+            .unwrap();
+        reach(&mut s, 7);
+        s.driver_throttle = 0.;
+        s.driver_brake = 0.8;
+        reach(&mut s, 8);
+        let saved = s.snapshot();
+        let mut restored = LiveDriveSession::from_scenario(p.parent().unwrap(), &scenario).unwrap();
+        restored.restore_snapshot(saved).unwrap();
+        assert_eq!(restored.state.learning.as_ref().unwrap().stage, 8);
+        assert_eq!(
+            restored.state.boiler_state.as_ref().unwrap().coal_kg,
+            s.state.boiler_state.as_ref().unwrap().coal_kg
+        );
+        s.steam_command(crate::steam::SteamCommand::AutomaticFireman)
+            .unwrap();
+        reach(&mut s, 9);
+        assert!(s.state.learning.as_ref().unwrap().completed_s.is_some());
+    }
 }

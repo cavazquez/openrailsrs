@@ -181,6 +181,7 @@ pub fn spawn_ground_fog(mut commands: Commands, mut images: ResMut<Assets<Image>
 #[allow(clippy::too_many_arguments)]
 pub fn update_ground_fog(
     mut commands: Commands,
+    quality_limits: Option<Res<crate::adaptive_graphics::AdaptiveGraphics>>,
     settings: Res<PlayerSettings>,
     fog_state: Res<FogState>,
     content: Res<ActivePlayerContent>,
@@ -234,6 +235,17 @@ pub fn update_ground_fog(
         quality.steps()
     } else {
         None
+    };
+    let steps = if quality_limits.as_ref().is_some_and(|q| q.level >= 3) {
+        None
+    } else {
+        steps.map(|s| {
+            if quality_limits.as_ref().is_some_and(|q| q.level > 0) {
+                s.min(32)
+            } else {
+                s
+            }
+        })
     };
     if let Some(step_count) = steps {
         let direction = sun_state.as_ref().map_or(Vec3::Y, |s| s.direction);

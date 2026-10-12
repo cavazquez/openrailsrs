@@ -1,0 +1,77 @@
+[scenario]
+name = "Conexión, demoras y obra temporal"
+description = "Prueba sintética de 1 km, sin catenaria. K acciona el motor y B abre sus controles. Paradas de 5 segundos."
+
+[route]
+path = "../traction_operation/route"
+start = "a"
+destination = "b"
+assume_signals_clear = true
+
+[[route.stops]]
+node = "a"
+arrive_s = 0.0
+depart_s = 5.0
+dwell_s = 5.0
+
+[[route.stops]]
+node = "mid"
+arrive_s = 90.0
+depart_s = 95.0
+dwell_s = 5.0
+
+[[route.stops]]
+node = "b"
+arrive_s = 160.0
+depart_s = 160.0
+dwell_s = 5.0
+
+[train]
+consist = "../player_lab/consists/lab.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+
+[simulation]
+duration = 240.0
+time_step = 0.05
+seed = 42
+legacy_power_cap = false
+
+[output]
+csv = "run.csv"
+metadata = "run.json"
+
+[[extra_trains]]
+id = "conector"
+consist = "../player_lab/consists/lab.con"
+start = "mid"
+destination = "b"
+start_time_s = 300.0
+start_offset_m = 200.0
+[[extra_trains.stops]]
+node = "b"
+arrive_s = 350.0
+depart_s = 360.0
+dwell_s = 10.0
+[[simulation.rail_operations.connections]]
+stop = 0
+service = "conector"
+service_stop = 0
+max_wait_s = 12.0
+[[simulation.rail_operations.incidents]]
+id = "demora-original"
+service = "conector"
+stop = 0
+wait_s = 20.0
+penalty = 15.0
+[[simulation.rail_operations.works]]
+id = "obra-e1"
+edge = "e1"
+start_m = 100.0
+end_m = 200.0
+start_s = 0.0
+end_s = 600.0
+direction = 0
+speed_kmh = 20.0
