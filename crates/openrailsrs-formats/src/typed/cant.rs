@@ -152,7 +152,9 @@ impl RouteCantSettings {
                 && values.len().is_multiple_of(2)
             {
                 let pairs = values
-                    .chunks_exact(2)
+                    .as_chunks::<2>()
+                    .0
+                    .iter()
                     .map(|p| [p[0], p[1]])
                     .collect::<Vec<_>>();
                 if pairs.iter().all(|p| {

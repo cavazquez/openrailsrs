@@ -197,7 +197,7 @@ pub fn parse_native_motors(ast: &Ast) -> Result<Vec<NativeMotor>, FormatError> {
                         .filter_map(scalar_text)
                         .filter_map(|v| v.parse::<f64>().ok())
                         .collect::<Vec<_>>();
-                    for pair in values.chunks_exact(2) {
+                    for pair in values.as_chunks::<2>().0 {
                         power = power.max(pair[1]);
                     }
                 }
