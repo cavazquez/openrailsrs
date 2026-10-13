@@ -84,7 +84,7 @@ fn roof_triangles(mesh: &Mesh, matrix: Mat4, out: &mut Vec<RoofTriangle>, limit:
         .indices()
         .map(|i| i.iter().collect::<Vec<_>>())
         .unwrap_or_else(|| (0..vertices.len()).collect());
-    for index in indices.chunks_exact(3) {
+    for index in indices.as_chunks::<3>().0 {
         if out.len() >= limit {
             break;
         }
