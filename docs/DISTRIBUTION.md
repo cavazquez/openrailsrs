@@ -53,7 +53,7 @@ Para un checkout con descargas/builds locales, prepará primero una copia limpia
 python3 scripts/package_snap.py --source-dir tmp/dist/snap-source
 cd tmp/dist/snap-source
 snapcraft pack --use-lxd
-sudo snap install --dangerous openrailsrs_0.1.0-alpha.4_amd64.snap
+sudo snap install --dangerous openrailsrs_0.1.0-alpha.5_amd64.snap
 openrailsrs.cli content --list
 openrailsrs
 ```
@@ -76,8 +76,29 @@ La revisión 3 incluye el puente ALSA–PulseAudio, el descubrimiento del socket
 
 ## Alpha disponible en Snap Store
 
-Actualmente **latest/edge** ofrece **0.1.0-alpha.4**, revisión **5**, publicada
-el **11 de octubre de 2026**. Incluye las [mejoras de contenido nativo](NATIVE_CONTENT_UPDATE.md):
+Actualmente **latest/edge** ofrece **0.1.0-alpha.5**, revisión **6**. Incluye las
+entregas recientes de equipos independientes, alimentación, frenos, cabinas,
+puertas, peralte, clima e iluminación. Los [treinta cambios más recientes](PLAYER_30_4_MANUAL.md)
+incluyen ejemplos y pasos para probarlos desde el menú.
+
+El Snap mide **164.024.320 bytes**; SHA-256
+`90406cf3cb4fd160e8b4d3c6952f6eb956d15c1eeff7e3ede93a20bfe7e65f12`.
+La descarga de la revisión 6 desde la tienda coincide byte por byte con el
+paquete probado. Se verificaron 1.545 archivos de entrada y 301 recursos
+distribuidos contra el commit `979d959`; pasaron 15 pruebas de empaquetado y
+toda su CI. Los binarios usan glibc 2.39, provista por core24.
+
+CLI, HTTPS, menú, ejemplos de motores y mercancías, equipos eléctricos, niebla,
+lluvia/nieve intensas y conservación de datos comunes pasaron bajo Snap estricto
+y usuario sin privilegios. Las ocho escenas usaron X11 virtual y Vulkan por
+software; los mandos L y O se comprobaron con eventos de teclado. La auditoría
+de archivos propios no encontró datos privados. Las rutas descargadas siguen
+fuera del paquete. [Recibo y alcance de QA](fixtures/compatibility/snap-alpha5-revision6/README.md).
+
+### Publicaciones anteriores
+
+La revisión **5**, **0.1.0-alpha.4**, se publicó el **11 de octubre de 2026**.
+Incluyó las [mejoras de contenido nativo](NATIVE_CONTENT_UPDATE.md):
 actividades y PAT originales, inversiones, horarios con reutilización de la
 formación y división/unión de una sección propia estática, funciones SIGSCR
 contrastadas con OR, instrumentos, filtros, previews y mapas de servicio.
@@ -186,7 +207,7 @@ cuenta todavía no está autenticada, iniciá sesión:
 
 ```bash
 snapcraft login
-snapcraft upload openrailsrs_0.1.0-alpha.4_amd64.snap --release latest/edge
+snapcraft upload openrailsrs_0.1.0-alpha.5_amd64.snap --release latest/edge
 ```
 
 No se guardan credenciales de Snapcraft dentro del repositorio ni del paquete.

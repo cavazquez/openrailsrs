@@ -1,0 +1,266 @@
+{
+  "schema": 1,
+  "recorded_at_utc": "2026-10-13T03:18:32.575915+00:00",
+  "source_commit": "979d9596141baeb8723b2f695babfe8a9eef3090",
+  "source_verified_files": 1545,
+  "source_mismatches": [],
+  "runtime_verified_resources": 301,
+  "binary_sha256": {
+    "openrailsrs": "61460cca8997a8298b3d121bc1d088d43a3b81b76ca5fa97b91caaa403c7756f",
+    "openrailsrs-viewer3d": "5e4aeec13a4c7aabd08ad554b8cb7144b68fc996f12eba64422661b5b7170523",
+    "openrailsrs-prepare-content": "0069cf8b951de4fa50aad175125cdb7b7ec3f6495c8f91d27034a783ac9c689a"
+  },
+  "required_glibc": "2.39",
+  "privacy_findings": [],
+  "package_tests_passed": 15,
+  "unprivileged_container": true,
+  "test_user_uid": 2002,
+  "strict_confinement": true,
+  "common_data_survived_update": true,
+  "https_status": 200,
+  "cli_simulations": {
+    "native_motors": {
+      "rows": 1227,
+      "reached_destination": true
+    },
+    "freight_traffic": {
+      "rows": 1848,
+      "reached_destination": true
+    }
+  },
+  "scenes": {
+    "motors": {
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "cpu_tiles": 1,
+      "gpu_tiles": 1,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "Cpu",
+        "hardware": false,
+        "name": "llvmpipe (LLVM 20.1.2, 256 bits)"
+      },
+      "active_cab": 0,
+      "motor_counts": [
+        2
+      ],
+      "electric_contacts": {
+        "aligned_collectors": 0,
+        "animated_collectors": 0,
+        "arc_events": 0,
+        "contact_source": "physical route voltage, original animation bounds and TRK wire height",
+        "supply_independent_of_scenery_lod": true,
+        "wire_out_of_model_range": 0
+      },
+      "volumetric_fog": true,
+      "weather_profile": "automatic",
+      "weather_execution": "auto"
+    },
+    "collectors": {
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "cpu_tiles": 1,
+      "gpu_tiles": 1,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "Cpu",
+        "hardware": false,
+        "name": "llvmpipe (LLVM 20.1.2, 256 bits)"
+      },
+      "active_cab": 0,
+      "motor_counts": [],
+      "electric_contacts": {
+        "aligned_collectors": 1,
+        "animated_collectors": 2,
+        "arc_events": 0,
+        "contact_source": "physical route voltage, original animation bounds and TRK wire height",
+        "supply_independent_of_scenery_lod": true,
+        "wire_out_of_model_range": 0
+      },
+      "volumetric_fog": true,
+      "weather_profile": "automatic",
+      "weather_execution": "auto"
+    },
+    "cab": {
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "cpu_tiles": 1,
+      "gpu_tiles": 1,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "Cpu",
+        "hardware": false,
+        "name": "llvmpipe (LLVM 20.1.2, 256 bits)"
+      },
+      "active_cab": 0,
+      "motor_counts": [
+        0,
+        0
+      ],
+      "electric_contacts": {
+        "aligned_collectors": 0,
+        "animated_collectors": 0,
+        "arc_events": 0,
+        "contact_source": "physical route voltage, original animation bounds and TRK wire height",
+        "supply_independent_of_scenery_lod": true,
+        "wire_out_of_model_range": 0
+      },
+      "volumetric_fog": true,
+      "weather_profile": "automatic",
+      "weather_execution": "auto"
+    },
+    "fog": {
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "cpu_tiles": 1,
+      "gpu_tiles": 1,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "Cpu",
+        "hardware": false,
+        "name": "llvmpipe (LLVM 20.1.2, 256 bits)"
+      },
+      "active_cab": 0,
+      "motor_counts": [
+        0
+      ],
+      "electric_contacts": {
+        "aligned_collectors": 0,
+        "animated_collectors": 0,
+        "arc_events": 0,
+        "contact_source": "physical route voltage, original animation bounds and TRK wire height",
+        "supply_independent_of_scenery_lod": true,
+        "wire_out_of_model_range": 0
+      },
+      "volumetric_fog": true,
+      "weather_profile": "automatic",
+      "weather_execution": "auto"
+    },
+    "rain": {
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "cpu_tiles": 1,
+      "gpu_tiles": 1,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "Cpu",
+        "hardware": false,
+        "name": "llvmpipe (LLVM 20.1.2, 256 bits)"
+      },
+      "active_cab": 0,
+      "motor_counts": [],
+      "electric_contacts": {
+        "aligned_collectors": 0,
+        "animated_collectors": 0,
+        "arc_events": 0,
+        "contact_source": "physical route voltage, original animation bounds and TRK wire height",
+        "supply_independent_of_scenery_lod": true,
+        "wire_out_of_model_range": 0
+      },
+      "volumetric_fog": true,
+      "weather_profile": "downpour",
+      "weather_execution": "cpu"
+    },
+    "snow": {
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "cpu_tiles": 1,
+      "gpu_tiles": 1,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "Cpu",
+        "hardware": false,
+        "name": "llvmpipe (LLVM 20.1.2, 256 bits)"
+      },
+      "active_cab": 0,
+      "motor_counts": [],
+      "electric_contacts": {
+        "aligned_collectors": 0,
+        "animated_collectors": 0,
+        "arc_events": 0,
+        "contact_source": "physical route voltage, original animation bounds and TRK wire height",
+        "supply_independent_of_scenery_lod": true,
+        "wire_out_of_model_range": 0
+      },
+      "volumetric_fog": true,
+      "weather_profile": "heavy_snow",
+      "weather_execution": "cpu"
+    },
+    "cab-input": {
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "cpu_tiles": 1,
+      "gpu_tiles": 1,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "Cpu",
+        "hardware": false,
+        "name": "llvmpipe (LLVM 20.1.2, 256 bits)"
+      },
+      "active_cab": 1,
+      "motor_counts": [
+        0,
+        0
+      ],
+      "electric_contacts": {
+        "aligned_collectors": 0,
+        "animated_collectors": 0,
+        "arc_events": 0,
+        "contact_source": "physical route voltage, original animation bounds and TRK wire height",
+        "supply_independent_of_scenery_lod": true,
+        "wire_out_of_model_range": 0
+      },
+      "volumetric_fog": false,
+      "weather_profile": "automatic",
+      "weather_execution": "auto"
+    },
+    "collector-input": {
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "cpu_tiles": 1,
+      "gpu_tiles": 1,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "Cpu",
+        "hardware": false,
+        "name": "llvmpipe (LLVM 20.1.2, 256 bits)"
+      },
+      "active_cab": 0,
+      "motor_counts": [],
+      "electric_contacts": {
+        "aligned_collectors": 0,
+        "animated_collectors": 2,
+        "arc_events": 0,
+        "contact_source": "physical route voltage, original animation bounds and TRK wire height",
+        "supply_independent_of_scenery_lod": true,
+        "wire_out_of_model_range": 0
+      },
+      "volumetric_fog": false,
+      "weather_profile": "automatic",
+      "weather_execution": "auto"
+    }
+  },
+  "keyboard_controls": {
+    "L_active_cab": 1,
+    "O_contact_removed": true,
+    "method": "X11 XTEST events to the shipped app"
+  },
+  "development_injection_included": false,
+  "scope": "Snap installation, TLS, CLI, menu and own examples on X11/Xvfb with software Vulkan; original native routes and hardware GPU were tested separately before packaging. Human listening and a complete original route inside Snap are not certified here."
+}

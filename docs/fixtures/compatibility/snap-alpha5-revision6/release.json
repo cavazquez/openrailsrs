@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "recorded_at_utc": "2026-10-13T03:20:33.621612+00:00",
+  "store": "https://snapcraft.io/openrailsrs",
+  "channel": "latest/edge",
+  "architecture": "amd64",
+  "version": "0.1.0-alpha.5",
+  "revision": 6,
+  "supersedes_revision": 5,
+  "size_bytes": 164024320,
+  "sha256": "90406cf3cb4fd160e8b4d3c6952f6eb956d15c1eeff7e3ede93a20bfe7e65f12",
+  "official_store_roundtrip_matches": true,
+  "implementation_commit": "979d9596141baeb8723b2f695babfe8a9eef3090",
+  "verified_source_files": 1545,
+  "source_manifest": "source-sha256.json",
+  "source_manifest_sha256": "4060c5a810a6a8dff2f29edbbb3f43956b6890253129a747ec789ca8f50665e1",
+  "verified_runtime_resources": 301,
+  "confinement": "strict",
+  "base": "core24",
+  "grade": "devel",
+  "required_glibc": "2.39",
+  "downloaded_content_included": false,
+  "privacy_findings": [],
+  "binary_sha256": {
+    "openrailsrs": "61460cca8997a8298b3d121bc1d088d43a3b81b76ca5fa97b91caaa403c7756f",
+    "openrailsrs-viewer3d": "5e4aeec13a4c7aabd08ad554b8cb7144b68fc996f12eba64422661b5b7170523",
+    "openrailsrs-prepare-content": "0069cf8b951de4fa50aad175125cdb7b7ec3f6495c8f91d27034a783ac9c689a"
+  },
+  "verification": "verification.json",
+  "ci": "https://github.com/cavazquez/openrailsrs/actions/runs/38338397066",
+  "ci_conclusion": "success",
+  "scope": "CLI, TLS, menu, own equipment/weather examples, real X11 keyboard input and common-data persistence under an unprivileged strict Snap with software Vulkan. Original native routes and hardware GPU were validated separately before packaging; human listening and a complete original route inside Snap are not certified here."
+}
