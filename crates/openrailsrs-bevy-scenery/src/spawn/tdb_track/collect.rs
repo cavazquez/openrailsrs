@@ -1074,6 +1074,7 @@ mod tests {
         let section = section_at(0.0, 0.0, 1);
         let tdb = TrackDbFile {
             nodes: vec![TrackDbNode {
+                junction_shape_index: None,
                 id: 1,
                 position: None,
                 pin_refs: Vec::new(),

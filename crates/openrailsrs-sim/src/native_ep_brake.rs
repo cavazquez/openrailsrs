@@ -109,6 +109,12 @@ impl NativeEpState {
         }
         (air, self.pressure_from_air(air))
     }
+    pub fn vent_fraction(&mut self, fraction: f64) {
+        self.cylinder_air_psi_m3 *= fraction;
+        self.pressure_psi = self.pressure_from_air(self.cylinder_air_psi_m3);
+        self.auto_air_psi_m3 *= fraction;
+        self.auto_pressure_psi *= fraction;
+    }
     pub fn precharge(&mut self, command: f64) {
         self.auto_pressure_psi = command.clamp(0., 1.) * self.profile.service_psi;
         // EP.Initialize increases AutoCylPressure after AirSinglePipe.Initialize;

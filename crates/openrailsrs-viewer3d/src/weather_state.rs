@@ -382,6 +382,7 @@ fn live_at(sample: &WeatherSample) -> Atmosphere {
 
 #[derive(Resource, Debug)]
 pub struct WeatherState {
+    pub advection: crate::weather_advection::WeatherAdvection,
     pub atmosphere: Atmosphere,
     pub profile: WeatherProfile,
     pub seed: u32,
@@ -401,6 +402,7 @@ pub struct WeatherState {
 impl Default for WeatherState {
     fn default() -> Self {
         Self {
+            advection: default(),
             atmosphere: default(),
             profile: default(),
             seed: 1,
@@ -448,6 +450,7 @@ impl WeatherState {
             self.selection = Some(selection);
             self.transition_from = self.atmosphere;
         }
+        self.advection.advance(clock, self.atmosphere.wind_mps);
         self.profile = profile;
         self.seed = seed;
         self.journey = journey;
@@ -485,10 +488,10 @@ impl WeatherState {
     }
     pub fn checkpoint(&self) -> Option<WeatherCheckpoint> {
         let (initial, profile, live, seed, journey) = self.selection?;
-        if live {
-            return None;
-        }
+
         Some(WeatherCheckpoint {
+            live,
+            advection: self.advection.clone(),
             initial,
             profile,
             seed,
@@ -502,6 +505,10 @@ impl WeatherState {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct WeatherCheckpoint {
+    #[serde(default)]
+    live: bool,
+    #[serde(default)]
+    advection: crate::weather_advection::WeatherAdvection,
     pub initial: PlayerWeather,
     pub profile: WeatherProfile,
     pub seed: u32,
@@ -512,21 +519,32 @@ pub struct WeatherCheckpoint {
 }
 impl WeatherCheckpoint {
     pub fn valid(&self) -> bool {
-        self.elapsed_s.is_finite()
+        self.advection.valid()
+            && self.elapsed_s.is_finite()
             && (0.0..=31_536_000.).contains(&self.elapsed_s)
             && self.atmosphere.valid()
             && self.transition_from.valid()
     }
     pub fn restore(&self, clock: f64) -> WeatherState {
         WeatherState {
+            advection: crate::weather_advection::WeatherAdvection {
+                clock_s: Some(clock),
+                ..self.advection.clone()
+            },
             atmosphere: self.atmosphere,
             profile: self.profile,
             seed: self.seed,
-            live: false,
+            live: self.live,
             journey: self.journey,
             start_s: clock - self.elapsed_s,
             last_s: Some(clock),
-            selection: Some((self.initial, self.profile, false, self.seed, self.journey)),
+            selection: Some((
+                self.initial,
+                self.profile,
+                self.live,
+                self.seed,
+                self.journey,
+            )),
             transition_from: self.transition_from,
         }
     }
@@ -649,6 +667,8 @@ pub fn update(
             )
         });
     }
+    let current_wind = state.atmosphere.wind_mps;
+    state.advection.advance(clock + offset, current_wind);
     if let Some(live) = live.as_mut() {
         live.session.state.ambient_temperature_c = f64::from(state.atmosphere.temperature_c);
         for service in &mut live.traffic.services {

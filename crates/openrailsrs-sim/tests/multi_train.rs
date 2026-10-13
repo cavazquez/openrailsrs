@@ -81,6 +81,9 @@ fn make_two_train_scenario(
             edge_speed_limits: vec![],
         },
         train: TrainSection {
+            freight: None,
+            systems: vec![],
+            platform_sides: vec![],
             announcements: Default::default(),
             presentation: vec![],
             vehicle_profiles: vec![],
@@ -122,6 +125,8 @@ fn make_two_train_scenario(
             metadata: "run_primary.toml".into(),
         },
         extra_trains: vec![TrainEntryDef {
+            freight: None,
+            systems: vec![],
             electric_pickups: vec![],
             id: "express".into(),
             consist: "consists/freight.con".into(),

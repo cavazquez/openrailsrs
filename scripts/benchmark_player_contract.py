@@ -44,6 +44,8 @@ def main():
     p.add_argument("--baseline", type=Path, required=True)
     p.add_argument("--current", type=Path, required=True)
     p.add_argument("--baseline-resources", type=Path)
+    p.add_argument("--baseline-version", default="baseline")
+    p.add_argument("--current-version", default="working-tree")
     p.add_argument("--scenario", type=Path, required=True)
     p.add_argument("--route-root", type=Path, required=True)
     p.add_argument("--out-dir", type=Path, required=True)
@@ -56,9 +58,11 @@ def main():
         setattr(a, k, getattr(a, k).resolve())
     if a.baseline_resources:
         a.baseline_resources = a.baseline_resources.resolve()
+        if not (a.baseline_resources / "assets/shaders").is_dir():
+            p.error("--baseline-resources requires a resource root containing assets/shaders")
     a.out_dir.mkdir(parents=True, exist_ok=True)
     a.viewer = a.current
-    settings(a)
+    settings(a, quality_limits={"enabled": False, "target_fps": 60, "min_level": 0, "max_level": 3})
     results = []
     for name, viewer in (("baseline", a.baseline), ("current", a.current)):
         opts = options(a, a.scenario, a.route_root)
@@ -72,7 +76,7 @@ def main():
             opts.resources_dir = a.baseline_resources
         capture = run_checkpoint(opts, name, a.target_m, True)
         contract = make_contract(a, capture, a.scenario)
-        report = {"contract": contract, "version": "reference-ac9ec45" if name == "baseline" else "third30-working-tree", "binary_sha256": sha(viewer),
+        report = {"contract": contract, "version": a.baseline_version if name == "baseline" else a.current_version, "binary_sha256": sha(viewer),
                   "vram_mib": (capture.get("graphics_memory") or {}).get("peak_process_vram_mib"), "capture": capture}
         (a.out_dir / (name + "-contract.json")).write_text(json.dumps(report, indent=2) + "\n")
         results.append(report)

@@ -864,15 +864,15 @@ fn extract_pair_tab(items: &[Ast]) -> Vec<(f64, f64)> {
 
 /// Fields extracted from `ORTSDieselEngines` (first engine block).
 #[derive(Clone, Debug, Default, PartialEq)]
-struct OrtsDieselEngineBlock {
-    power_tab: Vec<(f64, f64)>,
-    throttle_rpm_tab: Vec<(f64, f64)>,
-    idle_rpm: f64,
-    max_rpm: f64,
-    rate_of_change_up_rpm_pss: f64,
-    rate_of_change_down_rpm_pss: f64,
-    change_up_rpm_ps: f64,
-    change_down_rpm_ps: f64,
+pub(super) struct OrtsDieselEngineBlock {
+    pub(super) power_tab: Vec<(f64, f64)>,
+    pub(super) throttle_rpm_tab: Vec<(f64, f64)>,
+    pub(super) idle_rpm: f64,
+    pub(super) max_rpm: f64,
+    pub(super) rate_of_change_up_rpm_pss: f64,
+    pub(super) rate_of_change_down_rpm_pss: f64,
+    pub(super) change_up_rpm_ps: f64,
+    pub(super) change_down_rpm_ps: f64,
 }
 
 /// Parse `ORTSDieselEngines` — nested `Diesel ( ... )`, flat `Diesel(` siblings, or
@@ -909,7 +909,7 @@ fn parse_diesel_scalar_in_subtree(ast: &Ast, key: &str) -> f64 {
     value
 }
 
-fn parse_diesel_block_fields(diesel_items: &[Ast]) -> OrtsDieselEngineBlock {
+pub(super) fn parse_diesel_block_fields(diesel_items: &[Ast]) -> OrtsDieselEngineBlock {
     let subtree = Ast::List(diesel_items.to_vec());
     OrtsDieselEngineBlock {
         power_tab: parse_rpm_power_tab(&subtree),
@@ -1277,7 +1277,7 @@ fn parse_orts_curve_points(items: &[Ast]) -> Vec<(f64, f64)> {
     curve
 }
 
-fn parse_orts_notch_curves(ast: &Ast) -> Vec<(f64, Vec<(f64, f64)>)> {
+pub(super) fn parse_orts_notch_curves(ast: &Ast) -> Vec<(f64, Vec<(f64, f64)>)> {
     let mut out: Vec<(f64, Vec<(f64, f64)>)> = Vec::new();
 
     walk_lists_find::<(), _>(ast, &mut |items| {

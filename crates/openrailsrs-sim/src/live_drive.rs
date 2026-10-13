@@ -168,6 +168,8 @@ pub struct LiveDriveSession {
     pub(crate) consist: openrailsrs_train::Consist,
     pub(crate) original_physics: TrainPhysics,
     pub(crate) original_cab_equipment: Vec<openrailsrs_scenarios::cab_equipment::CabEquipmentDef>,
+    pub(crate) original_vehicle_systems:
+        Vec<openrailsrs_scenarios::vehicle_systems::VehicleSystemsDef>,
     pub(crate) cab_max_current_a: Option<f64>,
     pub(crate) cab_vehicle_index: usize,
     pub(crate) content_signature: String,
@@ -306,6 +308,10 @@ impl LiveDriveSession {
     }
 
     pub fn steam_command(&mut self, command: crate::steam::SteamCommand) -> Result<(), String> {
+        if !matches!(self.consist.vehicles.get(self.cab_vehicle()),Some(openrailsrs_train::Vehicle::Loco(l)) if l.steam.is_some())
+        {
+            return Err("El puesto activo no controla una locomotora de vapor".into());
+        }
         self.state
             .boiler_state
             .as_mut()
@@ -315,6 +321,18 @@ impl LiveDriveSession {
     }
 
     pub fn toggle_diesel_engine(&mut self, vehicle: usize) -> Result<(), String> {
+        if self
+            .state
+            .vehicle_systems
+            .iter()
+            .any(|c| c.definition.vehicle == vehicle && !c.motors.is_empty())
+        {
+            return self.operate_motor(
+                vehicle,
+                0,
+                crate::engine_equipment::MotorOperation::StartStop,
+            );
+        }
         let car = self
             .physics
             .diesel
@@ -390,7 +408,7 @@ impl LiveDriveSession {
         if self.physics.max_tractive_effort_n <= 0.0 {
             return "Sin unidades de tracción conectadas".into();
         }
-        let index = self.cab_vehicle_index;
+        let index = self.cab_vehicle();
         let vehicle = index + 1;
         if let Some(c) = self.state.diesel.car(index) {
             if c.fuel_l <= 0. {
@@ -494,8 +512,33 @@ impl LiveDriveSession {
             return Err("Esta formación no usa pantógrafo".into());
         }
         self.exterior.toggle_pantograph();
+        for car in &mut self.state.electric.cars {
+            for p in &mut car.pantographs {
+                p.command_up = None;
+            }
+        }
         self.state.electric.pantograph_command_up = self.exterior.pantograph_command_up;
         crate::electric::advance(&mut self.state, &self.path_data, &self.physics.electric, 0.);
+        Ok(())
+    }
+
+    pub fn toggle_collector(&mut self, vehicle: usize, collector: usize) -> Result<(), String> {
+        if vehicle >= self.formation.coupled_count {
+            return Err("Acoplá el vehículo para operar su pantógrafo".into());
+        }
+        let command = self.state.electric.pantograph_command_up;
+        let car = self
+            .state
+            .electric
+            .cars
+            .iter_mut()
+            .find(|c| c.vehicle == vehicle)
+            .ok_or("El vehículo no tiene alimentación eléctrica")?;
+        let p = car
+            .pantographs
+            .get_mut(collector)
+            .ok_or("El vehículo no declara ese pantógrafo independiente")?;
+        p.command_up = Some(!p.command_up.unwrap_or(command));
         Ok(())
     }
 
@@ -519,6 +562,7 @@ impl LiveDriveSession {
     pub fn from_scenario(scenario_dir: &Path, scenario: &ScenarioFile) -> Result<Self, SimError> {
         let route_dir = scenario_dir.join(&scenario.route.path);
         let mut graph = load_track_graph_from_route_dir(&route_dir)?;
+        crate::freight::cap_graph(&mut graph, scenario.train.freight.as_ref());
         crate::path::apply_route_switches(&mut graph, &scenario.route)?;
         for cap in &scenario.route.edge_speed_limits {
             graph.cap_edge_speed_limit_kmh(&cap.edge, cap.speed_limit_kmh);
@@ -527,6 +571,7 @@ impl LiveDriveSession {
         let path_edges = resolve_route_edges(&graph, &scenario.route)?;
         let consist_path = scenario_dir.join(&scenario.train.consist);
         let mut consist = load_consist_with_asset_root(&consist_path, consist_root(&consist_path))?;
+        crate::freight::apply(&mut consist, scenario.train.freight.as_ref())?;
         let customized = openrailsrs_train::vehicle_profiles::apply_with_davis(
             &consist_path,
             &mut consist,
@@ -631,9 +676,18 @@ impl LiveDriveSession {
             orts_inherit_partial_run_up: scenario.simulation.orts_inherit_partial_run_up,
         };
 
-        let path_data = PathData::from_path(&path_edges, &graph);
+        let mut path_data = PathData::from_path(&path_edges, &graph);
+        crate::freight::cap(&mut path_data, scenario.train.freight.as_ref());
         let mut state = TrainSimState::new(path_edges.clone());
         state.weather_track = scenario.simulation.weather_track.clone();
+        crate::vehicle_systems::configure(
+            &mut state,
+            &consist_path,
+            &scenario.train.systems,
+            &scenario.train.platform_sides,
+            consist.vehicles.len(),
+        )
+        .map_err(SimError::Msg)?;
         state.announcements.package = scenario.train.announcements.clone();
         state.announcements.package.root.clear();
         state.rail_operations.definition = scenario.simulation.rail_operations.clone();
@@ -662,6 +716,7 @@ impl LiveDriveSession {
         state.boiler_state = consist
             .aggregate_steam_params()
             .map(|p| crate::steam::BoilerState::from_params(&p));
+        crate::steam_equipment::configure(&mut state, &consist);
         state.diesel.initialize(&physics.diesel);
         if !physics.diesel_engines.is_empty() {
             state.diesel_rpm = physics
@@ -818,6 +873,11 @@ impl LiveDriveSession {
                 .cab_equipment
                 .iter()
                 .map(|c| c.config.clone())
+                .collect(),
+            original_vehicle_systems: state
+                .vehicle_systems
+                .iter()
+                .map(|c| c.definition.clone())
                 .collect(),
             cab_max_current_a,
             cab_vehicle_index,
@@ -1193,6 +1253,17 @@ impl LiveDriveSession {
     }
 
     pub fn toggle_doors(&mut self) {
+        if self.equipped_door_state().is_some() {
+            let open = self.equipped_door_state() == Some(crate::DoorState::Closed)
+                || self.equipped_door_state() == Some(crate::DoorState::Closing);
+            let side = if open {
+                self.platform_door_side().unwrap_or_default()
+            } else {
+                openrailsrs_scenarios::vehicle_systems::DoorSide::Both
+            };
+            let _ = self.command_doors(None, side, open);
+            return;
+        }
         if self.velocity_mps().abs() <= STOP_SPEED_TOLERANCE_MPS {
             self.exterior.toggle_door();
         }
@@ -1403,14 +1474,92 @@ impl LiveDriveSession {
 
     /// Snapshot for the live cab panel (Fase C3).
     pub fn cab_vehicle(&self) -> usize {
-        self.cab_vehicle_index
+        self.state
+            .active_cab_vehicle
+            .unwrap_or(self.cab_vehicle_index)
+    }
+
+    /// A cab change transfers the controls, never the physical consist.
+    pub fn select_cab(&mut self, vehicle: usize) -> Result<(), String> {
+        if self.velocity_mps().abs() > 0.01
+            || self.driver_throttle > 0.001
+            || (self.driver_direction - 0.5).abs() > 0.01
+        {
+            return Err("Detené el tren, cerrá el regulador y poné el inversor en neutro para cambiar de cabina".into());
+        }
+        if vehicle >= self.formation.coupled_count
+            || !matches!(
+                self.consist.vehicles.get(vehicle),
+                Some(openrailsrs_train::Vehicle::Loco(_))
+            )
+        {
+            return Err("Ese vehículo no tiene un puesto de conducción conectado".into());
+        }
+        let previous_cab = self.cab_vehicle();
+        if let Some(b) = self
+            .state
+            .steam_boilers
+            .iter_mut()
+            .find(|b| b.vehicle == previous_cab)
+            && let Some(current) = &self.state.boiler_state
+        {
+            b.boiler = current.clone();
+        }
+        self.state.active_cab_vehicle = Some(vehicle);
+        if !self.state.steam_boilers.is_empty() {
+            self.state.boiler_state = self
+                .state
+                .steam_boilers
+                .iter()
+                .find(|b| b.vehicle == vehicle)
+                .map(|b| b.boiler.clone());
+        }
+        self.rebuild_formation_physics();
+        if let Some(native) = &mut self.physics.native {
+            native.control_vehicle_index = vehicle;
+        }
+        self.stop_horn();
+        Ok(())
+    }
+
+    pub fn cycle_cab(&mut self) -> Result<usize, String> {
+        let cabs = (0..self.formation.coupled_count)
+            .filter(|&i| {
+                matches!(
+                    self.consist.vehicles.get(i),
+                    Some(openrailsrs_train::Vehicle::Loco(_))
+                )
+            })
+            .collect::<Vec<_>>();
+        if cabs.len() < 2 {
+            return Err("La formación tiene un solo puesto de conducción".into());
+        }
+        let slot = cabs
+            .iter()
+            .position(|&i| i == self.cab_vehicle())
+            .unwrap_or(0);
+        let next = cabs[(slot + 1) % cabs.len()];
+        self.select_cab(next)?;
+        Ok(next)
     }
 
     pub fn effective_headlights(&self) -> u8 {
-        if self.state.power_supply.cars.first().map_or_else(
-            || self.formation.cars.first().is_none_or(|c| c.battery_on),
-            |c| c.supply.low_voltage,
-        ) {
+        if self
+            .state
+            .power_supply
+            .cars
+            .iter()
+            .find(|c| c.vehicle == self.cab_vehicle())
+            .map_or_else(
+                || {
+                    self.formation
+                        .cars
+                        .get(self.cab_vehicle())
+                        .is_none_or(|c| c.battery_on)
+                },
+                |c| c.supply.low_voltage,
+            )
+        {
             self.headlights
         } else {
             0
@@ -1419,15 +1568,21 @@ impl LiveDriveSession {
 
     pub fn effective_cab_light(&self) -> bool {
         self.cab_light
-            && self.state.power_supply.cars.first().map_or_else(
-                || {
-                    self.formation
-                        .cars
-                        .first()
-                        .is_none_or(|c| c.battery_on && c.power_on)
-                },
-                |c| c.supply.cab,
-            )
+            && self
+                .state
+                .power_supply
+                .cars
+                .iter()
+                .find(|c| c.vehicle == self.cab_vehicle())
+                .map_or_else(
+                    || {
+                        self.formation
+                            .cars
+                            .get(self.cab_vehicle())
+                            .is_none_or(|c| c.battery_on && c.power_on)
+                    },
+                    |c| c.supply.cab,
+                )
     }
 
     pub fn selected_wiper_mode(&self) -> crate::wiper::WiperMode {
@@ -1441,47 +1596,88 @@ impl LiveDriveSession {
     }
     pub fn effective_wiper_active(&self) -> bool {
         self.selected_wiper_mode().moving(self.time_s())
-            && self.state.power_supply.cars.first().map_or_else(
-                || self.formation.cars.first().is_none_or(|c| c.battery_on),
-                |c| c.supply.low_voltage,
-            )
+            && self
+                .state
+                .power_supply
+                .cars
+                .iter()
+                .find(|c| c.vehicle == self.cab_vehicle())
+                .map_or_else(
+                    || {
+                        self.formation
+                            .cars
+                            .get(self.cab_vehicle())
+                            .is_none_or(|c| c.battery_on)
+                    },
+                    |c| c.supply.low_voltage,
+                )
     }
 
     pub fn cab_telemetry(&self) -> CabTelemetry {
         let speed_kmh = self.state.velocity_mps * 3.6;
         let limit_kmh = self.effective_speed_limit_mps() * 3.6;
         let brake_force_kn = self.wheel_rail_brake_forces_n().iter().sum::<f64>() / 1000.;
-        let diesel_rpm = self.state.diesel.cars.first().map(|c| c.rpm).or_else(|| {
-            if self
-                .physics
-                .diesel_engines
-                .iter()
-                .any(|e| e.engine.is_some())
-                && !self.state.diesel_rpm.is_empty()
-            {
-                Some(self.state.diesel_rpm.iter().sum::<f64>() / self.state.diesel_rpm.len() as f64)
+        let vehicle = self.cab_vehicle();
+        let diesel_rpm = self
+            .state
+            .vehicle_systems
+            .iter()
+            .find(|c| c.definition.vehicle == vehicle && !c.motors.is_empty())
+            .map(|c| c.motors.iter().map(|m| m.rpm).sum::<f64>() / c.motors.len() as f64)
+            .or_else(|| self.state.diesel.car(vehicle).map(|c| c.rpm))
+            .or_else(|| {
+                self.physics
+                    .diesel_vehicle_indices
+                    .iter()
+                    .position(|&i| i == vehicle)
+                    .and_then(|i| self.state.diesel_rpm.get(i))
+                    .copied()
+            });
+        let mut diesel_telemetry = self.state.diesel.car(vehicle).cloned();
+        if let Some(equipment) = self
+            .state
+            .vehicle_systems
+            .iter()
+            .find(|c| c.definition.vehicle == vehicle && !c.motors.is_empty())
+            && let Some(t) = &mut diesel_telemetry
+        {
+            t.rpm = diesel_rpm.unwrap_or(0.);
+            t.fuel_l = equipment.motors.iter().map(|m| m.fuel_l).sum();
+            t.consumed_l = equipment.motors.iter().map(|m| m.consumed_l).sum();
+            t.command_running = equipment.motors.iter().any(|m| m.running);
+            t.phase = if t.command_running {
+                crate::diesel_operation::EnginePhase::Running
             } else {
-                None
-            }
-        });
-        let boiler_bar = self.state.boiler_state.as_ref().map(|b| b.pressure_bar);
+                crate::diesel_operation::EnginePhase::Stopped
+            };
+            t.temperature_c = equipment
+                .motors
+                .iter()
+                .map(|m| m.coolant_c)
+                .fold(0., f64::max);
+        }
+        let is_steam = matches!(self.consist.vehicles.get(vehicle), Some(openrailsrs_train::Vehicle::Loco(l)) if l.steam.is_some());
+        let boiler_bar = is_steam
+            .then(|| self.state.boiler_state.as_ref().map(|b| b.pressure_bar))
+            .flatten();
         let main_res_bar = self
             .state
             .brake_system
             .circuits
-            .first()
+            .iter()
+            .find(|c| c.vehicle == vehicle)
             .map_or(boiler_bar.unwrap_or(8.0), |c| c.reservoir_bar);
         let head_vented = self
             .state
             .brake_system
             .cylinders
-            .first()
+            .get(vehicle)
             .is_some_and(|b| b.air_vented);
         let brake_pipe_bar = self
             .state
             .brake_system
             .cylinders
-            .first()
+            .get(vehicle)
             .and_then(|c| c.pipe_pressure_bar())
             .unwrap_or_else(|| {
                 if head_vented {
@@ -1490,14 +1686,45 @@ impl LiveDriveSession {
                     (5.0 - self.driver_brake * 3.5).max(0.0)
                 }
             });
-        let supply = self.state.power_supply.cars.first().map(|c| &c.supply);
+        let supply = self
+            .state
+            .power_supply
+            .cars
+            .iter()
+            .find(|c| c.vehicle == vehicle)
+            .map(|c| &c.supply);
         let cylinders = &self.state.brake_system.cylinders;
         // The driving cab reads the lead vehicle's cylinder, not the average of
         // trailer/motor pressures with different native full-pressure ratings.
         let brake_cyl_bar = cylinders
-            .first()
+            .get(vehicle)
             .map_or(self.driver_brake * 4.5, |b| b.pressure_bar());
         CabTelemetry {
+            electric_brake_fraction: self
+                .state
+                .vehicle_systems
+                .iter()
+                .find(|c| c.definition.vehicle == vehicle)
+                .map_or(0., |c| {
+                    c.definition.electric_brake.as_ref().map_or(0., |p| {
+                        c.brakes.electric_force_n
+                            / p.force_curve.iter().map(|p| p[1]).fold(1., f64::max)
+                    })
+                }),
+            dynamic_max_current_a: self
+                .state
+                .vehicle_systems
+                .iter()
+                .find(|c| c.definition.vehicle == vehicle)
+                .and_then(|c| c.definition.electric_brake.as_ref())
+                .and_then(|p| p.maximum_current_a),
+            dynamic_brake_pct: crate::multiple_unit::brake(&self.state, vehicle) * 100.,
+            electric_brake_force_n: self
+                .state
+                .vehicle_systems
+                .iter()
+                .find(|c| c.definition.vehicle == vehicle)
+                .map_or(0., |c| c.brakes.electric_force_n),
             cab_windows: self.cab_equipment().map_or([0.; 2], |c| c.windows),
             cab_door: self.cab_equipment().map_or(0., |c| c.door),
             washer_spraying: self.cab_equipment().is_some_and(|c| c.spraying),
@@ -1511,33 +1738,43 @@ impl LiveDriveSession {
                 .rail_adhesion
                 .as_ref()
                 .is_some_and(|r| r.sander_command),
-            steam: self.state.boiler_state.clone(),
-            diesel: self.state.diesel.cars.first().cloned(),
+            steam: if is_steam {
+                self.state.boiler_state.clone()
+            } else {
+                None
+            },
+            diesel: diesel_telemetry,
             pantograph_fraction: self
                 .state
                 .electric
                 .cars
-                .first()
+                .iter()
+                .find(|c| c.vehicle == vehicle)
                 .map_or(0., |c| c.pantograph_fraction),
             line_voltage_v: self
                 .state
                 .electric
                 .cars
-                .first()
+                .iter()
+                .find(|c| c.vehicle == vehicle)
                 .map_or(0., |c| c.contact_voltage_v),
-            circuit_breaker_state: self.state.electric.cars.first().map_or(0, |c| {
-                match c.breaker {
+            circuit_breaker_state: self
+                .state
+                .electric
+                .cars
+                .iter()
+                .find(|c| c.vehicle == vehicle)
+                .map_or(0, |c| match c.breaker {
                     crate::electric::BreakerState::Open => 0,
                     crate::electric::BreakerState::Closing => 1,
                     crate::electric::BreakerState::Closed => 2,
-                }
-            }),
+                }),
             main_power: supply.is_some_and(|s| s.main),
             auxiliary_power: supply.is_some_and(|s| s.auxiliary),
             low_voltage_power: supply.is_some_and(|s| s.low_voltage),
             cab_power: supply.is_some_and(|s| s.cab),
             train_supply: supply.is_some_and(|s| s.train_supply),
-            vacuum_brake: cylinders.first().is_some_and(|c| c.is_vacuum()),
+            vacuum_brake: cylinders.get(vehicle).is_some_and(|c| c.is_vacuum()),
             speed_kmh,
             limit_kmh,
             throttle_pct: self.driver_throttle * 100.0,
@@ -1550,9 +1787,16 @@ impl LiveDriveSession {
             cab_light: self.effective_cab_light(),
             engine_failure: self
                 .state
-                .diesel
-                .car(self.cab_vehicle_index)
-                .is_some_and(|c| c.fuel_l <= 0.)
+                .vehicle_systems
+                .iter()
+                .filter(|c| c.definition.vehicle == vehicle)
+                .flat_map(|c| &c.motors)
+                .any(|m| m.fault.is_some() || m.fuel_l <= 0.)
+                || self
+                    .state
+                    .diesel
+                    .car(self.cab_vehicle())
+                    .is_some_and(|c| c.fuel_l <= 0.)
                 || self
                     .state
                     .boiler_state
@@ -1561,7 +1805,7 @@ impl LiveDriveSession {
             thermal_limiting: crate::diesel_operation::available_fraction(
                 &self.state.diesel,
                 &self.physics.diesel,
-                self.cab_vehicle_index,
+                self.cab_vehicle(),
             ) < 0.999,
             emergency: self.state.brake_system.emergency,
             independent_brake_pct: self.state.brake_system.independent_command * 100.,
@@ -1574,13 +1818,13 @@ impl LiveDriveSession {
             tractive_load_fraction: self
                 .consist
                 .vehicles
-                .get(self.cab_vehicle_index)
+                .get(self.cab_vehicle())
                 .and_then(|v| {
                     if let openrailsrs_train::Vehicle::Loco(l) = v {
                         Some(if l.max_tractive_effort_n > 0. {
                             self.state
                                 .rail_force_n
-                                .get(self.cab_vehicle_index)
+                                .get(self.cab_vehicle())
                                 .copied()
                                 .unwrap_or(0.)
                                 / l.max_tractive_effort_n
@@ -1594,20 +1838,30 @@ impl LiveDriveSession {
                 .unwrap_or(0.),
             // OR 1.6.1 MSTSLocomotive constructs one axle even without Pacha physics.
             native_axles: matches!(
-                self.consist.vehicles.get(self.cab_vehicle_index),
+                self.consist.vehicles.get(self.cab_vehicle()),
                 Some(openrailsrs_train::Vehicle::Loco(_))
             ),
-            max_current_a: self.cab_max_current_a,
+            max_current_a: self
+                .physics
+                .native
+                .as_ref()
+                .and_then(|n| n.vehicles.get(vehicle))
+                .and_then(|p| p.max_current_a)
+                .or_else(|| {
+                    (vehicle == self.cab_vehicle_index)
+                        .then_some(self.cab_max_current_a)
+                        .flatten()
+                }),
             traction_load_fraction: self
                 .consist
                 .vehicles
-                .get(self.cab_vehicle_index)
+                .get(self.cab_vehicle())
                 .and_then(|v| {
                     if let openrailsrs_train::Vehicle::Loco(l) = v {
                         Some(if l.max_tractive_effort_n > 0. {
                             self.state
                                 .motor_force_n
-                                .get(self.cab_vehicle_index)
+                                .get(self.cab_vehicle())
                                 .copied()
                                 .unwrap_or(0.)
                                 / l.max_tractive_effort_n
@@ -1627,6 +1881,10 @@ impl LiveDriveSession {
 /// Driver-facing gauges for the 3D cab panel.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CabTelemetry {
+    pub dynamic_brake_pct: f64,
+    pub electric_brake_force_n: f64,
+    pub electric_brake_fraction: f64,
+    pub dynamic_max_current_a: Option<f64>,
     pub cab_windows: [f64; 2],
     pub cab_door: f64,
     pub washer_spraying: bool,
@@ -1728,6 +1986,7 @@ impl LiveDriveSession {
             if let Some(throttle) = automatic {
                 self.autodrive_inputs(throttle);
             }
+            self.state.driver_reverser = self.driver_direction;
             self.state.throttle = if (self.driver_direction >= 0.75
                 || self.driver_direction <= 0.25)
                 && self.exterior.door == crate::exterior::DoorState::Closed
@@ -1859,10 +2118,23 @@ impl LiveDriveSession {
                 self.driver_brake = 1.0;
                 if self.gameplay.phase == ServicePhase::ReadyToDepart {
                     if matches!(self.exterior.door, DoorState::Open | DoorState::Opening) {
-                        self.exterior.set_door(DoorState::Closing);
+                        if self.equipped_door_state().is_some() {
+                            let _ = self.command_doors(
+                                None,
+                                openrailsrs_scenarios::vehicle_systems::DoorSide::Both,
+                                false,
+                            );
+                        } else {
+                            self.exterior.set_door(DoorState::Closing);
+                        }
                     }
                 } else if self.exterior.door == DoorState::Closed {
-                    self.exterior.set_door(DoorState::Opening);
+                    if self.equipped_door_state().is_some() {
+                        let side = self.platform_door_side().unwrap_or_default();
+                        let _ = self.command_doors(None, side, true);
+                    } else {
+                        self.exterior.set_door(DoorState::Opening);
+                    }
                 }
                 return;
             }
@@ -1913,6 +2185,9 @@ impl LiveDriveSession {
     {
         self.tick_refill(step_dt);
         self.exterior.tick(step_dt);
+        if let Some(door) = self.equipped_door_state() {
+            self.exterior.door = door;
+        }
         self.tick_signals(step_dt);
         self.tick_announcements();
         self.tick_gameplay(step_dt);

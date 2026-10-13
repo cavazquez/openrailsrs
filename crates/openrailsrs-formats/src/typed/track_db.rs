@@ -19,6 +19,8 @@ use super::atom_to_number;
 /// One node in the MSTS Track Database.
 #[derive(Clone, Debug, PartialEq)]
 pub struct TrackDbNode {
+    /// Native TrJunctionNode ShapeIndex, used for the authored default branch.
+    pub junction_shape_index: Option<u32>,
     /// 1-based sequential ID as stored in the `.tdb` file.
     pub id: u32,
     /// World-space node location from native `UiD (...)`, when present.
@@ -303,6 +305,8 @@ impl TrItemWorldPose {
 /// One entry of `TrItemTable`.
 #[derive(Clone, Debug, PartialEq)]
 pub struct TrItem {
+    /// Original SpeedpostTrItemData flags, preserving passenger/freight applicability.
+    pub speed_post_flags: Option<u32>,
     /// Native sign angle; needed to restrict only its direction of travel.
     pub speed_post_angle_rad: Option<f64>,
     /// `TrItemId` (1-based, unique inside the `.tdb`).
@@ -607,6 +611,7 @@ fn collect_nodes(ast: &Ast, out: &mut Vec<TrackDbNode>) {
         {
             out.push(TrackDbNode {
                 id,
+                junction_shape_index: junction_shape_index(&items[2..]),
                 position: parse_node_position(&items[2..]),
                 pin_refs: parse_tr_pins(&items[2..]),
                 kind,
@@ -665,6 +670,7 @@ fn parse_track_nodes_children(children: &[Ast], out: &mut Vec<TrackDbNode>) {
         {
             out.push(TrackDbNode {
                 id,
+                junction_shape_index: junction_shape_index(&body[1..]),
                 position: parse_node_position(&body[1..]),
                 pin_refs: parse_tr_pins(&body[1..]),
                 kind,
@@ -682,6 +688,7 @@ fn parse_track_nodes_children(children: &[Ast], out: &mut Vec<TrackDbNode>) {
         {
             out.push(TrackDbNode {
                 id,
+                junction_shape_index: junction_shape_index(&sub[2..]),
                 position: parse_node_position(&sub[2..]),
                 pin_refs: parse_tr_pins(&sub[2..]),
                 kind,
@@ -692,6 +699,24 @@ fn parse_track_nodes_children(children: &[Ast], out: &mut Vec<TrackDbNode>) {
 
         i += 1;
     }
+}
+
+fn junction_shape_index(body: &[Ast]) -> Option<u32> {
+    for (i, item) in body.iter().enumerate() {
+        match item {
+            Ast::Atom(Atom::Symbol(tag)) if tag.eq_ignore_ascii_case("TrJunctionNode") => {
+                if let Some(Ast::List(values)) = body.get(i + 1) {
+                    return values.get(1).and_then(parse_u32);
+                }
+            }
+            Ast::List(values) if matches!(values.first(), Some(Ast::Atom(Atom::Symbol(tag))) if tag.eq_ignore_ascii_case("TrJunctionNode")) =>
+            {
+                return values.get(2).and_then(parse_u32);
+            }
+            _ => {}
+        }
+    }
+    None
 }
 
 /// Determine the kind of a track node from its inner S-expressions.
@@ -1506,6 +1531,14 @@ fn parse_tr_item(ast: &Ast) -> Option<TrItem> {
     };
 
     Some(TrItem {
+        speed_post_flags: if matches!(kind, TrItemKind::SpeedPost { .. }) {
+            find_tr_item_numbered_block(items, "SpeedpostTrItemData", 1)
+                .and_then(|v| v.first().copied())
+                .filter(|v| v.is_finite() && *v >= 0. && *v <= u32::MAX as f64 && v.fract() == 0.)
+                .map(|v| v as u32)
+        } else {
+            None
+        },
         speed_post_angle_rad: if matches!(kind, TrItemKind::SpeedPost { .. }) {
             find_tr_item_numbered_block(items, "SpeedpostTrItemData", 3)
                 .and_then(|n| n.last().copied())
@@ -1730,12 +1763,14 @@ mod tests {
     #[test]
     fn id_lookup_handles_native_slots_and_sparse_fallback() {
         let node = |id| TrackDbNode {
+            junction_shape_index: None,
             id,
             position: None,
             pin_refs: vec![],
             kind: TrackNodeKind::End,
         };
         let item = |id| TrItem {
+            speed_post_flags: None,
             speed_post_angle_rad: None,
             id,
             kind: TrItemKind::Other,
@@ -2113,5 +2148,16 @@ mod tests {
         let (bx, by, bz) = tdb.item_bevy_position(42).expect("bevy");
         let (ex, ey, ez) = world.bevy_position();
         assert!((bx - ex).abs() < 1e-3 && (by - ey).abs() < 1e-3 && (bz - ez).abs() < 1e-3);
+    }
+}
+
+#[cfg(test)]
+mod junction_shape_tests {
+    use super::*;
+    #[test]
+    fn junction_retains_original_shape_index_for_default_switch_resolution() {
+        let ast = parse_from_first_paren("(TrackDB (TrackNodes 1 (TrackNode 1 (TrJunctionNode 1 173) (TrPins 1 2 (TrPin 2 0) (TrPin 3 1) (TrPin 4 1)))))").unwrap();
+        let file = TrackDbFile::from_ast(&ast).unwrap();
+        assert_eq!(file.nodes[0].junction_shape_index, Some(173));
     }
 }

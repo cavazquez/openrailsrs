@@ -64,6 +64,7 @@ impl Spring {
 }
 #[derive(Default)]
 struct CarMotion {
+    physical_pose: Transform,
     clock: Option<f64>,
     heading: Option<f32>,
     speed: f32,
@@ -98,7 +99,7 @@ impl TrainMotion {
     pub fn rigid_transform(&self, entity: Entity, transform: GlobalTransform) -> GlobalTransform {
         self.cars.get(&entity).map_or(transform, |c| {
             GlobalTransform::from(Transform::from_matrix(
-                transform.to_matrix() * c.pose.to_matrix().inverse(),
+                transform.to_matrix() * c.pose.to_matrix().inverse() * c.physical_pose.to_matrix(),
             ))
         })
     }
@@ -186,6 +187,19 @@ pub fn update(
         && presentation
             .as_ref()
             .is_none_or(|p| p.vehicles.iter().all(|v| v.suspension.is_none()))
+        && live
+            .session
+            .state
+            .vehicle_systems
+            .iter()
+            .all(|s| s.definition.crosswind.is_none() && s.definition.tilt.is_none())
+        && live.traffic.services.iter().all(|t| {
+            t.session
+                .state
+                .vehicle_systems
+                .iter()
+                .all(|s| s.definition.crosswind.is_none() && s.definition.tilt.is_none())
+        })
     {
         motion.cars.clear();
         motion.running_gear.clear();
@@ -301,6 +315,19 @@ pub fn update(
         car.clock = Some(clock);
         car.heading = Some(heading);
         car.speed = speed;
+        let physical_roll = session
+            .state
+            .vehicle_systems
+            .iter()
+            .find(|c| c.definition.vehicle == index)
+            .map_or(0., |c| c.crosswind.angle_rad - c.tilt.angle_rad)
+            as f32
+            * if offset.flipped { -1. } else { 1. };
+        car.physical_pose = suspension_pose(physical_roll, 0., 0.);
+        // Rebuild from spring coordinates every frame; never compound a physical
+        // angle onto the previous render pose during pause or a camera switch.
+        car.pose = car.physical_pose
+            * suspension_pose(car.roll.position, car.pitch.position, car.bounce.position);
         *local = *local * car.pose;
         active.push(entity);
     }
@@ -453,6 +480,18 @@ mod tests {
             CarMotion {
                 clock: Some(clock),
                 pose,
+                roll: Spring {
+                    position: 0.02,
+                    ..default()
+                },
+                pitch: Spring {
+                    position: -0.01,
+                    ..default()
+                },
+                bounce: Spring {
+                    position: 0.02,
+                    ..default()
+                },
                 ..default()
             },
         );

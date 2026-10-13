@@ -178,6 +178,7 @@ pub fn run_scenario_headless_with_driver(
 ) -> Result<SimRunResult, SimError> {
     let route_dir = scenario_dir.join(&scenario.route.path);
     let mut graph = load_track_graph_from_route_dir(&route_dir)?;
+    crate::freight::cap_graph(&mut graph, scenario.train.freight.as_ref());
 
     // Apply per-scenario switch overrides (take precedence over track.toml defaults).
     for sw in &scenario.route.switches {
@@ -195,6 +196,7 @@ pub fn run_scenario_headless_with_driver(
     let path_edges = resolve_route_edges(&graph, &scenario.route)?;
     let consist_path = scenario_dir.join(&scenario.train.consist);
     let mut consist = load_consist_with_asset_root(&consist_path, consist_root(&consist_path))?;
+    crate::freight::apply(&mut consist, scenario.train.freight.as_ref())?;
     let customized = openrailsrs_train::vehicle_profiles::apply_with_davis(
         &consist_path,
         &mut consist,
@@ -317,9 +319,18 @@ pub fn run_scenario_headless_with_driver(
         .collect();
     let max_capacity = scenario.train.max_capacity;
 
-    let path_data = PathData::from_path(&path_edges, &graph);
+    let mut path_data = PathData::from_path(&path_edges, &graph);
+    crate::freight::cap(&mut path_data, scenario.train.freight.as_ref());
     let mut state = TrainSimState::new(path_edges);
     state.weather_track = scenario.simulation.weather_track.clone();
+    crate::vehicle_systems::configure(
+        &mut state,
+        &consist_path,
+        &scenario.train.systems,
+        &scenario.train.platform_sides,
+        consist.vehicles.len(),
+    )
+    .map_err(SimError::Msg)?;
     state.cab_equipment = crate::cab_equipment::load(
         &consist_path,
         &scenario.train.cab_equipment,
@@ -346,6 +357,7 @@ pub fn run_scenario_headless_with_driver(
     state.boiler_state = consist
         .aggregate_steam_params()
         .map(|p| crate::steam::BoilerState::from_params(&p));
+    crate::steam_equipment::configure(&mut state, &consist);
     // Initialise diesel RPM at each engine's idle speed.
     if !train_physics.diesel_engines.is_empty() {
         state.diesel_rpm = train_physics

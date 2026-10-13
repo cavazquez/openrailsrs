@@ -112,6 +112,7 @@ pub struct SkyParameters {
     pub zenith: Vec4,
     pub sun: Vec4,
     pub clouds: Vec4,
+    pub cloud_world: Vec4,
 }
 #[derive(Asset, TypePath, bevy::render::render_resource::AsBindGroup, Debug, Clone)]
 pub struct RailwaySkyMaterial {
@@ -163,6 +164,7 @@ pub fn sky_parameters(
     horizon = horizon.lerp(grey, overcast);
     zenith = zenith.lerp(grey * 0.8, overcast);
     SkyParameters {
+        cloud_world: Vec4::ZERO,
         horizon,
         zenith,
         sun: sun.extend(day),
@@ -204,6 +206,8 @@ pub fn sync_route_atmosphere(
     storm: Option<Res<crate::storm::StormState>>,
     weather: Option<Res<crate::weather_state::WeatherState>>,
     fog_state: Res<FogState>,
+    origin: Res<crate::floating_origin::FloatingOrigin>,
+    focus: Res<crate::world::RouteFocus>,
     mut clear: ResMut<ClearColor>,
     domes: Query<&MeshMaterial3d<RailwaySkyMaterial>, With<SkyDome>>,
     mut materials: ResMut<Assets<RailwaySkyMaterial>>,
@@ -220,6 +224,12 @@ pub fn sync_route_atmosphere(
     if let Some(weather) = weather.as_ref() {
         params = atmosphere_parameters(direction.y, &weather.atmosphere, direction, clock);
     }
+    let base = origin.shift + focus.center;
+    let phase = weather.as_ref().map_or(
+        Vec2::new(base.x.rem_euclid(8192.), base.z.rem_euclid(8192.)),
+        |w| w.advection.phase(base, 8192.),
+    );
+    params.cloud_world = Vec4::new(phase.x, phase.y, 0., 0.);
     let flash = storm.as_ref().map_or(0.0, |s| s.flash);
     params.horizon += Vec4::new(0.48, 0.56, 0.72, 0.0) * flash;
     params.zenith += Vec4::new(0.35, 0.43, 0.65, 0.0) * flash;

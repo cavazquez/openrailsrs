@@ -439,3 +439,10 @@ completa ni de la respuesta de todas las válvulas americanas.
 `openrails-consumable-mass.json` contiene cinco invocaciones de `MSTSWagon.UpdateLocomotiveLoadPhysics` en las DLL originales: 5.000, 2.500, 1 y 0 litros, y recarga a 5.000. El tren de prueba tiene masa llena de 80.000 kg, vacía de 75.746 kg, sin agua de calefacción ni arena. Se contrasta masa y peso adherente con 0,02 kg de tolerancia por precisión float de OR. [Proveniencia](../oracles/openrails-consumable-mass-provenance.json) y [capturador](../scripts/capture_consumable_mass_reference.py).
 
 OR exige animación de carga continua para activar este método; la implementación Rust aplica reserva diésel efectiva también al material sin esa declaración. Es una extensión intencional. No se afirma aquí masa completa de arena, agua auxiliar o reservas de vapor. Las referencias y tolerancias existentes de velocidad, posición, frenos y alimentación siguen fijadas.
+
+
+### Equipos, peralte e inyectores: cuarta entrega
+
+Se añaden referencias de los algoritmos originales de pantógrafos, inclinación activa, esfuerzo del freno dinámico, filtro de tensión y tablas antiguas de peralte. Los seis tamaños de inyector utilizan 402 muestras generadas con las tablas e interpolación de OR 1.6.1. Las capturas contienen commit, hashes y tolerancias; los scripts de captura no sobrescriben archivos existentes. Los nombres de cada referencia y las pruebas correspondientes están en [VEHICLE_SYSTEMS.md](VEHICLE_SYSTEMS.md).
+
+Baterías, hielo superficial, refrigeración, protección de bloqueo, mando múltiple declarado y los efectos gráficos se comprueban con ensayos propios. La aceptación distingue esos modelos del comportamiento original. Se conservan los umbrales de los recorridos anteriores y no se afirma compatibilidad completa con todo contenido o toda caldera de la comunidad.

@@ -440,6 +440,7 @@ fn convert_tdb_to_toml(
             edge_profiles.insert(
                 edge_id.clone(),
                 openrailsrs_track::EdgePhysicsProfile {
+                    curves: curve_profile(*length_m, sections, catalog, false),
                     grades: forward,
                     ..Default::default()
                 },
@@ -447,6 +448,7 @@ fn convert_tdb_to_toml(
             edge_profiles.insert(
                 reverse_id.clone(),
                 openrailsrs_track::EdgePhysicsProfile {
+                    curves: curve_profile(*length_m, sections, catalog, true),
                     grades: reverse,
                     ..Default::default()
                 },
@@ -755,6 +757,37 @@ fn section_lengths(
         }
     }
     values
+}
+fn curve_profile(
+    length: f64,
+    sections: &[TrVectorSectionRecord],
+    catalog: Option<&TSectionCatalog>,
+    reverse: bool,
+) -> Vec<openrailsrs_track::PositionCurve> {
+    let lengths = section_lengths(length, sections, catalog);
+    let mut before = 0.;
+    let mut curves = Vec::new();
+    for (s, span) in sections.iter().zip(lengths) {
+        let curvature = catalog
+            .and_then(|c| c.sections.get(&s.section_index))
+            .and_then(|c| c.curve_radius_m.zip(c.curve_angle_deg))
+            .filter(|(r, _)| *r > 0.)
+            .map_or(0., |(radius, angle)| angle.signum() / radius);
+        curves.push(openrailsrs_track::PositionCurve {
+            position_m: if reverse {
+                (length - before - span).max(0.)
+            } else {
+                before
+            },
+            curvature_m_inv: if reverse { -curvature } else { curvature },
+            cant_rad: if reverse { -s.az } else { s.az },
+            heading_rad: s.ay - std::f64::consts::FRAC_PI_2
+                + if reverse { std::f64::consts::PI } else { 0. },
+        });
+        before += span;
+    }
+    curves.sort_by(|a, b| a.position_m.total_cmp(&b.position_m));
+    curves
 }
 fn grade_profile(
     length: f64,

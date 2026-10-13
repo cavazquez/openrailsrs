@@ -17,6 +17,17 @@ pub fn vehicle_mass_kg(
     index: usize,
     base: f64,
 ) -> f64 {
+    if let Some(c) = state
+        .vehicle_systems
+        .iter()
+        .find(|c| c.definition.vehicle == index && !c.motors.is_empty())
+    {
+        return diesel_mass_kg(
+            base,
+            c.definition.motors.iter().map(|p| p.fuel_l).sum(),
+            c.motors.iter().map(|s| s.fuel_l).sum(),
+        );
+    }
     let config = train.diesel.cars.iter().find(|c| c.vehicle == index);
     let fuel = state.diesel.car(index);
     match (config, fuel) {
@@ -31,12 +42,29 @@ pub fn total_mass_kg(train: &TrainPhysics, state: &TrainSimState) -> f64 {
         .cars
         .iter()
         .filter_map(|c| {
-            state.diesel.car(c.vehicle).map(|s| {
-                (s.fuel_l.clamp(0.0, c.params.capacity_l) - c.params.capacity_l) * DIESEL_KG_PER_L
-            })
+            state
+                .diesel
+                .car(c.vehicle)
+                .filter(|_| {
+                    !state
+                        .vehicle_systems
+                        .iter()
+                        .any(|s| s.definition.vehicle == c.vehicle && !s.motors.is_empty())
+                })
+                .map(|s| {
+                    (s.fuel_l.clamp(0.0, c.params.capacity_l) - c.params.capacity_l)
+                        * DIESEL_KG_PER_L
+                })
         })
         .sum();
-    (train.mass_kg + state.extra_mass_kg + delta).max(1.0)
+    let declared: f64 = state
+        .vehicle_systems
+        .iter()
+        .filter(|c| c.definition.vehicle < train.vehicle_lengths_m.len())
+        .flat_map(|c| &c.motors)
+        .map(|m| (m.refilled_l - m.consumed_l) * DIESEL_KG_PER_L)
+        .sum();
+    (train.mass_kg + state.extra_mass_kg + delta + declared).max(1.0)
 }
 
 #[cfg(test)]

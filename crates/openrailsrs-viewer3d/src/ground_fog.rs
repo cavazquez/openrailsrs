@@ -84,6 +84,7 @@ fn corrected_shader(source: &str) -> Option<String> {
     // Homogeneous sky illumination has the bounded integral L_sky * albedo *
     // (1 - T). Use the transmittance already sampled through the density field,
     // rather than a radius-dependent term that turns daytime mist black.
+    let punctual=punctual.replace("density *= textureSampleLevel(density_texture, density_sampler, P_uvw + density_texture_offset, 0.0).r;","density *= textureSampleLevel(density_texture, density_sampler, P_uvw + density_texture_offset, 0.0).r;\n                let edge = clamp((1.0 - length((P_uvw.xz - vec2(0.5)) * 2.0)) / 0.25, 0.0, 1.0);\n                density *= edge * edge * (3.0 - 2.0 * edge);");
     Some(punctual.replace(old_ambient, "var accumulated_color = vec3<f32>(0.0);").replace(old_return,
         "let ambient_scatter = ambient_color * ambient_intensity * scattering / max(absorption + scattering, 0.0001) * (1.0 - background_alpha);\n    return vec4(accumulated_color + ambient_scatter, 1.0 - background_alpha);"))
 }
@@ -128,6 +129,13 @@ pub fn ground_density(uvw: Vec3) -> f32 {
     let above_rail = (uvw.y * 45.0 - 8.0 - 4.0).max(0.0);
     (-above_rail / 18.0).exp() * edge
 }
+pub fn bank_density(uvw: Vec3) -> f32 {
+    let tau = std::f32::consts::TAU;
+    let a = ((uvw.x * tau).sin() + (uvw.z * tau).cos()) * 0.25 + 0.5;
+    let b = ((uvw.x * 2. * tau + 0.4).cos() + (uvw.z * 3. * tau).sin()) * 0.25 + 0.5;
+    let above = (uvw.y * 45. - 12.).max(0.);
+    (-above / 18.).exp() * (0.20 + 0.8 * (a * 0.7 + b * 0.3).powi(2))
+}
 fn density_texture() -> Image {
     const SIZE: u32 = 32;
     let mut data = Vec::with_capacity((SIZE * SIZE * SIZE) as usize);
@@ -135,7 +143,7 @@ fn density_texture() -> Image {
         for y in 0..SIZE {
             for x in 0..SIZE {
                 let uvw = Vec3::new(x as f32, y as f32, z as f32) / (SIZE - 1) as f32;
-                data.push((255.0 * ground_density(uvw)).round() as u8);
+                data.push((255.0 * bank_density(uvw)).round() as u8);
             }
         }
     }
@@ -151,9 +159,9 @@ fn density_texture() -> Image {
         RenderAssetUsages::RENDER_WORLD,
     );
     image.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
-        address_mode_u: ImageAddressMode::ClampToEdge,
+        address_mode_u: ImageAddressMode::Repeat,
         address_mode_v: ImageAddressMode::ClampToEdge,
-        address_mode_w: ImageAddressMode::ClampToEdge,
+        address_mode_w: ImageAddressMode::Repeat,
         mag_filter: bevy::image::ImageFilterMode::Linear,
         min_filter: bevy::image::ImageFilterMode::Linear,
         ..default()
@@ -188,6 +196,8 @@ pub fn update_ground_fog(
     weather: Option<Res<crate::weather_state::WeatherState>>,
     sun_state: Option<Res<crate::route_lighting::RouteSunState>>,
     live: Option<Res<crate::live::LiveDrive>>,
+    origin: Res<crate::floating_origin::FloatingOrigin>,
+    focus: Res<crate::world::RouteFocus>,
     pipelines: Option<Res<crate::performance::ScenePipelineStatus>>,
     mut diagnostics: ResMut<FogDiagnostics>,
     mut cameras: Query<
@@ -287,6 +297,12 @@ pub fn update_ground_fog(
     for (mut transform, mut volume, mut visibility) in &mut volumes {
         transform.translation =
             Vec3::new(camera.translation.x, rail_y + 14.5, camera.translation.z);
+        let base = transform.translation + origin.shift + focus.center - Vec3::new(200., 0., 200.);
+        let phase = weather.as_ref().map_or(
+            Vec2::new(base.x.rem_euclid(400.), base.z.rem_euclid(400.)),
+            |w| w.advection.phase(base, 400.),
+        );
+        volume.density_texture_offset = Vec3::new(phase.x / 400., 0., phase.y / 400.);
         *visibility = if steps.is_some() {
             Visibility::Visible
         } else {
@@ -325,6 +341,19 @@ pub fn update_ground_fog(
 mod tests {
     use super::*;
     use crate::player_settings::FogQuality;
+    #[test]
+    fn periodic_banks_keep_their_density_across_texture_wrap_and_floating_origin() {
+        let p = Vec3::new(0.13, 0.2, 0.63);
+        assert!((bank_density(p) - bank_density(p + Vec3::X)).abs() < 1e-6);
+        assert!((bank_density(p) - bank_density(p + Vec3::Z)).abs() < 1e-6);
+        let range = (0..100)
+            .flat_map(|x| {
+                (0..100)
+                    .map(move |z| bank_density(Vec3::new(x as f32 / 100., 0.2, z as f32 / 100.)))
+            })
+            .fold((1_f32, 0_f32), |(lo, hi), v| (lo.min(v), hi.max(v)));
+        assert!(range.1 - range.0 > 0.3);
+    }
     #[test]
     fn dense_fog_obscures_nearby_track_without_an_edge_wall() {
         assert_eq!(ground_density(Vec3::new(1.0, 0.1, 0.5)), 0.0);

@@ -1,0 +1,1 @@
+(Wagon (Name "Vagón sintético de mercancías") (Type Freight) (Mass 20000) (Size 3 3.5 15) (MaxBrakeForce 90000) (BrakeSystemType Air_single_pipe))

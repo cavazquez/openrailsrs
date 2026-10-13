@@ -7,9 +7,14 @@ use crate::{
     msts_units::{parse_length_m, parse_velocity_mps},
 };
 use serde::{Deserialize, Serialize};
+fn legacy_default() -> bool {
+    true
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct CantStandard {
+    #[serde(default = "legacy_default")]
+    pub use_legacy_calculation: bool,
     pub min_cant_m: f32,
     pub max_cant_m: f32,
     pub min_speed_mps: f32,
@@ -24,6 +29,7 @@ impl CantStandard {
     pub fn native_default(metric: bool, high_speed: bool) -> Self {
         if metric {
             Self {
+                use_legacy_calculation: true,
                 min_cant_m: 0.010,
                 max_cant_m: 0.180,
                 min_speed_mps: 25.5 * (1. / 3.6),
@@ -36,6 +42,7 @@ impl CantStandard {
             }
         } else {
             Self {
+                use_legacy_calculation: true,
                 min_cant_m: 0.5 * 0.0254,
                 max_cant_m: 6.0 * 0.0254,
                 min_speed_mps: 15.5 * (1. / 2.236_936_3),
@@ -84,16 +91,18 @@ impl CantStandard {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RouteCantSettings {
+    pub legacy_radius_cant: Vec<[f32; 2]>,
     pub gauge_m: f32,
     pub design_speed_mps: f32,
     pub standards: Vec<CantStandard>,
-    /// Older radius/cant tables are preserved by disabling generation until
-    /// their separate legacy algorithm has a matching reference test.
+    /// Presence is retained even for a malformed table, so it cannot silently
+    /// become the modern speed formula. Valid pairs have a native reference.
     pub legacy_table_present: bool,
 }
 impl Default for RouteCantSettings {
     fn default() -> Self {
         Self {
+            legacy_radius_cant: vec![],
             gauge_m: 1.435,
             design_speed_mps: 40.,
             standards: vec![CantStandard::native_default(true, false)],
@@ -121,6 +130,7 @@ impl RouteCantSettings {
         let speed = quantity(ast, "SpeedLimit", true).unwrap_or(40.);
         let metric = field_values(ast, "MilepostUnitsMiles").is_empty();
         let mut settings = Self {
+            legacy_radius_cant: vec![],
             gauge_m: quantity(ast, "ORTSTrackGauge", false)
                 .filter(|g| *g > 0.1)
                 .unwrap_or(1.435),
@@ -128,6 +138,52 @@ impl RouteCantSettings {
             standards: vec![CantStandard::native_default(metric, speed > 45.)],
             legacy_table_present: !field_values(ast, "ORTSTrackSuperElevation").is_empty(),
         };
+        if let Some(values) = field_values(ast, "ORTSTrackSuperElevation").last() {
+            let values = values
+                .iter()
+                .map(|v| {
+                    scalar_text(v)
+                        .and_then(|s| parse_length_m(&s))
+                        .map(|v| v as f32)
+                })
+                .collect::<Option<Vec<_>>>();
+            if let Some(values) = values
+                && (4..=512).contains(&values.len())
+                && values.len().is_multiple_of(2)
+            {
+                let pairs = values
+                    .chunks_exact(2)
+                    .map(|p| [p[0], p[1]])
+                    .collect::<Vec<_>>();
+                if pairs.iter().all(|p| {
+                    p[0].is_finite() && p[0] > 0. && p[1].is_finite() && (0. ..=0.5).contains(&p[1])
+                }) && pairs.windows(2).all(|p| p[0][0] < p[1][0])
+                {
+                    settings.legacy_radius_cant = pairs;
+                    let std = &mut settings.standards[0];
+                    std.min_cant_m = settings
+                        .legacy_radius_cant
+                        .iter()
+                        .map(|p| p[1])
+                        .fold(f32::MAX, f32::min);
+                    std.max_cant_m = settings
+                        .legacy_radius_cant
+                        .iter()
+                        .map(|p| p[1])
+                        .fold(0., f32::max);
+                    std.min_speed_mps = 0.;
+                    // The native legacy constructor keeps metric runoff slope and defaults.
+                    std.runoff_slope = 0.003;
+                    std.runoff_speed_mps = if metric {
+                        if speed > 45. { 0.08 } else { 0.055 }
+                    } else if speed > 45. {
+                        0.1136 * 0.44704
+                    } else {
+                        0.0852 * 0.44704
+                    };
+                }
+            }
+        }
         let mut standards = vec![];
         for values in field_values(ast, "ORTSSuperElevation") {
             let block = Ast::List(values.to_vec());
@@ -137,6 +193,8 @@ impl RouteCantSettings {
                 quantity(&block, "MaxPassengerUnderbalance", false).unwrap_or(f32::MAX);
             s.freight_deficiency_m =
                 quantity(&block, "MaxFreightUnderbalance", false).unwrap_or(f32::MAX);
+            s.use_legacy_calculation =
+                s.passenger_deficiency_m > 10. && s.freight_deficiency_m > 10.;
             if s.passenger_deficiency_m > 10. && s.freight_deficiency_m > 10. {
                 s.passenger_deficiency_m = 0.075;
                 s.freight_deficiency_m = 0.05;
@@ -211,8 +269,27 @@ pub fn generate_cant_profiles(
     standards: &[CantStandard],
     direction: f32,
 ) -> Vec<CantProfile> {
+    generate_cant_profiles_with_table(sections, gauge, standards, direction, &[])
+}
+
+pub fn generate_cant_profiles_with_table(
+    sections: &[CantSection],
+    gauge: f32,
+    standards: &[CantStandard],
+    direction: f32,
+    legacy_radius_cant: &[[f32; 2]],
+) -> Vec<CantProfile> {
     let empty = || vec![CantProfile::default(); sections.len()];
     if sections.is_empty()
+        || (!legacy_radius_cant.is_empty()
+            && (legacy_radius_cant.len() < 2
+                || legacy_radius_cant.iter().any(|p| {
+                    !p[0].is_finite()
+                        || p[0] <= 0.
+                        || !p[1].is_finite()
+                        || !(0. ..=0.5).contains(&p[1])
+                })
+                || legacy_radius_cant.windows(2).any(|p| p[0][0] >= p[1][0])))
         || !gauge.is_finite()
         || gauge <= 0.
         || direction.abs() != 1.
@@ -256,11 +333,20 @@ pub fn generate_cant_profiles(
                 return 0.;
             }
             let factor = gauge / (9.81 * s.radius_m);
-            let cant = (factor * (s.passenger_speed_mps * s.passenger_speed_mps)
-                - std.passenger_deficiency_m)
-                .max(
-                    factor * (s.freight_speed_mps * s.freight_speed_mps) - std.freight_deficiency_m,
-                );
+            let cant = if std.use_legacy_calculation && legacy_radius_cant.len() >= 2 {
+                let i = legacy_radius_cant
+                    .partition_point(|p| p[0] < s.radius_m)
+                    .clamp(1, legacy_radius_cant.len() - 1);
+                let (a, b) = (legacy_radius_cant[i - 1], legacy_radius_cant[i]);
+                a[1] + (s.radius_m - a[0]) / (b[0] - a[0]) * (b[1] - a[1])
+            } else {
+                (factor * (s.passenger_speed_mps * s.passenger_speed_mps)
+                    - std.passenger_deficiency_m)
+                    .max(
+                        factor * (s.freight_speed_mps * s.freight_speed_mps)
+                            - std.freight_deficiency_m,
+                    )
+            };
             ((cant / std.precision_m).round() * std.precision_m).clamp(std.min_cant_m, max_cant)
         })
         .collect();
@@ -376,7 +462,7 @@ mod tests {
         assert!((route.standards[0].max_cant_m - 0.1016).abs() < 1e-6);
         assert!((route.standards[0].passenger_deficiency_m - 0.0508).abs() < 1e-6);
         let ast = crate::parse_named_stf(
-            "Tr_RouteFile ( RouteID ( legacy ) ORTSTrackSuperElevation ( 2 300 0.15 1000 0.05 ) )",
+            "Tr_RouteFile ( RouteID ( legacy ) ORTSTrackSuperElevation ( 300 0.15 1000 0.05 ) )",
         )
         .unwrap();
         assert!(RouteCantSettings::from_ast(&ast).legacy_table_present);

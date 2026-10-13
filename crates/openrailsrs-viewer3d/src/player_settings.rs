@@ -61,6 +61,7 @@ pub enum PlayerAction {
     Sander,
     TractionControls,
     Doors,
+    NextCab,
     Emergency,
     IndependentUp,
     IndependentDown,
@@ -88,7 +89,7 @@ pub enum PlayerAction {
 }
 
 impl PlayerAction {
-    pub const ALL: [Self; 41] = [
+    pub const ALL: [Self; 42] = [
         Self::ThrottleUp,
         Self::ThrottleDown,
         Self::BrakeUp,
@@ -106,6 +107,7 @@ impl PlayerAction {
         Self::Sander,
         Self::TractionControls,
         Self::Doors,
+        Self::NextCab,
         Self::Emergency,
         Self::IndependentUp,
         Self::IndependentDown,
@@ -150,6 +152,7 @@ impl PlayerAction {
             Self::Sander => "Activar / desactivar arenado",
             Self::TractionControls => "Controles de vapor y diésel",
             Self::Doors => "Puertas",
+            Self::NextCab => "Cambiar puesto de conducción (detenido y neutro)",
             Self::Emergency => "Emergencia",
             Self::IndependentUp => "Aplicar freno independiente",
             Self::IndependentDown => "Soltar freno independiente",
@@ -195,6 +198,7 @@ impl PlayerAction {
             Self::Sander => KeyCode::KeyX,
             Self::TractionControls => KeyCode::KeyB,
             Self::Doors => KeyCode::KeyQ,
+            Self::NextCab => KeyCode::KeyL,
             Self::Emergency => KeyCode::Backspace,
             Self::IndependentUp => KeyCode::BracketRight,
             Self::IndependentDown => KeyCode::BracketLeft,

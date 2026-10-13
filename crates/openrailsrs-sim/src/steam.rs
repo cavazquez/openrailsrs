@@ -191,6 +191,18 @@ pub(crate) fn steam_step_with_force_limit(
     dt: f64,
     force_limit_n: f64,
 ) -> f64 {
+    steam_step_with_equipment(b, p, regulator, velocity_mps, dt, force_limit_n, None)
+}
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn steam_step_with_equipment(
+    b: &mut BoilerState,
+    p: &SteamParams,
+    regulator: f64,
+    velocity_mps: f64,
+    dt: f64,
+    force_limit_n: f64,
+    aux: Option<&openrailsrs_scenarios::vehicle_systems::AuxiliaryDef>,
+) -> f64 {
     if !dt.is_finite() || dt <= 0. {
         return b.tractive_force_n;
     }
@@ -241,8 +253,22 @@ pub(crate) fn steam_step_with_force_limit(
         p.evaporation_rate_kg_per_s * burn / (p.coal_consumption_kg_per_s.max(0.001) * dt)
     };
     let injector_count = usize::from(b.controls.injector1) + usize::from(b.controls.injector2);
-    let injected = if b.pressure_bar > 2. && !b.low_water_failure {
-        (injector_count as f64 * p.operation.injector_rate_kg_s * dt)
+    let injector_flow = aux.and_then(|p| p.native_injector_mm).map_or(
+        injector_count as f64 * p.operation.injector_rate_kg_s,
+        |sizes| {
+            [b.controls.injector1, b.controls.injector2]
+                .into_iter()
+                .zip(sizes)
+                .filter(|(on, _)| *on)
+                .map(|(_, size)| crate::steam_injectors::flow_kg_s(size, b.pressure_bar))
+                .sum()
+        },
+    );
+    let injected = if b.pressure_bar > 2.
+        && aux.is_none_or(|p| b.pressure_bar <= p.injector_max_pressure_bar)
+        && !b.low_water_failure
+    {
+        (injector_flow * dt)
             .min(b.tender_water_kg)
             .min((capacity * 0.95 - b.water_kg).max(0.))
     } else {
@@ -251,7 +277,7 @@ pub(crate) fn steam_step_with_force_limit(
     b.tender_water_kg -= injected;
     b.water_kg += injected;
     b.injection_kg_s = injected / dt;
-    let extras = injected / dt * 0.03
+    let extras = injected / dt * aux.map_or(0.03, |p| p.injector_steam_kg_per_water_kg)
         + pressure_fraction
             * (if b.controls.blower { 0.05 } else { 0. }
                 + if b.controls.cylinder_cocks && regulator > 0. {
@@ -264,7 +290,8 @@ pub(crate) fn steam_step_with_force_limit(
     b.water_kg -= used;
     b.steam_usage_kg_s = used / dt;
     // Cold injected water consumes boiler heat as well as injector steam.
-    let heat_j = (b.evaporation_kg_s * dt - used) * STEAM_ENTHALPY_J_KG - injected * 750_000.;
+    let heat_j = (b.evaporation_kg_s * dt - used) * STEAM_ENTHALPY_J_KG
+        - injected * aux.map_or(750_000., |p| (180. - p.feedwater_c).max(0.) * 4180.);
     let storage = b.water_kg.max(capacity * 0.15) * WATER_HEAT_STORAGE_J_KG_BAR;
     let pressure = (b.pressure_bar + heat_j / storage).max(0.);
     let maximum = p.working_pressure_bar * SAFETY_VALVE_FACTOR;

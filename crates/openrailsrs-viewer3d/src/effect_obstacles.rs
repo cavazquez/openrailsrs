@@ -41,12 +41,86 @@ impl Solid {
 
 #[derive(Resource, Default)]
 pub struct EffectObstacles {
+    pub roofs: Vec<RoofTriangle>,
+    roof_meshes:
+        std::collections::HashMap<bevy::asset::AssetId<Mesh>, std::sync::Arc<Vec<RoofTriangle>>>,
+    static_roofs: Vec<RoofTriangle>,
     pub solids: Vec<Solid>,
     elapsed: f32,
     center: Option<Vec3>,
     origin: Vec3,
     statics: Vec<Solid>,
     pub refreshes: u64,
+}
+#[derive(Clone, Copy, Debug)]
+pub struct RoofTriangle {
+    pub a: Vec3,
+    pub b: Vec3,
+    pub c: Vec3,
+}
+impl RoofTriangle {
+    pub fn height(&self, point: Vec2) -> Option<f32> {
+        let a = self.a.xz();
+        let b = self.b.xz();
+        let c = self.c.xz();
+        let cross = |p: Vec2, q: Vec2| p.x * q.y - p.y * q.x;
+        let det = cross(b - a, c - a);
+        if det.abs() < 1e-6 {
+            return None;
+        }
+        let u = cross(point - a, c - a) / det;
+        let v = cross(b - a, point - a) / det;
+        (u >= -0.0001 && v >= -0.0001 && u + v <= 1.0001)
+            .then_some(self.a.y + (self.b.y - self.a.y) * u + (self.c.y - self.a.y) * v)
+    }
+}
+fn roof_triangles(mesh: &Mesh, matrix: Mat4, out: &mut Vec<RoofTriangle>, limit: usize) {
+    let Some(bevy::mesh::VertexAttributeValues::Float32x3(vertices)) =
+        mesh.attribute(Mesh::ATTRIBUTE_POSITION)
+    else {
+        return;
+    };
+    let indices = mesh
+        .indices()
+        .map(|i| i.iter().collect::<Vec<_>>())
+        .unwrap_or_else(|| (0..vertices.len()).collect());
+    for index in indices.chunks_exact(3) {
+        if out.len() >= limit {
+            break;
+        }
+        let Some(a) = vertices.get(index[0]) else {
+            continue;
+        };
+        let Some(b) = vertices.get(index[1]) else {
+            continue;
+        };
+        let Some(c) = vertices.get(index[2]) else {
+            continue;
+        };
+        let (a, b, c) = (
+            matrix.transform_point3(Vec3::from_array(*a)),
+            matrix.transform_point3(Vec3::from_array(*b)),
+            matrix.transform_point3(Vec3::from_array(*c)),
+        );
+        let n = (b - a).cross(c - a);
+        if n.y.abs() > n.length() * 0.15 {
+            out.push(RoofTriangle { a, b, c });
+        }
+    }
+}
+fn transform_roofs(
+    template: &[RoofTriangle],
+    matrix: Mat4,
+    out: &mut Vec<RoofTriangle>,
+    limit: usize,
+) {
+    for t in template.iter().take(limit.saturating_sub(out.len())) {
+        out.push(RoofTriangle {
+            a: matrix.transform_point3(t.a),
+            b: matrix.transform_point3(t.b),
+            c: matrix.transform_point3(t.c),
+        });
+    }
 }
 impl EffectObstacles {
     pub fn blocked(&self, from: Vec3, to: Vec3, source: Option<Entity>) -> bool {
@@ -70,6 +144,12 @@ impl EffectObstacles {
     }
     /// Conservative near-field cover using individual opaque parts, excluding trains.
     pub fn overhead(&self, point: Vec3) -> bool {
+        if !self.roofs.is_empty() {
+            return self.roofs.iter().any(|t| {
+                t.height(point.xz())
+                    .is_some_and(|h| h > point.y + 0.15 && h < point.y + 12.)
+            });
+        }
         self.solids
             .iter()
             .any(|b| b.owner.is_none() && b.hits(point, point + Vec3::Y * 12.0))
@@ -145,8 +225,13 @@ pub fn update(
         || obstacles.origin != origin.shift;
     if refresh {
         obstacles.statics.clear();
+        obstacles.static_roofs.clear();
+        obstacles
+            .roof_meshes
+            .retain(|id, _| scene.meshes.get(*id).is_some());
     }
     let mut dynamic = Vec::new();
+    let mut dynamic_roofs = Vec::new();
     for (tf, bounds, mesh, standard, source, native, instances, appearance, train, parent) in
         &scene.objects
     {
@@ -198,10 +283,26 @@ pub fn update(
             if broad_axes < 2 || solid.distance2(center) > 160.0_f32.powi(2) {
                 return;
             }
+            let template = if let Some(cached) = obstacles.roof_meshes.get(&mesh.0.id()) {
+                cached.clone()
+            } else {
+                let mut triangles = Vec::new();
+                if let Some(source) = scene.meshes.get(&mesh.0) {
+                    roof_triangles(source, Mat4::IDENTITY, &mut triangles, 8192);
+                }
+                let triangles = std::sync::Arc::new(triangles);
+                if obstacles.roof_meshes.len() >= 256 {
+                    obstacles.roof_meshes.clear();
+                }
+                obstacles.roof_meshes.insert(mesh.0.id(), triangles.clone());
+                triangles
+            };
             if train {
                 dynamic.push(solid);
+                transform_roofs(&template, matrix, &mut dynamic_roofs, 8192);
             } else {
                 obstacles.statics.push(solid);
+                transform_roofs(&template, matrix, &mut obstacles.static_roofs, 32768);
             }
         };
         if let Some(instances) = instances {
@@ -232,6 +333,8 @@ pub fn update(
     dynamic.truncate(64);
     obstacles.solids = obstacles.statics.clone();
     obstacles.solids.extend(dynamic);
+    obstacles.roofs = obstacles.static_roofs.clone();
+    obstacles.roofs.extend(dynamic_roofs);
 }
 
 #[cfg(test)]

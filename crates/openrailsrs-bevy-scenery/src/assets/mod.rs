@@ -375,6 +375,89 @@ mod tests {
     }
 
     #[test]
+    fn absolute_owned_legacy_bundle_keeps_world_and_height_buffers_after_reload() {
+        let source = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/player_lab/route");
+        let temp = tempfile::tempdir().unwrap();
+        for folder in ["WORLD", "TERRAIN"] {
+            std::fs::create_dir(temp.path().join(folder)).unwrap();
+            for entry in std::fs::read_dir(source.join(folder)).unwrap() {
+                let path = entry.unwrap().path();
+                if path.is_file() {
+                    std::fs::copy(
+                        &path,
+                        temp.path().join(folder).join(path.file_name().unwrap()),
+                    )
+                    .unwrap();
+                }
+            }
+        }
+        let manifest = temp.path().join("tile.tilebundle");
+        write_tile_bundle_manifest(
+            &manifest,
+            &TileBundleManifest {
+                tile_x: 0,
+                tile_z: 0,
+                world: Some(
+                    temp.path()
+                        .join("WORLD/w-000000-000000.w")
+                        .to_string_lossy()
+                        .into_owned(),
+                ),
+                terrain: Some(
+                    temp.path()
+                        .join("TERRAIN/+000000+000000.y")
+                        .to_string_lossy()
+                        .into_owned(),
+                ),
+            },
+        )
+        .unwrap();
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(AssetPlugin {
+                file_path: temp.path().to_string_lossy().into_owned(),
+                unapproved_path_mode: bevy::asset::UnapprovedPathMode::Allow,
+                ..default()
+            })
+            .add_plugins(MstsAssetPlugin);
+        for _ in 0..2 {
+            let handle: Handle<MstsTileBundleAsset> = app
+                .world()
+                .resource::<AssetServer>()
+                .load(manifest.to_string_lossy().into_owned());
+            wait_loaded(&mut app, &handle, "owned legacy bundle");
+            let bundle = app
+                .world()
+                .resource::<Assets<MstsTileBundleAsset>>()
+                .get(&handle)
+                .unwrap();
+            assert_eq!(
+                bundle.terrain_raw_status,
+                Some(TerrainRawStatus::Complete),
+                "{:?}",
+                bundle.diag.failures
+            );
+            let terrain = app
+                .world()
+                .resource::<Assets<MstsTerrainTileAsset>>()
+                .get(bundle.terrain.as_ref().unwrap())
+                .unwrap();
+            assert!(terrain.elevation.is_some());
+            let world = app
+                .world()
+                .resource::<Assets<MstsWorldTileAsset>>()
+                .get(bundle.world.as_ref().unwrap())
+                .unwrap();
+            assert_eq!(world.world.items.len(), 5);
+            drop(handle);
+            for _ in 0..8 {
+                app.update();
+            }
+        }
+    }
+
+    #[test]
     fn tile_bundle_loads_terrain_with_single_parse() {
         // #79: load_value + labeled asset must not parse the same .y twice.
         // Exclusive fixture path so parallel asset tests cannot inflate the counter.

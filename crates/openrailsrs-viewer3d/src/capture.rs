@@ -269,6 +269,8 @@ pub struct CaptureScene<'w, 's> {
     world_draws: Res<'w, crate::world_instancing::WorldDrawCounters>,
     #[cfg(feature = "dev-tools")]
     camera_journey: Res<'w, crate::dev_camera::CameraJourney>,
+    #[cfg(feature = "dev-tools")]
+    equipment_capture: Option<Res<'w, crate::equipment_capture::EquipmentCapture>>,
     #[cfg(feature = "dev-inspector")]
     inspector: Option<Res<'w, crate::dev_inspector::InspectorState>>,
     #[cfg(any(feature = "dev-tools", feature = "experimental-framepace"))]
@@ -290,6 +292,9 @@ pub struct CaptureScene<'w, 's> {
     fog: Option<Res<'w, crate::ground_fog::FogDiagnostics>>,
     electric_contacts: Option<Res<'w, crate::electric_contact::ElectricContacts>>,
     motion: Option<Res<'w, crate::train_motion::TrainMotion>>,
+    station_lighting: Option<Res<'w, crate::station_lighting::StationLighting>>,
+    weather_obstacles: Option<Res<'w, crate::effect_obstacles::EffectObstacles>>,
+    passenger_eye: Option<Res<'w, crate::camera::PassengerCamState>>,
     windows_schedule: Option<Res<'w, crate::building_windows::WindowSchedules>>,
     adaptive: Option<Res<'w, crate::adaptive_graphics::AdaptiveGraphics>>,
     train_lamps: Query<
@@ -362,6 +367,18 @@ impl CaptureScene<'_, '_> {
             && self.pipelines.as_ref().is_none_or(|p| p.ready())
             && self.lod_fades.is_empty()
     }
+    fn equipment_capture_report(&self) -> serde_json::Value {
+        #[cfg(feature = "dev-tools")]
+        {
+            self.equipment_capture
+                .as_ref()
+                .map_or(serde_json::Value::Null, |s| serde_json::json!(s.results))
+        }
+        #[cfg(not(feature = "dev-tools"))]
+        {
+            serde_json::Value::Null
+        }
+    }
     fn report(&self, live: Option<&crate::live::LiveDrive>) -> serde_json::Value {
         let deferred = self
             .world
@@ -429,6 +446,7 @@ impl CaptureScene<'_, '_> {
             "train_animated_parts": self.train_parts.iter().count(),
             "train_shared_shapes": shared_shapes.len(),
             "performance": self.performance.report(),
+            "equipment_actions": self.equipment_capture_report(),
             "renderer": self.pipelines.as_ref().and_then(|p|p.device()),
             "native_audio": self.audio.as_ref().and_then(|a| a.engine.as_ref().map(|engine|engine.report())),
             "shader_pipelines": self.pipelines.as_ref().map(|p| {
@@ -527,6 +545,16 @@ impl CaptureScene<'_, '_> {
         {
             report["camera_journey"] = self.camera_journey.report();
         }
+        report["station_lighting"] = self
+            .station_lighting
+            .as_ref()
+            .map_or(serde_json::Value::Null, |s| s.report());
+        report["weather_shelter"]=self.weather_obstacles.as_ref().map_or(serde_json::Value::Null,|s|serde_json::json!({"roof_triangles":s.roofs.len(),"refreshes":s.refreshes,"shared_cpu_gpu":true}));
+        report["vehicle_equipment"]=live.map_or(serde_json::Value::Null,|l|serde_json::json!({"active_cab":l.session.cab_vehicle(),"cars":l.session.state.vehicle_systems}));
+        report["passenger_eye"] = self.passenger_eye.as_ref().map_or(
+            serde_json::Value::Null,
+            |p| serde_json::json!({"vehicle":p.consist_car,"head_msts":p.head_msts.to_array()}),
+        );
         report["building_windows"] = self
             .windows_schedule
             .as_ref()
@@ -536,7 +564,7 @@ impl CaptureScene<'_, '_> {
         report["train_lamps"]=serde_json::json!(self.train_lamps.iter().filter(|(l,_,_)|l.intensity>0.).map(|(l,h,p)|serde_json::json!({"service":h.map(|h|h.service_index),"vehicle":h.map(|h|h.vehicle_index).or_else(||p.map(|p|p.vehicle)),"passenger":p.is_some(),"intensity":l.intensity,"shadows":l.shadow_maps_enabled,"range":l.range})).collect::<Vec<_>>());
         report["draw_calls"] = self.world_draws.report();
         report["enhanced_scenery"] = self.enhanced_scenery.report();
-        report["weather_state"] = self.weather_state.as_ref().map_or(serde_json::Value::Null,|s|serde_json::json!({"atmosphere":s.atmosphere,"profile":s.profile,"seed":s.seed,"live":s.live,"journey":s.journey,"elapsed_s":s.timeline_elapsed_s()}));
+        report["weather_state"] = self.weather_state.as_ref().map_or(serde_json::Value::Null,|s|serde_json::json!({"atmosphere":s.atmosphere,"profile":s.profile,"seed":s.seed,"live":s.live,"journey":s.journey,"elapsed_s":s.timeline_elapsed_s(),"advection":s.advection}));
         report["moon"] = self.moon.as_ref().map_or(serde_json::Value::Null, |m| serde_json::json!({"illuminated":m.illuminated,"altitude_deg":m.altitude_deg,"date":m.date,"lux":m.lux}));
         #[cfg(any(feature = "dev-tools", feature = "experimental-framepace"))]
         {

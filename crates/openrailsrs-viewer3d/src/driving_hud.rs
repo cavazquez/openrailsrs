@@ -451,7 +451,13 @@ fn update_driving_hud(
                         format!(
                             "{} · agarre {:.0}%{}\nArena: {}",
                             r.weather.label(),
-                            r.weather_factor * 100.,
+                            r.weather_factor
+                                * session
+                                    .state
+                                    .surface_conditions
+                                    .as_ref()
+                                    .map_or(1., |s| s.grip_multiplier())
+                                * 100.,
                             if cab.wheel_slip { " · PATINA" } else { "" },
                             r.sander_status()
                         )

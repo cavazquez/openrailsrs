@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AirCircuit {
+    #[serde(default)]
+    pub charged_bar_m3: f64,
     pub vehicle: usize,
     pub params: AirCircuitParams,
     pub reservoir_bar: f64,
@@ -15,6 +17,7 @@ pub struct AirCircuit {
 impl AirCircuit {
     pub fn new(vehicle: usize, params: AirCircuitParams) -> Self {
         Self {
+            charged_bar_m3: 0.,
             vehicle,
             reservoir_bar: params.maximum_bar,
             params,
@@ -24,6 +27,7 @@ impl AirCircuit {
         }
     }
     pub fn step(&mut self, command: f64, service_bar: f64, full_bar: f64, powered: bool, dt: f64) {
+        self.charged_bar_m3 = 0.;
         if !dt.is_finite() || dt <= 0.0 {
             return;
         }
@@ -47,8 +51,10 @@ impl AirCircuit {
             self.compressor_on = true;
         }
         if self.compressor_on {
+            let before = self.reservoir_bar;
             self.reservoir_bar =
                 (self.reservoir_bar + self.params.charging_bar_s * dt).min(self.params.maximum_bar);
+            self.charged_bar_m3 = (self.reservoir_bar - before) * self.params.reservoir_m3;
         }
     }
     pub fn valid(&self) -> bool {

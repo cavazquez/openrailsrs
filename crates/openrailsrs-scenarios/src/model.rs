@@ -195,6 +195,12 @@ pub struct DavisSection {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct TrainSection {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub freight: Option<crate::freight::FreightService>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub systems: Vec<crate::vehicle_systems::VehicleSystemsDef>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub platform_sides: Vec<crate::vehicle_systems::PlatformSideDef>,
     #[serde(default)]
     pub announcements: crate::announcements::AnnouncementPackage,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -305,6 +311,10 @@ pub struct ShuntingStep {
 /// `[[extra_trains]]` with their own route, consist, and departure time.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct TrainEntryDef {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub freight: Option<crate::freight::FreightService>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub systems: Vec<crate::vehicle_systems::VehicleSystemsDef>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub electric_pickups: Vec<openrailsrs_core::electrification::ElectricPickupOverride>,
     /// Unique identifier used in `BlockWait`/`BlockClear` events.
@@ -458,6 +468,24 @@ impl ScenarioFile {
         if !self.train.announcements.valid() {
             return Err(ScenarioError::Validation(
                 "Paquete de anuncios sin procedencia/licencia o inválido".into(),
+            ));
+        }
+        if self.train.freight.as_ref().is_some_and(|p| !p.valid())
+            || self.extra_trains.iter().any(|e| {
+                e.freight.as_ref().is_some_and(|p| !p.valid())
+                    || !crate::vehicle_systems::valid_definitions(&e.systems, &[])
+            })
+        {
+            return Err(crate::ScenarioError::Validation(
+                "Servicio de mercancías o equipos de tráfico inválidos".into(),
+            ));
+        }
+        if !crate::vehicle_systems::valid_definitions(
+            &self.train.systems,
+            &self.train.platform_sides,
+        ) {
+            return Err(ScenarioError::Validation(
+                "Equipos de vehículo o lados de andén inválidos".into(),
             ));
         }
         if self.train.presentation.len() > 256

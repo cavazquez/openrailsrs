@@ -581,13 +581,19 @@ pub fn update(
         }
         if let Some(solids) = &solids {
             let grid_center = state.shelter_center;
-            for solid in &solids.solids {
-                raster_roof(
-                    &mut state.shelter_values,
-                    grid_center,
-                    (solid.min + solid.max) * 0.5,
-                    (solid.max - solid.min) * 0.5,
-                );
+            if !solids.roofs.is_empty() {
+                for roof in &solids.roofs {
+                    raster_triangle(&mut state.shelter_values, grid_center, roof);
+                }
+            } else {
+                for solid in &solids.solids {
+                    raster_roof(
+                        &mut state.shelter_values,
+                        grid_center,
+                        (solid.min + solid.max) * 0.5,
+                        (solid.max - solid.min) * 0.5,
+                    );
+                }
             }
         } else {
             // The shared cache already filters materials and bounds nearby
@@ -765,6 +771,25 @@ fn encode_shelter(values: &[f32], base: f32) -> Vec<u8> {
         .collect()
 }
 
+fn raster_triangle(
+    values: &mut [f32],
+    grid_center: Vec2,
+    t: &crate::effect_obstacles::RoofTriangle,
+) {
+    let lo = t.a.xz().min(t.b.xz()).min(t.c.xz());
+    let hi = t.a.xz().max(t.b.xz()).max(t.c.xz());
+    let min = (lo - grid_center + Vec2::splat(HALF)) / (HALF * 2.) * GRID as f32;
+    let max = (hi - grid_center + Vec2::splat(HALF)) / (HALF * 2.) * GRID as f32;
+    for z in (min.y.floor().max(0.) as usize)..(max.y.ceil().max(0.) as usize).min(GRID) {
+        for x in (min.x.floor().max(0.) as usize)..(max.x.ceil().max(0.) as usize).min(GRID) {
+            let p = grid_center - Vec2::splat(HALF)
+                + Vec2::new(x as f32 + 0.5, z as f32 + 0.5) / GRID as f32 * (HALF * 2.);
+            if let Some(height) = t.height(p) {
+                values[z * GRID + x] = values[z * GRID + x].max(height);
+            }
+        }
+    }
+}
 fn raster_roof(values: &mut [f32], grid_center: Vec2, center: Vec3, extent: Vec3) {
     let min =
         (center.xz() - extent.xz() - grid_center + Vec2::splat(HALF)) / (HALF * 2.0) * GRID as f32;
@@ -887,6 +912,30 @@ mod tests {
         let rebased = particle_position(seed, &p);
         assert!((rebased + Vec3::X * 256.0 - start).length() < 1e-4);
         assert!(particle_corner(seed, Vec2::ZERO, &p).length() < 0.10);
+    }
+    #[test]
+    fn sloped_roof_preserves_a_skylight_in_the_cpu_and_hanabi_masks() {
+        use crate::effect_obstacles::RoofTriangle;
+        let mut values = vec![-512.; GRID * GRID];
+        for (lo, hi) in [(-12., -4.), (4., 12.)] {
+            let a = Vec3::new(lo, 3. + lo * 0.1, -12.);
+            let b = Vec3::new(hi, 3. + hi * 0.1, -12.);
+            let c = Vec3::new(hi, 3. + hi * 0.1, 12.);
+            let d = Vec3::new(lo, 3. + lo * 0.1, 12.);
+            raster_triangle(&mut values, Vec2::ZERO, &RoofTriangle { a, b, c });
+            raster_triangle(&mut values, Vec2::ZERO, &RoofTriangle { a, b: c, c: d });
+        }
+        let mid = GRID / 2 * GRID + GRID / 2;
+        assert_eq!(values[mid], -512., "skylight is open to precipitation");
+        let covered = GRID / 2 * GRID + GRID / 2 + 4;
+        assert!(values[covered] > 3.);
+        let packed = encode_shelter(&values, -180.);
+        let decode = |i: usize| {
+            -180.
+                + f32::from(u16::from_be_bytes([packed[i * 4], packed[i * 4 + 1]])) / 65535. * 512.
+        };
+        assert!(decode(mid) < -170.);
+        assert!((decode(covered) - values[covered]).abs() < 0.01);
     }
     #[test]
     fn roof_height_mask_is_bounded_and_preserves_surroundings() {

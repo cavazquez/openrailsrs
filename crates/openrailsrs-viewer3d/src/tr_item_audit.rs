@@ -292,6 +292,7 @@ mod tests {
         local_z: f64,
     ) -> TrackDbNode {
         TrackDbNode {
+            junction_shape_index: None,
             id,
             position: Some(TrackVectorPoint {
                 tile_x: tile.0,
@@ -329,6 +330,7 @@ mod tests {
 
     fn signal_item(id: u32, distance_m: f64) -> TrItem {
         TrItem {
+            speed_post_flags: None,
             world: None,
             speed_post_angle_rad: None,
             id,

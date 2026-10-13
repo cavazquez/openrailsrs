@@ -9,6 +9,7 @@ use openrailsrs_track::TrackGraph;
 /// Physical data for a single edge in the path — everything `physics::step` needs.
 #[derive(Clone, Debug, Default)]
 pub struct PathEdgeData {
+    pub direction_xz: Option<[f64; 2]>,
     pub profile: openrailsrs_track::EdgePhysicsProfile,
     pub length_m: f64,
     pub speed_limit_mps: f64,
@@ -48,6 +49,56 @@ pub struct PathData {
 }
 
 impl PathData {
+    pub fn curve_at_chainage(&self, chainage: f64) -> (f64, f64) {
+        let mut before = 0.;
+        let location = self.edges.iter().enumerate().find_map(|(i, e)| {
+            let end = before + e.length_m;
+            let found = (chainage <= end || i + 1 == self.edges.len())
+                .then_some((i, (chainage - before).clamp(0., e.length_m)));
+            before = end;
+            found
+        });
+        let Some((index, position)) = location else {
+            return (0., 0.);
+        };
+        let curves = &self.edges[index].profile.curves;
+        let j = curves.partition_point(|p| p.position_m <= position);
+        j.checked_sub(1).map_or((0., 0.), |j| {
+            let p = &curves[j];
+            let cant = curves
+                .get(j + 1)
+                .filter(|q| q.position_m > p.position_m)
+                .map_or(p.cant_rad, |q| {
+                    p.cant_rad
+                        + (q.cant_rad - p.cant_rad)
+                            * ((position - p.position_m) / (q.position_m - p.position_m))
+                                .clamp(0., 1.)
+                });
+            (p.curvature_m_inv, cant)
+        })
+    }
+    pub fn forward_at_chainage(&self, chainage: f64) -> Option<[f64; 2]> {
+        let mut before = 0.;
+        for (i, e) in self.edges.iter().enumerate() {
+            if chainage <= before + e.length_m || i + 1 == self.edges.len() {
+                return self.forward_at_head(i, (chainage - before).clamp(0., e.length_m));
+            }
+            before += e.length_m;
+        }
+        None
+    }
+    pub fn forward_at_head(&self, index: usize, position: f64) -> Option<[f64; 2]> {
+        let edge = self.edges.get(index)?;
+        let j = edge
+            .profile
+            .curves
+            .partition_point(|p| p.position_m <= position);
+        if let Some(p) = j.checked_sub(1).and_then(|j| edge.profile.curves.get(j)) {
+            Some([p.heading_rad.cos(), p.heading_rad.sin()])
+        } else {
+            edge.direction_xz
+        }
+    }
     /// Vehicle pitch is the elevation change across its length. Integrating
     /// each native grade segment also handles a car spanning an edge boundary.
     pub fn average_grade_between(&self, start: f64, end: f64) -> f64 {
@@ -97,6 +148,13 @@ impl PathData {
                             inherited = Some(limit);
                         }
                         PathEdgeData {
+                            direction_xz: graph.node(&e.from.0).zip(graph.node(&e.to.0)).and_then(
+                                |(a, b)| {
+                                    let (x, z) = (b.x_m - a.x_m, b.y_m - a.y_m);
+                                    let len = x.hypot(z);
+                                    (len > 0.001).then_some([x / len, z / len])
+                                },
+                            ),
                             profile,
                             length_m: e.length_m,
                             speed_limit_mps: initial,
@@ -104,6 +162,7 @@ impl PathData {
                         }
                     })
                     .unwrap_or(PathEdgeData {
+                        direction_xz: None,
                         profile: Default::default(),
                         length_m: 0.0,
                         speed_limit_mps: 55.0 / 3.6,
@@ -248,6 +307,7 @@ mod tests {
         g.set_physics_profile(
             "e1",
             EdgePhysicsProfile {
+                curves: vec![],
                 platforms: vec![],
                 speed_posts: vec![
                     PositionSpeedLimit {

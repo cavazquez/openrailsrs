@@ -8,7 +8,6 @@ use crate::coupler::{
 };
 use crate::path_data::PathData;
 use crate::state::TrainSimState;
-use crate::steam::steam_step_with_force_limit;
 
 const G: f64 = 9.80665;
 /// OR holds speed with brakes set while diesel RPM can still rise; no tractive demand.
@@ -119,6 +118,8 @@ pub fn step(
     };
 
     let v = state.velocity_mps.max(0.0);
+    crate::surface_conditions::update_program_input(state);
+    crate::vehicle_systems::advance_doors(state, train.vehicle_lengths_m.len(), dt);
     if let Some(program) = &state.weather_track
         && let Some(config) = &train.rail_adhesion
     {
@@ -131,6 +132,16 @@ pub fn step(
             state.pos_on_edge_m,
         );
         state.ambient_temperature_c = f64::from(frame.temperature_c);
+        let weather = crate::surface_conditions::SurfaceWeather {
+            temperature_c: f64::from(frame.temperature_c),
+            rain: f64::from(frame.rain),
+            snow: f64::from(frame.snow),
+            wind_mps: frame.wind_mps.map(f64::from),
+        };
+        state
+            .surface_conditions
+            .get_or_insert_with(|| crate::surface_conditions::SurfaceConditions::new(weather))
+            .weather = weather;
         use crate::adhesion::{RailAdhesionState, RailWeather};
         let weather = if frame.snow > 0.02 && frame.snow > frame.rain {
             RailWeather::Snow
@@ -151,6 +162,11 @@ pub fn step(
         rail.weather = weather;
         rail.weather_target_factor = Some(frame.rail_factor());
     }
+    if let Some(surface) = &mut state.surface_conditions {
+        surface.advance(dt);
+    }
+    crate::crosswind::advance(state, path_data, &train.vehicle_lengths_m, dt);
+    crate::tilting::advance(state, path_data, &train.vehicle_lengths_m, dt);
     crate::electric::advance(state, path_data, &train.electric, dt);
     let speed_cap = edge_data.speed_limit_at(state.pos_on_edge_m);
     let brake_frac = train.brake_mapping.command_to_sim_fraction(state.brake);
@@ -217,29 +233,74 @@ pub fn step(
     if train.native.is_none() && state.rail_adhesion.is_none() {
         state.brake_system.step_with_speed(brake_frac, dt, v);
     }
-    state.brake_system.step_circuits(&state.power_supply, dt);
-    let physical_throttle = train.native.as_ref().map_or(state.throttle, |native| {
-        native.throttle(
-            state.throttle,
-            state
-                .brake_system
-                .cylinders
-                .first()
-                .map_or(0., |c| c.pressure_bar()),
-        )
-    });
+    crate::auxiliary_work::step_circuits(state, dt);
+    let physical_throttle =
+        if !crate::vehicle_systems::doors_allow_traction(state, train.vehicle_lengths_m.len()) {
+            0.
+        } else {
+            train.native.as_ref().map_or(state.throttle, |native| {
+                native.throttle(
+                    state.throttle,
+                    state
+                        .brake_system
+                        .cylinders
+                        .first()
+                        .map_or(0., |c| c.pressure_bar()),
+                )
+            })
+        };
+    crate::multiple_unit::advance(state, train, dt);
     let native_brake_forces = state.brake_system.cylinder_forces_n(v);
     crate::power_supply::advance(state, &train.power_supply);
     crate::cab_equipment::advance(state, dt);
-    state.fuel_consumption_g += crate::diesel_operation::advance_with_supply(
+    let mut diesel_config = train.diesel.clone();
+    diesel_config.cars.retain(|c| {
+        !state
+            .vehicle_systems
+            .iter()
+            .any(|s| s.definition.vehicle == c.vehicle && !s.motors.is_empty())
+    });
+    // Preserve initialized native cars, but advance only the legacy subset.
+    let declared = state
+        .vehicle_systems
+        .iter()
+        .filter(|s| !s.motors.is_empty())
+        .map(|s| s.definition.vehicle)
+        .collect::<Vec<_>>();
+    let retained = state
+        .diesel
+        .cars
+        .iter()
+        .filter(|c| declared.contains(&c.vehicle))
+        .cloned()
+        .collect::<Vec<_>>();
+    state.diesel.cars.retain(|c| !declared.contains(&c.vehicle));
+    let vehicle_throttles = diesel_config
+        .cars
+        .iter()
+        .map(|c| {
+            (
+                c.vehicle,
+                crate::multiple_unit::throttle(state, c.vehicle, physical_throttle),
+            )
+        })
+        .collect();
+    state.fuel_consumption_g += crate::diesel_operation::advance_with_vehicle_throttles(
         &mut state.diesel,
-        &train.diesel,
+        &diesel_config,
         physical_throttle,
         dt,
         train.native.is_some(),
         &state.power_supply,
+        &vehicle_throttles,
     );
+    state.diesel.cars.extend(retained);
+    state.diesel.cars.sort_by_key(|c| c.vehicle);
+    crate::traction_energy::prepare(state, train.vehicle_lengths_m.len());
+    crate::engine_equipment::advance(state, physical_throttle, train.vehicle_lengths_m.len(), dt);
     crate::power_supply::advance(state, &train.power_supply);
+    crate::traction_energy::prepare(state, train.vehicle_lengths_m.len());
+    crate::brake_equipment::prepare_traction(state, train.vehicle_lengths_m.len(), v, dt);
     crate::power_supply::update_loads(
         state,
         &train.power_supply,
@@ -273,8 +334,15 @@ pub fn step(
     // ── Tractive force ────────────────────────────────────────────────────────
     // Steam path: boiler + cylinder model (updates boiler state in place).
     // Electric/diesel path: P/v law or explicit traction curve.
-    let mut f_motor = if let (Some(params), Some(boiler)) =
-        (&train.steam_params, state.boiler_state.as_mut())
+    let mut f_motor = if !state.steam_boilers.is_empty() {
+        crate::steam_equipment::advance(
+            state,
+            train.vehicle_lengths_m.len(),
+            physical_throttle,
+            steam_wheel_speed,
+            dt,
+        )
+    } else if let (Some(params), Some(boiler)) = (&train.steam_params, state.boiler_state.as_mut())
     {
         // Route limits are driving instructions. Only legacy toy scenarios use
         // the automatic power guard; a native regulator can produce overspeed.
@@ -283,7 +351,7 @@ pub fn step(
         } else {
             1.0
         };
-        let effective_throttle = state.throttle * factor;
+        let effective_throttle = physical_throttle * factor;
         let force_limit = if state.rail_adhesion.is_some() {
             let effort = if train.max_tractive_effort_n > 0. {
                 train.max_tractive_effort_n
@@ -299,13 +367,18 @@ pub fn step(
         } else {
             f64::INFINITY
         };
-        steam_step_with_force_limit(
+        crate::steam::steam_step_with_equipment(
             boiler,
             params,
             effective_throttle,
             steam_wheel_speed,
             dt,
             force_limit,
+            state
+                .vehicle_systems
+                .iter()
+                .find(|c| c.definition.vehicle == state.active_cab_vehicle.unwrap_or(0))
+                .and_then(|c| c.definition.auxiliaries.as_ref()),
         )
     } else if state.throttle > 0.0 || !train.diesel_engines.is_empty() {
         let speed_factor = if train.legacy_power_cap {
@@ -346,12 +419,18 @@ pub fn step(
             } else if brake_frac > BRAKE_TRACTION_CUTOFF {
                 0.0
             } else {
-                state.throttle
+                physical_throttle
             };
             for (i, engine) in train.diesel_engines.iter().enumerate() {
                 let rpm = state.diesel_rpm[i];
                 let vehicle_index = train.diesel_vehicle_indices.get(i).copied().unwrap_or(i);
-                let new_rpm = if let Some(car) = state.diesel.car(vehicle_index) {
+                let new_rpm = if let Some(fraction) =
+                    crate::engine_equipment::apparent_fraction(state, vehicle_index)
+                {
+                    engine.engine.as_ref().map_or(engine.idle_rpm(), |p| {
+                        p.idle_rpm + (p.max_rpm - p.idle_rpm) * fraction
+                    })
+                } else if let Some(car) = state.diesel.car(vehicle_index) {
                     car.rpm
                 } else if train.native.is_some() {
                     engine.advance_native_rpm(rpm, physical_throttle, dt)
@@ -360,11 +439,8 @@ pub fn step(
                 };
                 state.diesel_rpm[i] = new_rpm;
                 let vehicle_index = train.diesel_vehicle_indices.get(i).copied().unwrap_or(i);
-                let curve_throttle = if state.electric.power_available(vehicle_index)
-                    && state.diesel.power_available(vehicle_index)
-                    && state.power_supply.power_available(vehicle_index)
-                {
-                    traction_throttle
+                let curve_throttle = if crate::traction_energy::available(state, vehicle_index) {
+                    crate::multiple_unit::throttle(state, vehicle_index, traction_throttle)
                 } else {
                     0.
                 };
@@ -400,7 +476,18 @@ pub fn step(
                         .as_ref()
                         .and_then(|d| d.axles.get(i))
                         .map_or(v, |a| a.speed_mps.abs());
-                    let target = if let Some(native) = &train.native {
+                    let target = if let Some(fraction) =
+                        crate::engine_equipment::apparent_fraction(state, vehicle_index)
+                    {
+                        train
+                            .electric
+                            .fallback_cars
+                            .iter()
+                            .find(|(index, _)| *index == vehicle_index)
+                            .and_then(|(_, curve)| curve.interpolate(wheel_speed))
+                            .unwrap_or(0.)
+                            * curve_throttle.min(fraction)
+                    } else if let Some(native) = &train.native {
                         let vehicle_index =
                             train.diesel_vehicle_indices.get(i).copied().unwrap_or(i);
                         let profile = &native.vehicles[vehicle_index];
@@ -445,6 +532,17 @@ pub fn step(
                     force_n =
                         force_n.min((engine.engine_power_w(new_rpm) - load).max(0.0) / v.max(0.5));
                 }
+                force_n = crate::engine_equipment::limit_force(state, vehicle_index, force_n, v);
+                force_n = crate::brake_equipment::traction_limit(state, vehicle_index, force_n);
+                force_n = crate::traction_energy::limit_motor(
+                    state,
+                    vehicle_index,
+                    force_n,
+                    v,
+                    dt,
+                    train,
+                    path_data,
+                );
                 state.diesel_traction_force_n[i] = force_n;
                 if let Some(slot) = state.motor_force_n.get_mut(vehicle_index) {
                     *slot = force_n;
@@ -535,30 +633,31 @@ pub fn step(
             }
             f_total
         } else if !train.electric.cars.is_empty() || !train.diesel.cars.is_empty() {
-            train
-                .electric
-                .fallback_cars
-                .iter()
-                .filter(|(vehicle, _)| {
-                    state.electric.power_available(*vehicle)
-                        && state.diesel.power_available(*vehicle)
-                        && state.power_supply.power_available(*vehicle)
-                })
-                .map(|(vehicle, curve)| {
-                    let force = curve.interpolate(v).unwrap_or(0.0);
-                    let load = state.power_supply.vehicle_load_w(*vehicle);
-                    if load > 0.0 {
-                        (force - load / v.max(0.5)).max(0.0)
-                    } else {
-                        force
-                    }
-                })
-                .sum::<f64>()
-                * state.throttle
+            let mut total = 0.;
+            for (vehicle, curve) in &train.electric.fallback_cars {
+                let force = if crate::traction_energy::available(state, *vehicle) {
+                    (curve.interpolate(v).unwrap_or(0.)
+                        * crate::multiple_unit::throttle(state, *vehicle, physical_throttle)
+                        - state.power_supply.vehicle_load_w(*vehicle) / v.max(0.5))
+                    .max(0.)
+                } else {
+                    0.
+                };
+                let force = crate::engine_equipment::limit_force(state, *vehicle, force, v);
+                let force = crate::brake_equipment::traction_limit(state, *vehicle, force);
+                let force = crate::traction_energy::limit_motor(
+                    state, *vehicle, force, v, dt, train, path_data,
+                );
+                if let Some(slot) = state.motor_force_n.get_mut(*vehicle) {
+                    *slot = force;
+                }
+                total += force;
+            }
+            total
         } else if let Some(f_curve) = train.tractive.interpolate(v) {
-            f_curve * state.throttle
+            f_curve * physical_throttle
         } else {
-            (train.max_power_w / v.max(0.5)).min(train.max_tractive_effort_n) * state.throttle
+            (train.max_power_w / v.max(0.5)).min(train.max_tractive_effort_n) * physical_throttle
         };
         raw * speed_factor
     } else {
@@ -573,10 +672,7 @@ pub fn step(
             .map(|(i, curve)| {
                 (
                     *i,
-                    if state.electric.power_available(*i)
-                        && state.diesel.power_available(*i)
-                        && state.power_supply.power_available(*i)
-                    {
+                    if crate::traction_energy::available(state, *i) {
                         curve.interpolate(v).unwrap_or(0.)
                     } else {
                         0.
@@ -585,13 +681,13 @@ pub fn step(
             })
             .collect::<Vec<_>>();
         let sum = weights.iter().map(|(_, force)| force).sum::<f64>();
-        if sum > 0. && train.steam_params.is_none() {
+        if sum > 0. && train.steam_params.is_none() && train.electric.fallback_cars.is_empty() {
             for (i, force) in weights {
                 if let Some(slot) = state.motor_force_n.get_mut(i) {
                     *slot = f_motor * force / sum;
                 }
             }
-        } else if train.steam_params.is_some() {
+        } else if train.steam_params.is_some() && state.steam_boilers.is_empty() {
             let steam_weights = train
                 .rail_adhesion
                 .as_ref()
@@ -630,20 +726,21 @@ pub fn step(
             .map(|(i, c)| {
                 let weight = if train.steam_params.is_some() {
                     if c.steam {
-                        c.profile.driven_mass_kg
+                        if state.steam_boilers.is_empty() {
+                            c.profile.driven_mass_kg
+                        } else {
+                            state.motor_force_n.get(i).copied().unwrap_or(0.)
+                        }
                     } else {
                         0.
                     }
-                } else if state.electric.power_available(i)
-                    && state.diesel.power_available(i)
-                    && state.power_supply.power_available(i)
-                {
+                } else if crate::traction_energy::available(state, i) {
                     train
                         .electric
                         .fallback_cars
                         .iter()
                         .find(|(index, _)| *index == i)
-                        .and_then(|(_, curve)| curve.interpolate(v))
+                        .map(|_| state.motor_force_n.get(i).copied().unwrap_or(0.))
                         .unwrap_or(0.)
                 } else {
                     0.
@@ -724,6 +821,24 @@ pub fn step(
             f_brake = f_brake.min(cap);
         }
     }
+    let mut equipment_brake_forces = state.brake_system.cylinder_forces_n(v);
+    if equipment_brake_forces.is_empty() {
+        equipment_brake_forces = vec![
+            f_brake / train.vehicle_lengths_m.len().max(1) as f64;
+            train.vehicle_lengths_m.len()
+        ];
+    }
+
+    let equipped_brakes = state.vehicle_systems.iter().any(|s| {
+        s.definition.electric_brake.is_some()
+            || s.definition.brake_heat.is_some()
+            || s.definition.wheel_slide.is_some()
+    });
+    if equipped_brakes {
+        equipment_brake_forces =
+            crate::brake_equipment::forces(state, train, v, dt, equipment_brake_forces);
+        f_brake = equipment_brake_forces.iter().sum();
+    }
     let f_resist = train.davis.resistance_n(v);
     let grade_fraction = edge_data.grade_at(state.pos_on_edge_m) / 100.0;
     let f_grade = effective_mass * G * grade_fraction;
@@ -803,12 +918,14 @@ pub fn step(
             .multi_body_scalar_coast_below_v_mps
             .is_some_and(|threshold| state.throttle <= 0.0 && f_motor <= 1.0 && v < threshold);
         if scalar_coast {
-            let f_brake_coast =
-                if !state.brake_system.cylinders.is_empty() && state.rail_adhesion.is_none() {
-                    state.brake_system.total_force_n(v)
-                } else {
-                    f_brake
-                };
+            let f_brake_coast = if !equipped_brakes
+                && !state.brake_system.cylinders.is_empty()
+                && state.rail_adhesion.is_none()
+            {
+                state.brake_system.total_force_n(v)
+            } else {
+                f_brake
+            };
             let f_resist_coast = if train.vehicle_davis.len() == state.vehicles.len() {
                 state
                     .vehicles
@@ -868,7 +985,9 @@ pub fn step(
             }
             for _ in 0..n_sub {
                 let coupling_v = mass_weighted_mean_velocity(&state.vehicles, &masses).max(0.0);
-                let mut brake_forces: Vec<f64> = if !state.brake_system.cylinders.is_empty() {
+                let mut brake_forces: Vec<f64> = if equipped_brakes {
+                    equipment_brake_forces.clone()
+                } else if !state.brake_system.cylinders.is_empty() {
                     state.brake_system.cylinder_forces_n(coupling_v)
                 } else {
                     masses.iter().map(|m| f_brake * m / total_mass).collect()
@@ -984,12 +1103,16 @@ pub fn step(
         (f_motor.max(0.0) * v_avg + state.power_supply.auxiliary_w + state.power_supply.hotel_w)
             * effective_dt;
     // Regenerative braking: recover fraction of braking work.
-    let regen_factor =
-        if !train.electric.cars.is_empty() && !state.electric.cars.iter().any(|c| c.main_power) {
-            0.
-        } else {
-            train.regen_factor
-        };
+    let regen_factor = if state
+        .vehicle_systems
+        .iter()
+        .any(|c| c.definition.electric_brake.is_some())
+        || (!train.electric.cars.is_empty() && !state.electric.cars.iter().any(|c| c.main_power))
+    {
+        0.
+    } else {
+        train.regen_factor
+    };
     let regen_j = f_brake * v_avg * regen_factor * effective_dt;
     state.regen_energy_j += regen_j;
     state.cumulative_energy_j -= regen_j; // net consumed = gross - regen
@@ -1001,6 +1124,9 @@ pub fn step(
         let kwh = f_motor.max(0.0) * v_avg * effective_dt / 3_600_000.0;
         state.fuel_consumption_g += kwh * sfc;
     }
+    crate::auxiliary_work::steam_extras(state, effective_dt);
+    crate::traction_energy::account(state, v_avg, effective_dt);
+    crate::brake_equipment::account(state, v_avg, effective_dt);
     state.odometer_m += traveled;
     state.time = state.time + effective_dt;
     state.velocity_mps = if arrived { 0.0 } else { v_new };
@@ -1011,6 +1137,17 @@ pub fn step(
         dt,
     );
     crate::adhesion::finish(state, dt);
+    if let Some(rail) = &mut state.rail_adhesion {
+        for c in &state.vehicle_systems {
+            if c.definition.wheel_slide.is_some()
+                && c.definition.vehicle < train.vehicle_lengths_m.len()
+                && let Some(w) = rail.cars.get_mut(c.definition.vehicle)
+            {
+                w.wheel_speed_mps = c.brakes.wheel_speed_mps;
+                w.slipping = c.brakes.sliding;
+            }
+        }
+    }
 
     StepResult { arrived }
 }

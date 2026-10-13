@@ -16,6 +16,8 @@ Núcleo de simulación **sin gráficos** (Linux-first, Rust ≥1.95). CSV para s
 
 Fases y prioridades: [`ROADMAP.md`](ROADMAP.md). Docs: [`docs/README.md`](docs/README.md).
 
+La cuarta entrega amplía los equipos por vehículo: motores, pantógrafos, puertas, cabinas, alimentación entre coches, propulsión dual, frenos y auxiliares de vapor. También incorpora recorridos de mercancías, circulación por interiores permitidos y mejoras de iluminación, protección bajo techos, niebla y vidrio mojado. La [guía de los treinta cambios](docs/PLAYER_30_4_MANUAL.md) explica cómo probarlos y distingue los perfiles originales verificados de los modelos propios.
+
 La [web del proyecto](https://cavazquez.github.io/openrailsrs/) presenta el recorrido,
 capturas reales, la experiencia, instalación y estado de compatibilidad. Su fuente
 está en [`website/`](website/README.md), con layout y contenido separados y páginas de experiencia, contenido, instalación y compatibilidad.

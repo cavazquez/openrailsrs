@@ -499,6 +499,7 @@ mod tests {
         let s1 = section_at(100.0, 0.0, 1);
         let s2 = section_at(100.0, 100.0, 1);
         let node = openrailsrs_formats::TrackDbNode {
+            junction_shape_index: None,
             id: 1,
             position: None,
             pin_refs: Vec::new(),
@@ -547,6 +548,7 @@ mod tests {
         let s2 = section_at(200.0, 0.0, 3);
         let tdb = TrackDbFile {
             nodes: vec![TrackDbNode {
+                junction_shape_index: None,
                 id: 2,
                 position: None,
                 pin_refs: Vec::new(),
@@ -625,6 +627,7 @@ mod tests {
         };
         for i in 0..801 {
             tdb.nodes.push(TrackDbNode {
+                junction_shape_index: None,
                 id: 10_000 + i as u32,
                 position: None,
                 pin_refs: Vec::new(),
@@ -1036,6 +1039,7 @@ mod tests {
         let s2 = section_at(0.0, 200.0, 2);
         let tdb = TrackDbFile {
             nodes: vec![TrackDbNode {
+                junction_shape_index: None,
                 id: 2,
                 position: None,
                 pin_refs: Vec::new(),
@@ -1103,6 +1107,7 @@ mod tests {
         );
         let tdb = TrackDbFile {
             nodes: vec![TrackDbNode {
+                junction_shape_index: None,
                 id: 1,
                 position: None,
                 pin_refs: Vec::new(),

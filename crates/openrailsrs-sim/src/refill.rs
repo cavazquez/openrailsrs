@@ -40,6 +40,32 @@ impl LiveDriveSession {
                     _ => 0.,
                 }
             }
+            7 if self
+                .state
+                .vehicle_systems
+                .iter()
+                .any(|c| c.definition.vehicle == vehicle && !c.motors.is_empty()) =>
+            {
+                self.state
+                    .vehicle_systems
+                    .iter()
+                    .find(|c| c.definition.vehicle == vehicle)
+                    .unwrap()
+                    .motors
+                    .iter()
+                    .zip(
+                        &self
+                            .state
+                            .vehicle_systems
+                            .iter()
+                            .find(|c| c.definition.vehicle == vehicle)
+                            .unwrap()
+                            .definition
+                            .motors,
+                    )
+                    .map(|(s, p)| (p.fuel_l - s.fuel_l).max(0.) * DIESEL_KG_PER_L)
+                    .sum()
+            }
             7 => self
                 .state
                 .diesel
@@ -171,6 +197,26 @@ impl LiveDriveSession {
             6 => {
                 if let Some(b) = &mut self.state.boiler_state {
                     b.coal_kg += delivered;
+                }
+            }
+            7 if self
+                .state
+                .vehicle_systems
+                .iter()
+                .any(|c| c.definition.vehicle == op.vehicle && !c.motors.is_empty()) =>
+            {
+                let car = self
+                    .state
+                    .vehicle_systems
+                    .iter_mut()
+                    .find(|c| c.definition.vehicle == op.vehicle)
+                    .unwrap();
+                let mut remaining = delivered / DIESEL_KG_PER_L;
+                for (s, p) in car.motors.iter_mut().zip(&car.definition.motors) {
+                    let filled = remaining.min((p.fuel_l - s.fuel_l).max(0.));
+                    s.fuel_l += filled;
+                    s.refilled_l += filled;
+                    remaining -= filled;
                 }
             }
             7 => {

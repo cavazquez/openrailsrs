@@ -1,0 +1,63 @@
+[scenario]
+name = "Mercancías: servicio con circulación cruzada"
+description = "La formación cargada cumple tres paradas mientras otro servicio circula por la vía paralela."
+
+[route]
+path = "route_freight"
+start = "a"
+destination = "b"
+assume_signals_clear = true
+
+[[route.stops]]
+node = "a"
+arrive_s = 0.0
+depart_s = 5.0
+dwell_s = 5.0
+
+[[route.stops]]
+node = "mid"
+arrive_s = 90.0
+depart_s = 95.0
+dwell_s = 5.0
+
+[[route.stops]]
+node = "b"
+arrive_s = 160.0
+depart_s = 160.0
+dwell_s = 5.0
+
+[train]
+consist = "consists/freight.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+
+[simulation]
+duration = 240.0
+time_step = 0.05
+seed = 42
+legacy_power_cap = false
+
+[output]
+csv = "run.csv"
+metadata = "run.json"
+
+[train.freight]
+maximum_speed_mps=12.5
+[[train.freight.loads]]
+vehicle=1
+cargo_kg=25000.0
+
+[[extra_trains]]
+id="Servicio cruzado"
+consist="consists/freight.con"
+start="cross_b"
+destination="cross_a"
+start_time_s=5.0
+output_csv="crossing.csv"
+[extra_trains.freight]
+maximum_speed_mps=12.5
+[[extra_trains.freight.loads]]
+vehicle=1
+cargo_kg=25000.0

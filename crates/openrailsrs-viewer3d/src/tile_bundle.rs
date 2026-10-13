@@ -10,6 +10,7 @@
 //! (classified items + terrain RAW) instead of re-walking `WorldItem` /
 //! `TerrainFile` in app-local helpers.
 
+use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
@@ -65,7 +66,7 @@ pub fn request_tile_bundle(
     server.load(asset_path.into())
 }
 
-/// Discover WORLD/terrain for `(tile_x, tile_z)`, write a `.tilebundle` under the route,
+/// Discover WORLD/terrain for `(tile_x, tile_z)`, write a `.tilebundle` in player cache,
 /// and request it via AssetServer.
 ///
 /// Manifest paths are absolute so nested loaders resolve outside the shared asset root
@@ -80,7 +81,22 @@ pub fn request_route_tile_bundle(
 ) -> Option<Handle<MstsTileBundleAsset>> {
     let discovered = discover_tile_bundle_paths(route_dir, tile_x, tile_z);
     let world = world_path.map(Path::to_path_buf).or(discovered.world);
-    let terrain = terrain_path.map(Path::to_path_buf).or(discovered.terrain);
+    let terrain = terrain_path
+        .map(Path::to_path_buf)
+        .or(discovered.terrain)
+        .or_else(|| {
+            let dir = openrailsrs_formats::tile_paths::find_named_subdir(route_dir, "TERRAIN")?;
+            for extension in ["y", "t"] {
+                let candidate = dir.join(format!("{tile_x:+07}{tile_z:+07}.{extension}"));
+                if let Some(path) =
+                    openrailsrs_formats::encoding::resolve_path_case_insensitive(&candidate)
+                    && path.is_file()
+                {
+                    return Some(path);
+                }
+            }
+            None
+        });
     if world.is_none() && terrain.is_none() {
         return None;
     }
@@ -91,7 +107,16 @@ pub fn request_route_tile_bundle(
         world: world.as_ref().map(|p| p.to_string_lossy().into_owned()),
         terrain: terrain.as_ref().map(|p| p.to_string_lossy().into_owned()),
     };
-    let out_dir = route_dir.join(".openrailsrs").join("tilebundles");
+    let canonical = route_dir
+        .canonicalize()
+        .unwrap_or_else(|_| route_dir.to_path_buf());
+    let identity = format!(
+        "{:x}",
+        Sha256::digest(canonical.to_string_lossy().as_bytes())
+    );
+    let out_dir = openrailsrs_content::data_dir()
+        .join("cache/tilebundles")
+        .join(identity);
     let out_path = out_dir.join(format!("{tile_x}_{tile_z}.tilebundle"));
     if write_tile_bundle_manifest(&out_path, &manifest).is_err() {
         return None;

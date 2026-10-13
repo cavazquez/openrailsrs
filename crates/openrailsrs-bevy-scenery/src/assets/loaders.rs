@@ -300,12 +300,12 @@ impl AssetLoader for MstsTerrainTileAssetLoader {
                         );
                     }
                 },
-                Err(_) => {
+                Err(error) => {
                     diag.record_failed_at(
                         y_key,
                         MstsAssetKind::Terrain,
                         MstsLoadCause::Missing,
-                        "Y.RAW missing",
+                        format!("Y.RAW unavailable: {error}"),
                         Some(terrain.tile_x),
                         Some(terrain.tile_z),
                     );

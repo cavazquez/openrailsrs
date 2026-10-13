@@ -53,15 +53,18 @@ struct Contact {
 }
 #[derive(Resource, Default)]
 pub struct ElectricContacts {
-    curves: HashMap<Entity, CollectorCurve>,
-    targets: HashMap<Entity, f32>,
-    contacts: HashMap<Entity, Contact>,
+    curves: HashMap<(Entity, usize), CollectorCurve>,
+    targets: HashMap<(Entity, usize), f32>,
+    contacts: HashMap<(Entity, usize), Contact>,
     pub arc_events: u64,
     pub out_of_range: usize,
 }
 impl ElectricContacts {
     pub fn fraction(&self, car: Entity, physical: f32) -> f32 {
-        self.targets.get(&car).copied().unwrap_or(1.0) * physical
+        self.collector_fraction(car, 0, physical)
+    }
+    pub fn collector_fraction(&self, car: Entity, collector: usize, physical: f32) -> f32 {
+        self.targets.get(&(car, collector)).copied().unwrap_or(1.0) * physical
     }
     pub fn report(&self) -> serde_json::Value {
         serde_json::json!({"animated_collectors":self.curves.len(),"aligned_collectors":self.contacts.values().filter(|c|c.aligned).count(),
@@ -99,95 +102,123 @@ pub fn prepare_geometry(
         }) {
             continue;
         }
-        active.push(entity);
-        let part_count = parts
+        let count = session
+            .state
+            .electric
+            .cars
             .iter()
-            .filter(|(_, _, k, p)| {
-                p.parent() == entity && k.kind == RollingStockPartKind::Pantograph
-            })
-            .count();
-        if contacts
-            .curves
-            .get(&entity)
-            .is_some_and(|c| c.part_count != part_count)
-        {
-            contacts.curves.remove(&entity);
-        }
-        if let std::collections::hash_map::Entry::Vacant(entry) = contacts.curves.entry(entity) {
-            let mut heights = [f32::NEG_INFINITY; 17];
-            let mut point = Vec3::ZERO;
-            let mut complete = true;
-            for (mesh, binding, keyed, parent) in &parts {
-                if parent.parent() != entity
-                    || keyed.kind != RollingStockPartKind::Pantograph
-                    || binding.frame_count <= 0.0
-                {
-                    continue;
-                }
-                let Some(bevy::mesh::VertexAttributeValues::Float32x3(vertices)) = meshes
-                    .get(&mesh.0)
-                    .and_then(|m| m.attribute(Mesh::ATTRIBUTE_POSITION))
-                else {
-                    complete = false;
-                    continue;
-                };
-                for (i, height) in heights.iter_mut().enumerate() {
-                    let pose = animation_pose_matrices(
-                        &binding.shape,
-                        crate::rolling_stock_anim::key_from_frac(
-                            i as f32 / 16.0,
-                            binding.frame_count,
-                        ),
-                    );
-                    let transform = world_baked_anim_transform(
-                        Transform::IDENTITY,
-                        &binding.shape,
-                        keyed.matrix_idx,
-                        &pose,
-                    );
-                    // A rotated Aabb can overestimate the collector height by
-                    // metres. Use the actual rest-baked vertices, cached once.
-                    for vertex in vertices {
-                        let vertex = transform
-                            .to_matrix()
-                            .transform_point3(Vec3::from_array(*vertex));
-                        if vertex.y > *height {
-                            *height = vertex.y;
-                            if i == 16 {
-                                point = vertex;
+            .find(|c| c.vehicle == index.0)
+            .map_or(1, |c| c.pantographs.len().max(1));
+        for collector in 0..count {
+            let key = (entity, collector);
+            active.push(key);
+            let part_count = parts
+                .iter()
+                .filter(|(_, binding, k, p)| {
+                    p.parent() == entity
+                        && k.kind == RollingStockPartKind::Pantograph
+                        && collector_index(k, binding) == collector
+                })
+                .count();
+            if contacts
+                .curves
+                .get(&key)
+                .is_some_and(|c| c.part_count != part_count)
+            {
+                contacts.curves.remove(&key);
+            }
+            if let std::collections::hash_map::Entry::Vacant(entry) = contacts.curves.entry(key) {
+                let mut heights = [f32::NEG_INFINITY; 17];
+                let mut point = Vec3::ZERO;
+                let mut complete = true;
+                for (mesh, binding, keyed, parent) in &parts {
+                    if parent.parent() != entity
+                        || collector_index(keyed, binding) != collector
+                        || keyed.kind != RollingStockPartKind::Pantograph
+                        || binding.frame_count <= 0.0
+                    {
+                        continue;
+                    }
+                    let Some(bevy::mesh::VertexAttributeValues::Float32x3(vertices)) = meshes
+                        .get(&mesh.0)
+                        .and_then(|m| m.attribute(Mesh::ATTRIBUTE_POSITION))
+                    else {
+                        complete = false;
+                        continue;
+                    };
+                    for (i, height) in heights.iter_mut().enumerate() {
+                        let pose = animation_pose_matrices(
+                            &binding.shape,
+                            crate::rolling_stock_anim::key_from_frac(
+                                i as f32 / 16.0,
+                                binding.frame_count,
+                            ),
+                        );
+                        let transform = world_baked_anim_transform(
+                            Transform::IDENTITY,
+                            &binding.shape,
+                            keyed.matrix_idx,
+                            &pose,
+                        );
+                        // A rotated Aabb can overestimate the collector height by
+                        // metres. Use the actual rest-baked vertices, cached once.
+                        for vertex in vertices {
+                            let vertex = transform
+                                .to_matrix()
+                                .transform_point3(Vec3::from_array(*vertex));
+                            if vertex.y > *height {
+                                *height = vertex.y;
+                                if i == 16 {
+                                    point = vertex;
+                                }
                             }
                         }
                     }
                 }
+                if complete && heights.iter().all(|h| h.is_finite()) {
+                    entry.insert(CollectorCurve {
+                        heights,
+                        point,
+                        part_count,
+                    });
+                }
             }
-            if complete && heights.iter().all(|h| h.is_finite()) {
-                entry.insert(CollectorCurve {
-                    heights,
-                    point,
-                    part_count,
-                });
-            }
-        }
-        if let Some(curve) = contacts.curves.get(&entity) {
-            if let Some(fraction) = curve.fraction(wire.style.height_m) {
-                contacts.targets.insert(entity, fraction);
-            } else {
-                contacts.out_of_range += 1;
+            if let Some(curve) = contacts.curves.get(&key) {
+                if let Some(fraction) = curve.fraction(wire.style.height_m) {
+                    contacts.targets.insert(key, fraction);
+                } else {
+                    contacts.out_of_range += 1;
+                }
             }
         }
     }
     contacts.curves.retain(|e, _| active.contains(e));
 }
 
+fn collector_index(keyed: &TrainKeyedAnim, binding: &ShapeAnimBinding) -> usize {
+    binding
+        .shape
+        .matrices
+        .get(keyed.matrix_idx)
+        .and_then(|m| {
+            openrailsrs_formats::typed::vehicle_equipment::collector_matrix_index(&m.name)
+        })
+        .unwrap_or(0)
+}
 fn arc_transition(old: f64, new: f64, previously_loaded: bool, loaded: bool) -> bool {
     (old > 0.0 && new <= 0.0 && previously_loaded) || (old <= 0.0 && new > 0.0 && loaded)
 }
 #[derive(Component)]
-pub struct ContactFlash(Entity);
+pub struct ContactFlash(Entity, usize);
 
 pub fn spawn_flashes(
     mut commands: Commands,
-    cars: Query<(Entity, &TrainCarTrackOffset)>,
+    live: Res<crate::live::LiveDrive>,
+    cars: Query<(
+        Entity,
+        &TrainCarTrackOffset,
+        &crate::rolling_stock::ConsistCarIndex,
+    )>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
@@ -199,23 +230,29 @@ pub fn spawn_flashes(
         cull_mode: None,
         ..default()
     });
-    for (car, _) in &cars {
-        commands.spawn((
-            ContactFlash(car),
-            Mesh3d(mesh.clone()),
-            MeshMaterial3d(material.clone()),
-            Transform::IDENTITY,
-            Visibility::Hidden,
-            NotShadowCaster,
-            PointLight {
-                color: Color::srgb(0.6, 0.8, 1.0),
-                intensity: 0.0,
-                range: 3.0,
-                shadow_maps_enabled: false,
-                ..default()
-            },
-            Name::new("collector contact arc"),
-        ));
+    for (car, offset, index) in &cars {
+        let count = live
+            .session_for_track(offset.track_index)
+            .and_then(|s| s.state.electric.cars.iter().find(|c| c.vehicle == index.0))
+            .map_or(0, |c| c.pantographs.len().max(1));
+        for collector in 0..count {
+            commands.spawn((
+                ContactFlash(car, collector),
+                Mesh3d(mesh.clone()),
+                MeshMaterial3d(material.clone()),
+                Transform::IDENTITY,
+                Visibility::Hidden,
+                NotShadowCaster,
+                PointLight {
+                    color: Color::srgb(0.6, 0.8, 1.0),
+                    intensity: 0.0,
+                    range: 3.0,
+                    shadow_maps_enabled: false,
+                    ..default()
+                },
+                Name::new("collector contact arc"),
+            ));
+        }
     }
 }
 fn arc_mesh() -> Mesh {
@@ -288,51 +325,50 @@ pub fn update_contacts(
         else {
             continue;
         };
-        let curve = state.curves.get(&entity).cloned();
-        let aligned = wire.enabled
-            && state.targets.contains_key(&entity)
-            && electric.pantograph_fraction > 0.99;
-        let contact = state.contacts.entry(entity).or_default();
-        let clock = session.time_s();
-        let loaded = session.state.throttle > 0.05 && electric.main_power;
-        if contact.clock.is_some_and(|previous| clock < previous) {
-            *contact = Contact::default();
+        for collector in 0..electric.pantographs.len().max(1) {
+            let key = (entity, collector);
+            let physical = electric.pantographs.get(collector);
+            let fraction = physical.map_or(electric.pantograph_fraction, |p| p.fraction);
+            let voltage = physical.map_or(electric.contact_voltage_v, |p| p.contact_voltage_v);
+            let curve = state.curves.get(&key).cloned();
+            let aligned = wire.enabled && state.targets.contains_key(&key) && fraction > 0.99;
+            let contact = state.contacts.entry(key).or_default();
+            let clock = session.time_s();
+            let loaded = session.state.throttle > 0.05 && electric.main_power;
+            if contact.clock.is_some_and(|previous| clock < previous) {
+                *contact = Contact::default();
+            }
+            if !live.paused
+                && contact.clock.is_some()
+                && clock > contact.clock.unwrap()
+                && curve.is_some()
+                && (aligned || contact.aligned)
+                && clock - contact.last_arc >= 0.5
+                && arc_transition(contact.voltage, voltage, contact.loaded, loaded)
+            {
+                contact.last_arc = clock;
+                contact.flash_until = clock + 0.08;
+                events += 1;
+            }
+            if let Some(curve) = curve {
+                let mut point = curve.point;
+                point.y = wire.style.height_m;
+                contact.point = motion
+                    .as_ref()
+                    .map_or(*transform, |m| m.rigid_transform(entity, *transform))
+                    .transform_point(point);
+            }
+            contact.clock = Some(clock);
+            contact.voltage = voltage;
+            contact.loaded = loaded;
+            contact.aligned = aligned;
         }
-        if !live.paused
-            && contact.clock.is_some()
-            && clock > contact.clock.unwrap()
-            && curve.is_some()
-            && (aligned || contact.aligned)
-            && clock - contact.last_arc >= 0.5
-            && arc_transition(
-                contact.voltage,
-                electric.contact_voltage_v,
-                contact.loaded,
-                loaded,
-            )
-        {
-            contact.last_arc = clock;
-            contact.flash_until = clock + 0.08;
-            events += 1;
-        }
-        if let Some(curve) = curve {
-            let mut point = curve.point;
-            point.y = wire.style.height_m;
-            contact.point = motion
-                .as_ref()
-                .map_or(*transform, |m| m.rigid_transform(entity, *transform))
-                .transform_point(point);
-        }
-        contact.clock = Some(clock);
-        contact.voltage = electric.contact_voltage_v;
-        contact.loaded = loaded;
-        contact.aligned = aligned;
     }
     state.arc_events += events;
     for (flash, mut transform, mut global, mut visibility, mut light) in &mut flashes {
         let visible = state
             .contacts
-            .get(&flash.0)
+            .get(&(flash.0, flash.1))
             .is_some_and(|c| c.clock.is_some_and(|t| t < c.flash_until));
         *visibility = if visible {
             Visibility::Visible
@@ -340,7 +376,7 @@ pub fn update_contacts(
             Visibility::Hidden
         };
         light.intensity = if visible { 150.0 } else { 0.0 };
-        if let Some(contact) = state.contacts.get(&flash.0) {
+        if let Some(contact) = state.contacts.get(&(flash.0, flash.1)) {
             transform.translation = contact.point;
         }
         if let Ok((_, car, _, _)) = cars.get(flash.0) {

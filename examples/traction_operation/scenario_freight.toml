@@ -1,0 +1,50 @@
+[scenario]
+name = "Mercancías: 25 t de carga y límite de 45 km/h"
+description = "Formación propia con vagón de 20 t más 25 t de carga. Tres paradas breves."
+
+[route]
+path = "route"
+start = "a"
+destination = "b"
+assume_signals_clear = true
+
+[[route.stops]]
+node = "a"
+arrive_s = 0.0
+depart_s = 5.0
+dwell_s = 5.0
+
+[[route.stops]]
+node = "mid"
+arrive_s = 90.0
+depart_s = 95.0
+dwell_s = 5.0
+
+[[route.stops]]
+node = "b"
+arrive_s = 160.0
+depart_s = 160.0
+dwell_s = 5.0
+
+[train]
+consist = "consists/freight.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+
+[simulation]
+duration = 240.0
+time_step = 0.05
+seed = 42
+legacy_power_cap = false
+
+[output]
+csv = "run.csv"
+metadata = "run.json"
+
+[train.freight]
+maximum_speed_mps=12.5
+[[train.freight.loads]]
+vehicle=1
+cargo_kg=25000.0

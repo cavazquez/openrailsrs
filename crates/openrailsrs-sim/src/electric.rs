@@ -9,6 +9,7 @@ use std::path::Path;
 
 #[derive(Clone, Debug)]
 pub struct ElectricCar {
+    pub flipped: bool,
     pub vehicle: usize,
     pub offset_m: f64,
     pub enabled: bool,
@@ -106,6 +107,7 @@ impl ElectricTrainConfig {
                 && let Some(params) = &loco.electric
             {
                 result.cars.push(ElectricCar {
+                    flipped: loco.flipped,
                     vehicle: i,
                     offset_m: offset + length * 0.5,
                     enabled: true,
@@ -220,6 +222,16 @@ impl PowerLoss {
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct ElectricCarState {
+    #[serde(default)]
+    pub pantographs: Vec<PantographState>,
+    #[serde(default)]
+    pub pantograph_filter: crate::voltage_filter::VoltageFilter,
+    #[serde(default)]
+    pub voltage_filter: crate::voltage_filter::VoltageFilter,
+    #[serde(default)]
+    pub filtered_contact_voltage_v: f64,
+    #[serde(default)]
+    pub filter_voltage_v: f64,
     pub vehicle: usize,
     pub pantograph_fraction: f64,
     pub breaker: BreakerState,
@@ -229,6 +241,19 @@ pub struct ElectricCarState {
     pub contact_voltage_v: f64,
     pub main_power: bool,
     pub loss: PowerLoss,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct PantographState {
+    /// None follows the consist command; a local command controls only this collector.
+    pub command_up: Option<bool>,
+    pub fraction: f64,
+    pub contact_voltage_v: f64,
+    #[serde(default = "contact_enabled_default")]
+    pub contact_enabled: bool,
+}
+fn contact_enabled_default() -> bool {
+    true
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -266,6 +291,19 @@ impl ElectricTrainState {
         self.cars.len() == config.cars.len()
             && self.cars.iter().zip(&config.cars).all(|(state, car)| {
                 state.vehicle == car.vehicle
+                    && (state.pantographs.is_empty()
+                        || state.pantographs.len() == car.params.pantographs.len())
+                    && state.pantographs.iter().all(|p| {
+                        p.fraction.is_finite()
+                            && (0. ..=1.).contains(&p.fraction)
+                            && p.contact_voltage_v.is_finite()
+                            && p.contact_voltage_v >= 0.
+                    })
+                    && state.pantograph_filter.valid()
+                    && state.voltage_filter.valid()
+                    && [state.filtered_contact_voltage_v, state.filter_voltage_v]
+                        .iter()
+                        .all(|v| v.is_finite() && *v >= 0.)
                     && state.pantograph_fraction.is_finite()
                     && (0. ..=1.).contains(&state.pantograph_fraction)
                     && [
@@ -329,15 +367,43 @@ pub fn advance(state: &mut TrainSimState, path: &PathData, config: &ElectricTrai
             )
         })
         .collect();
-    for ((car, supply), current) in config
+    let collector_supplies = config
+        .cars
+        .iter()
+        .map(|car| {
+            let center = chainage
+                + if state.path_reversed {
+                    -config.length_m + car.offset_m
+                } else {
+                    -car.offset_m
+                };
+            car.params
+                .pantographs
+                .iter()
+                .map(|p| {
+                    config.supply_at(
+                        state,
+                        path,
+                        center
+                            + p.offset_m
+                                * if car.flipped { -1. } else { 1. }
+                                * if state.path_reversed { -1. } else { 1. },
+                    )
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+    for (((car, mut supply), current), collector_supplies) in config
         .cars
         .iter()
         .zip(supplies)
         .zip(&mut state.electric.cars)
+        .zip(collector_supplies)
     {
         let p = &car.params;
+        let previous_fraction = current.pantograph_fraction;
         let up = state.electric.pantograph_command_up;
-        let contact_delay = if p.pickup == ElectricPickup::Overhead && up {
+        let mut contact_delay = if p.pickup == ElectricPickup::Overhead && up {
             (1. - current.pantograph_fraction) * p.pantograph_delay_s
         } else {
             0.
@@ -353,13 +419,79 @@ pub fn advance(state: &mut TrainSimState, path: &PathData, config: &ElectricTrai
             0.
         };
         current.line_voltage_v = supply.voltage_v;
-        let pickup_ready =
+        let mut pickup_ready =
             p.pickup != ElectricPickup::Overhead || (up && current.pantograph_fraction >= 1.);
         current.contact_voltage_v = if pickup_ready && supply.kind == p.pickup {
             supply.voltage_v
         } else {
             0.
         };
+        if p.pickup == ElectricPickup::Overhead && !p.pantographs.is_empty() {
+            if current.pantographs.is_empty() {
+                current.pantographs = p
+                    .pantographs
+                    .iter()
+                    .enumerate()
+                    .map(|(i, _)| PantographState {
+                        command_up: if i == 0 { None } else { Some(false) },
+                        fraction: if i == 0 { previous_fraction } else { 0. },
+                        contact_enabled: true,
+                        ..Default::default()
+                    })
+                    .collect();
+            }
+            contact_delay = f64::INFINITY;
+            pickup_ready = false;
+            current.contact_voltage_v = 0.;
+            for ((collector, params), line) in current
+                .pantographs
+                .iter_mut()
+                .zip(&p.pantographs)
+                .zip(&collector_supplies)
+            {
+                let command = collector.command_up.unwrap_or(up);
+                if command
+                    && collector.contact_enabled
+                    && line.kind == p.pickup
+                    && line.voltage_v > 0.
+                {
+                    contact_delay = contact_delay.min((1. - collector.fraction) * params.delay_s);
+                }
+                let delta = if params.delay_s > 0. {
+                    dt / params.delay_s
+                } else {
+                    1.
+                };
+                collector.fraction =
+                    (collector.fraction + if command { delta } else { -delta }).clamp(0., 1.);
+                let ready = command && collector.fraction >= 1.;
+                pickup_ready |= ready;
+                collector.contact_voltage_v =
+                    if ready && collector.contact_enabled && line.kind == p.pickup {
+                        line.voltage_v
+                    } else {
+                        0.
+                    };
+                current.contact_voltage_v =
+                    current.contact_voltage_v.max(collector.contact_voltage_v);
+            }
+            current.pantograph_fraction = current
+                .pantographs
+                .iter()
+                .map(|p| p.fraction)
+                .fold(0., f64::max);
+            if let Some(line) = collector_supplies
+                .iter()
+                .filter(|s| s.kind == p.pickup && s.voltage_v > 0.)
+                .max_by(|a, b| a.voltage_v.total_cmp(&b.voltage_v))
+            {
+                supply = line.clone();
+            }
+            current.line_voltage_v = supply.voltage_v;
+            if !contact_delay.is_finite() {
+                contact_delay = 0.;
+            }
+        }
         let loss = if !car.enabled {
             PowerLoss::Isolated
         } else if supply.kind == ElectricPickup::None || supply.voltage_v <= 0. {
@@ -368,8 +500,11 @@ pub fn advance(state: &mut TrainSimState, path: &PathData, config: &ElectricTrai
             PowerLoss::IncompatiblePickup
         } else if !pickup_ready {
             PowerLoss::Pantograph
-        } else if supply.voltage_v < p.minimum_voltage_v
-            || p.maximum_voltage_v.is_some_and(|v| supply.voltage_v > v)
+        } else if current.contact_voltage_v <= 0. {
+            PowerLoss::NoSupply
+        } else if current.contact_voltage_v < p.minimum_voltage_v
+            || p.maximum_voltage_v
+                .is_some_and(|v| current.contact_voltage_v > v)
         {
             PowerLoss::Voltage
         } else if !state.electric.breaker_command_closed {
@@ -383,6 +518,7 @@ pub fn advance(state: &mut TrainSimState, path: &PathData, config: &ElectricTrai
             current.power_elapsed_s = 0.;
             current.main_power = false;
             current.loss = loss;
+            update_voltage_filters(current, dt);
             continue;
         }
         if hot_start {
@@ -416,5 +552,21 @@ pub fn advance(state: &mut TrainSimState, path: &PathData, config: &ElectricTrai
         } else {
             PowerLoss::Starting
         };
+        update_voltage_filters(current, dt);
     }
+}
+
+fn update_voltage_filters(current: &mut ElectricCarState, dt: f64) {
+    if dt <= 0. {
+        return;
+    }
+    current.filtered_contact_voltage_v = current
+        .pantograph_filter
+        .filter(current.contact_voltage_v, dt);
+    let connected = if current.breaker == BreakerState::Closed {
+        current.filtered_contact_voltage_v
+    } else {
+        0.
+    };
+    current.filter_voltage_v = current.voltage_filter.filter(connected, dt);
 }

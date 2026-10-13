@@ -189,6 +189,26 @@ pub fn advance_with_supply(
     native: bool,
     supply: &crate::power_supply::PowerTrainState,
 ) -> f64 {
+    advance_with_vehicle_throttles(
+        state,
+        config,
+        throttle,
+        dt,
+        native,
+        supply,
+        &Default::default(),
+    )
+}
+
+pub fn advance_with_vehicle_throttles(
+    state: &mut DieselTrainState,
+    config: &DieselTrainConfig,
+    throttle: f64,
+    dt: f64,
+    native: bool,
+    supply: &crate::power_supply::PowerTrainState,
+    throttles: &std::collections::BTreeMap<usize, f64>,
+) -> f64 {
     state.initialize(config);
     if !dt.is_finite() || dt < 0. || !throttle.is_finite() {
         return 0.;
@@ -208,7 +228,11 @@ pub fn advance_with_supply(
             s.demanded_rpm = car.params.starting_rpm;
         }
         if s.phase == EnginePhase::Running {
-            let throttle = if car.connected { throttle } else { 0. };
+            let throttle = if car.connected {
+                throttles.get(&car.vehicle).copied().unwrap_or(throttle)
+            } else {
+                0.
+            };
             let minimum_rpm = supply
                 .cars
                 .iter()

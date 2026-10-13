@@ -1,0 +1,106 @@
+[scenario]
+name = "Diésel: fallo térmico de prueba"
+description = "F9: motores, refrigeración y fallos; B: frenado. Modelo propio con parámetros explícitos."
+
+[route]
+path = "route"
+start = "a"
+destination = "b"
+assume_signals_clear = true
+
+[[route.stops]]
+node = "a"
+arrive_s = 0.0
+depart_s = 5.0
+dwell_s = 5.0
+
+[[route.stops]]
+node = "mid"
+arrive_s = 90.0
+depart_s = 95.0
+dwell_s = 5.0
+
+[[route.stops]]
+node = "b"
+arrive_s = 160.0
+depart_s = 160.0
+dwell_s = 5.0
+
+[train]
+consist = "consists/two_diesel.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+
+[simulation]
+duration = 240.0
+time_step = 0.05
+seed = 42
+legacy_power_cap = false
+
+[output]
+csv = "run_equipment.csv"
+metadata = "run_equipment.json"
+
+[[train.systems]]
+vehicle = 0
+[train.systems.diesel_circuits]
+oil_capacity_l=3.0
+coolant_capacity_l=5.0
+oil_heat_capacity_j_k=5000.0
+coolant_heat_capacity_j_k=20000.0
+heat_fraction=0.3
+transfer_w_k=3000.0
+radiator_w_k=5000.0
+fan_start_c=50.0
+fan_stop_c=40.0
+minimum_oil_fraction=0.3
+minimum_coolant_fraction=0.3
+shutdown_oil_c=110.0
+shutdown_coolant_c=100.0
+failures_enabled=true
+[[train.systems.motors]]
+id="Motor delantero"
+idle_rpm=300.0
+maximum_rpm=900.0
+rise_rpm_s=120.0
+fall_rpm_s=160.0
+rated_power_w=500000.0
+fuel_l=500.0
+idle_lph=5.0
+full_lph=100.0
+[[train.systems.motors]]
+id="Motor posterior"
+idle_rpm=300.0
+maximum_rpm=900.0
+rise_rpm_s=120.0
+fall_rpm_s=160.0
+rated_power_w=500000.0
+fuel_l=500.0
+idle_lph=5.0
+full_lph=100.0
+[train.systems.electric_brake]
+force_curve=[[0.0,0.0],[2.0,0.0],[10.0,80000.0],[50.0,80000.0],[70.0,0.0]]
+rheostat_max_w=800000.0
+regenerative_max_w=0.0
+receptivity_w=0.0
+efficiency=0.9
+apply_delay_s=1.0
+blend_with_service=true
+[train.systems.brake_heat]
+heat_capacity_j_k=100000.0
+cooling_w_k=150.0
+fade_start_c=100.0
+fade_full_c=250.0
+minimum_factor=0.3
+[train.systems.wheel_slide]
+slip_threshold=0.1
+release_rate_s=3.0
+reapply_rate_s=0.5
+wheel_inertia_kg_m2=500.0
+radius_m=0.5
+[train.systems.traction_control]
+slip_threshold=0.1
+cut_rate_s=2.0
+recover_rate_s=0.2

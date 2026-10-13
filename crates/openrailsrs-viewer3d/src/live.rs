@@ -425,6 +425,20 @@ pub fn advance_live_sim(
         let set_weather = |session: &mut LiveDriveSession| {
             if let Some(atmosphere) = atmosphere.as_ref() {
                 session.set_rail_weather_factor(weather, atmosphere.atmosphere.rail_factor());
+                let a = &atmosphere.atmosphere;
+                let input = openrailsrs_sim::surface_conditions::SurfaceWeather {
+                    temperature_c: f64::from(a.temperature_c),
+                    rain: f64::from(a.rain),
+                    snow: f64::from(a.snow),
+                    wind_mps: [f64::from(a.wind_mps.x), f64::from(a.wind_mps.z)],
+                };
+                session
+                    .state
+                    .surface_conditions
+                    .get_or_insert_with(|| {
+                        openrailsrs_sim::surface_conditions::SurfaceConditions::new(input)
+                    })
+                    .weather = input;
             } else {
                 session.set_rail_weather(weather);
             }
@@ -577,6 +591,20 @@ pub fn live_driver_input(
     }
     if pressed(A::Neutral) {
         let _ = live.session.set_direction(0.5);
+    }
+    if pressed(A::NextCab) {
+        match live.session.cycle_cab() {
+            Ok(index) => {
+                if let Some(ui) = ui.as_mut() {
+                    ui.notice = format!("Puesto activo: vehículo {}", index + 1);
+                }
+            }
+            Err(message) => {
+                if let Some(ui) = ui.as_mut() {
+                    ui.notice = message;
+                }
+            }
+        }
     }
     if keys.pressed(settings.key(A::Horn)) {
         live.session.trigger_horn(0.08);

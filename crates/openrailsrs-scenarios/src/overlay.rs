@@ -213,6 +213,9 @@ mod tests {
                 edge_speed_limits: vec![],
             },
             train: TrainSection {
+                freight: None,
+                systems: vec![],
+                platform_sides: vec![],
                 announcements: Default::default(),
                 presentation: vec![],
                 vehicle_profiles: vec![],

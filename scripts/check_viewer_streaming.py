@@ -194,6 +194,8 @@ def run_checkpoint(args, name, target, pause):
         ("dev_tools", "OPENRAILSRS_DEV_TOOLS"),
         ("dev_inspector_select", "OPENRAILSRS_DEV_INSPECTOR_SELECT"),
         ("capture_wiper", "OPENRAILSRS_CAPTURE_WIPER"),
+        ("shader_diagnostics", "OPENRAILSRS_SHADER_DIAGNOSTICS"),
+        ("capture_actions", "OPENRAILSRS_CAPTURE_ACTIONS"),
         ("capture_sander", "OPENRAILSRS_CAPTURE_SANDER"),
     ):
         if getattr(args, attr, None) is not None:

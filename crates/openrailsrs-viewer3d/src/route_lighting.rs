@@ -212,6 +212,11 @@ mod tests {
         })
         .init_resource::<ActivePlayerContent>()
         .init_resource::<FogState>()
+        .init_resource::<crate::floating_origin::FloatingOrigin>()
+        .insert_resource(crate::world::RouteFocus {
+            center: Vec3::ZERO,
+            height_origin: 0.0,
+        })
         .init_resource::<ClearColor>()
         .init_resource::<Assets<RailwaySkyMaterial>>()
         .add_systems(Update, sync_route_atmosphere);

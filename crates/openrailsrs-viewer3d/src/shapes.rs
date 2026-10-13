@@ -331,6 +331,11 @@ impl RouteAssets {
         > = track_db
             .as_ref()
             .map(|tdb| {
+                let speed_index =
+                    openrailsrs_bevy_scenery::spawn::tdb_track::NativeCantSpeedIndex::new(
+                        tdb,
+                        &catalog.tsection,
+                    );
                 tdb.nodes
                     .iter()
                     .filter_map(|node| {
@@ -340,7 +345,8 @@ impl RouteAssets {
                                 Some(&catalog.tsection),
                             )?;
                         let path = if banking {
-                            path.with_automatic_cant(node, &catalog.tsection, &cant)
+                            let speeds = speed_index.limits_for_node(tdb, node.id, path.length_m());
+                            path.with_automatic_cant_speeds(node, &catalog.tsection, &cant, &speeds)
                         } else {
                             path
                         };
@@ -2888,6 +2894,7 @@ mod tests {
         for heading in [0.0_f64, 90.0, -45.0, 167.0] {
             let tdb = TrackDbFile {
                 nodes: vec![TrackDbNode {
+                    junction_shape_index: None,
                     id: 1,
                     position: None,
                     pin_refs: vec![],

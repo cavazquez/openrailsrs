@@ -1,0 +1,63 @@
+[scenario]
+name = "Mando múltiple: dos familias compatibles"
+description = "L cambia de cabina en neutro; F9 permite aislar motores. El segundo mando tarda un segundo."
+
+[route]
+path = "route"
+start = "a"
+destination = "b"
+assume_signals_clear = true
+
+[[route.stops]]
+node = "a"
+arrive_s = 0.0
+depart_s = 5.0
+dwell_s = 5.0
+
+[[route.stops]]
+node = "mid"
+arrive_s = 90.0
+depart_s = 95.0
+dwell_s = 5.0
+
+[[route.stops]]
+node = "b"
+arrive_s = 160.0
+depart_s = 160.0
+dwell_s = 5.0
+
+[train]
+consist = "consists/two_diesel.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+
+[simulation]
+duration = 240.0
+time_step = 0.05
+seed = 42
+legacy_power_cap = false
+
+[output]
+csv = "run_two_diesel.csv"
+metadata = "run_two_diesel.json"
+
+[[train.systems]]
+vehicle=0
+[train.systems.multiple_unit]
+protocol="mu-a"
+compatible_protocols=["mu-b"]
+delay_s=0.0
+throttle=true
+dynamic_brake=true
+reverser=true
+[[train.systems]]
+vehicle=1
+[train.systems.multiple_unit]
+protocol="mu-b"
+compatible_protocols=["mu-a"]
+delay_s=1.0
+throttle=true
+dynamic_brake=true
+reverser=true

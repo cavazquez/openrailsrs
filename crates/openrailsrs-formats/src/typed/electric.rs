@@ -23,10 +23,33 @@ pub fn parse_electric_vehicle(ast: &Ast) -> Result<Option<ElectricVehicleParams>
     }
     params.breaker_delay_s = number(ast, "ORTSCircuitBreakerClosingDelay", true)?.unwrap_or(0.);
     params.power_on_delay_s = number(ast, "ORTSPowerOnDelay", true)?.unwrap_or(0.);
-    if let Some(pantographs) = named_blocks(ast, "ORTSPantographs").first()
-        && let Some(pantograph) = named_blocks(pantographs, "Pantograph").first()
-    {
-        params.pantograph_delay_s = number(pantograph, "Delay", true)?.unwrap_or(0.);
+    if let Some(pantographs) = named_blocks(ast, "ORTSPantographs").last() {
+        let pantographs = named_blocks(pantographs, "Pantograph");
+        if pantographs.is_empty() || pantographs.len() > 4 {
+            return Err(invalid("ORTSPantographs"));
+        }
+        for p in pantographs {
+            let delay_s = number(p, "Delay", true)?.unwrap_or(0.);
+            if delay_s > 60. {
+                return Err(invalid("ORTSPantographs.Delay"));
+            }
+            let offset_m = field_values(p, "ORTSRSOffset")
+                .last()
+                .and_then(|v| v.first())
+                .and_then(scalar_text)
+                .map(|s| {
+                    crate::msts_units::parse_length_m(&s).ok_or_else(|| invalid("ORTSRSOffset"))
+                })
+                .transpose()?
+                .unwrap_or(0.);
+            if !offset_m.is_finite() || offset_m.abs() > 50. {
+                return Err(invalid("ORTSRSOffset"));
+            }
+            params
+                .pantographs
+                .push(openrailsrs_core::electrification::PantographParams { delay_s, offset_m });
+        }
+        params.pantograph_delay_s = params.pantographs[0].delay_s;
     }
     params.minimum_voltage_v = number(ast, "ORTSRSMinimumVoltage", false)?.unwrap_or(1.);
     params.maximum_voltage_v = number(ast, "ORTSRSMaximumVoltage", false)?;

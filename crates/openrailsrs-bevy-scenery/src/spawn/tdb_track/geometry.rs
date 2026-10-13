@@ -1026,13 +1026,25 @@ impl TrackVectorPath {
     /// Generate banks only on single-path, non-road shapes. Authored AZ banks,
     /// junctions and incompatible pieces terminate groups instead of being tilted.
     pub fn with_automatic_cant(
-        mut self,
+        self,
         node: &TrackDbNode,
         tsection: &TSectionCatalog,
         settings: &openrailsrs_formats::typed::RouteCantSettings,
     ) -> Self {
-        use openrailsrs_formats::typed::{CantProfile, CantSection, generate_cant_profiles};
-        if settings.legacy_table_present {
+        self.with_automatic_cant_speeds(node, tsection, settings, &[])
+    }
+
+    pub fn with_automatic_cant_speeds(
+        mut self,
+        node: &TrackDbNode,
+        tsection: &TSectionCatalog,
+        settings: &openrailsrs_formats::typed::RouteCantSettings,
+        speed_limits: &[openrailsrs_formats::typed::cant_speeds::CantSpeedLimit],
+    ) -> Self {
+        use openrailsrs_formats::typed::{
+            CantProfile, CantSection, generate_cant_profiles_with_table,
+        };
+        if settings.legacy_table_present && settings.legacy_radius_cant.is_empty() {
             return self;
         }
         let TrackNodeKind::Vector { sections, .. } = &node.kind else {
@@ -1070,18 +1082,31 @@ impl TrackVectorPath {
         let finish = |group: &mut Vec<usize>, direction: f32, out: &mut Vec<CantProfile>| {
             let inputs: Vec<_> = group
                 .iter()
-                .map(|i| CantSection {
-                    length_m: span_length_m(self.spans[*i]) as f32,
-                    radius_m: self.spans[*i].curve_radius_m.unwrap_or(0.).abs(),
-                    passenger_speed_mps: settings.design_speed_mps,
-                    freight_speed_mps: settings.design_speed_mps,
+                .map(|i| {
+                    let start = if *i == 0 {
+                        0.
+                    } else {
+                        self.cumulative_ends_m[*i - 1]
+                    };
+                    let speed = openrailsrs_formats::typed::cant_speeds::speeds_at(
+                        speed_limits,
+                        start,
+                        settings.design_speed_mps,
+                    );
+                    CantSection {
+                        length_m: span_length_m(self.spans[*i]) as f32,
+                        radius_m: self.spans[*i].curve_radius_m.unwrap_or(0.).abs(),
+                        passenger_speed_mps: speed[0],
+                        freight_speed_mps: speed[1],
+                    }
                 })
                 .collect();
-            for (i, profile) in group.drain(..).zip(generate_cant_profiles(
+            for (i, profile) in group.drain(..).zip(generate_cant_profiles_with_table(
                 &inputs,
                 settings.gauge_m,
                 &settings.standards,
                 direction,
+                &settings.legacy_radius_cant,
             )) {
                 out[i] = profile;
             }
@@ -1209,6 +1234,18 @@ impl TrackVectorPath {
         pose
     }
 
+    /// Signed physical curvature along native chainage; straight spans return zero.
+    pub fn signed_curvature_at(&self, chainage_m: f64) -> f64 {
+        let index = self
+            .cumulative_ends_m
+            .partition_point(|end| chainage_m > *end + 1e-6)
+            .min(self.spans.len() - 1);
+        let span = self.spans[index];
+        if !span.is_curved() {
+            return 0.;
+        }
+        f64::from(span.curve_angle_deg.unwrap().signum() / span.curve_radius_m.unwrap().abs())
+    }
     /// Radius, authored roll and optional track gauge in the current span.
     pub fn curve_geometry_at(&self, chainage_m: f64) -> Option<(f64, f64, Option<f64>)> {
         let index = self
@@ -1660,6 +1697,7 @@ mod tests {
             .extend(catalog_with_straight_shape(2, 100.0).sections);
         let mut tdb = TrackDbFile::default();
         tdb.nodes.push(TrackDbNode {
+            junction_shape_index: None,
             id: 1,
             position: Some(first.start),
             pin_refs: Vec::new(),
@@ -1696,6 +1734,7 @@ mod tests {
         // owns these rail sections and OR Traveller includes their lengths.
         assert!(!section_is_drawable(&sections[1], Some(&catalog)));
         let node = TrackDbNode {
+            junction_shape_index: None,
             id: 1,
             position: Some(sections[0].start),
             pin_refs: Vec::new(),
@@ -1745,6 +1784,7 @@ mod tests {
                 section_at(0.0, 40.0, 3),
             ];
             let node = TrackDbNode {
+                junction_shape_index: None,
                 id: 1,
                 position: Some(sections[0].start),
                 pin_refs: Vec::new(),
@@ -1811,6 +1851,7 @@ mod tests {
         let arc_len = 500.0_f64 * 5.0_f64.to_radians();
         let mut tdb = TrackDbFile::default();
         tdb.nodes.push(TrackDbNode {
+            junction_shape_index: None,
             id: 1,
             position: Some(TrackVectorPoint {
                 tile_x: 0,
@@ -1853,6 +1894,7 @@ mod tests {
         let cat = catalog_with_straight_shape(1, 100.0);
         let mut tdb = TrackDbFile::default();
         tdb.nodes.push(TrackDbNode {
+            junction_shape_index: None,
             id: 1,
             position: Some(TrackVectorPoint {
                 tile_x: 0,

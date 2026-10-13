@@ -1468,11 +1468,20 @@ mod tests {
         for service in 0..2 {
             menu.service = service;
             menu.refresh_choices_with_library(&temp.path().join("empty-library"));
-            wait_for_audits(&mut menu);
             let example = absolute(&project.join("examples/routes/mitre/consists/caf_6000.con"));
             assert!(menu.consists.contains(&example));
             for con in &originals {
                 assert!(menu.consists.contains(con));
+                // Audit this fixture first; unrelated installed packs must not
+                // decide whether cross-route selection works.
+                let index = menu.consists.iter().position(|p| p == con).unwrap();
+                menu.cycle_consist(index as i32 - menu.consist as i32);
+                let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+                while menu.selected_audit_pending() {
+                    assert!(std::time::Instant::now() < deadline, "{}", menu.status);
+                    menu.poll_consist_audits();
+                    std::thread::sleep(std::time::Duration::from_millis(1));
+                }
                 assert!(menu.consist_audits[con].player_ready());
             }
         }

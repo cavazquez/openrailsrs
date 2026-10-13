@@ -52,6 +52,8 @@ pub struct RouteElectricSupply {
 /// default, as in OR 1.6.1; scenarios can explicitly specify conductor rails.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ElectricVehicleParams {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pantographs: Vec<PantographParams>,
     pub pickup: ElectricPickup,
     pub pantograph_delay_s: f64,
     pub breaker_delay_s: f64,
@@ -63,6 +65,7 @@ pub struct ElectricVehicleParams {
 impl Default for ElectricVehicleParams {
     fn default() -> Self {
         Self {
+            pantographs: vec![],
             pickup: ElectricPickup::Overhead,
             pantograph_delay_s: 0.,
             breaker_delay_s: 0.,
@@ -71,6 +74,15 @@ impl Default for ElectricVehicleParams {
             maximum_voltage_v: None,
         }
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct PantographParams {
+    pub delay_s: f64,
+    /// Signed metres from vehicle centre toward the forward end. Explicit
+    /// Rust metadata; native OR declares delay but has no collector offset.
+    #[serde(default)]
+    pub offset_m: f64,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

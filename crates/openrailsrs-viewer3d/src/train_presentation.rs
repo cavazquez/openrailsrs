@@ -24,12 +24,7 @@ pub fn prepare(mut state: ResMut<TrainPresentation>, live: Option<Res<LiveDrive>
 }
 pub fn supplied(session: &openrailsrs_sim::LiveDriveSession, vehicle: usize) -> bool {
     vehicle < session.formation.coupled_count
-        && session
-            .state
-            .power_supply
-            .cars
-            .iter()
-            .any(|c| c.vehicle < session.formation.coupled_count && c.supply.train_supply)
+        && session.state.power_supply.vehicle_supplied(vehicle)
 }
 pub fn update(
     mut commands: Commands,

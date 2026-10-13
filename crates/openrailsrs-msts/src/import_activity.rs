@@ -223,6 +223,9 @@ pub(crate) fn import_activity_definition(
             edge_speed_limits: vec![],
         },
         train: TrainSection {
+            freight: None,
+            systems: vec![],
+            platform_sides: vec![],
             announcements: Default::default(),
             presentation: vec![],
             vehicle_profiles: vec![],
@@ -412,6 +415,8 @@ fn build_one_extra_train(
     };
 
     Some(TrainEntryDef {
+        freight: None,
+        systems: vec![],
         electric_pickups: vec![],
         id: id.clone(),
         consist,

@@ -39,5 +39,8 @@ pub fn load_scenario(path: impl AsRef<Path>) -> Result<ScenarioFile, ScenarioErr
 pub mod rail_operations;
 
 pub mod presentation;
+pub mod vehicle_systems;
 
 pub mod announcements;
+
+pub mod freight;

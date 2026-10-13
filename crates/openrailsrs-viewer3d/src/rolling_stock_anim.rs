@@ -905,6 +905,21 @@ pub fn update_rolling_stock_part_anim(
         if let Some(session) = live_ref.and_then(|l| l.session_for_track(service))
             && let Some(index) = vehicle_index
         {
+            if keyed_anim.kind == RollingStockPartKind::Door
+                && let Some(car) = session
+                    .state
+                    .vehicle_systems
+                    .iter()
+                    .find(|c| c.definition.vehicle == index)
+                && car.definition.doors.is_some()
+            {
+                let name = matrix_name(&binding.shape, keyed_anim.matrix_idx).to_ascii_uppercase();
+                let side = openrailsrs_formats::typed::vehicle_equipment::door_matrix_side(&name);
+                frac = side.map_or_else(
+                    || car.door_fraction.iter().copied().fold(0., f64::max),
+                    |i| car.door_fraction[i],
+                ) as f32;
+            }
             if let Some(cab) = session
                 .state
                 .cab_equipment
@@ -964,7 +979,11 @@ pub fn update_rolling_stock_part_anim(
             frac = if params.params.pickup
                 == openrailsrs_core::electrification::ElectricPickup::Overhead
             {
-                state.pantograph_fraction as f32
+                let name = matrix_name(&binding.shape, keyed_anim.matrix_idx);
+                let id =
+                    openrailsrs_formats::typed::vehicle_equipment::collector_matrix_index(name);
+                id.and_then(|i| state.pantographs.get(i))
+                    .map_or(state.pantograph_fraction, |p| p.fraction) as f32
             } else {
                 0.
             };
@@ -973,7 +992,11 @@ pub fn update_rolling_stock_part_anim(
             && env_key_frac("OPENRAILSRS_DEBUG_PANTO_KEY").is_none()
             && let Some(contacts) = &contacts
         {
-            frac = contacts.fraction(parent.parent(), frac);
+            let collector = openrailsrs_formats::typed::vehicle_equipment::collector_matrix_index(
+                matrix_name(&binding.shape, keyed_anim.matrix_idx),
+            )
+            .unwrap_or(0);
+            frac = contacts.collector_fraction(parent.parent(), collector, frac);
         }
         if keyed_anim.kind == RollingStockPartKind::RunningGear {
             frac = live_ref

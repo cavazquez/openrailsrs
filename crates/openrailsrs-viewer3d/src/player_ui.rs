@@ -398,6 +398,17 @@ enum UiCommand {
     SelectCar(usize),
     Car(CarOperation),
     DieselEngine(usize),
+    EquipmentMotor(
+        usize,
+        usize,
+        openrailsrs_sim::engine_equipment::MotorOperation,
+    ),
+    TractionSource(
+        usize,
+        openrailsrs_scenarios::vehicle_systems::TractionSource,
+    ),
+    ElectricBrake(f64),
+    Pantograph(usize, usize),
     Sander,
     Steam(openrailsrs_sim::steam::SteamCommand),
     BeginRefill,
@@ -1288,6 +1299,10 @@ fn handle_buttons(
             UiCommand::NoteTab(tab)=>{ui.notebook_tab= *tab;Ok(())},UiCommand::Advanced(page)=>{ui.advanced_page= *page;Ok(())},
             UiCommand::SelectCar(car)=>{ui.selected_car= *car;Ok(())},
             UiCommand::Car(action)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.operate_car(ui.selected_car,*action)).map(|()|{ui.notice="Operación aplicada a la formación".into();}),
+            UiCommand::Pantograph(vehicle,collector)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.toggle_collector(*vehicle,*collector)).map(|()|{ui.notice="Mando aplicado al pantógrafo seleccionado".into();}),
+            UiCommand::EquipmentMotor(vehicle,motor,action)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.operate_motor(*vehicle,*motor,*action)),
+            UiCommand::TractionSource(vehicle,source)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.select_traction_source(*vehicle,*source)),
+            UiCommand::ElectricBrake(delta)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|{let c=(l.session.state.electric_brake_command+delta).clamp(0.,1.);l.session.set_electric_brake(c)}),
             UiCommand::DieselEngine(vehicle)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.toggle_diesel_engine(*vehicle)),
             UiCommand::Sander=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.toggle_sander()),
             UiCommand::Steam(command)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.steam_command(*command)),
@@ -1899,6 +1914,16 @@ fn poll_menu_audits(mut menu: ResMut<PlayerLaunchMenu>, mut ui: ResMut<PlayerUiS
 
 fn build_traction(p: &mut ChildSpawnerCommands<'_>, s: &LiveDriveSession) {
     button(p, "Arenado: activar / desactivar", UiCommand::Sander);
+    if s.state
+        .vehicle_systems
+        .iter()
+        .any(|c| c.definition.electric_brake.is_some())
+    {
+        row(p, |p| {
+            button(p, "Freno eléctrico −", UiCommand::ElectricBrake(-0.1));
+            button(p, "Freno eléctrico +", UiCommand::ElectricBrake(0.1));
+        });
+    }
     row(p, |p| {
         if !s.state.brake_system.circuits.is_empty() {
             button(p, "Aplicar independiente ]", UiCommand::IndependentApply);
@@ -1979,6 +2004,18 @@ fn build_traction(p: &mut ChildSpawnerCommands<'_>, s: &LiveDriveSession) {
 
 fn traction_text(s: &LiveDriveSession, settings: &PlayerSettings) -> String {
     let mut out = format!("{}\n\n", s.traction_diagnosis());
+    for c in &s.state.vehicle_systems {
+        if c.definition.electric_brake.is_some()
+            || c.definition.brake_heat.is_some()
+            || c.definition.wheel_slide.is_some()
+            || c.definition.traction_control.is_some()
+        {
+            out.push_str(&format!("Vehículo {} · eléctrico {:.0} kN · neumático {:.0} kN · retorno {:.0} kW · disipación {:.0} kW\nFreno {:.1} °C · rueda {:.1} m/s · WSP {} · presión {:.0}% · control tracción {:.0}%\n",c.definition.vehicle+1,c.brakes.electric_force_n/1000.,c.brakes.friction_force_n/1000.,c.brakes.regenerative_w/1000.,c.brakes.rheostatic_w/1000.,c.brakes.temperature_c,c.brakes.wheel_speed_mps,c.brakes.sliding,c.brakes.pressure_fraction*100.,c.brakes.traction_fraction*100.));
+        }
+    }
+    if let Some(surface) = &s.state.surface_conditions {
+        out.push_str(&format!("Superficie {:.1} °C · hielo {:.2} mm · agua {:.2} mm · nieve equivalente {:.2} mm\nFactor por hielo: {:.0}%\n\n",surface.temperature_c,surface.ice_mm,surface.liquid_mm,surface.snow_water_mm,surface.grip_multiplier()*100.));
+    }
     if let Some(rail) = &s.state.rail_adhesion {
         out += &format!(
             "Vía: {} · agarre del clima {:.0}%\nArenado: {}\n\n",
@@ -2180,6 +2217,99 @@ fn build_formation(p: &mut ChildSpawnerCommands<'_>, ui: &PlayerUiState, s: &Liv
         }
     });
     dynamic(p, DynamicText::Car, 14.0);
+    if let Some(car) = s
+        .state
+        .electric
+        .cars
+        .iter()
+        .find(|c| c.vehicle == ui.selected_car)
+    {
+        row(p, |p| {
+            for (i, collector) in car.pantographs.iter().enumerate() {
+                button(
+                    p,
+                    format!(
+                        "Pantógrafo {} · {:.0}% · {:.0} V",
+                        i + 1,
+                        collector.fraction * 100.,
+                        collector.contact_voltage_v
+                    ),
+                    UiCommand::Pantograph(ui.selected_car, i),
+                );
+            }
+        });
+        label(
+            p,
+            format!(
+                "Tensión captada {:.0} V · filtro de entrada {:.0} V · filtro principal {:.0} V",
+                car.contact_voltage_v, car.filtered_contact_voltage_v, car.filter_voltage_v
+            ),
+            14.,
+            MUTED,
+        );
+    }
+    if let Some(car) = s
+        .state
+        .vehicle_systems
+        .iter()
+        .find(|c| c.definition.vehicle == ui.selected_car)
+    {
+        for (index, (motor, profile)) in car.motors.iter().zip(&car.definition.motors).enumerate() {
+            label(
+                p,
+                format!(
+                    "{} · {:.0} RPM · {:.1} L · aceite {:.1} °C · refrigerante {:.1} °C · {}",
+                    profile.id,
+                    motor.rpm,
+                    motor.fuel_l,
+                    motor.oil_c,
+                    motor.coolant_c,
+                    motor.fault.map_or("En servicio", |f| f.label())
+                ),
+                14.,
+                TEXT,
+            );
+            row(p, |p| {
+                use openrailsrs_sim::engine_equipment::MotorOperation as M;
+                for (text, action) in [
+                    ("Arrancar / parar", M::StartStop),
+                    ("Aislar", M::Isolate),
+                    ("Ventilador", M::Fan),
+                    ("Rearmar fallo", M::Reset),
+                ] {
+                    button(
+                        p,
+                        text,
+                        UiCommand::EquipmentMotor(ui.selected_car, index, action),
+                    );
+                }
+            });
+        }
+        if car.definition.battery.is_some() {
+            label(
+                p,
+                format!(
+                    "Batería {:.2} kWh · fuente {:?} · carga {:.0} kW",
+                    car.energy.energy_j / 3600000.,
+                    car.energy.active,
+                    car.energy.charging_w / 1000.
+                ),
+                14.,
+                TEXT,
+            );
+            row(p, |p| {
+                use openrailsrs_scenarios::vehicle_systems::TractionSource as S;
+                for (text, source) in [
+                    ("Automática", S::Auto),
+                    ("Red", S::Line),
+                    ("Diésel", S::Diesel),
+                    ("Batería", S::Battery),
+                ] {
+                    button(p, text, UiCommand::TractionSource(ui.selected_car, source));
+                }
+            });
+        }
+    }
     if s.physics.power_supply.cars.iter().any(|c| {
         c.vehicle == ui.selected_car && c.params.manual_train_supply && c.params.train_supply_fitted
     }) {
@@ -2203,7 +2333,22 @@ fn build_formation(p: &mut ChildSpawnerCommands<'_>, ui: &PlayerUiState, s: &Liv
     }
     row(p, |p| {
         button(p, "Freno de mano", UiCommand::Car(CarOperation::Handbrake));
+        button(
+            p,
+            "Puertas izquierdas",
+            UiCommand::Car(CarOperation::DoorsLeft),
+        );
+        button(
+            p,
+            "Puertas derechas",
+            UiCommand::Car(CarOperation::DoorsRight),
+        );
         button(p, "Manguera delantera", UiCommand::Car(CarOperation::Hose));
+        button(
+            p,
+            "Cable eléctrico delantero",
+            UiCommand::Car(CarOperation::TrainBus),
+        );
         button(
             p,
             "Llave delantera",

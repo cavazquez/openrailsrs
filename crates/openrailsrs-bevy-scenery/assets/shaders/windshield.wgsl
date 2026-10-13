@@ -1,5 +1,6 @@
 #import bevy_core_pipeline::fullscreen_vertex_shader::FullscreenVertexOutput
-struct Settings { time_s: f32, rain: f32, near_clip: f32, last_wipe_s: f32, wiper_on: f32, snow: f32, _pad: vec3<f32>, glass: vec4<f32>, blade1: vec4<f32>, blade2: vec4<f32>, sweep: vec4<f32> }
+#import "shaders/cloud_field.wgsl"::cloud_coverage
+struct Settings { time_s: f32, rain: f32, near_clip: f32, last_wipe_s: f32, wiper_on: f32, snow: f32, _pad: vec3<f32>, glass: vec4<f32>, blade1: vec4<f32>, blade2: vec4<f32>, sweep: vec4<f32>, world_from_clip:mat4x4<f32>, clouds:vec4<f32>, cloud_world:vec4<f32> }
 @group(0) @binding(0) var scene: texture_2d<f32>;
 @group(0) @binding(1) var scene_sampler: sampler;
 @group(0) @binding(2) var<uniform> settings: Settings;
@@ -23,7 +24,16 @@ fn wet_after_wipe(uv: vec2<f32>, blade: vec4<f32>) -> f32 {
 fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
     let resolution = vec2<f32>(textureDimensions(depth));
     let d = textureLoad(depth, vec2<i32>(clamp(in.uv * resolution, vec2(0.0), resolution - 1.0)), 0);
-    let dry = textureSample(scene, scene_sampler, in.uv);
+    var dry = textureSample(scene, scene_sampler, in.uv);
+    if (settings.clouds.w>0.02 && d>0.0000001 && d<settings.near_clip/3.) {
+        let h=settings.world_from_clip*vec4(in.uv.x*2.-1.,1.-in.uv.y*2.,d,1.);
+        let world=h.xyz/h.w;
+        let projected=world.xz+settings.clouds.xz*(1200.-world.y)/max(settings.clouds.y,0.15)+settings.cloud_world.xy;
+        let shadow=cloud_coverage(projected,settings.clouds.w);
+        // Bounded SDR extension: preserve the diffuse sky fill and local lamps.
+        dry=vec4(dry.rgb*(1.-shadow*0.18),dry.a);
+    }
+    if (settings.rain<0.002) {return dry;}
     // Reverse-Z main depth: the desk/frames are close, scenery through a window
     // is distant. Rain must never appear over instruments or the opaque cab.
     if (d > settings.near_clip / 3.0) { return dry; }
@@ -38,7 +48,17 @@ fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
     let local = fract(grid) - vec2(0.2 + random.x * 0.6, 0.12 + fall * 0.76);
     let radius = length(local * vec2(1.0, 0.7));
     let quota = step(1.0 - settings.rain * 0.7, random.x);
-    let drop = (1.0 - smoothstep(0.055, 0.17, radius)) * wetness * quota;
+    // Two drops converge in each seeded glass cell. Their merged area is the
+    // sum of the two initial areas, with a smooth bridge before runoff starts.
+    let merge = smoothstep(0.25,0.65,fall)*settings.rain;
+    let separation=vec2(0.12,-0.32)*(1.-merge);
+    let first=length((local-separation)*vec2(1.,0.7));
+    let second=length((local+separation)*vec2(1.,0.7));
+    let area_radius=mix(0.12,0.1697056,merge);
+    let pair=min(first,second);
+    let neck=max(abs(local.x)-0.065,abs(local.y)-length(separation));
+    let merged=min(pair,mix(1.,neck,merge));
+    let drop=(1.-smoothstep(area_radius*0.45,area_radius,merged))*wetness*quota;
     // Snow adheres as ragged clumps with tiny clear channels, rather than rain
     // circles recoloured white. Speed increases impacts while the wiper clears
     // the original native blade sectors, including after pause/restore.
@@ -53,7 +73,8 @@ fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
     let refracted = textureSample(scene, scene_sampler, in.uv + local * drop * 0.008);
     let highlight = (1.0 - smoothstep(0.01, 0.08, abs(radius - 0.12))) * drop * 0.16;
     let wet = mix(dry.rgb, refracted.rgb, drop * (1.0-settings.snow)) + vec3(highlight * (1.0-settings.snow));
-    let rivulet = (1.0 - smoothstep(0.015, 0.045, abs(local.x))) * smoothstep(0.0, 0.35, local.y) * quota * settings.rain * wetness;
+    let trail_width=mix(0.025,0.06,merge);
+    let rivulet = (1.0 - smoothstep(trail_width*0.35,trail_width,abs(local.x))) * smoothstep(0.0, 0.35, local.y) * quota * settings.rain * wetness*merge;
     let frost = settings.snow * settings.rain * wetness * smoothstep(0.18, 0.01, min(pane.y, min(pane.x, 1.0-pane.x))) * 0.09;
     let runoff = wet + vec3(rivulet * 0.025 * (1.0 - settings.snow));
     return vec4(mix(runoff, vec3(0.80, 0.86, 0.91), clamp(snow * 0.72 + frost, 0.0, 0.8)), dry.a);

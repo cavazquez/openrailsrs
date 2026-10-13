@@ -11,6 +11,8 @@ fn example() -> (std::path::PathBuf, ScenarioFile) {
 }
 fn service(s: &ScenarioFile) -> TrainEntryDef {
     TrainEntryDef {
+        freight: None,
+        systems: vec![],
         id: "conector".into(),
         consist: s.train.consist.clone(),
         start: "mid".into(),

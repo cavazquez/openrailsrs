@@ -36,6 +36,7 @@ pub mod runner;
 pub mod scripted_driver;
 pub mod state;
 pub mod steam;
+pub mod steam_injectors;
 
 pub use brake::{
     BrakeCylinder, BrakeState, BrakeSystem, BrakeVehicleSpec, OR_DEFAULT_BRAKE_ADHESION_MU,
@@ -72,4 +73,22 @@ pub mod rail_operations;
 
 pub mod announcements;
 
+pub mod crosswind;
 pub mod replay;
+pub mod surface_conditions;
+pub mod traction_energy;
+pub mod vehicle_systems;
+pub mod voltage_filter;
+
+pub mod brake_equipment;
+pub mod engine_equipment;
+
+pub mod tilting;
+
+pub mod multiple_unit;
+
+pub mod auxiliary_work;
+
+pub mod steam_equipment;
+
+pub mod freight;

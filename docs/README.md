@@ -31,3 +31,7 @@ Perfiles de clima, escenografía opcional, inspector y mediciones del renderer: 
 Treinta ampliaciones de tren/cabina, entorno, sonido e historial, con criterios y prueba manual por issue: [PLAN_30.md](PLAN_30.md).
 
 Tercera entrega: [seguimiento por issue](PLAN_30_3.md), [pruebas manuales](PLAYER_30_3_MANUAL.md), [contrato de rendimiento](PERFORMANCE_CONTRACT.md) y [API Rust de vehículos](RUST_VEHICLE_API.md).
+
+Cuarta entrega: [seguimiento de treinta equipos y efectos](PLAN_30_4.md),
+[pruebas manuales por issue](PLAYER_30_4_MANUAL.md), [evidencias de aceptación](PLAYER_30_4_QA.md) y
+[definiciones, autoridad física y referencias de vehículos](VEHICLE_SYSTEMS.md).

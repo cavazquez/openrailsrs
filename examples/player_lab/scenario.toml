@@ -40,6 +40,7 @@ travel_m = 0.10
 damping_ratio = 0.8
 [[train.presentation]]
 vehicle = 1
+walk_boxes_m=[[[-0.4,1.9,-8.0],[0.4,2.1,8.0]]]
 [train.presentation.suspension]
 empty_mass_kg = 25000.0
 stiffness_npm = 1200000.0
@@ -55,3 +56,12 @@ position_m = [-1.4, 2.1, 3.0]
 direction = [-1.0, -0.3, 0.0]
 lumens = 240.0
 range_m = 5.0
+
+[[train.systems]]
+vehicle=1
+[train.systems.doors]
+left=true
+right=true
+open_s=2.0
+close_s=3.0
+traction_interlock=true

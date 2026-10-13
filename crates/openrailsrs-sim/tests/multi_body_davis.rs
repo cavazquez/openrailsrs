@@ -10,6 +10,7 @@ fn flat_path() -> PathData {
     PathData {
         edge_ids: vec![],
         edges: vec![PathEdgeData {
+            direction_xz: None,
             profile: Default::default(),
             length_m: 10_000.0,
             speed_limit_mps: 50.0,

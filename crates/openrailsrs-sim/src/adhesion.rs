@@ -251,7 +251,11 @@ pub(crate) fn prepare(state: &mut TrainSimState, config: &RailAdhesionConfig, ba
         } else {
             1.
         };
-        car.factor = (base * rail.weather_factor * multiplier).clamp(0.05, 2.5);
+        let ice = state
+            .surface_conditions
+            .as_ref()
+            .map_or(1., |s| s.grip_multiplier());
+        car.factor = (base * rail.weather_factor * multiplier * ice).clamp(0.05, 2.5);
         if car.using_sand {
             let delivered = required.min(car.sand_m3);
             car.sand_m3 -= delivered;

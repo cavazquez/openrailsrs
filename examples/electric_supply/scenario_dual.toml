@@ -1,0 +1,89 @@
+[scenario]
+name = "Laboratorio: propulsión dual: red, diésel y batería"
+description = "Prueba propia: F9 permite mandar cada pantógrafo por separado. El sector neutro corta sólo los colectores que se encuentran dentro de él."
+
+[route]
+path = "route"
+start = "a"
+destination = "b"
+assume_signals_clear = true
+
+[route.electric_supply]
+kind = "overhead"
+voltage_v = 25000.0
+
+[[route.electric_supply.sections]]
+edge = "e1"
+start_m = 150.0
+end_m = 230.0
+kind = "none"
+voltage_v = 0.0
+
+[[route.stops]]
+node = "a"
+arrive_s = 0.0
+depart_s = 5.0
+dwell_s = 5.0
+
+[[route.stops]]
+node = "mid"
+arrive_s = 90.0
+depart_s = 95.0
+dwell_s = 5.0
+
+[[route.stops]]
+node = "b"
+arrive_s = 160.0
+depart_s = 160.0
+dwell_s = 5.0
+
+[train]
+consist = "consists/two_pantographs.con"
+
+[train.davis]
+a_n = 400.0
+b_n_per_mps = 10.0
+c_n_per_mps2 = 0.4
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+
+[simulation]
+duration = 240.0
+time_step = 0.05
+seed = 42
+legacy_power_cap = false
+
+[output]
+csv = "run.csv"
+metadata = "run.json"
+
+[[train.systems]]
+vehicle=0
+[train.systems.battery]
+capacity_kwh=10.0
+initial_fraction=0.5
+maximum_discharge_w=400000.0
+maximum_charge_w=100000.0
+efficiency=0.9
+minimum_fraction=0.1
+[train.systems.electric_brake]
+force_curve=[[0.0,0.0],[2.0,0.0],[10.0,80000.0],[50.0,80000.0],[70.0,0.0]]
+rheostat_max_w=800000.0
+regenerative_max_w=1000000.0
+receptivity_w=100000.0
+efficiency=0.9
+apply_delay_s=1.0
+blend_with_service=true
+
+[[train.systems.motors]]
+id="Generador diésel"
+idle_rpm=300.0
+maximum_rpm=900.0
+rise_rpm_s=300.0
+fall_rpm_s=300.0
+rated_power_w=400000.0
+fuel_l=100.0
+idle_lph=2.0
+full_lph=40.0

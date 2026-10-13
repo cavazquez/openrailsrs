@@ -270,6 +270,21 @@ impl BrakeCylinder {
             && skid
             && self.current_force_n.max(self.independent_force_n) > 25.;
     }
+    /// WSP vents service pressure; independent and hand brakes remain separate.
+    pub fn limit_service_fraction(&mut self, fraction: f64) {
+        let factor = fraction.clamp(0., 1.);
+        if let Some(c) = &mut self.native_ep {
+            c.vent_fraction(factor);
+        }
+        if let Some(c) = &mut self.native_air {
+            c.cylinder.vent_fraction(factor);
+        }
+        if let Some(c) = &mut self.legacy_ep {
+            c.pressure_psi *= factor;
+            c.auto_psi *= factor;
+        }
+        self.current_force_n *= factor;
+    }
     pub fn pipe_pressure_bar(&self) -> Option<f64> {
         if let Some(vacuum) = &self.native_vacuum {
             return Some(

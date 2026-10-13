@@ -16,6 +16,8 @@ use crate::{
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CarOperationState {
+    #[serde(default = "train_bus_connected_default")]
+    pub train_bus_connected: bool,
     pub name: String,
     pub length_m: f64,
     pub mass_kg: f64,
@@ -59,6 +61,7 @@ impl FormationState {
                     Vehicle::Wagon(w) => (w.name.clone(), w.length_m, w.mass_kg, false),
                 };
                 CarOperationState {
+                    train_bus_connected: true,
                     name,
                     length_m,
                     mass_kg,
@@ -110,6 +113,9 @@ impl FormationState {
 
 #[derive(Clone, Copy, Debug)]
 pub enum CarOperation {
+    TrainBus,
+    DoorsLeft,
+    DoorsRight,
     Handbrake,
     Hose,
     FrontCock,
@@ -118,6 +124,10 @@ pub enum CarOperation {
     Battery,
     TrainSupply,
     MultipleUnit,
+}
+
+fn train_bus_connected_default() -> bool {
+    true
 }
 
 fn default_traffic_brake_assistance() -> bool {
@@ -290,6 +300,39 @@ impl LiveDriveSession {
 
     /// Validate completely before mutating the current game.
     pub fn validate_snapshot(&self, saved: &SessionSnapshot) -> Result<(), String> {
+        if saved
+            .state
+            .surface_conditions
+            .as_ref()
+            .is_some_and(|s| !s.valid())
+        {
+            return Err("Superficie meteorológica guardada inválida".into());
+        }
+        if !(0. ..=1.).contains(&saved.state.electric_brake_command)
+            || saved.state.vehicle_systems.iter().any(|c| !c.valid())
+            || (!saved.state.vehicle_systems.is_empty()
+                && saved
+                    .state
+                    .vehicle_systems
+                    .iter()
+                    .map(|c| &c.definition)
+                    .collect::<Vec<_>>()
+                    != self.original_vehicle_systems.iter().collect::<Vec<_>>())
+            || saved.state.platform_sides != self.state.platform_sides
+        {
+            return Err(
+                "Equipos o lados de andén guardados no corresponden a este contenido".into(),
+            );
+        }
+        if saved.state.active_cab_vehicle.is_some_and(|i| {
+            i >= saved.formation.coupled_count
+                || !matches!(
+                    self.consist.vehicles.get(i),
+                    Some(openrailsrs_train::Vehicle::Loco(_))
+                )
+        }) {
+            return Err("Puesto de conducción guardado inválido".into());
+        }
         if saved.state.cab_equipment.iter().any(|c| !c.valid())
             || (!saved.state.cab_equipment.is_empty()
                 && saved
@@ -414,11 +457,35 @@ impl LiveDriveSession {
         {
             return Err("La partida tiene reservas de abastecimiento inválidas".into());
         }
+        if !saved.state.steam_boilers.is_empty() {
+            let expected = self
+                .consist
+                .vehicles
+                .iter()
+                .enumerate()
+                .filter_map(|(i, v)| match v {
+                    openrailsrs_train::Vehicle::Loco(l) => l.steam.as_ref().map(|p| (i, p)),
+                    _ => None,
+                })
+                .collect::<Vec<_>>();
+            if expected.len() != saved.state.steam_boilers.len()
+                || expected
+                    .iter()
+                    .zip(&saved.state.steam_boilers)
+                    .any(|((i, p), b)| *i != b.vehicle || **p != b.params || !b.boiler.valid_for(p))
+            {
+                return Err("Calderas guardadas incompatibles con la formación".into());
+            }
+        }
+        let boiler_params = saved
+            .state
+            .steam_boilers
+            .iter()
+            .find(|b| b.vehicle == saved.state.active_cab_vehicle.unwrap_or(0))
+            .map(|b| &b.params)
+            .or(self.original_physics.steam_params.as_ref());
         if !saved.state.diesel.valid_for(&self.original_physics.diesel)
-            || match (
-                &saved.state.boiler_state,
-                &self.original_physics.steam_params,
-            ) {
+            || match (&saved.state.boiler_state, boiler_params) {
                 (Some(b), Some(p)) => !b.valid_for(p),
                 (None, None) => false,
                 _ => true,
@@ -474,7 +541,10 @@ impl LiveDriveSession {
                 .filter(|&&i| {
                     i < n && {
                         let car = &saved.formation.cars[i];
-                        car.power_on && car.battery_on && (i == 0 || car.mu_connected)
+                        car.power_on
+                            && car.battery_on
+                            && (i == saved.state.active_cab_vehicle.unwrap_or(0)
+                                || car.mu_connected)
                     }
                 })
                 .count();
@@ -661,6 +731,32 @@ impl LiveDriveSession {
         self.operational_start_m = saved.operational_start_m;
         self.operational_wait_started = saved.operational_wait_started;
         self.state = saved.state;
+        if self.state.vehicle_systems.is_empty() {
+            self.state.vehicle_systems = self
+                .original_vehicle_systems
+                .iter()
+                .cloned()
+                .map(crate::vehicle_systems::VehicleSystemState::new)
+                .collect();
+            for car in &mut self.state.vehicle_systems {
+                if let Some(p) = &car.definition.doors {
+                    for (i, fitted) in [p.left, p.right].into_iter().enumerate() {
+                        if fitted {
+                            car.door_target[i] = saved.exterior.door.anim_open_target();
+                            car.door_fraction[i] = if matches!(
+                                saved.exterior.door,
+                                crate::DoorState::Open | crate::DoorState::Closing
+                            ) {
+                                1.
+                            } else {
+                                0.
+                            };
+                        }
+                    }
+                }
+            }
+        }
+
         if self.state.cab_equipment.is_empty() {
             self.state.cab_equipment = self
                 .original_cab_equipment
@@ -720,6 +816,12 @@ impl LiveDriveSession {
         self.wiper_active = saved.wiper_active;
         self.wiper_mode = saved.wiper_mode;
         self.headlights = saved.headlights.min(2);
+        if let Some(native) = &mut self.physics.native {
+            native.control_vehicle_index = self
+                .state
+                .active_cab_vehicle
+                .unwrap_or(self.cab_vehicle_index);
+        }
         self.cab_light = saved.cab_light;
         self.horn_pressed_until_s = saved.horn_pressed_until_s;
         self.speed_mul = saved.speed_mul;
@@ -730,8 +832,10 @@ impl LiveDriveSession {
         // Rebuild immutable active-car configuration without advancing/initializing
         // saved electric equipment. Undeparted AI can legitimately be uninitialized.
         let saved_electric = self.state.electric.clone();
+        let saved_power_supply = self.state.power_supply.clone();
         self.rebuild_formation_physics();
         self.state.electric = saved_electric;
+        self.state.power_supply = saved_power_supply;
         self.evaluate_native_signals();
         // Traffic footprints are restored separately; recompute after that sync,
         // including when the player remains paused on the loaded frame.
@@ -766,6 +870,27 @@ impl LiveDriveSession {
         None
     }
     pub fn operate_car(&mut self, index: usize, action: CarOperation) -> Result<(), String> {
+        if matches!(action, CarOperation::DoorsLeft | CarOperation::DoorsRight) {
+            let side = if matches!(action, CarOperation::DoorsLeft) {
+                openrailsrs_scenarios::vehicle_systems::DoorSide::Left
+            } else {
+                openrailsrs_scenarios::vehicle_systems::DoorSide::Right
+            };
+            let local = if self.vehicle_definition(index).is_some_and(|v| v.flipped()) {
+                side.flipped()
+            } else {
+                side
+            };
+            let slot =
+                usize::from(local == openrailsrs_scenarios::vehicle_systems::DoorSide::Right);
+            let target = self
+                .state
+                .vehicle_systems
+                .iter()
+                .find(|c| c.definition.vehicle == index)
+                .is_some_and(|c| c.door_target[slot]);
+            return self.command_doors(Some(index), side, !target);
+        }
         if self.velocity_mps() > 0.1 {
             return Err("Detené el tren antes de operar la formación".into());
         }
@@ -776,6 +901,16 @@ impl LiveDriveSession {
             .get_mut(index)
             .ok_or("Coche desconocido")?;
         match action {
+            CarOperation::TrainBus => {
+                if index == 0 {
+                    return Err(
+                        "El primer coche no tiene cable delantero hacia otro vehículo".into(),
+                    );
+                }
+                car.train_bus_connected = !car.train_bus_connected;
+                self.rebuild_formation_physics();
+            }
+            CarOperation::DoorsLeft | CarOperation::DoorsRight => unreachable!(),
             CarOperation::Handbrake => {
                 if parked {
                     return Err(
@@ -834,6 +969,11 @@ impl LiveDriveSession {
     /// Park a secured trailing section; it remains on the track at its own position.
     pub fn uncouple_after(&mut self, index: usize) -> Result<(), String> {
         let keep = index + 1;
+        if keep <= self.cab_vehicle() {
+            return Err(
+                "Cambiá a una cabina de la sección que vas a conservar antes de desacoplar".into(),
+            );
+        }
         if self.velocity_mps() > 0.1 {
             return Err("Detené el tren antes de desacoplar".into());
         }
@@ -993,7 +1133,7 @@ impl LiveDriveSession {
             if let Vehicle::Loco(l) = v
                 && !(op.power_on
                     && (l.steam.is_some() || op.battery_on)
-                    && (index == 0 || op.mu_connected))
+                    && (index == self.cab_vehicle() || op.mu_connected))
             {
                 l.max_power_w = 0.0;
                 l.max_tractive_effort_n = 0.0;
@@ -1004,10 +1144,17 @@ impl LiveDriveSession {
         }
         let mut p = self.original_physics.clone();
         p.power_supply.active_fraction = n as f64 / self.consist.vehicles.len().max(1) as f64;
+        p.power_supply.bus_connected = self
+            .formation
+            .cars
+            .iter()
+            .map(|c| c.train_bus_connected)
+            .collect();
         for car in &mut p.power_supply.cars {
             if let Some(op) = self.formation.cars.get(car.vehicle) {
-                car.enabled =
-                    car.vehicle < n && op.power_on && (car.vehicle == 0 || op.mu_connected);
+                car.enabled = car.vehicle < n
+                    && op.power_on
+                    && (car.vehicle == self.cab_vehicle() || op.mu_connected);
                 car.battery_on = op.battery_on;
                 car.master_key_on = op.power_on;
                 car.train_supply_switch_on = op.train_supply_switch_on;
@@ -1018,7 +1165,9 @@ impl LiveDriveSession {
                 v.enabled = v.powered
                     && i < n
                     && self.formation.cars.get(i).is_some_and(|c| {
-                        c.power_on && (v.steam || c.battery_on) && (i == 0 || c.mu_connected)
+                        c.power_on
+                            && (v.steam || c.battery_on)
+                            && (i == self.cab_vehicle() || c.mu_connected)
                     });
             }
         }
@@ -1027,7 +1176,7 @@ impl LiveDriveSession {
                 car.connected = car.vehicle < n
                     && op.power_on
                     && op.battery_on
-                    && (car.vehicle == 0 || op.mu_connected);
+                    && (car.vehicle == self.cab_vehicle() || op.mu_connected);
                 car.battery = op.battery_on;
             }
         }
@@ -1036,7 +1185,9 @@ impl LiveDriveSession {
         for car in &mut p.electric.cars {
             car.enabled = car.vehicle < n
                 && self.formation.cars.get(car.vehicle).is_some_and(|op| {
-                    op.power_on && op.battery_on && (car.vehicle == 0 || op.mu_connected)
+                    op.power_on
+                        && op.battery_on
+                        && (car.vehicle == self.cab_vehicle() || op.mu_connected)
                 });
         }
         p.mass_kg = consist.total_mass_kg();
@@ -1047,6 +1198,7 @@ impl LiveDriveSession {
         p.vehicle_lengths_m = consist.vehicle_lengths_m();
         p.diesel_vehicle_indices = consist.diesel_vehicle_indices();
         if let Some(native) = &mut p.native {
+            native.control_vehicle_index = self.cab_vehicle();
             native.vehicles.truncate(n);
             native.vehicle_masses_kg.truncate(n);
         }
@@ -1096,6 +1248,11 @@ impl LiveDriveSession {
                 .collect();
         }
         self.physics = p;
+        crate::power_supply::update_bus(
+            &mut self.state,
+            &self.physics.power_supply,
+            self.formation.coupled_count,
+        );
         self.state.electric.pantograph_command_up = self.exterior.pantograph_command_up;
         crate::electric::advance(&mut self.state, &self.path_data, &self.physics.electric, 0.);
     }

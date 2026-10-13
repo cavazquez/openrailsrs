@@ -5,7 +5,9 @@
 //! - [`ukfs`]: UKFS placement + procedural fallback filter
 //! - [`transforms`]: metric tile / scene XZ helpers + ribbon clip
 
+mod cant_speed;
 mod collect;
+pub use cant_speed::NativeCantSpeedIndex;
 mod focus;
 mod geometry;
 mod transforms;

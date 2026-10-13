@@ -72,9 +72,9 @@ impl ReplayInput {
         Ok(Self {
             command: serde_json::json!({"driver_throttle":s.driver_throttle,"driver_brake":s.driver_brake,"driver_direction":s.driver_direction,"speed_mul":s.speed_mul,
             "headlights":s.headlights,"cab_light":s.cab_light,"wiper_mode":s.wiper_mode,"wiper_active":s.wiper_active,"horn_until":s.horn_pressed_until_s,
-            "emergency":c.brake_system.emergency,"independent":c.brake_system.independent_command,"cars":s.formation.cars,"coupled":s.formation.coupled_count,
+            "equipment_commands":c.vehicle_systems.iter().map(|v|serde_json::json!({"vehicle":v.definition.vehicle,"source":v.energy.selection,"motors":v.motors.iter().map(|m|(m.running,m.isolated,m.fan_enabled)).collect::<Vec<_>>()})).collect::<Vec<_>>(),"electric_brake":c.electric_brake_command,"emergency":c.brake_system.emergency,"independent":c.brake_system.independent_command,"cars":s.formation.cars,"coupled":s.formation.coupled_count,
             "cab":cab,"diesel":diesel,"steam":c.boiler_state.as_ref().map(|b|&b.controls),"pantograph":c.electric.pantograph_command_up,"breaker":c.electric.breaker_command_closed,
-            "doors":s.exterior.door.anim_open_target(),"weather":weather,"ambient":c.ambient_temperature_c,"switches":s.switches,"signal_overrides":s.signal_overrides,
+            "electric_collectors":c.electric.cars.iter().map(|c|c.pantographs.iter().map(|p|(p.command_up,p.contact_enabled)).collect::<Vec<_>>()).collect::<Vec<_>>(),"active_cab":c.active_cab_vehicle,"vehicle_doors":c.vehicle_systems.iter().map(|c|c.door_target).collect::<Vec<_>>(),"surface_weather":c.surface_conditions.as_ref().map(|s|s.weather),"doors":s.exterior.door.anim_open_target(),"weather":weather,"ambient":c.ambient_temperature_c,"switches":s.switches,"signal_overrides":s.signal_overrides,
             "incident_decisions":c.rail_operations.decisions,"quick_stations":s.gameplay.quick_station_practice,"missed_policy":s.gameplay.missed_stop_policy,"traffic_assistance":s.traffic_brake_assistance}),
         })
     }
@@ -98,6 +98,34 @@ impl ReplayInput {
         ] {
             if !(0. ..=1.).contains(&number(key)?) {
                 return Err(format!("Comando fuera de rango: {key}"));
+            }
+        }
+        if let Some(command) = v["electric_brake"].as_f64() {
+            if !(0. ..=1.).contains(&command) {
+                return Err("Freno eléctrico grabado inválido".into());
+            }
+            session.state.electric_brake_command = command;
+        }
+        if let Some(commands) = v["equipment_commands"].as_array() {
+            if commands.len() != session.state.vehicle_systems.len() {
+                return Err("Equipos grabados incompatibles".into());
+            }
+            for (input, car) in commands.iter().zip(&mut session.state.vehicle_systems) {
+                if input["vehicle"].as_u64() != Some(car.definition.vehicle as u64) {
+                    return Err("Vehículo grabado incompatible".into());
+                }
+                car.energy.selection =
+                    serde_json::from_value(input["source"].clone()).map_err(|e| e.to_string())?;
+                let motors: Vec<(bool, bool, bool)> =
+                    serde_json::from_value(input["motors"].clone()).map_err(|e| e.to_string())?;
+                if motors.len() != car.motors.len() {
+                    return Err("Motores grabados incompatibles".into());
+                }
+                for (m, (running, isolated, fan)) in car.motors.iter_mut().zip(motors) {
+                    m.running = running;
+                    m.isolated = isolated;
+                    m.fan_enabled = fan;
+                }
             }
         }
         let dt_speed = number("speed_mul")?;
@@ -136,6 +164,11 @@ impl ReplayInput {
         use crate::operations::CarOperation as O;
         for (i, wanted) in cars.iter().enumerate() {
             for (desired, actual, op) in [
+                (
+                    wanted.train_bus_connected,
+                    session.formation.cars[i].train_bus_connected,
+                    O::TrainBus,
+                ),
                 (
                     wanted.handbrake,
                     session.formation.cars[i].handbrake,
@@ -241,12 +274,70 @@ impl ReplayInput {
             }
             boiler.controls = controls;
         }
+        if let Some(active) = v.get("active_cab") {
+            let active: Option<usize> =
+                serde_json::from_value(active.clone()).map_err(|e| e.to_string())?;
+            let selected = active.unwrap_or(session.cab_vehicle_index);
+            if selected != session.cab_vehicle() {
+                session.select_cab(selected)?;
+            }
+        }
+        if let Some(doors) = v.get("vehicle_doors") {
+            let targets: Vec<[bool; 2]> =
+                serde_json::from_value(doors.clone()).map_err(|e| e.to_string())?;
+            if targets.len() != session.state.vehicle_systems.len() {
+                return Err("Puertas grabadas incompatibles".into());
+            }
+            for (car, targets) in session.state.vehicle_systems.iter_mut().zip(targets) {
+                if let Some(p) = &car.definition.doors {
+                    if !p.left && targets[0] || !p.right && targets[1] {
+                        return Err("Lado de puerta grabado no equipado".into());
+                    }
+                } else if targets != [false; 2] {
+                    return Err("El vehículo grabado no tiene puertas".into());
+                }
+                car.door_target = targets;
+            }
+        }
+        if let Some(weather) = v.get("surface_weather") {
+            let input: Option<crate::surface_conditions::SurfaceWeather> =
+                serde_json::from_value(weather.clone()).map_err(|e| e.to_string())?;
+            if let Some(input) = input {
+                if !input.valid() {
+                    return Err("Superficie grabada inválida".into());
+                }
+                session
+                    .state
+                    .surface_conditions
+                    .get_or_insert_with(|| crate::surface_conditions::SurfaceConditions::new(input))
+                    .weather = input;
+            }
+        }
         let flag = |k: &str| {
             v[k].as_bool()
                 .ok_or_else(|| format!("Interruptor grabado inválido: {k}"))
         };
         session.state.electric.pantograph_command_up = flag("pantograph")?;
         session.state.electric.breaker_command_closed = flag("breaker")?;
+        if let Some(controls) = v.get("electric_collectors") {
+            let controls: Vec<Vec<(Option<bool>, bool)>> =
+                serde_json::from_value(controls.clone()).map_err(|e| e.to_string())?;
+            if controls.len() != session.state.electric.cars.len()
+                || controls
+                    .iter()
+                    .zip(&session.state.electric.cars)
+                    .any(|(p, c)| p.len() != c.pantographs.len())
+            {
+                return Err("Pantógrafos grabados incompatibles".into());
+            }
+            for (car, controls) in session.state.electric.cars.iter_mut().zip(controls) {
+                for (p, (command, contact)) in car.pantographs.iter_mut().zip(controls) {
+                    p.command_up = command;
+                    p.contact_enabled = contact;
+                }
+            }
+        }
+
         if session.exterior.door.anim_open_target() != flag("doors")? {
             session.exterior.toggle_door();
         }

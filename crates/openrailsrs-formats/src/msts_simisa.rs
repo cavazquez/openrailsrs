@@ -24,6 +24,13 @@ pub struct SimisaPayload {
 
 /// Strip SIMISA wrapper and zlib-decompress (`SIMISA@F`) if present.
 pub fn decode_simisa_container(bytes: &[u8]) -> Result<SimisaPayload, FormatError> {
+    decode_simisa_container_limited(bytes, usize::MAX)
+}
+
+pub fn decode_simisa_container_limited(
+    bytes: &[u8],
+    maximum: usize,
+) -> Result<SimisaPayload, FormatError> {
     if bytes.len() < HEADER_LEN + 8 {
         return Err(FormatError::UnexpectedToken {
             offset: 0,
@@ -42,9 +49,12 @@ pub fn decode_simisa_container(bytes: &[u8]) -> Result<SimisaPayload, FormatErro
                 message: "truncated compressed SIMISA header".into(),
             });
         }
-        let inflated = inflate_simisa_body(bytes)?;
+        let inflated = inflate_simisa_body(bytes, maximum)?;
         crate::encoding::msts_latin_bytes(&inflated)
     } else if header_prefix.starts_with("SIMISA@@") || header_prefix.starts_with("SIMISA") {
+        if bytes.len().saturating_sub(HEADER_LEN) > maximum {
+            return Err(limit_error(maximum));
+        }
         bytes[HEADER_LEN..].to_vec()
     } else {
         return Err(FormatError::UnexpectedToken {
@@ -107,7 +117,13 @@ fn is_zlib_header(cmf: u8, flg: u8) -> bool {
     cmf == 0x78 && ((u16::from(cmf) << 8) | u16::from(flg)) % 31 == 0
 }
 
-fn inflate_simisa_body(bytes: &[u8]) -> Result<Vec<u8>, FormatError> {
+fn limit_error(maximum: usize) -> FormatError {
+    FormatError::UnexpectedToken {
+        offset: 0,
+        message: format!("SIMISA decoded payload exceeds {maximum} byte budget"),
+    }
+}
+fn inflate_simisa_body(bytes: &[u8], maximum: usize) -> Result<Vec<u8>, FormatError> {
     let mut starts = Vec::new();
     for fixed in [HEADER_LEN, HEADER_LEN + 2] {
         if fixed < bytes.len() {
@@ -126,7 +142,11 @@ fn inflate_simisa_body(bytes: &[u8]) -> Result<Vec<u8>, FormatError> {
         crate::cancellation::check()?;
         let mut decoder = flate2::read::ZlibDecoder::new(&bytes[start..]);
         let mut out = Vec::new();
-        match crate::cancellation::Reader(&mut decoder).read_to_end(&mut out) {
+        match crate::cancellation::Reader(&mut decoder)
+            .take(maximum.saturating_add(1) as u64)
+            .read_to_end(&mut out)
+        {
+            Ok(_) if out.len() > maximum => return Err(limit_error(maximum)),
             Ok(_) if !out.is_empty() => return Ok(out),
             Ok(_) => {
                 last_error = Some(std::io::Error::new(
@@ -191,4 +211,25 @@ fn find_binary_start(body: &[u8], token_offset: i32) -> usize {
 /// Check whether a token ID is a known shape or world token.
 fn is_known_shape_or_world_token(id: i32) -> bool {
     matches!(id, 1..=129 | 300..=430)
+}
+
+#[cfg(test)]
+mod limited_decode_tests {
+    use super::*;
+    use std::io::Write;
+    #[test]
+    fn compressed_scan_stops_at_the_decoded_budget_instead_of_expanding_the_entire_shape() {
+        let mut encoder = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::best());
+        encoder.write_all(b"JINX0s1t______\r\n").unwrap();
+        for _ in 0..1024 {
+            encoder.write_all(&[b' '; 1024]).unwrap();
+        }
+        let compressed = encoder.finish().unwrap();
+        assert!(compressed.len() < 4096);
+        let mut wrapped = b"SIMISA@F@@@@@@@@".to_vec();
+        wrapped.extend(compressed);
+        let error = crate::ShapeFile::from_bytes_limited(&wrapped, 8192).unwrap_err();
+        assert!(error.to_string().contains("budget"));
+        assert!(decode_simisa_container_limited(&wrapped, 2 * 1024 * 1024).is_ok());
+    }
 }

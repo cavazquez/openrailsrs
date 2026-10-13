@@ -61,6 +61,9 @@ pub struct WindshieldSettings {
     pub blade1: Vec4,
     pub blade2: Vec4,
     pub sweep: Vec4,
+    pub world_from_clip: Mat4,
+    pub clouds: Vec4,
+    pub cloud_world: Vec4,
 }
 #[derive(Resource, Default)]
 struct WindshieldWipeState {
@@ -74,6 +77,9 @@ fn sync_windshield(
     weather: Res<ActivePlayerContent>,
     atmosphere: Option<Res<crate::weather_state::WeatherState>>,
     follow: Res<CameraFollowMode>,
+    sun: Option<Res<crate::route_lighting::RouteSunState>>,
+    origin: Res<crate::floating_origin::FloatingOrigin>,
+    focus: Res<crate::world::RouteFocus>,
     cvf: Res<crate::cab_cvf::CabCvfState>,
     overlay: Res<crate::cab_cvf_overlay::CabCvfOverlayState>,
     preferences: Res<crate::player_settings::PlayerSettings>,
@@ -183,7 +189,25 @@ fn sync_windshield(
                 blade2.y = p.y;
             }
         }
+        let base = origin.shift + focus.center;
+        let cloud_phase = atmosphere
+            .as_ref()
+            .map_or(Vec2::ZERO, |w| w.advection.phase(base, 8192.));
+        let clip = projection.get_clip_from_view() * camera_transform.to_matrix().inverse();
+        let direction = sun.as_ref().map_or(Vec3::Y, |s| s.direction);
         let settings = WindshieldSettings {
+            world_from_clip: clip.inverse(),
+            clouds: Vec4::new(
+                direction.x,
+                direction.y,
+                direction.z,
+                if direction.y > 0.05 {
+                    atmosphere.as_ref().map_or(0., |w| w.atmosphere.cloud_cover)
+                } else {
+                    0.
+                },
+            ),
+            cloud_world: Vec4::new(cloud_phase.x, cloud_phase.y, 0., 0.),
             time_s: clock as f32,
             rain: if *follow == CameraFollowMode::DriverCam || follow.is_cab2d() {
                 atmosphere
@@ -303,7 +327,7 @@ fn draw_windshield(
     mut ctx: RenderContext,
 ) {
     let (target, depth, settings, index) = view.into_inner();
-    if settings.rain < 0.002 {
+    if settings.rain < 0.002 && settings.clouds.w < 0.02 {
         return;
     }
     let Some(pipeline) = pipeline else { return };

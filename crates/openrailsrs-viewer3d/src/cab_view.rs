@@ -186,6 +186,9 @@ fn publish_cab_lighting(
 }
 
 impl CabInteriorState {
+    pub(crate) fn reset_for_vehicle(&mut self) {
+        *self = Self::default();
+    }
     pub fn is_preparing(&self) -> bool {
         self.preparation.is_some()
     }
@@ -226,10 +229,9 @@ pub fn lead_trainset_root(consist: &TrainConsistScene, route_dir: &Path) -> Opti
         }
     }
     let shape_dirs: Vec<&Path> = shape_dir_bufs.iter().map(|p| p.as_path()).collect();
-    let vehicles = consist.vehicles_for("primary");
     let shape_path = crate::rolling_stock::resolve_consist_vehicle_shape_path(
         &shape_dirs,
-        vehicles.first()?,
+        consist.cab_vehicle()?,
         route_dir,
     )?;
     let trainset = if shape_path
@@ -295,7 +297,7 @@ pub fn resolve_cab_shape_for_consist(
     consist: &TrainConsistScene,
     route_dir: &Path,
 ) -> Option<PathBuf> {
-    let lead = consist.vehicles_for("primary").first()?;
+    let lead = consist.cab_vehicle()?;
     for root in cab_trainset_candidates(consist, route_dir) {
         if let Some(eng_path) = crate::rolling_stock::vehicle_engine_path(lead, &root)
             && let Ok(openrailsrs_formats::MstsFile::Engine(eng)) =
@@ -586,7 +588,7 @@ fn load_consist_2d_cab(
     cvf: &mut cab_cvf::CabCvfState,
 ) {
     if let Some(trainset) = lead_trainset_root(consist, route_dir)
-        && let Some(lead) = consist.vehicles_for("primary").first()
+        && let Some(lead) = consist.cab_vehicle()
         && let Some(eng_path) = crate::rolling_stock::vehicle_engine_path(lead, &trainset)
         && let Ok(openrailsrs_formats::MstsFile::Engine(eng)) =
             openrailsrs_formats::parse_msts_file(&eng_path)
@@ -681,10 +683,7 @@ pub fn sync_cab_interior(
         if state.preparation.is_none() {
             let trainset = lead_trainset_root(&consist, &assets.route_dir);
             let eng_path = trainset.as_ref().and_then(|root| {
-                crate::rolling_stock::vehicle_engine_path(
-                    consist.vehicles_for("primary").first()?,
-                    root,
-                )
+                crate::rolling_stock::vehicle_engine_path(consist.cab_vehicle()?, root)
             });
             let path = cab_shape.clone();
             let route_dir = assets.route_dir.clone();

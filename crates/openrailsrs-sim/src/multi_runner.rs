@@ -110,6 +110,7 @@ fn consist_root(consist_path: &Path) -> &Path {
         .unwrap_or(consist_path)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn build_physics(
     consist_path: &Path,
     davis_override: Option<&openrailsrs_scenarios::DavisSection>,
@@ -117,6 +118,7 @@ fn build_physics(
     legacy_power_cap: bool,
     profiles: &[openrailsrs_core::vehicle_profile::VehicleProfile],
     weather_track: bool,
+    freight: Option<&openrailsrs_scenarios::freight::FreightService>,
     electric_context: (
         &Path,
         Option<&openrailsrs_core::electrification::RouteElectricSupply>,
@@ -125,6 +127,7 @@ fn build_physics(
     ),
 ) -> Result<TrainPhysics, SimError> {
     let mut consist = load_consist_with_asset_root(consist_path, consist_root(consist_path))?;
+    crate::freight::apply(&mut consist, freight)?;
     let customized = openrailsrs_train::vehicle_profiles::apply_with_davis(
         consist_path,
         &mut consist,
@@ -242,6 +245,7 @@ pub fn run_scenario_multi_train(
             scenario.simulation.legacy_power_cap,
             &scenario.train.vehicle_profiles,
             scenario.simulation.weather_track.is_some(),
+            scenario.train.freight.as_ref(),
             (
                 &route_dir,
                 scenario.route.electric_supply.as_ref(),
@@ -250,18 +254,28 @@ pub fn run_scenario_multi_train(
             ),
         )?;
         physics.power_supply.loads = scenario.train.power_load.clone();
-        let path_data = PathData::from_path(&path_edges, &graph);
+        let mut path_data = PathData::from_path(&path_edges, &graph);
+        crate::freight::cap(&mut path_data, scenario.train.freight.as_ref());
         let mut state = TrainSimState::new(path_edges);
         state.weather_track = scenario.simulation.weather_track.clone();
         let mut loaded_consist =
             load_consist_with_asset_root(&consist_path, consist_root(&consist_path)).ok();
         if let Some(c) = &mut loaded_consist {
+            crate::freight::apply(c, scenario.train.freight.as_ref())?;
             openrailsrs_train::vehicle_profiles::apply(
                 &consist_path,
                 c,
                 &scenario.train.vehicle_profiles,
             )?;
             state.brake_system = build_brake_system(c);
+            crate::vehicle_systems::configure(
+                &mut state,
+                &consist_path,
+                &scenario.train.systems,
+                &scenario.train.platform_sides,
+                c.vehicles.len(),
+            )
+            .map_err(SimError::Msg)?;
             state.cab_equipment = crate::cab_equipment::load(
                 &consist_path,
                 &scenario.train.cab_equipment,
@@ -274,6 +288,8 @@ pub fn run_scenario_multi_train(
             .and_then(|c| c.aggregate_steam_params())
             .map(|p| crate::steam::BoilerState::from_params(&p));
         if let Some(consist) = loaded_consist.as_ref() {
+            physics.mass_kg = consist.total_mass_kg();
+            crate::steam_equipment::configure(&mut state, consist);
             let engines = consist.diesel_traction_models();
             if !engines.is_empty() {
                 state.diesel_rpm = engines.iter().map(|e| e.idle_rpm()).collect();
@@ -347,13 +363,14 @@ pub fn run_scenario_multi_train(
         }
         let path_edges = edge_path(&g2, &entry.start, &entry.destination)?;
         let consist_path = scenario_dir.join(&entry.consist);
-        let physics = build_physics(
+        let mut physics = build_physics(
             &consist_path,
             entry.davis.as_ref(),
             scenario.brake_mapping(),
             scenario.simulation.legacy_power_cap,
             &scenario.train.vehicle_profiles,
             scenario.simulation.weather_track.is_some(),
+            entry.freight.as_ref(),
             (
                 &route_dir,
                 scenario.route.electric_supply.as_ref(),
@@ -361,18 +378,28 @@ pub fn run_scenario_multi_train(
                 &graph,
             ),
         )?;
-        let path_data = PathData::from_path(&path_edges, &g2);
+        let mut path_data = PathData::from_path(&path_edges, &g2);
+        crate::freight::cap(&mut path_data, entry.freight.as_ref());
         let mut state = TrainSimState::new(path_edges);
         state.weather_track = scenario.simulation.weather_track.clone();
         let mut loaded_consist2 =
             load_consist_with_asset_root(&consist_path, consist_root(&consist_path)).ok();
         if let Some(c) = &mut loaded_consist2 {
+            crate::freight::apply(c, entry.freight.as_ref())?;
             openrailsrs_train::vehicle_profiles::apply(
                 &consist_path,
                 c,
                 &scenario.train.vehicle_profiles,
             )?;
             state.brake_system = build_brake_system(c);
+            crate::vehicle_systems::configure(
+                &mut state,
+                &consist_path,
+                &entry.systems,
+                &[],
+                c.vehicles.len(),
+            )
+            .map_err(SimError::Msg)?;
             state.cab_equipment = crate::cab_equipment::load(&consist_path, &[], c.vehicles.len())
                 .map_err(SimError::Msg)?;
         }
@@ -381,6 +408,8 @@ pub fn run_scenario_multi_train(
             .and_then(|c| c.aggregate_steam_params())
             .map(|p| crate::steam::BoilerState::from_params(&p));
         if let Some(consist) = loaded_consist2.as_ref() {
+            physics.mass_kg = consist.total_mass_kg();
+            crate::steam_equipment::configure(&mut state, consist);
             let engines = consist.diesel_traction_models();
             if !engines.is_empty() {
                 state.diesel_rpm = engines.iter().map(|e| e.idle_rpm()).collect();
@@ -794,6 +823,7 @@ impl LiveMultiSim {
                 scenario.simulation.legacy_power_cap,
                 &scenario.train.vehicle_profiles,
                 scenario.simulation.weather_track.is_some(),
+                scenario.train.freight.as_ref(),
                 (
                     &route_dir,
                     scenario.route.electric_supply.as_ref(),
@@ -862,6 +892,7 @@ impl LiveMultiSim {
                 scenario.simulation.legacy_power_cap,
                 &scenario.train.vehicle_profiles,
                 scenario.simulation.weather_track.is_some(),
+                entry.freight.as_ref(),
                 (
                     &route_dir,
                     scenario.route.electric_supply.as_ref(),
@@ -959,6 +990,7 @@ impl LiveMultiSim {
                 true,
                 &[],
                 false,
+                None,
                 (&route_dir, None, &[], &graph),
             )?;
             let total_dist_m: f64 = path_edges

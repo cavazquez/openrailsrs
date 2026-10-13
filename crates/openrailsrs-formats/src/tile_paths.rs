@@ -92,6 +92,27 @@ pub fn resolve_world_tile_file(route_dir: &Path, tile_x: i32, tile_z: i32) -> Op
         if let Some(found) = find_file_case_insensitive(&dir, &name) {
             return Some(found);
         }
+        // Some authors write negative zero. It is the same parsed tile as +0,
+        // and must also resolve when a composite bundle is requested by coords.
+        if tile_x == 0 || tile_z == 0 {
+            for sx in [false, true] {
+                for sz in [false, true] {
+                    let x = if tile_x == 0 && sx {
+                        "-000000".into()
+                    } else {
+                        format!("{tile_x:+07}")
+                    };
+                    let z = if tile_z == 0 && sz {
+                        "-000000".into()
+                    } else {
+                        format!("{tile_z:+07}")
+                    };
+                    if let Some(found) = find_file_case_insensitive(&dir, &format!("w{x}{z}.w")) {
+                        return Some(found);
+                    }
+                }
+            }
+        }
     }
     None
 }
@@ -296,6 +317,15 @@ mod tests {
             catalog.get(&(-6080, 14925)).map(|p| p.as_path()),
             Some(resolved.as_path())
         );
+    }
+
+    #[test]
+    fn negative_zero_world_resolves_the_same_key_used_by_bundles() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dir.path().join("WORLD")).unwrap();
+        let path = dir.path().join("WORLD/w-000000-000000.w");
+        std::fs::write(&path, b"fixture").unwrap();
+        assert_eq!(resolve_world_tile_file(dir.path(), 0, 0), Some(path));
     }
 
     #[test]

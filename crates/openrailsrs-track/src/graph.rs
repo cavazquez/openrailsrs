@@ -56,6 +56,8 @@ pub struct Edge {
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct EdgePhysicsProfile {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub curves: Vec<PositionCurve>,
     #[serde(default)]
     pub speed_posts: Vec<PositionSpeedLimit>,
     #[serde(default)]
@@ -63,6 +65,14 @@ pub struct EdgePhysicsProfile {
     /// Original reciprocal TDB platforms, in directed edge metres.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub platforms: Vec<PositionPlatform>,
+}
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct PositionCurve {
+    pub position_m: f64,
+    /// Signed curvature in the directed edge coordinate system.
+    pub curvature_m_inv: f64,
+    pub cant_rad: f64,
+    pub heading_rad: f64,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PositionPlatform {
@@ -98,10 +108,16 @@ pub struct TrackGraph {
 impl TrackGraph {
     pub fn set_physics_profile(&mut self, edge: &str, mut profile: EdgePhysicsProfile) {
         profile
+            .curves
+            .sort_by(|a, b| a.position_m.total_cmp(&b.position_m));
+        profile
             .speed_posts
             .sort_by(|a, b| a.position_m.total_cmp(&b.position_m));
         profile
             .grades
+            .sort_by(|a, b| a.position_m.total_cmp(&b.position_m));
+        profile
+            .curves
             .sort_by(|a, b| a.position_m.total_cmp(&b.position_m));
         self.profiles.insert(edge.into(), profile);
     }

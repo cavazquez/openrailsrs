@@ -1,3 +1,4 @@
+#![recursion_limit = "256"]
 //! Experimental 3D viewer for `openrailsrs` (Bevy).
 //!
 //! Loads a route directory (`track.toml`) and renders the logical graph as
@@ -17,12 +18,15 @@ pub mod cab_native_instruments;
 pub mod cab_panel;
 pub mod cab_render;
 pub mod cab_screen;
+mod cab_selection;
 pub mod cab_view;
 pub mod camera;
 pub mod capture;
 mod contact_shadows;
 mod content_management;
 pub mod content_validation;
+#[cfg(feature = "dev-tools")]
+mod equipment_capture;
 pub mod etcs;
 mod visual_fault;
 pub use openrailsrs_or_shader::coordinates;
@@ -216,6 +220,14 @@ impl Plugin for ViewerPlugin {
         }
         app.add_plugins(driving_hud::DrivingHudPlugin);
         app.add_plugins(player_ui::PlayerUiPlugin);
+        #[cfg(feature = "dev-tools")]
+        app.init_resource::<equipment_capture::EquipmentCapture>()
+            .add_systems(
+                Update,
+                equipment_capture::apply
+                    .run_if(live::live_mode_active)
+                    .run_if(in_state(ViewerAppState::Playing)),
+            );
         #[cfg(feature = "dev-tools")]
         app.add_systems(
             Update,
@@ -420,6 +432,27 @@ impl Plugin for ViewerPlugin {
                 Update,
                 moon::update
                     .after(route_lighting::update_route_sun)
+                    .run_if(in_state(ViewerAppState::Playing)),
+            );
+        app.add_systems(
+            OnEnter(ViewerAppState::Playing),
+            physical_track::prepare
+                .before(live::spawn_live_train)
+                .run_if(live::live_mode_active),
+        );
+        app.init_resource::<station_lighting::StationLighting>()
+            .add_systems(
+                PostUpdate,
+                station_lighting::update
+                    .after(bevy::transform::TransformSystems::Propagate)
+                    .run_if(live::live_mode_active)
+                    .run_if(in_state(ViewerAppState::Playing)),
+            )
+            .add_systems(
+                Update,
+                passenger_walk::update
+                    .before(camera::follow_train_camera)
+                    .run_if(live::live_mode_active)
                     .run_if(in_state(ViewerAppState::Playing)),
             );
         app.init_resource::<native_audio::NativeAudio>();
@@ -775,6 +808,15 @@ impl Plugin for ViewerPlugin {
             )
             .add_systems(
                 Update,
+                cab_selection::sync
+                    .before(cab_view::sync_cab_interior)
+                    .before(camera::follow_train_camera)
+                    .after(live::live_driver_input)
+                    .run_if(live::live_mode_active)
+                    .run_if(in_state(ViewerAppState::Playing)),
+            )
+            .add_systems(
+                Update,
                 (
                     gameplay::update_gameplay_markers.run_if(live::live_mode_active),
                     gameplay::update_gameplay_toast.run_if(live::live_mode_active),
@@ -911,3 +953,10 @@ mod service_builder;
 mod clearance;
 
 mod campaign_play;
+
+mod weather_advection;
+
+mod passenger_walk;
+mod station_lighting;
+
+mod physical_track;

@@ -11,7 +11,7 @@ python3 scripts/benchmark_player_contract.py \
   --out-dir tmp/performance-contract --weather rain --target-m 100
 ```
 
-Ambos binarios deben tener las funciones de captura y usar los mismos recursos. Para una referencia con recursos separados, agregá `--baseline-resources /ruta/a/sus/assets`. El escenario, la formación y los archivos de sus vehículos deben permanecer iguales. Para contenido original, elegí un escenario preparado con referencias absolutas y su raíz original.
+Ambos binarios deben tener las funciones de captura y usar los mismos recursos de ruta y formación. Cada ejecutable carga los shaders de su versión. Para una referencia con recursos separados, agregá `--baseline-resources /ruta/a/sus/recursos`; ese directorio debe contener `assets/shaders/`. El escenario, la formación y los archivos de sus vehículos deben permanecer iguales. Para contenido original, elegí un escenario preparado con referencias absolutas y su raíz original.
 
 El directorio conserva PNG, informes crudos, contratos JSON e informe de comparación. Registra CPU, kernel, arquitectura, adaptador/driver, 1280×720, hashes de ruta/formación/binario, cámara con FOV efectivo y presupuestos. La versión del binario acompaña su SHA256. Rechaza menos de 300 cuadros de partida y condiciones diferentes. La selección de GPU debe ser de hardware; no presenta lavapipe como resultado de una GPU física.
 

@@ -413,6 +413,10 @@ mod tests {
     #[test]
     fn cab_panel_formats_diesel_and_brake() {
         let tel = CabTelemetry {
+            dynamic_brake_pct: 0.,
+            electric_brake_force_n: 0.,
+            dynamic_max_current_a: None,
+            electric_brake_fraction: 0.,
             cab_windows: [0.; 2],
             cab_door: 0.,
             washer_spraying: false,
@@ -479,6 +483,10 @@ mod tests {
     #[test]
     fn cab_panel_marks_overspeed() {
         let tel = CabTelemetry {
+            dynamic_brake_pct: 0.,
+            electric_brake_force_n: 0.,
+            dynamic_max_current_a: None,
+            electric_brake_fraction: 0.,
             cab_windows: [0.; 2],
             cab_door: 0.,
             washer_spraying: false,

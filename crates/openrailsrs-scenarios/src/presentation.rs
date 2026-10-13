@@ -7,6 +7,8 @@ pub struct VehiclePresentation {
     pub suspension: Option<SuspensionDef>,
     pub horn: Option<SoundEmitterDef>,
     pub passenger_lamps: Vec<PassengerLampDef>,
+    /// Axis-aligned permitted eye volumes in the authored MSTS car frame.
+    pub walk_boxes_m: Vec<[[f32; 3]; 2]>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct SuspensionDef {
@@ -63,7 +65,12 @@ pub struct PassengerLampDef {
 }
 impl VehiclePresentation {
     pub fn valid(&self) -> bool {
-        self.vehicle < 256
+        self.walk_boxes_m.len() <= 32
+            && self.walk_boxes_m.iter().all(|b| {
+                b.iter().flatten().all(|v| v.is_finite() && v.abs() <= 100.)
+                    && (0..3).all(|i| b[0][i] < b[1][i])
+            })
+            && self.vehicle < 256
             && self.suspension.as_ref().is_none_or(SuspensionDef::valid)
             && self.horn.as_ref().is_none_or(SoundEmitterDef::valid)
             && self.passenger_lamps.len() <= 8

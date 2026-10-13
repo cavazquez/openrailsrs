@@ -1,5 +1,9 @@
 pub mod cant;
-pub use cant::{CantProfile, CantSection, CantStandard, RouteCantSettings, generate_cant_profiles};
+pub mod cant_speeds;
+pub use cant::{
+    CantProfile, CantSection, CantStandard, RouteCantSettings, generate_cant_profiles,
+    generate_cant_profiles_with_table,
+};
 mod activity;
 mod brake_shoe;
 mod carspawn;
@@ -81,6 +85,7 @@ use crate::error::FormatError;
 
 pub mod native_physics;
 pub mod power_supply;
+pub mod vehicle_equipment;
 /// Named STF blocks in either `(key values...)` or `key (values...)` form.
 pub mod vehicle_runtime;
 

@@ -61,7 +61,7 @@ impl TractiveCurve {
 ///
 /// These parameters drive the boiler + cylinder model in `openrailsrs-sim::steam`.
 /// When `None` the sim falls back to the electric/diesel P/v model.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct SteamParams {
     pub operation: Box<openrailsrs_formats::SteamOperatingParams>,
     /// Number of cylinders (typically 2 for outside-cylinder or 4 for compound).

@@ -444,11 +444,43 @@ impl ShapeFile {
         Self::from_bytes(&bytes)
     }
 
+    /// Bounded read for content metadata scans before launching the renderer.
+    pub fn from_path_limited(
+        path: impl AsRef<std::path::Path>,
+        maximum: usize,
+    ) -> Result<Self, FormatError> {
+        use std::io::Read;
+        let file =
+            std::fs::File::open(path.as_ref()).map_err(|e| FormatError::UnexpectedToken {
+                offset: 0,
+                message: e.to_string(),
+            })?;
+        let mut bytes = Vec::new();
+        crate::cancellation::Reader(file)
+            .take(maximum.saturating_add(1) as u64)
+            .read_to_end(&mut bytes)
+            .map_err(|e| FormatError::UnexpectedToken {
+                offset: 0,
+                message: e.to_string(),
+            })?;
+        Self::from_bytes_limited(&bytes, maximum)
+    }
+
     /// Parse shape bytes (SIMISA text/binary or raw ASCII).
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, FormatError> {
+        Self::from_bytes_limited(bytes, usize::MAX)
+    }
+    pub fn from_bytes_limited(bytes: &[u8], maximum: usize) -> Result<Self, FormatError> {
+        if bytes.len() > maximum {
+            return Err(FormatError::UnexpectedToken {
+                offset: 0,
+                message: format!("shape exceeds {maximum} byte budget"),
+            });
+        }
+
         let raw = crate::encoding::msts_latin_bytes(bytes);
         if raw.len() >= 6 && raw.starts_with(b"SIMISA") {
-            let payload = crate::msts_simisa::decode_simisa_container(&raw)?;
+            let payload = crate::msts_simisa::decode_simisa_container_limited(&raw, maximum)?;
             if crate::shape_binary_direct::is_binary_shape_payload(&payload) {
                 return crate::shape_binary_direct::shape_from_binary_payload(&payload);
             }

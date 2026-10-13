@@ -1178,6 +1178,7 @@ mod tests {
             z: 0.,
         };
         let node = TrackDbNode {
+            junction_shape_index: None,
             id: 1,
             position: Some(start),
             pin_refs: vec![],
@@ -1282,6 +1283,7 @@ mod tests {
         );
         let path = NativePath::new(
             &TrackDbNode {
+                junction_shape_index: None,
                 id: 1,
                 position: Some(start),
                 pin_refs: vec![],

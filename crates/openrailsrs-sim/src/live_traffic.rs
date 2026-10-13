@@ -249,6 +249,10 @@ impl LiveTraffic {
                 // formations superimposed at a shared spawn point before then.
                 if !service.departed {
                     service.session.state.time.0 = clock;
+                    crate::surface_conditions::update_program_input(&mut service.session.state);
+                    if let Some(surface) = &mut service.session.state.surface_conditions {
+                        surface.advance(dt);
+                    }
                     let footprint = service.session.own_occupied_edges();
                     if clock + 1e-9 >= service.departure_s
                         && footprint.keys().all(|edge| !occupied.contains_key(edge))
@@ -296,6 +300,12 @@ fn service_scenario(player: &ScenarioFile, entry: &TrainEntryDef) -> ScenarioFil
     ai.route.stops.clone_from(&entry.stops);
     ai.route.switches.clone_from(&entry.switches);
     ai.train.consist.clone_from(&entry.consist);
+    ai.train.systems.clone_from(&entry.systems);
+    ai.train.freight.clone_from(&entry.freight);
+    ai.train.platform_sides.clear();
+    ai.train.cab_equipment.clear();
+    ai.train.presentation.clear();
+    ai.train.power_load = Default::default();
     ai.train
         .electric_pickups
         .clone_from(&entry.electric_pickups);

@@ -721,6 +721,12 @@ pub fn terrain_tile_bundle_materialize_system(
         };
         stream.pending_load.remove(&key);
         stream.loaded.insert(key);
+        if tile.data.is_none() {
+            viewer_log!(
+                "terrain-stream: tile {key:?} has no elevation data: {:?}",
+                bundle.diag.failures
+            );
+        }
         stream.pending_spawn.push(key);
         stream.tile_cache.insert_scene_tile(&tile);
         elevation.merge_tile(key.0, key.1, Some(&tile));

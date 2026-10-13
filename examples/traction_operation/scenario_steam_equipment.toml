@@ -1,0 +1,57 @@
+[scenario]
+name = "Vapor: dos calderas e inyectores originales"
+description = "L cambia de locomotora detenida; B permite activar cada inyector. Tablas OR de 10 y 13 mm."
+
+[route]
+path = "route"
+start = "a"
+destination = "b"
+assume_signals_clear = true
+
+[[route.stops]]
+node = "a"
+arrive_s = 0.0
+depart_s = 5.0
+dwell_s = 5.0
+
+[[route.stops]]
+node = "mid"
+arrive_s = 90.0
+depart_s = 95.0
+dwell_s = 5.0
+
+[[route.stops]]
+node = "b"
+arrive_s = 160.0
+depart_s = 160.0
+dwell_s = 5.0
+
+[train]
+consist = "consists/two_steam.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+
+[simulation]
+duration = 240.0
+time_step = 0.05
+seed = 42
+legacy_power_cap = false
+
+[output]
+csv = "run_steam.csv"
+metadata = "run_steam.json"
+
+[[train.systems]]
+vehicle=0
+[train.systems.auxiliaries]
+native_injector_mm=[10,13]
+compressor_efficiency=0.7
+compressor_idle_w=500.0
+battery_kwh=0.05
+steam_compressor_kg_j=0.0000001
+ejector_steam_kg_s=0.02
+injector_steam_kg_per_water_kg=0.04
+injector_max_pressure_bar=18.0
+feedwater_c=20.0

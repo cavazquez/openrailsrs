@@ -377,7 +377,7 @@ pub fn control_value(control: &ControlType, tel: &CabTelemetry) -> f64 {
         ControlType::Throttle | ControlType::ThrottleDisplay => tel.throttle_pct / 100.0,
         ControlType::TrainBrake => tel.brake_pct / 100.0,
         // Distinct from train brake; no dedicated telemetry yet.
-        ControlType::DynamicBrakeDisplay => 0.0,
+        ControlType::DynamicBrakeDisplay => tel.dynamic_brake_pct / 100.,
         ControlType::DirectionDisplay => tel.direction,
         ControlType::Speedometer => {
             let scale = tel.limit_kmh.max(40.0);
@@ -486,6 +486,7 @@ pub fn dial_control_value(
         return tel.diesel.as_ref().map_or(0., |d| d.temperature_c);
     }
     match control {
+        ControlType::DynamicBrakeDisplay => tel.dynamic_brake_pct,
         ControlType::Speedometer => {
             if units.eq_ignore_ascii_case("MILES_PER_HOUR") {
                 tel.speed_kmh * 0.621_371
@@ -510,6 +511,17 @@ pub fn dial_control_value(
             }
         }
         ControlType::Ammeter | ControlType::AmmeterAbs | ControlType::LoadMeter => {
+            if tel.electric_brake_force_n > 0. {
+                let maximum = tel
+                    .dynamic_max_current_a
+                    .unwrap_or(dial.scale_min.abs().max(dial.scale_max.abs()));
+                let value = tel.electric_brake_fraction * maximum;
+                return if matches!(control, ControlType::Ammeter) && dial.scale_min < 0. {
+                    -value
+                } else {
+                    value
+                };
+            }
             use openrailsrs_sim::cab_meter::{CurrentMeter, CurrentMeterInput, current_meter_a};
             current_meter_a(
                 if matches!(control, ControlType::LoadMeter) {
@@ -1212,6 +1224,10 @@ mod tests {
     #[test]
     fn control_value_maps_throttle_and_brake() {
         let tel = CabTelemetry {
+            dynamic_brake_pct: 0.,
+            electric_brake_force_n: 0.,
+            dynamic_max_current_a: None,
+            electric_brake_fraction: 0.,
             cab_windows: [0.; 2],
             cab_door: 0.,
             washer_spraying: false,
@@ -1266,6 +1282,10 @@ mod tests {
         tel_h.horn_active = true;
         assert!((control_value(&ControlType::Generic("HORN".into()), &tel_h) - 1.0).abs() < 1e-6);
         let active = CabTelemetry {
+            dynamic_brake_pct: 0.,
+            electric_brake_force_n: 0.,
+            dynamic_max_current_a: None,
+            electric_brake_fraction: 0.,
             wheel_slip: true,
             sander_on: true,
             ..tel.clone()
@@ -1296,6 +1316,10 @@ mod tests {
             ..Default::default()
         };
         let loaded = CabTelemetry {
+            dynamic_brake_pct: 0.,
+            electric_brake_force_n: 0.,
+            dynamic_max_current_a: None,
+            electric_brake_fraction: 0.,
             max_current_a: None,
             native_axles: true,
             tractive_load_fraction: 0.0,

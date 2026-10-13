@@ -253,9 +253,11 @@ fn electric_supply_matches_pinned_native_pantograph_and_main_power_oracle() {
     let mut s = session();
     let params = &mut s.physics.electric.cars[0].params;
     params.pantograph_delay_s = oracle["pantograph_delay_s"].as_f64().unwrap();
+    params.pantographs[0].delay_s = params.pantograph_delay_s;
     params.breaker_delay_s = 0.;
     params.power_on_delay_s = oracle["power_on_delay_s"].as_f64().unwrap();
     s.state.electric.cars[0].pantograph_fraction = 0.;
+    s.state.electric.cars[0].pantographs[0].fraction = 0.;
     for point in oracle["pantographs"].as_array().unwrap() {
         s.state.electric.pantograph_command_up = point["command_up"].as_bool().unwrap();
         openrailsrs_sim::electric::advance(&mut s.state, &s.path_data, &s.physics.electric, 0.5);
@@ -283,6 +285,10 @@ fn electric_supply_matches_pinned_native_pantograph_and_main_power_oracle() {
             "Raising" => 0.5,
             _ => 0.,
         };
+        // This native fixture declares one collector. Its state is authoritative;
+        // the aggregate field remains the telemetry read by the old oracle.
+        s.state.electric.cars[0].pantographs[0].fraction =
+            s.state.electric.cars[0].pantograph_fraction;
         s.state.electric.breaker_command_closed = point["breaker"] == "Closed";
         openrailsrs_sim::electric::advance(&mut s.state, &s.path_data, &s.physics.electric, 0.);
         assert_eq!(

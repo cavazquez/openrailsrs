@@ -270,3 +270,8 @@ un viaje largo. Pasos y resultados esperados en la
 ## Alimentación y frenos por vehículo
 
 El mando de alimentación y los nuevos frenos de vacío/EP antiguo se ejecutan en Rust. Principal, auxiliar, batería, cabina y ETS conservan estado propio; los retardos y cambios de fuente llegan a tracción e iluminación. Los ensayos originales y sus límites se describen en [NATIVE_BRAKES_POWER.md](NATIVE_BRAKES_POWER.md). El host C# de TCS sigue siendo opcional; no es un host general de scripts de freno/alimentación de terceros.
+
+
+## Cuarta entrega: equipos por vehículo
+
+Los equipos declarados, sus perfiles y los límites verificados se describen en [VEHICLE_SYSTEMS.md](VEHICLE_SYSTEMS.md). La [guía manual](PLAYER_30_4_MANUAL.md) contiene treinta pruebas desde el menú. Los motores y calderas separados, colectores, bus, propulsión dual, frenos y auxiliares se conservan en partidas Rust; C# mantiene su opción de compatibilidad. Las ampliaciones con parámetros propios se distinguen de las leyes originales comprobadas.

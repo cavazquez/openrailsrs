@@ -29,6 +29,7 @@ pub struct ConsistVehicleVisual {
 /// Loaded consists keyed by replay track label (`primary`, extra `id`, …).
 #[derive(Resource, Clone, Default)]
 pub struct TrainConsistScene {
+    pub active_cab_vehicle: usize,
     pub scenario_dir: Option<PathBuf>,
     /// Primary consist path from `scenario.toml` (`train.consist`).
     pub primary_consist_rel: Option<String>,
@@ -38,6 +39,9 @@ pub struct TrainConsistScene {
 }
 
 impl TrainConsistScene {
+    pub fn cab_vehicle(&self) -> Option<&ConsistVehicleVisual> {
+        self.vehicles_for("primary").get(self.active_cab_vehicle)
+    }
     pub fn is_empty(&self) -> bool {
         self.by_label.is_empty()
     }

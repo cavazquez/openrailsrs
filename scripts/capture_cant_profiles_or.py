@@ -12,6 +12,7 @@ COMMIT = 'd16e670da333d26d2edfc97d5631a19dadf49ce5'
 SOURCE = 'Source/Orts.Simulation/Simulation/SuperElevation.cs'
 STANDARD = 'Source/Orts.Formats.Msts/RouteFile.cs'
 CONVERSIONS = 'Source/Orts.Common/Conversions.cs'
+INTERPOLATOR = 'Source/Orts.Parsers.Msts/Interpolator.cs'
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -26,7 +27,7 @@ def method(source, start):
     return source[a:end]
 
 
-def capture(source_root, dotnet, output):
+def capture(source_root, dotnet, output, extended=False):
     if output.exists():
         raise ValueError('Refusing to overwrite an oracle')
     source = subprocess.check_output(['git', '-C', str(source_root), 'show', COMMIT + ':' + SOURCE], text=True)
@@ -34,7 +35,7 @@ def capture(source_root, dotnet, output):
     conversions = subprocess.check_output(['git', '-C', str(source_root), 'show', COMMIT + ':' + CONVERSIONS], text=True)
     algorithm = method(source, 'void MarkSections(')
     a = route.index('public class SuperElevationStandard')
-    b = route.index('// Initialize new instance from superelevation interpolator', a)
+    b = route.index('// Read data for new instance using STF format' if extended else '// Initialize new instance from superelevation interpolator', a)
     standard = route[a:b] + '\n}'
     inputs = []
     for name, metric, high, lengths, radii, passenger, freight, direction in [
@@ -52,12 +53,30 @@ def capture(source_root, dotnet, output):
         inputs.append(dict(name=name, metric=metric, high_speed=high, gauge_m=1.435, direction=direction,
                            sections=[dict(length_m=l, radius_m=r, passenger_speed_mps=passenger, freight_speed_mps=freight)
                                      for l, r in zip(lengths, radii)]))
+    if extended:
+        table = [[200, .16], [600, .10], [1200, .04]]
+        for name, radius, pax, freight, direction, metric, use_legacy in [
+            ('legacy-knots', 600, 30, 20, 1, True, True),
+            ('legacy-interpolation-reverse', 800, 30, 20, -1, True, True),
+            ('legacy-extrapolation', 150, 25, 25, 1, True, True),
+            ('legacy-imperial', 800, 25, 20, 1, False, True),
+            ('modern-overrides-legacy', 800, 30, 20, 1, True, False),
+            ('local-passenger', 800, 20, 10, 1, True, False),
+            ('local-freight', 800, 10, 27, -1, True, False),
+            ('local-both-directions', 800, 30, 18, -1, True, False),
+        ]:
+            inputs.append(dict(name=name, metric=metric, high_speed=False, gauge_m=1.435,
+                               direction=direction, legacy_radius_cant=table,
+                               use_legacy=use_legacy,
+                               sections=[dict(length_m=l, radius_m=r,
+                                              passenger_speed_mps=pax, freight_speed_mps=freight)
+                                         for l, r in [(60, 0), (500, radius), (60, 0)]]))
     harness = r'''
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
-class Interpolator {
+public class Interpolator {
  public float[] X,Y;
  public Interpolator(float[] x,float[] y) {X=x;Y=y;}
  public void ScaleY(float v) {for(int i=0;i<Y.Length;i++) Y[i]*=v;}
@@ -75,13 +94,13 @@ class TRK {public Route Tr_RouteFile=new();}
 class Simulator {public TRK TRK=new();public TSectionDat TSectionDat=new();public float RouteTrackGaugeM=1.435f;}
 class TrVectorSection {public uint SectionIndex;public float NomElevM=-1,PassSpeedMpS,FreightSpeedMpS;public Interpolator? PhysElevTable,VisElevTable;}
 record Section(float LengthM,float RadiusM,float PassengerSpeedMps,float FreightSpeedMps);
-record Case(string Name,bool Metric,bool HighSpeed,float GaugeM,int Direction,Section[] Sections);
+record Case(string Name,bool Metric,bool HighSpeed,float GaugeM,int Direction,Section[] Sections,float[][]? LegacyRadiusCant=null,bool UseLegacy=true);
 class Reference {
  List<List<TrVectorSection>> Curves=new();
  void MapWFiles2Sections(List<TrVectorSection> sections) {}
  public object Run(Case input) {
   var simulator=new Simulator {RouteTrackGaugeM=input.GaugeM};
-  simulator.TRK.Tr_RouteFile.SuperElevation.Add(new SuperElevationStandard(input.Metric,input.HighSpeed));
+  SET_STANDARD
   var sections=new List<TrVectorSection>();
   for(uint i=0;i<input.Sections.Length;i++) {
    var s=input.Sections[i];simulator.TSectionDat.TrackSections[i]=new TrackSection {SectionCurve=s.RadiusM>0 ? new SectionCurve {Radius=s.RadiusM}:null};
@@ -90,6 +109,7 @@ class Reference {
   var lengths=input.Sections.Select(s=>s.LengthM).ToList();
   MarkSections(simulator,sections,lengths.Sum(),lengths,input.Direction);
   return new {input.Name,input.Metric,input.HighSpeed,input.GaugeM,input.Direction,input.Sections,
+   legacy_radius_cant=input.LegacyRadiusCant ?? [],use_legacy=input.UseLegacy,
    profiles=sections.Select(s=>new {positions=s.PhysElevTable?.X ?? [],elevations_m=s.PhysElevTable?.Y ?? [],angles_rad=s.VisElevTable?.Y ?? []}).ToArray()};
  }
  ALGORITHM
@@ -102,6 +122,23 @@ class Program {
  }
 }
 '''.replace('ALGORITHM', algorithm) + standard
+    setup = "simulator.TRK.Tr_RouteFile.SuperElevation.Add(new SuperElevationStandard(input.Metric,input.HighSpeed));"
+    if extended:
+        interpolator = subprocess.check_output(['git', '-C', str(source_root), 'show', COMMIT + ':' + INTERPOLATOR], text=True)
+        indexer = method(interpolator, 'public float this[float x]')
+        harness = harness.replace('public Interpolator(float[] x,float[] y) {X=x;Y=y;}',
+                                  'int Size,PrevIndex;float[]? Y2=null;public Interpolator(float[] x,float[] y) {X=x;Y=y;Size=x.Length;}')
+        harness = harness.replace('public float this[float x] => 0;', indexer)
+        setup = """
+        if(input.LegacyRadiusCant is {Length:>1}) {
+            var table=new Interpolator(input.LegacyRadiusCant.Select(p=>p[0]).ToArray(), input.LegacyRadiusCant.Select(p=>p[1]).ToArray());
+            simulator.TRK.Tr_RouteFile.SuperElevationHgtpRadiusM=table;
+            var standard=input.UseLegacy ? new SuperElevationStandard(table,input.Metric,input.HighSpeed):new SuperElevationStandard(input.Metric,input.HighSpeed);
+            standard.UseLegacyCalculation=input.UseLegacy;
+            simulator.TRK.Tr_RouteFile.SuperElevation.Add(standard);
+        } else { simulator.TRK.Tr_RouteFile.SuperElevation.Add(new SuperElevationStandard(input.Metric,input.HighSpeed)); }
+        """
+    harness = harness.replace('SET_STANDARD', setup)
     harness = harness.replace('public static float FromIn(float v)=>v*0.0254f;', method(conversions, 'public static float FromIn('))
     harness = harness.replace('public static float FromKpH(float v)=>v/3.6f;', method(conversions, 'public static float FromKpH('))
     harness = harness.replace('public static float FromMpH(float v)=>v*0.44704f;', method(conversions, 'public static float FromMpH('))
@@ -122,6 +159,9 @@ class Program {
                   standard_source=STANDARD, standard_source_sha256=hashlib.sha256(route.encode()).hexdigest(),
                   conversions_source=CONVERSIONS, conversions_source_sha256=hashlib.sha256(conversions.encode()).hexdigest(),
                   tolerance_m=0.00001, tolerance_rad=0.000001, cases=captured)
+    if extended:
+        oracle['interpolator_source'] = INTERPOLATOR
+        oracle['interpolator_source_sha256'] = hashlib.sha256(interpolator.encode()).hexdigest()
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(oracle, indent=2) + '\n')
     print(f'Captured {len(captured)} unchanged OR cant groups: {output}')
@@ -132,5 +172,6 @@ if __name__ == '__main__':
     p.add_argument('--source', type=Path, default=ROOT.parent / 'openrails')
     p.add_argument('--dotnet', type=Path, required=True)
     p.add_argument('--out', type=Path, required=True)
+    p.add_argument('--extended', action='store_true', help='Capture legacy tables and local passenger/freight limits too')
     a = p.parse_args()
-    capture(a.source, a.dotnet, a.out)
+    capture(a.source, a.dotnet, a.out, a.extended)

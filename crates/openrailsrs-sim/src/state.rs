@@ -8,6 +8,21 @@ use crate::steam::BoilerState;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TrainSimState {
+    #[serde(default = "forward_reverser")]
+    pub driver_reverser: f64,
+    #[serde(default)]
+    pub steam_boilers: Vec<crate::steam_equipment::VehicleBoiler>,
+    #[serde(default)]
+    pub electric_brake_command: f64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub surface_conditions: Option<crate::surface_conditions::SurfaceConditions>,
+    /// Active driving vehicle; absent in legacy saves means the original lead cab.
+    #[serde(default)]
+    pub active_cab_vehicle: Option<usize>,
+    #[serde(default)]
+    pub vehicle_systems: Vec<crate::vehicle_systems::VehicleSystemState>,
+    #[serde(default)]
+    pub platform_sides: Vec<openrailsrs_scenarios::vehicle_systems::PlatformSideDef>,
     #[serde(default)]
     pub announcements: crate::announcements::AnnouncementState,
     #[serde(default)]
@@ -89,6 +104,13 @@ pub struct TrainSimState {
 impl TrainSimState {
     pub fn new(path_edges: Vec<String>) -> Self {
         Self {
+            driver_reverser: 1.,
+            steam_boilers: vec![],
+            electric_brake_command: 0.,
+            surface_conditions: None,
+            active_cab_vehicle: None,
+            vehicle_systems: vec![],
+            platform_sides: vec![],
             learning: None,
             driving_report: Default::default(),
             refill_used_kg: Default::default(),
@@ -181,4 +203,8 @@ impl TrainSimState {
 
 fn default_ambient() -> f64 {
     20.0
+}
+
+fn forward_reverser() -> f64 {
+    1.
 }
