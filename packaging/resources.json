@@ -173,7 +173,6 @@
   "examples/player_campaign/day2.toml",
   "examples/player_lab/README.md",
   "examples/player_lab/consists/lab.con",
-  "examples/player_lab/route/.openrailsrs/tilebundles/0_0.tilebundle",
   "examples/player_lab/route/SHAPES/house_windows.s",
   "examples/player_lab/route/SHAPES/platform_lamp.s",
   "examples/player_lab/route/SHAPES/station_windows.s",

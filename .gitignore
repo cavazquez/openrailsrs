@@ -98,3 +98,5 @@ examples/class47_reference/run.json
 # Generated consumable and engine-lifecycle practice runs.
 examples/traction_operation/run*.csv
 examples/traction_operation/run*.json
+# Runtime manifests belong to player cache, never source or distribution.
+.openrailsrs/

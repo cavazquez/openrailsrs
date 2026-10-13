@@ -32,6 +32,8 @@ def runtime_resource(relative):
     path = Path(relative)
     if not relative.startswith(RESOURCE_PREFIXES) or path.is_absolute() or ".." in path.parts:
         raise ValueError(f"Invalid resource manifest path: {relative}")
+    if {".openrailsrs", "player-data", "official-content"}.intersection(path.parts):
+        return False
     if relative.startswith("examples/baselines/"):
         return False
     if path.suffix.lower() in (".csv", ".log", ".webm", ".mp4", ".replay", ".cs"):

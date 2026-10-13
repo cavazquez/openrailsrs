@@ -18,6 +18,12 @@ audio_environment = runpy.run_path(str(DISPLAY_LAUNCHER))['audio_environment']
 
 
 class PackagingTests(unittest.TestCase):
+    def test_runtime_resources_exclude_generated_manifests_and_player_data(self):
+        for relative in ('examples/player_lab/route/.openrailsrs/tilebundles/0_0.tilebundle',
+                         'examples/player-data/settings.json',
+                         'examples/official-content/author/route.trk'):
+            self.assertFalse(package_linux.runtime_resource(relative))
+
     def test_snap_audio_reaches_session_pulse_without_replacing_private_runtime(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory)
