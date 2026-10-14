@@ -1,0 +1,1086 @@
+{
+  "schema": 1,
+  "batch": 4,
+  "created_utc": "2026-10-14T23:21:19.836148+00:00",
+  "status": "ready_for_root_review_not_closed_by_this_receipt",
+  "scope": "Five independent issues against exact existing criteria; historical and current39 executions kept separate. No new Cargo/workspace build/GPU. One focused direct-rustc CPU turnout/contact probe was added for245.1; rejected harness attempts preserved.",
+  "runtime_commit": "a1b59e14bea6db433c0746dd0f1f2644dc5bc4dd",
+  "issues": [
+    {
+      "number": 245,
+      "title": "Plan 035: Afinar coincidencia entre posición física y visual de acopladores",
+      "criteria": [
+        {
+          "text": "Comparar puntos authored con contacto físico en rectas, curvas y cambios.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Prueba CPU39 nueva: 18/18 puntos sobre el mismo grafo, camino y montaje real pasan antes, sobre y después de la aguja y la curva, con ambas orientaciones. La inversión entra por la transición real al segundo tramo. Error máximo de contacto físico 0,315751285 m frente al límite predeclarado de 1 m; extremos de malla dentro de 1e-4 m y fuente inmutable. Colocación y orientación verificadas, sin estados inyectados.",
+          "evidence": [
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/connections-curve",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/connections-cut",
+            "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/flexible_connections",
+            "test:authored_endpoints_follow_curve_slack_and_reversal_without_changing_the_near_end",
+            "test:lod_rebind_keeps_authored_topology_and_sources_immutable_through_pause_cut_and_restore",
+            "current_turnout_contact39"
+          ]
+        },
+        {
+          "text": "Conservar coincidencia al invertir, desacoplar, guardar y restaurar.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "El caso de corte y el test LOD comprueban desconexión, restauración y fuentes originales inmutables. La prueba CPU39 adicional verifica9inversiones reales conservando contacto/path/orientación; guardado/corte/restauración siguen acreditados por las regresiones públicas nominales y visuales preservadas.",
+          "evidence": [
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/connections-curve",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/connections-cut",
+            "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/flexible_connections",
+            "test:authored_endpoints_follow_curve_slack_and_reversal_without_changing_the_near_end",
+            "test:lod_rebind_keeps_authored_topology_and_sources_immutable_through_pause_cut_and_restore",
+            "current_turnout_contact39"
+          ]
+        },
+        {
+          "text": "Añadir ensayos representativos de fuerzas/estados y una prueba de conducción; usar oráculos OR 1.6.1 para lo equivalente y pruebas propias para extensiones.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Hay conducción propia y tres estados de equilibrio comparados con el DLL original OR 1.6.1; no se equiparan transitorios rígidos/elásticos. Replay39:8vehículos/3casos, error0,00038474577N y15,569m conducidos después de restaurar, sin alterar criterios.",
+          "evidence": [
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/connections-curve",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/connections-cut",
+            "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/flexible_connections",
+            "test:authored_endpoints_follow_curve_slack_and_reversal_without_changing_the_near_end",
+            "test:lod_rebind_keeps_authored_topology_and_sources_immutable_through_pause_cut_and_restore",
+            "docs/fixtures/compatibility/fifth40-20261013/coupling-original.json#/force_cases",
+            "docs/fixtures/compatibility/fifth40-20261013/coupling-original.json#/driving_after_restore_m",
+            "docs/validation/FIFTH40_PHASE38_NATIVE_RESTORE_AND_ORACLES.json#/coupling_replay",
+            "current_cpu39:coupling_depot_replay"
+          ]
+        }
+      ],
+      "manual": {
+        "path": "docs/MANUAL_FIFTH40.md",
+        "line": 56,
+        "action": "Abrir las variantes connections/curve del laboratorio; cambiar holgura, invertir detenido y cortar/restaurar desde F9.",
+        "examples": [
+          "examples/player_lab/scenario_connections.toml",
+          "examples/player_lab/scenario_connections_curve.toml"
+        ]
+      },
+      "scope": "Requiere extremos y conectores declarados. Acople manual detenido; tres equilibrios OR no certifican impactos ni transitorios rígidos/elásticos. La comparación de aguja es CPU sobre fixture propio, no imagen de TDB nativo. Primer tramo authored reversed no se certifica; se usa transición real a un segundo tramo.",
+      "closure_readiness": "ready_for_root_review; all three criteria covered within documented owned/OR-equivalent scope"
+    },
+    {
+      "number": 333,
+      "title": "Plan 123: Cargar más tráfico original durante actividades completas",
+      "criteria": [
+        {
+          "text": "Resolver servicios AI originales con sus horarios, recorridos y formaciones.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Recibo completo histórico con20AI originales, horarios, recorridos y formaciones. No se sustituye por el probe corto39.",
+          "evidence": [
+            "test:preexisting_native_ai_is_simulated_before_the_activity_and_restores_without_resetting_reserves",
+            "docs/fixtures/compatibility/fifth40-20261013/native-activity-complete.json#/traffic",
+            "docs/fixtures/compatibility/fifth40-20261013/native-activity-complete.json#/player",
+            "docs/fixtures/compatibility/fifth40-20261013/native-activity-resume.json#"
+          ]
+        },
+        {
+          "text": "Completar una actividad con cruces y ocupación compartida sin asumir señales libres.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Actividad completa histórica:4/4paradas,62.664,95m,3781s,0AI fallidos y señales no asumidas libres. Conserva su ejecución y binario originales.",
+          "evidence": [
+            "test:preexisting_native_ai_is_simulated_before_the_activity_and_restores_without_resetting_reserves",
+            "docs/fixtures/compatibility/fifth40-20261013/native-activity-complete.json#/traffic",
+            "docs/fixtures/compatibility/fifth40-20261013/native-activity-complete.json#/player",
+            "docs/fixtures/compatibility/fifth40-20261013/native-activity-resume.json#",
+            "docs/validation/FIFTH40_PHASE38_NATIVE_RESTORE_AND_ORACLES.json#/native_probe/result"
+          ]
+        },
+        {
+          "text": "Documentar una prueba manual desde el menú y un caso de aceptación reproducible; comprobar persistencia y errores relevantes para este alcance.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Restauración 20→25 s compara tráfico/tiempo/señales y rechaza PAT corrupto; guía de menú preservada.",
+          "evidence": [
+            "test:preexisting_native_ai_is_simulated_before_the_activity_and_restores_without_resetting_reserves",
+            "docs/fixtures/compatibility/fifth40-20261013/native-activity-complete.json#/traffic",
+            "docs/fixtures/compatibility/fifth40-20261013/native-activity-complete.json#/player",
+            "docs/fixtures/compatibility/fifth40-20261013/native-activity-resume.json#",
+            "docs/validation/FIFTH40_PHASE38_NATIVE_RESTORE_AND_ORACLES.json#/native_probe/result",
+            "current_cpu39:native_saved_game_short"
+          ]
+        }
+      ],
+      "manual": {
+        "path": "docs/MANUAL_FIFTH40.md",
+        "line": 168,
+        "action": "Chiltern v4 → RS_Football Special: conducir las cuatro paradas Banbury–High Wycombe y guardar/reanudar con tráfico.",
+        "examples": []
+      },
+      "scope": "RS_Football Special de Chiltern v4; algunos AI siguen activos al terminar el jugador. Actividad completa histórica, no nueva ejecución39 ni todos los eventos/scripts comunitarios."
+    },
+    {
+      "number": 342,
+      "title": "Plan 132: Acoplar manualmente formaciones independientes",
+      "criteria": [
+        {
+          "text": "Detectar contacto entre trenes con velocidad, extremos y equipos compatibles.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Acople manual trasero→delantero detenido, sin tracción y con donante asegurado; contacto menor a un metro.",
+          "evidence": [
+            "test:independent_contact_moves_vehicles_once_preserves_pressure_fuel_and_can_reconstruct_a_save",
+            "test:coupling_an_unstarted_parked_donor_produces_an_immediately_valid_supply_snapshot",
+            "docs/fixtures/compatibility/fifth40-20261013/coupling-original.json#",
+            "docs/fixtures/compatibility/fifth40-20261013/graphics-and-operations.json#/reports/traffic-operations-final~1report.json/cases/coupling"
+          ]
+        },
+        {
+          "text": "Transferir vehículos sin duplicarlos y conservar presiones, reservas y reservas de vía.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Transferencia conserva identidad, presión, combustible y retiro del donante/reservas; snapshots reconstruibles.",
+          "evidence": [
+            "test:independent_contact_moves_vehicles_once_preserves_pressure_fuel_and_can_reconstruct_a_save",
+            "test:coupling_an_unstarted_parked_donor_produces_an_immediately_valid_supply_snapshot",
+            "docs/fixtures/compatibility/fifth40-20261013/coupling-original.json#",
+            "docs/fixtures/compatibility/fifth40-20261013/graphics-and-operations.json#/reports/traffic-operations-final~1report.json/cases/coupling"
+          ]
+        },
+        {
+          "text": "Añadir ensayos representativos de fuerzas/estados y una prueba de conducción; usar oráculos OR 1.6.1 para lo equivalente y pruebas propias para extensiones.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "DLL original OR 1.6.1 transfiere 4+4 vehículos; tres estados de equilibrio y conducción Rust posterior a restauración, sin equivalencia de impacto. Replay39:8vehículos/3casos, error0,00038474577N y15,569m conducidos después de restaurar, sin alterar criterios.",
+          "evidence": [
+            "test:independent_contact_moves_vehicles_once_preserves_pressure_fuel_and_can_reconstruct_a_save",
+            "test:coupling_an_unstarted_parked_donor_produces_an_immediately_valid_supply_snapshot",
+            "docs/fixtures/compatibility/fifth40-20261013/coupling-original.json#",
+            "docs/fixtures/compatibility/fifth40-20261013/graphics-and-operations.json#/reports/traffic-operations-final~1report.json/cases/coupling",
+            "docs/validation/FIFTH40_PHASE38_NATIVE_RESTORE_AND_ORACLES.json#/coupling_replay",
+            "current_cpu39:coupling_depot_replay"
+          ]
+        }
+      ],
+      "manual": {
+        "path": "docs/MANUAL_FIFTH40.md",
+        "line": 203,
+        "action": "Abrir scenario_coupling; asegurar donante y detener sin tracción; recoger en F9 y preparar mangueras/llaves/frenos antes de conducir.",
+        "examples": [
+          "examples/traffic_passing/scenario_coupling.toml"
+        ]
+      },
+      "scope": "Unión manual detenida trasero→delantero, donante asegurado y equipos/dinámica compatibles. No acople automático móvil ni todos los trenes/scripts."
+    },
+    {
+      "number": 347,
+      "title": "Plan 137: Agregar preparación y mantenimiento en depósitos",
+      "criteria": [
+        {
+          "text": "Definir tareas de preparación y recuperación ligadas a equipos reales.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Preparación y recuperación finita de aceite/refrigerante ligadas a depósitos declarados y vehículo asegurado.",
+          "evidence": [
+            "test:depot_transfers_finite_oil_and_coolant_without_resetting_fuel_or_temperature",
+            "docs/validation/FIFTH40_PHASE38_NAMED_TESTS.json#/tests/80",
+            "docs/fixtures/compatibility/fifth40-20261013/depot-state-continuity.json#/observed",
+            "docs/fixtures/compatibility/fifth40-20261013/depot-state-continuity.json#/reproduction",
+            "docs/validation/FIFTH40_PHASE38_NATIVE_RESTORE_AND_ORACLES.json#/coupling_replay",
+            "current_cpu39:depot_continuity"
+          ]
+        },
+        {
+          "text": "Conservar combustible, baterías, frenos y estado de servicio entre tareas.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Combustible 469+469 L, batería apagada y frenos/servicio no predeterminados se conservan frente a control a igual tiempo.",
+          "evidence": [
+            "test:depot_transfers_finite_oil_and_coolant_without_resetting_fuel_or_temperature",
+            "docs/validation/FIFTH40_PHASE38_NAMED_TESTS.json#/tests/80",
+            "docs/fixtures/compatibility/fifth40-20261013/depot-state-continuity.json#/observed",
+            "docs/fixtures/compatibility/fifth40-20261013/depot-state-continuity.json#/reproduction",
+            "docs/validation/FIFTH40_PHASE38_NATIVE_RESTORE_AND_ORACLES.json#/coupling_replay",
+            "current_cpu39:depot_continuity"
+          ]
+        },
+        {
+          "text": "Documentar una prueba manual desde el menú y un caso de aceptación reproducible; comprobar persistencia y errores relevantes para este alcance.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Restore a mitad de mantenimiento, aporte escaso, operación duplicada y preparación inválida tienen resultados originales propios; guía F9.",
+          "evidence": [
+            "test:depot_transfers_finite_oil_and_coolant_without_resetting_fuel_or_temperature",
+            "docs/validation/FIFTH40_PHASE38_NAMED_TESTS.json#/tests/80",
+            "docs/fixtures/compatibility/fifth40-20261013/depot-state-continuity.json#/observed",
+            "docs/fixtures/compatibility/fifth40-20261013/depot-state-continuity.json#/reproduction",
+            "docs/validation/FIFTH40_PHASE38_NATIVE_RESTORE_AND_ORACLES.json#/coupling_replay",
+            "current_cpu39:depot_continuity"
+          ]
+        }
+      ],
+      "manual": {
+        "path": "docs/MANUAL_FIFTH40.md",
+        "line": 217,
+        "action": "Abrir scenario_depot; asegurar/apagar motores dentro de la zona, iniciar mantenimiento en F9 y guardar a mitad.",
+        "examples": [
+          "examples/traction_operation/scenario_depot.toml"
+        ]
+      },
+      "scope": "Modelo propio de mantenimiento finito. No paridad OR de mantenimiento, reparación total ni reinicio gratuito de combustible, baterías, frenos o temperatura."
+    },
+    {
+      "number": 350,
+      "title": "Plan 140: Conducir jornadas de varios servicios con el mismo material",
+      "criteria": [
+        {
+          "text": "Encadenar servicios conservando vehículos, energía, averías y reloj.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Jornadas encadenan dos servicios con material real y estados sin reiniciar recursos.",
+          "evidence": [
+            "test:two_complete_driven_jornadas_keep_material_and_resume_mid_service",
+            "test:campaign_progress_and_real_material_continue_without_cli_and_resume_keeps_context"
+          ]
+        },
+        {
+          "text": "Presentar inicio y cierre de cada servicio dentro del menú y guardado del jugador.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Progreso de campaña y SavedGame real preservan servicio/hora/material y contexto del menú.",
+          "evidence": [
+            "test:two_complete_driven_jornadas_keep_material_and_resume_mid_service",
+            "test:campaign_progress_and_real_material_continue_without_cli_and_resume_keeps_context"
+          ]
+        },
+        {
+          "text": "Documentar una prueba manual desde el menú y un caso de aceptación reproducible; comprobar persistencia y errores relevantes para este alcance.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Los tests conducen servicios completos y restauran a mitad del segundo; ejemplos y menú documentados.",
+          "evidence": [
+            "test:two_complete_driven_jornadas_keep_material_and_resume_mid_service",
+            "test:campaign_progress_and_real_material_continue_without_cli_and_resume_keeps_context"
+          ]
+        }
+      ],
+      "manual": {
+        "path": "docs/MANUAL_FIFTH40.md",
+        "line": 224,
+        "action": "Nueva partida → Campañas y jornadas → Dos jornadas · material propio; conducir ambas, guardar y reanudar.",
+        "examples": [
+          "examples/player_campaign/campaign.toml"
+        ]
+      },
+      "scope": "Dos jornadas propias conducidas con continuidad de material/reloj y rechazo de archivos incompatibles; no todas las campañas comunitarias."
+    }
+  ],
+  "current_regression_execution": {
+    "check_command": [
+      "bash",
+      "check.sh"
+    ],
+    "start_utc": "2026-10-14T22:13:00.427315+00:00",
+    "end_utc": "2026-10-14T22:24:39.683222+00:00",
+    "check_receipt_sha256": "f32f167e1e6ac0d9876c60e1b33b27ac6324209f649aadba4da766da891fdc78",
+    "stdout_sha256": "00c0184998e1ccdf90fabbbd69691ae8883e0ef73b52626e9f8c0ca940f2393c",
+    "rust": {
+      "passed": 2083,
+      "failed": 0,
+      "ignored": 49,
+      "summaries": 152
+    },
+    "python": {
+      "tests": 127,
+      "summaries": 25
+    },
+    "inputs_unchanged": true,
+    "user_traces_unchanged": true,
+    "historical_git_head_at_check_start": "e865c8a56fef252c0b7f60775ac5e773844380f1",
+    "binding": "Compiled inputs match the protected phase39 build manifest 8dfa16a31a08b48a33776a9041b4f90ef24d6d3b70f6385303d4de8b0589b6a3; the check started before the runtime commit. Its historical head is preserved.",
+    "ci": {
+      "commit": "a1b59e14bea6db433c0746dd0f1f2644dc5bc4dd",
+      "url": "https://github.com/cavazquez/openrailsrs/actions/runs/38647767494",
+      "conclusion": "success",
+      "jobs": [
+        "Optional C# TCS host (Linux)",
+        "check.sh",
+        "Visual smoke (#43)",
+        "Cobertura de tests"
+      ]
+    },
+    "named_tests": {
+      "authored_endpoints_follow_curve_slack_and_reversal_without_changing_the_near_end": {
+        "source": "crates/openrailsrs-viewer3d/src/train_connections.rs",
+        "source_sha256": "b1994f3e1bccdf11662698b1c2f148f2dc54620dfcf21eef165a938c5eee64eb",
+        "source_line": 429,
+        "result": "passed",
+        "check39_log_lines": [
+          3035,
+          3035
+        ],
+        "check39_stdout": "test train_connections::tests::authored_endpoints_follow_curve_slack_and_reversal_without_changing_the_near_end ... ok"
+      },
+      "lod_rebind_keeps_authored_topology_and_sources_immutable_through_pause_cut_and_restore": {
+        "source": "crates/openrailsrs-viewer3d/src/train_connections.rs",
+        "source_sha256": "b1994f3e1bccdf11662698b1c2f148f2dc54620dfcf21eef165a938c5eee64eb",
+        "source_line": 279,
+        "result": "passed",
+        "check39_log_lines": [
+          3037,
+          3037
+        ],
+        "check39_stdout": "test train_connections::tests::lod_rebind_keeps_authored_topology_and_sources_immutable_through_pause_cut_and_restore ... ok"
+      },
+      "preexisting_native_ai_is_simulated_before_the_activity_and_restores_without_resetting_reserves": {
+        "source": "crates/openrailsrs-sim/tests/parallel_traffic.rs",
+        "source_sha256": "98cf1d718eca2a18ab48aca47d47c7d48c4e476f7c8690731cc7b3603e38e8eb",
+        "source_line": 98,
+        "result": "passed",
+        "check39_log_lines": [
+          1652,
+          1652
+        ],
+        "check39_stdout": "test preexisting_native_ai_is_simulated_before_the_activity_and_restores_without_resetting_reserves ... ok"
+      },
+      "independent_contact_moves_vehicles_once_preserves_pressure_fuel_and_can_reconstruct_a_save": {
+        "source": "crates/openrailsrs-sim/tests/yard_operations.rs",
+        "source_sha256": "d2cdb48084ef1101d6fa56584bc3049957dc2f8256abd231b8ea20dce7f6a14a",
+        "source_line": 30,
+        "result": "passed",
+        "check39_log_lines": [
+          1878,
+          1878
+        ],
+        "check39_stdout": "test independent_contact_moves_vehicles_once_preserves_pressure_fuel_and_can_reconstruct_a_save ... ok"
+      },
+      "coupling_an_unstarted_parked_donor_produces_an_immediately_valid_supply_snapshot": {
+        "source": "crates/openrailsrs-sim/tests/yard_operations.rs",
+        "source_sha256": "d2cdb48084ef1101d6fa56584bc3049957dc2f8256abd231b8ea20dce7f6a14a",
+        "source_line": 216,
+        "result": "passed",
+        "check39_log_lines": [
+          1875,
+          1875
+        ],
+        "check39_stdout": "test coupling_an_unstarted_parked_donor_produces_an_immediately_valid_supply_snapshot ... ok"
+      },
+      "depot_transfers_finite_oil_and_coolant_without_resetting_fuel_or_temperature": {
+        "source": "crates/openrailsrs-sim/tests/yard_operations.rs",
+        "source_sha256": "d2cdb48084ef1101d6fa56584bc3049957dc2f8256abd231b8ea20dce7f6a14a",
+        "source_line": 125,
+        "result": "passed",
+        "check39_log_lines": [
+          1877,
+          1877
+        ],
+        "check39_stdout": "test depot_transfers_finite_oil_and_coolant_without_resetting_fuel_or_temperature ... ok"
+      },
+      "two_complete_driven_jornadas_keep_material_and_resume_mid_service": {
+        "source": "crates/openrailsrs-viewer3d/src/campaign_play.rs",
+        "source_sha256": "ba5a2e94c4f8f19d3336253c9b0ac7b681a9cd2d3d0797e64545333235b4f3ee",
+        "source_line": 457,
+        "result": "passed",
+        "check39_log_lines": [
+          2431,
+          2431
+        ],
+        "check39_stdout": "test campaign_play::tests::two_complete_driven_jornadas_keep_material_and_resume_mid_service ... ok"
+      },
+      "campaign_progress_and_real_material_continue_without_cli_and_resume_keeps_context": {
+        "source": "crates/openrailsrs-viewer3d/src/campaign_play.rs",
+        "source_sha256": "ba5a2e94c4f8f19d3336253c9b0ac7b681a9cd2d3d0797e64545333235b4f3ee",
+        "source_line": 536,
+        "result": "passed",
+        "check39_log_lines": [
+          2430,
+          2430
+        ],
+        "check39_stdout": "test campaign_play::tests::campaign_progress_and_real_material_continue_without_cli_and_resume_keeps_context ... ok"
+      }
+    },
+    "new_tests_run_for_this_review": 0,
+    "additional_probe_scope": "Existing check39 nominal test execution reused unchanged; separate new functional CPU probe is current_turnout_contact39, not added to2083Rust/127Python counts."
+  },
+  "current_sources_matching_preserved_scope": {
+    "crates/openrailsrs-viewer3d/src/train_connections.rs": "b1994f3e1bccdf11662698b1c2f148f2dc54620dfcf21eef165a938c5eee64eb",
+    "crates/openrailsrs-sim/tests/parallel_traffic.rs": "98cf1d718eca2a18ab48aca47d47c7d48c4e476f7c8690731cc7b3603e38e8eb",
+    "crates/openrailsrs-sim/tests/yard_operations.rs": "d2cdb48084ef1101d6fa56584bc3049957dc2f8256abd231b8ea20dce7f6a14a",
+    "scripts/test_coupling_reference.py": "8ac46c4a423477a3b2c7f735363f707ca72f677637d7669e1ae78d10f7b76b42",
+    "crates/openrailsrs-viewer3d/src/campaign_play.rs": "ba5a2e94c4f8f19d3336253c9b0ac7b681a9cd2d3d0797e64545333235b4f3ee"
+  },
+  "preserved_evidence": [
+    {
+      "path": "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json",
+      "sha256": "24dce75393004319388c28a2912fd8d62dad4cfc470f63b3864b664f5b6985a6",
+      "json_pointer": "/cases/connections-curve",
+      "value_sha256": "dc4c53236b71f26907fb04321aaffdaef2d52de6ea23d0899c0bb90695839e25",
+      "execution": "Preserved historical execution; original phase/binary/content/scope, not new39"
+    },
+    {
+      "path": "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json",
+      "sha256": "24dce75393004319388c28a2912fd8d62dad4cfc470f63b3864b664f5b6985a6",
+      "json_pointer": "/cases/connections-cut",
+      "value_sha256": "0b85f8a7be406151dcdd54c7766dcf0ab58c6c13ea98f428b94bbc997e68c347",
+      "execution": "Preserved historical execution; original phase/binary/content/scope, not new39"
+    },
+    {
+      "path": "docs/fixtures/compatibility/fifth40-20261013/performance.json",
+      "sha256": "1f0dbaf0b2f85421818053862f0739ed43e1f27e730708892ee3fd368f4c3bc0",
+      "json_pointer": "/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/flexible_connections",
+      "value_sha256": "3347f625d6cff4677946c985de3595d5aef0e39fac1fe1fa9e208a6bbe16453d",
+      "execution": "Preserved historical execution; original phase/binary/content/scope, not new39"
+    },
+    {
+      "path": "docs/fixtures/compatibility/fifth40-20261013/coupling-original.json",
+      "sha256": "323e14c11c34f9729fe3469525bef3cd19790e6e4df4e5fc8594cba52e4de734",
+      "json_pointer": "/force_cases",
+      "value_sha256": "4e07408562bedb8b60ce05c1decfe3ad16b72230967de01f640b7e4729b49fce",
+      "execution": "Preserved historical execution; original phase/binary/content/scope, not new39"
+    },
+    {
+      "path": "docs/fixtures/compatibility/fifth40-20261013/coupling-original.json",
+      "sha256": "323e14c11c34f9729fe3469525bef3cd19790e6e4df4e5fc8594cba52e4de734",
+      "json_pointer": "/driving_after_restore_m",
+      "value_sha256": "55d6626bfdbd9812a01e119bfd53b18174974828e1af3fd22d87efdc79ccc66a",
+      "execution": "Preserved historical execution; original phase/binary/content/scope, not new39"
+    },
+    {
+      "path": "docs/validation/FIFTH40_PHASE38_NATIVE_RESTORE_AND_ORACLES.json",
+      "sha256": "eda10f0e1b06efb6df95c87a202cf6153013f3778802effb8e4b52e372a2f237",
+      "json_pointer": "/coupling_replay",
+      "value_sha256": "5ae53e6d94a2720f7bdad7d92e1c8aea32dbb102299c3eb2bdf1f222d8c0487a",
+      "execution": "Preserved historical execution; original phase/binary/content/scope, not new39"
+    },
+    {
+      "path": "docs/fixtures/compatibility/fifth40-20261013/native-activity-complete.json",
+      "sha256": "7abbb6af56813ab1b5083c9e0f89fb70c8da3a4582056b4bfe496dc76d1bdbc8",
+      "json_pointer": "/traffic",
+      "value_sha256": "34570c6f796ad30493c3334e85f6793b7a8bd8f7b8f8e2183f940a1afed04b7f",
+      "execution": "Preserved historical execution; original phase/binary/content/scope, not new39"
+    },
+    {
+      "path": "docs/fixtures/compatibility/fifth40-20261013/native-activity-complete.json",
+      "sha256": "7abbb6af56813ab1b5083c9e0f89fb70c8da3a4582056b4bfe496dc76d1bdbc8",
+      "json_pointer": "/player",
+      "value_sha256": "21f415a726e25708b53d5b273b3bed0d4b606a82361fc5f65b08fcb057e96e11",
+      "execution": "Preserved historical execution; original phase/binary/content/scope, not new39"
+    },
+    {
+      "path": "docs/fixtures/compatibility/fifth40-20261013/native-activity-resume.json",
+      "sha256": "e0da51e5cc16cddba7453ca1a3ff08ce6834a517b8642e8b20dba37701a4f4ba",
+      "json_pointer": "",
+      "value_sha256": "da89bf8deb0d40c6b558ecaad1fe80850b9debb5e981eefad1dc6e89cad33056",
+      "execution": "Preserved historical execution; original phase/binary/content/scope, not new39"
+    },
+    {
+      "path": "docs/validation/FIFTH40_PHASE38_NATIVE_RESTORE_AND_ORACLES.json",
+      "sha256": "eda10f0e1b06efb6df95c87a202cf6153013f3778802effb8e4b52e372a2f237",
+      "json_pointer": "/native_probe/result",
+      "value_sha256": "0a39857aafe581f0840743c219d9ff34052564355c2e6af728f01f6a7238f48e",
+      "execution": "Preserved historical execution; original phase/binary/content/scope, not new39"
+    },
+    {
+      "path": "docs/fixtures/compatibility/fifth40-20261013/coupling-original.json",
+      "sha256": "323e14c11c34f9729fe3469525bef3cd19790e6e4df4e5fc8594cba52e4de734",
+      "json_pointer": "",
+      "value_sha256": "d907357ffc899f9bd00ca8cadde9e4bb1e51bbdeb07ac9844cbf38b08bb46664",
+      "execution": "Preserved historical execution; original phase/binary/content/scope, not new39"
+    },
+    {
+      "path": "docs/fixtures/compatibility/fifth40-20261013/graphics-and-operations.json",
+      "sha256": "ba7966557bb67125ca8a740b32fff7da3e5dd99056195ad64ffdbf57e82f3fdb",
+      "json_pointer": "/reports/traffic-operations-final~1report.json/cases/coupling",
+      "value_sha256": "9b62c2a585a288784c7c6592eebd13545bebade28e6cb27120c8200813c78e92",
+      "execution": "Preserved historical execution; original phase/binary/content/scope, not new39"
+    },
+    {
+      "path": "docs/fixtures/compatibility/fifth40-20261013/depot-state-continuity.json",
+      "sha256": "8370d34533630b1c72335a475040716e998c81f161ee54ce65a68c7809e3fd33",
+      "json_pointer": "/observed",
+      "value_sha256": "583abd48464b120387bd8046b08084d188c0314d67ad507eed7ef142b6001529",
+      "execution": "Preserved historical execution; original phase/binary/content/scope, not new39"
+    },
+    {
+      "path": "docs/fixtures/compatibility/fifth40-20261013/depot-state-continuity.json",
+      "sha256": "8370d34533630b1c72335a475040716e998c81f161ee54ce65a68c7809e3fd33",
+      "json_pointer": "/reproduction",
+      "value_sha256": "3e2fe5e136972b13b1e4657f34dab9ad37bc262c3b02265e31bf4dbfad4afec1",
+      "execution": "Preserved historical execution; original phase/binary/content/scope, not new39"
+    }
+  ],
+  "manual": "docs/MANUAL_FIFTH40.md",
+  "manual_sha256": "b1408705e44aa9fd2dd8b9ddf4b794cffa99da8d05b44b5d88411e4fc57e2ecc",
+  "limits": [
+    "Historical complete activity, graphics, costs and original OR captures retain their phase/binary/content/conditions; not rerun or relabelled39.",
+    "Current39 actual nominal Rust PASS lines are identified;127Python tests are aggregate evidence. Separate nominal Python38 stays historical.",
+    "No global performance, memory/endurance, final Snap39 or Store acceptance; this receipt closes/comments no issue.",
+    "Human traces are read/hash-checked only; author content remains unversioned.",
+    "The short5.2s original-roundtrip39 does not replace historical complete62.66km/3781s activity333.1–2.",
+    "Focused245.1 CPU probe18/18 is new39; its three rejected harness attempts remain preserved and uncredited. It does not add global performance/endurance/Snap acceptance."
+  ],
+  "preserved_named_python_tests": {
+    "test_depot_control_preserves_nondefault_states_and_finite_supply": {
+      "source": "scripts/test_coupling_reference.py",
+      "source_sha256": "8ac46c4a423477a3b2c7f735363f707ca72f677637d7669e1ae78d10f7b76b42",
+      "receipt": "docs/validation/FIFTH40_PHASE38_NAMED_TESTS.json#/tests/80",
+      "execution": "Preserved nominal Python38, not named check39 stdout"
+    }
+  },
+  "current_cpu39": {
+    "build_receipt_sha256": "ecdce077508cb520f43810a79b1a2c750f3b8869b2caabb75186118075e8b7de",
+    "source_inputs_sha256": "8dfa16a31a08b48a33776a9041b4f90ef24d6d3b70f6385303d4de8b0589b6a3",
+    "viewer_sha256": "f1138d03ea6978baaab8e5fe8b4e8995c626a6df319a690bb7a92955512c0239",
+    "aggregate_receipt_sha256": "8a5f54b94b7b34a6114e568189c71c8ae14f6ed3594e5cdb36f5d5a5ee2d3368",
+    "invariants": {
+      "inputs_unchanged": true,
+      "protected_unchanged": true,
+      "originals_unchanged": true,
+      "user-traces_unchanged": true,
+      "sources-reference_unchanged": true
+    },
+    "native_saved_game_short": {
+      "receipt_sha256": "8d9995c02f05f86bf8ea0f8194764372f36819ba41c593840bb48aaee34e0271",
+      "compile_returncode": 0,
+      "run_returncode": 0,
+      "result": {
+        "car_count": 8,
+        "complete_state_exact": true,
+        "disk_bytes": 8332390,
+        "disk_round_trips": 1,
+        "elapsed_s": 130.339911497,
+        "final_time_s": 5.1999999999999895,
+        "initial_n5667": "diverging",
+        "initial_time_s": 0.0,
+        "memory_round_trips": 1,
+        "next_steps_s": [
+          0.17,
+          1.13
+        ],
+        "services": 20,
+        "status": "passed"
+      },
+      "scope": "Current39 functional SavedGame/native-signals/20AI only; initial0→5.2simulatedseconds, NOT complete activity333.1–2. Direct rustc uses System, not main allocator/RSS."
+    },
+    "coupling_depot_replay": {
+      "receipt_sha256": "fee71b1162620198c1cab56a2a52bc1718e03c3fd86c224295bec55e871fd51f",
+      "comparison": {
+        "status": "pass",
+        "reference": "Open Rails 1.6.1",
+        "transferred_original_vehicles": 8,
+        "force_cases": 3,
+        "maximum_force_error_n": 0.00038474577013403177,
+        "driving_after_restore_m": 15.569013531968608,
+        "limits": [
+          "Stationary manual rear-to-front joining only in Rust",
+          "OR automatically requires signed movement; zero-speed scan is retained separately",
+          "Different simple rigid / elastic transient and slack laws are not declared equivalent",
+          "Original stock is driven on owned synthetic track; native route/signal/full-physics parity not certified"
+        ]
+      },
+      "reference_sha256": "856bfa60d0be9fac22c6e05a8d05f3cf510a4bd7cebc253f87b0015329d195a4",
+      "rust_output_sha256": "2eeb73e081d6e32a94ab14f6c14c633890ca882f0266ce6621493a90fa778927",
+      "scope": "Replay against preserved OR1.6.1 data, no new OR capture; original ENG/WAG on owned synthetic track."
+    },
+    "depot_continuity": {
+      "depot_output_sha256": "21d93ccb7eb98d81bd377a30715f83b980df2db4498fef4835f4075f4b934239",
+      "matches_preserved_depot_output_bytes": true,
+      "scope": "Owned finite Rust maintenance/control model, not OR maintenance parity."
+    }
+  },
+  "updated_utc": "2026-10-14T23:46:47.131312+00:00",
+  "current_turnout_contact39": {
+    "status": "passed",
+    "issue": 245,
+    "criterion": 1,
+    "execution": "New focused CPU execution39, distinct from historical graphics/tests and from rejected harness attempts; actual protected39 viewer/libs and exact frozen private connection module.",
+    "start_utc": "2026-10-14T23:45:15.476256+00:00",
+    "end_utc": "2026-10-14T23:45:17.280999+00:00",
+    "host_pid": 280404,
+    "host_sid": 280404,
+    "elapsed_s": 1.7313677810016088,
+    "compile_returncode": 0,
+    "run_returncode": 0,
+    "private_receipt_sha256": "f4609a4fe1b633cb12bfc4888c0c980ba20de50f65f042e84eef8cf2e98bce13",
+    "raw_result_sha256": "975020df294d774354ef8baf49d1dedafda83386eaed657144d558e3ea99651b",
+    "approved_contract_sha256": "72c8173a5879a9822dbc3de6babfdd217e34bc88e880796f4e3d39bb178fa307",
+    "probe_source_sha256": "7186f882b1dabaeb1ef3bac7e8b8f67257f6eab772c45e07d2824280eaa8e2dd",
+    "runner_source_sha256": "1659f9117f69936e5536383a1fd5134d977fe1ca7f5f909373501c0a10795607",
+    "build_receipt_sha256": "ecdce077508cb520f43810a79b1a2c750f3b8869b2caabb75186118075e8b7de",
+    "compiled_inputs_sha256": "8dfa16a31a08b48a33776a9041b4f90ef24d6d3b70f6385303d4de8b0589b6a3",
+    "compiled_input_count": 751,
+    "viewer_rlib_sha256": "73f93da6a9160ca3f294e56b4aa59800dc032a92db3e373ff0b537f0a1811f80",
+    "exact_included_product_source": {
+      "path": "crates/openrailsrs-viewer3d/src/train_connections.rs",
+      "sha256": "b1994f3e1bccdf11662698b1c2f148f2dc54620dfcf21eef165a938c5eee64eb"
+    },
+    "method": {
+      "cars": 2,
+      "lengths_m": [
+        20,
+        20
+      ],
+      "formation": "examples/player_lab/consists/connections.con",
+      "contact_reference": "Physical coupling chainage at session.position_at_head_offset(-first_car_length), mapped by protected vehicle_pose_on_graph_edge; authored height0.4m. Same graph/path and actual protected update_consist_car_track_poses ordinary rigid-support mounting.",
+      "deformer": "Exact unmodified frozen private train_connections.rs is compiled into the client with data-only TrainPresentation adapter; physics/mounting/view transforms are linked from protected39. No Jacobs equipment declared.",
+      "reversal": "Each reverse case starts on a forward first leg and uses public driver brake/reverser plus session.step_realtime(0.05) to enter an actual second authored reversed leg. No injected SimulationState; actual flag/path/contact chainage checked.",
+      "fixture_graph": "Owned synthetic a(0,0)→junction(0,200), straight→merge(0,500), or diverge0→bend(10,300)→diverge1→bend2(10,400)→diverge2→merge, thenexit→d(0,700), with exact reverse edges and a real switch at junction.",
+      "case_coverage": "Straight/diverging, both orientations,5m before/on/5m after junction; diverging also5m before/on/5m after first curve.18cases total, all retained."
+    },
+    "tolerances_m": {
+      "near_endpoint_local": 1e-06,
+      "deformer_reported_endpoint_local": 1e-06,
+      "authored_neighbor_endpoint_world_f32": 0.0001,
+      "physical_world_contact_envelope": 1.0
+    },
+    "fixture_placement_epsilon_m": 1e-06,
+    "observed_maxima_m": {
+      "near_local_error_m": 0.0,
+      "authored_endpoint_error_m": 3.0517578125e-05,
+      "near_physical_contact_error_m": 0.315743088722229,
+      "far_physical_contact_error_m": 0.3157512843608856,
+      "fixture_placement_error_m": 0.0
+    },
+    "invariants": {
+      "compiled_inputs": true,
+      "traces": true,
+      "owned_originals": true,
+      "libraries": true,
+      "probe_sources": true
+    },
+    "cases": [
+      {
+        "raw_case_index": 0,
+        "label": "straight-forward-before_turnout",
+        "passed": true,
+        "path_reversed": false,
+        "physical_contact_chainage_m": 195.0,
+        "physical_contact_world_m": [
+          0.0,
+          0.7000000476837158,
+          195.0
+        ],
+        "fixture_placement_error_m": 0.0,
+        "orientation_verified": true,
+        "path_verified": true,
+        "authored_endpoint_error_m": 0.0,
+        "near_physical_contact_error_m": 0.1999969482421875,
+        "far_physical_contact_error_m": 0.1999969482421875,
+        "source_immutable": true,
+        "real_transition_ticks": 0,
+        "simulation_time_s": 0.0
+      },
+      {
+        "raw_case_index": 1,
+        "label": "straight-forward-on_turnout",
+        "passed": true,
+        "path_reversed": false,
+        "physical_contact_chainage_m": 200.0,
+        "physical_contact_world_m": [
+          0.0,
+          0.7000000476837158,
+          200.0
+        ],
+        "fixture_placement_error_m": 0.0,
+        "orientation_verified": true,
+        "path_verified": true,
+        "authored_endpoint_error_m": 0.0,
+        "near_physical_contact_error_m": 0.1999969482421875,
+        "far_physical_contact_error_m": 0.1999969482421875,
+        "source_immutable": true,
+        "real_transition_ticks": 0,
+        "simulation_time_s": 0.0
+      },
+      {
+        "raw_case_index": 2,
+        "label": "straight-forward-after_turnout",
+        "passed": true,
+        "path_reversed": false,
+        "physical_contact_chainage_m": 205.0,
+        "physical_contact_world_m": [
+          0.0,
+          0.7000000476837158,
+          205.0
+        ],
+        "fixture_placement_error_m": 0.0,
+        "orientation_verified": true,
+        "path_verified": true,
+        "authored_endpoint_error_m": 0.0,
+        "near_physical_contact_error_m": 0.1999969482421875,
+        "far_physical_contact_error_m": 0.1999969482421875,
+        "source_immutable": true,
+        "real_transition_ticks": 0,
+        "simulation_time_s": 0.0
+      },
+      {
+        "raw_case_index": 3,
+        "label": "straight-reverse-before_turnout",
+        "passed": true,
+        "path_reversed": true,
+        "physical_contact_chainage_m": 505.0,
+        "physical_contact_world_m": [
+          0.0,
+          0.7000000476837158,
+          195.0
+        ],
+        "fixture_placement_error_m": 0.0,
+        "orientation_verified": true,
+        "path_verified": true,
+        "authored_endpoint_error_m": 7.958078640513122e-13,
+        "near_physical_contact_error_m": 0.1999969482421875,
+        "far_physical_contact_error_m": 0.1999969482421875,
+        "source_immutable": true,
+        "real_transition_ticks": 1,
+        "simulation_time_s": 0.05
+      },
+      {
+        "raw_case_index": 4,
+        "label": "straight-reverse-on_turnout",
+        "passed": true,
+        "path_reversed": true,
+        "physical_contact_chainage_m": 500.0,
+        "physical_contact_world_m": [
+          0.0,
+          0.7000000476837158,
+          200.0
+        ],
+        "fixture_placement_error_m": 0.0,
+        "orientation_verified": true,
+        "path_verified": true,
+        "authored_endpoint_error_m": 7.958078640513122e-13,
+        "near_physical_contact_error_m": 0.1999969482421875,
+        "far_physical_contact_error_m": 0.1999969482421875,
+        "source_immutable": true,
+        "real_transition_ticks": 1,
+        "simulation_time_s": 0.05
+      },
+      {
+        "raw_case_index": 5,
+        "label": "straight-reverse-after_turnout",
+        "passed": true,
+        "path_reversed": true,
+        "physical_contact_chainage_m": 495.0,
+        "physical_contact_world_m": [
+          0.0,
+          0.7000000476837158,
+          205.0
+        ],
+        "fixture_placement_error_m": 0.0,
+        "orientation_verified": true,
+        "path_verified": true,
+        "authored_endpoint_error_m": 7.958078640513122e-13,
+        "near_physical_contact_error_m": 0.1999969482421875,
+        "far_physical_contact_error_m": 0.1999969482421875,
+        "source_immutable": true,
+        "real_transition_ticks": 1,
+        "simulation_time_s": 0.05
+      },
+      {
+        "raw_case_index": 6,
+        "label": "diverging-forward-before_turnout",
+        "passed": true,
+        "path_reversed": false,
+        "physical_contact_chainage_m": 195.0,
+        "physical_contact_world_m": [
+          0.0,
+          0.7000000476837158,
+          195.0
+        ],
+        "fixture_placement_error_m": 0.0,
+        "orientation_verified": true,
+        "path_verified": true,
+        "authored_endpoint_error_m": 4.76837158203125e-07,
+        "near_physical_contact_error_m": 0.315743088722229,
+        "far_physical_contact_error_m": 0.1999969482421875,
+        "source_immutable": true,
+        "real_transition_ticks": 0,
+        "simulation_time_s": 0.0
+      },
+      {
+        "raw_case_index": 7,
+        "label": "diverging-forward-on_turnout",
+        "passed": true,
+        "path_reversed": false,
+        "physical_contact_chainage_m": 200.0,
+        "physical_contact_world_m": [
+          0.0,
+          0.7000000476837158,
+          200.0
+        ],
+        "fixture_placement_error_m": 0.0,
+        "orientation_verified": true,
+        "path_verified": true,
+        "authored_endpoint_error_m": 1.7881393432617188e-07,
+        "near_physical_contact_error_m": 0.20001278817653656,
+        "far_physical_contact_error_m": 0.1999969482421875,
+        "source_immutable": true,
+        "real_transition_ticks": 0,
+        "simulation_time_s": 0.0
+      },
+      {
+        "raw_case_index": 8,
+        "label": "diverging-forward-after_turnout",
+        "passed": true,
+        "path_reversed": false,
+        "physical_contact_chainage_m": 205.0,
+        "physical_contact_world_m": [
+          0.4975185990333557,
+          0.7000000476837158,
+          204.97518920898438
+        ],
+        "fixture_placement_error_m": 0.0,
+        "orientation_verified": true,
+        "path_verified": true,
+        "authored_endpoint_error_m": 2.562999725341797e-06,
+        "near_physical_contact_error_m": 0.20001280307769775,
+        "far_physical_contact_error_m": 0.3157512843608856,
+        "source_immutable": true,
+        "real_transition_ticks": 0,
+        "simulation_time_s": 0.0
+      },
+      {
+        "raw_case_index": 9,
+        "label": "diverging-forward-before_curve",
+        "passed": true,
+        "path_reversed": false,
+        "physical_contact_chainage_m": 295.4987562112089,
+        "physical_contact_world_m": [
+          9.502481460571289,
+          0.7000000476837158,
+          295.0248107910156
+        ],
+        "fixture_placement_error_m": 0.0,
+        "orientation_verified": true,
+        "path_verified": true,
+        "authored_endpoint_error_m": 3.0517578125e-05,
+        "near_physical_contact_error_m": 0.3157404363155365,
+        "far_physical_contact_error_m": 0.19993682205677032,
+        "source_immutable": true,
+        "real_transition_ticks": 0,
+        "simulation_time_s": 0.0
+      },
+      {
+        "raw_case_index": 10,
+        "label": "diverging-forward-on_curve",
+        "passed": true,
+        "path_reversed": false,
+        "physical_contact_chainage_m": 300.4987562112089,
+        "physical_contact_world_m": [
+          10.0,
+          0.7000000476837158,
+          300.0
+        ],
+        "fixture_placement_error_m": 0.0,
+        "orientation_verified": true,
+        "path_verified": true,
+        "authored_endpoint_error_m": 0.0,
+        "near_physical_contact_error_m": 0.20001220703125,
+        "far_physical_contact_error_m": 0.19999755918979645,
+        "source_immutable": true,
+        "real_transition_ticks": 0,
+        "simulation_time_s": 0.0
+      },
+      {
+        "raw_case_index": 11,
+        "label": "diverging-forward-after_curve",
+        "passed": true,
+        "path_reversed": false,
+        "physical_contact_chainage_m": 305.4987562112089,
+        "physical_contact_world_m": [
+          10.0,
+          0.7000000476837158,
+          305.0
+        ],
+        "fixture_placement_error_m": 0.0,
+        "orientation_verified": true,
+        "path_verified": true,
+        "authored_endpoint_error_m": 9.5367431640625e-07,
+        "near_physical_contact_error_m": 0.20001220703125,
+        "far_physical_contact_error_m": 0.3157426416873932,
+        "source_immutable": true,
+        "real_transition_ticks": 0,
+        "simulation_time_s": 0.0
+      },
+      {
+        "raw_case_index": 12,
+        "label": "diverging-reverse-before_turnout",
+        "passed": true,
+        "path_reversed": true,
+        "physical_contact_chainage_m": 505.9975124224178,
+        "physical_contact_world_m": [
+          0.0,
+          0.7000000476837158,
+          195.0
+        ],
+        "fixture_placement_error_m": 0.0,
+        "orientation_verified": true,
+        "path_verified": true,
+        "authored_endpoint_error_m": 8.121869541355409e-07,
+        "near_physical_contact_error_m": 0.31569039821624756,
+        "far_physical_contact_error_m": 0.1999969482421875,
+        "source_immutable": true,
+        "real_transition_ticks": 1,
+        "simulation_time_s": 0.05
+      },
+      {
+        "raw_case_index": 13,
+        "label": "diverging-reverse-on_turnout",
+        "passed": true,
+        "path_reversed": true,
+        "physical_contact_chainage_m": 500.9975124224178,
+        "physical_contact_world_m": [
+          0.0,
+          0.7000000476837158,
+          200.0
+        ],
+        "fixture_placement_error_m": 0.0,
+        "orientation_verified": true,
+        "path_verified": true,
+        "authored_endpoint_error_m": 5.141637302585877e-07,
+        "near_physical_contact_error_m": 0.20001301169395447,
+        "far_physical_contact_error_m": 0.1999969482421875,
+        "source_immutable": true,
+        "real_transition_ticks": 1,
+        "simulation_time_s": 0.05
+      },
+      {
+        "raw_case_index": 14,
+        "label": "diverging-reverse-after_turnout",
+        "passed": true,
+        "path_reversed": true,
+        "physical_contact_chainage_m": 495.9975124224178,
+        "physical_contact_world_m": [
+          0.4975185990333557,
+          0.7000000476837158,
+          204.97518920898438
+        ],
+        "fixture_placement_error_m": 0.0,
+        "orientation_verified": true,
+        "path_verified": true,
+        "authored_endpoint_error_m": 1.5312507457565516e-05,
+        "near_physical_contact_error_m": 0.20001301169395447,
+        "far_physical_contact_error_m": 0.3156154155731201,
+        "source_immutable": true,
+        "real_transition_ticks": 1,
+        "simulation_time_s": 0.05
+      },
+      {
+        "raw_case_index": 15,
+        "label": "diverging-reverse-before_curve",
+        "passed": true,
+        "path_reversed": true,
+        "physical_contact_chainage_m": 405.4987562112089,
+        "physical_contact_world_m": [
+          9.502481460571289,
+          0.7000000476837158,
+          295.0248107910156
+        ],
+        "fixture_placement_error_m": 0.0,
+        "orientation_verified": true,
+        "path_verified": true,
+        "authored_endpoint_error_m": 3.0517578125e-05,
+        "near_physical_contact_error_m": 0.315616250038147,
+        "far_physical_contact_error_m": 0.19999784231185913,
+        "source_immutable": true,
+        "real_transition_ticks": 1,
+        "simulation_time_s": 0.05
+      },
+      {
+        "raw_case_index": 16,
+        "label": "diverging-reverse-on_curve",
+        "passed": true,
+        "path_reversed": true,
+        "physical_contact_chainage_m": 400.4987562112089,
+        "physical_contact_world_m": [
+          10.0,
+          0.7000000476837158,
+          300.0
+        ],
+        "fixture_placement_error_m": 0.0,
+        "orientation_verified": true,
+        "path_verified": true,
+        "authored_endpoint_error_m": 0.0,
+        "near_physical_contact_error_m": 0.20001220703125,
+        "far_physical_contact_error_m": 0.19999784231185913,
+        "source_immutable": true,
+        "real_transition_ticks": 1,
+        "simulation_time_s": 0.05
+      },
+      {
+        "raw_case_index": 17,
+        "label": "diverging-reverse-after_curve",
+        "passed": true,
+        "path_reversed": true,
+        "physical_contact_chainage_m": 395.4987562112089,
+        "physical_contact_world_m": [
+          10.0,
+          0.7000000476837158,
+          305.0
+        ],
+        "fixture_placement_error_m": 0.0,
+        "orientation_verified": true,
+        "path_verified": true,
+        "authored_endpoint_error_m": 9.5367431640625e-07,
+        "near_physical_contact_error_m": 0.20001220703125,
+        "far_physical_contact_error_m": 0.31562918424606323,
+        "source_immutable": true,
+        "real_transition_ticks": 1,
+        "simulation_time_s": 0.05
+      }
+    ],
+    "private_reproducer": {
+      "command": [
+        "python3",
+        "tmp/fifth40-continued-20261014/run-issue245-turnout39-v5.py",
+        "--contract",
+        "tmp/fifth40-continued-20261014/issue245-turnout39-contract.v5.approved.json"
+      ],
+      "probe": "tmp/fifth40-continued-20261014/issue245-turnout39-v3.rs",
+      "output": "tmp/fifth40-continued-20261014/issue245-turnout39-attempt4",
+      "availability": "Private archived reproducer and raw logs; not distributed as a new public workspace test. Public owned examples and nominal regressions remain linked separately."
+    },
+    "prior_attempts": [
+      {
+        "attempt": 1,
+        "receipt_sha256": "2433f9b136f9792c87af1cf4c3c750306d5b064539ac0dee783bb3f50ed80799",
+        "accepted": false,
+        "reason": "Direct rustc lacked CARGO_MANIFEST_DIR for Bevy derives; compile failed, no cases executed."
+      },
+      {
+        "attempt": 2,
+        "receipt_sha256": "8dbefc709a2aaca25278642d6982d6384f71d76ea4ad20655d818fa03933ffef",
+        "result_sha256": "277459473205dc1f14fc2d45fb849d8e9448b228c47c027e1a2c63f9c34e3504",
+        "accepted": false,
+        "reason": "Nominal18pass rejected on inspection: reverse fixture contact labels displaced40m."
+      },
+      {
+        "attempt": 3,
+        "receipt_sha256": "78c8de95a7154d3807dc8baa302f82a3952d6bfe938b7a0383e450696814321a",
+        "result_sha256": "20af1aab3f80640ebb4d12ca20472a7172c36c1b21248df98028274b2de4d05c",
+        "accepted": false,
+        "reason": "New placement/orientation guard rejected9reverse cases: authored first reversed leg does not initialize path_reversed; no complete245credit."
+      }
+    ],
+    "limits": [
+      "Physical world Euclidean1m envelope is predeclared for this comparison; production manual contact uses a separate normalized longitudinal1m predicate. These metrics are not declared identical.",
+      "Initial first-leg reversed support is not certified; potential initialization issue archived separately, no product fix. Actual operational second-leg transition is exercised.",
+      "Owned CPU mesh/graph fixture, no nativeTDB pixels, full coupling-impact/transient parity, renderer/FPS, main allocator/RSS or Snap acceptance.",
+      "No Cargo/workspace rebuild/GPU; Snap CPU build may be concurrent."
+    ],
+    "initial_first_leg_observation": {
+      "status": "potential_initialization_bug_or_unsupported_first_reversed_leg_not_fixed",
+      "private_observation_sha256": "213cfc702aa20987b7577834c9ed1bcbfe361ba600ca28341ab91ecc48f049cf",
+      "repro_scenario": "tmp/fifth40-continued-20261014/issue245-turnout39-attempt3/straight-reverse-on_turnout/scenario.toml",
+      "rejected_result_pointer": "/cases/4",
+      "expected_authored_first_leg_reversed": true,
+      "observed_initial_path_reversed": false,
+      "source_references": [
+        {
+          "path": "crates/openrailsrs-sim/src/state.rs",
+          "line": 140,
+          "sha256": "5cf5b7d1b911140f053d4c709d3fc1ca97aa9f74b0ea8cdabff755bbc108464b",
+          "meaning": "SimulationState initial path_reversed=false"
+        },
+        {
+          "path": "crates/openrailsrs-sim/src/live_drive.rs",
+          "line": 918,
+          "sha256": "f70af4b1a0cc9fe8d38a5c747ee2724931843b32ae8aa475be5bc05ee858a563",
+          "meaning": "from_scenario retains operational_legs; no first-leg reversed assignment found"
+        },
+        {
+          "path": "crates/openrailsrs-sim/src/operational_path.rs",
+          "line": 268,
+          "sha256": "a46716efb7725f0b2b6cead3eef39a32f36a2fb092a741fd72bea5f79b157d2d",
+          "meaning": "Actual second-leg transition applies next.reversed after validating all car positions"
+        }
+      ],
+      "scope": "Potential unsupported initialization case, not fixed or certified here. Actual second-leg reversal is accepted; prior rejected attempt remains separate."
+    }
+  }
+}
