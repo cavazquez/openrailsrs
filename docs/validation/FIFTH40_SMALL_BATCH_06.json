@@ -1,0 +1,736 @@
+{
+  "schema": 1,
+  "created_utc": "2026-10-14T23:23:19.480623+00:00",
+  "batch": "B06",
+  "scope": "Static evidence review for five issues; no new runtime tests, benchmarks, captures, Cargo or GPU jobs. Exact issue criteria retained.",
+  "runtime_commit": "a1b59e14bea6db433c0746dd0f1f2644dc5bc4dd",
+  "protected_phase39": {
+    "viewer_sha256": "f1138d03ea6978baaab8e5fe8b4e8995c626a6df319a690bb7a92955512c0239",
+    "input_manifest_sha256": "8dfa16a31a08b48a33776a9041b4f90ef24d6d3b70f6385303d4de8b0589b6a3",
+    "build_receipt_sha256": "ecdce077508cb520f43810a79b1a2c750f3b8869b2caabb75186118075e8b7de",
+    "source_files_match_manifest": true
+  },
+  "issues": [
+    {
+      "number": 297,
+      "title": "Plan 087: Mostrar huellas y despeje de nieve por vehículos",
+      "criteria": [
+        {
+          "text": "Relacionar marcas con ruedas y recorridos físicos reales.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Las marcas se obtienen de las transformaciones y radios de las ruedas. La captura histórica snow-curve registra 35,70364051646178 m y 278 segmentos; la regresión actual verifica movimiento real y rebase.",
+          "evidence": [
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/snow-curve",
+            "test:snow_tracks::tests::tracks_follow_actual_motion_are_bounded_and_rebase_without_moving"
+          ]
+        },
+        {
+          "text": "Conservar cobertura fuera del paso y limitar almacenamiento por sectores.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "El historial conserva hasta 25 sectores de 2048 m y 256 segmentos por sector; se publican como máximo 64 segmentos próximos. Sólo se despeja una franja de 0,22 m junto a cada rueda y se conserva la cobertura restante.",
+          "evidence": [
+            "crates/openrailsrs-viewer3d/src/snow_tracks.rs",
+            "test:snow_tracks::tests::tracks_follow_actual_motion_are_bounded_and_rebase_without_moving"
+          ]
+        },
+        {
+          "text": "Capturar cabina/exterior o vistas relevantes con condiciones reproducibles; comprobar pausa, cambios de cámara, origen flotante y coste del efecto.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Se conservan la captura con huellas y los casos de cámara conductor/exterior, pausa/restauración y origen observado de 500 m de fase36. Los tres PASS de check39 cubren pausa, teletransporte, rebase y ausencia de uploads repetidos en reposo. El coste histórico de snow_tracks en esos casos fue 19/26 us máximo, sin atribuirlo a39.",
+          "evidence": [
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/snow-curve",
+            "docs/validation/FIFTH40_PHASE36_SUBCRITERIA.json#/cases/snow-driver",
+            "docs/validation/FIFTH40_PHASE36_SUBCRITERIA.json#/cases/snow-exterior",
+            "test:snow_tracks::tests::paused_wheels_and_teleport_do_not_clear_new_snow",
+            "test:snow_tracks::tests::stationary_frame_does_not_mark_identical_gpu_segments_as_modified"
+          ]
+        }
+      ],
+      "scope": "Huellas del ejemplo propio con geometría de ruedas declarada; las vistas estáticas de fase36 tenían cero segmentos y no sustituyen al snow-curve en movimiento. No se certifica una apariencia de nieve original ni coste actual39.",
+      "missing_for_new_phase39_claim": "Para afirmar coste o apariencia39, faltaría una captura y medición39 equivalentes del caso en movimiento. Este lote sólo reutiliza las capturas históricas identificadas y tres PASS nominales39."
+    },
+    {
+      "number": 314,
+      "title": "Plan 104: Reducir carga y memoria de bancos de audio grandes",
+      "criteria": [
+        {
+          "text": "Medir lectura, decodificación y retención por banco y vehículo.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "El informe final32 mide 48 bancos SMS/WAV de tres trenes y ocho vehículos por tren: lectura/parseo, apertura, decodificación y PCM retenido por banco y vehículo. Los PCM compartidos se solapan y no deben sumarse para calcular el total único.",
+          "evidence": [
+            "docs/fixtures/compatibility/fifth40-20261013/performance.json#/audio/final_confirmation32/versions/candidate/banks"
+          ]
+        },
+        {
+          "text": "Liberar o reutilizar recursos manteniendo bucles continuos y colas acotadas.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "El pool reutiliza muestras, desaloja entradas inactivas y mantiene referencias fuertes de bucles activos; las regresiones actuales comprueban desalojo y cambios cabina/pasajero/exterior sin reiniciar bucles. Presupuesto de PCM 128 MiB y buzón de estado de dos mensajes; 64 entradas es un objetivo para entradas inactivas, no un límite de voces activas.",
+          "evidence": [
+            "docs/fixtures/compatibility/fifth40-20261013/performance.json#/audio/limits",
+            "test:native::decoded_pool_reuses_shared_samples_and_evicts_idle_entries_without_breaking_active_loops",
+            "test:native::tests::cab_passenger_and_exterior_switch_without_restarting_loops"
+          ]
+        },
+        {
+          "text": "Medir antes/después con el mismo binario de referencia, ruta, formación, cámara, semilla y hardware; separar carga inicial de conducción.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "El par histórico D9/final32 mantiene ruta/formación, cámara driver, semilla42, punto2500m y RX7600. PCM único 10,446857452392578→4,939460754394531 MiB con las mismas 38 voces. El informe global del mismo par separa carga inicial de conducción y conserva sus regresiones; no es un benchmark39 ni prueba una mejora general de cuadros.",
+          "evidence": [
+            "docs/fixtures/compatibility/fifth40-20261013/performance.json#/audio/final_confirmation32",
+            "docs/fixtures/compatibility/fifth40-20261013/performance.json#/final_global_reference32"
+          ]
+        }
+      ],
+      "scope": "Pool y telemetría de bancos SMS/WAV; ALSA-null ejercita el motor real pero no demuestra escucha humana ni paridad acústica. La comparación de memoria es sólo PCM único, no RSS/VRAM total.",
+      "missing_for_new_phase39_claim": "Para atribuir a39 una mejora temporal o de memoria total, faltaría un nuevo par controlado con la referencia fijada y el visor39. Los datos por banco y el par PCM presentes siguen siendo final32; el allocator del visor cambió en39."
+    },
+    {
+      "number": 384,
+      "title": "Plan 174: Reutilizar importaciones y señales mediante caché persistente",
+      "criteria": [
+        {
+          "text": "Cachear grafo, metadatos y programas compilados con identidad de dependencias.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La importación persiste grafo y metadatos e incluye la señalización nativa. Cada dependencia leída y namespace participa en la identidad; la compilación SIGSCR usa el SHA del texto y el fingerprint del compilador.",
+          "evidence": [
+            "crates/openrailsrs-msts/src/import_route.rs",
+            "crates/openrailsrs-track/src/sigscript.rs",
+            "crates/openrailsrs-content/src/source_cache.rs"
+          ]
+        },
+        {
+          "text": "Invalidar cambios de parser o SIGSCR y comparar resultados con importación fresca.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La regresión39 rechaza cambios de dependencia, namespace, versión de parser y datos corruptos. Los fingerprints de build incluyen parser/importador/SIGSCR/Cargo.lock. Las cuatro importaciones históricas fresca/fría/caliente/repetida producen exactamente los mismos 42.629.796 bytes y SHA; un hit no reescribe la entrada.",
+          "evidence": [
+            "test:source_cache::tests::changed_includes_namespace_parser_and_corruption_invalidate_the_result",
+            "docs/fixtures/compatibility/fifth40-20261013/performance.json#/native_cache/final_confirmation32",
+            "crates/openrailsrs-msts/build.rs",
+            "crates/openrailsrs-track/build.rs"
+          ]
+        },
+        {
+          "text": "Medir antes/después con el mismo binario de referencia, ruta, formación, cámara, semilla y hardware; separar carga inicial de conducción.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La misma CLI final32 midió fresco12,383624078s, frío11,900366055s, caliente0,146241945s y repetido0,128264925s sobre la misma ruta original. Es importación sin render: formación/cámara no intervienen y no se inventa conducción ni FPS. La carga concurrente se conserva; estos tiempos locales no son medidas39.",
+          "evidence": [
+            "docs/fixtures/compatibility/fifth40-20261013/performance.json#/native_cache/final_confirmation32"
+          ]
+        }
+      ],
+      "scope": "Caché derivada de importación y programas, con invalidación explícita; no garantiza compatibilidad de cualquier SIGSCR ni evalúa sus aspectos durante un viaje completo.",
+      "missing_for_new_phase39_claim": "Para afirmar estos tiempos en39 faltaría ejecutar la CLI39 con importación fresca/fría/caliente/repetida bajo el mismo contrato. No se ejecutó en este lote."
+    },
+    {
+      "number": 393,
+      "title": "Plan 183: Paralelizar tráfico conservando reproducibilidad",
+      "criteria": [
+        {
+          "text": "Separar trabajo independiente y ordenar aplicación de comandos y reservas.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "El coordinador serial congela concesiones/ocupación; sólo los estados disjuntos de los servicios avanzan en el pool. El vector conserva el orden para publicar estados y aplicar reservas. La prueba actual compara snapshots completos y restauración entre uno y ocho trabajadores.",
+          "evidence": [
+            "crates/openrailsrs-sim/src/live_traffic.rs",
+            "test:one_and_eight_workers_produce_identical_moving_trains_and_restore"
+          ]
+        },
+        {
+          "text": "Obtener los mismos resultados con distintas cantidades de hilos en recorridos representativos.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Los ensayos históricos32 con 1/2/4/8 trabajadores obtuvieron hashes finales iguales para 32 AI más jugador y para el corredor de dos AI más jugador. En39, el PASS nominal vuelve a comprobar uno contra ocho trabajadores durante 20 pasos y tras restaurar, en nueve vías independientes. El caso39 no se atribuye a la matriz histórica de cuatro cantidades.",
+          "evidence": [
+            "docs/fixtures/compatibility/fifth40-20261013/performance.json#/traffic/final_confirmation32",
+            "test:one_and_eight_workers_produce_identical_moving_trains_and_restore"
+          ]
+        },
+        {
+          "text": "Medir antes/después con el mismo binario de referencia, ruta, formación, cámara, semilla y hardware; separar carga inicial de conducción.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La referencia algorítmica es un trabajador en el mismo helper32; ruta/formación/semilla42 y cámara headless permanecen iguales. Se registran carga inicial y 60 s simulados de conducción por separado para 1/2/4/8. Ocho trabajadores fue más lento en ambas cargas y se conserva el resultado. No son tiempos39 ni rendimiento gráfico.",
+          "evidence": [
+            "docs/fixtures/compatibility/fifth40-20261013/performance.json#/traffic/final_confirmation32"
+          ]
+        }
+      ],
+      "scope": "Trabajo independiente por tren bajo coordinación serial. No garantiza escalado positivo ni equivalencia con cualquier actividad externa. LiveTraffic cambió después32; su matriz de tiempos mantiene esa versión histórica.",
+      "missing_for_new_phase39_claim": "Para afirmar tiempos39 de 1/2/4/8 o escalar a otras actividades faltaría su matriz actual; el PASS39 disponible compara1/8 y no reemplaza una medición temporal de cuatro cantidades."
+    },
+    {
+      "number": 396,
+      "title": "Plan 186: Crear editor gráfico de itinerarios, inversiones y esperas",
+      "criteria": [
+        {
+          "text": "Editar recorridos sobre red existente respetando agujas y sentido.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "El editor recorre la red dirigida existente y valida cada pata, arista y continuidad; el caso actual rechaza nodo/arista inexistente y discontinuidad. No crea vías ni modifica la red del autor.",
+          "evidence": [
+            "test:service_builder::tests::graphical_itinerary_validates_all_legs_reversal_wait_undo_and_separate_save",
+            "crates/openrailsrs-viewer3d/src/service_builder.rs"
+          ]
+        },
+        {
+          "text": "Validar inversiones y esperas, ofrecer undo y guardar sin alterar PAT originales.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La prueba39 guarda y recarga un plan con espera de60s e inversión, lo conduce hasta destino, deshace la inversión y rechaza NaN sin mutar el plan; comprueba que el grafo original no cambia. La secuencia gráfica histórica36 conserva también los SHA de escenario y grafo antes/después y guarda en copia propia.",
+          "evidence": [
+            "test:service_builder::tests::graphical_itinerary_validates_all_legs_reversal_wait_undo_and_separate_save",
+            "docs/validation/FIFTH40_PHASE36_SUBCRITERIA.json#/editor",
+            "docs/validation/FIFTH40_EDITOR36_PRESERVED_IMAGES.json#/editor_sources"
+          ]
+        },
+        {
+          "text": "Documentar una prueba manual desde el menú y un caso de aceptación reproducible; comprobar persistencia y errores relevantes para este alcance.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La guía describe el flujo desde Nueva partida y el guardado de la copia. Se preservan ocho etapas gráficas36 con ratón/scroll reales a800×600, incluida selección, espera, inversión, undo y guardado. Dos PNG públicos y sus SHA siguen disponibles; los tres archivos del editor mantienen exactamente sus SHA36/37 en el manifest39. La conducción de la copia se cubre por la prueba39, no se atribuye a la captura UI.",
+          "evidence": [
+            "docs/validation/FIFTH40_EDITOR36_PRESERVED_IMAGES.json#/published_frames",
+            "docs/validation/FIFTH40_PHASE36_SUBCRITERIA.json#/editor",
+            "docs/MANUAL_FIFTH40.md#396",
+            "test:service_builder::tests::graphical_itinerary_validates_all_legs_reversal_wait_undo_and_separate_save"
+          ]
+        }
+      ],
+      "scope": "Edición de itinerarios en una red existente de hasta128 nodos visibles, con copias propias. La inversión exitosa histórica usa una copia declarada con aristas inversas; no altera PAT ni añade vías al mapa original.",
+      "missing_for_new_phase39_claim": "No hay una nueva capturaUI39 en este lote. La secuencia36 se conserva con sus archivos del editor intactos y prueba funcional ejecutada39."
+    }
+  ],
+  "current_regression_execution": {
+    "check_command": [
+      "bash",
+      "check.sh"
+    ],
+    "start_utc": "2026-10-14T22:13:00.427315+00:00",
+    "end_utc": "2026-10-14T22:24:39.683222+00:00",
+    "check_receipt_sha256": "f32f167e1e6ac0d9876c60e1b33b27ac6324209f649aadba4da766da891fdc78",
+    "stdout_sha256": "00c0184998e1ccdf90fabbbd69691ae8883e0ef73b52626e9f8c0ca940f2393c",
+    "rust": {
+      "passed": 2083,
+      "failed": 0,
+      "ignored": 49,
+      "summaries": 152
+    },
+    "python": {
+      "tests": 127,
+      "summaries": 25
+    },
+    "inputs_unchanged": true,
+    "user_traces_unchanged": true,
+    "historical_git_head_at_check_start": "e865c8a56fef252c0b7f60775ac5e773844380f1",
+    "binding": "Compiled inputs match the protected phase39 build manifest 8dfa16a31a08b48a33776a9041b4f90ef24d6d3b70f6385303d4de8b0589b6a3; the check started before the runtime commit. Its historical head is preserved.",
+    "ci": {
+      "commit": "a1b59e14bea6db433c0746dd0f1f2644dc5bc4dd",
+      "url": "https://github.com/cavazquez/openrailsrs/actions/runs/38647767494",
+      "conclusion": "success",
+      "jobs": [
+        "Optional C# TCS host (Linux)",
+        "check.sh",
+        "Visual smoke (#43)",
+        "Cobertura de tests"
+      ]
+    },
+    "named_tests": {
+      "snow_tracks::tests::paused_wheels_and_teleport_do_not_clear_new_snow": {
+        "source": "crates/openrailsrs-viewer3d/src/snow_tracks.rs",
+        "source_sha256": "1b9409c8c19da65aade6c5f2637dd0f195369a5acd0187de6ef1764f2fd974e7",
+        "result": "passed",
+        "check39_log_line": 2892,
+        "check39_stdout": "test snow_tracks::tests::paused_wheels_and_teleport_do_not_clear_new_snow ... ok"
+      },
+      "snow_tracks::tests::stationary_frame_does_not_mark_identical_gpu_segments_as_modified": {
+        "source": "crates/openrailsrs-viewer3d/src/snow_tracks.rs",
+        "source_sha256": "1b9409c8c19da65aade6c5f2637dd0f195369a5acd0187de6ef1764f2fd974e7",
+        "result": "passed",
+        "check39_log_line": 2893,
+        "check39_stdout": "test snow_tracks::tests::stationary_frame_does_not_mark_identical_gpu_segments_as_modified ... ok"
+      },
+      "snow_tracks::tests::tracks_follow_actual_motion_are_bounded_and_rebase_without_moving": {
+        "source": "crates/openrailsrs-viewer3d/src/snow_tracks.rs",
+        "source_sha256": "1b9409c8c19da65aade6c5f2637dd0f195369a5acd0187de6ef1764f2fd974e7",
+        "result": "passed",
+        "check39_log_line": 2894,
+        "check39_stdout": "test snow_tracks::tests::tracks_follow_actual_motion_are_bounded_and_rebase_without_moving ... ok"
+      },
+      "native::decoded_pool_reuses_shared_samples_and_evicts_idle_entries_without_breaking_active_loops": {
+        "source": "crates/openrailsrs-audio/src/native.rs",
+        "source_sha256": "9e70e1534d4b5b2cd97c46b3acd812fb08ca94f13a892573cd8c60260593343f",
+        "result": "passed",
+        "check39_log_line": 130,
+        "check39_stdout": "test native::decoded_pool_reuses_shared_samples_and_evicts_idle_entries_without_breaking_active_loops ... ok"
+      },
+      "native::tests::cab_passenger_and_exterior_switch_without_restarting_loops": {
+        "source": "crates/openrailsrs-audio/src/native.rs",
+        "source_sha256": "9e70e1534d4b5b2cd97c46b3acd812fb08ca94f13a892573cd8c60260593343f",
+        "result": "passed",
+        "check39_log_line": 132,
+        "check39_stdout": "test native::tests::cab_passenger_and_exterior_switch_without_restarting_loops ... ok"
+      },
+      "source_cache::tests::changed_includes_namespace_parser_and_corruption_invalidate_the_result": {
+        "source": "crates/openrailsrs-content/src/source_cache.rs",
+        "source_sha256": "002116b71f600fb6e123f77b6537bd9e087c19a5b6f2c0e217362be6d387c6e4",
+        "result": "passed",
+        "check39_log_line": 588,
+        "check39_stdout": "test source_cache::tests::changed_includes_namespace_parser_and_corruption_invalidate_the_result ... ok"
+      },
+      "one_and_eight_workers_produce_identical_moving_trains_and_restore": {
+        "source": "crates/openrailsrs-sim/tests/parallel_traffic.rs",
+        "source_sha256": "98cf1d718eca2a18ab48aca47d47c7d48c4e476f7c8690731cc7b3603e38e8eb",
+        "result": "passed",
+        "check39_log_line": 1650,
+        "check39_stdout": "test one_and_eight_workers_produce_identical_moving_trains_and_restore ... ok"
+      },
+      "service_builder::tests::graphical_itinerary_validates_all_legs_reversal_wait_undo_and_separate_save": {
+        "source": "crates/openrailsrs-viewer3d/src/service_builder.rs",
+        "source_sha256": "71d6e3d6b610c32c856dcddfc368c0eaec253d0efedb36a9acff48470d321921",
+        "result": "passed",
+        "check39_log_line": 2789,
+        "check39_stdout": "test service_builder::tests::graphical_itinerary_validates_all_legs_reversal_wait_undo_and_separate_save ... ok"
+      }
+    }
+  },
+  "current_source_sha256": {
+    "crates/openrailsrs-viewer3d/src/snow_tracks.rs": "1b9409c8c19da65aade6c5f2637dd0f195369a5acd0187de6ef1764f2fd974e7",
+    "crates/openrailsrs-bevy-scenery/assets/shaders/snow_surface.wgsl": "93bf0fe7e155a3b91ca2cf6e1ed9be37e49c57743931dba9d77edc06f4b0276f",
+    "crates/openrailsrs-audio/src/native.rs": "9e70e1534d4b5b2cd97c46b3acd812fb08ca94f13a892573cd8c60260593343f",
+    "crates/openrailsrs-content/src/source_cache.rs": "002116b71f600fb6e123f77b6537bd9e087c19a5b6f2c0e217362be6d387c6e4",
+    "crates/openrailsrs-msts/src/import_route.rs": "754d97118f293c39687f0f495bdd730e83caec4857ddf3c360cb2d9681aa5b34",
+    "crates/openrailsrs-msts/build.rs": "2e234a93bff9b281a121d8b6d9b22058e005d92620050e3ddc1f1130d6e189c5",
+    "crates/openrailsrs-track/src/sigscript.rs": "e059d2642cd884aa54dd13afeaa09a7c74fe50cca5ae5b2b854e0649ff4104a5",
+    "crates/openrailsrs-track/build.rs": "9380af46bce3ff5b8517d08bb3ec907cbeb079dbc8b954bf0e7ef9be9ae085e2",
+    "crates/openrailsrs-sim/src/live_traffic.rs": "04f972018dc4a4102b4fdbdce5b34135ac1212ad3378de79241aefdfacdfb805",
+    "crates/openrailsrs-sim/tests/parallel_traffic.rs": "98cf1d718eca2a18ab48aca47d47c7d48c4e476f7c8690731cc7b3603e38e8eb",
+    "crates/openrailsrs-viewer3d/src/service_builder.rs": "71d6e3d6b610c32c856dcddfc368c0eaec253d0efedb36a9acff48470d321921",
+    "crates/openrailsrs-viewer3d/src/player_ui.rs": "79516299357befbf93de4b90ec5c4338fb89b759100fd5c90a84fe4661600055",
+    "crates/openrailsrs-viewer3d/src/player_ui/launcher.rs": "a72d212e74c562da2d3eb1439f766c3bf3d3556dab4a99aaa585e27a9293b8e3"
+  },
+  "historical_measurements": {
+    "version_policy": "These are original final32 and phase36 measurements. They are not rerun or relabelled as phase39. Current nominal PASS and source hashes are stated separately. Criteria require measurement, not a promise of positive speedup.",
+    "hardware": {
+      "cpu": "AMD Ryzen 5 9600X",
+      "benchmark_gpu": "AMD Radeon RX 7600",
+      "benchmark_gpu_available_mib": 8176,
+      "endurance_gpu": "AMD integrated1002:13c0,PCI0000:0e:00.0",
+      "endurance_dedicated_mib": 512,
+      "os": "Linux7.0.0-38-generic",
+      "mesa": "26.0.8"
+    },
+    "snow": {
+      "curve_binary_sha256": "97048367dd2984af238e367bc978fb5cdd4ed87383c2bacbceeb842ede28d24c",
+      "curve_capture_sha256": "b8e95cf0ce2b6b54b93b22337d89e37142539984eca8ae78c6a720f96e4af7ee",
+      "curve_odometer_m": 35.70364051646178,
+      "curve_segments": 278,
+      "phase36_viewer_sha256": "06ae19253b4ca0d040e13152be8527dda91d86a71334d8a8314f28501d540a56",
+      "phase36_subcriteria": {
+        "snow-driver": {
+          "actions": {
+            "paused_time_s": 1.950000000000001,
+            "restored_time_s": 1.950000000000001,
+            "maximum_observed_origin_m": 500.0,
+            "successful_actions": 9
+          },
+          "snow_tracks": {
+            "gpu_changes": 2,
+            "gpu_segments": 0.0,
+            "material_uploads": 2,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "system_stage": {
+            "calls": 898,
+            "histogram_ceiling_ms": 204.8,
+            "histogram_width_ms": 0.1,
+            "maximum_us": 19,
+            "p50_ms": 0.1,
+            "p99_ms": 0.1,
+            "total_us": 4098
+          },
+          "capture_sha256": "677536f0597d97832e0b875730132f23275855a414850245a638d86c052c607c"
+        },
+        "snow-exterior": {
+          "actions": {
+            "paused_time_s": 1.950000000000001,
+            "restored_time_s": 1.950000000000001,
+            "maximum_observed_origin_m": 500.0,
+            "successful_actions": 9
+          },
+          "snow_tracks": {
+            "gpu_changes": 2,
+            "gpu_segments": 0.0,
+            "material_uploads": 2,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "system_stage": {
+            "calls": 894,
+            "histogram_ceiling_ms": 204.8,
+            "histogram_width_ms": 0.1,
+            "maximum_us": 26,
+            "p50_ms": 0.1,
+            "p99_ms": 0.1,
+            "total_us": 5239
+          },
+          "capture_sha256": "06ab17c1083671d41b68c512da6ebd577b0ddb2adc382bdd35a11f3d6d22a004"
+        }
+      }
+    },
+    "audio": {
+      "configuration": {
+        "scenario_sha256": "faac5f908bfafd4a73ecf5be3e1c9601970c110b8926b7c80ac3221387baf5bf",
+        "seed": 42,
+        "camera": "driver",
+        "checkpoint_m": 2500.0,
+        "audio": "private ALSA null",
+        "cache_scope": "cold/warm refers to this executable's private application-data cache; OS file cache and Mesa shader cache are not cleared"
+      },
+      "versions": {
+        "baseline": {
+          "binary_sha256": "fcc8bee54cd6310f5b723f50e9cc0caa8576c6bc0db14da2ef2efcb254dd2053",
+          "programs": 48,
+          "streams": 174,
+          "sample_references": 69,
+          "active_voices": 38,
+          "unique_pcm_mib": 10.446857452392578,
+          "per_bank_metrics_available": false,
+          "cache": {
+            "sample_cache_hits": null,
+            "sample_cache_misses": null,
+            "sample_cache_evictions": null,
+            "file_open_us": null,
+            "decode_us": null
+          }
+        },
+        "candidate": {
+          "binary_sha256": "4ee97d35ead40ca675852ea0a011bc1e8c684cc3d86f88c3a99b82ed5032276f",
+          "programs": 48,
+          "streams": 174,
+          "sample_references": 69,
+          "active_voices": 38,
+          "unique_pcm_mib": 4.939460754394531,
+          "per_bank_metrics_available": true,
+          "cache": {
+            "sample_cache_hits": 4820,
+            "sample_cache_misses": 38,
+            "sample_cache_evictions": 0,
+            "file_open_us": 273,
+            "decode_us": 12810
+          }
+        }
+      },
+      "candidate_bank_count": 48,
+      "sample_bank": {
+        "program": "RF_BP_DMBSeng.sms",
+        "program_read_parse_us": 1329,
+        "referenced_samples": 21,
+        "resident_pcm_mib": 0.9818000793457031,
+        "resident_samples": 9,
+        "sample_decode_us": 2847,
+        "sample_file_open_us": 73,
+        "train": 0,
+        "vehicle": 0
+      },
+      "phase_separation": {
+        "baseline": {
+          "binary_sha256": "fcc8bee54cd6310f5b723f50e9cc0caa8576c6bc0db14da2ef2efcb254dd2053",
+          "cases": {
+            "downpour-cold": {
+              "startup_inclusive_max_ms": 1707.11499,
+              "loading_frames": 1102,
+              "gameplay": {
+                "gameplay_frames": 2010,
+                "gameplay_frame_p50_ms": 25,
+                "gameplay_frame_p95_ms": 27,
+                "gameplay_frame_p99_ms": 37,
+                "gameplay_longest_frame_ms": 65.40020700000001,
+                "gameplay_hitches_over_100_ms": 0
+              }
+            },
+            "downpour-warm": {
+              "startup_inclusive_max_ms": 1734.413744,
+              "loading_frames": 1084,
+              "gameplay": {
+                "gameplay_frames": 2027,
+                "gameplay_frame_p50_ms": 25,
+                "gameplay_frame_p95_ms": 26,
+                "gameplay_frame_p99_ms": 29,
+                "gameplay_longest_frame_ms": 50.650589000000004,
+                "gameplay_hitches_over_100_ms": 0
+              }
+            }
+          }
+        },
+        "candidate": {
+          "binary_sha256": "4ee97d35ead40ca675852ea0a011bc1e8c684cc3d86f88c3a99b82ed5032276f",
+          "cases": {
+            "downpour-cold": {
+              "startup_inclusive_max_ms": 1655.105461,
+              "loading_frames": 1196,
+              "gameplay": {
+                "gameplay_frames": 1998,
+                "gameplay_frame_p50_ms": 25,
+                "gameplay_frame_p95_ms": 29,
+                "gameplay_frame_p99_ms": 40,
+                "gameplay_longest_frame_ms": 78.159086,
+                "gameplay_hitches_over_100_ms": 0
+              }
+            },
+            "downpour-warm": {
+              "startup_inclusive_max_ms": 2007.909658,
+              "loading_frames": 1169,
+              "gameplay": {
+                "gameplay_frames": 2019,
+                "gameplay_frame_p50_ms": 25,
+                "gameplay_frame_p95_ms": 26,
+                "gameplay_frame_p99_ms": 32,
+                "gameplay_longest_frame_ms": 55.388565,
+                "gameplay_hitches_over_100_ms": 0
+              }
+            }
+          }
+        }
+      },
+      "limits": [
+        "Bank PCM overlaps across vehicles; unique PCM is measured separately.",
+        "D9 per-bank timing/cache counters were not exported and remain null.",
+        "The same global pair has worse P99 and driving maximum in both candidate cases; cold startup maximum improves but warm maximum regresses. It is not an isolated causal audio benchmark.",
+        "No manual listening claim; real audio engine output uses private ALSA-null."
+      ]
+    },
+    "native_cache": {
+      "binary_sha256": "185500fa159b8c4ded3f13d7cbc77cbdd741efe00e85b0e3dc283b92722328dc",
+      "raw_report_sha256": "898506f556fcb287445c158b418abaf4383130379772a20832dde402009fa7f2",
+      "results": [
+        {
+          "mode": "fresh",
+          "elapsed_s": 12.383624078000139,
+          "graph_sha256": "b4cdbfbef1d845a597cb04136e4597a54fa56c7edbed9c2c4e237e4b325446d0",
+          "graph_bytes": 42629796,
+          "cache_files": 0,
+          "cache_unchanged": false
+        },
+        {
+          "mode": "cold",
+          "elapsed_s": 11.900366055000632,
+          "graph_sha256": "b4cdbfbef1d845a597cb04136e4597a54fa56c7edbed9c2c4e237e4b325446d0",
+          "graph_bytes": 42629796,
+          "cache_files": 1,
+          "cache_unchanged": false
+        },
+        {
+          "mode": "warm",
+          "elapsed_s": 0.1462419450035668,
+          "graph_sha256": "b4cdbfbef1d845a597cb04136e4597a54fa56c7edbed9c2c4e237e4b325446d0",
+          "graph_bytes": 42629796,
+          "cache_files": 1,
+          "cache_unchanged": true
+        },
+        {
+          "mode": "warm-repeat",
+          "elapsed_s": 0.1282649249988026,
+          "graph_sha256": "b4cdbfbef1d845a597cb04136e4597a54fa56c7edbed9c2c4e237e4b325446d0",
+          "graph_bytes": 42629796,
+          "cache_files": 1,
+          "cache_unchanged": true
+        }
+      ],
+      "scope": "Exact final32CLI,fresh/cold/warm/repeat,all sourcegraph/SIGSCRbytesidentical;unchangedcachemtime onwarm;headless no3Dcamera or drivingFPS.",
+      "concurrent_workloads": "Integrated32endurance plus Native TGV GPUQA75s/CLIhelper;timings local,not hardware guarantee. No Cargo/Snapbuild."
+    },
+    "traffic": {
+      "binary_sha256": "f30fdfcfccfd46ea89a135075d3877a7f5eab4d7e7cb15e17b2ce63d602e7a2d",
+      "reference": "same binary, serial worker as algorithmic reference",
+      "camera": "headless",
+      "seed": 42,
+      "graph_sha256": "eee13a2927393dd0732369b5d01e7d77782aedf5e57afd4bff5d7831b634c6ed",
+      "formation_sha256": "56141328bc73a735ff43f95cb1ef61679d42c01ac01e4afe6b344cd9d8fceea2",
+      "runs": [
+        {
+          "driving_ms": 1248.764036,
+          "initial_load_ms": 35.781592,
+          "services": 32,
+          "simulated_seconds": 60,
+          "state_sha256": "2719cd3c6fbf6659da9e0b118a4f9606c621a5804265f3264e41e1181cc40150",
+          "workers": 1
+        },
+        {
+          "driving_ms": 1219.5093299999999,
+          "initial_load_ms": 33.02843,
+          "services": 32,
+          "simulated_seconds": 60,
+          "state_sha256": "2719cd3c6fbf6659da9e0b118a4f9606c621a5804265f3264e41e1181cc40150",
+          "workers": 2
+        },
+        {
+          "driving_ms": 1288.014368,
+          "initial_load_ms": 31.830126,
+          "services": 32,
+          "simulated_seconds": 60,
+          "state_sha256": "2719cd3c6fbf6659da9e0b118a4f9606c621a5804265f3264e41e1181cc40150",
+          "workers": 4
+        },
+        {
+          "driving_ms": 1436.7134740000001,
+          "initial_load_ms": 32.029745999999996,
+          "services": 32,
+          "simulated_seconds": 60,
+          "state_sha256": "2719cd3c6fbf6659da9e0b118a4f9606c621a5804265f3264e41e1181cc40150",
+          "workers": 8
+        }
+      ],
+      "corridor": {
+        "runs": [
+          {
+            "driving_ms": 95.67711399999999,
+            "initial_load_ms": 19.346909,
+            "services": 2,
+            "simulated_seconds": 60,
+            "state_sha256": "1211bfcd9981e8e8b593f4461d0eaeee24db95fddd45d97a7063f11e99f7f12b",
+            "workers": 1
+          },
+          {
+            "driving_ms": 115.794806,
+            "initial_load_ms": 17.62907,
+            "services": 2,
+            "simulated_seconds": 60,
+            "state_sha256": "1211bfcd9981e8e8b593f4461d0eaeee24db95fddd45d97a7063f11e99f7f12b",
+            "workers": 2
+          },
+          {
+            "driving_ms": 141.222835,
+            "initial_load_ms": 17.911585000000002,
+            "services": 2,
+            "simulated_seconds": 60,
+            "state_sha256": "1211bfcd9981e8e8b593f4461d0eaeee24db95fddd45d97a7063f11e99f7f12b",
+            "workers": 4
+          },
+          {
+            "driving_ms": 188.994439,
+            "initial_load_ms": 16.391974,
+            "services": 2,
+            "simulated_seconds": 60,
+            "state_sha256": "1211bfcd9981e8e8b593f4461d0eaeee24db95fddd45d97a7063f11e99f7f12b",
+            "workers": 8
+          }
+        ],
+        "scenario": "examples/chiltern_extended/scenario.toml",
+        "scenario_sha256": "faac5f908bfafd4a73ecf5be3e1c9601970c110b8926b7c80ac3221387baf5bf",
+        "scope": "repository corridor physics, switches and signalling; native rendering/content audit remains separate"
+      },
+      "execution": {
+        "started_utc": "2026-10-14T04:42:10.617514+00:00",
+        "finished_utc": "2026-10-14T04:42:16.588311+00:00",
+        "elapsed_wall_s": 5.970796266999969,
+        "returncode": 0,
+        "binary_sha256": "f30fdfcfccfd46ea89a135075d3877a7f5eab4d7e7cb15e17b2ce63d602e7a2d",
+        "concurrency": "Only own integrated GPU endurance32 on the host; no other CPU QA, Cargo or RX renderer. Standalone release32-linked example, not the D9 binary."
+      },
+      "limits": "One measurement per worker count,60simulated seconds; exact snapshot equality,not original20AI validation or OpenRails parity. Serial worker is same compiled binary algorithmic reference; rendering/camera absent. No general scaling speedup asserted."
+    },
+    "editor": {
+      "viewer_sha256": "06ae19253b4ca0d040e13152be8527dda91d86a71334d8a8314f28501d540a56",
+      "stages": 8,
+      "actual_mouse_input": true,
+      "original_scenario_before_and_after_sha256": "f9adc155f5354cb9a90f9a942aaf48f7889bde09a63105fc4833cdcd2ac67d8b",
+      "original_graph_before_and_after_sha256": "eb4e1c47a7e592482037df932d921492a7c6b2d1c1cd250dea3a74b906aadfbc",
+      "editor_source_sha256_still_matches_39": {
+        "crates/openrailsrs-viewer3d/src/service_builder.rs": "71d6e3d6b610c32c856dcddfc368c0eaec253d0efedb36a9acff48470d321921",
+        "crates/openrailsrs-viewer3d/src/player_ui.rs": "79516299357befbf93de4b90ec5c4338fb89b759100fd5c90a84fe4661600055",
+        "crates/openrailsrs-viewer3d/src/player_ui/launcher.rs": "a72d212e74c562da2d3eb1439f766c3bf3d3556dab4a99aaa585e27a9293b8e3"
+      },
+      "scope": "Eight historical stages exercise UI; the current named regression additionally saves/loads and drives the itinerary."
+    }
+  },
+  "preserved_evidence": [
+    {
+      "path": "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json",
+      "sha256": "24dce75393004319388c28a2912fd8d62dad4cfc470f63b3864b664f5b6985a6",
+      "json_pointer": "/cases/snow-curve",
+      "execution": "historical captured moving wheel tracks, original binary and asset sets"
+    },
+    {
+      "path": "docs/validation/FIFTH40_PHASE36_SUBCRITERIA.json",
+      "sha256": "a571f8de069ca0596554a9f35ffae69302270e079f914f6ba761e12e25ca138b",
+      "json_pointer": "/cases/snow-driver",
+      "execution": "historical phase36 pause/restore/origin/camera and bounded stage timing"
+    },
+    {
+      "path": "docs/validation/FIFTH40_PHASE36_SUBCRITERIA.json",
+      "sha256": "a571f8de069ca0596554a9f35ffae69302270e079f914f6ba761e12e25ca138b",
+      "json_pointer": "/cases/snow-exterior",
+      "execution": "historical phase36 pause/restore/origin/camera and bounded stage timing"
+    },
+    {
+      "path": "docs/fixtures/compatibility/fifth40-20261013/performance.json",
+      "sha256": "1f0dbaf0b2f85421818053862f0739ed43e1f27e730708892ee3fd368f4c3bc0",
+      "json_pointer": "/audio/final_confirmation32",
+      "execution": "historical real SMS/WAV ALSA-null engine reports"
+    },
+    {
+      "path": "docs/fixtures/compatibility/fifth40-20261013/performance.json",
+      "sha256": "1f0dbaf0b2f85421818053862f0739ed43e1f27e730708892ee3fd368f4c3bc0",
+      "json_pointer": "/audio/limits",
+      "execution": "pool payload and mailbox policy"
+    },
+    {
+      "path": "docs/fixtures/compatibility/fifth40-20261013/performance.json",
+      "sha256": "1f0dbaf0b2f85421818053862f0739ed43e1f27e730708892ee3fd368f4c3bc0",
+      "json_pointer": "/final_global_reference32",
+      "execution": "same historical binary pair; load and driving separated; regressions retained"
+    },
+    {
+      "path": "docs/fixtures/compatibility/fifth40-20261013/performance.json",
+      "sha256": "1f0dbaf0b2f85421818053862f0739ed43e1f27e730708892ee3fd368f4c3bc0",
+      "json_pointer": "/native_cache/final_confirmation32",
+      "execution": "historical same-CLI fresh/cold/warm/repeat; import only"
+    },
+    {
+      "path": "docs/fixtures/compatibility/fifth40-20261013/performance.json",
+      "sha256": "1f0dbaf0b2f85421818053862f0739ed43e1f27e730708892ee3fd368f4c3bc0",
+      "json_pointer": "/traffic/final_confirmation32",
+      "execution": "historical same-helper serial vs1/2/4/8; load and driving separated"
+    },
+    {
+      "path": "docs/validation/FIFTH40_EDITOR36_PRESERVED_IMAGES.json",
+      "sha256": "ab430a14830a67c50f2565ad63168d1cf25ba1a6ee1f824e4baaa742f64dde91",
+      "json_pointer": "/published_frames",
+      "execution": "preserved historical phase36 editor UI"
+    },
+    {
+      "path": "docs/validation/FIFTH40_PHASE36_SUBCRITERIA.json",
+      "sha256": "a571f8de069ca0596554a9f35ffae69302270e079f914f6ba761e12e25ca138b",
+      "json_pointer": "/editor",
+      "execution": "historical real mouse/scroll/save and unchanged original fixture"
+    }
+  ],
+  "preserved_png_review": [
+    {
+      "path": "docs/validation/images/fifth40-phase36-editor/00-map.png",
+      "sha256": "45fff2a840e56457c79de9ecc18286a69fec4c3439a72051c2427edaa5a20bee",
+      "observed": "800×600: mapa y controles de inversión/espera, con cuerpo desplazable.",
+      "review_type": "static inspection of preserved PNG; no new capture"
+    },
+    {
+      "path": "docs/validation/images/fifth40-phase36-editor/03-reverse.png",
+      "sha256": "51a04ed942dafc39b6312bc74522b980bcb6859394149ba2c74a9d6556a34347",
+      "observed": "Plan de dos patas con espera30s e inversión; no es captura de una partida conducida.",
+      "review_type": "static inspection of preserved PNG; no new capture"
+    },
+    {
+      "path": "docs/validation/images/fifth40-phase37/snow-quality37-snow-exterior.png",
+      "sha256": "06ab17c1083671d41b68c512da6ebd577b0ddb2adc382bdd35a11f3d6d22a004",
+      "observed": "Vista exterior pausada del laboratorio propio con nieve. Su SHA coincide con snow-exterior preservado; tenía cero huellas y no prueba marcas en movimiento.",
+      "review_type": "static inspection of preserved PNG; no new capture"
+    }
+  ],
+  "manual": "docs/MANUAL_FIFTH40.md",
+  "manual_sha256": "b1408705e44aa9fd2dd8b9ddf4b794cffa99da8d05b44b5d88411e4fc57e2ecc",
+  "limits": [
+    "All 15 issue criteria retain their exact text. Satisfaction is bounded to the documented cases and original measured versions.",
+    "No new current39 performance claim is made. Current39 test execution is reused by exact nominal PASS, not inferred from test totals or CI alone.",
+    "No measurements were run for this receipt. Historic timing, allocator, cache/workset and concurrent-load limits remain attached to the original records.",
+    "The later memory/endurance and Snap acceptance are separate; this does not certify two-hour stability or close #403.",
+    "No downloaded author content, private binaries or human traces are added or changed.",
+    "This file does not itself close issues. Root reviews and publishes each decision."
+  ],
+  "does_not_close_any_issue": true
+}
