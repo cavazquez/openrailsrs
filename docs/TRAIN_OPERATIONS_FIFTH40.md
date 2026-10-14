@@ -2,6 +2,8 @@
 
 La referencia de compatibilidad sigue siendo Open Rails 1.6.1. Los ejemplos de esta guía usan material propio y prueban operaciones del jugador; no certifican todos los trenes de la comunidad. Las rutas y formaciones del autor se conservan sin modificarlas.
 
+Nueva partida comienza por **País**. Para los laboratorios de esta guía, elegí **Todos los países** y después el recorrido. El país limita las rutas y servicios, pero las formaciones siguen siendo globales: se puede elegir un tren francés para una ruta británica. Los avisos de electrificación, trocha y recursos permanecen visibles. **Sin dato de país** reúne paquetes sin una declaración conocida; no se deduce la procedencia por el nombre del archivo.
+
 ## Adelantamientos y encuentros (#335, #339)
 
 En **Nueva partida → Ruta y servicio → Buscar servicios**, elegí **Tráfico: adelantamiento de local y expreso** o **Tráfico: encuentro en vía única**. También se pueden abrir directamente:
@@ -31,6 +33,10 @@ Después del acople deben verse cuatro vehículos y desaparecer el servicio dona
 
 El alcance inicial es extremo trasero a delantero, diésel o eléctrico, TCS Rust y dinámica compatible. Se rechazan frenos incompatibles, vapor, scripts externos o una disposición que desplazaría coches a otro ramal. Se mantiene la comprobación física de todos los coches al unirlos; el contacto de un solo enganche no permite trasladar una formación entre vías.
 
+El [oráculo de acople](fixtures/compatibility/fifth40-20261013/coupling-original.json) ejecuta los métodos reales `UncoupleBehind`, `CheckForCoupling` y `ComputeCouplerForces` del DLL fijado de Open Rails 1.6.1, sin modificarlo. Registra la unión de cuatro más cuatro vehículos originales, conservación de presiones y combustible y retiro de la ocupación/reservas del donante. El cliente Rust, enlazado contra las librerías de la fuente 32, conserva esos estados al unir y reanudar; después conduce los ocho vehículos 15,57 m en veinte segundos sobre una vía propia de prueba.
+
+Los tres estados de equilibrio —sin carga, tensión y compresión— difieren menos de 0,000385 N, frente a una tolerancia de 0,1 N; la aceleración usa una tolerancia de 0,00001 m/s². Se comparan las mismas masas y cargas externas, con la precarga elástica de Rust calculada a partir de esas entradas. El modelo rígido de OR y el elástico de Rust tienen distintas extensiones y transitorios; este ensayo no certifica impactos en movimiento ni sus curvas completas. OR exige movimiento con signo para su acople automático, mientras el comando manual del visor exige detener y asegurar la formación.
+
 ## Clasificación en patios (#343)
 
 Elegí **Patio: clasificar y recoger vagones por destino** o **Patio: dos cuadrillas, dos destinos**. F9 muestra cada lote, su destino, vehículos y vía. Aplicá los frenos de mano de los coches 2 y 3 y desacoplá detrás de la locomotora. El lote Norte sólo aparece entregado cuando ambos vagones completos quedan dentro de su zona y asegurados. Volver a recogerlos retira esa aceptación.
@@ -48,6 +54,8 @@ No se autoriza entrar hacia otro tren ni una sección estacionada. Las ruedas de
 Elegí **Depósito: preparación y mantenimiento**. En F9 prepará el tren detenido, sin tracción, en neutro, con motores apagados y frenos de mano aplicados. Elegí el trabajo del depósito presente en la misma vía. Se recuperan aceite y refrigerante mediante las reservas finitas y tiempos declarados del equipo; no se rellena combustible ni se borran averías arbitrariamente.
 
 Guardá a mitad del trabajo y reanudá. Deben conservarse avance, reservas restantes, combustible, baterías, presiones y temperaturas. Si falta una reserva o el vehículo sale de la zona, la recuperación no debe seguir como si el depósito fuese infinito. La UI informa la operación y los errores de preparación.
+
+El [ensayo de continuidad](fixtures/compatibility/fifth40-20261013/depot-state-continuity.json) parte de ambas baterías desconectadas, 469 L por motor, frenos aplicados y una parada en fase de intercambio con penalización previa 37,5. Guarda a mitad de la tarea y compara la recuperación con un tren que recibe los mismos controles y tiempo, sin mantenimiento. Combustible, baterías, frenos y servicio resultan idénticos al control; la temperatura de freno cambia de 76,57 a 73,68 °C en ambos. El mantenimiento transfiere 50 L de aceite y 70 L de refrigerante. Con sólo un litro de cada reserva, las averías permanecen y repetir el ciclo después de reanudar no crea material; completar el ciclo no significa reparar todos los motores.
 
 ## Jornadas (#350)
 
@@ -83,7 +91,9 @@ La auditoría de ese paquete encontró veinte CON originales y dos formaciones 3
 
 Para probar una formación completa, elegila en **Nueva partida → Tren**, abrí **Ver detalles** y comprobá recursos y compatibilidad de electrificación. Usá una ruta electrificada adecuada y verificá la cabina con 1 y el exterior con 2. Recursos completos no certifican scripts C#, sonidos o física completa del modelo. El laboratorio usado en QA es un escenario propio de 25 kV; no es una ruta original de ese autor.
 
-La carga del candidato 25 abrió la cabina 3D completa, pero su exterior se rechazó por matrices anónimas omitidas en el parser. La corrección conserva los 134 índices originales y el candidato 26 ya muestra carrocería, nariz y techo ensamblados en exterior, además de la cabina completa. Las capturas cargaron doce vehículos, sin shaders fallidos o pendientes; no se usan para afirmar rendimiento ni paridad física. El Snap estricto alpha.6 x15 repitió la auditoría (20 CON, dos listas) y mostró la formación original en el selector global; cabina y exterior llegaron a Playing con doce vehículos y sin shaders pendientes o fallidos. Se inspeccionaron los PNG nuevos y se registró `ScreenshotCaptured`. El suelo magenta es la geometría del laboratorio propio, no un escenario del autor. La aceptación x15 queda conservada como candidata intermedia: falta repetir las capturas en el paquete definitivo tras UI29. La aceptación separa auditoría, carga e inspección visual, sin certificar paridad física, sonido ni scripts C#.
+La carga del candidato 25 abrió la cabina 3D completa, pero su exterior se rechazó por matrices anónimas omitidas en el parser. La corrección conserva los 134 índices originales y el candidato 26 ya muestra carrocería, nariz y techo ensamblados en exterior, además de la cabina completa. Las capturas cargaron doce vehículos, sin shaders fallidos o pendientes; no se usan para afirmar rendimiento ni paridad física. El Snap estricto alpha.6 x15 repitió la auditoría (20 CON, dos listas). El candidato x16 volvió a cargar el selector, cabina y exterior normales, con doce vehículos y sin shaders pendientes o fallidos. Se inspeccionaron los PNG nuevos y se registró `ScreenshotCaptured`. El suelo magenta es la geometría del laboratorio propio, no un escenario del autor.
+
+También se recorrió el menú mediante clics y escritura reales: **Nueva partida → País → Reino Unido → Chiltern → servicio → Tren → buscar SNCF_TGV-325-FR_Sharpe → elegir → volver a Ruta y servicio**. El país británico y la ruta elegida se conservan al seleccionar el tren francés. Su aviso eléctrico permanece; esa combinación no se inició durante la prueba. El ensayo no fijó páginas o formaciones mediante variables de captura y conservó doce imágenes del flujo. Las pruebas x15/x16 quedan como antecedentes; el Snap final **alpha.6 x17**, de fuente limpia `bd0b5e4`, repitió el flujo real, la auditoría y las tres vistas con PNG nuevos y callbacks. La auditoría mantiene dos formaciones completas y dieciocho incompletas. Se separan auditoría, carga e inspección visual, sin certificar paridad física, sonido, scripts C# ni la prueba de estabilidad de memoria.
 
 ## Pruebas automatizadas
 
@@ -100,3 +110,13 @@ La evidencia automatizada y las capturas tienen alcances distintos:
 - [La actividad completa original](fixtures/compatibility/fifth40-20261013/native-activity-complete.json) y [su restauración](fixtures/compatibility/fifth40-20261013/native-activity-resume.json) son dos ensayos separados. El primero conserva el exit 143 del wrapper junto al resultado final Completed; el segundo verifica veinte AI entre 20→25 s y el rechazo atómico de un guardado de tráfico corrupto.
 
 El [registro de `check.sh`](fixtures/compatibility/fifth40-20261013/check.json) identifica el binario y las pruebas ejecutadas. La aceptación del Snap final y las capturas TGV corregidas se registran aparte; los resultados del núcleo no se presentan como pruebas del paquete publicado.
+
+Los clientes de acople y depósito se pueden repetir contra librerías coherentes ya compiladas. Sus salidas y fuentes de OR se verifican por hash, sin incluir bytes de vehículos descargados en Git:
+
+```bash
+python3 scripts/capture_coupling_reference.py --content /ruta/al/Chiltern-original --out-dir tmp/coupling-or
+python3 scripts/capture_coupling_comparison.py --stock /ruta/al/Chiltern-original/TRAINS/TRAINSET/RF_Blue_Pullman --reference tmp/coupling-or/reference.json --deps-dir target/release/deps --out-dir tmp/coupling-rust
+PYTHONPATH=scripts python3 -m unittest -v test_coupling_reference
+```
+
+La captura original requiere la instalación fijada OR 1.6.1 y el prefijo Wine privado; la comparación necesita los `rlib` coherentes de una compilación anterior. Los archivos del autor se leen o se copian únicamente a la carpeta de QA ignorada, sin modificarlos.

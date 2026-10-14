@@ -114,6 +114,20 @@
     "transient_images_retired": true,
     "backend_unavailable_is_not_zero": true
   },
+  "additional_qa_python_check": {
+    "status": "passed",
+    "completed_utc": "2026-10-14T04:48:07.870880+00:00",
+    "elapsed_s": 3.7790648150039488,
+    "python_suites": 24,
+    "python_tests": 119,
+    "failed": 0,
+    "website_consistency_returncode": 0,
+    "check_sh_sha256": "dc53659aef1a50fdd035f482786ebfb17548cb8e7423c932319ba8330a4120ab",
+    "log_sha256": "74e9d24b5a50b9d6116492aa53c3ed7ccaab54caca34e96d117deafd206fa5db",
+    "new_suite": "scripts/test_coupling_reference.py",
+    "new_suite_tests": 5,
+    "scope": "Separate rerun of every Python suite after adding the original coupling/depot QA clients and their fixtures to check.sh. Runtime source32 is unchanged; the full Rust/check.sh result above remains its own receipt."
+  },
   "sandbox_attempt": {
     "log_sha256": "2008fc164e0a680793724a25cf05239f2dd01b5de588c01d8012f7c122cf92cd",
     "returncode": 1,

@@ -1,0 +1,1999 @@
+{
+  "reference": "Open Rails 1.6.1",
+  "dt_s": 0.05,
+  "coupling": {
+    "split_method": "Simulator.UncoupleBehind(TrainCar, true)",
+    "contact_method": "Simulator.CheckForCoupling(Train, 0.05f)",
+    "original_order": [
+      "0 - 0",
+      "0 - 3",
+      "0 - 7",
+      "0 - 5",
+      "0 - 4",
+      "0 - 6",
+      "0 - 2",
+      "0 - 1"
+    ],
+    "signed_overlap_m": -0.149962857,
+    "separated": {
+      "player_number": 0,
+      "donor_number": 2,
+      "active_trains": [
+        {
+          "number": 0,
+          "type": "PLAYER",
+          "cars": [
+            "0 - 0",
+            "0 - 3",
+            "0 - 7",
+            "0 - 5"
+          ]
+        },
+        {
+          "number": 2,
+          "type": "STATIC",
+          "cars": [
+            "0 - 4",
+            "0 - 6",
+            "0 - 2",
+            "0 - 1"
+          ]
+        }
+      ],
+      "player_speed_mps": -0.05,
+      "length_m": 83.032,
+      "mass_kg": 221498.8984375,
+      "vehicles": [
+        {
+          "id": "0 - 0",
+          "file": "RF_WP_DMBSA.eng",
+          "owner": 0,
+          "mass_kg": 69091.4,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": 681.9136,
+          "brake_type": "EPBrakeSystem",
+          "pipe_psi": 70.0,
+          "cylinder_psi": 12.0,
+          "auxiliary_psi": 60.0,
+          "shoe_force_n": 50952.457,
+          "handbrake": false,
+          "front_hose": false,
+          "rear_hose": true,
+          "front_cock": false,
+          "rear_cock": true
+        },
+        {
+          "id": "0 - 3",
+          "file": "RF_WP_PSB.wag",
+          "owner": 0,
+          "mass_kg": 50802.5,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": null,
+          "brake_type": "EPBrakeSystem",
+          "pipe_psi": 71.0,
+          "cylinder_psi": 13.0,
+          "auxiliary_psi": 61.0,
+          "shoe_force_n": 104462.234,
+          "handbrake": false,
+          "front_hose": true,
+          "rear_hose": true,
+          "front_cock": true,
+          "rear_cock": true
+        },
+        {
+          "id": "0 - 7",
+          "file": "RF_WP_KFC.wag",
+          "owner": 0,
+          "mass_kg": 50802.5,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": null,
+          "brake_type": "EPBrakeSystem",
+          "pipe_psi": 72.0,
+          "cylinder_psi": 14.0,
+          "auxiliary_psi": 62.0,
+          "shoe_force_n": 104462.234,
+          "handbrake": false,
+          "front_hose": true,
+          "rear_hose": true,
+          "front_cock": true,
+          "rear_cock": true
+        },
+        {
+          "id": "0 - 5",
+          "file": "RF_WP_PCFD.wag",
+          "owner": 0,
+          "mass_kg": 50802.5,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": null,
+          "brake_type": "EPBrakeSystem",
+          "pipe_psi": 73.0,
+          "cylinder_psi": 15.0,
+          "auxiliary_psi": 63.0,
+          "shoe_force_n": 104462.234,
+          "handbrake": false,
+          "front_hose": true,
+          "rear_hose": false,
+          "front_cock": true,
+          "rear_cock": false
+        }
+      ],
+      "donor_vehicles": [
+        {
+          "id": "0 - 4",
+          "file": "RF_WP_PCFE.wag",
+          "owner": 2,
+          "mass_kg": 50802.5,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": null,
+          "brake_type": "EPBrakeSystem",
+          "pipe_psi": 74.0,
+          "cylinder_psi": 16.0,
+          "auxiliary_psi": 64.0,
+          "shoe_force_n": 268530.219,
+          "handbrake": false,
+          "front_hose": false,
+          "rear_hose": true,
+          "front_cock": false,
+          "rear_cock": true
+        },
+        {
+          "id": "0 - 6",
+          "file": "RF_WP_KFF.wag",
+          "owner": 2,
+          "mass_kg": 50802.5,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": null,
+          "brake_type": "EPBrakeSystem",
+          "pipe_psi": 75.0,
+          "cylinder_psi": 17.0,
+          "auxiliary_psi": 65.0,
+          "shoe_force_n": 268530.219,
+          "handbrake": false,
+          "front_hose": true,
+          "rear_hose": true,
+          "front_cock": true,
+          "rear_cock": true
+        },
+        {
+          "id": "0 - 2",
+          "file": "RF_WP_PSG.wag",
+          "owner": 2,
+          "mass_kg": 50802.5,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": null,
+          "brake_type": "EPBrakeSystem",
+          "pipe_psi": 76.0,
+          "cylinder_psi": 18.0,
+          "auxiliary_psi": 66.0,
+          "shoe_force_n": 268530.219,
+          "handbrake": false,
+          "front_hose": true,
+          "rear_hose": true,
+          "front_cock": true,
+          "rear_cock": true
+        },
+        {
+          "id": "0 - 1",
+          "file": "RF_WP_DMBSH.eng",
+          "owner": 2,
+          "mass_kg": 67000.0,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": 1256.7561,
+          "brake_type": "AirSinglePipe",
+          "pipe_psi": 77.0,
+          "cylinder_psi": 19.0,
+          "auxiliary_psi": 67.0,
+          "shoe_force_n": 62222.2266,
+          "handbrake": true,
+          "front_hose": true,
+          "rear_hose": false,
+          "front_cock": true,
+          "rear_cock": false
+        }
+      ],
+      "front": {
+        "tile_x": -6086,
+        "tile_z": 14927,
+        "x": 447.055054,
+        "y": 59.564476,
+        "z": 785.372864,
+        "node": 96,
+        "offset_m": 433.051025,
+        "direction": "Backward"
+      },
+      "rear": {
+        "tile_x": -6086,
+        "tile_z": 14927,
+        "x": 521.346436,
+        "y": 59.9839478,
+        "z": 822.452332,
+        "node": 96,
+        "offset_m": 350.019043,
+        "direction": "Backward"
+      },
+      "donor_front": {
+        "tile_x": -6086,
+        "tile_z": 14927,
+        "x": 523.225342,
+        "y": 59.9945564,
+        "z": 823.3902,
+        "node": 96,
+        "offset_m": 347.918945,
+        "direction": "Backward"
+      },
+      "track": [
+        {
+          "section": 75,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 76,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 93,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 94,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 95,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 96,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 97,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 98,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 99,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 100,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 101,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 102,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 103,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 13520,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 13522,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 13523,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 18216,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 18218,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19971,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19972,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19973,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19977,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19978,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19979,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19980,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19981,
+          "player_occupied": true,
+          "donor_occupied": true,
+          "reserved_by": null
+        },
+        {
+          "section": 19982,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19983,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19984,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19985,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19986,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19987,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19988,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19989,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19990,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19991,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19992,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 22211,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        }
+      ]
+    },
+    "stationary_scan": {
+      "player_number": 0,
+      "donor_number": 2,
+      "active_trains": [
+        {
+          "number": 0,
+          "type": "PLAYER",
+          "cars": [
+            "0 - 0",
+            "0 - 3",
+            "0 - 7",
+            "0 - 5"
+          ]
+        },
+        {
+          "number": 2,
+          "type": "STATIC",
+          "cars": [
+            "0 - 4",
+            "0 - 6",
+            "0 - 2",
+            "0 - 1"
+          ]
+        }
+      ],
+      "player_speed_mps": 0.0,
+      "length_m": 83.032,
+      "mass_kg": 221498.8984375,
+      "vehicles": [
+        {
+          "id": "0 - 0",
+          "file": "RF_WP_DMBSA.eng",
+          "owner": 0,
+          "mass_kg": 69091.4,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": 681.9136,
+          "brake_type": "EPBrakeSystem",
+          "pipe_psi": 70.0,
+          "cylinder_psi": 12.0,
+          "auxiliary_psi": 60.0,
+          "shoe_force_n": 50952.457,
+          "handbrake": false,
+          "front_hose": false,
+          "rear_hose": true,
+          "front_cock": false,
+          "rear_cock": true
+        },
+        {
+          "id": "0 - 3",
+          "file": "RF_WP_PSB.wag",
+          "owner": 0,
+          "mass_kg": 50802.5,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": null,
+          "brake_type": "EPBrakeSystem",
+          "pipe_psi": 71.0,
+          "cylinder_psi": 13.0,
+          "auxiliary_psi": 61.0,
+          "shoe_force_n": 104462.234,
+          "handbrake": false,
+          "front_hose": true,
+          "rear_hose": true,
+          "front_cock": true,
+          "rear_cock": true
+        },
+        {
+          "id": "0 - 7",
+          "file": "RF_WP_KFC.wag",
+          "owner": 0,
+          "mass_kg": 50802.5,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": null,
+          "brake_type": "EPBrakeSystem",
+          "pipe_psi": 72.0,
+          "cylinder_psi": 14.0,
+          "auxiliary_psi": 62.0,
+          "shoe_force_n": 104462.234,
+          "handbrake": false,
+          "front_hose": true,
+          "rear_hose": true,
+          "front_cock": true,
+          "rear_cock": true
+        },
+        {
+          "id": "0 - 5",
+          "file": "RF_WP_PCFD.wag",
+          "owner": 0,
+          "mass_kg": 50802.5,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": null,
+          "brake_type": "EPBrakeSystem",
+          "pipe_psi": 73.0,
+          "cylinder_psi": 15.0,
+          "auxiliary_psi": 63.0,
+          "shoe_force_n": 104462.234,
+          "handbrake": false,
+          "front_hose": true,
+          "rear_hose": false,
+          "front_cock": true,
+          "rear_cock": false
+        }
+      ],
+      "donor_vehicles": [
+        {
+          "id": "0 - 4",
+          "file": "RF_WP_PCFE.wag",
+          "owner": 2,
+          "mass_kg": 50802.5,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": null,
+          "brake_type": "EPBrakeSystem",
+          "pipe_psi": 74.0,
+          "cylinder_psi": 16.0,
+          "auxiliary_psi": 64.0,
+          "shoe_force_n": 268530.219,
+          "handbrake": false,
+          "front_hose": false,
+          "rear_hose": true,
+          "front_cock": false,
+          "rear_cock": true
+        },
+        {
+          "id": "0 - 6",
+          "file": "RF_WP_KFF.wag",
+          "owner": 2,
+          "mass_kg": 50802.5,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": null,
+          "brake_type": "EPBrakeSystem",
+          "pipe_psi": 75.0,
+          "cylinder_psi": 17.0,
+          "auxiliary_psi": 65.0,
+          "shoe_force_n": 268530.219,
+          "handbrake": false,
+          "front_hose": true,
+          "rear_hose": true,
+          "front_cock": true,
+          "rear_cock": true
+        },
+        {
+          "id": "0 - 2",
+          "file": "RF_WP_PSG.wag",
+          "owner": 2,
+          "mass_kg": 50802.5,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": null,
+          "brake_type": "EPBrakeSystem",
+          "pipe_psi": 76.0,
+          "cylinder_psi": 18.0,
+          "auxiliary_psi": 66.0,
+          "shoe_force_n": 268530.219,
+          "handbrake": false,
+          "front_hose": true,
+          "rear_hose": true,
+          "front_cock": true,
+          "rear_cock": true
+        },
+        {
+          "id": "0 - 1",
+          "file": "RF_WP_DMBSH.eng",
+          "owner": 2,
+          "mass_kg": 67000.0,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": 1256.7561,
+          "brake_type": "AirSinglePipe",
+          "pipe_psi": 77.0,
+          "cylinder_psi": 19.0,
+          "auxiliary_psi": 67.0,
+          "shoe_force_n": 62222.2266,
+          "handbrake": true,
+          "front_hose": true,
+          "rear_hose": false,
+          "front_cock": true,
+          "rear_cock": false
+        }
+      ],
+      "front": {
+        "tile_x": -6086,
+        "tile_z": 14927,
+        "x": 449.068176,
+        "y": 59.5757828,
+        "z": 786.377747,
+        "node": 96,
+        "offset_m": 430.801025,
+        "direction": "Backward"
+      },
+      "rear": {
+        "tile_x": -6086,
+        "tile_z": 14927,
+        "x": 523.3595,
+        "y": 59.9953156,
+        "z": 823.4572,
+        "node": 96,
+        "offset_m": 347.769043,
+        "direction": "Backward"
+      },
+      "donor_front": {
+        "tile_x": -6086,
+        "tile_z": 14927,
+        "x": 523.225342,
+        "y": 59.9945564,
+        "z": 823.3902,
+        "node": 96,
+        "offset_m": 347.918945,
+        "direction": "Backward"
+      },
+      "track": [
+        {
+          "section": 75,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 76,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 93,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 94,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 95,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 96,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 97,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 98,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 99,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 100,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 101,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 102,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 103,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 13520,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 13522,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 13523,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 18216,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 18218,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19971,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19972,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19973,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19977,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19978,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19979,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19980,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19981,
+          "player_occupied": true,
+          "donor_occupied": true,
+          "reserved_by": null
+        },
+        {
+          "section": 19982,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19983,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19984,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19985,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19986,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19987,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19988,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19989,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19990,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19991,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19992,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 22211,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        }
+      ]
+    },
+    "before": {
+      "player_number": 0,
+      "donor_number": 2,
+      "active_trains": [
+        {
+          "number": 0,
+          "type": "PLAYER",
+          "cars": [
+            "0 - 0",
+            "0 - 3",
+            "0 - 7",
+            "0 - 5"
+          ]
+        },
+        {
+          "number": 2,
+          "type": "STATIC",
+          "cars": [
+            "0 - 4",
+            "0 - 6",
+            "0 - 2",
+            "0 - 1"
+          ]
+        }
+      ],
+      "player_speed_mps": -0.05,
+      "length_m": 83.032,
+      "mass_kg": 221498.8984375,
+      "vehicles": [
+        {
+          "id": "0 - 0",
+          "file": "RF_WP_DMBSA.eng",
+          "owner": 0,
+          "mass_kg": 69091.4,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": 681.9136,
+          "brake_type": "EPBrakeSystem",
+          "pipe_psi": 70.0,
+          "cylinder_psi": 12.0,
+          "auxiliary_psi": 60.0,
+          "shoe_force_n": 50952.457,
+          "handbrake": false,
+          "front_hose": false,
+          "rear_hose": true,
+          "front_cock": false,
+          "rear_cock": true
+        },
+        {
+          "id": "0 - 3",
+          "file": "RF_WP_PSB.wag",
+          "owner": 0,
+          "mass_kg": 50802.5,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": null,
+          "brake_type": "EPBrakeSystem",
+          "pipe_psi": 71.0,
+          "cylinder_psi": 13.0,
+          "auxiliary_psi": 61.0,
+          "shoe_force_n": 104462.234,
+          "handbrake": false,
+          "front_hose": true,
+          "rear_hose": true,
+          "front_cock": true,
+          "rear_cock": true
+        },
+        {
+          "id": "0 - 7",
+          "file": "RF_WP_KFC.wag",
+          "owner": 0,
+          "mass_kg": 50802.5,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": null,
+          "brake_type": "EPBrakeSystem",
+          "pipe_psi": 72.0,
+          "cylinder_psi": 14.0,
+          "auxiliary_psi": 62.0,
+          "shoe_force_n": 104462.234,
+          "handbrake": false,
+          "front_hose": true,
+          "rear_hose": true,
+          "front_cock": true,
+          "rear_cock": true
+        },
+        {
+          "id": "0 - 5",
+          "file": "RF_WP_PCFD.wag",
+          "owner": 0,
+          "mass_kg": 50802.5,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": null,
+          "brake_type": "EPBrakeSystem",
+          "pipe_psi": 73.0,
+          "cylinder_psi": 15.0,
+          "auxiliary_psi": 63.0,
+          "shoe_force_n": 104462.234,
+          "handbrake": false,
+          "front_hose": true,
+          "rear_hose": false,
+          "front_cock": true,
+          "rear_cock": false
+        }
+      ],
+      "donor_vehicles": [
+        {
+          "id": "0 - 4",
+          "file": "RF_WP_PCFE.wag",
+          "owner": 2,
+          "mass_kg": 50802.5,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": null,
+          "brake_type": "EPBrakeSystem",
+          "pipe_psi": 74.0,
+          "cylinder_psi": 16.0,
+          "auxiliary_psi": 64.0,
+          "shoe_force_n": 268530.219,
+          "handbrake": false,
+          "front_hose": false,
+          "rear_hose": true,
+          "front_cock": false,
+          "rear_cock": true
+        },
+        {
+          "id": "0 - 6",
+          "file": "RF_WP_KFF.wag",
+          "owner": 2,
+          "mass_kg": 50802.5,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": null,
+          "brake_type": "EPBrakeSystem",
+          "pipe_psi": 75.0,
+          "cylinder_psi": 17.0,
+          "auxiliary_psi": 65.0,
+          "shoe_force_n": 268530.219,
+          "handbrake": false,
+          "front_hose": true,
+          "rear_hose": true,
+          "front_cock": true,
+          "rear_cock": true
+        },
+        {
+          "id": "0 - 2",
+          "file": "RF_WP_PSG.wag",
+          "owner": 2,
+          "mass_kg": 50802.5,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": null,
+          "brake_type": "EPBrakeSystem",
+          "pipe_psi": 76.0,
+          "cylinder_psi": 18.0,
+          "auxiliary_psi": 66.0,
+          "shoe_force_n": 268530.219,
+          "handbrake": false,
+          "front_hose": true,
+          "rear_hose": true,
+          "front_cock": true,
+          "rear_cock": true
+        },
+        {
+          "id": "0 - 1",
+          "file": "RF_WP_DMBSH.eng",
+          "owner": 2,
+          "mass_kg": 67000.0,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": 1256.7561,
+          "brake_type": "AirSinglePipe",
+          "pipe_psi": 77.0,
+          "cylinder_psi": 19.0,
+          "auxiliary_psi": 67.0,
+          "shoe_force_n": 62222.2266,
+          "handbrake": true,
+          "front_hose": true,
+          "rear_hose": false,
+          "front_cock": true,
+          "rear_cock": false
+        }
+      ],
+      "front": {
+        "tile_x": -6086,
+        "tile_z": 14927,
+        "x": 449.068176,
+        "y": 59.5757828,
+        "z": 786.377747,
+        "node": 96,
+        "offset_m": 430.801025,
+        "direction": "Backward"
+      },
+      "rear": {
+        "tile_x": -6086,
+        "tile_z": 14927,
+        "x": 523.3595,
+        "y": 59.9953156,
+        "z": 823.4572,
+        "node": 96,
+        "offset_m": 347.769043,
+        "direction": "Backward"
+      },
+      "donor_front": {
+        "tile_x": -6086,
+        "tile_z": 14927,
+        "x": 523.225342,
+        "y": 59.9945564,
+        "z": 823.3902,
+        "node": 96,
+        "offset_m": 347.918945,
+        "direction": "Backward"
+      },
+      "track": [
+        {
+          "section": 75,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 76,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 93,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 94,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 95,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 96,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 97,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 98,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 99,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 100,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 101,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 102,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 103,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 13520,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 13522,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 13523,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 18216,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 18218,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19971,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19972,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19973,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19977,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19978,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19979,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19980,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19981,
+          "player_occupied": true,
+          "donor_occupied": true,
+          "reserved_by": null
+        },
+        {
+          "section": 19982,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19983,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19984,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19985,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19986,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19987,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19988,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19989,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19990,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19991,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19992,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 22211,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        }
+      ]
+    },
+    "after": {
+      "player_number": 0,
+      "donor_number": 2,
+      "active_trains": [
+        {
+          "number": 0,
+          "type": "PLAYER",
+          "cars": [
+            "0 - 0",
+            "0 - 3",
+            "0 - 7",
+            "0 - 5",
+            "0 - 4",
+            "0 - 6",
+            "0 - 2",
+            "0 - 1"
+          ]
+        }
+      ],
+      "player_speed_mps": -0.05,
+      "length_m": 166.163986,
+      "mass_kg": 440906.3984375,
+      "vehicles": [
+        {
+          "id": "0 - 0",
+          "file": "RF_WP_DMBSA.eng",
+          "owner": 0,
+          "mass_kg": 69091.4,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": 681.9136,
+          "brake_type": "EPBrakeSystem",
+          "pipe_psi": 70.0,
+          "cylinder_psi": 12.0,
+          "auxiliary_psi": 60.0,
+          "shoe_force_n": 50952.457,
+          "handbrake": false,
+          "front_hose": false,
+          "rear_hose": true,
+          "front_cock": false,
+          "rear_cock": true
+        },
+        {
+          "id": "0 - 3",
+          "file": "RF_WP_PSB.wag",
+          "owner": 0,
+          "mass_kg": 50802.5,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": null,
+          "brake_type": "EPBrakeSystem",
+          "pipe_psi": 71.0,
+          "cylinder_psi": 13.0,
+          "auxiliary_psi": 61.0,
+          "shoe_force_n": 104462.234,
+          "handbrake": false,
+          "front_hose": true,
+          "rear_hose": true,
+          "front_cock": true,
+          "rear_cock": true
+        },
+        {
+          "id": "0 - 7",
+          "file": "RF_WP_KFC.wag",
+          "owner": 0,
+          "mass_kg": 50802.5,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": null,
+          "brake_type": "EPBrakeSystem",
+          "pipe_psi": 72.0,
+          "cylinder_psi": 14.0,
+          "auxiliary_psi": 62.0,
+          "shoe_force_n": 104462.234,
+          "handbrake": false,
+          "front_hose": true,
+          "rear_hose": true,
+          "front_cock": true,
+          "rear_cock": true
+        },
+        {
+          "id": "0 - 5",
+          "file": "RF_WP_PCFD.wag",
+          "owner": 0,
+          "mass_kg": 50802.5,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": null,
+          "brake_type": "EPBrakeSystem",
+          "pipe_psi": 73.0,
+          "cylinder_psi": 15.0,
+          "auxiliary_psi": 63.0,
+          "shoe_force_n": 104462.234,
+          "handbrake": false,
+          "front_hose": true,
+          "rear_hose": false,
+          "front_cock": true,
+          "rear_cock": false
+        },
+        {
+          "id": "0 - 4",
+          "file": "RF_WP_PCFE.wag",
+          "owner": 0,
+          "mass_kg": 50802.5,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": null,
+          "brake_type": "EPBrakeSystem",
+          "pipe_psi": 74.0,
+          "cylinder_psi": 16.0,
+          "auxiliary_psi": 64.0,
+          "shoe_force_n": 268530.219,
+          "handbrake": false,
+          "front_hose": false,
+          "rear_hose": true,
+          "front_cock": false,
+          "rear_cock": true
+        },
+        {
+          "id": "0 - 6",
+          "file": "RF_WP_KFF.wag",
+          "owner": 0,
+          "mass_kg": 50802.5,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": null,
+          "brake_type": "EPBrakeSystem",
+          "pipe_psi": 75.0,
+          "cylinder_psi": 17.0,
+          "auxiliary_psi": 65.0,
+          "shoe_force_n": 268530.219,
+          "handbrake": false,
+          "front_hose": true,
+          "rear_hose": true,
+          "front_cock": true,
+          "rear_cock": true
+        },
+        {
+          "id": "0 - 2",
+          "file": "RF_WP_PSG.wag",
+          "owner": 0,
+          "mass_kg": 50802.5,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": null,
+          "brake_type": "EPBrakeSystem",
+          "pipe_psi": 76.0,
+          "cylinder_psi": 18.0,
+          "auxiliary_psi": 66.0,
+          "shoe_force_n": 268530.219,
+          "handbrake": false,
+          "front_hose": true,
+          "rear_hose": true,
+          "front_cock": true,
+          "rear_cock": true
+        },
+        {
+          "id": "0 - 1",
+          "file": "RF_WP_DMBSH.eng",
+          "owner": 0,
+          "mass_kg": 67000.0,
+          "flipped": false,
+          "speed_mps": 0.0,
+          "fuel_l": 1256.7561,
+          "brake_type": "AirSinglePipe",
+          "pipe_psi": 77.0,
+          "cylinder_psi": 19.0,
+          "auxiliary_psi": 67.0,
+          "shoe_force_n": 62222.2266,
+          "handbrake": true,
+          "front_hose": true,
+          "rear_hose": false,
+          "front_cock": true,
+          "rear_cock": false
+        }
+      ],
+      "donor_vehicles": [],
+      "front": {
+        "tile_x": -6086,
+        "tile_z": 14927,
+        "x": 449.068176,
+        "y": 59.5757828,
+        "z": 786.377747,
+        "node": 96,
+        "offset_m": 430.801025,
+        "direction": "Backward"
+      },
+      "rear": {
+        "tile_x": -6086,
+        "tile_z": 14927,
+        "x": 597.5545,
+        "y": 60.4153481,
+        "z": 860.9511,
+        "node": 96,
+        "offset_m": 264.636963,
+        "direction": "Backward"
+      },
+      "donor_front": {
+        "tile_x": -6086,
+        "tile_z": 14927,
+        "x": 523.225342,
+        "y": 59.9945564,
+        "z": 823.3902,
+        "node": 96,
+        "offset_m": 347.918945,
+        "direction": "Backward"
+      },
+      "track": [
+        {
+          "section": 75,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 76,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 93,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 94,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 95,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 96,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 97,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 98,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 99,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 100,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 101,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 102,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 103,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 13520,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 13522,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 13523,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 18216,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 18218,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19971,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19972,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19973,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19977,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19978,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19979,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19980,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19981,
+          "player_occupied": true,
+          "donor_occupied": false,
+          "reserved_by": null
+        },
+        {
+          "section": 19982,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19983,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19984,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19985,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19986,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19987,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19988,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19989,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19990,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19991,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 19992,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        },
+        {
+          "section": 22211,
+          "player_occupied": false,
+          "donor_occupied": false,
+          "reserved_by": 0
+        }
+      ]
+    },
+    "every_original_object_transferred_once": true,
+    "removed_donor_has_no_occupation_or_reservations": true,
+    "equilibrium_forces": [
+      {
+        "id": "stationary_unloaded",
+        "method": "Train.ComputeCouplerForces(0.05f)",
+        "simple_control_physics": true,
+        "masses_kg": [
+          69091.4,
+          50802.5
+        ],
+        "input_force_n": [
+          0.0,
+          0.0
+        ],
+        "slack_m": 0.0,
+        "coupler_force_or_n": 0.0,
+        "resulting_forces_n": [
+          0.0,
+          0.0
+        ],
+        "resulting_acceleration_mps2": [
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "id": "engaged_tension",
+        "method": "Train.ComputeCouplerForces(0.05f)",
+        "simple_control_physics": true,
+        "masses_kg": [
+          69091.4,
+          50802.5
+        ],
+        "input_force_n": [
+          80000.0,
+          0.0
+        ],
+        "slack_m": 0.0101,
+        "coupler_force_or_n": -33898.3047,
+        "resulting_forces_n": [
+          46101.6953,
+          33898.3047
+        ],
+        "resulting_acceleration_mps2": [
+          0.667256653,
+          0.667256653
+        ]
+      },
+      {
+        "id": "engaged_compression",
+        "method": "Train.ComputeCouplerForces(0.05f)",
+        "simple_control_physics": true,
+        "masses_kg": [
+          69091.4,
+          50802.5
+        ],
+        "input_force_n": [
+          0.0,
+          80000.0
+        ],
+        "slack_m": -0.0101,
+        "coupler_force_or_n": 46101.6953,
+        "resulting_forces_n": [
+          46101.6953,
+          33898.3047
+        ],
+        "resulting_acceleration_mps2": [
+          0.667256653,
+          0.667256653
+        ]
+      }
+    ]
+  },
+  "overlap": [
+    {
+      "id": "rear_front_overlap",
+      "relative_m": [
+        0.0,
+        0.0,
+        0.25
+      ],
+      "overlap_m": -0.25
+    },
+    {
+      "id": "rear_front_separated",
+      "relative_m": [
+        0.0,
+        0.0,
+        -0.25
+      ],
+      "overlap_m": 0.25
+    },
+    {
+      "id": "beyond_one_metre",
+      "relative_m": [
+        0.0,
+        0.0,
+        1.01
+      ],
+      "overlap_m": 1.0
+    },
+    {
+      "id": "other_track",
+      "relative_m": [
+        2.0,
+        0.0,
+        0.25
+      ],
+      "overlap_m": 1.0
+    },
+    {
+      "id": "other_elevation",
+      "relative_m": [
+        0.0,
+        1.01,
+        0.25
+      ],
+      "overlap_m": 1.0
+    }
+  ],
+  "momentum": [
+    {
+      "id": "stationary",
+      "masses_a_kg": [
+        40000.0,
+        20000.0,
+        20000.0
+      ],
+      "masses_b_kg": [
+        40000.0,
+        20000.0,
+        20000.0
+      ],
+      "initial_a_mps": 0.0,
+      "initial_b_mps": 0.0,
+      "other_multiplier": 1.0,
+      "resulting_a_mps": 0.0,
+      "resulting_b_mps": 0.0,
+      "cars_a_mps": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "cars_b_mps": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "low_speed_same_direction",
+      "masses_a_kg": [
+        40000.0,
+        20000.0,
+        20000.0
+      ],
+      "masses_b_kg": [
+        40000.0,
+        20000.0,
+        20000.0
+      ],
+      "initial_a_mps": -0.05,
+      "initial_b_mps": 0.0,
+      "other_multiplier": 1.0,
+      "resulting_a_mps": -0.025,
+      "resulting_b_mps": -0.025,
+      "cars_a_mps": [
+        -0.025,
+        -0.025,
+        -0.025
+      ],
+      "cars_b_mps": [
+        -0.025,
+        -0.025,
+        -0.025
+      ]
+    },
+    {
+      "id": "opposite_orientation",
+      "masses_a_kg": [
+        40000.0,
+        20000.0,
+        20000.0
+      ],
+      "masses_b_kg": [
+        40000.0,
+        20000.0,
+        20000.0
+      ],
+      "initial_a_mps": 0.05,
+      "initial_b_mps": -0.02,
+      "other_multiplier": -1.0,
+      "resulting_a_mps": 0.035,
+      "resulting_b_mps": 0.035,
+      "cars_a_mps": [
+        0.035,
+        0.035,
+        0.035
+      ],
+      "cars_b_mps": [
+        0.035,
+        0.035,
+        0.035
+      ]
+    }
+  ],
+  "scope": "Real unmodified CheckForCoupling transfer and track-state update; prescribed contact and retained subsystem inputs. Moving-impact and full-route physics are not certified."
+}

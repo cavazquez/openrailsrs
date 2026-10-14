@@ -1,0 +1,107 @@
+{
+  "schema": 1,
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "dlls_unmodified": true,
+  "original_source_files": {
+    "Source/Orts.Simulation/Simulation/Simulator.cs": "2699443a778fd1f674bded3906ca94a9f5556513755a6050796c0f5c0c6590ed",
+    "Source/Orts.Simulation/Simulation/Physics/Train.cs": "c4bc5b5822f8d154ea723c5bcb0390ccd54c675b65ec4d12d2e3e2acf92cf2cf",
+    "Source/Orts.Simulation/Simulation/Traveller.cs": "5cdd52469523420fe5f9d8e50ced3877135c042fc984dd8b1bdfcbfa2b0ec5bc"
+  },
+  "assemblies": {
+    "RunActivity.exe": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2",
+    "Orts.Simulation.dll": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679",
+    "Orts.Settings.dll": "fe0d8d81149f480f3972c80e64ffaf6012c7599e32c26c8e4d46510e3edbb2e7",
+    "Orts.Common.dll": "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212",
+    "Orts.Formats.Msts.dll": "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465",
+    "Orts.Parsers.Msts.dll": "8e0781c9f861ed95b4467d1bf948ea7aca896d634f21ac5952f97a9f630d0b36",
+    "MonoGame.Framework.dll": "c6a16c29705a4c847e0e4a2647bf432604cd9320cbc5d4125ab01ae7bb7e6542",
+    "Newtonsoft.Json.dll": "9af2e1c672afd67a291b8f2031a341a3788d4d9f683eaddc6ceab3a3a74c546e"
+  },
+  "native_pat_sha256": "ee9518d145b7363408106193e48359367a8f0f7b9a260fd17177da1f82ac3d61",
+  "native_consist_sha256": "1be577c48940fc227f5bd0c4a05e21795d1b48a1cc113247cfb028fc18d79b72",
+  "native_vehicle_files": {
+    "RF_WP_DMBSA.eng": "4da0da99e3141c2dd6938a58b5b94d3844e96d9fd6689b1d80f639b5027b92ea",
+    "RF_WP_PSB.wag": "a496249a60b460bbfa9c4163b77e8367985029462c2aa1277b7003835cf88beb",
+    "RF_WP_KFC.wag": "fca08cc01ba9fe0f732e0c5c79fcc8461a8367c14201ae2fc0d8c86f57add6c4",
+    "RF_WP_PCFD.wag": "b8a58bf85bd6f5e947a8033fdf87e85f9f422c3cc1ada9114c6d14044242ef00",
+    "RF_WP_PCFE.wag": "822160aaf16cba4d5cba07d3b37c7131441853d2daf71c8b401ad8b781ce2030",
+    "RF_WP_KFF.wag": "79f8c539828b1a961dfc859267981547de0c0268fa72493355ddd857bad9d3a3",
+    "RF_WP_PSG.wag": "4ae0e96cce97002751fe7d8c034af29b65283a55acf0abdcbe1e2511085bc72a",
+    "RF_WP_DMBSH.eng": "468a335e44e17fe206e016b61cc98459bb88cd42839b374cae6c3224bd27d402"
+  },
+  "files": {
+    "oracles/coupling-reference.json": "856bfa60d0be9fac22c6e05a8d05f3cf510a4bd7cebc253f87b0015329d195a4",
+    "oracles/coupling-rust32.json": "2eeb73e081d6e32a94ab14f6c14c633890ca882f0266ce6621493a90fa778927",
+    "tools/openrails-reference/CouplingReference.cs": "c3c610df7823cdd33fcfd6b696e7551214f7ee6829a2fc9afc1318f809062bbb",
+    "tools/openrails-reference/CouplingCompare.rs": "a22f8dd37498a542502cce122cd5f46e205684a02b56265a1cf6bdae988d7d9a",
+    "scripts/capture_coupling_reference.py": "dfaa112a2cf3c991b912468110ea7baad721304b12c60d8497623a8735a71300"
+  },
+  "rust_capture": {
+    "source_commit": "bd0b5e437ff71135cfd31aa19c588c0c5a07d66c",
+    "runtime_source_modified": false,
+    "cargo_invoked": false,
+    "libraries": {
+      "openrailsrs_sim": {
+        "file": "libopenrailsrs_sim-0b4c8ec2009dde6a.rlib",
+        "sha256": "a3cc458b4f116c98f987bb13f5541031da1630257729e88d4c75e86eef70ffeb"
+      },
+      "openrailsrs_scenarios": {
+        "file": "libopenrailsrs_scenarios-01d572d59d2a22f8.rlib",
+        "sha256": "d32bc2a41290141d0d2284d49d027750d9b49f32eafc541f0864cd3bfafb2f0d"
+      },
+      "serde_json": {
+        "file": "libserde_json-db6ce5f9e7610b86.rlib",
+        "sha256": "a80bd3f38dd45ee245c72047108108a451208074c35a6bf0b08a4cb9563caafc"
+      }
+    },
+    "rustc": "rustc 1.99.0 (b940084d7 2026-09-28)",
+    "helper_sha256": "a22f8dd37498a542502cce122cd5f46e205684a02b56265a1cf6bdae988d7d9a",
+    "runner_sha256": "6abcb3ec39bf769a51c89d419402e3a1fe7b092c0f653361d79067c766fdacd8",
+    "or_reference_sha256": "856bfa60d0be9fac22c6e05a8d05f3cf510a4bd7cebc253f87b0015329d195a4",
+    "rust_output_sha256": "2eeb73e081d6e32a94ab14f6c14c633890ca882f0266ce6621493a90fa778927"
+  },
+  "runtime_source_files": {
+    "crates/openrailsrs-sim/src/independent_coupling.rs": "109c13b5efdc6c96389b44ed93feb07b0169a6710f8ad069f89fa24a1f205a42",
+    "crates/openrailsrs-sim/src/live_traffic.rs": "aec7114136dc26db56a362fa59c74ceb914a50fc457b12327534ba0417aa4988",
+    "crates/openrailsrs-sim/src/operations.rs": "df4376602ae5ed5fed9cafcf6f219c3117ca85a938cac5abf52054aa12659548",
+    "crates/openrailsrs-sim/src/coupler.rs": "9c82372fabe491de81675c11859486863aac6c478bc0e3cd771aef8f9977f511",
+    "crates/openrailsrs-sim/src/brake.rs": "27d5ad32b1fc6428e64e63c8dab733421c5afab79ab4d44d249afb9ec1cc43e2",
+    "crates/openrailsrs-sim/src/depot.rs": "617631cc53f7bdb923710ec524f44d51f7e961e7b85544d7ff4813eb184a4e8e",
+    "crates/openrailsrs-sim/src/engine_equipment.rs": "a35e503bb105e7767a4e471ecac9be58659dfab4ae19f5f25474ff52211411bb",
+    "crates/openrailsrs-sim/src/live_drive.rs": "f70af4b1a0cc9fe8d38a5c747ee2724931843b32ae8aa475be5bc05ee858a563"
+  },
+  "comparison": {
+    "status": "pass",
+    "reference": "Open Rails 1.6.1",
+    "transferred_original_vehicles": 8,
+    "force_cases": 3,
+    "maximum_force_error_n": 0.00038474577013403177,
+    "driving_after_restore_m": 15.569013531968608,
+    "limits": [
+      "Stationary manual rear-to-front joining only in Rust",
+      "OR automatically requires signed movement; zero-speed scan is retained separately",
+      "Different simple rigid / elastic transient and slack laws are not declared equivalent",
+      "Original stock is driven on owned synthetic track; native route/signal/full-physics parity not certified"
+    ]
+  },
+  "protocol": {
+    "original": "Load original PAT/CON with unmodified Simulator, UncoupleBehind splits4+4; separate contact scan clears the prior split guard; stationary scan does not join; CheckForCoupling at-0.05m/s joins at prescribed rear/front overlap. Actual original ComputeCouplerForces records unloaded/tension/compression states.",
+    "rust": "Same original ENG/WAG bytes on an owned synthetic directed track, explicit stationary manual rear/front contact; copy/restore actual state; connect hose/cocks, release handbrakes and drive20s. Static elastic pre-load derives from external loads/masses only, not OR results.",
+    "force_tolerance_n": 0.1,
+    "acceleration_tolerance_mps2": 1e-05
+  },
+  "limits": [
+    "Stationary manual rear-to-front joining only in Rust",
+    "OR automatically requires signed movement; zero-speed scan is retained separately",
+    "Different simple rigid / elastic transient and slack laws are not declared equivalent",
+    "Original stock is driven on owned synthetic track; native route/signal/full-physics parity not certified"
+  ],
+  "rejected_QA_attempts": [
+    "Wine server blocked by workspace sandbox; rerun used authorized private Wine prefix.",
+    "Initial C# helper cast corrected before the accepted capture.",
+    "Host cache selection chose incompatible crate identities; target disappeared externally before a coherent host comparison could run. Builder release cache used instead.",
+    "Parked donor begins secured; QA explicitly releases its handbrakes through real operations before checking the unsecured-donor rejection. No runtime source was changed."
+  ],
+  "author_bytes_versioned": false
+}

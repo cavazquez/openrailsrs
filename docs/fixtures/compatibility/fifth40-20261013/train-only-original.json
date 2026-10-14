@@ -29,8 +29,8 @@
       }
     ]
   },
-  "status": "strict_snap_x15_original_train_only_acceptance_pass; final_UI29_snap_acceptance_pending",
-  "scope": "Original train-only pack installation, resource audit and normal cab/exterior loading verified on host26 and strict Snap alpha.6 x15 using a synthetic 25 kV lab. Final UI29 Snap repetition remains pending; does not certify full OR physics, C# or sound parity.",
+  "status": "strict_snap_x17_source32_actual_country_flow_audit_and_original_train_views_pass",
+  "scope": "Original train-only base pack resource audit on x15, live cab/exterior on x15/x16, and genuine country-route-service-train mouse flow in x16; final32 remains pending. Does not certify full OR physics, C#, sound, or memory issue403.",
   "original": {
     "package": "Jeanprisca/SNCF-TGV-Atlantique",
     "author": {
@@ -337,7 +337,7 @@
     "source_changes_after_cli_build": "Only the test fixture corrected STF escaping, native loader root and restoration of the 3D-only placeholder."
   },
   "pending": [
-    "Repeat the same original-stock selector/cab/exterior acceptance after the final UI29-only Snap rebuild; preserve x15 as an intermediate candidate."
+    "Memory403 endurance and store publication are separate from this functional content acceptance; no claim of those outcomes here."
   ],
   "host_runtime_candidate25": {
     "viewer_sha256": "b18442e7a3d21b9895c74ade1bd65a71ec503eb264b6e94acacabb26bf2fbaa7",
@@ -736,5 +736,799 @@
     ],
     "qa_display_setup_resolution": "Reuse the numeric Wayland socket pattern accepted by the unchanged strict Snap. Production code and interfaces were not modified; the two rejected harness runs are not accepted screenshots.",
     "synthetic_route_assume_signals_clear": true
+  },
+  "strict_snap_candidate_x16": {
+    "role": "complete_intermediate_UI31_candidate; final32_repeat_pending",
+    "status": "pass",
+    "source_commit": "e0b55efd782df52dc09581bc5cff478b802d2793",
+    "source_dirty": false,
+    "version": "0.1.0-alpha.6",
+    "revision": "x16",
+    "archive_sha256": "11c0c042e1e8c9dac2f3f52345a33f29803d271fde24de14875deb2dd1eb72b7",
+    "confinement": "strict",
+    "build_glibc": "2.39",
+    "session": {
+      "snap_revision": "x16",
+      "snap_version": "0.1.0-alpha.6",
+      "viewer_sha256": "5f61368d6da3ed996034db83f72557ade3b8784e6d3b4232802e2c6fd5261470",
+      "cli_sha256": "52fc1a4aaaece70993a24f072a1c0fbd0d22dd34fe9e8defddc736ca49257ab4",
+      "harness_sha256": "7e171a970b63e093b0ef3a4a3fbd490a48dca974f414042891dee97e2ad07930",
+      "wrapper_sha256": "7131291f596929eca5616fa8ce665ffd87bf02712f3a76eadee7d77d6d1eedcf",
+      "no_fps_claim": true,
+      "normal_renderer": true,
+      "source_commit": "e0b55efd782df52dc09581bc5cff478b802d2793",
+      "started_at": 1791949221.869598,
+      "scope": "Unmodified original TGV stock discovered by global library on a synthetic 25 kV QA route; capture menu_page=train bypasses country flow only for visual inspection.",
+      "finished_at": 1791949293.7611442,
+      "all_cases_pass": true
+    },
+    "performance_claim": null,
+    "memory_403_certification": false,
+    "resource_audit_scope": "The prior x15 audit is retained under x15; x16 repeats live loading with unchanged native parsers. Not relabelled as a new x16 audit.",
+    "captures": [
+      {
+        "mode": "selector",
+        "started_at": 1791949222.0117745,
+        "finished_at": 1791949242.510309,
+        "screenshot_sha256": "d551ed649dc7ef13ba1b5a9ff9dcf6d56c838c77384238cf21f8848e93bc5222",
+        "report_sha256": "44d48e86c12b186b0dad2604018634370da5c78c9c0fb410b0b6df89a69d9f61",
+        "scenario_sha256": "c7b6def873a364c5e63184f4c3d11f8a1806f6f30bed8d421b87718530808ce0",
+        "screenshot_captured_callback": true,
+        "normal_renderer": true,
+        "capture_environment": {},
+        "process_exit": 0,
+        "visual_inspected": true,
+        "renderer": {
+          "backend": "Vulkan",
+          "device_type": "DiscreteGpu",
+          "hardware": true,
+          "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+        },
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "log_sha256": "b648ce6f90ddc509391726cca8c6ec71d7c384bb5bfdae5aac086d40d01f432a",
+        "scope": "Original stock on synthetic 25 kV fixture; no --track-dev, full OR physics, audio, C# or frame-performance certification."
+      },
+      {
+        "mode": "driver",
+        "started_at": 1791949242.5714517,
+        "finished_at": 1791949269.5763402,
+        "screenshot_sha256": "539ac79d7c444bebe24a64677240ba43728e15d7dba86cd17866803a2c96ecae",
+        "report_sha256": "f6e94984bf8e50b9b0d52da7761c086314cf2b7cecb20e6af948415e547bf1d2",
+        "scenario_sha256": "c7b6def873a364c5e63184f4c3d11f8a1806f6f30bed8d421b87718530808ce0",
+        "screenshot_captured_callback": true,
+        "normal_renderer": true,
+        "capture_environment": {
+          "OPENRAILSRS_FOLLOW": "driver",
+          "OPENRAILSRS_CAM_DIST": "220",
+          "OPENRAILSRS_CAM_PITCH": "0.25",
+          "OPENRAILSRS_CAM_YAW": "1.6",
+          "OPENRAILSRS_SCREENSHOT_AFTER_READY": "1",
+          "OPENRAILSRS_SCREENSHOT_READY_FRAMES": "180"
+        },
+        "process_exit": 0,
+        "visual_inspected": true,
+        "renderer": {
+          "backend": "Vulkan",
+          "device_type": "DiscreteGpu",
+          "hardware": true,
+          "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+        },
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "log_sha256": "044d298074b4a29f9902b2a7fc9071807fc50762ae8ce9fd5bd0b9958898998e",
+        "train_cars": 12,
+        "gameplay_frames": 177,
+        "cab_view": {
+          "camera_eye": [
+            133.364990234375,
+            3.0899999141693115,
+            42.0099983215332
+          ],
+          "camera_inside_geometry": true,
+          "expected_eye": [
+            133.364990234375,
+            3.0899999141693115,
+            42.0099983215332
+          ],
+          "eye_error_m": 0.0,
+          "mesh_parts": 364,
+          "visible_mesh_parts": 364
+        },
+        "camera": {
+          "aspect_ratio": 1.4285714626312256,
+          "distance_m": 220.0,
+          "fov_y_rad": 1.0471975803375244,
+          "indirect_drawing": false,
+          "pitch_rad": 0.25,
+          "position_world": [
+            296.364990234375,
+            3.0899999141693115,
+            -0.4900016784667969
+          ],
+          "rotation_xyzw": [
+            -0.07391279190778732,
+            -0.7032330632209778,
+            -0.07391276955604553,
+            0.7032332420349121
+          ],
+          "target_world": [
+            300.0,
+            0.30000001192092896,
+            3.814697265625e-06
+          ],
+          "yaw_rad": 0.0
+        },
+        "parsed_exterior_parts": 1886,
+        "scope": "Original stock on synthetic 25 kV fixture; no --track-dev, full OR physics, audio, C# or frame-performance certification."
+      },
+      {
+        "mode": "exterior",
+        "started_at": 1791949269.6408248,
+        "finished_at": 1791949293.7080925,
+        "screenshot_sha256": "3489a28fecb0caa9cf2ea01ac851a8caf8cfdd0e092677dc27d57cbb3399e76b",
+        "report_sha256": "f8817bc9670d865e602925fd4ecf7808b41fd6c33913212fd879e5bbc43ae627",
+        "scenario_sha256": "c7b6def873a364c5e63184f4c3d11f8a1806f6f30bed8d421b87718530808ce0",
+        "screenshot_captured_callback": true,
+        "normal_renderer": true,
+        "capture_environment": {
+          "OPENRAILSRS_FOLLOW": "orbit",
+          "OPENRAILSRS_CAM_DIST": "95",
+          "OPENRAILSRS_CAM_PITCH": "0.18",
+          "OPENRAILSRS_CAM_YAW": "0.4",
+          "OPENRAILSRS_CAPTURE_OR_FOCUS": "1",
+          "OPENRAILSRS_SCREENSHOT_AFTER_READY": "1",
+          "OPENRAILSRS_SCREENSHOT_READY_FRAMES": "180"
+        },
+        "process_exit": 0,
+        "visual_inspected": true,
+        "renderer": {
+          "backend": "Vulkan",
+          "device_type": "DiscreteGpu",
+          "hardware": true,
+          "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+        },
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "log_sha256": "269ee8da2b24d66bb53a34e9880e06a4f27072b91f2cd223479657cd026420e4",
+        "train_cars": 12,
+        "gameplay_frames": 177,
+        "cab_view": null,
+        "camera": {
+          "aspect_ratio": 1.4285714626312256,
+          "distance_m": 95.0,
+          "fov_y_rad": 0.7853981852531433,
+          "indirect_drawing": false,
+          "pitch_rad": 0.18000000715255737,
+          "position_world": [
+            325.41204833984375,
+            17.307809829711914,
+            86.08709716796875
+          ],
+          "rotation_xyzw": [
+            -0.08808697760105133,
+            0.1978653222322464,
+            0.017856119200587273,
+            0.9761000275611877
+          ],
+          "target_world": [
+            289.0150146484375,
+            0.30000001192092896,
+            0.0
+          ],
+          "yaw_rad": 0.4000000059604645
+        },
+        "parsed_exterior_parts": 1886,
+        "scope": "Original stock on synthetic 25 kV fixture; no --track-dev, full OR physics, audio, C# or frame-performance certification."
+      }
+    ],
+    "real_country_to_foreign_train_flow": {
+      "snap_revision": "x16",
+      "snap_version": "0.1.0-alpha.6",
+      "viewer_sha256": "5f61368d6da3ed996034db83f72557ade3b8784e6d3b4232802e2c6fd5261470",
+      "source_commit": "e0b55efd782df52dc09581bc5cff478b802d2793",
+      "command": [
+        "snap",
+        "run",
+        "openrailsrs",
+        "--menu"
+      ],
+      "started_at": 1791949026.6721601,
+      "finished_at": 1791949127.8105571,
+      "steps": [
+        {
+          "stage": "home",
+          "at": 1791949030.0854175,
+          "snapshot": {
+            "file": "00-home.png",
+            "sha256": "69be69f3f9bc06a76fc42db7bece440f475c95e3a885c3489a9882e09f680070"
+          }
+        },
+        {
+          "kind": "click",
+          "stage": "new-game",
+          "x": 430,
+          "y": 205,
+          "at": 1791949033.0662062,
+          "snapshot": {
+            "file": "01-new-game.png",
+            "sha256": "c1d2ca090bd4a50d5acbbaf509b7d0d7248d761046a586f74ef20aa61cc8230d"
+          }
+        },
+        {
+          "kind": "click",
+          "stage": "country-uk",
+          "x": 712,
+          "y": 311,
+          "at": 1791949036.0880072,
+          "snapshot": {
+            "file": "02-country-uk.png",
+            "sha256": "5ecf2eca3008dd1e17884dbe211d8153a1935cb20924dc20ab0f082c8df6db3b"
+          }
+        },
+        {
+          "kind": "click",
+          "stage": "route-chiltern",
+          "x": 282,
+          "y": 434,
+          "at": 1791949039.051149,
+          "snapshot": {
+            "file": "03-route-chiltern.png",
+            "sha256": "c338d3f8445fe8c40c416dd0145dd8b3502313a41f894750a51e4d221540165f"
+          }
+        },
+        {
+          "kind": "click",
+          "stage": "service-open",
+          "x": 276,
+          "y": 281,
+          "at": 1791949042.119614,
+          "snapshot": {
+            "file": "04-service-open.png",
+            "sha256": "6e806227457d093403a97da125af2cd4300e70b586356a7ea2b0c2012d520a44"
+          }
+        },
+        {
+          "kind": "click",
+          "stage": "service-select",
+          "x": 282,
+          "y": 442,
+          "at": 1791949045.1122985,
+          "snapshot": {
+            "file": "05-service-select.png",
+            "sha256": "ceb4769c6583a1cb213d0c0236e6c3208f955f3f4051f151bafd17688cbbcb98"
+          }
+        },
+        {
+          "kind": "click",
+          "stage": "train",
+          "x": 399,
+          "y": 116,
+          "at": 1791949048.111507,
+          "snapshot": {
+            "file": "06-train.png",
+            "sha256": "8d221aa864d1d71447394e169d131a442b4dd71bd02fbf3181e4e35e2af322c7"
+          }
+        },
+        {
+          "kind": "click",
+          "stage": "train-search",
+          "x": 283,
+          "y": 310,
+          "at": 1791949051.119756,
+          "snapshot": {
+            "file": "07-train-search.png",
+            "sha256": "cd20dde5f9dd6014de4d407101f74f21a8fa5850a811957ae72d3e6b09649222"
+          }
+        },
+        {
+          "kind": "type",
+          "stage": "query-tgv",
+          "text": "SNCF_TGV-325-FR_Sharpe",
+          "at": 1791949054.0356503,
+          "snapshot": {
+            "file": "08-query-tgv.png",
+            "sha256": "c48d8ddb67f477a03e4a6b3b8332ec17bd4a02e1ed74801dfa1ec9bd3523c16f"
+          }
+        },
+        {
+          "kind": "click",
+          "stage": "select-tgv",
+          "x": 276,
+          "y": 435,
+          "settle_s": 5,
+          "at": 1791949060.045874,
+          "snapshot": {
+            "file": "09-select-tgv.png",
+            "sha256": "39966d3c6f1ed826015c1444b81176d5f45e5e704741d255484c8be3d967e33b"
+          }
+        },
+        {
+          "kind": "click",
+          "stage": "route-persist",
+          "x": 252,
+          "y": 116,
+          "at": 1791949063.587162,
+          "snapshot": {
+            "file": "10-route-persist.png",
+            "sha256": "83498ec5d6d2f75e17487c2f97daf58db1e8cf6779d94ebf04d2e563f2071a74"
+          }
+        },
+        {
+          "kind": "click",
+          "stage": "train-final",
+          "x": 399,
+          "y": 116,
+          "settle_s": 8,
+          "at": 1791949072.5785606,
+          "snapshot": {
+            "file": "11-train-final.png",
+            "sha256": "ea35fce32332848ab0e78d8106536852198d4e4fa3f5821a56c1fb3885ad7410"
+          }
+        }
+      ],
+      "expected_route_country": "Reino Unido",
+      "foreign_train_origin": "Jeanprisca/SNCF-TGV-Atlantique (France)",
+      "country_page_override": false,
+      "consist_override": false,
+      "direct_scenario": false,
+      "never_clicked_start": true,
+      "no_gameplay": true,
+      "private_display_authenticated": true,
+      "capture_callback": true,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "Cpu",
+        "hardware": false,
+        "name": "llvmpipe (LLVM 20.1.2, 256 bits)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "screenshot_sha256": "4879870caeeff6805650a5bf10a139fd12dbc41c73fe52868f61605f3b38b865",
+      "report_sha256": "567707d73718299b5713e545b29a5b37d43ee1d134bb973f67a3ddf5da6b7879",
+      "log_sha256": "ee201902bfa8fbaac0ccffda5f70c9358afcbc78b090d69f171ec07672c45185",
+      "harness_sha256": "e7276ac9deffd4094eaf336db5a1071541bb6b0ce5dd46469e1b361ade6481e6",
+      "performance_claim": null,
+      "visual_inspected": true,
+      "visual_observations": {
+        "home": "Normal main menu; no page or formation override.",
+        "country": "Eight direct country buttons, UK selected by genuine mouse event.",
+        "route": "Only Chiltern under UK in this QA library; own player-data inventory differs from the general QA user.",
+        "services": "Chiltern extended service selected from thirteen actual current-route services.",
+        "train": "Global 473 formation list includes original French train pack, then query returns base and incomplete MAJ separately.",
+        "persist": "Return to Route shows País Reino Unido and Chiltern with TGV selected; next Train retains selection and physical electrical warning.",
+        "launch": "Resources necessary complete; Jugar remains available, but never pressed because route has no compatible supply."
+      },
+      "harness_rejected_runs": [
+        {
+          "stage": "initial pixel capture",
+          "reason": "QA ctypes snapshot reader lacked its process XAUTHORITY; same Snap window was healthy",
+          "log_sha256": "b0d6004492f507daf36f4f029a6aaed19c179d41b923313deb99bc72755d1e0f",
+          "accepted": false
+        },
+        {
+          "stage": "capture deadline before two extra confirmations",
+          "reason": "The live240s capture completed after foreign-train selection; full proof repeated with all originally specified assertions and the same observed xdotool actions",
+          "log_sha256": "4edea97d335e2e1a6d7e0d728ec2ee5954321ceaaecaf699a4a7d78b7c43a480",
+          "accepted": false
+        }
+      ]
+    },
+    "scope": "StrictSnapUI31 original-stock discovery and normal loading; original files unchanged, synthetic 25 kV live lab; final32 still pending. No certification of memory issue403."
+  },
+  "strict_snap_final_x17": {
+    "role": "final_source32_functional_acceptance",
+    "status": "pass",
+    "source_commit": "bd0b5e437ff71135cfd31aa19c588c0c5a07d66c",
+    "source_dirty": false,
+    "version": "0.1.0-alpha.6",
+    "revision": "x17",
+    "archive_sha256": "63a251bdafc579a6726be522db367a36adeea0f6329927d60f1669430ff7e479",
+    "confinement": "strict",
+    "build_glibc": "2.39",
+    "session": {
+      "snap_revision": "x17",
+      "snap_version": "0.1.0-alpha.6",
+      "viewer_sha256": "80dac555da2468e0e24652485d3157af7eb190959d1612b14ba2ab9e8a3d55c1",
+      "cli_sha256": "52fc1a4aaaece70993a24f072a1c0fbd0d22dd34fe9e8defddc736ca49257ab4",
+      "harness_sha256": "7e171a970b63e093b0ef3a4a3fbd490a48dca974f414042891dee97e2ad07930",
+      "wrapper_sha256": "7131291f596929eca5616fa8ce665ffd87bf02712f3a76eadee7d77d6d1eedcf",
+      "no_fps_claim": true,
+      "normal_renderer": true,
+      "source_commit": "bd0b5e437ff71135cfd31aa19c588c0c5a07d66c",
+      "started_at": 1791951476.747754,
+      "scope": "Unmodified original TGV stock discovered by global library on a synthetic 25 kV QA route; capture menu_page=train bypasses country flow only for visual inspection.",
+      "finished_at": 1791951552.0771255,
+      "all_cases_pass": true
+    },
+    "performance_claim": null,
+    "memory_403_certification": false,
+    "resource_audit": {
+      "total_formations": 20,
+      "content_valid": 2,
+      "player_ready": 2,
+      "incomplete": 18,
+      "ready": [
+        {
+          "name": "SNCF_TGV-325-FR",
+          "vehicles": 12,
+          "cab_3d": true,
+          "content_valid": true,
+          "player_ready": true
+        },
+        {
+          "name": "SNCF_TGV-325-FR_Sharpe",
+          "vehicles": 12,
+          "cab_3d": true,
+          "content_valid": true,
+          "player_ready": true
+        }
+      ],
+      "audit_sha256": "b79eeca4c8d658ed1f7c08a76292b370eb9dc8d4e806c8cb416784d293cc3137",
+      "prepare_stdout_sha256": "a1acad0d2778a6d349cf1b1cf0e5b9b7ad52c03ccaa62d53b0ce601f0a2212e7",
+      "prepare_stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "cli_sha256": "52fc1a4aaaece70993a24f072a1c0fbd0d22dd34fe9e8defddc736ca49257ab4",
+      "actual_final_revision": true
+    },
+    "captures": [
+      {
+        "started_at": 1791951476.8922224,
+        "finished_at": 1791951497.4341462,
+        "snap_version": "0.1.0-alpha.6",
+        "host_candidate": false,
+        "snap_revision": "x17",
+        "screenshot_captured_callback": true,
+        "normal_renderer": true,
+        "formation": "SNCF_TGV-325-FR_Sharpe.con",
+        "mode": "selector",
+        "screenshot_sha256": "d551ed649dc7ef13ba1b5a9ff9dcf6d56c838c77384238cf21f8848e93bc5222",
+        "report_sha256": "44d48e86c12b186b0dad2604018634370da5c78c9c0fb410b0b6df89a69d9f61",
+        "scenario_sha256": "c7b6def873a364c5e63184f4c3d11f8a1806f6f30bed8d421b87718530808ce0",
+        "renderer": {
+          "backend": "Vulkan",
+          "device_type": "DiscreteGpu",
+          "hardware": true,
+          "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+        },
+        "capture_environment": {},
+        "scope": "Original train on a synthetic 25 kV fixture",
+        "visual_inspected": true,
+        "process_exit": 0,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        }
+      },
+      {
+        "started_at": 1791951497.5076623,
+        "finished_at": 1791951525.4835367,
+        "snap_version": "0.1.0-alpha.6",
+        "host_candidate": false,
+        "snap_revision": "x17",
+        "screenshot_captured_callback": true,
+        "normal_renderer": true,
+        "formation": "SNCF_TGV-325-FR_Sharpe.con",
+        "mode": "driver",
+        "screenshot_sha256": "539ac79d7c444bebe24a64677240ba43728e15d7dba86cd17866803a2c96ecae",
+        "report_sha256": "2ea7d5ef86f967785f5a7000134d7c80eb1f1ada56e7912f6e95eecf00bf9bb2",
+        "scenario_sha256": "c7b6def873a364c5e63184f4c3d11f8a1806f6f30bed8d421b87718530808ce0",
+        "renderer": {
+          "backend": "Vulkan",
+          "device_type": "DiscreteGpu",
+          "hardware": true,
+          "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+        },
+        "capture_environment": {
+          "OPENRAILSRS_FOLLOW": "driver",
+          "OPENRAILSRS_CAM_DIST": "220",
+          "OPENRAILSRS_CAM_PITCH": "0.25",
+          "OPENRAILSRS_CAM_YAW": "1.6",
+          "OPENRAILSRS_SCREENSHOT_AFTER_READY": "1",
+          "OPENRAILSRS_SCREENSHOT_READY_FRAMES": "180"
+        },
+        "scope": "Original train on a synthetic 25 kV fixture",
+        "visual_inspected": true,
+        "process_exit": 0,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "train_cars": 12,
+        "gameplay_frames": 177,
+        "cab_view": {
+          "camera_eye": [
+            133.364990234375,
+            3.0899999141693115,
+            42.0099983215332
+          ],
+          "camera_inside_geometry": true,
+          "expected_eye": [
+            133.364990234375,
+            3.0899999141693115,
+            42.0099983215332
+          ],
+          "eye_error_m": 0.0,
+          "mesh_parts": 364,
+          "visible_mesh_parts": 364
+        },
+        "camera": {
+          "aspect_ratio": 1.4285714626312256,
+          "distance_m": 220.0,
+          "fov_y_rad": 1.0471975803375244,
+          "indirect_drawing": false,
+          "pitch_rad": 0.25,
+          "position_world": [
+            296.364990234375,
+            3.0899999141693115,
+            -0.4900016784667969
+          ],
+          "rotation_xyzw": [
+            -0.07391279190778732,
+            -0.7032330632209778,
+            -0.07391276955604553,
+            0.7032332420349121
+          ],
+          "target_world": [
+            300.0,
+            0.30000001192092896,
+            0.0
+          ],
+          "yaw_rad": 0.0
+        }
+      },
+      {
+        "started_at": 1791951525.6103818,
+        "finished_at": 1791951552.0627162,
+        "snap_version": "0.1.0-alpha.6",
+        "host_candidate": false,
+        "snap_revision": "x17",
+        "screenshot_captured_callback": true,
+        "normal_renderer": true,
+        "formation": "SNCF_TGV-325-FR_Sharpe.con",
+        "mode": "exterior",
+        "screenshot_sha256": "cfde27967d3b67f436ee1b5ecfa0b7c522ac9513d01a0676832fe5dc286f09ba",
+        "report_sha256": "7e36fe15b4068d83e57be771ba066ad6664adb51a61acc0b1496049888201d03",
+        "scenario_sha256": "c7b6def873a364c5e63184f4c3d11f8a1806f6f30bed8d421b87718530808ce0",
+        "renderer": {
+          "backend": "Vulkan",
+          "device_type": "DiscreteGpu",
+          "hardware": true,
+          "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+        },
+        "capture_environment": {
+          "OPENRAILSRS_FOLLOW": "orbit",
+          "OPENRAILSRS_CAM_DIST": "95",
+          "OPENRAILSRS_CAM_PITCH": "0.18",
+          "OPENRAILSRS_CAM_YAW": "0.4",
+          "OPENRAILSRS_CAPTURE_OR_FOCUS": "1",
+          "OPENRAILSRS_SCREENSHOT_AFTER_READY": "1",
+          "OPENRAILSRS_SCREENSHOT_READY_FRAMES": "180"
+        },
+        "scope": "Original train on a synthetic 25 kV fixture",
+        "visual_inspected": true,
+        "process_exit": 0,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "train_cars": 12,
+        "gameplay_frames": 177,
+        "cab_view": null,
+        "camera": {
+          "aspect_ratio": 1.4285714626312256,
+          "distance_m": 95.0,
+          "fov_y_rad": 0.7853981852531433,
+          "indirect_drawing": false,
+          "pitch_rad": 0.18000000715255737,
+          "position_world": [
+            325.41204833984375,
+            17.307809829711914,
+            86.08709716796875
+          ],
+          "rotation_xyzw": [
+            -0.08808697760105133,
+            0.1978653222322464,
+            0.017856119200587273,
+            0.9761000275611877
+          ],
+          "target_world": [
+            289.0150146484375,
+            0.30000001192092896,
+            0.0
+          ],
+          "yaw_rad": 0.4000000059604645
+        }
+      }
+    ],
+    "real_country_to_foreign_train_flow": {
+      "snap_revision": "x17",
+      "snap_version": "0.1.0-alpha.6",
+      "viewer_sha256": "80dac555da2468e0e24652485d3157af7eb190959d1612b14ba2ab9e8a3d55c1",
+      "source_commit": "bd0b5e437ff71135cfd31aa19c588c0c5a07d66c",
+      "command": [
+        "snap",
+        "run",
+        "openrailsrs",
+        "--menu"
+      ],
+      "started_at": 1791951354.9462907,
+      "finished_at": 1791951455.8531904,
+      "steps": [
+        {
+          "stage": "home",
+          "at": 1791951358.2543209,
+          "snapshot": {
+            "file": "00-home.png",
+            "sha256": "69be69f3f9bc06a76fc42db7bece440f475c95e3a885c3489a9882e09f680070"
+          }
+        },
+        {
+          "kind": "click",
+          "stage": "new-game",
+          "x": 430,
+          "y": 205,
+          "at": 1791951361.223541,
+          "snapshot": {
+            "file": "01-new-game.png",
+            "sha256": "c1d2ca090bd4a50d5acbbaf509b7d0d7248d761046a586f74ef20aa61cc8230d"
+          }
+        },
+        {
+          "kind": "click",
+          "stage": "country-uk",
+          "x": 712,
+          "y": 311,
+          "at": 1791951364.1899023,
+          "snapshot": {
+            "file": "02-country-uk.png",
+            "sha256": "5ecf2eca3008dd1e17884dbe211d8153a1935cb20924dc20ab0f082c8df6db3b"
+          }
+        },
+        {
+          "kind": "click",
+          "stage": "route-chiltern",
+          "x": 282,
+          "y": 434,
+          "at": 1791951367.1809812,
+          "snapshot": {
+            "file": "03-route-chiltern.png",
+            "sha256": "c338d3f8445fe8c40c416dd0145dd8b3502313a41f894750a51e4d221540165f"
+          }
+        },
+        {
+          "kind": "click",
+          "stage": "service-open",
+          "x": 276,
+          "y": 281,
+          "at": 1791951370.1396444,
+          "snapshot": {
+            "file": "04-service-open.png",
+            "sha256": "6e806227457d093403a97da125af2cd4300e70b586356a7ea2b0c2012d520a44"
+          }
+        },
+        {
+          "kind": "click",
+          "stage": "service-select",
+          "x": 282,
+          "y": 442,
+          "at": 1791951373.07854,
+          "snapshot": {
+            "file": "05-service-select.png",
+            "sha256": "ceb4769c6583a1cb213d0c0236e6c3208f955f3f4051f151bafd17688cbbcb98"
+          }
+        },
+        {
+          "kind": "click",
+          "stage": "train",
+          "x": 399,
+          "y": 116,
+          "at": 1791951376.0200412,
+          "snapshot": {
+            "file": "06-train.png",
+            "sha256": "8d221aa864d1d71447394e169d131a442b4dd71bd02fbf3181e4e35e2af322c7"
+          }
+        },
+        {
+          "kind": "click",
+          "stage": "train-search",
+          "x": 283,
+          "y": 310,
+          "at": 1791951379.0244095,
+          "snapshot": {
+            "file": "07-train-search.png",
+            "sha256": "cd20dde5f9dd6014de4d407101f74f21a8fa5850a811957ae72d3e6b09649222"
+          }
+        },
+        {
+          "kind": "type",
+          "stage": "query-tgv",
+          "text": "SNCF_TGV-325-FR_Sharpe",
+          "at": 1791951381.9021266,
+          "snapshot": {
+            "file": "08-query-tgv.png",
+            "sha256": "c48d8ddb67f477a03e4a6b3b8332ec17bd4a02e1ed74801dfa1ec9bd3523c16f"
+          }
+        },
+        {
+          "kind": "click",
+          "stage": "select-tgv",
+          "x": 276,
+          "y": 435,
+          "settle_s": 5,
+          "at": 1791951387.84366,
+          "snapshot": {
+            "file": "09-select-tgv.png",
+            "sha256": "39966d3c6f1ed826015c1444b81176d5f45e5e704741d255484c8be3d967e33b"
+          }
+        },
+        {
+          "kind": "click",
+          "stage": "route-persist",
+          "x": 252,
+          "y": 116,
+          "at": 1791951390.7622843,
+          "snapshot": {
+            "file": "10-route-persist.png",
+            "sha256": "83498ec5d6d2f75e17487c2f97daf58db1e8cf6779d94ebf04d2e563f2071a74"
+          }
+        },
+        {
+          "kind": "click",
+          "stage": "train-final",
+          "x": 399,
+          "y": 116,
+          "settle_s": 8,
+          "at": 1791951399.7346294,
+          "snapshot": {
+            "file": "11-train-final.png",
+            "sha256": "ea35fce32332848ab0e78d8106536852198d4e4fa3f5821a56c1fb3885ad7410"
+          }
+        }
+      ],
+      "expected_route_country": "Reino Unido",
+      "foreign_train_origin": "Jeanprisca/SNCF-TGV-Atlantique (France)",
+      "country_page_override": false,
+      "consist_override": false,
+      "direct_scenario": false,
+      "never_clicked_start": true,
+      "no_gameplay": true,
+      "private_display_authenticated": true,
+      "capture_callback": true,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "Cpu",
+        "hardware": false,
+        "name": "llvmpipe (LLVM 20.1.2, 256 bits)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "screenshot_sha256": "4879870caeeff6805650a5bf10a139fd12dbc41c73fe52868f61605f3b38b865",
+      "report_sha256": "567707d73718299b5713e545b29a5b37d43ee1d134bb973f67a3ddf5da6b7879",
+      "log_sha256": "ed11fc2c4e536062717a1dfb28ad6b660a257bd62e5fcee520e90f38562d85f3",
+      "harness_sha256": "1b084d1efa6409d31662a208cec433b6dbaeb0f263e2f6f3f0d213da9188bf98",
+      "performance_claim": null
+    },
+    "visual_notes": [
+      "Fresh PNGs inspected after actual ScreenshotCaptured callback; no --track-dev.",
+      "The 12-car original has complete 3D cab and an assembled nose/body/roof; earlier candidate25 fragmentation is absent.",
+      "Actual click flow keeps País Reino Unido and Chiltern after selecting French TGV; incompatible electric supply warning remains and the Start button was never clicked.",
+      "Magenta ground is the owned synthetic25kV fixture, not the author's route.",
+      "Static selector/cab pixel hashes can equal x16; outputs were unlinked first and callbacks/timestamps verify new x17 captures."
+    ],
+    "limits": [
+      "Not original route, full physics, audio, C# or cross-content certification.",
+      "Final memory403 endurance is a separate acceptance owned by its receipt.",
+      "Base package positive only; separate MAJ update and18 genuinely incomplete formations are not declared complete."
+    ]
   }
 }

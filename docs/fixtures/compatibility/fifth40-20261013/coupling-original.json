@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "status": "pass",
+  "reference": "Open Rails 1.6.1",
+  "scope": "Real joining state handoff and prescribed static equilibrium; not full original route/impact/slack-transient parity",
+  "provenance": "oracles/coupling-reference-provenance.json",
+  "provenance_sha256": "8f341947c0a262f3ea9ce466b066245d5c6e0533e66c9485f8969e88f7c79579",
+  "transferred_original_vehicles": 8,
+  "force_cases": 3,
+  "maximum_force_error_n": 0.00038474577013403177,
+  "driving_after_restore_m": 15.569013531968608,
+  "limits": [
+    "Stationary manual rear-to-front joining only in Rust",
+    "OR automatically requires signed movement; zero-speed scan is retained separately",
+    "Different simple rigid / elastic transient and slack laws are not declared equivalent",
+    "Original stock is driven on owned synthetic track; native route/signal/full-physics parity not certified"
+  ],
+  "reproduction": {
+    "status": "pass",
+    "script": "scripts/capture_coupling_comparison.py",
+    "script_sha256": "d18d69efc3d96ed1e83619b89f27dea85c6e2b10a18b406bd71c63742e1ce9bc",
+    "receipt_sha256": "a3f4d94bcb08a5c1e1ea2af21849916ff1d5287c8cb8b348074cec8f4960def4",
+    "reference_sha256": "856bfa60d0be9fac22c6e05a8d05f3cf510a4bd7cebc253f87b0015329d195a4",
+    "rust_output_sha256": "2eeb73e081d6e32a94ab14f6c14c633890ca882f0266ce6621493a90fa778927",
+    "depot_output_sha256": "21d93ccb7eb98d81bd377a30715f83b980df2db4498fef4835f4075f4b934239",
+    "source_commit": "bd0b5e437ff71135cfd31aa19c588c0c5a07d66c",
+    "cargo_invoked": false,
+    "runtime_modified": false,
+    "original_assets_versioned": false,
+    "scope": "Published wrapper executed using already compiled coherent release libraries; results are byte-identical to the curated oracle and depot outputs."
+  }
+}
