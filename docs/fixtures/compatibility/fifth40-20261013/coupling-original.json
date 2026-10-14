@@ -4,7 +4,7 @@
   "reference": "Open Rails 1.6.1",
   "scope": "Real joining state handoff and prescribed static equilibrium; not full original route/impact/slack-transient parity",
   "provenance": "oracles/coupling-reference-provenance.json",
-  "provenance_sha256": "7eaf389e22bda0075c6dcb1b51dc90e51ac57be84a1230321a577124a4389cdf",
+  "provenance_sha256": "ca34aced1ef6cd90ff8f9fd2960cda001787098e7e79cc585a19adc0e648c071",
   "transferred_original_vehicles": 8,
   "force_cases": 3,
   "maximum_force_error_n": 0.00038474577013403177,
@@ -30,13 +30,16 @@
     "scope": "Published wrapper executed using already compiled coherent release libraries; results are byte-identical to the curated oracle and depot outputs."
   },
   "latest_replay": {
-    "phase": 37,
+    "phase": 38,
     "status": "pass",
-    "source_base_commit": "baa8a4cb482bc7a6d6b2c5a14dbcc09ffb2b3c79",
+    "source_base_commit": "a53fc107c0678a8fff106158218e0504076fc723",
     "source_dirty": true,
-    "source_snapshot_sha256": "9397e55550becf116c503a13ac1bda32dc4a428d8138f861d3cc1562b6d036ee",
+    "source_snapshot_sha256": "f7bbb9b3e212e433f554387a192cb250435badb0cf0e02d5de6fcce7a7bc9739",
     "source_inputs_unchanged_during_build": true,
-    "viewer_sha256": "35f4e5ce719e5d7e67c040cab96aabf2acc909dd7cdcb99df4a0f9bcc5472639",
+    "compiled_source_now_committed_as": "656ae35f05000e1b1e13e93d35a4c45615e4ed96",
+    "committed_export_snapshot_sha256": "a594c4a4d146f76002150745bd7a884a7c3cd621084e7b6bdd7e025cc1e07b21",
+    "committed_export_validated_inputs": 751,
+    "viewer_sha256": "5be5da7de14db73321303af2b310da7c8ca635b3dcd9c304fbe631ae0d8fd47d",
     "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
     "cargo_invoked": false,
     "runtime_modified_by_capture": false,
@@ -44,7 +47,7 @@
     "libraries": {
       "openrailsrs_sim": {
         "file": "libopenrailsrs_sim-8aea4f5f640cd4f3.rlib",
-        "sha256": "e1a450d46cea038c75f766d00252442bce0164fb4cf9163f7b7d94ea002edadd"
+        "sha256": "ea2a4beb85f7c9d66548f8c9105c21f315e37e9b9be10ea787feb97e508b31d8"
       },
       "openrailsrs_scenarios": {
         "file": "libopenrailsrs_scenarios-9cd3e3309e3e4a46.rlib",
@@ -75,15 +78,15 @@
       "RF_WP_PSG.wag": "4ae0e96cce97002751fe7d8c034af29b65283a55acf0abdcbe1e2511085bc72a",
       "RF_WP_DMBSH.eng": "468a335e44e17fe206e016b61cc98459bb88cd42839b374cae6c3224bd27d402"
     },
-    "raw_receipt_sha256": "43d31b03a27e8eb812ecafcc99d8b66d9f9e0177824898b198b04a405c4f37b8",
+    "raw_receipt_sha256": "a481c61f9bfef65a87ada90494dc11a949b55e6e5fea84b6bec90d21bcbc7f3c",
     "reference_sha256": "856bfa60d0be9fac22c6e05a8d05f3cf510a4bd7cebc253f87b0015329d195a4",
     "rust_output_file": "oracles/coupling-rust32.json",
     "rust_output_sha256": "2eeb73e081d6e32a94ab14f6c14c633890ca882f0266ce6621493a90fa778927",
     "depot_output_sha256": "21d93ccb7eb98d81bd377a30715f83b980df2db4498fef4835f4075f4b934239",
     "rust_output_byte_identical_to_historical32": true,
     "depot_observed_identical_to_historical32": true,
-    "coupling_runner_sha256": "a4b95888fe514915c9f5617d690164a920e783ce51201376044c42bb4db6dd99",
-    "depot_runner_sha256": "0b9f9f28ef8ee4cefaaebe3de567865290b1ab2fc229ce2a434769f4de35ef7b",
+    "coupling_runner_sha256": "ad0eff63d9a91161eaa0c4f10c80d873c733c84e5b3f3ef33f1335d0095c816a",
+    "depot_runner_sha256": "82a94aeecf78c74b2cb580ea69157451fad6d2b2042d82987c949e77a2455f47",
     "capture_script_sha256": "d18d69efc3d96ed1e83619b89f27dea85c6e2b10a18b406bd71c63742e1ce9bc",
     "comparison": {
       "status": "pass",
@@ -99,6 +102,6 @@
         "Original stock is driven on owned synthetic track; native route/signal/full-physics parity not certified"
       ]
     },
-    "scope": "A real new Rust replay with coherent host debug/all-features libraries. Original OR DLL capture is unchanged. Identical output bytes retain the historical raw filename rather than relabelling the old execution."
+    "scope": "A real new Rust replay with coherent host debug/all-features libraries38. Original OR DLL capture is unchanged. Identical output bytes retain the historical raw filename; no historical execution is relabelled38."
   }
 }
