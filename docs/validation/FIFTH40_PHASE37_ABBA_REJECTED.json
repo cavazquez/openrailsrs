@@ -1,0 +1,829 @@
+{
+  "schema": 1,
+  "candidate": "phase37",
+  "runtime_commit": "c4615ec01aa75b8b94522074f7faa686b85c3c2f",
+  "status": "issue240_acceptance_failed",
+  "issue": 240,
+  "reference": {
+    "commit": "d9dba7af1f531183de594af3201373d3b1b20590",
+    "binary_sha256": "531ec4d91cfa3391f1f24a8d62d8abef026603609528462efacbb8ae7a096e08",
+    "recompiled_original_binary": true
+  },
+  "candidate_binary_sha256": "35f4e5ce719e5d7e67c040cab96aabf2acc909dd7cdcb99df4a0f9bcc5472639",
+  "scope": {
+    "route": "Chiltern Extended: Northolt Park to Gerrards Cross",
+    "formation_vehicles": 8,
+    "original_route": "Chiltern v4",
+    "resolution": [
+      1280,
+      720
+    ],
+    "camera": "driver",
+    "driver_fov_degrees": 55,
+    "weather_profile": "downpour",
+    "weather_seed": 42,
+    "particle_budget": 2048,
+    "distance_m": 2500,
+    "ready_frames": 600,
+    "view_radius_m": 2000,
+    "present_mode": "auto_vsync",
+    "framepace": "off",
+    "vulkan_gpu": "AMD Radeon RX 7600",
+    "selected_gpu_pci": "0000:03:00.0",
+    "order": [
+      "A1 cold",
+      "A1 warm",
+      "B1 cold",
+      "B1 warm",
+      "B2 cold",
+      "B2 warm",
+      "A2 cold",
+      "A2 warm"
+    ],
+    "cache_scope": "New application and Mesa cache directories for each block; warm reuses its cold directory. OS file cache is not dropped."
+  },
+  "execution": {
+    "started_utc": "2026-10-14T18:44:25.759105+00:00",
+    "completed_utc": "2026-10-14T18:58:24.874644+00:00",
+    "elapsed_window_s": 839.115539,
+    "processes_all_exit_zero": true,
+    "all_eight_retained": true,
+    "visual_review": "All eight full1280x720 PNGs and2x4 sheet inspected. Matching opaque Pullman cab/instruments/HUD/55deg driver viewport, downpour and same branch. No missing cab or scenery seen; sub-metre stop overshoot preserved in raw odometers.",
+    "frame_count_scope": "JourneyPerformance counts Time<Real> render-world intervals once perPlayingUpdate; DevMetrics samples Last-to-Last after60ready frames, CPU First-to-Last. No claim of physical presented frames."
+  },
+  "acceptance": {
+    "strict_primary_pairs": [
+      {
+        "cache_state": "cold",
+        "baseline_block": "A1",
+        "candidate_block": "B1",
+        "metrics": {
+          "gameplay_frame_p99_ms": {
+            "baseline": 42,
+            "candidate": 39,
+            "delta": -3
+          },
+          "gameplay_longest_frame_ms": {
+            "baseline": 132.644862,
+            "candidate": 80.720191,
+            "delta": -51.92467099999999
+          },
+          "startup_longest_frame_ms": {
+            "baseline": 1508.377802,
+            "candidate": 1530.962602,
+            "delta": 22.584800000000087
+          },
+          "gameplay_hitches_over_100_ms": {
+            "baseline": 1,
+            "candidate": 0,
+            "delta": -1
+          }
+        },
+        "both_primary_fields_strictly_improved": true
+      },
+      {
+        "cache_state": "cold",
+        "baseline_block": "A2",
+        "candidate_block": "B2",
+        "metrics": {
+          "gameplay_frame_p99_ms": {
+            "baseline": 41,
+            "candidate": 43,
+            "delta": 2
+          },
+          "gameplay_longest_frame_ms": {
+            "baseline": 136.683479,
+            "candidate": 94.726156,
+            "delta": -41.957323
+          },
+          "startup_longest_frame_ms": {
+            "baseline": 1469.2601080000002,
+            "candidate": 1543.334503,
+            "delta": 74.07439499999987
+          },
+          "gameplay_hitches_over_100_ms": {
+            "baseline": 1,
+            "candidate": 0,
+            "delta": -1
+          }
+        },
+        "both_primary_fields_strictly_improved": false
+      },
+      {
+        "cache_state": "warm",
+        "baseline_block": "A1",
+        "candidate_block": "B1",
+        "metrics": {
+          "gameplay_frame_p99_ms": {
+            "baseline": 39,
+            "candidate": 39,
+            "delta": 0
+          },
+          "gameplay_longest_frame_ms": {
+            "baseline": 71.421064,
+            "candidate": 105.981199,
+            "delta": 34.560135
+          },
+          "startup_longest_frame_ms": {
+            "baseline": 1584.298282,
+            "candidate": 1540.9136,
+            "delta": -43.384681999999884
+          },
+          "gameplay_hitches_over_100_ms": {
+            "baseline": 0,
+            "candidate": 1,
+            "delta": 1
+          }
+        },
+        "both_primary_fields_strictly_improved": false
+      },
+      {
+        "cache_state": "warm",
+        "baseline_block": "A2",
+        "candidate_block": "B2",
+        "metrics": {
+          "gameplay_frame_p99_ms": {
+            "baseline": 45,
+            "candidate": 44,
+            "delta": -1
+          },
+          "gameplay_longest_frame_ms": {
+            "baseline": 75.46260600000001,
+            "candidate": 68.432024,
+            "delta": -7.03058200000001
+          },
+          "startup_longest_frame_ms": {
+            "baseline": 1479.839093,
+            "candidate": 1476.842143,
+            "delta": -2.99694999999997
+          },
+          "gameplay_hitches_over_100_ms": {
+            "baseline": 0,
+            "candidate": 0,
+            "delta": 0
+          }
+        },
+        "both_primary_fields_strictly_improved": true
+      }
+    ],
+    "all_pairs_passed": false,
+    "decision": "Do not close240. Two pairs improve bothfields; warmA1→B1 tiesP99 and worsensmax; coldA2→B2 worsensP99. No averaging/replacing/selected repeat."
+  },
+  "secondary_outcomes": "P95 generally worsens29–30→30–31ms. CPU p99 improves in allfourpairs but is a separate scope; GPU p99 modestlyhigher. Preserve startup/allmaxima/memory from raw reports.",
+  "runs": [
+    {
+      "block": "A1",
+      "cache_state": "cold",
+      "started_utc": "2026-10-14T18:44:25.969547+00:00",
+      "completed_utc": "2026-10-14T18:46:09.617449+00:00",
+      "performance": {
+        "elapsed_s": 99.01715155200013,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 28,
+        "frame_p99_ms": 51,
+        "frames": 3802,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 29,
+        "gameplay_frame_p99_ms": 42,
+        "gameplay_frames": 2481,
+        "gameplay_hitches_over_100_ms": 1,
+        "gameplay_longest_frame_ms": 132.644862,
+        "hitches_over_100_ms": 4,
+        "loading_frames": 2481,
+        "longest_frame_ms": 1508.377802,
+        "peak_rss_mib": 2432.98046875,
+        "rss_mib": 2274.6171875,
+        "startup_longest_frame_ms": 1508.377802
+      },
+      "dev_diagnostics": {
+        "samples": 2420,
+        "frame_ms": {
+          "p50": 25.050563,
+          "p95": 37.183249,
+          "p99": 51.428534
+        },
+        "cpu_main_ms": {
+          "p50": 14.244233,
+          "p95": 31.247722,
+          "p99": 42.439685999999995
+        },
+        "gpu_ms": {
+          "p50": 1.37084,
+          "p95": 1.58396,
+          "p99": 1.72912
+        },
+        "categories": {
+          "assets_upload": 12,
+          "cpu_main": 350,
+          "presentation_or_idle": 906,
+          "shader_pipeline": 5,
+          "streaming": 1147
+        }
+      },
+      "geometry_cache": null,
+      "gpu_tiles": 8,
+      "odometer_m": 2500.165185885929,
+      "artifacts": {
+        ".png": {
+          "sha256": "dff5bd8ca85b99d6ae9bc7b3d0f15512fdffe67e4c08124ff96a78b36c30acda",
+          "bytes": 794450
+        },
+        ".stream.json": {
+          "sha256": "af7f8af5914a8518d82f5b349e4bec71738e42de931b5616da2133e75cc76af5",
+          "bytes": 122867
+        },
+        ".log": {
+          "sha256": "44a3dd86baccba69acc199ad48f33491d475e51a9a48e8136a83da69c8c622be",
+          "bytes": 303858
+        },
+        ".xvfb.log": {
+          "sha256": "f67ed17a210bf279418ee220c8a03d750a7ba378d5e058af5b580f4eb4b7d9bd",
+          "bytes": 3236
+        }
+      }
+    },
+    {
+      "block": "A1",
+      "cache_state": "warm",
+      "started_utc": "2026-10-14T18:46:09.726422+00:00",
+      "completed_utc": "2026-10-14T18:47:52.874825+00:00",
+      "performance": {
+        "elapsed_s": 98.42538053200013,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 28,
+        "frame_p99_ms": 52,
+        "frames": 3783,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 29,
+        "gameplay_frame_p99_ms": 39,
+        "gameplay_frames": 2492,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 71.421064,
+        "hitches_over_100_ms": 3,
+        "loading_frames": 2446,
+        "longest_frame_ms": 1584.298282,
+        "peak_rss_mib": 2343.26953125,
+        "rss_mib": 2180.1484375,
+        "startup_longest_frame_ms": 1584.298282
+      },
+      "dev_diagnostics": {
+        "samples": 2432,
+        "frame_ms": {
+          "p50": 25.002943,
+          "p95": 37.0559,
+          "p99": 52.331334
+        },
+        "cpu_main_ms": {
+          "p50": 14.172672,
+          "p95": 31.26719,
+          "p99": 42.587254
+        },
+        "gpu_ms": {
+          "p50": 1.366,
+          "p95": 1.58856,
+          "p99": 1.7276
+        },
+        "categories": {
+          "assets_upload": 15,
+          "cpu_main": 360,
+          "presentation_or_idle": 916,
+          "shader_pipeline": 2,
+          "streaming": 1139
+        }
+      },
+      "geometry_cache": null,
+      "gpu_tiles": 8,
+      "odometer_m": 2500.165185885929,
+      "artifacts": {
+        ".png": {
+          "sha256": "257ea0cf3818bc010fbdb70350dd1d50557d04ead5260151061da1a1fec192d4",
+          "bytes": 794465
+        },
+        ".stream.json": {
+          "sha256": "56f6e534a435d56b5faf892b324b2f2bcfee9cc5480326e6915735088a6599ae",
+          "bytes": 123887
+        },
+        ".log": {
+          "sha256": "86c464c83a6b2ef191290130f7a3e354b351dd272c668d99e5453cd3e9c38cb2",
+          "bytes": 308676
+        },
+        ".xvfb.log": {
+          "sha256": "b0077f62ccaaf18dc2827f666f7c5ae4274b6e892bf849cc41dfa14d1e129cda",
+          "bytes": 3236
+        }
+      }
+    },
+    {
+      "block": "B1",
+      "cache_state": "cold",
+      "started_utc": "2026-10-14T18:47:52.981613+00:00",
+      "completed_utc": "2026-10-14T18:49:39.167228+00:00",
+      "performance": {
+        "elapsed_s": 103.89668557899985,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 29,
+        "frame_p99_ms": 36,
+        "frames": 4006,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 31,
+        "gameplay_frame_p99_ms": 39,
+        "gameplay_frames": 2465,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 80.720191,
+        "hitches_over_100_ms": 2,
+        "loading_frames": 2774,
+        "longest_frame_ms": 1530.962602,
+        "peak_rss_mib": 2228.19921875,
+        "rss_mib": 1934.8046875,
+        "startup_longest_frame_ms": 1530.962602
+      },
+      "dev_diagnostics": {
+        "samples": 2397,
+        "frame_ms": {
+          "p50": 25.191307,
+          "p95": 34.228979,
+          "p99": 42.467371
+        },
+        "cpu_main_ms": {
+          "p50": 16.048888,
+          "p95": 31.559067000000002,
+          "p99": 36.665427
+        },
+        "gpu_ms": {
+          "p50": 1.48236,
+          "p95": 1.7156,
+          "p99": 1.86968
+        },
+        "categories": {
+          "assets_upload": 9,
+          "cpu_main": 693,
+          "presentation_or_idle": 468,
+          "shader_pipeline": 5,
+          "streaming": 1222
+        }
+      },
+      "geometry_cache": {
+        "gpu_handles_cached": false,
+        "hits": 0,
+        "max_disk_mib": 256,
+        "misses": 1300,
+        "schema": 1
+      },
+      "gpu_tiles": 11,
+      "odometer_m": 2500.673563507305,
+      "artifacts": {
+        ".png": {
+          "sha256": "9d217b3e572f2290fbc575e9de17bca087228d17a8aa2e91e7ea650fa9dbc461",
+          "bytes": 798741
+        },
+        ".stream.json": {
+          "sha256": "54630388399d486b252118a39b82502bb993f7cbaa029946d1a4837af8c6386b",
+          "bytes": 201812
+        },
+        ".log": {
+          "sha256": "9398b2d62436e37e501d428e445c33ed3685d0fbbbf056ee3f7281bb5c747401",
+          "bytes": 360286
+        },
+        ".xvfb.log": {
+          "sha256": "97011efd862e018dd6b023a5180c635a6f9047047a478b538405575d16e11cf3",
+          "bytes": 3236
+        }
+      }
+    },
+    {
+      "block": "B1",
+      "cache_state": "warm",
+      "started_utc": "2026-10-14T18:49:39.276390+00:00",
+      "completed_utc": "2026-10-14T18:51:25.196758+00:00",
+      "performance": {
+        "elapsed_s": 103.73597697000014,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 29,
+        "frame_p99_ms": 36,
+        "frames": 4006,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 30,
+        "gameplay_frame_p99_ms": 39,
+        "gameplay_frames": 2471,
+        "gameplay_hitches_over_100_ms": 1,
+        "gameplay_longest_frame_ms": 105.981199,
+        "hitches_over_100_ms": 3,
+        "loading_frames": 2769,
+        "longest_frame_ms": 1540.9136,
+        "peak_rss_mib": 2177.6875,
+        "rss_mib": 1906.03125,
+        "startup_longest_frame_ms": 1540.9136
+      },
+      "dev_diagnostics": {
+        "samples": 2405,
+        "frame_ms": {
+          "p50": 25.212693,
+          "p95": 34.011803,
+          "p99": 42.377391
+        },
+        "cpu_main_ms": {
+          "p50": 15.774132999999999,
+          "p95": 31.055231,
+          "p99": 36.707624
+        },
+        "gpu_ms": {
+          "p50": 1.48104,
+          "p95": 1.6982,
+          "p99": 1.82904
+        },
+        "categories": {
+          "assets_upload": 10,
+          "cpu_main": 597,
+          "presentation_or_idle": 572,
+          "shader_pipeline": 3,
+          "streaming": 1223
+        }
+      },
+      "geometry_cache": {
+        "gpu_handles_cached": false,
+        "hits": 0,
+        "max_disk_mib": 256,
+        "misses": 1301,
+        "schema": 1
+      },
+      "gpu_tiles": 11,
+      "odometer_m": 2500.673563507305,
+      "artifacts": {
+        ".png": {
+          "sha256": "2b0f29fe47363cc332e0606c5def64d314ce1889301fca9fc74a51e90021d5df",
+          "bytes": 798424
+        },
+        ".stream.json": {
+          "sha256": "cf7914718f2cdf50cb4524d6fe74cfa68f7060753720caf347d75557ccdde16c",
+          "bytes": 201173
+        },
+        ".log": {
+          "sha256": "e57a93bf3c6e297e2656473c16e85c09512ba0ee1e3d6e4c13f564c7bf5d8476",
+          "bytes": 361516
+        },
+        ".xvfb.log": {
+          "sha256": "e0888ff8b669b0dbdd9fb200abe5451ed02e850e059c1d39289d5e44634c8753",
+          "bytes": 3236
+        }
+      }
+    },
+    {
+      "block": "B2",
+      "cache_state": "cold",
+      "started_utc": "2026-10-14T18:51:25.306834+00:00",
+      "completed_utc": "2026-10-14T18:53:11.723218+00:00",
+      "performance": {
+        "elapsed_s": 104.17515858900003,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 29,
+        "frame_p99_ms": 36,
+        "frames": 4017,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 31,
+        "gameplay_frame_p99_ms": 43,
+        "gameplay_frames": 2470,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 94.726156,
+        "hitches_over_100_ms": 2,
+        "loading_frames": 2792,
+        "longest_frame_ms": 1543.334503,
+        "peak_rss_mib": 2228.1796875,
+        "rss_mib": 1980.1015625,
+        "startup_longest_frame_ms": 1543.334503
+      },
+      "dev_diagnostics": {
+        "samples": 2402,
+        "frame_ms": {
+          "p50": 25.15404,
+          "p95": 34.505790000000005,
+          "p99": 43.303115000000005
+        },
+        "cpu_main_ms": {
+          "p50": 15.932022,
+          "p95": 31.816593999999995,
+          "p99": 36.36536
+        },
+        "gpu_ms": {
+          "p50": 1.47684,
+          "p95": 1.70264,
+          "p99": 1.84684
+        },
+        "categories": {
+          "assets_upload": 8,
+          "cpu_main": 688,
+          "presentation_or_idle": 466,
+          "shader_pipeline": 5,
+          "streaming": 1235
+        }
+      },
+      "geometry_cache": {
+        "gpu_handles_cached": false,
+        "hits": 0,
+        "max_disk_mib": 256,
+        "misses": 1301,
+        "schema": 1
+      },
+      "gpu_tiles": 11,
+      "odometer_m": 2500.165185885929,
+      "artifacts": {
+        ".png": {
+          "sha256": "4ad9c52ac4614db88b65b140a195796142371f516588ea8a212cd44c0591e741",
+          "bytes": 798273
+        },
+        ".stream.json": {
+          "sha256": "6d754612c27f019d15a049e64ad91da801e4d4898532653529f25991d280c0cd",
+          "bytes": 201961
+        },
+        ".log": {
+          "sha256": "7ce18c5816efb958c0a5e9621e649faed9df3e7c429560167adb929bd8b0024e",
+          "bytes": 362253
+        },
+        ".xvfb.log": {
+          "sha256": "8d342f9d2470bd0c6f8454114d068c3846706151fb1e857798046d9bf2dfe836",
+          "bytes": 3236
+        }
+      }
+    },
+    {
+      "block": "B2",
+      "cache_state": "warm",
+      "started_utc": "2026-10-14T18:53:11.830665+00:00",
+      "completed_utc": "2026-10-14T18:54:57.763725+00:00",
+      "performance": {
+        "elapsed_s": 103.77363716099975,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 30,
+        "frame_p99_ms": 40,
+        "frames": 3988,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 31,
+        "gameplay_frame_p99_ms": 44,
+        "gameplay_frames": 2466,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 68.432024,
+        "hitches_over_100_ms": 2,
+        "loading_frames": 2748,
+        "longest_frame_ms": 1476.842143,
+        "peak_rss_mib": 2220.34375,
+        "rss_mib": 1873.94140625,
+        "startup_longest_frame_ms": 1476.842143
+      },
+      "dev_diagnostics": {
+        "samples": 2400,
+        "frame_ms": {
+          "p50": 25.251634,
+          "p95": 35.611791,
+          "p99": 44.016441
+        },
+        "cpu_main_ms": {
+          "p50": 16.135335,
+          "p95": 32.434644999999996,
+          "p99": 39.585456
+        },
+        "gpu_ms": {
+          "p50": 1.48504,
+          "p95": 1.70456,
+          "p99": 1.86296
+        },
+        "categories": {
+          "assets_upload": 8,
+          "cpu_main": 716,
+          "presentation_or_idle": 457,
+          "shader_pipeline": 3,
+          "streaming": 1216
+        }
+      },
+      "geometry_cache": {
+        "gpu_handles_cached": false,
+        "hits": 0,
+        "max_disk_mib": 256,
+        "misses": 1300,
+        "schema": 1
+      },
+      "gpu_tiles": 11,
+      "odometer_m": 2500.165185885929,
+      "artifacts": {
+        ".png": {
+          "sha256": "f2f4ffc69df34ef7fb966617f000be5e33864ec28dbefaba399c5aa6390294e7",
+          "bytes": 798241
+        },
+        ".stream.json": {
+          "sha256": "f319ddc019121b1385118e43bfcb39ca2d3e6c4ba67c886ba3527b2482c09d89",
+          "bytes": 202794
+        },
+        ".log": {
+          "sha256": "34b38f195bbc23382eeba385fee10d44cf90ebbcca5be860c9933ea52a58401a",
+          "bytes": 367329
+        },
+        ".xvfb.log": {
+          "sha256": "a4357e90240bd3bab7fe3af9eb6777d348608e5e2546ad3f2ee3761189abf387",
+          "bytes": 3236
+        }
+      }
+    },
+    {
+      "block": "A2",
+      "cache_state": "cold",
+      "started_utc": "2026-10-14T18:54:57.873062+00:00",
+      "completed_utc": "2026-10-14T18:56:41.522237+00:00",
+      "performance": {
+        "elapsed_s": 99.02050680999994,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 28,
+        "frame_p99_ms": 51,
+        "frames": 3803,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 29,
+        "gameplay_frame_p99_ms": 41,
+        "gameplay_frames": 2482,
+        "gameplay_hitches_over_100_ms": 1,
+        "gameplay_longest_frame_ms": 136.683479,
+        "hitches_over_100_ms": 4,
+        "loading_frames": 2479,
+        "longest_frame_ms": 1469.2601080000002,
+        "peak_rss_mib": 2505.80078125,
+        "rss_mib": 2400.20703125,
+        "startup_longest_frame_ms": 1469.2601080000002
+      },
+      "dev_diagnostics": {
+        "samples": 2421,
+        "frame_ms": {
+          "p50": 25.03099,
+          "p95": 37.361031000000004,
+          "p99": 52.212873
+        },
+        "cpu_main_ms": {
+          "p50": 14.383121000000001,
+          "p95": 31.455421999999995,
+          "p99": 42.059391000000005
+        },
+        "gpu_ms": {
+          "p50": 1.35836,
+          "p95": 1.58264,
+          "p99": 1.71432
+        },
+        "categories": {
+          "assets_upload": 10,
+          "cpu_main": 344,
+          "presentation_or_idle": 916,
+          "shader_pipeline": 6,
+          "streaming": 1145
+        }
+      },
+      "geometry_cache": null,
+      "gpu_tiles": 8,
+      "odometer_m": 2500.165185885929,
+      "artifacts": {
+        ".png": {
+          "sha256": "11a907fabdd9092b41cb3dd8953bca646c3f00e80e16c38efce9215bee22169d",
+          "bytes": 794904
+        },
+        ".stream.json": {
+          "sha256": "d86dc4f94786b1ac91e36acfac94a678ae7e1a3d5cce0d04af83f74569c84909",
+          "bytes": 123464
+        },
+        ".log": {
+          "sha256": "4776f670d5f312e55505ceadbe658525188225631c4925c2e2be83caeaa6cf6f",
+          "bytes": 304810
+        },
+        ".xvfb.log": {
+          "sha256": "00c4951de6e10376c689b83e7046e8568724870e2e14cf0fd43a45aeaf6b3083",
+          "bytes": 3236
+        }
+      }
+    },
+    {
+      "block": "A2",
+      "cache_state": "warm",
+      "started_utc": "2026-10-14T18:56:41.630380+00:00",
+      "completed_utc": "2026-10-14T18:58:24.771318+00:00",
+      "performance": {
+        "elapsed_s": 98.58893347399984,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 29,
+        "frame_p99_ms": 54,
+        "frames": 3782,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 30,
+        "gameplay_frame_p99_ms": 45,
+        "gameplay_frames": 2489,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 75.46260600000001,
+        "hitches_over_100_ms": 3,
+        "loading_frames": 2449,
+        "longest_frame_ms": 1479.839093,
+        "peak_rss_mib": 2332.0859375,
+        "rss_mib": 2112.6953125,
+        "startup_longest_frame_ms": 1479.839093
+      },
+      "dev_diagnostics": {
+        "samples": 2429,
+        "frame_ms": {
+          "p50": 24.982738,
+          "p95": 38.357465,
+          "p99": 52.279449
+        },
+        "cpu_main_ms": {
+          "p50": 14.415499,
+          "p95": 32.232119,
+          "p99": 44.926933000000005
+        },
+        "gpu_ms": {
+          "p50": 1.36672,
+          "p95": 1.5772,
+          "p99": 1.74884
+        },
+        "categories": {
+          "assets_upload": 10,
+          "cpu_main": 401,
+          "presentation_or_idle": 871,
+          "shader_pipeline": 5,
+          "streaming": 1142
+        }
+      },
+      "geometry_cache": null,
+      "gpu_tiles": 8,
+      "odometer_m": 2500.165185885929,
+      "artifacts": {
+        ".png": {
+          "sha256": "037c4f4176e3b1fd9c0b5de2d314e4be29072fc8262e61289c8b9e8117ca6d68",
+          "bytes": 793741
+        },
+        ".stream.json": {
+          "sha256": "048530793629528d9b0da62cca9558ac8d722fdf86cf4bfff720647cb498b717",
+          "bytes": 124146
+        },
+        ".log": {
+          "sha256": "a53d5c0dd9d0758580a8055688d0741ccc6e8c6a0bbbad08507ea5a114b72c83",
+          "bytes": 310440
+        },
+        ".xvfb.log": {
+          "sha256": "c8df619dd3db82aba4b326cd0b2af4a128fdd0b82bf7aae35b30de4fa69266a5",
+          "bytes": 3236
+        }
+      }
+    }
+  ],
+  "earlier_measurements": [
+    {
+      "scope": "ABBA500",
+      "result": "All eight P99 values tied at25ms; no P99 acceptance. Separate lower gameplay maxima do not replace primary criteria.",
+      "receipt": {
+        "sha256": "8cadc44d2d765d0b4bb1f9812f432822b90238e31f88c2fc9072d8fea9b5e28c",
+        "bytes": 16378,
+        "location": "private QA archive"
+      }
+    },
+    {
+      "scope": "Two-run default2000 pilot",
+      "result": "P99 41→37ms and longest gameplay frame140.821→85.279ms; P95 28→31ms worsened. Diagnostic only, not acceptance.",
+      "receipt": {
+        "sha256": "0a8fd63a977a55b953a8bdf09c202e6de70ae000f0f887c3d276ebd2ebac94bb",
+        "bytes": 2143,
+        "location": "private QA archive"
+      }
+    }
+  ],
+  "diagnostic_limits": [
+    "The old cpu_prepare_lods span includes geometry-cache writes and texture dependency resolution;9.743599s must not be called exclusive LOD time.",
+    "The old publish_auxiliary span covers more than a CarSpawner call. A maximum tagged CarSpawner is not isolated proof of that call cost.",
+    "Journey, DevMetrics frame and CPU intervals have different boundaries; their individual maxima are not interchangeable.",
+    "Geometry cache0hits/1301misses and1022entries near256MiB indicate sequential eviction; no claim that this alone caused the105.981ms frame.",
+    "Source37 fails two of four predeclared paired comparisons. No averaging, selected repeats, lower quality, budget increases or relaxed limits are used to call this passed."
+  ],
+  "archive_artifacts": {
+    "abba500-reviewed.json": {
+      "sha256": "8cadc44d2d765d0b4bb1f9812f432822b90238e31f88c2fc9072d8fea9b5e28c",
+      "bytes": 16378,
+      "location": "private QA archive"
+    },
+    "pilot2000-reviewed.json": {
+      "sha256": "0a8fd63a977a55b953a8bdf09c202e6de70ae000f0f887c3d276ebd2ebac94bb",
+      "bytes": 2143,
+      "location": "private QA archive"
+    },
+    "abba2000-reviewed.json": {
+      "sha256": "4e6af16a4c7e1893b59e01a9be7c3b1206d96fce32e2726edb117f222801d851",
+      "bytes": 24365,
+      "location": "private QA archive"
+    },
+    "abba2000-predeclared-plan.json": {
+      "sha256": "94e37dc92a4f0c7dd680da49b216e3f40e7422c54dce9c6dddca55eb94b3483a",
+      "bytes": 8442,
+      "location": "private QA archive"
+    },
+    "run-abba2000.py": {
+      "sha256": "35e7e1e964fdf712038fc5483665970625f71cdf0ee486d2c9cca58eefb61c92",
+      "bytes": 9407,
+      "location": "private QA archive"
+    },
+    "abba2000-frozen-window-observed.json": {
+      "sha256": "8b6ff342e7171773de6a798b71f9cd060fb87db41309e1fe694f6d7ca1684988",
+      "bytes": 877,
+      "location": "private QA archive"
+    }
+  },
+  "next_work": "Prepare candidate38: reuse texture paths resolved by workers, move remaining road-car preparation off ECS, bound/compress geometry cache and correct diagnostic spans. Rerun acceptance before closing issue240.",
+  "does_not_close_issue": true,
+  "does_not_mark_batch_complete": true
+}

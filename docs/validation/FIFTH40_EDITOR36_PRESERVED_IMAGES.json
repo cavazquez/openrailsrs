@@ -1,0 +1,87 @@
+{
+  "schema": 1,
+  "status": "preserved_actual_phase36_editor_frames_and_source_equivalence",
+  "created_utc": "2026-10-14T18:35:54.517798+00:00",
+  "issue": 396,
+  "criterion": 3,
+  "execution_candidate": "phase36",
+  "execution_receipt": {
+    "status": "pass",
+    "viewer_sha256": "06ae19253b4ca0d040e13152be8527dda91d86a71334d8a8314f28501d540a56",
+    "window": [
+      800,
+      600
+    ],
+    "source_fixture_sha256_before_and_after": "f9adc155f5354cb9a90f9a942aaf48f7889bde09a63105fc4833cdcd2ac67d8b",
+    "tracked_original_graph_sha256_before_and_after": "eb4e1c47a7e592482037df932d921492a7c6b2d1c1cd250dea3a74b906aadfbc",
+    "owned_private_bidirectional_graph_sha256": "ce1a803787c1212bf37dc4ee2349b98d9e291dc6d05c9f9a60e968f03330600c",
+    "fixture_change": "Copied owned example; explicitly added directed reverse edges for successful inversion testing",
+    "saved_scenario_sha256": "a9733525b4f6a77da1ddcf1514ffaa2394d31d4bfa809a540171ed339444bcc5",
+    "saved_itinerary": [
+      {
+        "destination": "mid",
+        "edges": [
+          "e1"
+        ],
+        "end_chainage_m": 5000.0,
+        "reversed": false,
+        "start": "yard_a",
+        "start_offset_m": 80.0,
+        "stops": [],
+        "switches": [],
+        "wait_s": 30.0
+      }
+    ],
+    "stages": 8,
+    "actual_mouse_input": true,
+    "scope": "Private XTEST input with software Vulkan; no gameplay or FPS claim. Fresh map/pause GPU captures are separate."
+  },
+  "execution_receipt_sha256": "7956306d4db56ca187d59dff078020d0d3c7c1641c277bc1f4fae04b19e770d1",
+  "stage_receipts_sha256": "a662c5dbe724ce9b1b9215aa6c612e406ec3069b8fb5dae8377d604afd6e643c",
+  "published_frames": [
+    {
+      "stage": "00-map",
+      "file": "docs/validation/images/fifth40-phase36-editor/00-map.png",
+      "sha256": "45fff2a840e56457c79de9ecc18286a69fec4c3439a72051c2427edaa5a20bee",
+      "bytes": 70176,
+      "original_stage_stream_sha256": "09b99ed8062ab5d5d5db76b8959cdccea98375e04ce5492c11624572c935e883"
+    },
+    {
+      "stage": "03-reverse",
+      "file": "docs/validation/images/fifth40-phase36-editor/03-reverse.png",
+      "sha256": "51a04ed942dafc39b6312bc74522b980bcb6859394149ba2c74a9d6556a34347",
+      "bytes": 72100,
+      "original_stage_stream_sha256": "ab967cac0a6d2fcb6c4160b2622bf236f3be5456227da54918609650a48b918f"
+    }
+  ],
+  "editor_sources": [
+    {
+      "file": "crates/openrailsrs-viewer3d/src/player_ui.rs",
+      "sha256": "79516299357befbf93de4b90ec5c4338fb89b759100fd5c90a84fe4661600055",
+      "bytes": 245732,
+      "identical_phase36_and_phase37": true
+    },
+    {
+      "file": "crates/openrailsrs-viewer3d/src/service_builder.rs",
+      "sha256": "71d6e3d6b610c32c856dcddfc368c0eaec253d0efedb36a9acff48470d321921",
+      "bytes": 30854,
+      "identical_phase36_and_phase37": true
+    },
+    {
+      "file": "crates/openrailsrs-viewer3d/src/player_ui/launcher.rs",
+      "sha256": "a72d212e74c562da2d3eb1439f766c3bf3d3556dab4a99aaa585e27a9293b8e3",
+      "bytes": 39231,
+      "identical_phase36_and_phase37": true
+    }
+  ],
+  "current_regression_execution": "docs/validation/FIFTH40_PHASE37_NAMED_TESTS.json",
+  "scope": "These are actual phase36 GUI frames from an owned bidirectional copy of the laboratory. Their identity is not relabelled as a phase37 execution. The three editor implementation files are byte-identical in36/37; the final37 core validation test is separately named in its execution receipt.",
+  "limits": [
+    "Eight actual mouse/scroll stages exercised point selection,30s wait,reversal,undo and saving a separate TOML. A saved service was read and validated; this UI script did not launch a subsequent gameplay journey from that file.",
+    "The original one-way graph remained intact; the private fixture explicitly added reverse edges.",
+    "The final save frame contains a private path and remains private with its existing digest; its pixels have not been altered or replaced.",
+    "CPU/lavapipe interaction scope; no hardware performance claim."
+  ],
+  "does_not_close_any_issue": true,
+  "does_not_mark_batch_complete": true
+}
