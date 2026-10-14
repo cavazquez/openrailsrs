@@ -1,0 +1,417 @@
+{
+  "schema": 1,
+  "batch": 5,
+  "created_utc": "2026-10-14T23:21:19.847124+00:00",
+  "status": "ready_for_root_review_not_closed_by_this_receipt",
+  "scope": "Five independent issues against exact existing criteria; historical and current39 executions kept separate. No new Cargo/build/GPU/test run.",
+  "runtime_commit": "a1b59e14bea6db433c0746dd0f1f2644dc5bc4dd",
+  "issues": [
+    {
+      "number": 335,
+      "title": "Plan 125: Programar adelantamientos entre locales y expresos",
+      "criteria": [
+        {
+          "text": "Elegir vías y prioridades conservando paradas pendientes de ambos servicios.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Apartadero y prioridad conservan parada del local y llegada del expreso en ejemplos propios.",
+          "evidence": [
+            "test:dispatcher_selects_a_siding_before_the_meet_and_releases_only_after_the_other_tail_clears",
+            "test:shipped_overtake_and_meet_examples_complete_both_real_services_without_missing_the_local_stop",
+            "test:too_short_siding_is_rejected_with_a_diagnostic_and_no_position_change"
+          ]
+        },
+        {
+          "text": "Resolver espera y liberación cuando la formación completa despeja agujas.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Espera hasta que la cola del otro tren abandona el bloque; los dos servicios completan el itinerario.",
+          "evidence": [
+            "test:dispatcher_selects_a_siding_before_the_meet_and_releases_only_after_the_other_tail_clears",
+            "test:shipped_overtake_and_meet_examples_complete_both_real_services_without_missing_the_local_stop",
+            "test:too_short_siding_is_rejected_with_a_diagnostic_and_no_position_change"
+          ]
+        },
+        {
+          "text": "Documentar una prueba manual desde el menú y un caso de aceptación reproducible; comprobar persistencia y errores relevantes para este alcance.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Los tests guardan/restauran la espera y rechazan apartadero corto sin cambiar posición; guía accesible desde menú.",
+          "evidence": [
+            "test:dispatcher_selects_a_siding_before_the_meet_and_releases_only_after_the_other_tail_clears",
+            "test:shipped_overtake_and_meet_examples_complete_both_real_services_without_missing_the_local_stop",
+            "test:too_short_siding_is_rejected_with_a_diagnostic_and_no_position_change"
+          ]
+        }
+      ],
+      "manual": {
+        "path": "docs/MANUAL_FIFTH40.md",
+        "line": 175,
+        "action": "Abrir scenario_overtake; atender parada local y esperar al despeje de cola del expreso; guardar/restaurar la espera.",
+        "examples": [
+          "examples/traffic_passing/scenario_overtake.toml"
+        ]
+      },
+      "scope": "Planes/apartaderos declarados en la red propia; no planificador general de todas las rutas comunitarias."
+    },
+    {
+      "number": 339,
+      "title": "Plan 129: Planificar encuentros en vía única y apartaderos",
+      "criteria": [
+        {
+          "text": "Detectar encuentros antes de bloquear el corredor y seleccionar apartadero válido.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Encuentro opuesto planificado sobre un apartadero declarado en la red.",
+          "evidence": [
+            "test:dispatcher_selects_a_siding_before_the_meet_and_releases_only_after_the_other_tail_clears",
+            "test:shipped_overtake_and_meet_examples_complete_both_real_services_without_missing_the_local_stop",
+            "test:too_short_siding_is_rejected_with_a_diagnostic_and_no_position_change"
+          ]
+        },
+        {
+          "text": "Conservar destino, longitud de tren y liberación de cola con diagnóstico de alternativas.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Longitud, destino, cola y diagnóstico de alternativa demasiado corta se conservan.",
+          "evidence": [
+            "test:dispatcher_selects_a_siding_before_the_meet_and_releases_only_after_the_other_tail_clears",
+            "test:shipped_overtake_and_meet_examples_complete_both_real_services_without_missing_the_local_stop",
+            "test:too_short_siding_is_rejected_with_a_diagnostic_and_no_position_change"
+          ]
+        },
+        {
+          "text": "Documentar una prueba manual desde el menú y un caso de aceptación reproducible; comprobar persistencia y errores relevantes para este alcance.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Caso opuesto completa ambos servicios, restaura espera y explica prueba manual.",
+          "evidence": [
+            "test:dispatcher_selects_a_siding_before_the_meet_and_releases_only_after_the_other_tail_clears",
+            "test:shipped_overtake_and_meet_examples_complete_both_real_services_without_missing_the_local_stop",
+            "test:too_short_siding_is_rejected_with_a_diagnostic_and_no_position_change"
+          ]
+        }
+      ],
+      "manual": {
+        "path": "docs/MANUAL_FIFTH40.md",
+        "line": 182,
+        "action": "Abrir scenario_meet; revisar F9/M, esperar en el apartadero y continuar tras el despeje completo del contrario.",
+        "examples": [
+          "examples/traffic_passing/scenario_meet.toml"
+        ]
+      },
+      "scope": "Encuentro propio sobre alternativa declarada con longitud útil válida; no inventa apartaderos ni ignora ocupación."
+    },
+    {
+      "number": 340,
+      "title": "Plan 130: Profundizar autorizaciones de maniobra con límites",
+      "criteria": [
+        {
+          "text": "Delimitar distancia, velocidad y condiciones de call-on o maniobra.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Autorización 10–500 m, límite 15 km/h y vencimiento 120 s con parada antes del extremo.",
+          "evidence": [
+            "test:own_wheels_before_signal_do_not_block_a_bounded_authority_and_restore_preserves_it",
+            "test:another_train_invalid_distance_expiration_and_reversing_reject_or_revoke_authority"
+          ]
+        },
+        {
+          "text": "Conservar protección por ocupación y revocar autorización cuando cambian las condiciones.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Otro tren, reversa, distancia inválida o cambio de ocupación revocan/rechazan la autorización.",
+          "evidence": [
+            "test:own_wheels_before_signal_do_not_block_a_bounded_authority_and_restore_preserves_it",
+            "test:another_train_invalid_distance_expiration_and_reversing_reject_or_revoke_authority"
+          ]
+        },
+        {
+          "text": "Documentar una prueba manual desde el menú y un caso de aceptación reproducible; comprobar persistencia y errores relevantes para este alcance.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La regresión restaura el tiempo restante y conduce hasta el límite; guía M/F9 documentada.",
+          "evidence": [
+            "test:own_wheels_before_signal_do_not_block_a_bounded_authority_and_restore_preserves_it",
+            "test:another_train_invalid_distance_expiration_and_reversing_reject_or_revoke_authority"
+          ]
+        }
+      ],
+      "manual": {
+        "path": "docs/MANUAL_FIFTH40.md",
+        "line": 189,
+        "action": "Detenerse ante señal real; en M pedir Maniobra · 200 m / 15 km/h / 120 s y comprobar guardado, límite, vencimiento e inversión.",
+        "examples": []
+      },
+      "scope": "Autorización limitada y revocable, sin asumir señal libre; fixture sintético para intrusión/ruedas propias/expiración, no SIGSCR completo."
+    },
+    {
+      "number": 341,
+      "title": "Plan 131: Permitir tomar control de otra locomotora o servicio",
+      "criteria": [
+        {
+          "text": "Transferir mando a un servicio válido sin reiniciar sus estados.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Transferencia a tren detenido conserva equipos y recursos; no acepta donante en marcha o inválido.",
+          "evidence": [
+            "test:driver_transfers_to_stopped_service_preserves_resources_and_restore_reconstructs_roles",
+            "test:repeated_driver_swaps_restore_the_whole_role_permutation",
+            "test:parked_services_have_real_handbrakes_and_remain_stationary_until_the_driver_takes_over",
+            "test:different_formation_driver_transfer_and_coupling_are_atomic_and_survive_saved_game",
+            "docs/fixtures/compatibility/fifth40-20261013/graphics-and-operations.json#/reports/traffic-operations-final~1report.json/cases/control"
+          ]
+        },
+        {
+          "text": "Resolver el conductor del servicio abandonado y conservar ambos al guardar.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "El tren abandonado recupera conductor AI; guardado restaura la permutación completa de roles.",
+          "evidence": [
+            "test:driver_transfers_to_stopped_service_preserves_resources_and_restore_reconstructs_roles",
+            "test:repeated_driver_swaps_restore_the_whole_role_permutation",
+            "test:parked_services_have_real_handbrakes_and_remain_stationary_until_the_driver_takes_over",
+            "test:different_formation_driver_transfer_and_coupling_are_atomic_and_survive_saved_game",
+            "docs/fixtures/compatibility/fifth40-20261013/graphics-and-operations.json#/reports/traffic-operations-final~1report.json/cases/control"
+          ]
+        },
+        {
+          "text": "Documentar una prueba manual desde el menú y un caso de aceptación reproducible; comprobar persistencia y errores relevantes para este alcance.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Pruebas de swaps y SavedGame real verifican cambio de formación y rechazo atómico de historial/donante inválido; la captura de control conserva la formación reconstruida y recursos listos.",
+          "evidence": [
+            "test:driver_transfers_to_stopped_service_preserves_resources_and_restore_reconstructs_roles",
+            "test:repeated_driver_swaps_restore_the_whole_role_permutation",
+            "test:parked_services_have_real_handbrakes_and_remain_stationary_until_the_driver_takes_over",
+            "test:different_formation_driver_transfer_and_coupling_are_atomic_and_survive_saved_game",
+            "docs/fixtures/compatibility/fifth40-20261013/graphics-and-operations.json#/reports/traffic-operations-final~1report.json/cases/control"
+          ]
+        }
+      ],
+      "manual": {
+        "path": "docs/MANUAL_FIFTH40.md",
+        "line": 196,
+        "action": "Abrir scenario_control; ambas formaciones detenidas, regulador cero/neutro; Tomar control de other en F9 y guardar/reanudar.",
+        "examples": [
+          "examples/traffic_passing/scenario_control.toml"
+        ]
+      },
+      "scope": "Tomar control de un servicio válido detenido conserva estados y roles; rechaza tren en marcha, inválido o sin locomotora. Una captura sola no demuestra continuidad."
+    },
+    {
+      "number": 343,
+      "title": "Plan 133: Clasificar vagones por destino en patios",
+      "criteria": [
+        {
+          "text": "Declarar destinos y verificar composición entregada en cada vía.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Entrega exige vagones exactos, cuerpo completo dentro de zona y frenos de mano; recoger retira aceptación.",
+          "evidence": [
+            "test:delivery_requires_exact_wagons_full_siding_and_secured_detachment_then_pickup_removes_acceptance",
+            "test:two_crews_deliver_distinct_wagon_lots_and_foreign_wagons_make_a_siding_invalid"
+          ]
+        },
+        {
+          "text": "Operar desacoples y recogidas con señales y frenos físicos.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Desacoples y recogidas preservan identidad propia/ajena y restricciones físicas.",
+          "evidence": [
+            "test:delivery_requires_exact_wagons_full_siding_and_secured_detachment_then_pickup_removes_acceptance",
+            "test:two_crews_deliver_distinct_wagon_lots_and_foreign_wagons_make_a_siding_invalid"
+          ]
+        },
+        {
+          "text": "Documentar una prueba manual desde el menú y un caso de aceptación reproducible; comprobar persistencia y errores relevantes para este alcance.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Dos cuadrillas entregan distintos destinos; guardado y errores se verifican en pruebas y guía F9.",
+          "evidence": [
+            "test:delivery_requires_exact_wagons_full_siding_and_secured_detachment_then_pickup_removes_acceptance",
+            "test:two_crews_deliver_distinct_wagon_lots_and_foreign_wagons_make_a_siding_invalid"
+          ]
+        }
+      ],
+      "manual": {
+        "path": "docs/MANUAL_FIFTH40.md",
+        "line": 210,
+        "action": "Abrir scenario_delivery y scenario_classification; asegurar/cortar el lote exacto en su zona, recogerlo y guardar/restaurar.",
+        "examples": [
+          "examples/yard_training/scenario_delivery.toml",
+          "examples/yard_training/scenario_classification.toml"
+        ]
+      },
+      "scope": "Lotes declarados y una sección trasera independiente por formación; no patio por gravedad ni cortes ilimitados."
+    }
+  ],
+  "current_regression_execution": {
+    "check_command": [
+      "bash",
+      "check.sh"
+    ],
+    "start_utc": "2026-10-14T22:13:00.427315+00:00",
+    "end_utc": "2026-10-14T22:24:39.683222+00:00",
+    "check_receipt_sha256": "f32f167e1e6ac0d9876c60e1b33b27ac6324209f649aadba4da766da891fdc78",
+    "stdout_sha256": "00c0184998e1ccdf90fabbbd69691ae8883e0ef73b52626e9f8c0ca940f2393c",
+    "rust": {
+      "passed": 2083,
+      "failed": 0,
+      "ignored": 49,
+      "summaries": 152
+    },
+    "python": {
+      "tests": 127,
+      "summaries": 25
+    },
+    "inputs_unchanged": true,
+    "user_traces_unchanged": true,
+    "historical_git_head_at_check_start": "e865c8a56fef252c0b7f60775ac5e773844380f1",
+    "binding": "Compiled inputs match the protected phase39 build manifest 8dfa16a31a08b48a33776a9041b4f90ef24d6d3b70f6385303d4de8b0589b6a3; the check started before the runtime commit. Its historical head is preserved.",
+    "ci": {
+      "commit": "a1b59e14bea6db433c0746dd0f1f2644dc5bc4dd",
+      "url": "https://github.com/cavazquez/openrailsrs/actions/runs/38647767494",
+      "conclusion": "success",
+      "jobs": [
+        "Optional C# TCS host (Linux)",
+        "check.sh",
+        "Visual smoke (#43)",
+        "Cobertura de tests"
+      ]
+    },
+    "named_tests": {
+      "dispatcher_selects_a_siding_before_the_meet_and_releases_only_after_the_other_tail_clears": {
+        "source": "crates/openrailsrs-sim/tests/passing_services.rs",
+        "source_sha256": "cdc8249d06095c481bf1467b8989ac8e215cb75bd156c172048ae2602536ee24",
+        "source_line": 67,
+        "result": "passed",
+        "check39_log_lines": [
+          1660,
+          1660
+        ],
+        "check39_stdout": "test dispatcher_selects_a_siding_before_the_meet_and_releases_only_after_the_other_tail_clears ... ok"
+      },
+      "shipped_overtake_and_meet_examples_complete_both_real_services_without_missing_the_local_stop": {
+        "source": "crates/openrailsrs-sim/tests/passing_services.rs",
+        "source_sha256": "cdc8249d06095c481bf1467b8989ac8e215cb75bd156c172048ae2602536ee24",
+        "source_line": 175,
+        "result": "passed",
+        "check39_log_lines": [
+          1661,
+          1661
+        ],
+        "check39_stdout": "test shipped_overtake_and_meet_examples_complete_both_real_services_without_missing_the_local_stop ... ok"
+      },
+      "too_short_siding_is_rejected_with_a_diagnostic_and_no_position_change": {
+        "source": "crates/openrailsrs-sim/tests/passing_services.rs",
+        "source_sha256": "cdc8249d06095c481bf1467b8989ac8e215cb75bd156c172048ae2602536ee24",
+        "source_line": 155,
+        "result": "passed",
+        "check39_log_lines": [
+          1662,
+          1662
+        ],
+        "check39_stdout": "test too_short_siding_is_rejected_with_a_diagnostic_and_no_position_change ... ok"
+      },
+      "own_wheels_before_signal_do_not_block_a_bounded_authority_and_restore_preserves_it": {
+        "source": "crates/openrailsrs-sim/tests/shunt_authority.rs",
+        "source_sha256": "744a9bb61622affb1dca83cf5b85618bd88e722298719f2e54d6ecd2f176f009",
+        "source_line": 26,
+        "result": "passed",
+        "check39_log_lines": [
+          1729,
+          1729
+        ],
+        "check39_stdout": "test own_wheels_before_signal_do_not_block_a_bounded_authority_and_restore_preserves_it ... ok"
+      },
+      "another_train_invalid_distance_expiration_and_reversing_reject_or_revoke_authority": {
+        "source": "crates/openrailsrs-sim/tests/shunt_authority.rs",
+        "source_sha256": "744a9bb61622affb1dca83cf5b85618bd88e722298719f2e54d6ecd2f176f009",
+        "source_line": 51,
+        "result": "passed",
+        "check39_log_lines": [
+          1728,
+          1728
+        ],
+        "check39_stdout": "test another_train_invalid_distance_expiration_and_reversing_reject_or_revoke_authority ... ok"
+      },
+      "driver_transfers_to_stopped_service_preserves_resources_and_restore_reconstructs_roles": {
+        "source": "crates/openrailsrs-sim/tests/parallel_traffic.rs",
+        "source_sha256": "98cf1d718eca2a18ab48aca47d47c7d48c4e476f7c8690731cc7b3603e38e8eb",
+        "source_line": 66,
+        "result": "passed",
+        "check39_log_lines": [
+          1649,
+          1649
+        ],
+        "check39_stdout": "test driver_transfers_to_stopped_service_preserves_resources_and_restore_reconstructs_roles ... ok"
+      },
+      "repeated_driver_swaps_restore_the_whole_role_permutation": {
+        "source": "crates/openrailsrs-sim/tests/parallel_traffic.rs",
+        "source_sha256": "98cf1d718eca2a18ab48aca47d47c7d48c4e476f7c8690731cc7b3603e38e8eb",
+        "source_line": 152,
+        "result": "passed",
+        "check39_log_lines": [
+          1653,
+          1653
+        ],
+        "check39_stdout": "test repeated_driver_swaps_restore_the_whole_role_permutation ... ok"
+      },
+      "parked_services_have_real_handbrakes_and_remain_stationary_until_the_driver_takes_over": {
+        "source": "crates/openrailsrs-sim/tests/parallel_traffic.rs",
+        "source_sha256": "98cf1d718eca2a18ab48aca47d47c7d48c4e476f7c8690731cc7b3603e38e8eb",
+        "source_line": 123,
+        "result": "passed",
+        "check39_log_lines": [
+          1651,
+          1651
+        ],
+        "check39_stdout": "test parked_services_have_real_handbrakes_and_remain_stationary_until_the_driver_takes_over ... ok"
+      },
+      "different_formation_driver_transfer_and_coupling_are_atomic_and_survive_saved_game": {
+        "source": "crates/openrailsrs-viewer3d/src/saved_game.rs",
+        "source_sha256": "212ed80b6ef747e572cbcb3210f53079b4fe64eb57e88420245796391366239e",
+        "source_line": 607,
+        "result": "passed",
+        "check39_log_lines": [
+          2763,
+          2763
+        ],
+        "check39_stdout": "test saved_game::tests::different_formation_driver_transfer_and_coupling_are_atomic_and_survive_saved_game ... ok"
+      },
+      "delivery_requires_exact_wagons_full_siding_and_secured_detachment_then_pickup_removes_acceptance": {
+        "source": "crates/openrailsrs-sim/tests/yard_operations.rs",
+        "source_sha256": "d2cdb48084ef1101d6fa56584bc3049957dc2f8256abd231b8ea20dce7f6a14a",
+        "source_line": 12,
+        "result": "passed",
+        "check39_log_lines": [
+          1876,
+          1876
+        ],
+        "check39_stdout": "test delivery_requires_exact_wagons_full_siding_and_secured_detachment_then_pickup_removes_acceptance ... ok"
+      },
+      "two_crews_deliver_distinct_wagon_lots_and_foreign_wagons_make_a_siding_invalid": {
+        "source": "crates/openrailsrs-sim/tests/yard_operations.rs",
+        "source_sha256": "d2cdb48084ef1101d6fa56584bc3049957dc2f8256abd231b8ea20dce7f6a14a",
+        "source_line": 185,
+        "result": "passed",
+        "check39_log_lines": [
+          1879,
+          1879
+        ],
+        "check39_stdout": "test two_crews_deliver_distinct_wagon_lots_and_foreign_wagons_make_a_siding_invalid ... ok"
+      }
+    },
+    "new_tests_run_for_this_review": 0
+  },
+  "current_sources_matching_preserved_scope": {
+    "crates/openrailsrs-sim/tests/passing_services.rs": "cdc8249d06095c481bf1467b8989ac8e215cb75bd156c172048ae2602536ee24",
+    "crates/openrailsrs-sim/tests/shunt_authority.rs": "744a9bb61622affb1dca83cf5b85618bd88e722298719f2e54d6ecd2f176f009",
+    "crates/openrailsrs-sim/tests/parallel_traffic.rs": "98cf1d718eca2a18ab48aca47d47c7d48c4e476f7c8690731cc7b3603e38e8eb",
+    "crates/openrailsrs-viewer3d/src/saved_game.rs": "212ed80b6ef747e572cbcb3210f53079b4fe64eb57e88420245796391366239e",
+    "crates/openrailsrs-sim/tests/yard_operations.rs": "d2cdb48084ef1101d6fa56584bc3049957dc2f8256abd231b8ea20dce7f6a14a"
+  },
+  "preserved_evidence": [
+    {
+      "path": "docs/fixtures/compatibility/fifth40-20261013/graphics-and-operations.json",
+      "sha256": "ba7966557bb67125ca8a740b32fff7da3e5dd99056195ad64ffdbf57e82f3fdb",
+      "json_pointer": "/reports/traffic-operations-final~1report.json/cases/control",
+      "value_sha256": "04c7d24681f9a5dff287be62350bc168d431a99bdcc66d1547e4e2ea0f52e696",
+      "execution": "Preserved historical execution; original phase/binary/content/scope, not new39"
+    }
+  ],
+  "manual": "docs/MANUAL_FIFTH40.md",
+  "manual_sha256": "b1408705e44aa9fd2dd8b9ddf4b794cffa99da8d05b44b5d88411e4fc57e2ecc",
+  "limits": [
+    "Historical complete activity, graphics, costs and original OR captures retain their phase/binary/content/conditions; not rerun or relabelled39.",
+    "Current39 actual nominal Rust PASS lines are identified;127Python tests are aggregate evidence. Separate nominal Python38 stays historical.",
+    "No global performance, memory/endurance, final Snap39 or Store acceptance; this receipt closes/comments no issue.",
+    "Human traces are read/hash-checked only; author content remains unversioned."
+  ]
+}
