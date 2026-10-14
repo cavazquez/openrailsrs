@@ -1,0 +1,243 @@
+{
+  "schema": 1,
+  "status": "rejected_stopped_before_7200_seconds",
+  "candidate_commit": "656ae35f05000e1b1e13e93d35a4c45615e4ed96",
+  "viewer_sha256": "5be5da7de14db73321303af2b310da7c8ca635b3dcd9c304fbe631ae0d8fd47d",
+  "started_utc": "2026-10-14T20:18:58.248147+00:00",
+  "stopped_utc": "2026-10-14T21:25:20.347974+00:00",
+  "supervisor_elapsed_s": 3981.962332316998,
+  "viewer_process_elapsed_s": 3980.6101741509992,
+  "supervisor_returncode": -2,
+  "viewer_returncode": -15,
+  "duration_required_s": 7200,
+  "duration_complete": false,
+  "final_acceptance_audit_executed": false,
+  "frozen_plan_sha256": "aa79415e5307dd2a5552048d0113b03d70850180f202ca5282ba198912439edc",
+  "comparison_required": {
+    "scene": "own 30 km memory laboratory",
+    "scene_age_s": 150,
+    "scene_age_tolerance_s": 1,
+    "camera": "DriverCam",
+    "weather": "heavy_snow",
+    "seed": 42,
+    "weather_timeline_s": 120,
+    "weather_timeline_tolerance_s": 1,
+    "equal_render_budget_and_live_pools": true,
+    "rss_last_minus_first_mib_max": 64,
+    "rss_range_mib_max": 256
+  },
+  "observations": [
+    {
+      "slot": 1590,
+      "actual_wall_s": 1590.032255641,
+      "scene_elapsed_s": 149.955670474,
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.8799999952316284,
+          "flake_size": 1.350000023841858,
+          "fog_density": 0.0007999999797903001,
+          "overcast": 0.699999988079071,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 1.0,
+          "snow_cover": 1.0,
+          "storm": 0.0,
+          "temperature_c": -1.0,
+          "visibility_m": 500.0,
+          "wind_mps": [
+            3.5435197353363037,
+            0.0,
+            1.6431869268417358
+          ]
+        },
+        "journey": {
+          "pace": "normal",
+          "winter": false
+        },
+        "live": false,
+        "profile": "heavy_snow",
+        "seed": 42,
+        "timeline_elapsed_s": 120.0499999999285
+      },
+      "render_budget": {
+        "memory_pressure": false,
+        "particles": 256,
+        "passenger_lights": 0,
+        "station_lights": 0,
+        "train_lights": 5,
+        "upload_mib": 8,
+        "vegetation_divisor": 8
+      },
+      "residency": {
+        "basis": "measured active-device usage / physical device total",
+        "budget_mib": 512.0,
+        "pressured": false,
+        "transitions": 10
+      },
+      "rss_mib": 12005.125,
+      "main_pools": {
+        "entities": 768,
+        "meshes": 31,
+        "images": 28,
+        "fonts": 1,
+        "font_atlases": 12,
+        "effect_assets": 2
+      },
+      "render_pools": {
+        "images": 29,
+        "meshes": 30,
+        "views": 29,
+        "material_slabs": 1,
+        "material_slab_bytes": 1531968
+      },
+      "gpu_live_mib": 464.5124740600586,
+      "gpu_reserved_mib": 1247.7463607788086,
+      "fog": {
+        "allocations": 1,
+        "bytes": 32768,
+        "name": "openrailsrs-ground-fog-density"
+      },
+      "json_restore_cycles": 26,
+      "disk_restore_cycles": 26,
+      "disk_failures": 0,
+      "memory_restore_failures": 0,
+      "raw_sha256": "f2cf2aa182ec57e59a179bab0b286c23cf27c28ff351a94114bafa7933f4c148",
+      "glibc_mallinfo2_bytes": {
+        "allocator": "glibc mallinfo2",
+        "arena": 12746375168,
+        "available": true,
+        "fordblks": 12157374592,
+        "hblkhd": 2224,
+        "scope": "Raw bytes: arena includes libc heap capacity; uordblks/fordblks describe arena use/free space, hblkhd separate mmap allocation space. These statistics do not equal total PSS, Rust live-object bytes or all driver allocations. No malloc_trim is called.",
+        "uordblks": 589000576
+      },
+      "active_gpu": {
+        "active_device_pci": "0000:0e:00.0",
+        "device_total_mib": 512.0,
+        "device_used_mib": 422.8046875,
+        "source": "linux_drm_fdinfo"
+      }
+    },
+    {
+      "slot": 3750,
+      "actual_wall_s": 3750.017580527,
+      "scene_elapsed_s": 149.947606871,
+      "weather_state": {
+        "atmosphere": {
+          "cloud_cover": 0.8799999952316284,
+          "flake_size": 1.350000023841858,
+          "fog_density": 0.0007999999797903001,
+          "overcast": 0.699999988079071,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 1.0,
+          "snow_cover": 1.0,
+          "storm": 0.0,
+          "temperature_c": -1.0,
+          "visibility_m": 500.0,
+          "wind_mps": [
+            3.508225440979004,
+            0.0,
+            1.6187845468521118
+          ]
+        },
+        "journey": {
+          "pace": "normal",
+          "winter": false
+        },
+        "live": false,
+        "profile": "heavy_snow",
+        "seed": 42,
+        "timeline_elapsed_s": 119.84999999992823
+      },
+      "render_budget": {
+        "memory_pressure": true,
+        "particles": 256,
+        "passenger_lights": 0,
+        "station_lights": 0,
+        "train_lights": 5,
+        "upload_mib": 2,
+        "vegetation_divisor": 8
+      },
+      "residency": {
+        "basis": "measured active-device usage / physical device total",
+        "budget_mib": 512.0,
+        "pressured": true,
+        "transitions": 11
+      },
+      "rss_mib": 16485.04296875,
+      "main_pools": {
+        "entities": 768,
+        "meshes": 31,
+        "images": 28,
+        "fonts": 1,
+        "font_atlases": 12,
+        "effect_assets": 4
+      },
+      "render_pools": {
+        "images": 29,
+        "meshes": 30,
+        "views": 13,
+        "material_slabs": 2,
+        "material_slab_bytes": 1636032
+      },
+      "gpu_live_mib": 421.18773651123047,
+      "gpu_reserved_mib": 1287.7463607788086,
+      "fog": {
+        "allocations": 1,
+        "bytes": 32768,
+        "name": "openrailsrs-ground-fog-density"
+      },
+      "json_restore_cycles": 62,
+      "disk_restore_cycles": 62,
+      "disk_failures": 0,
+      "memory_restore_failures": 0,
+      "raw_sha256": "8c7c8ea881a1feb6a36886924db64a162481825c24848826517e5ec7634679c4",
+      "glibc_mallinfo2_bytes": {
+        "allocator": "glibc mallinfo2",
+        "arena": 19965812736,
+        "available": true,
+        "fordblks": 19369191488,
+        "hblkhd": 5104,
+        "scope": "Raw bytes: arena includes libc heap capacity; uordblks/fordblks describe arena use/free space, hblkhd separate mmap allocation space. These statistics do not equal total PSS, Rust live-object bytes or all driver allocations. No malloc_trim is called.",
+        "uordblks": 596621248
+      },
+      "active_gpu": {
+        "active_device_pci": "0000:0e:00.0",
+        "device_total_mib": 512.0,
+        "device_used_mib": 462.9140625,
+        "source": "linux_drm_fdinfo"
+      }
+    }
+  ],
+  "observed_failures": [
+    "Effective render_budget differs: memory_pressure false/upload_mib8 versus true/upload_mib2.",
+    "RSS last-first exceeds the predeclared64MiB and range256MiB limits already between the first two visits.",
+    "Main effect_assets and render view/material slab pools differ; the plan requires equal live pools."
+  ],
+  "rss_delta_mib": 4479.91796875,
+  "libc_uordblks_delta_mib": 7.26763916015625,
+  "libc_arena_delta_mib": 6884.9921875,
+  "allocation_cause_limit": "Most added glibc arena space is reported free while uordblks changes about7.27MiB; this is consistent with heap capacity retention/fragmentation, not sufficient to identify a live-object leak. No allocator trimming, forced asset retirement or runtime edits performed.",
+  "stop": "Only the failed attempt's verified supervisor session was signalled. Its viewer and private compositor terminated; that session was empty afterward. No desktop/user process was signalled.",
+  "source_identity": {
+    "input_count": 751,
+    "changes": [],
+    "manifest_sha256": "f7bbb9b3e212e433f554387a192cb250435badb0cf0e02d5de6fcce7a7bc9739",
+    "poststop_check_sha256": "f15ab105fbf84164339446a33f77ec6fa6dfbc397f01187331f3202283c4c3a1"
+  },
+  "evidence_sha256": {
+    "lifetime38-midrun-material-failure-3750.json": "270f64ca28caab9c4d03b232494be896b9ba0ae26f1f25181e1e1a1c5bf495a0",
+    "lifetime38-observed-checkpoint-1590.json": "f2cf2aa182ec57e59a179bab0b286c23cf27c28ff351a94114bafa7933f4c148",
+    "lifetime38-observed-checkpoint-3750.json": "8c7c8ea881a1feb6a36886924db64a162481825c24848826517e5ec7634679c4",
+    "lifetime38-authorized-stop.json": "cda6d089eca9363798dc4319b73666ca62ed31d72c650da7f32022425c450d99",
+    "lifetime38-allocator-series.csv": "c63dec16dcd216302a426647f3297d1f92ec44349b071fbc9c978c78d2263cbd"
+  },
+  "limits": [
+    "The first two predeclared visits already fail; no replacement visits, relaxed thresholds, forced allocator trim/purge or reduced quality were used to make the attempt pass.",
+    "Free heap capacity in mallinfo2 is not a measure of all live Rust objects or GPU resources; allocator retention/fragmentation is a hypothesis until reproduced.",
+    "62 JSON and 62 actual SavedGame disk restores had completed without failure at wall3750; this does not certify the complete duration or all120 required operations.",
+    "The separate phase38 ABBA and cold process-memory measurements remain historical scoped measurements. They do not override this failed stability gate.",
+    "This artifact is not authorized for final Snap publication or issue closure on the basis of this test. A corrected candidate requires its own complete run."
+  ]
+}

@@ -1,0 +1,2143 @@
+{
+  "schema": 1,
+  "kind": "fifth40_phase38_process_memory_control",
+  "status": "completed_scoped_measurement_not_stability_or_general_saving",
+  "recorded_utc": "2026-10-14T21:18:58.822459+00:00",
+  "runtime_commit": "656ae35f05000e1b1e13e93d35a4c45615e4ed96",
+  "baseline": {
+    "binary": "<repository>/tmp/fifth40-continued-20261014/baseline-d9-viewer",
+    "sha256": "531ec4d91cfa3391f1f24a8d62d8abef026603609528462efacbb8ae7a096e08",
+    "resources": "<repository>/tmp/fifth40-continued-20261014/baseline-d9-source",
+    "build_receipt": "<repository>/tmp/fifth40-continued-20261014/baseline-d9-build-receipt.json",
+    "commit": "d9dba7af1f531183de594af3201373d3b1b20590"
+  },
+  "candidate": {
+    "binary": "<repository>/tmp/fifth40-continued-20261014/phase38-build2/phase38-viewer",
+    "sha256": "5be5da7de14db73321303af2b310da7c8ca635b3dcd9c304fbe631ae0d8fd47d",
+    "resources": "<repository>",
+    "build_receipt": "<repository>/tmp/fifth40-continued-20261014/phase38-build2/phase38-build-receipt.json"
+  },
+  "configuration": {
+    "scenario": "<repository>/examples/chiltern_extended/scenario.toml",
+    "scenario_sha256_policy": "hash at freeze, same scenario and original rollingstock/route per launch",
+    "resolution": [
+      1280,
+      720
+    ],
+    "target_m": 2500,
+    "ready_frames": 600,
+    "minimum_gameplay_frames": 300,
+    "view_radius_m": 2000,
+    "follow": "driver",
+    "cab_fov_deg": 55,
+    "weather": "rain",
+    "weather_profile": "downpour",
+    "seed": 42,
+    "particle_budget": 2048,
+    "autodrive": 0.75,
+    "speed_multiplier": 4,
+    "shadows": true,
+    "contact_shadow_quality": 1,
+    "auto_quality_limits": false,
+    "framepace": "off",
+    "gpu": "VulkanRX1002:7480 /PCI0000:03:00.0 and same WestonGL",
+    "audio": "disabled equally",
+    "present_mode": "auto_vsync",
+    "timeout_s_per_run": 420,
+    "frame_spans": false,
+    "profile_systems": false,
+    "route_root": "<official-content>/chiltern-v4-2fc79dd1c7f0eebc/Chiltern-Route-v4-8236df20ed9f596b8cf15720c43bfbdd0c43125d/ROUTES/Chiltern",
+    "weather_quality": "high"
+  },
+  "background": {
+    "allowed": "The alreadyrunning final7200 onintegratedPCI0000:0e:00.0, CPU/IO and lightorchestration; userdesktop/services untouched.",
+    "supervisor_host_pid_sid": 189006,
+    "viewer_host_pid": 189027,
+    "plan_sha256": "aa79415e5307dd2a5552048d0113b03d70850180f202ca5282ba198912439edc",
+    "note": "The IG background changes scene/workload. Per-PID selectedRX readings exclude its allocations; systemmemory pressure/scheduling can still influence observations. No FPS or exclusivehostclaim."
+  },
+  "frozen_protocol": {
+    "plan": {
+      "path": "tmp/fifth40-continued-20261014/memory3913-v3-frozen-plan.json",
+      "sha256": "2da33b91fed12014adeb669311f2a5da707447a7b31d15334ecf48670ac0f03d",
+      "bytes": 15828
+    },
+    "exact_command": {
+      "path": "tmp/fifth40-continued-20261014/memory3913-v3-exact-command.json",
+      "sha256": "8c1d0e7e6f8f3b922596e60d41ad5b17e356c12611cc0130de27e65ba0aa797d",
+      "bytes": 907
+    },
+    "phase_boundaries": {
+      "bootstrap_marker": "openrailsrs-viewer3d: progressive spawn complete — entering simulation",
+      "capture_marker": "openrailsrs-viewer3d: screenshot requested → <exact case PNG>",
+      "source_evidence": "BothD9and38 route_bootstrap.rs321 emit same marker when initialprogressiveworld/terrain/cab and graphics-readiness branch removesloadingoverlay. Notfirstphysicallypresented frame or exactfirstphysics tick.",
+      "phases": [
+        "Preparationbeforeinitialbootstrapmarker",
+        "Running/streamingbetweenbootstrapandcapturerequest",
+        "Capture/readback/shutdownaftercapturerequest"
+      ],
+      "bracket": "Retain rawlog/appelapsedms and hostmonotonic/UTC bracket frompreviouslogpoll tofirstobservedlogmarker. Samplesinsidebracket can belongtoeitheradjacentphase.",
+      "bounds": "Certain-sample maximum and maximumincludingboundarysamples only classify OBSERVED samples. They do not bound physicalpeaks between1Hz samples or marker-I/O latency. No missingphase maximum becomeszero.",
+      "whole_launch": "Always retain full-launch observedmaxima includingcapture, with phase summariesseparate; neveromit anunfavorable sample."
+    },
+    "cache_policy": "Four new cold privateapplication/Mesa caches; two independent processes perversion. OS pagecache notflushed. No warmcache claim, no posthocselectedreplacement.",
+    "observer_policy": {
+      "interval_target_s": 1.0,
+      "maximum_scope": "Observed sample maxima, not physicalcomplete peaks. The reported cadence/maxgaps are actual.",
+      "selected_pci": "0000:03:00.0",
+      "pid_identity": "Actual Popen PID plus/proc/stat startticks; verify executable path and protectedbinarySHA. Reject PIDreuse.",
+      "counter_policy": "Keep drm-resident-vram/gtt, drm-memory-vram/gtt and drm-total-vram/gtt SEPARATE. No resident→memory fallback. These exact rawkernel labels stay distinct; no countersemantics inferred from totaldevicecapacity.",
+      "aggregation": "Deduplicate per(PCI,client-id), preserve duplicates/rawfdinfo. Sum clients withinthatPCI only and only if everycomponent isavailable; missing/unknownclient/racedfd→null, never0. Real measuredzero retained. OtherPCI maps retained but never addedtoselectedGPU.",
+      "units": "Original strings retained. Normalize B/bytes,KiB/kB(kernel1024),MiB,GiB tobytes; unknownunit/nonfinite/negative→null.",
+      "host_process_memory": "Actual samePID VmRSS,VmHWM,VmSwap per1Hz sample, rawunits retained. VmHWM is kernelprocesswide highwater, not phase-local.",
+      "raw_preservation": "Each sample retains raw_drm_records for EVERY DRM fd, with originaltext and parsedfields, including duplicate clients and unidentified records. Deduplicatedaggregation staysseparate. NonDRM fdinfo need not be retained. If duplicatevalues differ, bothtexts persist but only the first identifiedclient contributes, asbefore."
+    },
+    "workset_policy": "Sameconfigured2000m/quality/budgets; preserveactualCPU/GPU tiles, WORLDdrawcalls/entities. PriorABBAobservedD9GPUtiles8vs38eleven. No forcingequalcounts, silently reducingquality, or claimingpixel/worksetparity. Newvaluesmaydiffer andmustbereported."
+  },
+  "measurement_review": {
+    "schema": 1,
+    "status": "completed_scoped_memory_observations_reviewed_no_general_saving_claim",
+    "reviewed_utc": "2026-10-14T21:12:42.410983+00:00",
+    "plan_sha256": "2da33b91fed12014adeb669311f2a5da707447a7b31d15334ecf48670ac0f03d",
+    "command_sha256": "8c1d0e7e6f8f3b922596e60d41ad5b17e356c12611cc0130de27e65ba0aa797d",
+    "runner_sha256": "5a6758c215bf32a649d3733d0b248e8fea850fe27954e3e41815cbbbfa84db67",
+    "observer_sha256": "bc40efe23c63ecc5dc1fcbe13588f18117cc4f51113dd4b440cbbe69ef37deb9",
+    "release_gate_sha256": "18feb9489b2d9a060900262f27f6ea3c2d86eed8810bc22a25abeff77bf10c36",
+    "raw_result_sha256": "e1a8f833c54eccc446cdbeb6a9d1e46d0a137b6e8be4724d1d92d2dae0487d11",
+    "raw_runs_sha256": "4ed318b114c7d4d13a22b3030d32801362f4edf80ac57eeffe052dec3354a2b0",
+    "raw_spec_sha256": "8c02fab14afc06334e98f7f5daa39ecfa6c2159732ccf415b4dc64f3c77dcbe7",
+    "supervisor_receipt_sha256": "88d3bc5d42327164a2621478c4e78d39ad3531218f0b3c755e80bf118ac719d0",
+    "host_process_release_sha256": "0d68ca17da903d45ebe4d22aab18f3dbb2523ebe7bb23715500a27bfea10f064",
+    "returncode": 0,
+    "actual_process_elapsed_s": 407.9252711000008,
+    "started_utc": "2026-10-14T21:02:14.303436+00:00",
+    "completed_utc": "2026-10-14T21:09:02.227734+00:00",
+    "actual_cases": 4,
+    "all_capture_processes_exit_zero": true,
+    "all_four_png_reviewed": true,
+    "all_exported_quality_points_zero": true,
+    "selected_pci": "0000:03:00.0",
+    "runs": [
+      {
+        "case": "A1",
+        "label": "baseline",
+        "binary_sha256": "531ec4d91cfa3391f1f24a8d62d8abef026603609528462efacbb8ae7a096e08",
+        "identity": {
+          "pid": 211547,
+          "start_ticks": 1927474,
+          "exe": "<repository>/tmp/fifth40-continued-20261014/baseline-d9-viewer",
+          "observed_after_popen_utc": "2026-10-14T21:02:14.827589+00:00",
+          "observed_after_popen_monotonic_ns": 19274744619563
+        },
+        "sample_count": 104,
+        "actual_max_gap_s": 1.018083152,
+        "cadence_within_2s": true,
+        "coverage": {
+          "rss_bytes": {
+            "available": 104,
+            "missing": 0,
+            "observed_max_bytes": 2516779008
+          },
+          "vram_resident_bytes": {
+            "available": 102,
+            "missing": 2,
+            "observed_max_bytes": 2291195904
+          },
+          "vram_memory_bytes": {
+            "available": 102,
+            "missing": 2,
+            "observed_max_bytes": 2291195904
+          },
+          "vram_total_bytes": {
+            "available": 102,
+            "missing": 2,
+            "observed_max_bytes": 2291195904
+          },
+          "gtt_resident_bytes": {
+            "available": 102,
+            "missing": 2,
+            "observed_max_bytes": 84103168
+          },
+          "gtt_memory_bytes": {
+            "available": 102,
+            "missing": 2,
+            "observed_max_bytes": 84103168
+          },
+          "gtt_total_bytes": {
+            "available": 102,
+            "missing": 2,
+            "observed_max_bytes": 84103168
+          }
+        },
+        "whole_process_observed_maxima_bytes": {
+          "rss_bytes": 2516779008,
+          "vram_resident_bytes": 2291195904,
+          "vram_memory_bytes": 2291195904,
+          "vram_total_bytes": 2291195904,
+          "gtt_resident_bytes": 84103168,
+          "gtt_memory_bytes": 84103168,
+          "gtt_total_bytes": 84103168
+        },
+        "kernel_vmhwm_max_observed_bytes": 2516779008,
+        "public_helper_rss_peak_mib_4Hz": 2400.2,
+        "max_swap_observed_bytes": 0,
+        "phases": {
+          "preparation": {
+            "certain_sample_count": 38,
+            "possible_sample_count": 39,
+            "observed_maxima_bytes": {
+              "rss_bytes": {
+                "certain_samples": 2516779008,
+                "including_boundary_samples": 2516779008,
+                "certain_available_samples": 38,
+                "possible_available_samples": 39
+              },
+              "vram_resident_bytes": {
+                "certain_samples": 1989632000,
+                "including_boundary_samples": 1991467008,
+                "certain_available_samples": 37,
+                "possible_available_samples": 38
+              },
+              "vram_memory_bytes": {
+                "certain_samples": 1989632000,
+                "including_boundary_samples": 1991467008,
+                "certain_available_samples": 37,
+                "possible_available_samples": 38
+              },
+              "vram_total_bytes": {
+                "certain_samples": 1989632000,
+                "including_boundary_samples": 1991467008,
+                "certain_available_samples": 37,
+                "possible_available_samples": 38
+              },
+              "gtt_resident_bytes": {
+                "certain_samples": 84103168,
+                "including_boundary_samples": 84103168,
+                "certain_available_samples": 37,
+                "possible_available_samples": 38
+              },
+              "gtt_memory_bytes": {
+                "certain_samples": 84103168,
+                "including_boundary_samples": 84103168,
+                "certain_available_samples": 37,
+                "possible_available_samples": 38
+              },
+              "gtt_total_bytes": {
+                "certain_samples": 84103168,
+                "including_boundary_samples": 84103168,
+                "certain_available_samples": 37,
+                "possible_available_samples": 38
+              }
+            }
+          },
+          "running_streaming": {
+            "certain_sample_count": 62,
+            "possible_sample_count": 64,
+            "observed_maxima_bytes": {
+              "rss_bytes": {
+                "certain_samples": 2296606720,
+                "including_boundary_samples": 2296606720,
+                "certain_available_samples": 62,
+                "possible_available_samples": 64
+              },
+              "vram_resident_bytes": {
+                "certain_samples": 2291191808,
+                "including_boundary_samples": 2291191808,
+                "certain_available_samples": 61,
+                "possible_available_samples": 63
+              },
+              "vram_memory_bytes": {
+                "certain_samples": 2291191808,
+                "including_boundary_samples": 2291191808,
+                "certain_available_samples": 61,
+                "possible_available_samples": 63
+              },
+              "vram_total_bytes": {
+                "certain_samples": 2291191808,
+                "including_boundary_samples": 2291191808,
+                "certain_available_samples": 61,
+                "possible_available_samples": 63
+              },
+              "gtt_resident_bytes": {
+                "certain_samples": 84103168,
+                "including_boundary_samples": 84103168,
+                "certain_available_samples": 61,
+                "possible_available_samples": 63
+              },
+              "gtt_memory_bytes": {
+                "certain_samples": 84103168,
+                "including_boundary_samples": 84103168,
+                "certain_available_samples": 61,
+                "possible_available_samples": 63
+              },
+              "gtt_total_bytes": {
+                "certain_samples": 84103168,
+                "including_boundary_samples": 84103168,
+                "certain_available_samples": 61,
+                "possible_available_samples": 63
+              }
+            }
+          },
+          "capture_shutdown": {
+            "certain_sample_count": 2,
+            "possible_sample_count": 3,
+            "observed_maxima_bytes": {
+              "rss_bytes": {
+                "certain_samples": 2292535296,
+                "including_boundary_samples": 2292535296,
+                "certain_available_samples": 2,
+                "possible_available_samples": 3
+              },
+              "vram_resident_bytes": {
+                "certain_samples": 2291195904,
+                "including_boundary_samples": 2291195904,
+                "certain_available_samples": 2,
+                "possible_available_samples": 3
+              },
+              "vram_memory_bytes": {
+                "certain_samples": 2291195904,
+                "including_boundary_samples": 2291195904,
+                "certain_available_samples": 2,
+                "possible_available_samples": 3
+              },
+              "vram_total_bytes": {
+                "certain_samples": 2291195904,
+                "including_boundary_samples": 2291195904,
+                "certain_available_samples": 2,
+                "possible_available_samples": 3
+              },
+              "gtt_resident_bytes": {
+                "certain_samples": 84103168,
+                "including_boundary_samples": 84103168,
+                "certain_available_samples": 2,
+                "possible_available_samples": 3
+              },
+              "gtt_memory_bytes": {
+                "certain_samples": 84103168,
+                "including_boundary_samples": 84103168,
+                "certain_available_samples": 2,
+                "possible_available_samples": 3
+              },
+              "gtt_total_bytes": {
+                "certain_samples": 84103168,
+                "including_boundary_samples": 84103168,
+                "certain_available_samples": 2,
+                "possible_available_samples": 3
+              }
+            }
+          }
+        },
+        "markers": {
+          "bootstrap": {
+            "log_line_paths_normalized": "[ 38283.7ms 18:02:53.115] openrailsrs-viewer3d: openrailsrs-viewer3d: progressive spawn complete — entering simulation",
+            "application_log_elapsed_ms": 38283.7,
+            "first_observed_utc": "2026-10-14T21:02:53.318141+00:00",
+            "lower_monotonic_ns": 19312982896854,
+            "upper_monotonic_ns": 19313235092335,
+            "observation_bracket_s": 0.252195481
+          },
+          "capture": {
+            "log_line_paths_normalized": "[101827.5ms 18:03:56.659] openrailsrs-viewer3d: openrailsrs-viewer3d: screenshot requested → <repository>/tmp/fifth40-continued-20261014/memory3913-v3-d9-vs38-four-cold/A1/drive.png",
+            "application_log_elapsed_ms": 101827.5,
+            "first_observed_utc": "2026-10-14T21:03:56.760527+00:00",
+            "lower_monotonic_ns": 19376422436884,
+            "upper_monotonic_ns": 19376677428708,
+            "observation_bracket_s": 0.254991824
+          }
+        },
+        "workset": {
+          "cpu_tiles": 30,
+          "gpu_tiles": 8,
+          "draw_calls": {
+            "grass": 0,
+            "opaque": 298,
+            "scope": "actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi",
+            "shadow": 242
+          },
+          "gpu_entities": 15823,
+          "odometer_m": 2500.165185885929
+        },
+        "raw_internal_graphics_memory": {
+          "device_total_mib": 8688.0,
+          "device_used_mib": 3177.9921875,
+          "peak_process_vram_mib": 2185.0625,
+          "process_gtt_mib": 82.20703125,
+          "process_vram_mib": 2185.0625,
+          "source": "linux_drm_fdinfo"
+        },
+        "configured_quality": "high, capturedweatherlevel0, particles2048, adaptivegraphics0/changes0",
+        "render_budget_exported": false,
+        "render_budget": null,
+        "png_reviewed": true,
+        "png_notes": "NativePullman drivercab,wetwindshield,Hudsandcountryside visible. B2is2.54mfurther; no exactposition/pixel/worksetidentityclaim.",
+        "raw_duplicate_fd_records": 206,
+        "artifacts": {
+          "drive.external-memory.jsonl": "3d920dcecb0f92963af8dfd14cc91ca950bda9e568cf7d3dd640a2973114aa88",
+          "drive.log": "f338461b9a74a3210f038a5e052b1adf040842a6bd6e898a66392599db49464d",
+          "drive.memory-events.json": "95ab117118c04f6ccf03736f8fe2bb295e34c11a73f6f5b0b68ad7040b771fe8",
+          "drive.memory-summary.json": "7f45b7035179797e4a8ff958c9e255c98e7ee2ba43ea8fb7bd738cd417d3d7d1",
+          "drive.png": "db258d39eb5c940ce3ad66ef5bc70565bd9a40d786b9f62fe90e7c2843435604",
+          "drive.stream.json": "5db77a9f5be056a881c41e3144f9b87f1adc3aa8572b1dac44d43646879d2e96",
+          "drive.xvfb.log": "f50d16490a20825f1094125f77794585383b4954a9ff18f8c45d3a3aa1240c34"
+        }
+      },
+      {
+        "case": "B1",
+        "label": "candidate",
+        "binary_sha256": "5be5da7de14db73321303af2b310da7c8ca635b3dcd9c304fbe631ae0d8fd47d",
+        "identity": {
+          "pid": 212597,
+          "start_ticks": 1937994,
+          "exe": "<repository>/tmp/fifth40-continued-20261014/phase38-build2/phase38-viewer",
+          "observed_after_popen_utc": "2026-10-14T21:04:00.025162+00:00",
+          "observed_after_popen_monotonic_ns": 19379942169346
+        },
+        "sample_count": 96,
+        "actual_max_gap_s": 1.024438699,
+        "cadence_within_2s": true,
+        "coverage": {
+          "rss_bytes": {
+            "available": 96,
+            "missing": 0,
+            "observed_max_bytes": 2566246400
+          },
+          "vram_resident_bytes": {
+            "available": 95,
+            "missing": 1,
+            "observed_max_bytes": 2398834688
+          },
+          "vram_memory_bytes": {
+            "available": 95,
+            "missing": 1,
+            "observed_max_bytes": 2398834688
+          },
+          "vram_total_bytes": {
+            "available": 95,
+            "missing": 1,
+            "observed_max_bytes": 2398834688
+          },
+          "gtt_resident_bytes": {
+            "available": 95,
+            "missing": 1,
+            "observed_max_bytes": 21151744
+          },
+          "gtt_memory_bytes": {
+            "available": 95,
+            "missing": 1,
+            "observed_max_bytes": 21151744
+          },
+          "gtt_total_bytes": {
+            "available": 95,
+            "missing": 1,
+            "observed_max_bytes": 21151744
+          }
+        },
+        "whole_process_observed_maxima_bytes": {
+          "rss_bytes": 2566246400,
+          "vram_resident_bytes": 2398834688,
+          "vram_memory_bytes": 2398834688,
+          "vram_total_bytes": 2398834688,
+          "gtt_resident_bytes": 21151744,
+          "gtt_memory_bytes": 21151744,
+          "gtt_total_bytes": 21151744
+        },
+        "kernel_vmhwm_max_observed_bytes": 2610880512,
+        "public_helper_rss_peak_mib_4Hz": 2491.3,
+        "max_swap_observed_bytes": 0,
+        "phases": {
+          "preparation": {
+            "certain_sample_count": 32,
+            "possible_sample_count": 32,
+            "observed_maxima_bytes": {
+              "rss_bytes": {
+                "certain_samples": 2566246400,
+                "including_boundary_samples": 2566246400,
+                "certain_available_samples": 32,
+                "possible_available_samples": 32
+              },
+              "vram_resident_bytes": {
+                "certain_samples": 1984479232,
+                "including_boundary_samples": 1984479232,
+                "certain_available_samples": 31,
+                "possible_available_samples": 31
+              },
+              "vram_memory_bytes": {
+                "certain_samples": 1984479232,
+                "including_boundary_samples": 1984479232,
+                "certain_available_samples": 31,
+                "possible_available_samples": 31
+              },
+              "vram_total_bytes": {
+                "certain_samples": 1984479232,
+                "including_boundary_samples": 1984479232,
+                "certain_available_samples": 31,
+                "possible_available_samples": 31
+              },
+              "gtt_resident_bytes": {
+                "certain_samples": 21151744,
+                "including_boundary_samples": 21151744,
+                "certain_available_samples": 31,
+                "possible_available_samples": 31
+              },
+              "gtt_memory_bytes": {
+                "certain_samples": 21151744,
+                "including_boundary_samples": 21151744,
+                "certain_available_samples": 31,
+                "possible_available_samples": 31
+              },
+              "gtt_total_bytes": {
+                "certain_samples": 21151744,
+                "including_boundary_samples": 21151744,
+                "certain_available_samples": 31,
+                "possible_available_samples": 31
+              }
+            }
+          },
+          "running_streaming": {
+            "certain_sample_count": 63,
+            "possible_sample_count": 64,
+            "observed_maxima_bytes": {
+              "rss_bytes": {
+                "certain_samples": 2338062336,
+                "including_boundary_samples": 2338062336,
+                "certain_available_samples": 63,
+                "possible_available_samples": 64
+              },
+              "vram_resident_bytes": {
+                "certain_samples": 2398834688,
+                "including_boundary_samples": 2398834688,
+                "certain_available_samples": 63,
+                "possible_available_samples": 64
+              },
+              "vram_memory_bytes": {
+                "certain_samples": 2398834688,
+                "including_boundary_samples": 2398834688,
+                "certain_available_samples": 63,
+                "possible_available_samples": 64
+              },
+              "vram_total_bytes": {
+                "certain_samples": 2398834688,
+                "including_boundary_samples": 2398834688,
+                "certain_available_samples": 63,
+                "possible_available_samples": 64
+              },
+              "gtt_resident_bytes": {
+                "certain_samples": 21151744,
+                "including_boundary_samples": 21151744,
+                "certain_available_samples": 63,
+                "possible_available_samples": 64
+              },
+              "gtt_memory_bytes": {
+                "certain_samples": 21151744,
+                "including_boundary_samples": 21151744,
+                "certain_available_samples": 63,
+                "possible_available_samples": 64
+              },
+              "gtt_total_bytes": {
+                "certain_samples": 21151744,
+                "including_boundary_samples": 21151744,
+                "certain_available_samples": 63,
+                "possible_available_samples": 64
+              }
+            }
+          },
+          "capture_shutdown": {
+            "certain_sample_count": 0,
+            "possible_sample_count": 1,
+            "observed_maxima_bytes": {
+              "rss_bytes": {
+                "certain_samples": null,
+                "including_boundary_samples": 2259791872,
+                "certain_available_samples": 0,
+                "possible_available_samples": 1
+              },
+              "vram_resident_bytes": {
+                "certain_samples": null,
+                "including_boundary_samples": 2398834688,
+                "certain_available_samples": 0,
+                "possible_available_samples": 1
+              },
+              "vram_memory_bytes": {
+                "certain_samples": null,
+                "including_boundary_samples": 2398834688,
+                "certain_available_samples": 0,
+                "possible_available_samples": 1
+              },
+              "vram_total_bytes": {
+                "certain_samples": null,
+                "including_boundary_samples": 2398834688,
+                "certain_available_samples": 0,
+                "possible_available_samples": 1
+              },
+              "gtt_resident_bytes": {
+                "certain_samples": null,
+                "including_boundary_samples": 21151744,
+                "certain_available_samples": 0,
+                "possible_available_samples": 1
+              },
+              "gtt_memory_bytes": {
+                "certain_samples": null,
+                "including_boundary_samples": 21151744,
+                "certain_available_samples": 0,
+                "possible_available_samples": 1
+              },
+              "gtt_total_bytes": {
+                "certain_samples": null,
+                "including_boundary_samples": 21151744,
+                "certain_available_samples": 0,
+                "possible_available_samples": 1
+              }
+            }
+          }
+        },
+        "markers": {
+          "bootstrap": {
+            "log_line_paths_normalized": "[ 31900.9ms 18:04:31.944] openrailsrs-viewer3d: openrailsrs-viewer3d: progressive spawn complete — entering simulation",
+            "application_log_elapsed_ms": 31900.9,
+            "first_observed_utc": "2026-10-14T21:04:32.016691+00:00",
+            "lower_monotonic_ns": 19411682245529,
+            "upper_monotonic_ns": 19411933640874,
+            "observation_bracket_s": 0.251395345
+          },
+          "capture": {
+            "log_line_paths_normalized": "[ 95800.9ms 18:05:35.844] openrailsrs-viewer3d: openrailsrs-viewer3d: screenshot requested → <repository>/tmp/fifth40-continued-20261014/memory3913-v3-d9-vs38-four-cold/B1/drive.png",
+            "application_log_elapsed_ms": 95800.9,
+            "first_observed_utc": "2026-10-14T21:05:35.951424+00:00",
+            "lower_monotonic_ns": 19475616332630,
+            "upper_monotonic_ns": 19475868341635,
+            "observation_bracket_s": 0.252009005
+          }
+        },
+        "workset": {
+          "cpu_tiles": 30,
+          "gpu_tiles": 11,
+          "draw_calls": {
+            "grass": 0,
+            "opaque": 302,
+            "scope": "actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi",
+            "shadow": 223
+          },
+          "gpu_entities": 20954,
+          "odometer_m": 2500.165185885929
+        },
+        "raw_internal_graphics_memory": {
+          "active_device_pci": "0000:03:00.0",
+          "device_total_mib": 8176.0,
+          "device_used_mib": 2789.7265625,
+          "devices": [
+            {
+              "device_total_mib": 8176.0,
+              "device_used_mib": 2789.7265625,
+              "pci": "0000:03:00.0",
+              "process_gtt_mib": 20.171875,
+              "process_vram_mib": 2287.70703125
+            },
+            {
+              "device_total_mib": 512.0,
+              "device_used_mib": 490.921875,
+              "pci": "0000:0e:00.0",
+              "process_gtt_mib": 2.0,
+              "process_vram_mib": 0.01171875
+            }
+          ],
+          "peak_process_vram_mib": 2287.71875,
+          "process_gtt_mib": 22.171875,
+          "process_vram_mib": 2287.71875,
+          "source": "linux_drm_fdinfo"
+        },
+        "configured_quality": "high, capturedweatherlevel0, particles2048, adaptivegraphics0/changes0",
+        "render_budget_exported": true,
+        "render_budget": {
+          "memory_pressure": false,
+          "particles": 8192,
+          "passenger_lights": 8,
+          "station_lights": 24,
+          "train_lights": 8,
+          "upload_mib": 8,
+          "vegetation_divisor": 1
+        },
+        "png_reviewed": true,
+        "png_notes": "NativePullman drivercab,wetwindshield,Hudsandcountryside visible. B2is2.54mfurther; no exactposition/pixel/worksetidentityclaim.",
+        "raw_duplicate_fd_records": 190,
+        "artifacts": {
+          "drive.external-memory.jsonl": "ecedef6790151ade3bfd0559cb052426b21fd8151649b93c06845e0e5704ff7c",
+          "drive.log": "755e17253b94daac2274f3bcdea7a0954b6f4a56c96eb6af2f2005b00244313d",
+          "drive.memory-events.json": "c912badfef09542840cf86c1a343d8baf309ef09d588e73e5ef512b0a574f461",
+          "drive.memory-summary.json": "3d5563c4de9984d0721c0343902b4a0e9cdb738ddc56cebb72341d83c3fdbedf",
+          "drive.png": "e757322a7444bb3c1c2899925fdb54585c4ad815a216c4dd5ae724a71f9b5f4e",
+          "drive.stream.json": "0ece709e89cc87f8535e0e93ae45e65079e7eb9618c7167dcce3157d75f1f72d",
+          "drive.xvfb.log": "abc77a678031c644d138bea831b28577c4729d93c2a5ca0ae538756570ab10fd"
+        }
+      },
+      {
+        "case": "B2",
+        "label": "candidate",
+        "binary_sha256": "5be5da7de14db73321303af2b310da7c8ca635b3dcd9c304fbe631ae0d8fd47d",
+        "identity": {
+          "pid": 213562,
+          "start_ticks": 1947648,
+          "exe": "<repository>/tmp/fifth40-continued-20261014/phase38-build2/phase38-viewer",
+          "observed_after_popen_utc": "2026-10-14T21:05:36.571773+00:00",
+          "observed_after_popen_monotonic_ns": 19476488824701
+        },
+        "sample_count": 97,
+        "actual_max_gap_s": 1.019544828,
+        "cadence_within_2s": true,
+        "coverage": {
+          "rss_bytes": {
+            "available": 97,
+            "missing": 0,
+            "observed_max_bytes": 2374336512
+          },
+          "vram_resident_bytes": {
+            "available": 96,
+            "missing": 1,
+            "observed_max_bytes": 2430636032
+          },
+          "vram_memory_bytes": {
+            "available": 96,
+            "missing": 1,
+            "observed_max_bytes": 2430636032
+          },
+          "vram_total_bytes": {
+            "available": 96,
+            "missing": 1,
+            "observed_max_bytes": 2430636032
+          },
+          "gtt_resident_bytes": {
+            "available": 96,
+            "missing": 1,
+            "observed_max_bytes": 21188608
+          },
+          "gtt_memory_bytes": {
+            "available": 96,
+            "missing": 1,
+            "observed_max_bytes": 21188608
+          },
+          "gtt_total_bytes": {
+            "available": 96,
+            "missing": 1,
+            "observed_max_bytes": 21188608
+          }
+        },
+        "whole_process_observed_maxima_bytes": {
+          "rss_bytes": 2374336512,
+          "vram_resident_bytes": 2430636032,
+          "vram_memory_bytes": 2430636032,
+          "vram_total_bytes": 2430636032,
+          "gtt_resident_bytes": 21188608,
+          "gtt_memory_bytes": 21188608,
+          "gtt_total_bytes": 21188608
+        },
+        "kernel_vmhwm_max_observed_bytes": 2374975488,
+        "public_helper_rss_peak_mib_4Hz": 2265.8,
+        "max_swap_observed_bytes": 0,
+        "phases": {
+          "preparation": {
+            "certain_sample_count": 32,
+            "possible_sample_count": 32,
+            "observed_maxima_bytes": {
+              "rss_bytes": {
+                "certain_samples": 2374336512,
+                "including_boundary_samples": 2374336512,
+                "certain_available_samples": 32,
+                "possible_available_samples": 32
+              },
+              "vram_resident_bytes": {
+                "certain_samples": 2015125504,
+                "including_boundary_samples": 2015125504,
+                "certain_available_samples": 31,
+                "possible_available_samples": 31
+              },
+              "vram_memory_bytes": {
+                "certain_samples": 2015125504,
+                "including_boundary_samples": 2015125504,
+                "certain_available_samples": 31,
+                "possible_available_samples": 31
+              },
+              "vram_total_bytes": {
+                "certain_samples": 2015125504,
+                "including_boundary_samples": 2015125504,
+                "certain_available_samples": 31,
+                "possible_available_samples": 31
+              },
+              "gtt_resident_bytes": {
+                "certain_samples": 21188608,
+                "including_boundary_samples": 21188608,
+                "certain_available_samples": 31,
+                "possible_available_samples": 31
+              },
+              "gtt_memory_bytes": {
+                "certain_samples": 21188608,
+                "including_boundary_samples": 21188608,
+                "certain_available_samples": 31,
+                "possible_available_samples": 31
+              },
+              "gtt_total_bytes": {
+                "certain_samples": 21188608,
+                "including_boundary_samples": 21188608,
+                "certain_available_samples": 31,
+                "possible_available_samples": 31
+              }
+            }
+          },
+          "running_streaming": {
+            "certain_sample_count": 64,
+            "possible_sample_count": 65,
+            "observed_maxima_bytes": {
+              "rss_bytes": {
+                "certain_samples": 2080468992,
+                "including_boundary_samples": 2081259520,
+                "certain_available_samples": 64,
+                "possible_available_samples": 65
+              },
+              "vram_resident_bytes": {
+                "certain_samples": 2430636032,
+                "including_boundary_samples": 2430636032,
+                "certain_available_samples": 64,
+                "possible_available_samples": 65
+              },
+              "vram_memory_bytes": {
+                "certain_samples": 2430636032,
+                "including_boundary_samples": 2430636032,
+                "certain_available_samples": 64,
+                "possible_available_samples": 65
+              },
+              "vram_total_bytes": {
+                "certain_samples": 2430636032,
+                "including_boundary_samples": 2430636032,
+                "certain_available_samples": 64,
+                "possible_available_samples": 65
+              },
+              "gtt_resident_bytes": {
+                "certain_samples": 21188608,
+                "including_boundary_samples": 21188608,
+                "certain_available_samples": 64,
+                "possible_available_samples": 65
+              },
+              "gtt_memory_bytes": {
+                "certain_samples": 21188608,
+                "including_boundary_samples": 21188608,
+                "certain_available_samples": 64,
+                "possible_available_samples": 65
+              },
+              "gtt_total_bytes": {
+                "certain_samples": 21188608,
+                "including_boundary_samples": 21188608,
+                "certain_available_samples": 64,
+                "possible_available_samples": 65
+              }
+            }
+          },
+          "capture_shutdown": {
+            "certain_sample_count": 0,
+            "possible_sample_count": 1,
+            "observed_maxima_bytes": {
+              "rss_bytes": {
+                "certain_samples": null,
+                "including_boundary_samples": 2081259520,
+                "certain_available_samples": 0,
+                "possible_available_samples": 1
+              },
+              "vram_resident_bytes": {
+                "certain_samples": null,
+                "including_boundary_samples": 2430472192,
+                "certain_available_samples": 0,
+                "possible_available_samples": 1
+              },
+              "vram_memory_bytes": {
+                "certain_samples": null,
+                "including_boundary_samples": 2430472192,
+                "certain_available_samples": 0,
+                "possible_available_samples": 1
+              },
+              "vram_total_bytes": {
+                "certain_samples": null,
+                "including_boundary_samples": 2430472192,
+                "certain_available_samples": 0,
+                "possible_available_samples": 1
+              },
+              "gtt_resident_bytes": {
+                "certain_samples": null,
+                "including_boundary_samples": 21188608,
+                "certain_available_samples": 0,
+                "possible_available_samples": 1
+              },
+              "gtt_memory_bytes": {
+                "certain_samples": null,
+                "including_boundary_samples": 21188608,
+                "certain_available_samples": 0,
+                "possible_available_samples": 1
+              },
+              "gtt_total_bytes": {
+                "certain_samples": null,
+                "including_boundary_samples": 21188608,
+                "certain_available_samples": 0,
+                "possible_available_samples": 1
+              }
+            }
+          }
+        },
+        "markers": {
+          "bootstrap": {
+            "log_line_paths_normalized": "[ 31545.3ms 18:06:08.122] openrailsrs-viewer3d: openrailsrs-viewer3d: progressive spawn complete — entering simulation",
+            "application_log_elapsed_ms": 31545.3,
+            "first_observed_utc": "2026-10-14T21:06:08.302072+00:00",
+            "lower_monotonic_ns": 19507967853506,
+            "upper_monotonic_ns": 19508219020433,
+            "observation_bracket_s": 0.251166927
+          },
+          "capture": {
+            "log_line_paths_normalized": "[ 96635.8ms 18:07:13.212] openrailsrs-viewer3d: openrailsrs-viewer3d: screenshot requested → <repository>/tmp/fifth40-continued-20261014/memory3913-v3-d9-vs38-four-cold/B2/drive.png",
+            "application_log_elapsed_ms": 96635.8,
+            "first_observed_utc": "2026-10-14T21:07:13.317083+00:00",
+            "lower_monotonic_ns": 19572981675287,
+            "upper_monotonic_ns": 19573233189358,
+            "observation_bracket_s": 0.251514071
+          }
+        },
+        "workset": {
+          "cpu_tiles": 30,
+          "gpu_tiles": 11,
+          "draw_calls": {
+            "grass": 0,
+            "opaque": 328,
+            "scope": "actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi",
+            "shadow": 252
+          },
+          "gpu_entities": 20878,
+          "odometer_m": 2502.706464176422
+        },
+        "raw_internal_graphics_memory": {
+          "active_device_pci": "0000:03:00.0",
+          "device_total_mib": 8176.0,
+          "device_used_mib": 2819.8984375,
+          "devices": [
+            {
+              "device_total_mib": 8176.0,
+              "device_used_mib": 2819.8984375,
+              "pci": "0000:03:00.0",
+              "process_gtt_mib": 20.20703125,
+              "process_vram_mib": 2317.87890625
+            },
+            {
+              "device_total_mib": 512.0,
+              "device_used_mib": 467.0,
+              "pci": "0000:0e:00.0",
+              "process_gtt_mib": 2.0,
+              "process_vram_mib": 0.01171875
+            }
+          ],
+          "peak_process_vram_mib": 2317.890625,
+          "process_gtt_mib": 22.20703125,
+          "process_vram_mib": 2317.890625,
+          "source": "linux_drm_fdinfo"
+        },
+        "configured_quality": "high, capturedweatherlevel0, particles2048, adaptivegraphics0/changes0",
+        "render_budget_exported": true,
+        "render_budget": {
+          "memory_pressure": false,
+          "particles": 8192,
+          "passenger_lights": 8,
+          "station_lights": 24,
+          "train_lights": 8,
+          "upload_mib": 8,
+          "vegetation_divisor": 1
+        },
+        "png_reviewed": true,
+        "png_notes": "NativePullman drivercab,wetwindshield,Hudsandcountryside visible. B2is2.54mfurther; no exactposition/pixel/worksetidentityclaim.",
+        "raw_duplicate_fd_records": 192,
+        "artifacts": {
+          "drive.external-memory.jsonl": "d28bcc5b6c39180058109a64d1d6c5779c3482471cb33f39ffb7c130ef142ec3",
+          "drive.log": "60ddb8ebe47d62a6c850d249af5a6b70e81dc2a4f4e6180decbd12976b89b626",
+          "drive.memory-events.json": "9f4adf739d999bec323c77f1368e2b20e6279d36817d23edd062a8da5c658536",
+          "drive.memory-summary.json": "0c5f8eb32145d54737ca28207dd07552e6ff256e93a949292c6d6f8521105926",
+          "drive.png": "d3b2b354fb66cf9ce72896fec8a5b240508aa766023e030559ed9b9c53f1b625",
+          "drive.stream.json": "575c9510bec2e4b81d5d840e7e49fd2545615b0903ae0e7f9b530d2237548dfe",
+          "drive.xvfb.log": "fc4451bf856e2acde6a831806445e65814346efffb272dc1c9b0e7ae6dde6f47"
+        }
+      },
+      {
+        "case": "A2",
+        "label": "baseline",
+        "binary_sha256": "531ec4d91cfa3391f1f24a8d62d8abef026603609528462efacbb8ae7a096e08",
+        "identity": {
+          "pid": 214633,
+          "start_ticks": 1957400,
+          "exe": "<repository>/tmp/fifth40-continued-20261014/baseline-d9-viewer",
+          "observed_after_popen_utc": "2026-10-14T21:07:14.083921+00:00",
+          "observed_after_popen_monotonic_ns": 19574000918202
+        },
+        "sample_count": 107,
+        "actual_max_gap_s": 1.018510639,
+        "cadence_within_2s": true,
+        "coverage": {
+          "rss_bytes": {
+            "available": 107,
+            "missing": 0,
+            "observed_max_bytes": 2471301120
+          },
+          "vram_resident_bytes": {
+            "available": 103,
+            "missing": 4,
+            "observed_max_bytes": 2291515392
+          },
+          "vram_memory_bytes": {
+            "available": 103,
+            "missing": 4,
+            "observed_max_bytes": 2291515392
+          },
+          "vram_total_bytes": {
+            "available": 103,
+            "missing": 4,
+            "observed_max_bytes": 2291515392
+          },
+          "gtt_resident_bytes": {
+            "available": 103,
+            "missing": 4,
+            "observed_max_bytes": 84103168
+          },
+          "gtt_memory_bytes": {
+            "available": 103,
+            "missing": 4,
+            "observed_max_bytes": 84103168
+          },
+          "gtt_total_bytes": {
+            "available": 103,
+            "missing": 4,
+            "observed_max_bytes": 84103168
+          }
+        },
+        "whole_process_observed_maxima_bytes": {
+          "rss_bytes": 2471301120,
+          "vram_resident_bytes": 2291515392,
+          "vram_memory_bytes": 2291515392,
+          "vram_total_bytes": 2291515392,
+          "gtt_resident_bytes": 84103168,
+          "gtt_memory_bytes": 84103168,
+          "gtt_total_bytes": 84103168
+        },
+        "kernel_vmhwm_max_observed_bytes": 2471301120,
+        "public_helper_rss_peak_mib_4Hz": 2356.8,
+        "max_swap_observed_bytes": 0,
+        "phases": {
+          "preparation": {
+            "certain_sample_count": 42,
+            "possible_sample_count": 42,
+            "observed_maxima_bytes": {
+              "rss_bytes": {
+                "certain_samples": 2471301120,
+                "including_boundary_samples": 2471301120,
+                "certain_available_samples": 42,
+                "possible_available_samples": 42
+              },
+              "vram_resident_bytes": {
+                "certain_samples": 1987612672,
+                "including_boundary_samples": 1987612672,
+                "certain_available_samples": 38,
+                "possible_available_samples": 38
+              },
+              "vram_memory_bytes": {
+                "certain_samples": 1987612672,
+                "including_boundary_samples": 1987612672,
+                "certain_available_samples": 38,
+                "possible_available_samples": 38
+              },
+              "vram_total_bytes": {
+                "certain_samples": 1987612672,
+                "including_boundary_samples": 1987612672,
+                "certain_available_samples": 38,
+                "possible_available_samples": 38
+              },
+              "gtt_resident_bytes": {
+                "certain_samples": 84103168,
+                "including_boundary_samples": 84103168,
+                "certain_available_samples": 38,
+                "possible_available_samples": 38
+              },
+              "gtt_memory_bytes": {
+                "certain_samples": 84103168,
+                "including_boundary_samples": 84103168,
+                "certain_available_samples": 38,
+                "possible_available_samples": 38
+              },
+              "gtt_total_bytes": {
+                "certain_samples": 84103168,
+                "including_boundary_samples": 84103168,
+                "certain_available_samples": 38,
+                "possible_available_samples": 38
+              }
+            }
+          },
+          "running_streaming": {
+            "certain_sample_count": 62,
+            "possible_sample_count": 63,
+            "observed_maxima_bytes": {
+              "rss_bytes": {
+                "certain_samples": 2285137920,
+                "including_boundary_samples": 2285137920,
+                "certain_available_samples": 62,
+                "possible_available_samples": 63
+              },
+              "vram_resident_bytes": {
+                "certain_samples": 2291511296,
+                "including_boundary_samples": 2291511296,
+                "certain_available_samples": 62,
+                "possible_available_samples": 63
+              },
+              "vram_memory_bytes": {
+                "certain_samples": 2291511296,
+                "including_boundary_samples": 2291511296,
+                "certain_available_samples": 62,
+                "possible_available_samples": 63
+              },
+              "vram_total_bytes": {
+                "certain_samples": 2291511296,
+                "including_boundary_samples": 2291511296,
+                "certain_available_samples": 62,
+                "possible_available_samples": 63
+              },
+              "gtt_resident_bytes": {
+                "certain_samples": 84103168,
+                "including_boundary_samples": 84103168,
+                "certain_available_samples": 62,
+                "possible_available_samples": 63
+              },
+              "gtt_memory_bytes": {
+                "certain_samples": 84103168,
+                "including_boundary_samples": 84103168,
+                "certain_available_samples": 62,
+                "possible_available_samples": 63
+              },
+              "gtt_total_bytes": {
+                "certain_samples": 84103168,
+                "including_boundary_samples": 84103168,
+                "certain_available_samples": 62,
+                "possible_available_samples": 63
+              }
+            }
+          },
+          "capture_shutdown": {
+            "certain_sample_count": 2,
+            "possible_sample_count": 3,
+            "observed_maxima_bytes": {
+              "rss_bytes": {
+                "certain_samples": 2285137920,
+                "including_boundary_samples": 2285137920,
+                "certain_available_samples": 2,
+                "possible_available_samples": 3
+              },
+              "vram_resident_bytes": {
+                "certain_samples": 2291515392,
+                "including_boundary_samples": 2291515392,
+                "certain_available_samples": 2,
+                "possible_available_samples": 3
+              },
+              "vram_memory_bytes": {
+                "certain_samples": 2291515392,
+                "including_boundary_samples": 2291515392,
+                "certain_available_samples": 2,
+                "possible_available_samples": 3
+              },
+              "vram_total_bytes": {
+                "certain_samples": 2291515392,
+                "including_boundary_samples": 2291515392,
+                "certain_available_samples": 2,
+                "possible_available_samples": 3
+              },
+              "gtt_resident_bytes": {
+                "certain_samples": 84103168,
+                "including_boundary_samples": 84103168,
+                "certain_available_samples": 2,
+                "possible_available_samples": 3
+              },
+              "gtt_memory_bytes": {
+                "certain_samples": 84103168,
+                "including_boundary_samples": 84103168,
+                "certain_available_samples": 2,
+                "possible_available_samples": 3
+              },
+              "gtt_total_bytes": {
+                "certain_samples": 84103168,
+                "including_boundary_samples": 84103168,
+                "certain_available_samples": 2,
+                "possible_available_samples": 3
+              }
+            }
+          }
+        },
+        "markers": {
+          "bootstrap": {
+            "log_line_paths_normalized": "[ 41646.6ms 18:07:55.736] openrailsrs-viewer3d: openrailsrs-viewer3d: progressive spawn complete — entering simulation",
+            "application_log_elapsed_ms": 41646.6,
+            "first_observed_utc": "2026-10-14T21:07:55.877991+00:00",
+            "lower_monotonic_ns": 19615543583890,
+            "upper_monotonic_ns": 19615794953882,
+            "observation_bracket_s": 0.251369992
+          },
+          "capture": {
+            "log_line_paths_normalized": "[104820.7ms 18:08:58.910] openrailsrs-viewer3d: openrailsrs-viewer3d: screenshot requested → <repository>/tmp/fifth40-continued-20261014/memory3913-v3-d9-vs38-four-cold/A2/drive.png",
+            "application_log_elapsed_ms": 104820.7,
+            "first_observed_utc": "2026-10-14T21:08:59.059040+00:00",
+            "lower_monotonic_ns": 19678723872664,
+            "upper_monotonic_ns": 19678976004399,
+            "observation_bracket_s": 0.252131735
+          }
+        },
+        "workset": {
+          "cpu_tiles": 30,
+          "gpu_tiles": 8,
+          "draw_calls": {
+            "grass": 0,
+            "opaque": 314,
+            "scope": "actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi",
+            "shadow": 303
+          },
+          "gpu_entities": 15729,
+          "odometer_m": 2500.165185885929
+        },
+        "raw_internal_graphics_memory": {
+          "device_total_mib": 8688.0,
+          "device_used_mib": 3154.3046875,
+          "peak_process_vram_mib": 2185.3671875,
+          "process_gtt_mib": 82.20703125,
+          "process_vram_mib": 2185.3671875,
+          "source": "linux_drm_fdinfo"
+        },
+        "configured_quality": "high, capturedweatherlevel0, particles2048, adaptivegraphics0/changes0",
+        "render_budget_exported": false,
+        "render_budget": null,
+        "png_reviewed": true,
+        "png_notes": "NativePullman drivercab,wetwindshield,Hudsandcountryside visible. B2is2.54mfurther; no exactposition/pixel/worksetidentityclaim.",
+        "raw_duplicate_fd_records": 212,
+        "artifacts": {
+          "drive.external-memory.jsonl": "64fc162b29ef22c3b1c634c259a51d4ca1bacdad8ba8792b64c2c426760319c8",
+          "drive.log": "cdedff1a87c9f1e4af07df746ef9f18d3f5f5b2937308105af086bee0f2d3f95",
+          "drive.memory-events.json": "61633658a5adaab2756c9c95fe1ab803a236d52a95db6f7ade8841cd19cb664a",
+          "drive.memory-summary.json": "0a3c1b8184c6b7808bf5d67df01d6902f68c8c9176e4e9cb7203bc0ae7ed47ac",
+          "drive.png": "d84a028d34377d77b273d3569a9956a0823c4393251278ca64f5d83d6ebe32ab",
+          "drive.stream.json": "3330c3527aee3746454e3f41aa3a8f75d6be6f774a9f049bc1313d588b707bba",
+          "drive.xvfb.log": "3e854710d4ede9945c4937c5998fa3ae0e340cc8872dd25ee462b29c06ffaefc"
+        }
+      }
+    ],
+    "paired_observed_deltas": [
+      {
+        "baseline": "A1",
+        "candidate": "B1",
+        "whole_launch": {
+          "rss_bytes": {
+            "baseline_bytes": 2516779008,
+            "candidate_bytes": 2566246400,
+            "delta_bytes": 49467392
+          },
+          "vram_resident_bytes": {
+            "baseline_bytes": 2291195904,
+            "candidate_bytes": 2398834688,
+            "delta_bytes": 107638784
+          },
+          "vram_memory_bytes": {
+            "baseline_bytes": 2291195904,
+            "candidate_bytes": 2398834688,
+            "delta_bytes": 107638784
+          },
+          "vram_total_bytes": {
+            "baseline_bytes": 2291195904,
+            "candidate_bytes": 2398834688,
+            "delta_bytes": 107638784
+          },
+          "gtt_resident_bytes": {
+            "baseline_bytes": 84103168,
+            "candidate_bytes": 21151744,
+            "delta_bytes": -62951424
+          },
+          "gtt_memory_bytes": {
+            "baseline_bytes": 84103168,
+            "candidate_bytes": 21151744,
+            "delta_bytes": -62951424
+          },
+          "gtt_total_bytes": {
+            "baseline_bytes": 84103168,
+            "candidate_bytes": 21151744,
+            "delta_bytes": -62951424
+          }
+        },
+        "phase_deltas": {
+          "preparation": {
+            "rss_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 2516779008,
+                "candidate_bytes": 2566246400,
+                "delta_bytes": 49467392
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 2516779008,
+                "candidate_bytes": 2566246400,
+                "delta_bytes": 49467392
+              }
+            },
+            "vram_resident_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 1989632000,
+                "candidate_bytes": 1984479232,
+                "delta_bytes": -5152768
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 1991467008,
+                "candidate_bytes": 1984479232,
+                "delta_bytes": -6987776
+              }
+            },
+            "vram_memory_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 1989632000,
+                "candidate_bytes": 1984479232,
+                "delta_bytes": -5152768
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 1991467008,
+                "candidate_bytes": 1984479232,
+                "delta_bytes": -6987776
+              }
+            },
+            "vram_total_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 1989632000,
+                "candidate_bytes": 1984479232,
+                "delta_bytes": -5152768
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 1991467008,
+                "candidate_bytes": 1984479232,
+                "delta_bytes": -6987776
+              }
+            },
+            "gtt_resident_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21151744,
+                "delta_bytes": -62951424
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21151744,
+                "delta_bytes": -62951424
+              }
+            },
+            "gtt_memory_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21151744,
+                "delta_bytes": -62951424
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21151744,
+                "delta_bytes": -62951424
+              }
+            },
+            "gtt_total_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21151744,
+                "delta_bytes": -62951424
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21151744,
+                "delta_bytes": -62951424
+              }
+            }
+          },
+          "running_streaming": {
+            "rss_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 2296606720,
+                "candidate_bytes": 2338062336,
+                "delta_bytes": 41455616
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 2296606720,
+                "candidate_bytes": 2338062336,
+                "delta_bytes": 41455616
+              }
+            },
+            "vram_resident_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 2291191808,
+                "candidate_bytes": 2398834688,
+                "delta_bytes": 107642880
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 2291191808,
+                "candidate_bytes": 2398834688,
+                "delta_bytes": 107642880
+              }
+            },
+            "vram_memory_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 2291191808,
+                "candidate_bytes": 2398834688,
+                "delta_bytes": 107642880
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 2291191808,
+                "candidate_bytes": 2398834688,
+                "delta_bytes": 107642880
+              }
+            },
+            "vram_total_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 2291191808,
+                "candidate_bytes": 2398834688,
+                "delta_bytes": 107642880
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 2291191808,
+                "candidate_bytes": 2398834688,
+                "delta_bytes": 107642880
+              }
+            },
+            "gtt_resident_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21151744,
+                "delta_bytes": -62951424
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21151744,
+                "delta_bytes": -62951424
+              }
+            },
+            "gtt_memory_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21151744,
+                "delta_bytes": -62951424
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21151744,
+                "delta_bytes": -62951424
+              }
+            },
+            "gtt_total_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21151744,
+                "delta_bytes": -62951424
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21151744,
+                "delta_bytes": -62951424
+              }
+            }
+          },
+          "capture_shutdown": {
+            "rss_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 2292535296,
+                "candidate_bytes": null,
+                "delta_bytes": null
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 2292535296,
+                "candidate_bytes": 2259791872,
+                "delta_bytes": -32743424
+              }
+            },
+            "vram_resident_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 2291195904,
+                "candidate_bytes": null,
+                "delta_bytes": null
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 2291195904,
+                "candidate_bytes": 2398834688,
+                "delta_bytes": 107638784
+              }
+            },
+            "vram_memory_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 2291195904,
+                "candidate_bytes": null,
+                "delta_bytes": null
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 2291195904,
+                "candidate_bytes": 2398834688,
+                "delta_bytes": 107638784
+              }
+            },
+            "vram_total_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 2291195904,
+                "candidate_bytes": null,
+                "delta_bytes": null
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 2291195904,
+                "candidate_bytes": 2398834688,
+                "delta_bytes": 107638784
+              }
+            },
+            "gtt_resident_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": null,
+                "delta_bytes": null
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21151744,
+                "delta_bytes": -62951424
+              }
+            },
+            "gtt_memory_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": null,
+                "delta_bytes": null
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21151744,
+                "delta_bytes": -62951424
+              }
+            },
+            "gtt_total_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": null,
+                "delta_bytes": null
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21151744,
+                "delta_bytes": -62951424
+              }
+            }
+          }
+        },
+        "kernel_vmhwm_delta_observed_bytes": 94101504,
+        "public_helper_rss_peak_delta_mib": 91.10000000000036
+      },
+      {
+        "baseline": "A2",
+        "candidate": "B2",
+        "whole_launch": {
+          "rss_bytes": {
+            "baseline_bytes": 2471301120,
+            "candidate_bytes": 2374336512,
+            "delta_bytes": -96964608
+          },
+          "vram_resident_bytes": {
+            "baseline_bytes": 2291515392,
+            "candidate_bytes": 2430636032,
+            "delta_bytes": 139120640
+          },
+          "vram_memory_bytes": {
+            "baseline_bytes": 2291515392,
+            "candidate_bytes": 2430636032,
+            "delta_bytes": 139120640
+          },
+          "vram_total_bytes": {
+            "baseline_bytes": 2291515392,
+            "candidate_bytes": 2430636032,
+            "delta_bytes": 139120640
+          },
+          "gtt_resident_bytes": {
+            "baseline_bytes": 84103168,
+            "candidate_bytes": 21188608,
+            "delta_bytes": -62914560
+          },
+          "gtt_memory_bytes": {
+            "baseline_bytes": 84103168,
+            "candidate_bytes": 21188608,
+            "delta_bytes": -62914560
+          },
+          "gtt_total_bytes": {
+            "baseline_bytes": 84103168,
+            "candidate_bytes": 21188608,
+            "delta_bytes": -62914560
+          }
+        },
+        "phase_deltas": {
+          "preparation": {
+            "rss_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 2471301120,
+                "candidate_bytes": 2374336512,
+                "delta_bytes": -96964608
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 2471301120,
+                "candidate_bytes": 2374336512,
+                "delta_bytes": -96964608
+              }
+            },
+            "vram_resident_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 1987612672,
+                "candidate_bytes": 2015125504,
+                "delta_bytes": 27512832
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 1987612672,
+                "candidate_bytes": 2015125504,
+                "delta_bytes": 27512832
+              }
+            },
+            "vram_memory_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 1987612672,
+                "candidate_bytes": 2015125504,
+                "delta_bytes": 27512832
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 1987612672,
+                "candidate_bytes": 2015125504,
+                "delta_bytes": 27512832
+              }
+            },
+            "vram_total_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 1987612672,
+                "candidate_bytes": 2015125504,
+                "delta_bytes": 27512832
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 1987612672,
+                "candidate_bytes": 2015125504,
+                "delta_bytes": 27512832
+              }
+            },
+            "gtt_resident_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21188608,
+                "delta_bytes": -62914560
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21188608,
+                "delta_bytes": -62914560
+              }
+            },
+            "gtt_memory_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21188608,
+                "delta_bytes": -62914560
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21188608,
+                "delta_bytes": -62914560
+              }
+            },
+            "gtt_total_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21188608,
+                "delta_bytes": -62914560
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21188608,
+                "delta_bytes": -62914560
+              }
+            }
+          },
+          "running_streaming": {
+            "rss_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 2285137920,
+                "candidate_bytes": 2080468992,
+                "delta_bytes": -204668928
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 2285137920,
+                "candidate_bytes": 2081259520,
+                "delta_bytes": -203878400
+              }
+            },
+            "vram_resident_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 2291511296,
+                "candidate_bytes": 2430636032,
+                "delta_bytes": 139124736
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 2291511296,
+                "candidate_bytes": 2430636032,
+                "delta_bytes": 139124736
+              }
+            },
+            "vram_memory_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 2291511296,
+                "candidate_bytes": 2430636032,
+                "delta_bytes": 139124736
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 2291511296,
+                "candidate_bytes": 2430636032,
+                "delta_bytes": 139124736
+              }
+            },
+            "vram_total_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 2291511296,
+                "candidate_bytes": 2430636032,
+                "delta_bytes": 139124736
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 2291511296,
+                "candidate_bytes": 2430636032,
+                "delta_bytes": 139124736
+              }
+            },
+            "gtt_resident_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21188608,
+                "delta_bytes": -62914560
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21188608,
+                "delta_bytes": -62914560
+              }
+            },
+            "gtt_memory_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21188608,
+                "delta_bytes": -62914560
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21188608,
+                "delta_bytes": -62914560
+              }
+            },
+            "gtt_total_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21188608,
+                "delta_bytes": -62914560
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21188608,
+                "delta_bytes": -62914560
+              }
+            }
+          },
+          "capture_shutdown": {
+            "rss_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 2285137920,
+                "candidate_bytes": null,
+                "delta_bytes": null
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 2285137920,
+                "candidate_bytes": 2081259520,
+                "delta_bytes": -203878400
+              }
+            },
+            "vram_resident_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 2291515392,
+                "candidate_bytes": null,
+                "delta_bytes": null
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 2291515392,
+                "candidate_bytes": 2430472192,
+                "delta_bytes": 138956800
+              }
+            },
+            "vram_memory_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 2291515392,
+                "candidate_bytes": null,
+                "delta_bytes": null
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 2291515392,
+                "candidate_bytes": 2430472192,
+                "delta_bytes": 138956800
+              }
+            },
+            "vram_total_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 2291515392,
+                "candidate_bytes": null,
+                "delta_bytes": null
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 2291515392,
+                "candidate_bytes": 2430472192,
+                "delta_bytes": 138956800
+              }
+            },
+            "gtt_resident_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": null,
+                "delta_bytes": null
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21188608,
+                "delta_bytes": -62914560
+              }
+            },
+            "gtt_memory_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": null,
+                "delta_bytes": null
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21188608,
+                "delta_bytes": -62914560
+              }
+            },
+            "gtt_total_bytes": {
+              "certain_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": null,
+                "delta_bytes": null
+              },
+              "including_boundary_samples": {
+                "baseline_bytes": 84103168,
+                "candidate_bytes": 21188608,
+                "delta_bytes": -62914560
+              }
+            }
+          }
+        },
+        "kernel_vmhwm_delta_observed_bytes": -96325632,
+        "public_helper_rss_peak_delta_mib": -91.0
+      }
+    ],
+    "checkpoint_odometer_m": {
+      "A1": 2500.165185885929,
+      "B1": 2500.165185885929,
+      "B2": 2502.706464176422,
+      "A2": 2500.165185885929
+    },
+    "checkpoint_span_m": 2.5412782904927553,
+    "checkpoint_span_percent_of2500": 0.1016511316197102,
+    "limits": [
+      "Four new fresh-private-cache coldlaunches, two perversion, ABBA order. OS pagecache notflushed; no warmclaim. V1unexecuted/V2rejected retained; no cases reused or selected away.",
+      "Observed maxima at1Hz with measuredcadence, not completephysicalpeaks. KernelVmHWM observedprocesshighwater and publichelper4HzRSS are separatelylabelled.",
+      "Resident/memory/total VRAM/GTT counters remainseparate and peractualsamePID/startticks/selectedPCI. No summingadapters, no missing→0, no capacity normalization. RawallDRMfds includingduplicates/unidentified retained; first identifiedclient countedonce.",
+      "Phasebrackets onlyclassify observed samples. Perphase certain/inclusive maxima do notbound physicalpeak betweenobservations. Capture/readback/shutdown retained separately; no phasecoverage remainsnull.",
+      "Candidate observedVRAM is higher and GTT lower; RSS directiondiffers betweenpairs. No general memorysaving, causality, allroutes/hardware or FPSclaim.",
+      "IG7200 with changingworkload was declaredbackground, plus ambientuserdesktop/lightCPU/IO. PerPID RXcounters exclude itsallocations but systempressure/scheduling remainpossibleinfluences.",
+      "Worksets differ: D9 GPUterrain8 versuscandidate11 plusentity/drawcounts retained. B2target2502.706464m versusothers2500.165186m (2.541278m/about0.102%); allcaptured at>=2500, no exactposition/pixel/worksetidentity.",
+      "render_budget notexported bycapturereport remainsnull. Configuredhigh and exportedqualitylevel0/2048/adaptive0 observed; no time-resolvedinternalqualityhistory invented.",
+      "This is separatememoryevidence, not replacementofABBAperformance, not7200acceptance and no automatic issueclosure."
+    ]
+  },
+  "budget_scope_correction": {
+    "schema": 1,
+    "status": "documentation_addendum_raw_budget_scope_corrected_no_new_measurements",
+    "reviewed_utc": "2026-10-14T21:17:41.729743+00:00",
+    "original_review_path": "tmp/fifth40-continued-20261014/memory3913-v3-reviewed.json",
+    "original_review_sha256": "1caa851c1dc6843d32b460a7fddcc67cdfc4f9bb7cfff5bfed668da5a315524e",
+    "preserved_original_review": true,
+    "correction": {
+      "original_limits_index": 7,
+      "original_text": "render_budget notexported bycapturereport remainsnull. Configuredhigh and exportedqualitylevel0/2048/adaptive0 observed; no time-resolvedinternalqualityhistory invented.",
+      "replacement_text": "The filtered runner rows omit render_budget. Full on-disk drive.stream.json exports the candidate global render budget for B1/B2 (particles8192, lights8/24/8, upload8MiB, vegetation divisor1, memory_pressurefalse); baseline D9 does not export it and remains null with a missing-schema reason. All four captured weather reports independently record quality level0, GPU capacity2048 and GPU particles2048. These are checkpoint observations, not time-resolved quality history.",
+      "original_per_case_data_note": "The original review already preserved the B1/B2 raw render_budget dictionaries correctly. This addendum corrects its contradictory blanket limit and makes filtered-row versus raw-stream scope explicit."
+    },
+    "runs": [
+      {
+        "case": "A1",
+        "label": "baseline",
+        "helper_report_render_budget": null,
+        "helper_report_render_budget_scope": "The selected per-run row persisted by run-memory3913-v3-control.py in runs.json/result.json, not the full dictionary returned by run_checkpoint.",
+        "helper_report_render_budget_null_reason": "The private runner selected workset, graphics memory and RSS fields and omitted this key; omission does not establish absence from the capture report.",
+        "raw_stream_path": "tmp/fifth40-continued-20261014/memory3913-v3-d9-vs38-four-cold/A1/drive.stream.json",
+        "raw_stream_sha256": "5db77a9f5be056a881c41e3144f9b87f1adc3aa8572b1dac44d43646879d2e96",
+        "raw_stream_render_budget": null,
+        "raw_stream_render_budget_null_reason": "Baseline D9 capture schema does not export this key; unavailable, not zero.",
+        "raw_stream_weather_particles": {
+          "cpu_mesh_updates": 0,
+          "cpu_particles": 0,
+          "execution": "gpu",
+          "gpu_backend": "bevy_hanabi 0.19.0",
+          "gpu_capacity": 2048,
+          "gpu_mesh_updates": 0,
+          "gpu_particles": 2048,
+          "gpu_seed_initializations": 1,
+          "gpu_simulation_delta_s": 0.0,
+          "quality_level": 0,
+          "requested": "gpu",
+          "seed_upload_capacity": 4096,
+          "shelter_refreshes": 709,
+          "snow_fraction": 0.0
+        },
+        "raw_stream_adaptive_graphics": {
+          "changes": 0,
+          "filtered_ms": 0.0,
+          "level": 0
+        }
+      },
+      {
+        "case": "B1",
+        "label": "candidate",
+        "helper_report_render_budget": null,
+        "helper_report_render_budget_scope": "The selected per-run row persisted by run-memory3913-v3-control.py in runs.json/result.json, not the full dictionary returned by run_checkpoint.",
+        "helper_report_render_budget_null_reason": "The private runner selected workset, graphics memory and RSS fields and omitted this key; omission does not establish absence from the capture report.",
+        "raw_stream_path": "tmp/fifth40-continued-20261014/memory3913-v3-d9-vs38-four-cold/B1/drive.stream.json",
+        "raw_stream_sha256": "0ece709e89cc87f8535e0e93ae45e65079e7eb9618c7167dcce3157d75f1f72d",
+        "raw_stream_render_budget": {
+          "memory_pressure": false,
+          "particles": 8192,
+          "passenger_lights": 8,
+          "station_lights": 24,
+          "train_lights": 8,
+          "upload_mib": 8,
+          "vegetation_divisor": 1
+        },
+        "raw_stream_render_budget_null_reason": null,
+        "raw_stream_weather_particles": {
+          "cpu_mesh_updates": 0,
+          "cpu_particles": 0,
+          "execution": "gpu",
+          "gpu_backend": "bevy_hanabi 0.19.0",
+          "gpu_capacity": 2048,
+          "gpu_mesh_updates": 0,
+          "gpu_particles": 2048,
+          "gpu_seed_initializations": 1,
+          "gpu_simulation_delta_s": 0.0,
+          "quality_level": 0,
+          "requested": "gpu",
+          "seed_upload_capacity": 4096,
+          "shelter_image_ids": [
+            "AssetId<bevy_image::image::Image>{uuid: 657c23a8-ea46-4ae2-8ab6-4c5197fc8798}",
+            "AssetId<bevy_image::image::Image>{uuid: f6f315f9-73b9-4aa2-8e35-de2770929985}"
+          ],
+          "shelter_refreshes": 698,
+          "snow_fraction": 0.0
+        },
+        "raw_stream_adaptive_graphics": {
+          "changes": 0,
+          "filtered_ms": 0.0,
+          "level": 0
+        }
+      },
+      {
+        "case": "B2",
+        "label": "candidate",
+        "helper_report_render_budget": null,
+        "helper_report_render_budget_scope": "The selected per-run row persisted by run-memory3913-v3-control.py in runs.json/result.json, not the full dictionary returned by run_checkpoint.",
+        "helper_report_render_budget_null_reason": "The private runner selected workset, graphics memory and RSS fields and omitted this key; omission does not establish absence from the capture report.",
+        "raw_stream_path": "tmp/fifth40-continued-20261014/memory3913-v3-d9-vs38-four-cold/B2/drive.stream.json",
+        "raw_stream_sha256": "575c9510bec2e4b81d5d840e7e49fd2545615b0903ae0e7f9b530d2237548dfe",
+        "raw_stream_render_budget": {
+          "memory_pressure": false,
+          "particles": 8192,
+          "passenger_lights": 8,
+          "station_lights": 24,
+          "train_lights": 8,
+          "upload_mib": 8,
+          "vegetation_divisor": 1
+        },
+        "raw_stream_render_budget_null_reason": null,
+        "raw_stream_weather_particles": {
+          "cpu_mesh_updates": 0,
+          "cpu_particles": 0,
+          "execution": "gpu",
+          "gpu_backend": "bevy_hanabi 0.19.0",
+          "gpu_capacity": 2048,
+          "gpu_mesh_updates": 0,
+          "gpu_particles": 2048,
+          "gpu_seed_initializations": 1,
+          "gpu_simulation_delta_s": 0.0,
+          "quality_level": 0,
+          "requested": "gpu",
+          "seed_upload_capacity": 4096,
+          "shelter_image_ids": [
+            "AssetId<bevy_image::image::Image>{uuid: 657c23a8-ea46-4ae2-8ab6-4c5197fc8798}",
+            "AssetId<bevy_image::image::Image>{uuid: f6f315f9-73b9-4aa2-8e35-de2770929985}"
+          ],
+          "shelter_refreshes": 665,
+          "snow_fraction": 0.0
+        },
+        "raw_stream_adaptive_graphics": {
+          "changes": 0,
+          "filtered_ms": 0.0,
+          "level": 0
+        }
+      },
+      {
+        "case": "A2",
+        "label": "baseline",
+        "helper_report_render_budget": null,
+        "helper_report_render_budget_scope": "The selected per-run row persisted by run-memory3913-v3-control.py in runs.json/result.json, not the full dictionary returned by run_checkpoint.",
+        "helper_report_render_budget_null_reason": "The private runner selected workset, graphics memory and RSS fields and omitted this key; omission does not establish absence from the capture report.",
+        "raw_stream_path": "tmp/fifth40-continued-20261014/memory3913-v3-d9-vs38-four-cold/A2/drive.stream.json",
+        "raw_stream_sha256": "3330c3527aee3746454e3f41aa3a8f75d6be6f774a9f049bc1313d588b707bba",
+        "raw_stream_render_budget": null,
+        "raw_stream_render_budget_null_reason": "Baseline D9 capture schema does not export this key; unavailable, not zero.",
+        "raw_stream_weather_particles": {
+          "cpu_mesh_updates": 0,
+          "cpu_particles": 0,
+          "execution": "gpu",
+          "gpu_backend": "bevy_hanabi 0.19.0",
+          "gpu_capacity": 2048,
+          "gpu_mesh_updates": 0,
+          "gpu_particles": 2048,
+          "gpu_seed_initializations": 1,
+          "gpu_simulation_delta_s": 0.0,
+          "quality_level": 0,
+          "requested": "gpu",
+          "seed_upload_capacity": 4096,
+          "shelter_refreshes": 709,
+          "snow_fraction": 0.0
+        },
+        "raw_stream_adaptive_graphics": {
+          "changes": 0,
+          "filtered_ms": 0.0,
+          "level": 0
+        }
+      }
+    ],
+    "budget_interpretation": {
+      "global_budget": "Candidate render_budget is the global governor budget. Its particles8192 does not report the actual Hanabi allocation or mean8192 particles were rendered.",
+      "explicit_configuration": "All four launches used weather_quality=high and particle_budget2048 symmetrically, as frozen in the v3 plan.",
+      "override_order": "weather_particles.rs first applies preferred/global budget, then OPENRAILSRS_WEATHER_PARTICLE_BUDGET overrides the count for the selected execution mode. The report records GPU capacity and actual particle count separately.",
+      "observed_checkpoint": "All four raw stream reports have gpu_capacity2048/gpu_particles2048/quality_level0, while both candidate global budgets expose particles8192.",
+      "baseline_limit": "D9 missing global budget metadata prevents a direct field-by-field global-governor budget comparison; configured options and exported weather/adaptive checkpoint readings remain available."
+    },
+    "evidence_sources": {
+      "tmp/fifth40-continued-20261014/run-memory3913-v3-control.py": "5a6758c215bf32a649d3733d0b248e8fea850fe27954e3e41815cbbbfa84db67",
+      "tmp/fifth40-continued-20261014/memory3913-check_viewer_streaming.py": "294d305534b42b12f0e27209b85c59206f4354a116e83c506a82c5e4c0e9aedf",
+      "crates/openrailsrs-viewer3d/src/weather_particles.rs": "a3911c684d3fbff92e47f59c59bb4f785ce4576ce8e4a108e06616e50bfbfb75",
+      "tmp/fifth40-continued-20261014/memory3913-v3-d9-vs38-four-cold/result.json": "e1a8f833c54eccc446cdbeb6a9d1e46d0a137b6e8be4724d1d92d2dae0487d11",
+      "tmp/fifth40-continued-20261014/memory3913-v3-d9-vs38-four-cold/runs.json": "4ed318b114c7d4d13a22b3030d32801362f4edf80ac57eeffe052dec3354a2b0"
+    },
+    "unchanged_scope": "No source, runs, raw results, thresholds, counters, phase boundaries or comparisons changed. The observed1Hz memory conclusions remain: candidate VRAM higher, GTT lower, RSS mixed; no general memory saving, FPS, physical complete peak or pixel/workset identity claim. No issue closure is asserted."
+  },
+  "root_visual_review": {
+    "schema": 1,
+    "reviewed_utc": "2026-10-14T21:11:45.040491+00:00",
+    "reviewer": "root",
+    "status": "four_fresh_captures_visually_reviewed_measurement_scope_only",
+    "result_sha256": "e1a8f833c54eccc446cdbeb6a9d1e46d0a137b6e8be4724d1d92d2dae0487d11",
+    "contact_sheet_sha256": "c65e61d1e7028148a118f6a6eb3879d7bf680b7ec30435ff86c29f12031918c9",
+    "captures": [
+      {
+        "case": "A1",
+        "png": "<repository>/tmp/fifth40-continued-20261014/memory3913-v3-d9-vs38-four-cold/A1/drive.png",
+        "sha256": "db258d39eb5c940ce3ad66ef5bc70565bd9a40d786b9f62fe90e7c2843435604",
+        "camera_fov_y_rad": 0.9599310755729675,
+        "odometer_m": 2500.165185885929,
+        "quality_level": 0,
+        "gpu_particles": 2048,
+        "visible_cab_parts": 52
+      },
+      {
+        "case": "B1",
+        "png": "<repository>/tmp/fifth40-continued-20261014/memory3913-v3-d9-vs38-four-cold/B1/drive.png",
+        "sha256": "e757322a7444bb3c1c2899925fdb54585c4ad815a216c4dd5ae724a71f9b5f4e",
+        "camera_fov_y_rad": 0.9599310755729675,
+        "odometer_m": 2500.165185885929,
+        "quality_level": 0,
+        "gpu_particles": 2048,
+        "visible_cab_parts": 52
+      },
+      {
+        "case": "B2",
+        "png": "<repository>/tmp/fifth40-continued-20261014/memory3913-v3-d9-vs38-four-cold/B2/drive.png",
+        "sha256": "d3b2b354fb66cf9ce72896fec8a5b240508aa766023e030559ed9b9c53f1b625",
+        "camera_fov_y_rad": 0.9599310755729675,
+        "odometer_m": 2502.706464176422,
+        "quality_level": 0,
+        "gpu_particles": 2048,
+        "visible_cab_parts": 52
+      },
+      {
+        "case": "A2",
+        "png": "<repository>/tmp/fifth40-continued-20261014/memory3913-v3-d9-vs38-four-cold/A2/drive.png",
+        "sha256": "d84a028d34377d77b273d3569a9956a0823c4393251278ca64f5d83d6ebe32ab",
+        "camera_fov_y_rad": 0.9599310755729675,
+        "odometer_m": 2500.165185885929,
+        "quality_level": 0,
+        "gpu_particles": 2048,
+        "visible_cab_parts": 52
+      }
+    ],
+    "observations": "Viewed the uncropped four-image contact. Original cab, nearby track, terrain, rain on glass and approach HUD present in all four.69cab meshes/52visible, same55degree field of view. B2view/pose differs slightly and odometer is2.54m further; preserve raw camera poses and workset differences. No claim of pixel equality.",
+    "limits": [
+      "Same configured camera/rain/highquality/seed/hardware; physical scene/workset not identical (GPUtiles8reference/11candidate).",
+      "All observed quality levels0 and actualGPU2048; no claim of identical per-frame weather history.",
+      "Raw observed canonical process VRAM increases in candidate while GTTdecreases; no general saving or physical peak claim.",
+      "1Hz observation, missing/ambiguous phase maxima remain null; no FPS or overallissue closure.",
+      "V1notexecuted and v2rejected remain independent records."
+    ]
+  },
+  "provenance": {
+    "review": {
+      "path": "tmp/fifth40-continued-20261014/memory3913-v3-reviewed.json",
+      "sha256": "1caa851c1dc6843d32b460a7fddcc67cdfc4f9bb7cfff5bfed668da5a315524e",
+      "bytes": 66007
+    },
+    "budget_correction": {
+      "path": "tmp/fifth40-continued-20261014/memory3913-v3-reviewed-budget-addendum.json",
+      "sha256": "2c6261b93c28c6e4f63df1b4ffbe16419d0f44e36967d99c96251860f7cd121e",
+      "bytes": 10126
+    },
+    "root_visual": {
+      "path": "tmp/fifth40-continued-20261014/root-memory3913-v3-visual-review.json",
+      "sha256": "14143c915da00773013120c556bcd47c4d13ee120ccbf31a443ae5aad408d264",
+      "bytes": 3010
+    },
+    "actual_supervisor": {
+      "path": "tmp/fifth40-continued-20261014/memory3913-v3-supervisor.json",
+      "sha256": "88d3bc5d42327164a2621478c4e78d39ad3531218f0b3c755e80bf118ac719d0",
+      "bytes": 1287
+    },
+    "host_process_release": {
+      "path": "tmp/fifth40-continued-20261014/memory3913-v3-process-release.json",
+      "sha256": "0d68ca17da903d45ebe4d22aab18f3dbb2523ebe7bb23715500a27bfea10f064",
+      "bytes": 296
+    },
+    "prior_v1_not_executed": {
+      "path": "tmp/fifth40-continued-20261014/memory3913-v1-not-executed.json",
+      "sha256": "b7b5c7dd425dcecd11ec3dd262e1043c19b2f827e470c4059a0783be68c211c6",
+      "bytes": 1880
+    },
+    "prior_v2_rejected_supervisor": {
+      "path": "tmp/fifth40-continued-20261014/memory3913-v2-supervisor.json",
+      "sha256": "ffb3e40a3a535e813d2056ebcfded406890c6e90a4735171386fe12259cc94ee",
+      "bytes": 1287
+    },
+    "prior_v2_visual_review": {
+      "path": "tmp/fifth40-continued-20261014/root-memory3913-v2-rejected-visual-review.json",
+      "sha256": "fb962d9ecbd1f1883642e12dc064a42a3625ad0b41f8430f518e135cd0869114",
+      "bytes": 961
+    }
+  },
+  "interpretation": [
+    "The narrative budget_scope_correction supersedes only measurement_review.limits[7]. The original review and all raw values remain preserved.",
+    "The four new cold launches measure actual same-PID per-selected-PCI process memory at1Hz. No warm result, full physical peak, exclusive-host, FPS or causal saving claim.",
+    "Candidate observed VRAM increased, GTT decreased and RSS direction differs between pairs. Keep both pairs and all phases, including readback.",
+    "Actual GPU terrain differs8versus11; B2 stops2.541278m further. Configured route, eight-car formation, camera55degrees, highquality/downpour/seed42 and selected hardware match, without pixel/pose/workset equality.",
+    "The independent7200-second stability trial and distribution/Store acceptance remain separate and pending. No issue is closed by this receipt."
+  ],
+  "publication_path_normalization": "Paths in this public derived summary use <repository> and <official-content>; embedded log excerpts are labelled paths_normalized. Original private records, their hashes and numerical values are unchanged."
+}
