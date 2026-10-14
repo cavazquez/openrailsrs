@@ -1611,7 +1611,7 @@ type ParsedWorldShape = (
     Option<ShapeFile>,
     Option<crate::shapes::LoadedShape>,
     Vec<Option<crate::shapes::LoadedShape>>,
-    Vec<PathBuf>,
+    crate::shapes::PreparedTexturePaths,
     Option<crate::scenery_lod::PreparedSilhouette>,
 );
 type ShapeBatchReceiver = std::sync::Mutex<std::sync::mpsc::Receiver<Vec<ParsedWorldShape>>>;
@@ -1702,6 +1702,18 @@ enum WorldSpawnPhase {
 }
 
 impl WorldSpawnProgress {
+    pub(crate) fn diagnostic_phase(&self) -> String {
+        format!(
+            "{:?}; parsed {}/{}; published {}/{}; lod_pending {}",
+            self.phase,
+            self.shape_parse_index,
+            self.shape_load_paths.len(),
+            self.asset_build_index,
+            self.parsed_shapes.len(),
+            self.pending_lod_publication.is_some()
+        )
+    }
+
     pub fn status_text(&self) -> String {
         match self.phase {
             WorldSpawnPhase::Classifying => {
@@ -2834,25 +2846,16 @@ fn world_shape_texture_paths(
     loaded: Option<&crate::shapes::LoadedShape>,
     lods: &[Option<crate::shapes::LoadedShape>],
     route_dir: &Path,
-) -> Vec<PathBuf> {
+) -> crate::shapes::PreparedTexturePaths {
     let _timer = crate::performance::ShapeTimer::start("resolve_texture_dependencies", path);
     let Some(loaded) = loaded else {
-        return Vec::new();
+        return Default::default();
     };
     let dirs = texture_search_dirs_for_shape(path, route_dir);
     let refs: Vec<&Path> = dirs.iter().map(|p| p.as_path()).collect();
     let flags = texture_flags_for_shape(path);
-    let mut textures = collect_loaded_shape_texture_paths_with_flags(loaded, &refs, flags);
-    for lod in lods.iter().flatten() {
-        textures.extend(collect_loaded_shape_texture_paths_with_flags(
-            lod, &refs, flags,
-        ));
-    }
     let pbr = load_shape_pbr_sidecar(path);
-    textures.extend(collect_pbr_normal_map_texture_paths(pbr.as_ref(), &refs));
-    textures.sort_unstable();
-    textures.dedup();
-    textures
+    crate::shapes::prepare_shape_texture_paths(loaded, lods, &refs, flags, pbr.as_ref())
 }
 
 fn parse_next_shape_batch(progress: &mut WorldSpawnProgress, route_dir: &Path) -> bool {
@@ -2904,9 +2907,11 @@ fn parse_next_shape_batch(progress: &mut WorldSpawnProgress, route_dir: &Path) -
                                 );
                                 crate::scenery_lod::prepare(&shape)
                             };
-                            let _timer =
-                                crate::performance::ShapeTimer::start("cpu_prepare_lods", path);
-                            let lods = prepare_lod_meshes(path, &shape);
+                            let lods = {
+                                let _timer =
+                                    crate::performance::ShapeTimer::start("cpu_prepare_lods", path);
+                                prepare_lod_meshes(path, &shape)
+                            };
                             crate::prepared_geometry::write_verified(
                                 path,
                                 source.as_deref(),
@@ -2929,7 +2934,7 @@ fn parse_next_shape_batch(progress: &mut WorldSpawnProgress, route_dir: &Path) -
                                 Some(summary),
                             )
                         }
-                        None => (path.clone(), None, None, vec![], vec![], None),
+                        None => (path.clone(), None, None, vec![], Default::default(), None),
                     }
                 })
                 .collect();
@@ -2949,12 +2954,13 @@ fn parse_next_shape_batch(progress: &mut WorldSpawnProgress, route_dir: &Path) -
         Err(std::sync::mpsc::TryRecvError::Empty) => return true,
         Err(std::sync::mpsc::TryRecvError::Disconnected) => batch
             .into_iter()
-            .map(|p| (p, None, None, vec![], vec![], None))
+            .map(|p| (p, None, None, vec![], Default::default(), None))
             .collect(),
     };
     progress.shape_task = None;
     for (shape_path, shape_file, loaded, lods, textures, summary) in parsed {
-        progress.texture_paths.extend(textures);
+        progress.texture_paths.extend(textures.paths().cloned());
+        progress.ace_cache.resolved.extend(textures);
         progress.prepared_lods.insert(shape_path.clone(), lods);
         if let Some(summary) = summary {
             progress
@@ -3258,6 +3264,7 @@ pub struct WorldSceneryStreamState {
     shapes: HashSet<WorldObjectKey>,
     auxiliary: HashSet<WorldObjectKey>,
     pending_auxiliary: std::collections::VecDeque<WorldObject>,
+    road_car_preparation: crate::road_cars::RoadCarPreparation,
     last_center: Option<Vec3>,
     last_item_count: usize,
     initial_ready: bool,
@@ -3309,6 +3316,7 @@ impl WorldSceneryStreamState {
         self.auxiliary.retain(|key| !tiles.contains(&key.tile));
         self.pending_auxiliary
             .retain(|obj| !tiles.contains(&(obj.tile_x, obj.tile_z)));
+        self.road_car_preparation.forget_tiles(tiles);
         self.last_center = None;
     }
 
@@ -3430,7 +3438,15 @@ pub fn world_stream_scenery_system(
     // Forests, transfers and track batches can each allocate sizeable buffers.
     // Submit one authored auxiliary object per frame rather than every newly
     // visible sector at once. Capture readiness includes this queue.
-    let auxiliary: Vec<_> = state.pending_auxiliary.pop_front().into_iter().collect();
+    let front = state.pending_auxiliary.front().cloned();
+    let road_ready = front.as_ref().is_none_or(|object| {
+        object.kind != "CarSpawner" || state.road_car_preparation.advance(object, &assets, *focus)
+    });
+    let auxiliary: Vec<_> = if road_ready {
+        state.pending_auxiliary.pop_front().into_iter().collect()
+    } else {
+        Vec::new()
+    };
     let new_items = auxiliary.as_slice();
     let _auxiliary_timer = new_items
         .first()
@@ -3516,15 +3532,12 @@ pub fn world_stream_scenery_system(
         );
     }
     if road_cars > 0 {
-        crate::road_cars::spawn_road_car_objects(
+        state.road_car_preparation.publish(
+            &new_items[0],
             &mut commands,
             &mut meshes,
             &mut images,
             &mut materials,
-            new_items,
-            &assets,
-            &focus,
-            Some(cull_center),
             &origin,
         );
     }
@@ -3564,6 +3577,7 @@ pub fn world_stream_scenery_system(
             "openrailsrs-viewer3d: streamed scenery — {forests} forest, {waters} water, {transfers} transfer, {road_cars} roadcar, {dyntracks} dyntrack"
         );
     }
+    drop(_auxiliary_timer);
     if !selected_shapes.is_empty() {
         viewer_log!(
             "openrailsrs-viewer3d: activating {} deferred world item(s) near ({:.0},{:.0})",

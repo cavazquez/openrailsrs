@@ -668,6 +668,17 @@ fn edition_label(native: &Path, manifest: &Value) -> String {
         None => format!("{name} · descarga {id}"),
     }
 }
+fn package_edition_label(manifest: &Value) -> String {
+    let name = manifest["package"]
+        .as_str()
+        .and_then(|name| name.rsplit(['/', '\\']).next())
+        .map(str::trim)
+        .filter(|name| {
+            !name.is_empty() && !matches!(*name, "." | "..") && !name.chars().any(char::is_control)
+        })
+        .unwrap_or("Contenido");
+    edition_label(Path::new(name), manifest)
+}
 pub fn installed_label(path: &Path) -> String {
     let Some(m) = read_manifest(&path.join("openrailsrs-content.json")) else {
         return path
@@ -676,8 +687,7 @@ pub fn installed_label(path: &Path) -> String {
             .to_string_lossy()
             .into_owned();
     };
-    let name = m["package"].as_str().unwrap_or("Contenido");
-    edition_label(Path::new(name), &m)
+    package_edition_label(&m)
 }
 pub fn prepared_routes() -> Vec<PreparedRoute> {
     content_directories()
@@ -799,14 +809,14 @@ fn discover_stock_sources(root: &Path) -> Vec<(PathBuf, String)> {
                 continue;
             };
             if !sources.iter().any(|(p, _)| p == &consists) {
-                sources.push((consists, edition_label(&path, &manifest)));
+                sources.push((consists, package_edition_label(&manifest)));
             }
         }
         if let Some(standalone) =
             canonical_inside(&package.join("openrailsrs-import/standalone"), &package)
                 .filter(|p| p.is_dir())
         {
-            sources.push((standalone, edition_label(&package, &manifest)));
+            sources.push((standalone, package_edition_label(&manifest)));
         }
     }
     sources.sort_by(|a, b| a.0.cmp(&b.0));
@@ -1393,6 +1403,53 @@ mod tests {
         let found = discover_stock_sources(&library);
         assert_eq!(found.len(), 1);
         assert_eq!(found[0].0, consists);
+    }
+    #[test]
+    fn train_only_sources_share_the_package_identity_instead_of_stock_or_storage_names() {
+        let temp = tempfile::tempdir().unwrap();
+        let library = temp.path().join("official-content");
+        let package = library.join("private-download-40f03ebf");
+        let consists = package.join("TGV/CONSISTS");
+        let stock = package.join("TGV/TRAINSET/Train");
+        let standalone = package.join("openrailsrs-import/standalone");
+        for path in [&consists, &stock, &standalone] {
+            std::fs::create_dir_all(path).unwrap();
+        }
+        let engine = "Atl-M1-24047-att_FR-Sharpes.eng";
+        std::fs::write(stock.join(engine), b"author").unwrap();
+        let manifest = serde_json::json!({
+            "package": "Jeanprisca/SNCF-TGV-Atlantique",
+            "routes": [],
+            "stock_files": [format!("TGV/TRAINSET/Train/{engine}")],
+            "source_date": "2023-04-28T23:12:52Z",
+            "revision": {"commit": "10967835842c02ed5ae4a3f480c1dca9fb4ef609"}
+        });
+        std::fs::write(
+            package.join("openrailsrs-content.json"),
+            serde_json::to_vec(&manifest).unwrap(),
+        )
+        .unwrap();
+        let found = discover_stock_sources(&library);
+        let expected = "SNCF-TGV-Atlantique · origen 2023-04-28 · 10967835";
+        assert_eq!(found.len(), 2);
+        assert!(found.iter().all(|(_, edition)| edition == expected));
+        assert!(found.iter().any(|(path, _)| path == &consists));
+        assert!(found.iter().any(|(path, _)| path == &standalone));
+        assert_eq!(installed_label(&package), expected);
+    }
+    #[test]
+    fn package_identity_is_a_display_name_without_control_or_parent_components() {
+        for value in ["", ".", "..", "Author/..", "Author/", "Author/Train\nLabel"] {
+            let manifest = serde_json::json!({"package": value});
+            assert_eq!(
+                package_edition_label(&manifest),
+                "Contenido · descarga sin-id"
+            );
+        }
+        assert_eq!(
+            package_edition_label(&serde_json::json!({"package": "Author\\SNCF-TGV-Atlantique"})),
+            "SNCF-TGV-Atlantique · descarga sin-id"
+        );
     }
     fn fixture(root: &Path) -> (PathBuf, PreparedRoute) {
         let package = root.join("official-content/package");

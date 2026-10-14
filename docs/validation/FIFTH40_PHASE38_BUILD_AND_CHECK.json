@@ -1,0 +1,174 @@
+{
+  "schema": 1,
+  "candidate": "phase38",
+  "status": "passed_build_and_check_not_final_acceptance",
+  "source_base_commit": "a53fc107c0678a8fff106158218e0504076fc723",
+  "source_dirty_during_build": true,
+  "compiled_source_snapshot_sha256": "f7bbb9b3e212e433f554387a192cb250435badb0cf0e02d5de6fcce7a7bc9739",
+  "compiled_inputs_count": 751,
+  "build": {
+    "status": "passed",
+    "returncode": 0,
+    "elapsed_s": 0.22193219299879274,
+    "start_utc": "2026-10-14T19:33:23.814707+00:00",
+    "end_utc": "2026-10-14T19:33:24.050271+00:00",
+    "command": [
+      "cargo",
+      "build",
+      "--offline",
+      "--locked",
+      "--workspace",
+      "--all-features",
+      "--jobs",
+      "2"
+    ],
+    "inputs_count": 751,
+    "inputs_unchanged": true,
+    "user_traces_unchanged": true,
+    "profile": {
+      "CARGO_PROFILE_DEV_OPT_LEVEL": "1",
+      "CARGO_PROFILE_DEV_DEBUG": "0",
+      "CARGO_PROFILE_DEV_STRIP": "symbols",
+      "CARGO_PROFILE_DEV_INCREMENTAL": "false",
+      "CARGO_PROFILE_TEST_OPT_LEVEL": "1",
+      "CARGO_PROFILE_TEST_DEBUG": "0",
+      "CARGO_PROFILE_TEST_STRIP": "symbols",
+      "CARGO_PROFILE_TEST_INCREMENTAL": "false",
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "2"
+    },
+    "log_sha256": "36789b419250be298313d4f49f93600c1975c78f77e4f44b100d20dc04e071cc"
+  },
+  "binaries": {
+    "phase38-viewer": {
+      "path": "<private-qa>/phase38-build2/phase38-viewer",
+      "bytes": 172867616,
+      "sha256": "5be5da7de14db73321303af2b310da7c8ca635b3dcd9c304fbe631ae0d8fd47d"
+    },
+    "phase38-cli": {
+      "path": "<private-qa>/phase38-build2/phase38-cli",
+      "bytes": 68052912,
+      "sha256": "0db78c6031fc89ba83f416c2da78b1200487353bb95da70bd43c86daaedfe258"
+    },
+    "phase38-prepare": {
+      "path": "<private-qa>/phase38-build2/phase38-prepare",
+      "bytes": 60540280,
+      "sha256": "0eff5cb6a5eb64e36399d539118b5fa79aaeb273ec0c0a23a6c106ae1d877ad0"
+    }
+  },
+  "check": {
+    "status": "passed",
+    "returncode": 0,
+    "elapsed_s": 133.60567510200053,
+    "start_utc": "2026-10-14T19:31:06.412344+00:00",
+    "end_utc": "2026-10-14T19:33:22.963257+00:00",
+    "command": [
+      "bash",
+      "check.sh"
+    ],
+    "git_head": "a53fc107c0678a8fff106158218e0504076fc723",
+    "inputs_count": 31870,
+    "inputs_unchanged": true,
+    "user_traces_unchanged": true,
+    "profile": {
+      "CARGO_PROFILE_DEV_OPT_LEVEL": "1",
+      "CARGO_PROFILE_DEV_DEBUG": "0",
+      "CARGO_PROFILE_DEV_STRIP": "symbols",
+      "CARGO_PROFILE_DEV_INCREMENTAL": "false",
+      "CARGO_PROFILE_TEST_OPT_LEVEL": "1",
+      "CARGO_PROFILE_TEST_DEBUG": "0",
+      "CARGO_PROFILE_TEST_STRIP": "symbols",
+      "CARGO_PROFILE_TEST_INCREMENTAL": "false",
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "2"
+    },
+    "log_sha256": "a4b15b0d0718a58e7bc885d9852a355dbe472919607b9d1f0784631c3dc325be",
+    "rust": {
+      "passed": 2083,
+      "failed": 0,
+      "ignored": 49,
+      "summaries": 152
+    },
+    "python": {
+      "tests": 127,
+      "summaries": 25
+    },
+    "changed_inputs": []
+  },
+  "independent_security_review": {
+    "schema": 1,
+    "status": "completed_static_review",
+    "candidate": "phase38",
+    "base_commit": "a53fc107c0678a8fff106158218e0504076fc723",
+    "review_agent": "security_review38",
+    "confirmed_findings": 0,
+    "reviewed_files": {
+      "Cargo.lock": "ba0ffab626b32f8ca2a911ca969b424df725232e487444e6991fddb869dc96ce",
+      "crates/openrailsrs-viewer3d/Cargo.toml": "130b45e48f1ce56d762d75c60c292435151a4efeb3649a4462d40864bca7b8fa",
+      "crates/openrailsrs-viewer3d/build.rs": "6bcd2a145d6afa86c72368a77569f1f66a99ecccb3be9f76668861d9ecf5f898",
+      "crates/openrailsrs-viewer3d/src/official_content.rs": "0f27fed2200e041191f16eef13bc88538fee374af46ff6fd54566071950dc63d",
+      "crates/openrailsrs-viewer3d/src/performance.rs": "b7ff00e3f45bce03d81fc53716e618fdc4d8db655172f446ca20b8c04baacba1",
+      "crates/openrailsrs-viewer3d/src/player_ui/menu_country.rs": "ae957e9c09d82bbc9fb1e51d9d16ff54e358b8b8f34d33212dd33ba507848b4c",
+      "crates/openrailsrs-viewer3d/src/prepared_geometry.rs": "4e4eb4193aa01d73c7f3949e9574a9cc8c59b78ee804d74db6f687055323e5f9",
+      "crates/openrailsrs-viewer3d/src/road_cars.rs": "ad789d69a7527794b0b009c2238cefc937d7a459c117f4f71936f42cd801deb6",
+      "crates/openrailsrs-viewer3d/src/shapes.rs": "f9926772bd283f53c5c6ed55dffc2845e8fc5dac62e342255be21e46e65a87f1",
+      "crates/openrailsrs-viewer3d/src/world.rs": "ce47c95abe753b7122772fc433893327198b3677e6c71b215752aa8507f944c5"
+    },
+    "patch_sha256": "0ef0c3a04c4bbb639a3e3cb4706db2383310de04af0b49c6ec99f47eb21be926",
+    "agent_reported_patch_sha256": "0ef0c3a04c4bbb639a3e3cb4706db2383310de04af0b49c6ec99f47eb21be926",
+    "scope": [
+      "bounded Zstd input/output/window and integrity",
+      "atomic cache publication and shared disk budget",
+      "road-car preparation workers and generation ownership",
+      "texture resolution context and content package labels"
+    ],
+    "limits": [
+      "Static review only; no Cargo, GPU, network or downloaded author content was used.",
+      "Does not replace check.sh, runtime performance, long-duration memory tests or strict Snap QA."
+    ],
+    "completed_utc": "2026-10-14T19:22:31.099268+00:00",
+    "post_review_test_style_change": {
+      "path": "crates/openrailsrs-viewer3d/src/road_cars.rs",
+      "current_sha256": "18100d313efdf31ffe074f6ce0642bed8b38a2d9ecc59a4e966ddb260216240d",
+      "reviewed_sha256": "ad789d69a7527794b0b009c2238cefc937d7a459c117f4f71936f42cd801deb6",
+      "reconstruction_of_only_initialization_style_change_matches_reviewed_bytes": true,
+      "scope": "Only a test fixture initializer inside cfg(test); the runtime body and every other reviewed file are unchanged. No additional security review is claimed."
+    }
+  },
+  "new_regressions_observed": [
+    "test official_content::tests::package_identity_is_a_display_name_without_control_or_parent_components ... ok",
+    "test official_content::tests::train_only_sources_share_the_package_identity_instead_of_stock_or_storage_names ... ok",
+    "test performance::tests::frame_context_correlates_true_overlaps_preserves_longest_and_reports_truncation ... ok",
+    "test prepared_geometry::tests::bounded_file_reads_reject_large_and_non_regular_inputs ... ok",
+    "test prepared_geometry::tests::cached_geometry_matches_fresh_and_source_descriptor_or_damage_invalidates_it ... ok",
+    "test prepared_geometry::tests::compressed_envelope_rejects_damage_truncation_bombs_and_inconsistent_lengths ... ok",
+    "test prepared_geometry::tests::concurrent_workers_publish_only_complete_entries_and_never_exceed_the_reserved_budget ... ok",
+    "test prepared_geometry::tests::legacy_geometry_retains_semantic_validation_and_migrates_only_after_publication ... ok",
+    "test prepared_geometry::tests::lru_hits_and_external_writers_refresh_the_shared_inventory_without_rescanning_each_write ... ok",
+    "test prepared_geometry::tests::quota_counts_legacy_and_temporaries_and_keeps_a_previous_entry_on_failed_admission ... ok",
+    "test road_cars::tests::unloading_and_reset_drop_receivers_before_an_old_worker_can_publish ... ok",
+    "test road_cars::tests::worker_preparation_publishes_original_parts_without_source_reads_and_reuses_models ... ok"
+  ],
+  "prior_attempts": [
+    {
+      "directory": "check38-attempt1",
+      "status": "Clippy rejected a field reassignment in a new test fixture; no tests executed",
+      "receipt_sha256": "5b5f2c11cdccf7c8a461cc769470d3fa31881b30c32298fd0154b27f846ca542"
+    },
+    {
+      "directory": "check38-attempt2",
+      "status": "collector exited143 during the test suite, no completion receipt; not a pass",
+      "interruption_receipt_sha256": "47a6af5433bd87dab8b764bc22fa385f474fa0b9bd582f6b0496ee518cbc50e4",
+      "all64_tracked_example_outputs_restored_from_verified_snapshot": true
+    }
+  ],
+  "pending": [
+    "actual native/world memoryJSON and SavedGame restoration probe38",
+    "new native420 and extended-fixture180 gates38",
+    "all eight ABBA default2000 measurements38 against exact rebuiltD9",
+    "one complete7200-second memory acceptance with actual disk restores and comparable visits",
+    "strict Snap/portable final artifact QA and Store edge publication"
+  ],
+  "does_not_close_any_issue": true,
+  "does_not_mark_batch_complete": true
+}

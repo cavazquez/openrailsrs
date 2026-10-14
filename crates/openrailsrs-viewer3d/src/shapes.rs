@@ -229,6 +229,7 @@ pub struct RouteAssets {
     track_db: Option<openrailsrs_formats::TrackDbFile>,
     /// Road database (`.rdb`) — same schema as TDB; used for CarSpawner endpoints (#32).
     road_db: Option<std::sync::Arc<openrailsrs_formats::TrackDbFile>>,
+    worker_tsection: std::sync::Arc<openrailsrs_formats::TSectionCatalog>,
     carspawn: openrailsrs_formats::CarSpawnerCatalog,
     sigcfg: openrailsrs_formats::SigCfgFile,
     tdb_sections_by_shape: HashMap<u32, Vec<TdbSectionAnchor>>,
@@ -375,11 +376,13 @@ impl RouteAssets {
                 }
             }
         }
+        let worker_tsection = std::sync::Arc::new(catalog.tsection.clone());
         Self {
             route_dir,
             catalog,
             track_db,
             road_db: road_db.map(std::sync::Arc::new),
+            worker_tsection,
             carspawn,
             sigcfg,
             tdb_sections_by_shape,
@@ -403,6 +406,10 @@ impl RouteAssets {
     /// Read-only ownership for background scenery jobs, without copying RDB.
     pub fn shared_road_db(&self) -> Option<std::sync::Arc<openrailsrs_formats::TrackDbFile>> {
         self.road_db.clone()
+    }
+
+    pub fn shared_tsection(&self) -> std::sync::Arc<openrailsrs_formats::TSectionCatalog> {
+        self.worker_tsection.clone()
     }
 
     pub fn carspawn(&self) -> &openrailsrs_formats::CarSpawnerCatalog {
@@ -2029,7 +2036,12 @@ fn load_normal_map_image_handle(
     ace_cache: &dyn ShapeTextureSource,
     tex_addr_mode: Option<i32>,
 ) -> Option<Handle<Image>> {
-    let tex_path = resolve_texture_path_in_dirs(texture_dirs, file_name)?;
+    let tex_path = resolved_texture_path(
+        ace_cache,
+        texture_dirs,
+        file_name,
+        TextureFlags::from_raw(TextureFlags::NONE),
+    )?;
     // Distinct cache key from albedo sRGB entries (negative addr key).
     let addr_key = -(texture_cache_addr_key(tex_addr_mode)
         .saturating_abs()
@@ -2039,7 +2051,14 @@ fn load_normal_map_image_handle(
     }
     let is_dds = tex_path.extension().map(|e| e.to_ascii_lowercase())
         == Some(std::ffi::OsString::from("dds"));
-    let image = if is_dds {
+    let image = if let Some(prepared) = ace_cache.prepared(&tex_path) {
+        // Cache pixels/blocks are lossless source data, without albedo brighten.
+        // Reuse them for linear normal maps rather than reading DDS/ACE on ECS.
+        let mut image = prepared.image.clone();
+        image.texture_descriptor.format = image.texture_descriptor.format.remove_srgb_suffix();
+        openrailsrs_bevy_scenery::textures::apply_tex_addr_mode(&mut image, tex_addr_mode);
+        image
+    } else if is_dds {
         let bytes = std::fs::read(&tex_path).ok()?;
         let mut img = decode_dds_to_image_with_addr(&bytes, tex_addr_mode).ok()?;
         // Normal maps are linear, including compressed BC formats.
@@ -2202,6 +2221,16 @@ fn scenery_alpha_passes(
 /// scenery can publish a ready image without repeating disk I/O/decompression.
 pub trait ShapeTextureSource {
     fn get(&self, path: &Path) -> Option<&AceFile>;
+    /// Outer None means this source has no matching preparation context. An
+    /// inner None is a known missing file in this generation, not a disk query.
+    fn resolved_path(
+        &self,
+        _dirs: &[&Path],
+        _name: &str,
+        _flags: TextureFlags,
+    ) -> Option<Option<PathBuf>> {
+        None
+    }
     fn cab_brightened(&self, _path: &Path) -> Option<bool> {
         None
     }
@@ -2214,6 +2243,165 @@ pub trait ShapeTextureSource {
     fn alpha(&self, path: &Path) -> Option<openrailsrs_bevy_scenery::texture_cache::TextureAlpha> {
         self.prepared(path).map(|texture| texture.alpha)
     }
+}
+
+#[derive(Clone)]
+struct PreparedResolution {
+    directories: Vec<PathBuf>,
+    flags: TextureFlags,
+    environment: TextureEnvironment,
+    path: Option<PathBuf>,
+}
+
+/// Resolver results belong to a single preparation generation. Directory order,
+/// exact author name and seasonal flags are part of the key; a new environment
+/// never reuses a previous positive or negative result.
+#[derive(Default)]
+pub struct PreparedTexturePaths {
+    entries: HashMap<String, Vec<PreparedResolution>>,
+    count: usize,
+}
+impl PreparedTexturePaths {
+    const MAX_ENTRIES: usize = 32_768;
+
+    pub fn prepare(&mut self, dirs: &[&Path], name: &str, flags: TextureFlags) {
+        let environment = scenery_texture_environment(flags);
+        self.prepare_in(dirs, name, flags, environment);
+    }
+
+    fn prepare_in(
+        &mut self,
+        dirs: &[&Path],
+        name: &str,
+        flags: TextureFlags,
+        environment: TextureEnvironment,
+    ) {
+        if self.lookup_in(dirs, name, flags, environment).is_some()
+            || self.count >= Self::MAX_ENTRIES
+        {
+            return;
+        }
+        let effective_flags = if environment.night {
+            flags.with(TextureFlags::NIGHT)
+        } else {
+            flags
+        };
+        let path = openrailsrs_bevy_scenery::textures::resolve_texture_path_in_dirs(
+            dirs,
+            name,
+            &environment,
+            effective_flags,
+        );
+        self.entries
+            .entry(name.to_owned())
+            .or_default()
+            .push(PreparedResolution {
+                directories: dirs.iter().map(|p| p.to_path_buf()).collect(),
+                flags,
+                environment,
+                path,
+            });
+        self.count += 1;
+    }
+
+    fn lookup_in(
+        &self,
+        dirs: &[&Path],
+        name: &str,
+        flags: TextureFlags,
+        environment: TextureEnvironment,
+    ) -> Option<Option<PathBuf>> {
+        self.entries.get(name)?.iter().find_map(|entry| {
+            (entry.flags == flags
+                && entry.environment == environment
+                && entry.directories.len() == dirs.len()
+                && entry
+                    .directories
+                    .iter()
+                    .zip(dirs)
+                    .all(|(a, b)| a.as_path() == *b))
+            .then(|| entry.path.clone())
+        })
+    }
+
+    pub fn lookup(
+        &self,
+        dirs: &[&Path],
+        name: &str,
+        flags: TextureFlags,
+    ) -> Option<Option<PathBuf>> {
+        self.lookup_in(dirs, name, flags, scenery_texture_environment(flags))
+    }
+
+    pub fn paths(&self) -> impl Iterator<Item = &PathBuf> {
+        self.entries
+            .values()
+            .flatten()
+            .filter_map(|entry| entry.path.as_ref())
+    }
+
+    pub fn environment_current(&self) -> bool {
+        self.entries
+            .values()
+            .flatten()
+            .all(|entry| entry.environment == scenery_texture_environment(entry.flags))
+    }
+
+    pub fn extend(&mut self, other: Self) {
+        for (name, entries) in other.entries {
+            for entry in entries {
+                let refs: Vec<_> = entry.directories.iter().map(PathBuf::as_path).collect();
+                if self.count >= Self::MAX_ENTRIES {
+                    return;
+                }
+                if self
+                    .lookup_in(&refs, &name, entry.flags, entry.environment)
+                    .is_none()
+                {
+                    self.entries.entry(name.clone()).or_default().push(entry);
+                    self.count += 1;
+                }
+            }
+        }
+    }
+}
+
+/// Only metadata is collected here. All resolution and pixel decoding stays on
+/// the preparation worker; publication can reuse both without rescanning dirs.
+pub fn prepare_shape_texture_paths(
+    loaded: &LoadedShape,
+    lods: &[Option<LoadedShape>],
+    dirs: &[&Path],
+    flags: TextureFlags,
+    pbr: Option<&ShapePbrSidecar>,
+) -> PreparedTexturePaths {
+    let mut paths = PreparedTexturePaths::default();
+    for shape in std::iter::once(loaded).chain(lods.iter().flatten()) {
+        for name in shape
+            .texture_file
+            .iter()
+            .chain(shape.parts.iter().filter_map(|p| p.texture_file.as_ref()))
+        {
+            paths.prepare(dirs, name, flags);
+        }
+    }
+    if let Some(pbr) = pbr {
+        for name in pbr.normal_map_filenames() {
+            paths.prepare(dirs, name, TextureFlags::from_raw(TextureFlags::NONE));
+        }
+    }
+    paths
+}
+
+fn resolved_texture_path(
+    source: &dyn ShapeTextureSource,
+    dirs: &[&Path],
+    name: &str,
+    flags: TextureFlags,
+) -> Option<PathBuf> {
+    source
+        .resolved_path(dirs, name, flags)
+        .unwrap_or_else(|| resolve_texture_path_in_dirs_with_flags(dirs, name, flags))
 }
 
 impl ShapeTextureSource for HashMap<PathBuf, AceFile> {
@@ -2230,9 +2418,18 @@ pub struct PrefetchedTextures {
     pub loaded: HashSet<PathBuf>,
     pub prepared: HashMap<PathBuf, openrailsrs_bevy_scenery::texture_cache::CachedTexture>,
     pub alpha: HashMap<PathBuf, openrailsrs_bevy_scenery::texture_cache::TextureAlpha>,
+    pub resolved: PreparedTexturePaths,
 }
 
 impl ShapeTextureSource for PrefetchedTextures {
+    fn resolved_path(
+        &self,
+        dirs: &[&Path],
+        name: &str,
+        flags: TextureFlags,
+    ) -> Option<Option<PathBuf>> {
+        self.resolved.lookup(dirs, name, flags)
+    }
     fn cab_brightened(&self, path: &Path) -> Option<bool> {
         self.cab_brightness.get(path).copied()
     }
@@ -2257,6 +2454,7 @@ impl PrefetchedTextures {
         self.loaded.extend(other.loaded);
         self.prepared.extend(other.prepared);
         self.alpha.extend(other.alpha);
+        self.resolved.extend(other.resolved);
     }
     pub fn clear_pixels(&mut self) {
         self.aces.clear();
@@ -2386,7 +2584,7 @@ fn material_for_shape_texture(
     let lit = lit_override.unwrap_or_else(scenery_materials_lit);
     let addr_key = texture_cache_sampler_key(tex_addr_mode, mip_map_lod_bias);
     if let Some(tex_name) = texture_file {
-        match resolve_texture_path_in_dirs_with_flags(texture_dirs, tex_name, texture_flags) {
+        match resolved_texture_path(ace_cache, texture_dirs, tex_name, texture_flags) {
             None => {}
             Some(tex_path) => {
                 // Warm starts reuse lossless derivatives before decoding an ACE.
@@ -2924,6 +3122,106 @@ mod tests {
     use super::*;
     use std::collections::HashMap;
     use std::path::PathBuf;
+
+    #[test]
+    fn worker_texture_resolution_preserves_directory_flags_and_environment_precedence() {
+        use openrailsrs_bevy_scenery::textures::Season;
+        let root = tempfile::tempdir().unwrap();
+        let a = root.path().join("route");
+        let b = root.path().join("global");
+        std::fs::create_dir_all(a.join("night")).unwrap();
+        std::fs::create_dir(&b).unwrap();
+        std::fs::write(a.join("BODY.ace"), b"route").unwrap();
+        std::fs::write(b.join("BODY.ace"), b"global").unwrap();
+        std::fs::write(a.join("night/BODY.ace"), b"night").unwrap();
+        let dirs = [a.as_path(), b.as_path()];
+        let reversed = [b.as_path(), a.as_path()];
+        let flags = TextureFlags::from_raw(TextureFlags::NIGHT);
+        let day = TextureEnvironment::summer_day();
+        let night = TextureEnvironment { night: true, ..day };
+        let mut prepared = PreparedTexturePaths::default();
+        prepared.prepare_in(&dirs, "body.ace", flags, day);
+        prepared.prepare_in(&dirs, "body.ace", flags, night);
+        prepared.prepare_in(&reversed, "body.ace", flags, day);
+        assert_eq!(
+            prepared.lookup_in(&dirs, "body.ace", flags, day),
+            Some(Some(a.join("BODY.ace")))
+        );
+        assert_eq!(
+            prepared.lookup_in(&dirs, "body.ace", flags, night),
+            Some(Some(a.join("night/BODY.ace")))
+        );
+        assert_eq!(
+            prepared.lookup_in(&reversed, "body.ace", flags, day),
+            Some(Some(b.join("BODY.ace")))
+        );
+        assert_eq!(
+            prepared.lookup_in(&dirs, "body.ace", TextureFlags::default(), day),
+            None
+        );
+        assert_eq!(
+            prepared.lookup_in(
+                &dirs,
+                "body.ace",
+                flags,
+                TextureEnvironment {
+                    season: Season::Winter,
+                    ..day
+                }
+            ),
+            None
+        );
+        assert_eq!(
+            prepared.lookup_in(
+                &dirs,
+                "body.ace",
+                flags,
+                TextureEnvironment {
+                    snow_weather: true,
+                    ..day
+                }
+            ),
+            None
+        );
+        // No path is re-read by lookup after the worker resolved it.
+        std::fs::remove_file(a.join("BODY.ace")).unwrap();
+        assert_eq!(
+            prepared.lookup_in(&dirs, "body.ace", flags, day),
+            Some(Some(a.join("BODY.ace")))
+        );
+    }
+
+    #[test]
+    fn missing_texture_results_expire_with_generation_and_capacity_falls_back_to_resolution() {
+        let root = tempfile::tempdir().unwrap();
+        let dirs = [root.path()];
+        let flags = TextureFlags::default();
+        let environment = TextureEnvironment::summer_day();
+        let mut old = PreparedTexturePaths::default();
+        old.prepare_in(&dirs, "later.ace", flags, environment);
+        assert_eq!(
+            old.lookup_in(&dirs, "later.ace", flags, environment),
+            Some(None)
+        );
+        std::fs::write(root.path().join("later.ace"), b"now installed").unwrap();
+        assert_eq!(
+            old.lookup_in(&dirs, "later.ace", flags, environment),
+            Some(None)
+        );
+        let mut next = PreparedTexturePaths::default();
+        next.prepare_in(&dirs, "later.ace", flags, environment);
+        assert_eq!(
+            next.lookup_in(&dirs, "later.ace", flags, environment),
+            Some(Some(root.path().join("later.ace")))
+        );
+        next.count = PreparedTexturePaths::MAX_ENTRIES;
+        next.prepare_in(&dirs, "uncached.ace", flags, environment);
+        assert_eq!(
+            next.lookup_in(&dirs, "uncached.ace", flags, environment),
+            None,
+            "capacity exhaustion is not a false negative"
+        );
+    }
 
     #[test]
     fn native_track_anchor_heading_reflects_world_z_before_refining_shape_yaw() {

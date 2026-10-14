@@ -7,6 +7,93 @@ use std::sync::{
     atomic::{AtomicU64, Ordering},
 };
 
+const RECENT_SPAN_LIMIT: usize = 512;
+const FRAME_CONTEXT_LIMIT: usize = 16;
+const CONTEXT_SPAN_LIMIT: usize = 48;
+static SPAN_CLOCK: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
+static RECENT_SPANS: std::sync::OnceLock<std::sync::Mutex<std::collections::VecDeque<CpuSpan>>> =
+    std::sync::OnceLock::new();
+
+fn frame_spans_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| std::env::var("OPENRAILSRS_FRAME_SPANS").is_ok_and(|v| v == "1"))
+}
+fn span_seconds(instant: std::time::Instant) -> f64 {
+    instant
+        .saturating_duration_since(*SPAN_CLOCK.get_or_init(|| instant))
+        .as_secs_f64()
+}
+
+#[derive(Clone, Serialize)]
+pub struct CpuSpan {
+    stage: &'static str,
+    object: String,
+    thread: String,
+    started_s: f64,
+    ended_s: f64,
+    elapsed_ms: f64,
+}
+fn record_span(
+    stage: &'static str,
+    object: &str,
+    started: std::time::Instant,
+    ended: std::time::Instant,
+) {
+    if !frame_spans_enabled() || ended.duration_since(started).as_micros() < 1000 {
+        return;
+    }
+    let span = CpuSpan {
+        stage,
+        object: object.to_owned(),
+        thread: format!("{:?}", std::thread::current().id()),
+        started_s: span_seconds(started),
+        ended_s: span_seconds(ended),
+        elapsed_ms: ended.duration_since(started).as_secs_f64() * 1000.,
+    };
+    let mut spans = RECENT_SPANS.get_or_init(Default::default).lock().unwrap();
+    if spans.len() == RECENT_SPAN_LIMIT {
+        spans.pop_front();
+    }
+    spans.push_back(span);
+}
+
+#[derive(Clone, Serialize)]
+pub struct JourneyFrameContext {
+    frame: u64,
+    delta_ms: f64,
+    startup: bool,
+    streaming: bool,
+    scene_phase: String,
+    render_interval_start_s: Option<f64>,
+    render_interval_end_s: Option<f64>,
+    main_observed_s: f64,
+    overlapping_spans: Vec<CpuSpan>,
+    omitted_spans: usize,
+}
+
+#[derive(Clone, Default, Serialize)]
+pub struct JourneyFrameContexts {
+    maximum_gameplay: Option<JourneyFrameContext>,
+    maximum_startup: Option<JourneyFrameContext>,
+    recent_slow_frames: std::collections::VecDeque<JourneyFrameContext>,
+    scope: &'static str,
+}
+fn overlapping_spans(
+    spans: impl Iterator<Item = CpuSpan>,
+    start: f64,
+    end: f64,
+) -> (Vec<CpuSpan>, usize) {
+    let mut overlapping = spans
+        .filter(|span| span.started_s < end && span.ended_s > start)
+        .collect::<Vec<_>>();
+    // Preserve the longest spans when concurrent workers exceed the diagnostic
+    // cap. The omitted count makes truncation explicit; never sum nested spans.
+    overlapping.sort_by(|a, b| b.elapsed_ms.total_cmp(&a.elapsed_ms));
+    let omitted = overlapping.len().saturating_sub(CONTEXT_SPAN_LIMIT);
+    overlapping.truncate(CONTEXT_SPAN_LIMIT);
+    (overlapping, omitted)
+}
+
 /// CPU lifecycle attribution is bounded independently of the number of shapes.
 /// Paths are reduced to basenames so exported reports do not expose home paths.
 #[derive(Default, Serialize)]
@@ -26,6 +113,10 @@ pub struct ShapeTimer {
 }
 impl ShapeTimer {
     pub fn start(stage: &'static str, path: &std::path::Path) -> Self {
+        let started = std::time::Instant::now();
+        if frame_spans_enabled() {
+            SPAN_CLOCK.get_or_init(|| started);
+        }
         Self {
             stage,
             name: path
@@ -35,13 +126,18 @@ impl ShapeTimer {
                 .chars()
                 .take(160)
                 .collect(),
-            started: std::time::Instant::now(),
+            started,
         }
     }
 }
 impl Drop for ShapeTimer {
     fn drop(&mut self) {
-        let us = self.started.elapsed().as_micros().min(u64::MAX as u128) as u64;
+        let ended = std::time::Instant::now();
+        let us = ended
+            .duration_since(self.started)
+            .as_micros()
+            .min(u64::MAX as u128) as u64;
+        record_span(self.stage, &self.name, self.started, ended);
         let mut stages = SHAPE_STAGES.get_or_init(Default::default).lock().unwrap();
         let slot = stages.entry(self.stage).or_default();
         slot.calls += 1;
@@ -77,14 +173,22 @@ pub fn profile_system(name: &'static str) -> Option<SystemTimer> {
     static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     ENABLED
         .get_or_init(|| std::env::var("OPENRAILSRS_PROFILE_SYSTEMS").is_ok_and(|v| v == "1"))
-        .then(|| SystemTimer {
-            name,
-            started: std::time::Instant::now(),
+        .then(|| {
+            let started = std::time::Instant::now();
+            if frame_spans_enabled() {
+                SPAN_CLOCK.get_or_init(|| started);
+            }
+            SystemTimer { name, started }
         })
 }
 impl Drop for SystemTimer {
     fn drop(&mut self) {
-        let us = self.started.elapsed().as_micros().min(u64::MAX as u128) as u64;
+        let ended = std::time::Instant::now();
+        let us = ended
+            .duration_since(self.started)
+            .as_micros()
+            .min(u64::MAX as u128) as u64;
+        record_span(self.name, "system (inclusive)", self.started, ended);
         let mut stages = SYSTEM_STAGES.get_or_init(Default::default).lock().unwrap();
         let slot = stages.entry(self.name).or_default();
         slot.calls += 1;
@@ -755,6 +859,7 @@ pub struct JourneyPerformance {
     gameplay_longest_ms: f64,
     gameplay_hitches: u64,
     startup_longest_ms: f64,
+    frame_contexts: Option<JourneyFrameContexts>,
 }
 impl Default for JourneyPerformance {
     fn default() -> Self {
@@ -773,6 +878,7 @@ impl Default for JourneyPerformance {
             gameplay_longest_ms: 0.0,
             gameplay_hitches: 0,
             startup_longest_ms: 0.0,
+            frame_contexts: None,
         }
     }
 }
@@ -796,6 +902,9 @@ pub struct JourneyPerformanceReport {
     pub gameplay_longest_frame_ms: f64,
     pub gameplay_hitches_over_100_ms: u64,
     pub startup_longest_frame_ms: f64,
+    /// Opt-in correlation only. Does not replace the Journey histogram or its
+    /// scope; unavailable when OPENRAILSRS_FRAME_SPANS is not enabled.
+    pub frame_contexts: Option<JourneyFrameContexts>,
 }
 impl JourneyPerformance {
     fn record(&mut self, seconds: f64, loading: bool, startup: bool) {
@@ -863,6 +972,7 @@ impl JourneyPerformance {
             gameplay_longest_frame_ms: self.gameplay_longest_ms,
             gameplay_hitches_over_100_ms: self.gameplay_hitches,
             startup_longest_frame_ms: self.startup_longest_ms,
+            frame_contexts: self.frame_contexts.clone(),
         }
     }
     pub fn hud_text(&self) -> String {
@@ -893,14 +1003,83 @@ pub fn measure_journey(
     mut graphics: ResMut<crate::gpu_memory::GraphicsMemory>,
 ) {
     let initial_load = startup.is_some() || metrics.frames == 0;
-    metrics.record(
-        time.delta_secs_f64(),
-        progress.is_some()
-            || terrain.is_some()
-            || stream.is_some_and(|stream| stream.pending_work() > 0)
-            || initial_load,
-        initial_load,
-    );
+    let streaming = progress.is_some()
+        || terrain.is_some()
+        || stream
+            .as_ref()
+            .is_some_and(|stream| stream.pending_work() > 0)
+        || initial_load;
+    let delta_ms = time.delta_secs_f64() * 1000.;
+    let new_maximum = if initial_load {
+        delta_ms > metrics.startup_longest_ms
+    } else {
+        delta_ms > metrics.gameplay_longest_ms
+    };
+    metrics.record(time.delta_secs_f64(), streaming, initial_load);
+    if frame_spans_enabled()
+        && delta_ms.is_finite()
+        && delta_ms > 0.
+        && (new_maximum || delta_ms >= 50.)
+    {
+        let now = std::time::Instant::now();
+        let interval = time.last_update().and_then(|end| {
+            end.checked_sub(time.delta())
+                .map(|start| (span_seconds(start), span_seconds(end)))
+        });
+        let (overlapping, omitted) = interval.map_or_else(
+            || (Vec::new(), 0),
+            |(start, end)| {
+                overlapping_spans(
+                    RECENT_SPANS
+                        .get_or_init(Default::default)
+                        .lock()
+                        .unwrap()
+                        .iter()
+                        .cloned(),
+                    start,
+                    end,
+                )
+            },
+        );
+        let context = JourneyFrameContext {
+            frame: metrics.frames,
+            delta_ms,
+            startup: initial_load,
+            streaming,
+            scene_phase: progress.as_ref().map_or_else(
+                || {
+                    if terrain.is_some() {
+                        "terrain".into()
+                    } else {
+                        "no foreground WORLD task".into()
+                    }
+                },
+                |progress| progress.diagnostic_phase(),
+            ),
+            render_interval_start_s: interval.map(|pair| pair.0),
+            render_interval_end_s: interval.map(|pair| pair.1),
+            main_observed_s: span_seconds(now),
+            overlapping_spans: overlapping,
+            omitted_spans: omitted,
+        };
+        let diagnostics = metrics.frame_contexts.get_or_insert_with(|| JourneyFrameContexts {
+            scope: "Opt-in monotonic clock correlation from first Playing frame. Time<Real> render-world interval, observed Update phase and completed CPU spans across threads. Spans may be inclusive/nested; never sum them or assert physical presentation/Last-to-Last equivalence. Main observed phase may follow the pipelined render interval.",
+            ..default()
+        });
+        if new_maximum {
+            if initial_load {
+                diagnostics.maximum_startup = Some(context.clone());
+            } else {
+                diagnostics.maximum_gameplay = Some(context.clone());
+            }
+        }
+        if delta_ms >= 50. {
+            if diagnostics.recent_slow_frames.len() == FRAME_CONTEXT_LIMIT {
+                diagnostics.recent_slow_frames.pop_front();
+            }
+            diagnostics.recent_slow_frames.push_back(context);
+        }
+    }
     metrics.rss_clock_s += time.delta_secs_f64();
     if metrics.rss_clock_s < 1.0 {
         return;
@@ -929,6 +1108,45 @@ pub fn measure_journey(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn frame_context_correlates_true_overlaps_preserves_longest_and_reports_truncation() {
+        let span = |index, start, end| CpuSpan {
+            stage: "test",
+            object: format!("{index}"),
+            thread: "worker".into(),
+            started_s: start,
+            ended_s: end,
+            elapsed_ms: (end - start) * 1000.,
+        };
+        let values = std::iter::once(span(0, 1., 2.))
+            .chain(std::iter::once(span(1, 3., 4.)))
+            .chain((0..60).map(|i| span(i + 2, 2. + i as f64 / 1000., 3.)))
+            .chain(std::iter::once(span(99, 2.1, 2.9)));
+        let (matched, omitted) = overlapping_spans(values, 2., 3.);
+        assert_eq!(matched.len(), CONTEXT_SPAN_LIMIT);
+        assert_eq!(omitted, 13);
+        assert!(
+            matched
+                .iter()
+                .all(|span| span.started_s < 3. && span.ended_s > 2.)
+        );
+        assert_eq!(matched[0].object, "2");
+        assert!(
+            !matched
+                .iter()
+                .any(|span| span.object == "0" || span.object == "1")
+        );
+        // This extra diagnostic does not change the established histogram.
+        let mut metrics = JourneyPerformance::default();
+        for _ in 0..100 {
+            metrics.record(0.025, false, false);
+        }
+        metrics.record(0.105, true, false);
+        assert_eq!(metrics.report().gameplay_frame_p99_ms, 25);
+        assert_eq!(metrics.report().gameplay_longest_frame_ms, 105.);
+        assert!(metrics.report().frame_contexts.is_none());
+    }
 
     #[test]
     fn image_inventory_preserves_orphan_candidates_and_reports_truncation() {

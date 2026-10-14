@@ -155,6 +155,10 @@ mod tests {
         assert_eq!(country("Mitre · versión del autor"), 1);
         assert_eq!(country("Ejemplo · Mitre"), 1);
         assert_eq!(country("SNCF-TGV-Atlantique · 1096783"), 7);
+        assert_eq!(
+            country("SNCF-TGV-Atlantique · origen 2023-04-28 · 10967835"),
+            7
+        );
         assert_eq!(country("My railway near Newcastle"), 6);
         assert_eq!(country("Chilternish experimental"), 6);
         assert_eq!(country("Unknown route"), 6);

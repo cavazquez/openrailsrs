@@ -15,7 +15,7 @@ En **Nueva partida → Ruta y servicio → Buscar servicios**, elegí **Tráfico
 
 El local empieza junto a su parada. Abrí sus puertas, completá el intercambio y cerralas. F9 muestra el apartadero elegido y el servicio al que debe esperar. Avanzá al apartadero a velocidad de maniobra y detenete antes de su salida; el límite mostrado baja al acercarte al punto de espera. En la cámara exterior debe circular el otro tren por la vía principal. El local sale sólo después de que la cola del otro servicio despeje el corredor. La parada del local se conserva al adoptar la alternativa.
 
-Guardá con F8 mientras esperás y reanudá esa partida desde el menú. La espera y el tráfico deben continuar en sus posiciones. Un apartadero corto u ocupado produce un diagnóstico y no cambia la posición ni elimina paradas. Los planes usan alternativas declaradas sobre la red real y reservas compartidas; no inventan vías ni liberan el corredor por un temporizador.
+Mientras esperás, abrí Pausa con P o Esc y elegí Guardar 1, 2 o 3. Después, usá Continuar en el menú para reanudar esa partida. La espera y el tráfico deben continuar en sus posiciones. Un apartadero corto u ocupado produce un diagnóstico y no cambia la posición ni elimina paradas. Los planes usan alternativas declaradas sobre la red real y reservas compartidas; no inventan vías ni liberan el corredor por un temporizador.
 
 ## Cambio de conductor (#341)
 

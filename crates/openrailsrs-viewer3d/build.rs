@@ -6,7 +6,12 @@ fn main() {
         &[
             "src/prepared_geometry.rs",
             "src/shapes.rs",
+            "src/world.rs",
             "../openrailsrs-bevy-scenery/src/shapes/mesh.rs",
+            "../openrailsrs-bevy-scenery/src/shapes/anim.rs",
+            "../openrailsrs-bevy-scenery/src/shapes/debug.rs",
+            "../openrailsrs-bevy-scenery/src/shapes/descriptor.rs",
+            "../openrailsrs-or-shader/src/coordinates.rs",
             "../openrailsrs-formats/src/typed/shape.rs",
             "../openrailsrs-formats/src/shape_binary_reader.rs",
             "../openrailsrs-formats/src/shape_binary.rs",
