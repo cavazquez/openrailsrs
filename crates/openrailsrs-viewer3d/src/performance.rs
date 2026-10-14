@@ -273,6 +273,9 @@ pub struct GpuAllocatorReport {
     pub allocations: usize,
     pub blocks: usize,
     pub largest_labels: Vec<GpuAllocationLabel>,
+    /// Inspect this small shared image before truncating the largest labels.
+    /// None means the label is absent, not a fabricated zero allocation count.
+    pub ground_fog_density: Option<GpuAllocationLabel>,
     pub sparse_blocks: Vec<GpuAllocationBlock>,
 }
 #[derive(Clone, Debug, Serialize)]
@@ -318,6 +321,25 @@ fn allocation_labels<'a>(
     labels.sort_unstable_by(|a, b| b.bytes.cmp(&a.bytes).then_with(|| a.name.cmp(&b.name)));
     labels.truncate(limit);
     labels
+}
+
+fn ground_fog_allocations<'a>(
+    allocations: impl Iterator<Item = (&'a str, u64)>,
+) -> Option<GpuAllocationLabel> {
+    let mut label = None::<GpuAllocationLabel>;
+    for (name, bytes) in allocations {
+        if name != "openrailsrs-ground-fog-density" {
+            continue;
+        }
+        let total = label.get_or_insert_with(|| GpuAllocationLabel {
+            name: name.to_owned(),
+            bytes: 0,
+            allocations: 0,
+        });
+        total.bytes = total.bytes.saturating_add(bytes);
+        total.allocations += 1;
+    }
+    label
 }
 #[derive(Clone, Debug, Serialize)]
 pub struct RendererDevice {
@@ -528,6 +550,9 @@ pub fn update_pipeline_status(
                             largest_labels: allocation_labels(
                                 report.allocations.iter().map(|a| (a.name.as_str(), a.size)),
                                 16,
+                            ),
+                            ground_fog_density: ground_fog_allocations(
+                                report.allocations.iter().map(|a| (a.name.as_str(), a.size)),
                             ),
                             sparse_blocks,
                         }
@@ -814,6 +839,27 @@ pub fn measure_journey(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn shared_fog_allocation_is_counted_even_below_the_largest_label_cutoff() {
+        let mut source = vec![("larger texture", 1_048_576); 20];
+        source.extend([
+            ("openrailsrs-ground-fog-density", 32_768),
+            ("openrailsrs-ground-fog-density", 32_768),
+        ]);
+        let largest = allocation_labels(source.iter().copied(), 1);
+        assert_eq!(largest[0].name, "larger texture");
+        let observed = ground_fog_allocations(source.into_iter()).unwrap();
+        assert_eq!(observed.allocations, 2);
+        assert_eq!(observed.bytes, 65_536);
+        assert_eq!(observed.name, "openrailsrs-ground-fog-density");
+    }
+
+    #[test]
+    fn missing_fog_allocation_label_stays_unavailable_instead_of_zero_filled() {
+        assert!(ground_fog_allocations([("another texture", 32_768)].into_iter()).is_none());
+        assert!(ground_fog_allocations(std::iter::empty()).is_none());
+    }
+
     #[test]
     fn material_owner_maps_distinguish_absence_empty_and_retired_types() {
         let unavailable =

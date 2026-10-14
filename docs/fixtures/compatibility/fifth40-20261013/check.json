@@ -2,10 +2,10 @@
   "schema": 1,
   "completed": true,
   "command": "CARGO_BUILD_JOBS=2 bash ./check.sh",
-  "log_sha256": "3fd6b760438d8090d10042a7a218784720cbeeab9bf94f19531d2cc8d70f5b59",
+  "log_sha256": "2f20330e501e815b817cd95acbadfb0709fa0b349f731bd3b46b538105b8de61",
   "rust_suites": 152,
   "rust": {
-    "passed": 2052,
+    "passed": 2055,
     "failed": 0,
     "ignored": 49
   },
@@ -22,7 +22,7 @@
     "OK: check.sh complet\u00f3 sin errores."
   ],
   "player_traces_preserved": true,
-  "scope": "Full checks for frozen source31, with country-first and finite-width selector labels separately accepted by real pixel/label/viewport captures. Exact endurance27 and rebuilt strict Snap have separate receipts.",
+  "scope": "Frozen source32 full checks; one shared ground-fog texture and allocation diagnostics added to source31. Hardware long-run and exact packaged artifact acceptance are separate receipts.",
   "capture_regression": {
     "delayed_readback_test": "capture::completion_tests::delayed_readback_replaces_stale_image_and_write_failure_never_completes",
     "success_requires": "ScreenshotCaptured delivered and fresh image write succeeded",
@@ -36,8 +36,8 @@
     "transient_images_retired": true,
     "shelter_bytes_refreshed": true
   },
-  "source_variant": "phase31",
-  "viewer_sha256": "9c7a1418630d7f828639aa736ab3151e87ee8f3c1e253165dbfc594bfab457e9",
+  "source_variant": "phase32",
+  "viewer_sha256": "4ee97d35ead40ca675852ea0a011bc1e8c684cc3d86f88c3a99b82ed5032276f",
   "render_retirement_regression": {
     "tests": [
       "render_retirement::tests::retiring_views_releases_buffer_owners_and_preserves_live_phases_and_subviews",
@@ -100,5 +100,24 @@
       }
     ],
     "scope": "UI-only differences; the endurance executable is27, not31. No renderer, core, shaders or dependency sources differ."
+  },
+  "ground_fog_lifecycle_regression": {
+    "tests": [
+      "ground_fog::tests::twelve_scene_reloads_reuse_one_fog_density_image_without_changing_its_payload",
+      "performance::tests::shared_fog_allocation_is_counted_even_below_the_largest_label_cutoff",
+      "performance::tests::missing_fog_allocation_label_stays_unavailable_instead_of_zero_filled"
+    ],
+    "reloads": 12,
+    "live_source_images": 1,
+    "fixed_asset_id": true,
+    "payload_sampler_and_descriptor_preserved": true,
+    "transient_images_retired": true,
+    "backend_unavailable_is_not_zero": true
+  },
+  "sandbox_attempt": {
+    "log_sha256": "2008fc164e0a680793724a25cf05239f2dd01b5de588c01d8012f7c122cf92cd",
+    "returncode": 1,
+    "accepted": false,
+    "reason": "Four Unix socket bind calls forbidden by sandbox; exact-source full rerun with permitted local sockets passed."
   }
 }

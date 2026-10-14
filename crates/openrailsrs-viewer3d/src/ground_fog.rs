@@ -1,5 +1,5 @@
 //! Dense local fog and headlight scattering, with a distance-only alternative.
-use bevy::asset::RenderAssetUsages;
+use bevy::asset::{AssetId, RenderAssetUsages};
 use bevy::image::{ImageAddressMode, ImageSampler, ImageSamplerDescriptor};
 use bevy::light::{FogVolume, VolumetricFog, VolumetricLight};
 use bevy::prelude::*;
@@ -119,6 +119,24 @@ pub(crate) fn apply_shader_fix(
 #[derive(Component)]
 pub struct GroundFog;
 
+// The density field depends only on local UVW, so all routes can reuse one
+// texture and TextureView rather than leave a new render key after each scene.
+const DENSITY_IMAGE: Handle<Image> =
+    bevy::asset::uuid_handle!("8c2541d7-cf90-4624-b741-7f9e336d5d85");
+
+pub(crate) fn density_image_id() -> AssetId<Image> {
+    DENSITY_IMAGE.id()
+}
+
+fn shared_density_texture(images: &mut Assets<Image>) -> Handle<Image> {
+    if !images.contains(DENSITY_IMAGE.id()) {
+        images
+            .insert(DENSITY_IMAGE.id(), density_texture())
+            .expect("The fixed fog density image ID is valid");
+    }
+    DENSITY_IMAGE.clone()
+}
+
 /// Smooth compact support eliminates the vertical wall produced by a uniform
 /// 12 km box. DistanceFog handles distant extinction; this local layer is for
 /// ground mist and headlight shafts in the local 400 m volume.
@@ -156,8 +174,11 @@ fn density_texture() -> Image {
         TextureDimension::D3,
         data,
         TextureFormat::R8Unorm,
-        RenderAssetUsages::RENDER_WORLD,
+        // Keep the 32 KiB source copy available across scene extraction and
+        // device recovery; SceneCleanup explicitly preserves this one image.
+        RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD,
     );
+    image.texture_descriptor.label = Some("openrailsrs-ground-fog-density");
     image.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
         address_mode_u: ImageAddressMode::Repeat,
         address_mode_v: ImageAddressMode::ClampToEdge,
@@ -174,7 +195,7 @@ pub fn spawn_ground_fog(mut commands: Commands, mut images: ResMut<Assets<Image>
         GroundFog,
         Name::new("railway-ground-fog"),
         FogVolume {
-            density_texture: Some(images.add(density_texture())),
+            density_texture: Some(shared_density_texture(&mut images)),
             density_factor: 0.0,
             scattering_asymmetry: 0.65,
             absorption: 0.05,
@@ -344,6 +365,44 @@ pub fn update_ground_fog(
 mod tests {
     use super::*;
     use crate::player_settings::FogQuality;
+    use bevy::ecs::system::RunSystemOnce;
+
+    #[test]
+    fn twelve_scene_reloads_reuse_one_fog_density_image_without_changing_its_payload() {
+        let mut world = World::new();
+        world.init_resource::<Assets<Image>>();
+        crate::scene_cleanup::begin_loading(&mut world);
+        let expected = density_texture();
+        assert_eq!(expected.data.as_ref().unwrap().len(), 32 * 32 * 32);
+        assert_eq!(
+            expected.asset_usage,
+            RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD
+        );
+        for cycle in 0..12 {
+            let transient = world.resource_mut::<Assets<Image>>().add(Image::default());
+            crate::scene_cleanup::begin_loading(&mut world);
+            assert!(!world.resource::<Assets<Image>>().contains(transient.id()));
+            world.run_system_once(spawn_ground_fog).unwrap();
+            let volumes = world
+                .query_filtered::<&FogVolume, With<GroundFog>>()
+                .iter(&world)
+                .collect::<Vec<_>>();
+            assert_eq!(volumes.len(), 1, "Scene {cycle} owns one fog volume");
+            assert_eq!(
+                volumes[0].density_texture.as_ref().unwrap().id(),
+                density_image_id()
+            );
+            assert_eq!(volumes[0].density_factor, 0.0);
+            let images = world.resource::<Assets<Image>>();
+            assert_eq!(images.len(), 1, "Only one shared density image survives");
+            let actual = images.get(density_image_id()).unwrap();
+            assert_eq!(actual.data, expected.data);
+            assert_eq!(actual.texture_descriptor, expected.texture_descriptor);
+            assert_eq!(actual.sampler, expected.sampler);
+            assert_eq!(actual.asset_usage, expected.asset_usage);
+        }
+    }
+
     #[test]
     fn periodic_banks_keep_their_density_across_texture_wrap_and_floating_origin() {
         let p = Vec3::new(0.13, 0.2, 0.63);

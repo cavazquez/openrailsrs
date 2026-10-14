@@ -158,6 +158,7 @@ pub fn begin_loading(world: &mut World) {
         fonts.insert(mesh.0.id().untyped());
     }
     fonts.extend(crate::particle_textures::preserved_ids().map(AssetId::untyped));
+    fonts.insert(crate::ground_fog::density_image_id().untyped());
     asset_types!(retire, world, &mut cleanup, &fonts);
 
     reset::<crate::world::WorldShapeLodCache>(world);
