@@ -3,6 +3,7 @@ use super::*;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum NewGameStep {
+    Country,
     Route,
     Train,
     Environment,
@@ -55,7 +56,7 @@ pub(super) fn build_home(p: &mut ChildSpawnerCommands<'_>) {
     for (title, description, panel) in [
         (
             "Nueva partida",
-            "Elegí una ruta, un tren y las condiciones del viaje.",
+            "Elegí el país, la ruta, el tren y las condiciones del viaje.",
             PlayerPanel::NewGame,
         ),
         (
@@ -110,14 +111,22 @@ fn tab(p: &mut ChildSpawnerCommands<'_>, name: &str, command: UiCommand, selecte
     }
 }
 
-pub(super) fn build_steps(p: &mut ChildSpawnerCommands<'_>, selected: NewGameStep) {
+pub(super) fn build_steps(p: &mut ChildSpawnerCommands<'_>, ui: &PlayerUiState) {
     row(p, |p| {
         for (step, name) in [
-            (NewGameStep::Route, "1 · Ruta y servicio"),
-            (NewGameStep::Train, "2 · Tren"),
-            (NewGameStep::Environment, "3 · Hora y clima"),
+            (NewGameStep::Country, "1 · País"),
+            (NewGameStep::Route, "2 · Ruta y servicio"),
+            (NewGameStep::Train, "3 · Tren"),
+            (NewGameStep::Environment, "4 · Hora y clima"),
         ] {
-            tab(p, name, UiCommand::NewGameStep(step), selected == step);
+            if ui.country_chosen || step == NewGameStep::Country {
+                tab(
+                    p,
+                    name,
+                    UiCommand::NewGameStep(step),
+                    ui.new_game_step == step,
+                );
+            }
         }
     });
 }
@@ -187,7 +196,27 @@ pub(super) fn build_new_game(
         }
     }
     match ui.new_game_step {
+        NewGameStep::Country => menu_country::build(p, ui, menu),
         NewGameStep::Route => {
+            button(
+                p,
+                format!(
+                    "País: {} · Cambiar",
+                    menu_country::country_label(ui.choice_search[ChoiceKind::Route.slot()].country)
+                ),
+                UiCommand::NewGameStep(NewGameStep::Country),
+            );
+            if !menu_country::route_available(ui, menu) {
+                label(p, "No hay rutas instaladas de este país.", 21.0, TEXT);
+                label(
+                    p,
+                    "Elegí otro país o abrí la biblioteca para instalar una ruta de su autor.",
+                    14.0,
+                    MUTED,
+                );
+                button(p, "Abrir biblioteca", UiCommand::Open(PlayerPanel::Content));
+                return;
+            }
             button(
                 p,
                 "Campañas y jornadas",
@@ -642,6 +671,23 @@ pub(super) fn build_launch_footer(
         Name::new("launch-footer"),
     ))
     .with_children(|p| {
+        if ui.new_game_step == NewGameStep::Country {
+            label(
+                p,
+                "Primero elegí un país. Después, la ruta y el servicio.",
+                13.0,
+                MUTED,
+            );
+            return;
+        }
+        if !menu_country::route_available(ui, menu) {
+            button(
+                p,
+                "← Elegir país",
+                UiCommand::NewGameStep(NewGameStep::Country),
+            );
+            return;
+        }
         label(
             p,
             format!(
@@ -662,6 +708,7 @@ pub(super) fn build_launch_footer(
         let (message, color, ready) = readiness(menu);
         row(p, |p| {
             match ui.new_game_step {
+                NewGameStep::Country => unreachable!("country footer returns before route actions"),
                 NewGameStep::Route => {
                     button(
                         p,
@@ -982,6 +1029,7 @@ pub(super) fn build_settings_tabs(p: &mut ChildSpawnerCommands<'_>, selected: Se
 
 pub(super) fn capture_page(ui: &mut PlayerUiState, page: &str) {
     let (panel, step, advanced) = match page {
+        "country" => (PlayerPanel::NewGame, NewGameStep::Country, false),
         "vehicle-profile" => (PlayerPanel::VehicleProfile, NewGameStep::Train, false),
         "bug-report" => (PlayerPanel::IssueReport, NewGameStep::Route, false),
         "library-tools" => {
@@ -1017,6 +1065,9 @@ pub(super) fn capture_page(ui: &mut PlayerUiState, page: &str) {
     };
     ui.panel = panel;
     ui.new_game_step = step;
+    ui.country_chosen = step != NewGameStep::Country;
+    ui.choice_search[ChoiceKind::Route.slot()].country = 0;
+    ui.choice_search[ChoiceKind::Service.slot()].country = 0;
     ui.new_game_advanced = advanced;
     ui.navigation = vec![PlayerPanel::Menu];
 }

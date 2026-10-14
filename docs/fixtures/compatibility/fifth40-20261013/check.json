@@ -2,10 +2,10 @@
   "schema": 1,
   "completed": true,
   "command": "CARGO_BUILD_JOBS=2 bash ./check.sh",
-  "log_sha256": "4b0b8d67d182942a47a88e400f2582a5685dcc886424da21fd0bc75a18f1e201",
+  "log_sha256": "9ceaa3aab4aef7ab9861771090bc722e1681b6f6164c5208e76a0b851c73335b",
   "rust_suites": 152,
   "rust": {
-    "passed": 2048,
+    "passed": 2052,
     "failed": 0,
     "ignored": 49
   },
@@ -22,7 +22,7 @@
     "OK: check.sh complet\u00f3 sin errores."
   ],
   "player_traces_preserved": true,
-  "scope": "Final source26: full check, original TGV fields/cab/equipment and anonymous matrix slots; retired-view binding pruning and actual material-map/GNU heap telemetry. Hardware endurance and packaged builds have separate receipts.",
+  "scope": "Full final source28 check and fixed OR1.6.1 oracles, original TGV resource/runtime/parser regressions, render lifetime/material/heap regressions and country-first launch flow. The two-column UI has separate real viewport capture acceptance; endurance27 is explicitly attributed to its own binary and unchanged core/renderer sources.",
   "capture_regression": {
     "delayed_readback_test": "capture::completion_tests::delayed_readback_replaces_stale_image_and_write_failure_never_completes",
     "success_requires": "ScreenshotCaptured delivered and fresh image write succeeded",
@@ -36,8 +36,8 @@
     "transient_images_retired": true,
     "shelter_bytes_refreshed": true
   },
-  "source_variant": "phase26",
-  "viewer_sha256": "24793d08bc7a6900ea817165dd2519492dbbdceacd043cf58c08a1fd6170ca4a",
+  "source_variant": "phase28",
+  "viewer_sha256": "7423b7e89154ab104cd58f6605aeee81aeb38ebb769d85d97b96b4de4579daa7",
   "render_retirement_regression": {
     "tests": [
       "render_retirement::tests::retiring_views_releases_buffer_owners_and_preserves_live_phases_and_subviews",
@@ -73,5 +73,19 @@
     "empty_and_retired_types": true,
     "unexpected_material_types_separate": true,
     "heap_snapshot_optional_gnu": true
+  },
+  "country_first_regression": {
+    "tests": [
+      "player_ui::menu_country::tests::only_identified_package_origins_receive_a_country",
+      "player_ui::tests::new_game_starts_with_direct_countries_before_routes_or_trains",
+      "player_ui::tests::all_unknown_and_empty_countries_keep_selection_and_launch_consistent",
+      "player_ui::tests::country_survives_filter_reset_and_rejects_invalid_selection_without_mutation"
+    ],
+    "direct_country_before_routes_services": true,
+    "all_unknown_empty_country": true,
+    "invalid_selection_atomic": true,
+    "normal_async_route_selection": true,
+    "foreign_stock_still_global": true,
+    "train_capture_hook_preserved": true
   }
 }

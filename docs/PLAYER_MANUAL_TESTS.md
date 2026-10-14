@@ -17,7 +17,7 @@ El script compila y abre el menú. Si el Content está en otro directorio, defin
 `CHILTERN_ROUTE` con la carpeta que contiene `WORLD`, `TILES` y `Chiltern.tdb`.
 Para saltar el menú: `./scripts/run_chiltern_service.sh --direct`.
 
-Elegí **Chiltern**, **Chiltern local con tráfico: Northolt Park → West Ruislip**,
+Elegí **Reino Unido**, **Chiltern**, **Chiltern local con tráfico: Northolt Park → West Ruislip**,
 **birmingham_pullman**, **Recorrido del servicio**, **09:55**, **Verano** y
 **Despejado**. El tren debe tener ocho coches y comenzar detenido en Northolt Park.
 No abras dos visores a la vez.
@@ -28,7 +28,18 @@ superposiciones que permiten seguir conduciendo. Esc cierra un panel o abre paus
 
 ## 1. Menú de inicio y selección de contenido
 
-1. Desde **Nueva partida**, elegí ruta y servicio en **1 · Ruta y servicio**.
+1. Al abrir **Nueva partida**, la primera elección debe ser **1 · País**, con
+   botones directos para cada país, **Todos los países** y **Sin dato de país**.
+   En **640 × 480**, los ocho botones deben verse en dos columnas y cuatro
+   filas, sin tener que desplazar la pantalla para descubrir un país.
+   Antes de elegir no deben mostrarse una ruta, servicio o botón **Jugar**.
+   Elegí **Argentina**: en **2 · Ruta y servicio** deben aparecer sólo sus rutas
+   instaladas, como Mitre, y los servicios de la ruta elegida. Cambiá a
+   **Reino Unido** y comprobá Chiltern. **Todos los países** restaura todas las
+   rutas; **Sin dato de país** conserva las que no podemos identificar.
+   Un país sin rutas debe ofrecer abrir la biblioteca, sin mostrar ni iniciar
+   la ruta del país anterior. El origen se reconoce para paquetes conocidos;
+   no se deduce el país de cualquier topónimo de un nombre o descripción.
    Pulsá **Buscar rutas…**, escribí parte del nombre y elegí directamente una
    fila. Podés usar ↑/↓ y Enter; Esc sale del buscador. **Limpiar** restaura la
    lista completa y los botones de página permiten recorrerla. El botón
@@ -36,9 +47,11 @@ superposiciones que permiten seguir conduciendo. Esc cierra un panel o abre paus
    Las paradas y el horario previsto deben corresponder al servicio elegido.
    A la derecha debe aparecer la imagen de la ruta incluida por su autor, junto
    con trocha y alimentación. Si no hay imagen instalada, se informa allí.
-   Pasá a **2 · Tren**: el buscador debe ofrecer formaciones de **todos los
+   Pasá a **3 · Tren**: el buscador debe ofrecer formaciones de **todos los
    paquetes instalados** y ejemplos, con su procedencia. Cambiar de mapa debe
-   conservar esa disponibilidad; los PAT siguen perteneciendo al mapa elegido.
+   conservar esa disponibilidad; elegí un tren de otro país para comprobarlo.
+   Elegir el país de una ruta no aplica un filtro de país a los trenes.
+   Los PAT siguen perteneciendo al mapa elegido.
    La preview muestra los modelos y texturas de la **formación completa**.
    Usá ↶/↷, +/−, **Todo** y **Vehículo** para girar, acercarte y enfocar coches.
    **Filtros** abre país, trocha, tracción, recursos y favoritos. La estrella
@@ -48,7 +61,7 @@ superposiciones que permiten seguir conduciendo. Esc cierra un panel o abre paus
    **Ver detalles** abre archivos faltantes y sus ubicaciones.
 2. Volvé al servicio Chiltern local y pulsá **Jugar**. Debe aparecer la
    pantalla de carga y después el escenario original, el Pullman y la próxima parada.
-3. Volvé al menú desde la pausa y, en **3 · Hora y clima**, probá otra hora,
+3. Volvé al menú desde la pausa y, en **4 · Hora y clima**, probá otra hora,
    estación del año y clima. La
    libreta/HUD deben mostrar la hora elegida; el sol debe cambiar con fecha y hora.
    Lluvia muestra precipitación; Niebla reduce la visibilidad
@@ -58,7 +71,7 @@ superposiciones que permiten seguir conduciendo. Esc cierra un panel o abre paus
    Los recursos ausentes usan la textura base. De noche se seleccionan las
    variantes Night que declara cada modelo; el sol, el cielo y la niebla deben
    oscurecerse juntos. Probá 21:55: el horizonte no debe conservar el azul diurno.
-4. En **1 · Ruta y servicio**, abrí **Cambiar recorrido (exploración)**
+4. En **2 · Ruta y servicio**, abrí **Cambiar recorrido (exploración)**
    y elegí un PAT diferente en **Recorrido**. Debe indicarse que se iniciará una
    exploración por ese camino, hasta su destino; no deben conservarse las tres
    paradas del servicio local en un recorrido diferente.

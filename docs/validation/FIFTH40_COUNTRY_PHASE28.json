@@ -1,0 +1,341 @@
+{
+  "schema": 1,
+  "scope": "Phase28 fixes the phase27 country-menu discovery failure using two columns/four rows. The same commands, order and selection logic remain.",
+  "candidate": "phase28",
+  "binary_sha256": "7423b7e89154ab104cd58f6605aeee81aeb38ebb769d85d97b96b4de4579daa7",
+  "source_snapshot": "phase28-source.json",
+  "source_snapshot_sha256": "446153c66e2183dc9489c25088074f376cbc9ee1459f775f593a06ddf49dd024",
+  "harness": "capture-country-complete.py",
+  "harness_sha256": "eaef302c3ed400519cbbb19feb87751de255435babe2dd8e0acb15e11aa08e31",
+  "raw_report_sha256": "b142b60966d96b38e85f9058f8e4ac992600d2c0882be3d84c12d1e46082775e",
+  "renderer_scope": "Private Weston on RX7600 PCI0000:03:00.0; sequential viewers and source/geometry/texture caches disabled",
+  "acceptance": {
+    "sizes_px": [
+      [
+        800,
+        600
+      ],
+      [
+        640,
+        480
+      ]
+    ],
+    "cases_passed": 2,
+    "png_inspected": 2,
+    "fully_visible_country_choices_each": 8,
+    "failed_shader_pipelines": 0,
+    "not_based_on_ocr": true,
+    "snap_certified": false,
+    "long_run_stability_certified": false
+  },
+  "cases": [
+    {
+      "status": "PASS",
+      "binary_sha256": "7423b7e89154ab104cd58f6605aeee81aeb38ebb769d85d97b96b4de4579daa7",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "frame": "country-800x600.png",
+      "frame_sha256": "f4d17dad3328f82b07f1137167c15af67dc56256daf19f2587d56dc5e0a72204",
+      "raw_checkpoint_sha256": "e9c20800d98f77a14719caef0376ac91c75e15de4a90c9f479cf807e00ed6d35",
+      "log_sha256": "42e1c069097275c39f7151d19203fc4289041007f3f7e6956c1fd47996332091",
+      "frame_size_px": [
+        800,
+        600
+      ],
+      "country_chosen_input": false,
+      "hook": "MENU_PAGE=country uses the normal builder",
+      "commands": [
+        {
+          "max": [
+            396.0,
+            233.0
+          ],
+          "min": [
+            66.0,
+            201.0
+          ],
+          "name": "ui-SelectCountry(0)"
+        },
+        {
+          "max": [
+            734.0,
+            233.0
+          ],
+          "min": [
+            404.0,
+            201.0
+          ],
+          "name": "ui-SelectCountry(1)"
+        },
+        {
+          "max": [
+            396.0,
+            277.0
+          ],
+          "min": [
+            66.0,
+            245.0
+          ],
+          "name": "ui-SelectCountry(2)"
+        },
+        {
+          "max": [
+            734.0,
+            277.0
+          ],
+          "min": [
+            404.0,
+            245.0
+          ],
+          "name": "ui-SelectCountry(3)"
+        },
+        {
+          "max": [
+            396.0,
+            321.0
+          ],
+          "min": [
+            66.0,
+            289.0
+          ],
+          "name": "ui-SelectCountry(4)"
+        },
+        {
+          "max": [
+            734.0,
+            321.0
+          ],
+          "min": [
+            404.0,
+            289.0
+          ],
+          "name": "ui-SelectCountry(5)"
+        },
+        {
+          "max": [
+            396.0,
+            365.0
+          ],
+          "min": [
+            66.0,
+            333.0
+          ],
+          "name": "ui-SelectCountry(6)"
+        },
+        {
+          "max": [
+            734.0,
+            365.0
+          ],
+          "min": [
+            404.0,
+            333.0
+          ],
+          "name": "ui-SelectCountry(7)"
+        }
+      ],
+      "labels": [
+        "Todos los países",
+        "Argentina",
+        "Australia",
+        "Estados Unidos",
+        "Portugal",
+        "Reino Unido",
+        "Sin dato de país",
+        "Francia"
+      ],
+      "viewport": {
+        "max": [
+          734.0,
+          505.0
+        ],
+        "min": [
+          66.0,
+          134.0
+        ],
+        "name": "player-scroll"
+      },
+      "fully_visible_country_choices": 8,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "effective_cache_policy": {
+        "source": "off",
+        "geometry": "off",
+        "texture": "off"
+      },
+      "visual_inspection_pending": false,
+      "visual_inspection": "All eight country choices are readable and completely visible in two columns/four rows. The question, header and fixed footer are coherent.",
+      "case": "country-800x600"
+    },
+    {
+      "status": "PASS",
+      "binary_sha256": "7423b7e89154ab104cd58f6605aeee81aeb38ebb769d85d97b96b4de4579daa7",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "frame": "country-640x480.png",
+      "frame_sha256": "5c84d524082c3704443ecd5d8bc817440cb965d3abfa6048cd9cca6c6e445d53",
+      "raw_checkpoint_sha256": "b86665031a0b0bf6c5bc65209e411adfa0ad0f32cf5fcbeb2c8a486ff04ba45a",
+      "log_sha256": "1fb93bd6d440160ee1e572db7a34d2dd8c9838aecd0b2291d893dff68c486d0c",
+      "frame_size_px": [
+        640,
+        480
+      ],
+      "country_chosen_input": false,
+      "hook": "MENU_PAGE=country uses the normal builder",
+      "commands": [
+        {
+          "max": [
+            316.0,
+            226.0
+          ],
+          "min": [
+            56.0,
+            194.0
+          ],
+          "name": "ui-SelectCountry(0)"
+        },
+        {
+          "max": [
+            584.0,
+            226.0
+          ],
+          "min": [
+            324.0,
+            194.0
+          ],
+          "name": "ui-SelectCountry(1)"
+        },
+        {
+          "max": [
+            316.0,
+            270.0
+          ],
+          "min": [
+            56.0,
+            238.0
+          ],
+          "name": "ui-SelectCountry(2)"
+        },
+        {
+          "max": [
+            584.0,
+            270.0
+          ],
+          "min": [
+            324.0,
+            238.0
+          ],
+          "name": "ui-SelectCountry(3)"
+        },
+        {
+          "max": [
+            316.0,
+            314.0
+          ],
+          "min": [
+            56.0,
+            282.0
+          ],
+          "name": "ui-SelectCountry(4)"
+        },
+        {
+          "max": [
+            584.0,
+            314.0
+          ],
+          "min": [
+            324.0,
+            282.0
+          ],
+          "name": "ui-SelectCountry(5)"
+        },
+        {
+          "max": [
+            316.0,
+            358.0
+          ],
+          "min": [
+            56.0,
+            326.0
+          ],
+          "name": "ui-SelectCountry(6)"
+        },
+        {
+          "max": [
+            584.0,
+            358.0
+          ],
+          "min": [
+            324.0,
+            326.0
+          ],
+          "name": "ui-SelectCountry(7)"
+        }
+      ],
+      "labels": [
+        "Todos los países",
+        "Argentina",
+        "Australia",
+        "Estados Unidos",
+        "Portugal",
+        "Reino Unido",
+        "Sin dato de país",
+        "Francia"
+      ],
+      "viewport": {
+        "max": [
+          584.0,
+          392.0
+        ],
+        "min": [
+          56.0,
+          127.0
+        ],
+        "name": "player-scroll"
+      },
+      "fully_visible_country_choices": 8,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "effective_cache_policy": {
+        "source": "off",
+        "geometry": "off",
+        "texture": "off"
+      },
+      "visual_inspection_pending": false,
+      "visual_inspection": "All eight country choices are readable and completely visible in two columns/four rows. The question, header and fixed footer are coherent. The explanatory note following the options is partly clipped below the viewport; the eight choices and footer remain fully visible.",
+      "case": "country-640x480"
+    }
+  ],
+  "previous_finding": {
+    "receipt": "docs/validation/FIFTH40_PHASE27_BRIDGE_AND_COUNTRY.json",
+    "receipt_sha256": "e5fdd0892e3e6f79f40bfe161a73a1da106df2678b7f8da052d37c8d4606a0bc",
+    "country_status": "DISCOVERYFAIL",
+    "previous_png_and_logs_preserved": true,
+    "phase27_frames_relabelled": false
+  },
+  "manual_test": [
+    "Open the viewer, choose Nueva partida, and resize to800x600 and640x480.",
+    "The first step must be1·País, with no country already selected. All eight choices must be visible without scrolling: Todos los países, Argentina, Australia, Estados Unidos, Portugal, Reino Unido, Sin dato de país, Francia.",
+    "Choose a country; the next step should show its installed routes/services. An empty country must explain the missing routes rather than silently choosing another country.",
+    "Go back toPaís and choose Todos los países; all installed routes should be available. Country choice does not restrict the later train list."
+  ],
+  "limits": [
+    "The eight choice rectangles and matching labels come from real captured ECS/UI data, and both PNGs were inspected. This is not solely OCR or a count of offscreen entries.",
+    "MENU_PAGE=country uses the same normal screen builder and sets country_chosen=false as the recorded capture input. These frames do not synthesize clicks or scrolling.",
+    "The optional explanatory note below the eight choices is partially clipped at640x480. The options, header and fixed footer are fully visible.",
+    "This layout receipt does not certify long-run graphics memory, the final Snap or every menu page.",
+    "Private home paths, downloaded author resources and PNG payloads are not versioned in this receipt."
+  ]
+}

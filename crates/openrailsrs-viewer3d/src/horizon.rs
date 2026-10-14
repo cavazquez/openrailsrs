@@ -93,7 +93,7 @@ fn coarse(path: PathBuf, x: i32, z: i32) -> Option<((i32, i32), Mesh, Color)> {
             let ace = openrailsrs_ace::read_ace_limited(tex, 32 * 1024 * 1024).ok()?;
             let mut sum = [0u64; 3];
             let mut count = 0;
-            for p in ace.mip0.chunks_exact(4).step_by(64) {
+            for p in ace.mip0.as_chunks::<4>().0.iter().step_by(64) {
                 for i in 0..3 {
                     sum[i] += u64::from(p[i]);
                 }

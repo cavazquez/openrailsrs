@@ -126,7 +126,9 @@ muestra de la textura del suelo del autor.
 El cielo y la cámara no son superficies que proyecten sombra. Las sombras del
 tren y de objetos instanciados deben continuar al cambiar de cámara o de sector.
 Comparar contacto desactivado/alto con el mismo encuadre. La prueba nativa incluye
-vistas del puente y del horizonte y registra los mismos ajustes de iluminación.
+una vista baja junto a la vía y otra del horizonte, con los ajustes de iluminación
+registrados. El caso histórico `bridge-low` no muestra un puente sobre la cámara;
+no se cuenta como prueba de sombras bajo un puente.
 Esto valida continuidad y composición en Bevy; no exige igualdad de píxeles con
 el renderizador de Open Rails.
 
@@ -286,10 +288,52 @@ Estas cifras describen esa escena; no son un presupuesto para toda ruta o GPU.
 ## Evidencia y referencia
 
 Las capturas nativas cubren las tres estaciones desde cabina/exterior, contacto
-apagado/alto, horizonte elevado y puente. Las propias cubren conexión efectiva,
+apagado/alto, horizonte elevado y una vista baja junto a la vía. Las propias cubren conexión efectiva,
 separación y restauración, conducción en curva, Jacobs, pasajeros, pausa y rebase,
 mojado/seco, nieve y colisión. Los resultados de una ejecución deben conservarse
 junto con sus PNG, hashes y logs; no se versionan las instalaciones del autor.
+
+Después de corregir la lectura de matrices anónimas válidas en modelos `.s`,
+se repitieron trece vistas originales de Chiltern con el binario de fase 26:
+las tres estaciones desde cabina y exterior, techos nevados, el cruce de Park Royal
+cerrado y liberado, contacto apagado/alto, horizonte y vista baja. Los trece PNG
+se inspeccionaron y terminaron sin shaders pendientes o fallidos en la RX 7600.
+El [recibo de la repetición](validation/FIFTH40_CHILTERN_PHASE26_REFRESH.json)
+conserva los hashes de binario, fuente, imágenes y diagnósticos, el intento excluido
+por falta de espacio y las políticas de caché que llegaron realmente al visor.
+La carpeta de repetición del cruce conserva su nombre `no-cache`, pero allí sólo
+se desactivó la caché de texturas: las de fuente y geometría seguían habilitadas.
+Las cuatro vistas adicionales sí desactivaron esas tres cachés explícitamente.
+
+Las capturas históricas mantienen sus propios binarios y condiciones. La nueva
+serie comprueba la composición de esos modelos originales tras el cambio de
+lector; no certifica cambios posteriores de fuente, estabilidad de memoria durante
+dos horas ni el paquete Snap final. Las dos imágenes de contacto son visualmente
+similares: se comprobaron sus ajustes y sombras coherentes, sin atribuirles una
+mejora cuantitativa que las imágenes no demuestran.
+
+Una captura posterior con fase 27 sí muestra el puente de celosía original de
+Park Royal (`WORLD` UID 11863, `SRV_150ftRSTTTrussBridge.s`) y su apoyo desde un
+ángulo lateral bajo. La vegetación original tapa parte de su extremo izquierdo.
+El [recibo separado de fase 27](validation/FIFTH40_PHASE27_BRIDGE_AND_COUNTRY.json)
+registra ese encuadre y sus hashes: no sustituye a `bridge-low` ni se describe
+como una cámara situada debajo del puente.
+
+El primer paso de «Nueva partida» se comprobó aparte en ventanas de 800×600 y
+640×480. La lista inicial de fase 27 ocultaba opciones y se conserva como
+`DISCOVERYFAIL`. En fase 28, dos columnas de cuatro filas muestran los ocho
+países sin desplazar la lista. El [recibo del menú](validation/FIFTH40_COUNTRY_PHASE28.json)
+registra los rectángulos y etiquetas reales de la UI, además de los dos PNG
+inspeccionados. A 640×480 se recorta parcialmente la nota explicativa posterior;
+las ocho opciones y el pie fijo quedan completamente visibles.
+
+Para comprobarlo a mano, abrir «Nueva partida» y redimensionar a ambos tamaños.
+El primer paso debe ser «1 · País», con las ocho opciones visibles y ningún país
+ya elegido. Elegir un país debe abrir sus rutas y servicios; si no tiene rutas
+instaladas, el menú debe explicarlo. Volver a «País» y elegir «Todos los países»
+debe recuperar la lista completa. Esta elección no limita los trenes que se
+pueden elegir después. Las capturas de tamaños validan la composición; los clics
+y la selección se verifican por separado.
 
 Una prueba pesada de nieve y cámara ABA en la GPU integrada recibió `DeviceLost`
 de RADV y falló; no se cuenta como aceptación. Las capturas livianas de pasajeros,

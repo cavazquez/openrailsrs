@@ -1,0 +1,919 @@
+{
+  "schema": 1,
+  "scope": "Original Chiltern GPU refresh after preserving valid anonymous Open Rails shape matrices; historical owned fixtures keep their original binary identities",
+  "candidate": "phase26",
+  "date": "2026-10-14 UTC",
+  "reference": "Open Rails 1.6.1 authored content and shape semantics; no forced weather pixel parity",
+  "acceptance": {
+    "cases_passed": 13,
+    "png_inspected": 13,
+    "failed_shader_pipelines": 0,
+    "long_run_stability_certified": false,
+    "snap_certified": false,
+    "later_source27_certified": false
+  },
+  "binary": {
+    "sha256": "24793d08bc7a6900ea817165dd2519492dbbdceacd043cf58c08a1fd6170ca4a",
+    "preservation": "immutable gzip archived after all captures completed",
+    "archive_sha256": "cfb9a03453fb8d4d6cc5624ac16e35a0dae17f2c2924638ee56d91d81ed04cc3",
+    "post_run_identity_manifest_sha256": "1899f19b2c3d20a5700b80540d12c82c5e7a04da989d7ed9911c5e4945921fba",
+    "root_archive_manifest_sha256": "fee19ee89989f214f6aeb86ebf03dec40b18ea08d71e4e1c4118534861ce216d",
+    "identity_verification": "streaming decompression without writing a second ELF"
+  },
+  "source": {
+    "snapshot": "phase26-source.json",
+    "snapshot_sha256": "a3c373b9798c638953a73fd3568b536747096a31dcf6840b98ab023074df7fd0",
+    "pre_launch_identity_manifest_sha256": "c83c5ac95752dde050836081708cebb85d04cffa7fd2e07d732684315545cd24",
+    "production_edits_by_this_refresh": false
+  },
+  "gpu": {
+    "pci": "0000:03:00.0",
+    "device": "AMD Radeon RX 7600 (RADV NAVI33)",
+    "scope": "one private Weston/viewer at a time on this GPU; integrated soak kept on its separate GPU"
+  },
+  "content": {
+    "route": "Chiltern v4",
+    "train": "RF Blue Pullman, eight vehicles",
+    "installed_original_assets_read_only": true,
+    "author_files_versioned": false
+  },
+  "harnesses": [
+    {
+      "path": "scripts/capture_route_views.py",
+      "wrapper": null,
+      "wrapper_sha256": null
+    },
+    {
+      "path": "scripts/check_native_world_fifth_batch.py",
+      "wrapper": null,
+      "wrapper_sha256": null
+    },
+    {
+      "path": "scripts/check_native_world_fifth_batch.py",
+      "wrapper": "native-phase26-no-cache.py",
+      "wrapper_sha256": "d28efdffc30fe621bf0039ebe8007499e5b20cf953b82586d606b71a2f3f48fa"
+    },
+    {
+      "path": "scripts/check_native_world_fifth_batch.py",
+      "wrapper": "native-phase26-extra-views.py",
+      "wrapper_sha256": "96127eda1e9057e6182e7a13ac4f9636b8be9a8729fcb264bbfce25db28f04b4"
+    }
+  ],
+  "cases": [
+    {
+      "case": "northolt-park",
+      "status": "PASS",
+      "capture_directory": "native-phase26-stations",
+      "frame": "northolt-park.png",
+      "frame_sha256": "d2d571b949297e9a928d6c3567655eeeb8d0b1e31606aae5b85ffba9236bf0a6",
+      "frame_size_px": [
+        1280,
+        720
+      ],
+      "raw_report_sha256": "bb6a2530f82f101162d914a968efa1fb54845d3477afc460f27349c5b890ed25",
+      "raw_checkpoint_sha256": "405a5742cefa9afbba41545ed9f86fac7134a49e20b0b5d84cbdd71ec479d775",
+      "log_sha256": "af6ab17ed26244b7eced405ce04230c86eceafb0ee1c45c38d1aa3856232b01d",
+      "binary_sha256": "24793d08bc7a6900ea817165dd2519492dbbdceacd043cf58c08a1fd6170ca4a",
+      "binary_identity_basis": "external pre-launch SHA check and post-run archived ELF verification; this harness does not emit a binary SHA field",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "gpu_tiles": 4,
+      "gpu_entities": 1884,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "clock_time_s": 35700.0,
+      "weather": "clear",
+      "train_vehicles": 8,
+      "peak_rss_mib": 1309.2,
+      "contact_shadow_steps": [
+        8
+      ],
+      "effective_cache_policy": {
+        "source": "on",
+        "geometry": "on",
+        "texture": "on"
+      },
+      "visual_inspection": "Original platform, train, buildings, vegetation and terrain are coherent in the exterior view."
+    },
+    {
+      "case": "northolt-park-cab",
+      "status": "PASS",
+      "capture_directory": "native-phase26-stations",
+      "frame": "northolt-park-cab.png",
+      "frame_sha256": "e8ef5235cfab38c216fe63ba8ae20fd3376d995796c3ddbfad1bf4a1d5ff6c27",
+      "frame_size_px": [
+        1280,
+        720
+      ],
+      "raw_report_sha256": "bb6a2530f82f101162d914a968efa1fb54845d3477afc460f27349c5b890ed25",
+      "raw_checkpoint_sha256": "87266a2942c5869633b9ad1f4f1a7d5859473da79672d5cbf5fd854dfa69800a",
+      "log_sha256": "c3606ddd404efeb6ab124e2fbdeb645c4e5075816fd72adfee8d654bf4dca9ad",
+      "binary_sha256": "24793d08bc7a6900ea817165dd2519492dbbdceacd043cf58c08a1fd6170ca4a",
+      "binary_identity_basis": "external pre-launch SHA check and post-run archived ELF verification; this harness does not emit a binary SHA field",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "gpu_tiles": 4,
+      "gpu_entities": 1884,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "clock_time_s": 35700.0,
+      "weather": "clear",
+      "train_vehicles": 8,
+      "peak_rss_mib": 1881.4,
+      "contact_shadow_steps": [],
+      "effective_cache_policy": {
+        "source": "on",
+        "geometry": "on",
+        "texture": "on"
+      },
+      "visual_inspection": "Original cab geometry and instruments remain visible; the window shows the platform and railway.",
+      "cab_view": {
+        "camera_eye": [
+          1.9919323921203613,
+          13.182847023010254,
+          -0.06452369689941406
+        ],
+        "camera_inside_geometry": true,
+        "expected_eye": [
+          1.991933822631836,
+          13.182847023010254,
+          -0.06452226638793945
+        ],
+        "eye_error_m": 2.0230486370564904e-06,
+        "mesh_parts": 69,
+        "visible_mesh_parts": 69
+      }
+    },
+    {
+      "case": "south-ruislip",
+      "status": "PASS",
+      "capture_directory": "native-phase26-stations",
+      "frame": "south-ruislip.png",
+      "frame_sha256": "5cfd30b9fa691a3dcb493a79003e68714368935674a4ee7c557d894702cc9db1",
+      "frame_size_px": [
+        1280,
+        720
+      ],
+      "raw_report_sha256": "bb6a2530f82f101162d914a968efa1fb54845d3477afc460f27349c5b890ed25",
+      "raw_checkpoint_sha256": "2c407410a7ac6bc3608d529360ac966453c0facbf25ef56f773fca1478a4c932",
+      "log_sha256": "a115bdf69c38276d2a3c46e9fcd17808515903ebbc7dafae7f276d34c9261fbf",
+      "binary_sha256": "24793d08bc7a6900ea817165dd2519492dbbdceacd043cf58c08a1fd6170ca4a",
+      "binary_identity_basis": "external pre-launch SHA check and post-run archived ELF verification; this harness does not emit a binary SHA field",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "gpu_tiles": 4,
+      "gpu_entities": 3429,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "clock_time_s": 35700.0,
+      "weather": "clear",
+      "train_vehicles": 8,
+      "peak_rss_mib": 1458.5,
+      "contact_shadow_steps": [
+        8
+      ],
+      "effective_cache_policy": {
+        "source": "on",
+        "geometry": "on",
+        "texture": "on"
+      },
+      "visual_inspection": "Original platform, train, buildings, vegetation and track remain coherent in the exterior view."
+    },
+    {
+      "case": "south-ruislip-cab",
+      "status": "PASS",
+      "capture_directory": "native-phase26-stations",
+      "frame": "south-ruislip-cab.png",
+      "frame_sha256": "95a21dfd49ca71bbb49756acea9c313ff91c1f8dd5124c0876b6e351d6a46bda",
+      "frame_size_px": [
+        1280,
+        720
+      ],
+      "raw_report_sha256": "bb6a2530f82f101162d914a968efa1fb54845d3477afc460f27349c5b890ed25",
+      "raw_checkpoint_sha256": "ce18751a8d9662bf742b314e9833f5129a5659d3070b8ada9a802c5cf90f6ba1",
+      "log_sha256": "f1d9c7e82a4445179491a188db7c5b041ba03bf9dd61c469cfc3cc8a7662fb60",
+      "binary_sha256": "24793d08bc7a6900ea817165dd2519492dbbdceacd043cf58c08a1fd6170ca4a",
+      "binary_identity_basis": "external pre-launch SHA check and post-run archived ELF verification; this harness does not emit a binary SHA field",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "gpu_tiles": 4,
+      "gpu_entities": 3429,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "clock_time_s": 35700.0,
+      "weather": "clear",
+      "train_vehicles": 8,
+      "peak_rss_mib": 1806.5,
+      "contact_shadow_steps": [],
+      "effective_cache_policy": {
+        "source": "on",
+        "geometry": "on",
+        "texture": "on"
+      },
+      "visual_inspection": "Original cab geometry and instruments remain visible; the window shows the platform and railway.",
+      "cab_view": {
+        "camera_eye": [
+          0.6991782188415527,
+          10.199478149414062,
+          1.8801336288452148
+        ],
+        "camera_inside_geometry": true,
+        "expected_eye": [
+          0.6991791725158691,
+          10.199478149414062,
+          1.8801360130310059
+        ],
+        "eye_error_m": 2.5678466499812203e-06,
+        "mesh_parts": 69,
+        "visible_mesh_parts": 69
+      }
+    },
+    {
+      "case": "gerrards-cross",
+      "status": "PASS",
+      "capture_directory": "native-phase26-stations",
+      "frame": "gerrards-cross.png",
+      "frame_sha256": "9f9742d00ae81e91cac93ab59d11ad9ac887e1d4675b541c094ee0fc969f22a1",
+      "frame_size_px": [
+        1280,
+        720
+      ],
+      "raw_report_sha256": "bb6a2530f82f101162d914a968efa1fb54845d3477afc460f27349c5b890ed25",
+      "raw_checkpoint_sha256": "7fd15015ca3ffa57d54cc7abca28f01a2ead024ca841b87f675b56571e6e81af",
+      "log_sha256": "3d3f7841616dcdcd1296506b46c7ea621fc29b52099aa53464df8d4198e25f1f",
+      "binary_sha256": "24793d08bc7a6900ea817165dd2519492dbbdceacd043cf58c08a1fd6170ca4a",
+      "binary_identity_basis": "external pre-launch SHA check and post-run archived ELF verification; this harness does not emit a binary SHA field",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "gpu_tiles": 4,
+      "gpu_entities": 2023,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "clock_time_s": 35700.0,
+      "weather": "clear",
+      "train_vehicles": 8,
+      "peak_rss_mib": 1409.7,
+      "contact_shadow_steps": [
+        8
+      ],
+      "effective_cache_policy": {
+        "source": "on",
+        "geometry": "on",
+        "texture": "on"
+      },
+      "visual_inspection": "Original station, buildings, train, vegetation and terrain remain coherent in the exterior view."
+    },
+    {
+      "case": "gerrards-cross-cab",
+      "status": "PASS",
+      "capture_directory": "native-phase26-stations",
+      "frame": "gerrards-cross-cab.png",
+      "frame_sha256": "3acf5259c06c07314cf030c75474da82a63d631b0d157603f5acd41f881b8de2",
+      "frame_size_px": [
+        1280,
+        720
+      ],
+      "raw_report_sha256": "bb6a2530f82f101162d914a968efa1fb54845d3477afc460f27349c5b890ed25",
+      "raw_checkpoint_sha256": "9be8b2c6c0beda47ef9cd09f6849406011a2b38e3982093bdcf0eecb301db116",
+      "log_sha256": "487a5d90fb84fea87aecd3c5e1b4c50da54236d5dff1914c1d5c4ba96a0746dc",
+      "binary_sha256": "24793d08bc7a6900ea817165dd2519492dbbdceacd043cf58c08a1fd6170ca4a",
+      "binary_identity_basis": "external pre-launch SHA check and post-run archived ELF verification; this harness does not emit a binary SHA field",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "gpu_tiles": 4,
+      "gpu_entities": 2023,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "clock_time_s": 35700.0,
+      "weather": "clear",
+      "train_vehicles": 8,
+      "peak_rss_mib": 1882.8,
+      "contact_shadow_steps": [],
+      "effective_cache_policy": {
+        "source": "on",
+        "geometry": "on",
+        "texture": "on"
+      },
+      "visual_inspection": "Original cab geometry and instruments remain visible; the window shows the platform and railway.",
+      "cab_view": {
+        "camera_eye": [
+          1.231968879699707,
+          -1.7621612548828125,
+          1.583036184310913
+        ],
+        "camera_inside_geometry": true,
+        "expected_eye": [
+          1.231971263885498,
+          -1.7621612548828125,
+          1.5830368995666504
+        ],
+        "eye_error_m": 2.489163080099388e-06,
+        "mesh_parts": 69,
+        "visible_mesh_parts": 69
+      }
+    },
+    {
+      "case": "roofs-snow",
+      "status": "PASS",
+      "capture_directory": "native-phase26-world",
+      "frame": "roofs-snow.png",
+      "frame_sha256": "f2187911cc59ae777970a7750fe4c8fc814d8664820410956636bc82532aee51",
+      "frame_size_px": [
+        1280,
+        720
+      ],
+      "raw_report_sha256": "7f628a985ce6a76a7ff977bd967444b54b1fee4d9e79c27e0b63cfe3eb86fb74",
+      "raw_checkpoint_sha256": "b3b45d3e46fb6c6bffefff2aeca9acc218a975d323d0ac0b91d6f0234f7d9d3c",
+      "log_sha256": "8991a82b1ec21124d362f1ddcf9b8acb0ac01c626daa2580c621fa8a662d6a6b",
+      "binary_sha256": "24793d08bc7a6900ea817165dd2519492dbbdceacd043cf58c08a1fd6170ca4a",
+      "binary_identity_basis": "binary_sha256 emitted by the capture harness",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "gpu_tiles": 4,
+      "gpu_entities": 3429,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "clock_time_s": 35700.0,
+      "weather": "snow",
+      "train_vehicles": 8,
+      "peak_rss_mib": 1374.4,
+      "contact_shadow_steps": [
+        8
+      ],
+      "effective_cache_policy": {
+        "source": "on",
+        "geometry": "on",
+        "texture": "on"
+      },
+      "visual_inspection": "Snow appears on roofs and terrain while original colored facades, windows and vegetation remain visible; the railway is usable.",
+      "runtime_shader_sha256": {
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_moment_pack.wgsl": "218475b9e91288988ccb086749da4093398c0e3d29a4d7739c4c5df20169ba5f",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/terrain.wgsl": "e981280e8a0f4646db2d372bc54c781bff143eb2f0c8885ce9e69848a27deb76",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/snow_vertex.wgsl": "d1c213ad7bf9bed5bf8d768e51f8f0720628980c0b3f2a9311067178ac4e6a23",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_moment_blur.wgsl": "f0bf898137eb8cba44df2840428c7e6b3dca26c59d2d3706d94a247c3cc8acbe",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/terrain_snow_vertex.wgsl": "5559850ccfc3382f0e3ed0da61a2fa65916bb461e3bd5902455ba7e0afe66ff6",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_terrain.wgsl": "b18b56fc186a0c104ac57f8e94eccb23f37d7e718c1ed6f28f060376b15b1dfd",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_cab.wgsl": "fad7a2b58f33fdea467c5076b4070ad2ee5a5e8182b38a07ed4631b24af8014a",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/railway_lighting.wgsl": "ee12f381923662cc568bb14c034ba01aea366ccbe7de74988dfdf886bdd68ef4",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/cloud_field.wgsl": "972c5c29591626656d35a76d53dcdad31539721aad441136aea1b24811bdd64e",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/surface_weather.wgsl": "830c03d3810afc1bd0d21d812cb7997ec513175982a609c698741f4a3ed6ce6a",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_scenery.wgsl": "f6dcccb448116fd62d749dd214fb295a43c48a127738031b77a700fa8b03f692",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_shadow.wgsl": "ca9fe546c16fa82c0f758deb94d939e34e8fba2a76a60a18342db8af72ad010e",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_forest.wgsl": "2661056bfcebb195f663bef425def3f49653621b2f9bde7e0918786bf80cc57a",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/railway_sky.wgsl": "9a0344db7d04774e469e17c1bcaa01d9af9e53d7c5b30d32e2edf793b5f3942f",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/snow_surface.wgsl": "93bf0fe7e155a3b91ca2cf6e1ed9be37e49c57743931dba9d77edc06f4b0276f",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/hanabi_weather_fragment.wgsl": "ec6e7efa2f69d0bec81e2232c800e12024f2763a40b940e518661013c2138960",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_scenery_bindings.wgsl": "308a0dd8959b54dee842751693afb47a6f85ab62280a01c456608a6b1c9fdcfc",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_moment_preview.wgsl": "b8359b6fb54ba7409cc7315ca4e1cd0e41ffabdc66f64ac2e0f69e82193f38ce",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_scenery_prepass.wgsl": "b266628bf7024be63f3181bd9d514aa2498137d700f2cd0ec254cac0b3540bf1",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/weather_particles.wgsl": "25077efabf986cec285c542ec0fbbd0b8dc4634442a3cbe3f14227404989e1d6",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/terrain_common.wgsl": "fb5b9cdbcc5542cdb356b904cf3ceabcaf710a7d82e81c159036fa31e07c3874",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/moon.wgsl": "7da04d322f77d9c21ba283762920959e4ca496483e4e547209d0eb95e3487931",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/windshield.wgsl": "da54244b4b1f0efbac2873c87aaf3f9d2ff223a7dd0950f11f3daa836754134b"
+      },
+      "snow_cover": 1.0
+    },
+    {
+      "case": "crossing-closed",
+      "status": "PASS",
+      "capture_directory": "native-phase26-world-retry-no-cache",
+      "frame": "crossing-closed.png",
+      "frame_sha256": "c2911a7853012bb1eb147ec44715fa224ea208b083f57be88c8825b7d01cbdd3",
+      "frame_size_px": [
+        1280,
+        720
+      ],
+      "raw_report_sha256": "23661e0412a7d7042827ef6d317b0aca83ee62d19767a5a6abd85ba2c986b0c9",
+      "raw_checkpoint_sha256": "ff780e62c9aa5a22c8c2e50bf60b5fe0ac4f86016aa89f74a0d00de1e4d0bdc8",
+      "log_sha256": "586da613c07baa1b0052169462adf72e738ddf0122a983bbfba3f4aa3fdb1954",
+      "binary_sha256": "24793d08bc7a6900ea817165dd2519492dbbdceacd043cf58c08a1fd6170ca4a",
+      "binary_identity_basis": "binary_sha256 emitted by the capture harness",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "gpu_tiles": 2,
+      "gpu_entities": 7801,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "clock_time_s": 43211.9,
+      "weather": "clear",
+      "train_vehicles": 8,
+      "peak_rss_mib": 2007.4,
+      "contact_shadow_steps": [
+        8
+      ],
+      "effective_cache_policy": {
+        "source": "on",
+        "geometry": "on",
+        "texture": "off"
+      },
+      "visual_inspection": "Original Park Royal gates protect the road and vehicles wait before them. Closed animation, TDB lane and RDB queue assertions pass after pause/save/restore.",
+      "cache_note": "The historical directory name is retained. Inherited OPENRAILSRS variables were filtered by run_checkpoint; only the texture-cache option reached the child. Source and geometry caches were enabled.",
+      "runtime_shader_sha256": {
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_moment_pack.wgsl": "218475b9e91288988ccb086749da4093398c0e3d29a4d7739c4c5df20169ba5f",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/terrain.wgsl": "e981280e8a0f4646db2d372bc54c781bff143eb2f0c8885ce9e69848a27deb76",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/snow_vertex.wgsl": "d1c213ad7bf9bed5bf8d768e51f8f0720628980c0b3f2a9311067178ac4e6a23",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_moment_blur.wgsl": "f0bf898137eb8cba44df2840428c7e6b3dca26c59d2d3706d94a247c3cc8acbe",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/terrain_snow_vertex.wgsl": "5559850ccfc3382f0e3ed0da61a2fa65916bb461e3bd5902455ba7e0afe66ff6",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_terrain.wgsl": "b18b56fc186a0c104ac57f8e94eccb23f37d7e718c1ed6f28f060376b15b1dfd",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_cab.wgsl": "fad7a2b58f33fdea467c5076b4070ad2ee5a5e8182b38a07ed4631b24af8014a",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/railway_lighting.wgsl": "ee12f381923662cc568bb14c034ba01aea366ccbe7de74988dfdf886bdd68ef4",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/cloud_field.wgsl": "972c5c29591626656d35a76d53dcdad31539721aad441136aea1b24811bdd64e",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/surface_weather.wgsl": "830c03d3810afc1bd0d21d812cb7997ec513175982a609c698741f4a3ed6ce6a",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_scenery.wgsl": "f6dcccb448116fd62d749dd214fb295a43c48a127738031b77a700fa8b03f692",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_shadow.wgsl": "ca9fe546c16fa82c0f758deb94d939e34e8fba2a76a60a18342db8af72ad010e",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_forest.wgsl": "2661056bfcebb195f663bef425def3f49653621b2f9bde7e0918786bf80cc57a",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/railway_sky.wgsl": "9a0344db7d04774e469e17c1bcaa01d9af9e53d7c5b30d32e2edf793b5f3942f",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/snow_surface.wgsl": "93bf0fe7e155a3b91ca2cf6e1ed9be37e49c57743931dba9d77edc06f4b0276f",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/hanabi_weather_fragment.wgsl": "ec6e7efa2f69d0bec81e2232c800e12024f2763a40b940e518661013c2138960",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_scenery_bindings.wgsl": "308a0dd8959b54dee842751693afb47a6f85ab62280a01c456608a6b1c9fdcfc",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_moment_preview.wgsl": "b8359b6fb54ba7409cc7315ca4e1cd0e41ffabdc66f64ac2e0f69e82193f38ce",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_scenery_prepass.wgsl": "b266628bf7024be63f3181bd9d514aa2498137d700f2cd0ec254cac0b3540bf1",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/weather_particles.wgsl": "25077efabf986cec285c542ec0fbbd0b8dc4634442a3cbe3f14227404989e1d6",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/terrain_common.wgsl": "fb5b9cdbcc5542cdb356b904cf3ceabcaf710a7d82e81c159036fa31e07c3874",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/moon.wgsl": "7da04d322f77d9c21ba283762920959e4ca496483e4e547209d0eb95e3487931",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/windshield.wgsl": "da54244b4b1f0efbac2873c87aaf3f9d2ff223a7dd0950f11f3daa836754134b"
+      },
+      "crossings": {
+        "-6083:14926:12473": {
+          "definition": {
+            "animation_s": 4.0,
+            "id": "-6083:14926:12473",
+            "lanes": [
+              {
+                "edge": "e1994",
+                "position_m": 239.8314
+              }
+            ],
+            "minimum_m": 20.0,
+            "warning_s": 30.0
+          },
+          "demand": true,
+          "elapsed_closed_s": 11.900000000000034,
+          "fraction": 1.0,
+          "road_closed": true
+        },
+        "-6083:14926:12474": {
+          "definition": {
+            "animation_s": 4.0,
+            "id": "-6083:14926:12474",
+            "lanes": [
+              {
+                "edge": "e1994",
+                "position_m": 242.8448
+              }
+            ],
+            "minimum_m": 20.0,
+            "warning_s": 30.0
+          },
+          "demand": true,
+          "elapsed_closed_s": 11.900000000000034,
+          "fraction": 1.0,
+          "road_closed": true
+        }
+      },
+      "rdb_cars": 38,
+      "road_stops": 27,
+      "unresolved_crossings": 0,
+      "odometer_m": 0.0,
+      "equipment_actions": [
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [],
+          "index": 0,
+          "origin_m": [
+            3.3922157287597656,
+            0.0,
+            -270.85479736328125
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 11.900000000000034
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [],
+          "index": 1,
+          "origin_m": [
+            3.3922157287597656,
+            0.0,
+            -270.85479736328125
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 11.900000000000034
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [],
+          "index": 2,
+          "origin_m": [
+            3.3922157287597656,
+            0.0,
+            -270.85479736328125
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 11.900000000000034
+        }
+      ],
+      "queued_head_stop_errors_m": [
+        0.03664671587298862,
+        0.0007097307647931927
+      ]
+    },
+    {
+      "case": "crossing-released",
+      "status": "PASS",
+      "capture_directory": "native-phase26-world-retry-no-cache",
+      "frame": "crossing-released.png",
+      "frame_sha256": "9d566c7ef176c20846f7b3c4ea116fc891a6ee96a4c0fcdac3eae31b89398f2a",
+      "frame_size_px": [
+        1280,
+        720
+      ],
+      "raw_report_sha256": "23661e0412a7d7042827ef6d317b0aca83ee62d19767a5a6abd85ba2c986b0c9",
+      "raw_checkpoint_sha256": "bbd2128018c8734bd1b1b06f38dfd7fb1df0f753ee34aa4cd256df94abaded5a",
+      "log_sha256": "5ed5817a9fabb7ad8e392a800fea67bc8373c1d86c6f88c85ca9cca141262178",
+      "binary_sha256": "24793d08bc7a6900ea817165dd2519492dbbdceacd043cf58c08a1fd6170ca4a",
+      "binary_identity_basis": "binary_sha256 emitted by the capture harness",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "gpu_tiles": 2,
+      "gpu_entities": 8258,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "clock_time_s": 43253.2,
+      "weather": "clear",
+      "train_vehicles": 8,
+      "peak_rss_mib": 2041.9,
+      "contact_shadow_steps": [
+        8
+      ],
+      "effective_cache_policy": {
+        "source": "on",
+        "geometry": "on",
+        "texture": "off"
+      },
+      "visual_inspection": "Original gates reopen and the road is released after the full train clears the crossing.",
+      "cache_note": "The historical directory name is retained. Inherited OPENRAILSRS variables were filtered by run_checkpoint; only the texture-cache option reached the child. Source and geometry caches were enabled.",
+      "runtime_shader_sha256": {
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_moment_pack.wgsl": "218475b9e91288988ccb086749da4093398c0e3d29a4d7739c4c5df20169ba5f",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/terrain.wgsl": "e981280e8a0f4646db2d372bc54c781bff143eb2f0c8885ce9e69848a27deb76",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/snow_vertex.wgsl": "d1c213ad7bf9bed5bf8d768e51f8f0720628980c0b3f2a9311067178ac4e6a23",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_moment_blur.wgsl": "f0bf898137eb8cba44df2840428c7e6b3dca26c59d2d3706d94a247c3cc8acbe",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/terrain_snow_vertex.wgsl": "5559850ccfc3382f0e3ed0da61a2fa65916bb461e3bd5902455ba7e0afe66ff6",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_terrain.wgsl": "b18b56fc186a0c104ac57f8e94eccb23f37d7e718c1ed6f28f060376b15b1dfd",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_cab.wgsl": "fad7a2b58f33fdea467c5076b4070ad2ee5a5e8182b38a07ed4631b24af8014a",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/railway_lighting.wgsl": "ee12f381923662cc568bb14c034ba01aea366ccbe7de74988dfdf886bdd68ef4",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/cloud_field.wgsl": "972c5c29591626656d35a76d53dcdad31539721aad441136aea1b24811bdd64e",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/surface_weather.wgsl": "830c03d3810afc1bd0d21d812cb7997ec513175982a609c698741f4a3ed6ce6a",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_scenery.wgsl": "f6dcccb448116fd62d749dd214fb295a43c48a127738031b77a700fa8b03f692",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_shadow.wgsl": "ca9fe546c16fa82c0f758deb94d939e34e8fba2a76a60a18342db8af72ad010e",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_forest.wgsl": "2661056bfcebb195f663bef425def3f49653621b2f9bde7e0918786bf80cc57a",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/railway_sky.wgsl": "9a0344db7d04774e469e17c1bcaa01d9af9e53d7c5b30d32e2edf793b5f3942f",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/snow_surface.wgsl": "93bf0fe7e155a3b91ca2cf6e1ed9be37e49c57743931dba9d77edc06f4b0276f",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/hanabi_weather_fragment.wgsl": "ec6e7efa2f69d0bec81e2232c800e12024f2763a40b940e518661013c2138960",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_scenery_bindings.wgsl": "308a0dd8959b54dee842751693afb47a6f85ab62280a01c456608a6b1c9fdcfc",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_moment_preview.wgsl": "b8359b6fb54ba7409cc7315ca4e1cd0e41ffabdc66f64ac2e0f69e82193f38ce",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_scenery_prepass.wgsl": "b266628bf7024be63f3181bd9d514aa2498137d700f2cd0ec254cac0b3540bf1",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/weather_particles.wgsl": "25077efabf986cec285c542ec0fbbd0b8dc4634442a3cbe3f14227404989e1d6",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/terrain_common.wgsl": "fb5b9cdbcc5542cdb356b904cf3ceabcaf710a7d82e81c159036fa31e07c3874",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/moon.wgsl": "7da04d322f77d9c21ba283762920959e4ca496483e4e547209d0eb95e3487931",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/windshield.wgsl": "da54244b4b1f0efbac2873c87aaf3f9d2ff223a7dd0950f11f3daa836754134b"
+      },
+      "crossings": {
+        "-6083:14926:12473": {
+          "definition": {
+            "animation_s": 4.0,
+            "id": "-6083:14926:12473",
+            "lanes": [
+              {
+                "edge": "e1994",
+                "position_m": 239.8314
+              }
+            ],
+            "minimum_m": 20.0,
+            "warning_s": 30.0
+          },
+          "demand": false,
+          "elapsed_closed_s": 0.0,
+          "fraction": 0.0,
+          "road_closed": false
+        },
+        "-6083:14926:12474": {
+          "definition": {
+            "animation_s": 4.0,
+            "id": "-6083:14926:12474",
+            "lanes": [
+              {
+                "edge": "e1994",
+                "position_m": 242.8448
+              }
+            ],
+            "minimum_m": 20.0,
+            "warning_s": 30.0
+          },
+          "demand": false,
+          "elapsed_closed_s": 0.0,
+          "fraction": 0.0,
+          "road_closed": false
+        }
+      },
+      "rdb_cars": 38,
+      "road_stops": 27,
+      "unresolved_crossings": 0,
+      "odometer_m": 380.26336438270266,
+      "equipment_actions": [
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Fly",
+          "door_fractions": [],
+          "index": 0,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 3.899999999999994
+        }
+      ]
+    },
+    {
+      "case": "contact-off",
+      "status": "PASS",
+      "capture_directory": "native-phase26-extra",
+      "frame": "contact-off.png",
+      "frame_sha256": "295b4584cc2410934e0970e1b31e2516ec904236a35cdcec9eba8e8e98c43014",
+      "frame_size_px": [
+        1280,
+        720
+      ],
+      "raw_report_sha256": "be4f9aa6fbaeee624259f00b41ac73b1f8b261dc25ef55d6b49a3c1371cedaee",
+      "raw_checkpoint_sha256": "27eaacec3405e3bd7ad46adadf9a57759cc9282df67537b5db7bbf96929c8a51",
+      "log_sha256": "db33e751699e0e024a1043b655aad8390608b1d4d01ebf7b711052981da587a2",
+      "binary_sha256": "24793d08bc7a6900ea817165dd2519492dbbdceacd043cf58c08a1fd6170ca4a",
+      "binary_identity_basis": "binary_sha256 emitted by the capture harness",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "gpu_tiles": 4,
+      "gpu_entities": 1884,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "clock_time_s": 35700.0,
+      "weather": "clear",
+      "train_vehicles": 8,
+      "peak_rss_mib": 1313.2,
+      "contact_shadow_steps": [],
+      "effective_cache_policy": {
+        "source": "off",
+        "geometry": "off",
+        "texture": "off"
+      },
+      "visual_inspection": "Native train, platform and object shadows remain attached to their geometry; no camera-shaped caster is visible.",
+      "cache_note": "Source, geometry and texture options were set explicitly on the harness argument object. Tiny tile-bundle metadata can still exist.",
+      "scenario_sha256": "a783b12c39d4879ce7930e62f84a647fc5494146675156ce69814b9c1a1f19b9"
+    },
+    {
+      "case": "contact-high",
+      "status": "PASS",
+      "capture_directory": "native-phase26-extra",
+      "frame": "contact-high.png",
+      "frame_sha256": "4edce6f3af72838f7da2d79f8501ddd869e5c5d016c8808e2dd2d140b88227d2",
+      "frame_size_px": [
+        1280,
+        720
+      ],
+      "raw_report_sha256": "be4f9aa6fbaeee624259f00b41ac73b1f8b261dc25ef55d6b49a3c1371cedaee",
+      "raw_checkpoint_sha256": "3c8003e13a80600eb468e0bdae0d89b2bf6e1c71c5c34521fb6242b2d74a1f51",
+      "log_sha256": "c8d3e1593666a593802ea57b7ba901242f357b32f4bd1a8e0ad78e972649d84e",
+      "binary_sha256": "24793d08bc7a6900ea817165dd2519492dbbdceacd043cf58c08a1fd6170ca4a",
+      "binary_identity_basis": "binary_sha256 emitted by the capture harness",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "gpu_tiles": 4,
+      "gpu_entities": 1884,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "clock_time_s": 35700.0,
+      "weather": "clear",
+      "train_vehicles": 8,
+      "peak_rss_mib": 1278.6,
+      "contact_shadow_steps": [
+        16
+      ],
+      "effective_cache_policy": {
+        "source": "off",
+        "geometry": "off",
+        "texture": "off"
+      },
+      "visual_inspection": "Native train, platform and object shadows remain coherent with contact quality set to high. The two contact images are visually similar; no quantitative improvement is claimed.",
+      "cache_note": "Source, geometry and texture options were set explicitly on the harness argument object. Tiny tile-bundle metadata can still exist.",
+      "scenario_sha256": "a783b12c39d4879ce7930e62f84a647fc5494146675156ce69814b9c1a1f19b9"
+    },
+    {
+      "case": "forest-far",
+      "status": "PASS",
+      "capture_directory": "native-phase26-extra",
+      "frame": "forest-far.png",
+      "frame_sha256": "00b9552d2bb87661c4aadbc6c077bf4892f45e986f7c7eb51037f2c7eddefabb",
+      "frame_size_px": [
+        1280,
+        720
+      ],
+      "raw_report_sha256": "be4f9aa6fbaeee624259f00b41ac73b1f8b261dc25ef55d6b49a3c1371cedaee",
+      "raw_checkpoint_sha256": "60a4d1e64245bb1c9ff8e226157f36f505a9787269db1c1a0329832d33d2a9b6",
+      "log_sha256": "eee21c00338858b9185c2492a0263da8f7aa3c7b7d7c436b9d3773e79ef90de4",
+      "binary_sha256": "24793d08bc7a6900ea817165dd2519492dbbdceacd043cf58c08a1fd6170ca4a",
+      "binary_identity_basis": "binary_sha256 emitted by the capture harness",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "gpu_tiles": 4,
+      "gpu_entities": 1884,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "clock_time_s": 35700.0,
+      "weather": "clear",
+      "train_vehicles": 8,
+      "peak_rss_mib": 1284.4,
+      "contact_shadow_steps": [
+        8
+      ],
+      "effective_cache_policy": {
+        "source": "off",
+        "geometry": "off",
+        "texture": "off"
+      },
+      "visual_inspection": "The elevated view retains native heightfields, horizon and vegetation.",
+      "cache_note": "Source, geometry and texture options were set explicitly on the harness argument object. Tiny tile-bundle metadata can still exist.",
+      "scenario_sha256": "a783b12c39d4879ce7930e62f84a647fc5494146675156ce69814b9c1a1f19b9"
+    },
+    {
+      "case": "bridge-low",
+      "status": "PASS",
+      "capture_directory": "native-phase26-extra",
+      "frame": "bridge-low.png",
+      "frame_sha256": "7f03ee11ba2bf14eac4fa3cc6707596e7872b1df4cb1134e0ab445eba55abb08",
+      "frame_size_px": [
+        1280,
+        720
+      ],
+      "raw_report_sha256": "be4f9aa6fbaeee624259f00b41ac73b1f8b261dc25ef55d6b49a3c1371cedaee",
+      "raw_checkpoint_sha256": "acaa4f300326d8677e3e4cd8de19d733b2b237bd80e67565724fb38ec64160f6",
+      "log_sha256": "9778b5b49d383f6f19d272b3e37c13efb4577d8ced6dce26552c1355b7376be0",
+      "binary_sha256": "24793d08bc7a6900ea817165dd2519492dbbdceacd043cf58c08a1fd6170ca4a",
+      "binary_identity_basis": "binary_sha256 emitted by the capture harness",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "gpu_tiles": 4,
+      "gpu_entities": 3429,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "clock_time_s": 35700.0,
+      "weather": "clear",
+      "train_vehicles": 8,
+      "peak_rss_mib": 1442.3,
+      "contact_shadow_steps": [
+        8
+      ],
+      "effective_cache_policy": {
+        "source": "off",
+        "geometry": "off",
+        "texture": "off"
+      },
+      "visual_inspection": "This low-angle view beside the train, track, signal and ground matches the historical framing. No overhead bridge is visible, so this frame does not certify an under-bridge shadow case.",
+      "cache_note": "Source, geometry and texture options were set explicitly on the harness argument object. Tiny tile-bundle metadata can still exist.",
+      "scenario_sha256": "84f6f520b09615811848e4ab3bf4c439cc1ff8f43ce6fe95eed36bd2aee852e7"
+    }
+  ],
+  "excluded_attempts": [
+    {
+      "case": "crossing-closed",
+      "capture_directory": "native-phase26-world",
+      "reason": "HOME quota exhausted: No space left on device while writing checkpoint; no complete JSON acceptance",
+      "log_sha256": "1ea4d5042601b846e90735ab81ffa6700eae02618d270244c97536b19b54c780",
+      "frame_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "raw_checkpoint_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "retried_in": "native-phase26-world-retry-no-cache",
+      "counted_as_pass": false
+    }
+  ],
+  "derived_cache_retirements": [
+    {
+      "manifest": "native-phase26-cache-retirement.json",
+      "manifest_sha256": "ef751f168628da979e35717a8671df3558df63dbbd54cb8295d15481ff3c9c86",
+      "total_bytes": 497035228,
+      "derived_cache_only": true,
+      "original_assets_removed": false
+    },
+    {
+      "manifest": "native-phase26-retry-cache-retirement.json",
+      "manifest_sha256": "17ab7cf9a85f15067cfc359b4176e18c103033dd660b1d8c96250135b1409e8e",
+      "total_bytes": 119935666,
+      "derived_cache_only": true,
+      "original_assets_removed": false
+    }
+  ],
+  "limits": [
+    "No acceptance of phase27 UI/horizon source, prolonged memory stability or final Snap is inferred from these frames.",
+    "Contact off/high frames have the requested settings and coherent shadows; no large visible or quantitative contact-shadow improvement is claimed.",
+    "bridge-low is the preserved case identifier for a low railway view; it contains no visible overhead bridge.",
+    "The new original scenes supplement the 28 historical owned/native frames; no historical frame or failure was relabeled.",
+    "Peak RSS values describe individual launches, including loading; these static samples are not a whole-route memory budget.",
+    "Private paths, installed author files, PNG payloads and derivative caches are not copied into the public receipt."
+  ]
+}

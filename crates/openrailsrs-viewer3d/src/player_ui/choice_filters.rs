@@ -11,15 +11,7 @@ pub(in crate::player_ui) enum ChoiceFilter {
     Favorites,
     Reset,
 }
-const COUNTRIES: [&str; 7] = [
-    "Todos los países",
-    "Argentina",
-    "Australia",
-    "Estados Unidos",
-    "Portugal",
-    "Reino Unido",
-    "Sin dato de país",
-];
+use crate::player_ui::menu_country::{COUNTRIES, country};
 const GAUGES: [Option<f64>; 5] = [None, Some(1.0), Some(1.435), Some(1.6), Some(1.668)];
 const TRACTIONS: [&str; 5] = [
     "Toda tracción",
@@ -34,31 +26,6 @@ const RESOURCES: [&str; 4] = [
     "Faltantes",
     "Sin revisar",
 ];
-fn country(text: &str) -> usize {
-    let name = normalized(text);
-    if name.contains("mitre") || name.contains("belgrano") {
-        1
-    } else if ["zig zag", "zigzag", "newcastle", "burrinjuck", "craven"]
-        .iter()
-        .any(|s| name.contains(s))
-    {
-        2
-    } else if ["bnsf", "long island", "lirr"]
-        .iter()
-        .any(|s| name.contains(s))
-    {
-        3
-    } else if name.contains("portugal") || name.contains("cpv") {
-        4
-    } else if ["chiltern", "mideast", "scottish", "demo model"]
-        .iter()
-        .any(|s| name.contains(s))
-    {
-        5
-    } else {
-        6
-    }
-}
 pub(in crate::player_ui) fn favorite_key(
     menu: &PlayerLaunchMenu,
     kind: ChoiceKind,
@@ -167,7 +134,7 @@ pub(in crate::player_ui) fn build(
         ChoiceKind::Service => menu.services.len(),
         ChoiceKind::Consist => menu.consists.len(),
     };
-    let active = usize::from(search.country != 0)
+    let active = usize::from(kind == ChoiceKind::Consist && search.country != 0)
         + usize::from(search.favorites_only)
         + usize::from(search.gauge != 0)
         + usize::from(search.traction != 0)
@@ -204,11 +171,13 @@ pub(in crate::player_ui) fn build(
         return;
     }
     row(p, |p| {
-        button(
-            p,
-            COUNTRIES[search.country],
-            UiCommand::ChoiceFilter(kind, ChoiceFilter::Country),
-        );
+        if kind == ChoiceKind::Consist {
+            button(
+                p,
+                crate::player_ui::menu_country::country_label(search.country),
+                UiCommand::ChoiceFilter(kind, ChoiceFilter::Country),
+            );
+        }
         button(
             p,
             if search.favorites_only {

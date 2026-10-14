@@ -1,0 +1,423 @@
+{
+  "schema": 1,
+  "scope": "A separate phase27 original bridge view and two real small-screen country-menu captures. This does not relabel phase26 or historical frames.",
+  "candidate": "phase27",
+  "binary_sha256": "b00a0840c9179fd7d357436d144d16e36224b3b3a4d66f9154a0d9f7013c1217",
+  "source_snapshot": "phase27-source.json",
+  "source_snapshot_sha256": "6d1347d73abc054818c337e3aa0e0b09328788ce095773fa29e6dbbdbc558148",
+  "harness": "phase27-visual-final.py",
+  "harness_sha256": "ae13caafd49b2edeadb8bcd89745fdb6358124ef354b556316904c6038aaee64",
+  "raw_report_sha256": "acda56bf38aa2f13d034cae9a99ac04488e6594024f0134f2c165196272f0a43",
+  "gpu": "RX7600 PCI0000:03:00.0, private Weston, one viewer at a time; integrated soak separate",
+  "bridge_acceptance": true,
+  "menu_commands_present": 8,
+  "menu_scroll_interaction_certified": false,
+  "snap_certified": false,
+  "long_run_stability_certified": false,
+  "cases": [
+    {
+      "case": "country-800x600",
+      "frame": "country-800x600.png",
+      "frame_sha256": "e2d8589b33ef198429e6843b633320149b1ae9852a63a6495d5da5bb03d02352",
+      "frame_size_px": [
+        800,
+        600
+      ],
+      "raw_checkpoint_sha256": "076957c05ff4d6882179afac598ba2de13f400502a1ade96afe9814aafc1f2cd",
+      "log_sha256": "596aa54c2052c0b7e13c0870a0dc75151b20691e89f7e2acb7b0809ead0a0181",
+      "binary_sha256": "b00a0840c9179fd7d357436d144d16e36224b3b3a4d66f9154a0d9f7013c1217",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "inspected": true,
+      "status": "DISCOVERYFAIL",
+      "country": {
+        "capture_hook": "MENU_PAGE=country; capture_page sets country_chosen=false before building",
+        "commands": [
+          {
+            "max": [
+              734.0,
+              541.0
+            ],
+            "min": [
+              66.0,
+              509.0
+            ],
+            "name": "ui-SelectCountry(7)"
+          },
+          {
+            "max": [
+              734.0,
+              497.0
+            ],
+            "min": [
+              66.0,
+              465.0
+            ],
+            "name": "ui-SelectCountry(6)"
+          },
+          {
+            "max": [
+              734.0,
+              453.0
+            ],
+            "min": [
+              66.0,
+              421.0
+            ],
+            "name": "ui-SelectCountry(5)"
+          },
+          {
+            "max": [
+              734.0,
+              409.0
+            ],
+            "min": [
+              66.0,
+              377.0
+            ],
+            "name": "ui-SelectCountry(4)"
+          },
+          {
+            "max": [
+              734.0,
+              365.0
+            ],
+            "min": [
+              66.0,
+              333.0
+            ],
+            "name": "ui-SelectCountry(3)"
+          },
+          {
+            "max": [
+              734.0,
+              321.0
+            ],
+            "min": [
+              66.0,
+              289.0
+            ],
+            "name": "ui-SelectCountry(2)"
+          },
+          {
+            "max": [
+              734.0,
+              277.0
+            ],
+            "min": [
+              66.0,
+              245.0
+            ],
+            "name": "ui-SelectCountry(1)"
+          },
+          {
+            "max": [
+              734.0,
+              233.0
+            ],
+            "min": [
+              66.0,
+              201.0
+            ],
+            "name": "ui-SelectCountry(0)"
+          }
+        ],
+        "scroll_viewport": {
+          "max": [
+            734.0,
+            505.0
+          ],
+          "min": [
+            66.0,
+            134.0
+          ],
+          "name": "player-scroll"
+        },
+        "labels": [
+          "Todos los países",
+          "Argentina",
+          "Australia",
+          "Estados Unidos",
+          "Portugal",
+          "Reino Unido",
+          "Sin dato de país",
+          "Francia"
+        ],
+        "fully_inside_scroll_viewport": [
+          "ui-SelectCountry(6)",
+          "ui-SelectCountry(5)",
+          "ui-SelectCountry(4)",
+          "ui-SelectCountry(3)",
+          "ui-SelectCountry(2)",
+          "ui-SelectCountry(1)",
+          "ui-SelectCountry(0)"
+        ],
+        "scope": "Real GPU UI geometry and labels; wheel interaction is not synthesized by this harness"
+      },
+      "visual_inspection": "Country page, question, labels and fixed footer render without overflow into the footer. At the initial scroll offset only part of the eight-country list is inside the clipped viewport; there is no visible scroll affordance in this captured version.",
+      "effective_cache_policy": {
+        "source": "off",
+        "geometry": "off",
+        "texture": "off"
+      },
+      "failure_reason": "All eight country choices must fit completely at this resolution. The initial viewport hides options, so this layout is not accepted even though commands and labels exist."
+    },
+    {
+      "case": "country-640x480",
+      "frame": "country-640x480.png",
+      "frame_sha256": "f9fa13ba993ab74c8920f34f6c6d7bc3c94061434d2b6a869dbab7fed13de190",
+      "frame_size_px": [
+        640,
+        480
+      ],
+      "raw_checkpoint_sha256": "a5a42610015aa2e4875ce346bb74c592d6009e34790a4dd53077b4b41c840280",
+      "log_sha256": "abc38c7f84a2fc416a919d3ecbc6c075e6dfd5e30f43a98158df395ae4e06c45",
+      "binary_sha256": "b00a0840c9179fd7d357436d144d16e36224b3b3a4d66f9154a0d9f7013c1217",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "inspected": true,
+      "status": "DISCOVERYFAIL",
+      "country": {
+        "capture_hook": "MENU_PAGE=country; capture_page sets country_chosen=false before building",
+        "commands": [
+          {
+            "max": [
+              584.0,
+              534.0
+            ],
+            "min": [
+              56.0,
+              502.0
+            ],
+            "name": "ui-SelectCountry(7)"
+          },
+          {
+            "max": [
+              584.0,
+              490.0
+            ],
+            "min": [
+              56.0,
+              458.0
+            ],
+            "name": "ui-SelectCountry(6)"
+          },
+          {
+            "max": [
+              584.0,
+              446.0
+            ],
+            "min": [
+              56.0,
+              414.0
+            ],
+            "name": "ui-SelectCountry(5)"
+          },
+          {
+            "max": [
+              584.0,
+              402.0
+            ],
+            "min": [
+              56.0,
+              370.0
+            ],
+            "name": "ui-SelectCountry(4)"
+          },
+          {
+            "max": [
+              584.0,
+              358.0
+            ],
+            "min": [
+              56.0,
+              326.0
+            ],
+            "name": "ui-SelectCountry(3)"
+          },
+          {
+            "max": [
+              584.0,
+              314.0
+            ],
+            "min": [
+              56.0,
+              282.0
+            ],
+            "name": "ui-SelectCountry(2)"
+          },
+          {
+            "max": [
+              584.0,
+              270.0
+            ],
+            "min": [
+              56.0,
+              238.0
+            ],
+            "name": "ui-SelectCountry(1)"
+          },
+          {
+            "max": [
+              584.0,
+              226.0
+            ],
+            "min": [
+              56.0,
+              194.0
+            ],
+            "name": "ui-SelectCountry(0)"
+          }
+        ],
+        "scroll_viewport": {
+          "max": [
+            584.0,
+            392.0
+          ],
+          "min": [
+            56.0,
+            127.0
+          ],
+          "name": "player-scroll"
+        },
+        "labels": [
+          "Todos los países",
+          "Argentina",
+          "Australia",
+          "Estados Unidos",
+          "Portugal",
+          "Reino Unido",
+          "Sin dato de país",
+          "Francia"
+        ],
+        "fully_inside_scroll_viewport": [
+          "ui-SelectCountry(3)",
+          "ui-SelectCountry(2)",
+          "ui-SelectCountry(1)",
+          "ui-SelectCountry(0)"
+        ],
+        "scope": "Real GPU UI geometry and labels; wheel interaction is not synthesized by this harness"
+      },
+      "visual_inspection": "Country page, question, labels and fixed footer render without overflow into the footer. At the initial scroll offset only part of the eight-country list is inside the clipped viewport; there is no visible scroll affordance in this captured version.",
+      "effective_cache_policy": {
+        "source": "off",
+        "geometry": "off",
+        "texture": "off"
+      },
+      "failure_reason": "All eight country choices must fit completely at this resolution. The initial viewport hides options, so this layout is not accepted even though commands and labels exist."
+    },
+    {
+      "case": "bridge-visible",
+      "frame": "bridge-visible.png",
+      "frame_sha256": "bd457d8c2be67ebfcccc05f86de5a6cf812bc1ddc265f3d6fe74cd206f5f4249",
+      "frame_size_px": [
+        1280,
+        720
+      ],
+      "raw_checkpoint_sha256": "226faef54b54a91b6b1c6f63dbae26ec95f5a7ece60fa22dae8cdbec0192ae24",
+      "log_sha256": "5be9730693f656754de31e2fa32191261e78c8874adb100974791a3cd16069be",
+      "binary_sha256": "b00a0840c9179fd7d357436d144d16e36224b3b3a4d66f9154a0d9f7013c1217",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "inspected": true,
+      "status": "PASS",
+      "bridge_source": {
+        "world": "WORLD/w-006083+014926.w",
+        "uid": 11863,
+        "shape": "SRV_150ftRSTTTrussBridge.s",
+        "original_position_msts": [
+          -472.738,
+          43.5413,
+          -883.716
+        ],
+        "original_rotation_xyzw": [
+          0,
+          0.29029,
+          0,
+          0.956939
+        ],
+        "eye_render_m": [
+          -416,
+          3,
+          -184
+        ],
+        "look_at_render_m": [
+          -472.738,
+          11,
+          -144.284
+        ],
+        "world_sha256": "ba39c634f831bc770498ababd32e35790080c0f76035048b8e2e128e0f040f9f",
+        "shape_sha256": "e4783dd0b5cb751e4741949d3aa600bc6b123d84c151dd262e7bc8a1a7bc502a",
+        "descriptor_sha256": "be03d9a987844e1468fabeefc7af83bba590aa6dc394a103aa075b8725832278"
+      },
+      "gpu_tiles": 3,
+      "gpu_entities": 8947,
+      "peak_rss_mib": 2009.3,
+      "clock_time_s": 43200.0,
+      "contact_shadow_steps": [
+        16
+      ],
+      "equipment_actions": [
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Fly",
+          "door_fractions": [],
+          "index": 0,
+          "origin_m": [
+            3.3922157287597656,
+            0.0,
+            -270.85479736328125
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 0.0
+        }
+      ],
+      "effective_cache_policy": {
+        "source": "off",
+        "geometry": "off",
+        "texture": "off"
+      },
+      "visual_inspection": "Original Park Royal truss bridge and support are clearly visible from a low lateral view. Original vegetation partly occludes its left end. The camera is beside the bridge; no under-bridge view or moving-camera shadow assertion is claimed.",
+      "runtime_shader_sha256": {}
+    }
+  ],
+  "limits": [
+    "bridge-visible shows a real original bridge; bridge-low remains the historical low railway view with no overhead bridge visible.",
+    "SelectCountry(0..7) geometry and matching labels are captured from ECS, not inferred solely from OCR.",
+    "MENU_PAGE=country uses the normal screen builder and explicitly sets country_chosen=false; this hook input is recorded, not a separate runtime state query.",
+    "At800x600 seven rows are fully inside the initial viewport; at640x480 four are fully inside and Portugal is partly clipped. This initial layout fails the complete-visibility requirement; no wheel test is used as a substitute.",
+    "This report records the initial small-menu usability finding; later fixes need their own captures.",
+    "No installed author files, private home paths, PNG payloads or caches are copied into the public receipt."
+  ],
+  "menu_layout_accepted": false,
+  "menu_initial_layout_status": "DISCOVERYFAIL",
+  "menu_acceptance_requirement": "All eight SelectCountry rectangles must fit completely within the visible scroll viewport at640x480 and800x600. A subsequent two-column layout requires separate captured acceptance."
+}

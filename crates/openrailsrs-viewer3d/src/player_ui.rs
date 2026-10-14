@@ -23,6 +23,7 @@ mod choices;
 mod formation_editor;
 mod launcher;
 mod library;
+mod menu_country;
 mod previews;
 mod recommendations;
 mod service_editor;
@@ -261,6 +262,7 @@ pub struct PlayerUiState {
     in_start_menu: bool,
     navigation: Vec<PlayerPanel>,
     new_game_step: NewGameStep,
+    country_chosen: bool,
     new_game_advanced: bool,
     choice_search: [ChoiceSearch; 3],
     choice_focus: Option<ChoiceKind>,
@@ -298,7 +300,8 @@ impl Default for PlayerUiState {
             pause_before: false,
             in_start_menu: false,
             navigation: Vec::new(),
-            new_game_step: NewGameStep::Route,
+            new_game_step: NewGameStep::Country,
+            country_chosen: false,
             new_game_advanced: false,
             choice_search: default(),
             choice_focus: None,
@@ -412,6 +415,7 @@ enum UiCommand {
     HistoryFilter(crate::save_history::Filter),
     HistoryRefresh,
     SelectRoute(usize),
+    SelectCountry(usize),
     SelectChoice(ChoiceKind, usize),
     PreviewRotate(f32),
     PreviewZoom(f32),
@@ -1215,7 +1219,18 @@ fn handle_buttons(
             UiCommand::MissingOrigin=>crate::official_content::missing_source(&menu).ok_or("No hay un origen verificado".to_string()).and_then(|s|crate::official_content::open_source_url(&s.page)),
             UiCommand::MissingAudit=>menu.reaudit_selected().map(|message|{ui.notice=message;}),
             UiCommand::MissingUpdate=>crate::official_content::missing_source(&menu).map(|s|s.package_id).and_then(|id|downloads.packages.iter().position(|p|p.id()==id)).ok_or("No hay una descarga automática verificada para este origen".to_string()).and_then(|index|{downloads.selected=index;downloads.start().map(|()|open_panel(&mut ui,&mut live,PlayerPanel::Content))}),
-            UiCommand::Open(panel)=>{if *panel == PlayerPanel::Continue {history.request(crate::player_settings::player_data_dir());}open_panel(&mut ui,&mut live,*panel);Ok(())},
+            UiCommand::Open(panel) => {
+                if *panel == PlayerPanel::Continue {
+                    history.request(crate::player_settings::player_data_dir());
+                }
+                if *panel == PlayerPanel::NewGame {
+                    ui.new_game_step = NewGameStep::Country;
+                    ui.country_chosen = false;
+                    ui.new_game_advanced = false;
+                }
+                open_panel(&mut ui, &mut live, *panel);
+                Ok(())
+            },
             UiCommand::Close=>{close_panel(&mut ui,&mut live);Ok(())},
             UiCommand::Exit => { exit.write(AppExit::Success); Ok(()) },
             UiCommand::ReturnMenu => {
@@ -1229,6 +1244,12 @@ fn handle_buttons(
                 })
             },
             UiCommand::Start=>{
+                if ui.panel == PlayerPanel::NewGame && !menu_country::route_available(&ui, &menu) {
+                    ui.new_game_step = if ui.country_chosen {NewGameStep::Route} else {NewGameStep::Country};
+                    ui.notice = "Elegí un país y una ruta instalada antes de iniciar.".into();
+                    ui.rebuild = true;
+                    continue;
+                }
                 let setup=settings.journey_setup.clone();
                 study::challenge_weather(&setup, &mut settings.weather_profile, &mut menu.weather);
                 if setup.weather_challenge(settings.weather_seed).is_some(){menu.environment.time=crate::environment::EnvironmentSource::Manual;menu.environment.weather=crate::environment::EnvironmentSource::Manual;}
@@ -1273,15 +1294,17 @@ fn handle_buttons(
             UiCommand::HistoryRefresh=>{history.request(player_data_dir());Ok(())},
             UiCommand::ResumeHistory(index)=>history.entries.get(*index).ok_or("Partida inexistente".into()).and_then(|entry|SavedGame::prepare_resume(&entry.path)).map(|request|{launch.0=Some(request);ui.panel=PlayerPanel::None;}),
             UiCommand::SelectRoute(index) => {
-                let delta = *index as i32 - menu.route as i32;
-                menu.cycle_route(delta);
-                ui.new_game_step = NewGameStep::Route;
+                choices::select(&mut menu, ChoiceKind::Route, *index);
+                ui.choice_search[ChoiceKind::Route.slot()].country = menu.routes.get(*index).map_or(0, |name|menu_country::country(name));
+                ui.new_game_step = NewGameStep::Country;
+                ui.country_chosen = false;
                 ui.new_game_advanced = false;
                 open_panel(&mut ui, &mut live, PlayerPanel::NewGame);
                 Ok(())
             },
+            UiCommand::SelectCountry(index) => menu_country::select(&mut ui, &mut menu, *index),
             UiCommand::NewGameStep(step) => {
-                ui.new_game_step = *step;
+                ui.new_game_step = if !ui.country_chosen {NewGameStep::Country} else if matches!(step, NewGameStep::Train|NewGameStep::Environment) && !menu_country::route_available(&ui, &menu) {NewGameStep::Route} else {*step};
                 ui.new_game_advanced = false;
                 ui.choice_focus = None;
                 ui.notice.clear();
@@ -1297,9 +1320,13 @@ fn handle_buttons(
             UiCommand::PreviewAll => { previews.pose = default(); Ok(()) },
             UiCommand::PreviewRouteView => { previews.show_route_map = !previews.show_route_map; Ok(()) },
             UiCommand::SelectChoice(kind, index) => {
+                if *kind == ChoiceKind::Route && !menu_country::route_matches(&menu, *index, ui.choice_search[ChoiceKind::Route.slot()].country) {
+                    Err("Elegí una ruta del país seleccionado, o cambiá el país.".into())
+                } else {
                 choices::select(&mut menu, *kind, *index);
                 ui.choice_focus = None;
                 Ok(())
+                }
             },
             UiCommand::ShowChoices(kind) => {
                 ui.route_picker = *kind;
@@ -1314,7 +1341,9 @@ fn handle_buttons(
                 Ok(())
             },
             UiCommand::ChoiceFilter(kind,filter) => {
+                let country = ui.choice_search[ChoiceKind::Route.slot()].country;
                 choices::cycle_filter(&mut ui.choice_search[kind.slot()],*filter);
+                if *kind != ChoiceKind::Consist {ui.choice_search[kind.slot()].country = country;}
                 ui.choice_focus=None; Ok(())
             },
             UiCommand::ToggleFavorite(kind,index) => {
@@ -1615,7 +1644,7 @@ fn build_panel(
                 }
             });
             match panel {
-                PlayerPanel::NewGame => launcher::build_steps(p, ui.new_game_step),
+                PlayerPanel::NewGame => launcher::build_steps(p, &ui),
                 PlayerPanel::Content => launcher::build_library_tabs(p, ui.library_tab),
                 PlayerPanel::Settings => launcher::build_settings_tabs(p, ui.settings_tab),
                 _ => {}
@@ -4542,6 +4571,246 @@ mod tests {
             .reset_all();
     }
     #[test]
+    fn new_game_starts_with_direct_countries_before_routes_or_trains() {
+        let mut app = menu_app();
+        app.update();
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::Open(PlayerPanel::NewGame))
+        });
+        let ui = app.world().resource::<PlayerUiState>();
+        assert_eq!(ui.new_game_step, NewGameStep::Country);
+        assert!(!ui.country_chosen);
+        let mut commands = app.world_mut().query::<&UiCommand>();
+        let countries = commands
+            .iter(app.world())
+            .filter_map(|cmd| {
+                if let UiCommand::SelectCountry(index) = cmd {
+                    Some(*index)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(
+            countries,
+            (0..menu_country::COUNTRIES.len()).collect::<Vec<_>>()
+        );
+        assert!(!commands.iter(app.world()).any(|cmd| matches!(
+            cmd,
+            UiCommand::Start
+                | UiCommand::ShowChoices(_)
+                | UiCommand::FocusSearch(_)
+                | UiCommand::NewGameStep(
+                    NewGameStep::Route | NewGameStep::Train | NewGameStep::Environment
+                )
+        )));
+        click(&mut app, |cmd| matches!(cmd, UiCommand::SelectCountry(1)));
+        let menu = app.world().resource::<PlayerLaunchMenu>();
+        let ui = app.world().resource::<PlayerUiState>();
+        assert_eq!(ui.new_game_step, NewGameStep::Route);
+        assert!(ui.country_chosen);
+        assert!(menu_country::route_matches(menu, menu.route, 1));
+        let routes = choices::filtered(
+            menu,
+            ChoiceKind::Route,
+            &ui.choice_search[0],
+            app.world().resource::<PlayerSettings>(),
+        );
+        assert!(!routes.is_empty());
+        assert!(
+            routes
+                .iter()
+                .all(|&index| menu_country::country(&menu.routes[index]) == 1)
+        );
+        let services = choices::filtered(
+            menu,
+            ChoiceKind::Service,
+            &ui.choice_search[1],
+            app.world().resource::<PlayerSettings>(),
+        );
+        assert_eq!(services, menu.service_indices());
+        assert_eq!(
+            menu.current().unwrap().route_dir,
+            menu.services[services[0]].route_dir
+        );
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::NewGameStep(NewGameStep::Train))
+        });
+        let menu = app.world().resource::<PlayerLaunchMenu>();
+        let ui = app.world().resource::<PlayerUiState>();
+        assert_eq!(ui.choice_search[ChoiceKind::Consist.slot()].country, 0);
+        assert_eq!(
+            choices::filtered(
+                menu,
+                ChoiceKind::Consist,
+                &ui.choice_search[2],
+                app.world().resource::<PlayerSettings>()
+            )
+            .len(),
+            menu.consists.len()
+        );
+        let foreign = (0..menu.consists.len())
+            .find(|&index| menu_country::country(&menu.consist_origin_label(index)) != 1)
+            .expect("global stock includes other origins");
+        let name = menu.consists[foreign]
+            .file_stem()
+            .unwrap()
+            .to_string_lossy()
+            .into_owned();
+        app.world_mut()
+            .resource_mut::<PlayerUiState>()
+            .choice_search[2]
+            .query = name;
+        app.world_mut().resource_mut::<PlayerUiState>().rebuild = true;
+        app.update();
+        click(
+            &mut app,
+            |cmd| matches!(cmd, UiCommand::SelectChoice(ChoiceKind::Consist, index) if *index == foreign),
+        );
+        assert_eq!(app.world().resource::<PlayerLaunchMenu>().consist, foreign);
+        assert_eq!(
+            app.world().resource::<PlayerUiState>().choice_search[0].country,
+            1
+        );
+    }
+    #[test]
+    fn all_unknown_and_empty_countries_keep_selection_and_launch_consistent() {
+        let mut app = menu_app();
+        {
+            let mut menu = app.world_mut().resource_mut::<PlayerLaunchMenu>();
+            let mut service = menu.services[0].clone();
+            service.edition = Some("Unlisted country fixture".into());
+            menu.services.push(service);
+            menu.routes.push("Unlisted country fixture".into());
+            // France has no route in this fixture; installing a French train
+            // cannot make an existing route French.
+            assert!(
+                !menu
+                    .routes
+                    .iter()
+                    .any(|name| menu_country::country(name) == 7)
+            );
+        }
+        app.update();
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::Open(PlayerPanel::NewGame))
+        });
+        click(&mut app, |cmd| matches!(cmd, UiCommand::SelectCountry(6)));
+        {
+            let ui = app.world().resource::<PlayerUiState>();
+            let menu = app.world().resource::<PlayerLaunchMenu>();
+            assert!(menu_country::route_matches(menu, menu.route, 6));
+            let routes = choices::filtered(
+                menu,
+                ChoiceKind::Route,
+                &ui.choice_search[0],
+                app.world().resource::<PlayerSettings>(),
+            );
+            assert!(routes.contains(&(menu.routes.len() - 1)));
+            assert!(
+                routes
+                    .iter()
+                    .all(|&index| menu_country::country(&menu.routes[index]) == 6)
+            );
+        }
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::NewGameStep(NewGameStep::Country))
+        });
+        click(&mut app, |cmd| matches!(cmd, UiCommand::SelectCountry(7)));
+        assert!(!menu_country::route_available(
+            app.world().resource::<PlayerUiState>(),
+            app.world().resource::<PlayerLaunchMenu>()
+        ));
+        let mut commands = app.world_mut().query::<&UiCommand>();
+        assert!(!commands.iter(app.world()).any(|cmd| matches!(
+            cmd,
+            UiCommand::Start | UiCommand::ShowChoices(_) | UiCommand::FocusSearch(_)
+        )));
+        // Later tabs cannot launch the previous country's route.
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::NewGameStep(NewGameStep::Train))
+        });
+        assert_eq!(
+            app.world().resource::<PlayerUiState>().new_game_step,
+            NewGameStep::Route
+        );
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::NewGameStep(NewGameStep::Country))
+        });
+        click(&mut app, |cmd| matches!(cmd, UiCommand::SelectCountry(0)));
+        let menu = app.world().resource::<PlayerLaunchMenu>();
+        let ui = app.world().resource::<PlayerUiState>();
+        assert!(menu_country::route_available(ui, menu));
+        assert_eq!(
+            choices::filtered(
+                menu,
+                ChoiceKind::Route,
+                &ui.choice_search[0],
+                app.world().resource::<PlayerSettings>()
+            )
+            .len(),
+            menu.routes.len()
+        );
+    }
+    #[test]
+    fn country_survives_filter_reset_and_rejects_invalid_selection_without_mutation() {
+        let mut app = menu_app();
+        app.update();
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::Open(PlayerPanel::NewGame))
+        });
+        click(&mut app, |cmd| matches!(cmd, UiCommand::SelectCountry(1)));
+        click(&mut app, |cmd| {
+            matches!(
+                cmd,
+                UiCommand::ChoiceFilter(ChoiceKind::Route, choices::ChoiceFilter::Toggle)
+            )
+        });
+        click(&mut app, |cmd| {
+            matches!(
+                cmd,
+                UiCommand::ChoiceFilter(ChoiceKind::Route, choices::ChoiceFilter::Reset)
+            )
+        });
+        assert_eq!(
+            app.world().resource::<PlayerUiState>().choice_search[0].country,
+            1
+        );
+        assert!(menu_country::route_available(
+            app.world().resource::<PlayerUiState>(),
+            app.world().resource::<PlayerLaunchMenu>()
+        ));
+        let before = app.world().resource::<PlayerLaunchMenu>().route;
+        let invalid = app
+            .world_mut()
+            .spawn((
+                UiCommand::SelectCountry(menu_country::COUNTRIES.len()),
+                Interaction::None,
+            ))
+            .id();
+        click(
+            &mut app,
+            |cmd| matches!(cmd, UiCommand::SelectCountry(index) if *index == menu_country::COUNTRIES.len()),
+        );
+        assert_eq!(app.world().resource::<PlayerLaunchMenu>().route, before);
+        assert_eq!(
+            app.world().resource::<PlayerUiState>().choice_search[0].country,
+            1
+        );
+        assert!(!app.world().resource::<PlayerUiState>().notice.is_empty());
+        app.world_mut().despawn(invalid);
+        // Explicit QA capture pages select all countries without changing the
+        // user-facing first step. They retain their direct Train entry point.
+        let mut ui = app.world_mut().resource_mut::<PlayerUiState>();
+        launcher::capture_page(&mut ui, "train");
+        assert_eq!(ui.new_game_step, NewGameStep::Train);
+        assert!(ui.country_chosen);
+        assert_eq!(ui.choice_search[0].country, 0);
+        launcher::capture_page(&mut ui, "country");
+        assert_eq!(ui.new_game_step, NewGameStep::Country);
+        assert!(!ui.country_chosen);
+    }
+    #[test]
     fn home_actions_and_nested_details_return_without_losing_the_trip() {
         let mut app = menu_app();
         app.update();
@@ -4565,6 +4834,7 @@ mod tests {
         click(&mut app, |cmd| {
             matches!(cmd, UiCommand::Open(PlayerPanel::NewGame))
         });
+        click(&mut app, |cmd| matches!(cmd, UiCommand::SelectCountry(0)));
         {
             let mut menu = app.world_mut().resource_mut::<PlayerLaunchMenu>();
             menu.start_time_s = 12345.;
@@ -4615,6 +4885,7 @@ mod tests {
         click(&mut app, |cmd| {
             matches!(cmd, UiCommand::Open(PlayerPanel::NewGame))
         });
+        click(&mut app, |cmd| matches!(cmd, UiCommand::SelectCountry(0)));
         click(&mut app, |cmd| {
             matches!(cmd, UiCommand::FocusSearch(ChoiceKind::Route))
         });
@@ -4663,6 +4934,7 @@ mod tests {
         click(&mut app, |cmd| {
             matches!(cmd, UiCommand::Open(PlayerPanel::NewGame))
         });
+        click(&mut app, |cmd| matches!(cmd, UiCommand::SelectCountry(0)));
         let chosen = 0;
         let path = app.world().resource::<PlayerLaunchMenu>().consists[chosen].clone();
         {
@@ -4714,6 +4986,7 @@ mod tests {
         click(&mut app, |cmd| {
             matches!(cmd, UiCommand::Open(PlayerPanel::NewGame))
         });
+        click(&mut app, |cmd| matches!(cmd, UiCommand::SelectCountry(0)));
         click(&mut app, |cmd| {
             matches!(cmd, UiCommand::FocusSearch(ChoiceKind::Route))
         });
@@ -4763,6 +5036,7 @@ mod tests {
         click(&mut app, |cmd| {
             matches!(cmd, UiCommand::Open(PlayerPanel::NewGame))
         });
+        click(&mut app, |cmd| matches!(cmd, UiCommand::SelectCountry(0)));
         for step in [
             NewGameStep::Route,
             NewGameStep::Train,
@@ -4814,6 +5088,7 @@ mod tests {
         click(&mut app, |cmd| {
             matches!(cmd, UiCommand::Open(PlayerPanel::NewGame))
         });
+        click(&mut app, |cmd| matches!(cmd, UiCommand::SelectCountry(0)));
         for incomplete in [false, true] {
             {
                 let mut menu = app.world_mut().resource_mut::<PlayerLaunchMenu>();
@@ -5239,6 +5514,7 @@ mod tests {
         click(&mut app, |cmd| {
             matches!(cmd, UiCommand::Open(PlayerPanel::NewGame))
         });
+        click(&mut app, |cmd| matches!(cmd, UiCommand::SelectCountry(0)));
         click(&mut app, |cmd| {
             matches!(cmd, UiCommand::NewGameStep(NewGameStep::Environment))
         });
@@ -5295,6 +5571,7 @@ mod tests {
         click(&mut app, |cmd| {
             matches!(cmd, UiCommand::Open(PlayerPanel::NewGame))
         });
+        click(&mut app, |cmd| matches!(cmd, UiCommand::SelectCountry(0)));
         click(&mut app, |cmd| {
             matches!(cmd, UiCommand::NewGameStep(NewGameStep::Environment))
         });

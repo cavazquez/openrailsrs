@@ -121,4 +121,3 @@ fn vertex(vertex_no_morph: Vertex) -> VertexOutput {
 
     return out;
 }
-

@@ -4126,8 +4126,8 @@
     }
   },
   "allocation_lifetime": {
-    "status": "Final candidate26 actual 7200-second run in progress; lifetime stability not yet accepted.",
-    "only_functional_change_22_to_23": "wgpu MemoryHintsPerformance→MemoryUsage; identical simulation/resources/graphical settings",
+    "status": "Full lifetime validation pending final candidate27 and a protected disk margin; diagnostics24/26 remain partial/rejected.",
+    "only_functional_change_22_to_23": "wgpu MemoryHintsPerformance\u2192MemoryUsage; identical simulation/resources/graphical settings",
     "performance_control22": {
       "state": "Intentionally interrupted allocation control; not a completed7200s run or definitive unbounded leak verdict.",
       "viewer_sha256": "d14ebc6432dd4b946442861ab52a44854054cc805e474cb7aa89cf4f2c2a5efa",
@@ -4135,7 +4135,7 @@
       "route_changes": 8,
       "save_restore_cycles": 24,
       "utc": "2026-10-13T23:36:26Z",
-      "reason": "Preserve Performance allocator control and begin full finalMemoryUsage policy acceptance. Measured sparse256MiB blocks pinned by0.214–6MiB live resources; no quality or simulation reduction.",
+      "reason": "Preserve Performance allocator control and begin full finalMemoryUsage policy acceptance. Measured sparse256MiB blocks pinned by0.214\u20136MiB live resources; no quality or simulation reduction.",
       "comparable_labs": [
         {
           "wall_s": 240.031637779,
@@ -4166,7 +4166,7 @@
         }
       ]
     },
-    "sampling_scope": "ActualVulkan allocator allocations and reserved blocks every30s, live RenderApp assets/slabs/queues, DRM perPCI VRAM/GTT, RAM/audio. Backendunsupported isNone; no zero substitution. Reserved memory differs from live allocations. DefaultMemoryUsage uses8–64MiB device blocks instead of128–256MiB. SourceCache/OS/Mesa caches remain scoped separately.",
+    "sampling_scope": "ActualVulkan allocator allocations and reserved blocks every30s, live RenderApp assets/slabs/queues, DRM perPCI VRAM/GTT, RAM/audio. Backendunsupported isNone; no zero substitution. Reserved memory differs from live allocations. DefaultMemoryUsage uses8\u201364MiB device blocks instead of128\u2013256MiB. SourceCache/OS/Mesa caches remain scoped separately.",
     "memory_usage_control23": {
       "state": "Interrupted actual allocator diagnosis; not a completed7200s run.",
       "viewer_sha256": "80921b72a8d75dee6d0fcf766bf73e03c7504409a413a727b9d31541f530176f",
@@ -4759,7 +4759,7 @@
       "scope": "Positive retired/cache/source keys verify execution of the public-API dead-view pruning. This interrupted diagnosis does not certify long-term stability. One raw telemetry line was truncated at disk quota and preserved as invalid; it was not repaired or used as acceptance."
     },
     "final_candidate26": {
-      "status": "In progress; no actual7200-second acceptance yet.",
+      "status": "Rejected partial diagnosis: a telemetry line was truncated during disk exhaustion; no complete 7200-second acceptance.",
       "viewer_sha256": "24793d08bc7a6900ea817165dd2519492dbbdceacd043cf58c08a1fd6170ca4a",
       "viewer_bytes": 172519328,
       "started_utc": "2026-10-14T01:12:44Z",
@@ -4786,6 +4786,139 @@
       },
       "additional_measurements": "Actual RenderMaterialBindings and ErasedRenderAssets<PreparedMaterial> maps by material type, optional Linux GNU mallinfo2 raw byte statistics, Vulkan live allocations/reserved blocks and per-PCI DRM VRAM/GTT. Missing resources are explicit, never zero-filled.",
       "scope": "Final geometry compiler includes corrected native unnamed-matrix parsing. Candidate24 stays a partial diagnosis; candidate26 receives a new full 7200-second run. No allocator trimming or GPU resource-quality reduction is introduced by telemetry."
+    },
+    "rejected_telemetry_diagnostic26": {
+      "status": "Rejected partial diagnosis due to ENOSPC-truncated telemetry; not a7200-second acceptance. Raw lines preserved without repair.",
+      "viewer_sha256": "24793d08bc7a6900ea817165dd2519492dbbdceacd043cf58c08a1fd6170ca4a",
+      "complete_rows": 21,
+      "observed_wall_s": 810.033094611,
+      "route_changes": 4,
+      "sampled_actual_route_transitions": 4,
+      "save_restore_cycles": 13,
+      "invalid_raw_lines": [
+        {
+          "line": 15,
+          "characters": 33300,
+          "error": "Expecting ',' delimiter: line 1 column 33301 (char 33300)"
+        }
+      ],
+      "last_material_owners": {
+        "bindings": {
+          "available": true,
+          "by_type": {
+            "MoonMaterial": 1,
+            "ParticleMaterial": 1,
+            "RailwaySkyMaterial": 1,
+            "StandardMaterial": 28
+          },
+          "total": 31
+        },
+        "prepared": {
+          "available": true,
+          "by_type": {
+            "MoonMaterial": 1,
+            "ParticleMaterial": 1,
+            "RailwaySkyMaterial": 1,
+            "StandardMaterial": 28
+          },
+          "total": 31
+        }
+      },
+      "last_bin_unpacking": {
+        "cached_keys": 2,
+        "retired_keys": 14,
+        "source_keys": 2,
+        "stale_keys_after": 0,
+        "stale_keys_before": 0
+      },
+      "max_stale_after": 0,
+      "last_heap_allocator": {
+        "allocator": "glibc mallinfo2",
+        "arena": 2518876160,
+        "available": true,
+        "fordblks": 2149410736,
+        "hblkhd": 80,
+        "scope": "Raw bytes: arena includes libc heap capacity; uordblks/fordblks describe arena use/free space, hblkhd separate mmap allocation space. These statistics do not equal total PSS, Rust live-object bytes or all driver allocations. No malloc_trim is called.",
+        "uordblks": 369465424
+      },
+      "last_rss_mib": 2414.84375
+    },
+    "final_candidate27": {
+      "status": "In progress; no 7200-second acceptance claim.",
+      "started_utc": "2026-10-14T01:45:20Z",
+      "expected_end_utc": "2026-10-14T03:45:20Z",
+      "viewer_sha256": "b00a0840c9179fd7d357436d144d16e36224b3b3a4d66f9154a0d9f7013c1217",
+      "viewer_bytes": 172560672,
+      "source_snapshot": "phase27-source.json:662 frozen source hashes",
+      "configuration": {
+        "seconds": 7200,
+        "route_interval_s": 180,
+        "wall_sample_interval_s": 30,
+        "camera_weather_restore_interval_s": 60,
+        "framepace": 30,
+        "audio": "private ALSA null",
+        "vulkan_device": "1002:13c0",
+        "seed": 42,
+        "autodrive": 0.5,
+        "speed_multiplier": 4,
+        "weather_particle_budget": 2048,
+        "quality_limits": {
+          "enabled": true,
+          "target_fps": 30,
+          "min_level": 0,
+          "max_level": 3
+        },
+        "gpu_memory_policy": "Natural active physical device budget; MemoryUsage allocation hints."
+      },
+      "cache_scope": "Warm derivative cache relocated from rejected26 without duplication. Geometry compiler dependencies unchanged by country-first player_ui update; original resources unchanged. No cold-start cache claim for this endurance run.",
+      "disk_scope": {
+        "home_free_bytes_at_start": 598593536,
+        "alert_below_mib": 250,
+        "protected_margin": "Parent reserves existing disk margin; no large artifact writes until coordinated."
+      },
+      "known_background_loads": [
+        "No Cargo or Snap CPU compilation at startup.",
+        "Dedicated RX visual captures followed by sequential D9\u219227 benchmark; integrated GPU remains exclusive.",
+        "Later release/Snap CPU builds will be timestamped; endurance is not an FPS claim."
+      ]
+    },
+    "first_retirement27": {
+      "wall_s": 210.027424094,
+      "scenario": "Laboratorio de fuelles, mangueras y acopladores",
+      "route_changes": 1,
+      "pending_uploads": 0,
+      "scope": "First executed scene transition: actual render maps are present, dead bind-group keys were retired and stale_after is zero. This is a functional retirement check; the complete 7200-second stability acceptance remains pending.",
+      "bin_unpacking_lifetime": {
+        "cached_keys": 2,
+        "retired_keys": 2,
+        "source_keys": 2,
+        "stale_keys_after": 0,
+        "stale_keys_before": 0
+      },
+      "material_owners": {
+        "bindings": {
+          "available": true,
+          "by_type": {
+            "MoonMaterial": 1,
+            "ParticleMaterial": 1,
+            "RailwaySkyMaterial": 1,
+            "StandardMaterial": 39,
+            "TerrainMaterial": 1
+          },
+          "total": 43
+        },
+        "prepared": {
+          "available": true,
+          "by_type": {
+            "MoonMaterial": 1,
+            "ParticleMaterial": 1,
+            "RailwaySkyMaterial": 1,
+            "StandardMaterial": 39,
+            "TerrainMaterial": 1
+          },
+          "total": 43
+        }
+      }
     }
   },
   "limits": [
@@ -4797,7 +4930,7 @@
   ],
   "allocation_timing_comparison": {
     "status": "Completed four real sequential RX checkpoints with no compilation/software render workloads.",
-    "only_functional_change": "MemoryHints::Performance→MemoryUsage",
+    "only_functional_change": "MemoryHints::Performance\u2192MemoryUsage",
     "raw_report_sha256": "abd03a991134ed4256a800e11ce1fc1dc805eb0e9714b3a20472a384f8cfaf3e",
     "configuration": {
       "schema": 1,
@@ -4816,7 +4949,7 @@
       "checkpoint_m": 2500,
       "cache_scope": "cold/warm refers to this executable's private application-data cache; OS file cache and Mesa shader cache are not cleared",
       "framepace": "off",
-      "concurrent_workloads": "No Cargo, Native20AI, content extraction or Snap CPU render jobs. Only final23 integrated-GPU endurance30fps background in all four cases. SameGL/Vulkan RX7600, resources, graphical quality, camera, weather and physics. Sole functional change WgpuMemoryHints Performance→MemoryUsage.",
+      "concurrent_workloads": "No Cargo, Native20AI, content extraction or Snap CPU render jobs. Only final23 integrated-GPU endurance30fps background in all four cases. SameGL/Vulkan RX7600, resources, graphical quality, camera, weather and physics. Sole functional change WgpuMemoryHints Performance\u2192MemoryUsage.",
       "profile_systems": true,
       "weathers": [
         "downpour"
@@ -5004,5 +5137,990 @@
       }
     },
     "interpretation": "P99 unchanged26ms cold/warm. Cold driving maximum worsens0.97ms, warm improves15.12ms; initial maxima worsen17.80/4.74ms. No blanketFPS gain or hidden reduction in graphical quality."
+  },
+  "final_global_reference": {
+    "scope": "Released reference d9dba7af versus final renderer/parser candidate27, four sequential RX7600 launches in intense rain. Integrated-GPU endurance is the only background workload; its scene phases differ between launches. The within-batch causal comparison and earlier global comparison remain separate. Both fresh PNGs inspected; measurements are local and do not certify all routes or a general FPS gain.",
+    "raw_report_sha256": "71d1fc06b99d03fb8b41d9905f7995a8c586d35f6c12e333921310aecc4aa2f4",
+    "configuration": {
+      "scenario_sha256": "faac5f908bfafd4a73ecf5be3e1c9601970c110b8926b7c80ac3221387baf5bf",
+      "seed": 42,
+      "camera": "driver",
+      "window": [
+        1280,
+        720
+      ],
+      "view_distance_m": 500,
+      "speed_multiplier": 4,
+      "weather_particle_budget": 2048,
+      "audio": "private ALSA null",
+      "checkpoint_m": 2500,
+      "cache_scope": "cold/warm refers to this executable's private application-data cache; OS file cache and Mesa shader cache are not cleared",
+      "framepace": "off",
+      "concurrent_workloads": "No Cargo/native simulations/Snap CPU builds; integrated GPU candidate27 endurance30fps concurrent for every case, benchmark GL and Vulkan both isolated on RX7600.",
+      "profile_systems": true,
+      "weathers": [
+        "downpour"
+      ]
+    },
+    "versions": {
+      "baseline": {
+        "binary_sha256": "fcc8bee54cd6310f5b723f50e9cc0caa8576c6bc0db14da2ef2efcb254dd2053",
+        "cases": {
+          "downpour-cold": {
+            "odometer_m": 2501.1992980011064,
+            "gpu_tiles": 2,
+            "visible_neighbourhood_pending": 0,
+            "pending_uploads": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "gameplay": {
+              "gameplay_frames": 2013,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 27,
+              "gameplay_frame_p99_ms": 40,
+              "gameplay_longest_frame_ms": 97.903756,
+              "gameplay_hitches_over_100_ms": 0
+            },
+            "startup_inclusive_max_ms": 1609.8797089999998,
+            "loading_frames": 1101,
+            "rss_mib": 1868.01171875,
+            "peak_rss_mib": 1868.01171875,
+            "graphics_memory": {
+              "device_total_mib": 8688.0,
+              "device_used_mib": 3042.87890625,
+              "peak_process_vram_mib": 1640.0390625,
+              "process_gtt_mib": 82.20703125,
+              "process_vram_mib": 1640.0390625,
+              "source": "linux_drm_fdinfo"
+            },
+            "geometry_cache": null,
+            "system_stages": null,
+            "shape_stages": null,
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "host_usage": {
+              "cpu_percent_one_core": 211.09211504412048,
+              "gpu_busy_percent_mean": 31.669172932330827,
+              "selected_gpu_pci": "0000:03:00.0",
+              "gpu_busy_percent_by_device": {
+                "0000:0e:00.0": 40.68301886792453,
+                "0000:03:00.0": 31.669172932330827
+              },
+              "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
+              "private_compositor": {
+                "gl_renderer": "AMD Radeon RX 7600 (radeonsi, navi33, ACO, DRM 3.64, 7.0.0-38-generic)",
+                "egl_device": "/dev/dri/renderD129",
+                "DRI_PRIME": "pci-0000_03_00_0",
+                "scope": "GL renderer identifies effective offload device; EGL device may retain enumeration node"
+              }
+            },
+            "png_sha256": "54df6bd07cdb8305a47a87de3bededfa51285c131d05408da89dbc41f00a428f",
+            "png_bytes": 788884,
+            "render_resources": null
+          },
+          "downpour-warm": {
+            "odometer_m": 2500.6907735943855,
+            "gpu_tiles": 2,
+            "visible_neighbourhood_pending": 0,
+            "pending_uploads": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "gameplay": {
+              "gameplay_frames": 2026,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 25,
+              "gameplay_frame_p99_ms": 28,
+              "gameplay_longest_frame_ms": 43.99968,
+              "gameplay_hitches_over_100_ms": 0
+            },
+            "startup_inclusive_max_ms": 1549.6679009999998,
+            "loading_frames": 1084,
+            "rss_mib": 1768.3046875,
+            "peak_rss_mib": 1768.3046875,
+            "graphics_memory": {
+              "device_total_mib": 8688.0,
+              "device_used_mib": 2485.29296875,
+              "peak_process_vram_mib": 1383.9765625,
+              "process_gtt_mib": 82.20703125,
+              "process_vram_mib": 1383.9765625,
+              "source": "linux_drm_fdinfo"
+            },
+            "geometry_cache": null,
+            "system_stages": null,
+            "shape_stages": null,
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "host_usage": {
+              "cpu_percent_one_core": 207.46842681720346,
+              "gpu_busy_percent_mean": 31.33587786259542,
+              "selected_gpu_pci": "0000:03:00.0",
+              "gpu_busy_percent_by_device": {
+                "0000:0e:00.0": 49.599236641221374,
+                "0000:03:00.0": 31.33587786259542
+              },
+              "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
+              "private_compositor": {
+                "gl_renderer": "AMD Radeon RX 7600 (radeonsi, navi33, ACO, DRM 3.64, 7.0.0-38-generic)",
+                "egl_device": "/dev/dri/renderD129",
+                "DRI_PRIME": "pci-0000_03_00_0",
+                "scope": "GL renderer identifies effective offload device; EGL device may retain enumeration node"
+              }
+            },
+            "png_sha256": "8d178c83e9584a52deed1d54c6e5d1cfaa3304650bfc64b16107139f076282ca",
+            "png_bytes": 789394,
+            "render_resources": null
+          }
+        }
+      },
+      "candidate": {
+        "binary_sha256": "b00a0840c9179fd7d357436d144d16e36224b3b3a4d66f9154a0d9f7013c1217",
+        "cases": {
+          "downpour-cold": {
+            "odometer_m": 2500.6907735943855,
+            "gpu_tiles": 5,
+            "visible_neighbourhood_pending": 0,
+            "pending_uploads": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "gameplay": {
+              "gameplay_frames": 2025,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 26,
+              "gameplay_frame_p99_ms": 28,
+              "gameplay_longest_frame_ms": 68.561383,
+              "gameplay_hitches_over_100_ms": 0
+            },
+            "startup_inclusive_max_ms": 1694.781714,
+            "loading_frames": 1174,
+            "rss_mib": 1876.54296875,
+            "peak_rss_mib": 1876.54296875,
+            "graphics_memory": {
+              "active_device_pci": "0000:03:00.0",
+              "device_total_mib": 8176.0,
+              "device_used_mib": 2193.3984375,
+              "devices": [
+                {
+                  "device_total_mib": 8176.0,
+                  "device_used_mib": 2193.3984375,
+                  "pci": "0000:03:00.0",
+                  "process_gtt_mib": 20.20703125,
+                  "process_vram_mib": 1449.51171875
+                },
+                {
+                  "device_total_mib": 512.0,
+                  "device_used_mib": 474.4140625,
+                  "pci": "0000:0e:00.0",
+                  "process_gtt_mib": 2.0,
+                  "process_vram_mib": 0.01171875
+                }
+              ],
+              "peak_process_vram_mib": 1449.5234375,
+              "process_gtt_mib": 22.20703125,
+              "process_vram_mib": 1449.5234375,
+              "source": "linux_drm_fdinfo"
+            },
+            "geometry_cache": {
+              "gpu_handles_cached": false,
+              "hits": 0,
+              "max_disk_mib": 256,
+              "misses": 472,
+              "schema": 1
+            },
+            "system_stages": {
+              "camera_collision": {
+                "calls": 2422,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 10,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1410
+              },
+              "effect_obstacles": {
+                "calls": 2422,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 5587,
+                "p50_ms": 0.3,
+                "p99_ms": 1.4,
+                "total_us": 871961
+              },
+              "flexible_connections": {
+                "calls": 2422,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 59,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 16904
+              },
+              "horizon": {
+                "calls": 2423,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 21080,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 61398
+              },
+              "jacobs_bogie": {
+                "calls": 2423,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 129,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 23155
+              },
+              "level_crossing_register": {
+                "calls": 2423,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 9674,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 36395
+              },
+              "live_drive": {
+                "calls": 3074,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 2983,
+                "p50_ms": 0.2,
+                "p99_ms": 2.5,
+                "total_us": 954534
+              },
+              "mirrors": {
+                "calls": 2422,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 6,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1480
+              },
+              "platform_people": {
+                "calls": 2422,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 14,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 8568
+              },
+              "road_cars": {
+                "calls": 2423,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 198,
+                "p50_ms": 0.1,
+                "p99_ms": 0.2,
+                "total_us": 46740
+              },
+              "snow_materials": {
+                "calls": 2422,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 36,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 7164
+              },
+              "snow_roof_markers": {
+                "calls": 2423,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 1,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 11
+              },
+              "snow_tracks": {
+                "calls": 2422,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 2,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 117
+              },
+              "streaming_forecast.update": {
+                "calls": 2422,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 24,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1572
+              },
+              "terrain_spawn.terrain_tile_bundle_materialize_system": {
+                "calls": 2422,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 139,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 2469
+              },
+              "terrain_spawn.terrain_tile_spawn_stream_system": {
+                "calls": 2422,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 102,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1214
+              },
+              "terrain_spawn.terrain_tile_stream_system": {
+                "calls": 2422,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 2330,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 71104
+              },
+              "terrain_spawn.terrain_tile_unload_system": {
+                "calls": 2422,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 42,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 8204
+              },
+              "wet_surfaces": {
+                "calls": 2423,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 872,
+                "p50_ms": 0.1,
+                "p99_ms": 0.6,
+                "total_us": 103544
+              },
+              "world.progressive_world_spawn_system": {
+                "calls": 2422,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 44472,
+                "p50_ms": 0.1,
+                "p99_ms": 8.7,
+                "total_us": 1897358
+              },
+              "world.update_world_scenery_lod": {
+                "calls": 2422,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 6750,
+                "p50_ms": 0.1,
+                "p99_ms": 4.6,
+                "total_us": 2240571
+              },
+              "world.world_stream_scenery_system": {
+                "calls": 2422,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 32551,
+                "p50_ms": 0.1,
+                "p99_ms": 5.8,
+                "total_us": 540175
+              },
+              "world.world_tile_bundle_materialize_system": {
+                "calls": 2422,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 1395,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 8557
+              },
+              "world.world_tile_stream_system": {
+                "calls": 2422,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 271,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 19258
+              },
+              "world.world_tile_unload_system": {
+                "calls": 2422,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 4136,
+                "p50_ms": 0.1,
+                "p99_ms": 1.8,
+                "total_us": 140147
+              }
+            },
+            "shape_stages": {
+              "cpu_prepare": {
+                "calls": 483,
+                "maximum_us": 4028,
+                "slowest_shape": "50mberm.s",
+                "total_us": 75346
+              },
+              "cpu_prepare_lods": {
+                "calls": 472,
+                "maximum_us": 48345,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 2752066
+              },
+              "geometry_cache_read": {
+                "calls": 472,
+                "maximum_us": 3747,
+                "slowest_shape": "SRV_SaltboxFarmhouse.s",
+                "total_us": 63956
+              },
+              "geometry_cache_write": {
+                "calls": 472,
+                "maximum_us": 8382,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 640190
+              },
+              "prepare_silhouette": {
+                "calls": 472,
+                "maximum_us": 55,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 2615
+              },
+              "publish_auxiliary": {
+                "calls": 26,
+                "maximum_us": 25817,
+                "slowest_shape": "CarSpawner",
+                "total_us": 49876
+              },
+              "publish_gpu_assets": {
+                "calls": 472,
+                "maximum_us": 42939,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 1132147
+              },
+              "publish_lod_gpu_assets": {
+                "calls": 276,
+                "maximum_us": 13176,
+                "slowest_shape": "CMhenlowshops.s",
+                "total_us": 450002
+              },
+              "resolve_texture_dependencies": {
+                "calls": 472,
+                "maximum_us": 42686,
+                "slowest_shape": "CMhenlowshops.s",
+                "total_us": 2105173
+              },
+              "source_read_parse": {
+                "calls": 483,
+                "maximum_us": 28782,
+                "slowest_shape": "RF_WP_DMBSA.s",
+                "total_us": 986706
+              }
+            },
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "host_usage": {
+              "cpu_percent_one_core": 224.8211286376439,
+              "gpu_busy_percent_mean": 22.633204633204635,
+              "selected_gpu_pci": "0000:03:00.0",
+              "gpu_busy_percent_by_device": {
+                "0000:0e:00.0": 92.2084942084942,
+                "0000:03:00.0": 22.633204633204635
+              },
+              "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
+              "private_compositor": {
+                "gl_renderer": "AMD Radeon RX 7600 (radeonsi, navi33, ACO, DRM 3.64, 7.0.0-38-generic)",
+                "egl_device": "/dev/dri/renderD129",
+                "DRI_PRIME": "pci-0000_03_00_0",
+                "scope": "GL renderer identifies effective offload device; EGL device may retain enumeration node"
+              }
+            },
+            "png_sha256": "331c7da25c868ab39d062787b1b2450b95106d18aaffb0654eb4b1c80aef0c18",
+            "png_bytes": 793291,
+            "render_resources": {
+              "allocator": null,
+              "bin_unpacking_lifetime": {
+                "cached_keys": 2,
+                "retired_keys": 0,
+                "source_keys": 2,
+                "stale_keys_after": 0,
+                "stale_keys_before": 0
+              },
+              "bindless_material_allocations": 891,
+              "bindless_material_allocations_scope": "Raw upstream allocated_resource_count may overcount repeated bindings within a material; use material_owners for actual map ownership.",
+              "images": 544,
+              "indexed_mesh_allocations": 272,
+              "material_owners": {
+                "bindings": {
+                  "available": true,
+                  "by_type": {
+                    "MoonMaterial": 1,
+                    "OrCabMaterial": 69,
+                    "ParticleMaterial": 1,
+                    "RailwaySkyMaterial": 1,
+                    "StandardMaterial": 2609,
+                    "TerrainMaterial": 49
+                  },
+                  "total": 2730
+                },
+                "prepared": {
+                  "available": true,
+                  "by_type": {
+                    "MoonMaterial": 1,
+                    "OrCabMaterial": 69,
+                    "ParticleMaterial": 1,
+                    "RailwaySkyMaterial": 1,
+                    "StandardMaterial": 2609,
+                    "TerrainMaterial": 49
+                  },
+                  "total": 2730
+                }
+              },
+              "material_slab_bytes": 501120,
+              "material_slabs": 1,
+              "mesh_slab_bytes": 198612280,
+              "mesh_slabs": 4,
+              "meshes": 2271,
+              "oit_head_capacity": 921600,
+              "oit_node_capacity": 3686400,
+              "pipelines": 103,
+              "views": 14
+            }
+          },
+          "downpour-warm": {
+            "odometer_m": 2501.1992980011064,
+            "gpu_tiles": 5,
+            "visible_neighbourhood_pending": 0,
+            "pending_uploads": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "gameplay": {
+              "gameplay_frames": 2036,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 25,
+              "gameplay_frame_p99_ms": 27,
+              "gameplay_longest_frame_ms": 44.408386,
+              "gameplay_hitches_over_100_ms": 0
+            },
+            "startup_inclusive_max_ms": 1808.62462,
+            "loading_frames": 1179,
+            "rss_mib": 1793.01953125,
+            "peak_rss_mib": 1793.01953125,
+            "graphics_memory": {
+              "active_device_pci": "0000:03:00.0",
+              "device_total_mib": 8176.0,
+              "device_used_mib": 2353.46484375,
+              "devices": [
+                {
+                  "device_total_mib": 8176.0,
+                  "device_used_mib": 2353.46484375,
+                  "pci": "0000:03:00.0",
+                  "process_gtt_mib": 20.171875,
+                  "process_vram_mib": 1509.44921875
+                },
+                {
+                  "device_total_mib": 512.0,
+                  "device_used_mib": 474.9921875,
+                  "pci": "0000:0e:00.0",
+                  "process_gtt_mib": 2.0,
+                  "process_vram_mib": 0.01171875
+                }
+              ],
+              "peak_process_vram_mib": 1509.4609375,
+              "process_gtt_mib": 22.171875,
+              "process_vram_mib": 1509.4609375,
+              "source": "linux_drm_fdinfo"
+            },
+            "geometry_cache": {
+              "gpu_handles_cached": false,
+              "hits": 467,
+              "max_disk_mib": 256,
+              "misses": 8,
+              "schema": 1
+            },
+            "system_stages": {
+              "camera_collision": {
+                "calls": 2429,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 21,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1803
+              },
+              "effect_obstacles": {
+                "calls": 2429,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 2228,
+                "p50_ms": 0.3,
+                "p99_ms": 1.3,
+                "total_us": 887152
+              },
+              "flexible_connections": {
+                "calls": 2429,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 54,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 17489
+              },
+              "horizon": {
+                "calls": 2430,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 22999,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 66577
+              },
+              "jacobs_bogie": {
+                "calls": 2430,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 121,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 24087
+              },
+              "level_crossing_register": {
+                "calls": 2430,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 9073,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 40048
+              },
+              "live_drive": {
+                "calls": 3089,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 3064,
+                "p50_ms": 0.3,
+                "p99_ms": 2.7,
+                "total_us": 1005884
+              },
+              "mirrors": {
+                "calls": 2429,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 5,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1523
+              },
+              "platform_people": {
+                "calls": 2429,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 15,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 9127
+              },
+              "road_cars": {
+                "calls": 2430,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 291,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 46773
+              },
+              "snow_materials": {
+                "calls": 2429,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 43,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 8150
+              },
+              "snow_roof_markers": {
+                "calls": 2430,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 1,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 7
+              },
+              "snow_tracks": {
+                "calls": 2429,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 3,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 201
+              },
+              "streaming_forecast.update": {
+                "calls": 2429,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 33,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1625
+              },
+              "terrain_spawn.terrain_tile_bundle_materialize_system": {
+                "calls": 2429,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 254,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 2603
+              },
+              "terrain_spawn.terrain_tile_spawn_stream_system": {
+                "calls": 2429,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 127,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1274
+              },
+              "terrain_spawn.terrain_tile_stream_system": {
+                "calls": 2429,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 3583,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 75881
+              },
+              "terrain_spawn.terrain_tile_unload_system": {
+                "calls": 2429,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 47,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 8316
+              },
+              "wet_surfaces": {
+                "calls": 2430,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 921,
+                "p50_ms": 0.1,
+                "p99_ms": 0.6,
+                "total_us": 112059
+              },
+              "world.progressive_world_spawn_system": {
+                "calls": 2429,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 50894,
+                "p50_ms": 0.1,
+                "p99_ms": 9.1,
+                "total_us": 1986479
+              },
+              "world.update_world_scenery_lod": {
+                "calls": 2429,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 10395,
+                "p50_ms": 0.1,
+                "p99_ms": 4.8,
+                "total_us": 2281110
+              },
+              "world.world_stream_scenery_system": {
+                "calls": 2429,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 24307,
+                "p50_ms": 0.1,
+                "p99_ms": 5.9,
+                "total_us": 549212
+              },
+              "world.world_tile_bundle_materialize_system": {
+                "calls": 2429,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 1303,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 8773
+              },
+              "world.world_tile_stream_system": {
+                "calls": 2429,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 61,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 19283
+              },
+              "world.world_tile_unload_system": {
+                "calls": 2429,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 2589,
+                "p50_ms": 0.1,
+                "p99_ms": 1.7,
+                "total_us": 138931
+              }
+            },
+            "shape_stages": {
+              "cpu_prepare": {
+                "calls": 19,
+                "maximum_us": 1736,
+                "slowest_shape": "RF_WP_DMBSA.s",
+                "total_us": 15599
+              },
+              "cpu_prepare_lods": {
+                "calls": 8,
+                "maximum_us": 14112,
+                "slowest_shape": "SpeedSign_60.s",
+                "total_us": 44356
+              },
+              "geometry_cache_read": {
+                "calls": 475,
+                "maximum_us": 10106,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 524769
+              },
+              "geometry_cache_write": {
+                "calls": 8,
+                "maximum_us": 4256,
+                "slowest_shape": "VLILFSBCBB20SSV.s",
+                "total_us": 8004
+              },
+              "prepare_silhouette": {
+                "calls": 475,
+                "maximum_us": 80,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 3274
+              },
+              "publish_auxiliary": {
+                "calls": 26,
+                "maximum_us": 17861,
+                "slowest_shape": "CarSpawner",
+                "total_us": 35640
+              },
+              "publish_gpu_assets": {
+                "calls": 475,
+                "maximum_us": 49388,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 1184796
+              },
+              "publish_lod_gpu_assets": {
+                "calls": 276,
+                "maximum_us": 13599,
+                "slowest_shape": "CMhenlowshops.s",
+                "total_us": 462334
+              },
+              "resolve_texture_dependencies": {
+                "calls": 475,
+                "maximum_us": 42704,
+                "slowest_shape": "CMhenlowshops.s",
+                "total_us": 2312289
+              },
+              "source_read_parse": {
+                "calls": 19,
+                "maximum_us": 30824,
+                "slowest_shape": "RF_WP_DMBSA.s",
+                "total_us": 237692
+              }
+            },
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "host_usage": {
+              "cpu_percent_one_core": 224.50320862167632,
+              "gpu_busy_percent_mean": 22.727969348659006,
+              "selected_gpu_pci": "0000:03:00.0",
+              "gpu_busy_percent_by_device": {
+                "0000:0e:00.0": 68.63218390804597,
+                "0000:03:00.0": 22.727969348659006
+              },
+              "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
+              "private_compositor": {
+                "gl_renderer": "AMD Radeon RX 7600 (radeonsi, navi33, ACO, DRM 3.64, 7.0.0-38-generic)",
+                "egl_device": "/dev/dri/renderD129",
+                "DRI_PRIME": "pci-0000_03_00_0",
+                "scope": "GL renderer identifies effective offload device; EGL device may retain enumeration node"
+              }
+            },
+            "png_sha256": "32667528ae169f6ec156ec34bf549b4c1d77b9d436034a0b26188f4ea80f0a60",
+            "png_bytes": 792670,
+            "render_resources": {
+              "allocator": null,
+              "bin_unpacking_lifetime": {
+                "cached_keys": 2,
+                "retired_keys": 0,
+                "source_keys": 2,
+                "stale_keys_after": 0,
+                "stale_keys_before": 0
+              },
+              "bindless_material_allocations": 887,
+              "bindless_material_allocations_scope": "Raw upstream allocated_resource_count may overcount repeated bindings within a material; use material_owners for actual map ownership.",
+              "images": 544,
+              "indexed_mesh_allocations": 272,
+              "material_owners": {
+                "bindings": {
+                  "available": true,
+                  "by_type": {
+                    "MoonMaterial": 1,
+                    "OrCabMaterial": 69,
+                    "ParticleMaterial": 1,
+                    "RailwaySkyMaterial": 1,
+                    "StandardMaterial": 2601,
+                    "TerrainMaterial": 49
+                  },
+                  "total": 2722
+                },
+                "prepared": {
+                  "available": true,
+                  "by_type": {
+                    "MoonMaterial": 1,
+                    "OrCabMaterial": 69,
+                    "ParticleMaterial": 1,
+                    "RailwaySkyMaterial": 1,
+                    "StandardMaterial": 2601,
+                    "TerrainMaterial": 49
+                  },
+                  "total": 2722
+                }
+              },
+              "material_slab_bytes": 499584,
+              "material_slabs": 1,
+              "mesh_slab_bytes": 198612280,
+              "mesh_slabs": 4,
+              "meshes": 2264,
+              "oit_head_capacity": 921600,
+              "oit_node_capacity": 3686400,
+              "pipelines": 102,
+              "views": 14
+            }
+          }
+        }
+      }
+    }
   }
 }
