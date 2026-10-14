@@ -186,7 +186,12 @@ pub(crate) fn import_activity_definition(
     // execution horizon; explicit gameplay deadlines remain authoritative.
     let duration_s = 7200.0_f64.max(activity.duration_s * 3.0);
 
-    let extra_trains = build_extra_trains(route_dir, &activity, &player_consist_str);
+    let extra_trains = build_extra_trains(
+        route_dir,
+        &activity,
+        &player_consist_str,
+        imported_route_dir,
+    )?;
     let stops = build_stops_from_objects(route_dir, &activity);
     let sound_regions = build_sound_regions(route_dir, &activity);
 
@@ -297,9 +302,11 @@ pub(crate) fn import_activity_definition(
                             MstsError::msg("The original formation is required for PAT reversals")
                         })?
                 };
-                let consist =
-                    openrailsrs_train::load_consist_with_asset_root(&con, con.parent().unwrap())
-                        .map_err(|e| MstsError::msg(e.to_string()))?;
+                let consist = openrailsrs_train::load_consist_with_asset_root(
+                    &con,
+                    openrailsrs_train::consist_asset_root(&con),
+                )
+                .map_err(|e| MstsError::msg(e.to_string()))?;
                 consist.vehicle_lengths_m().iter().sum()
             }
         };
@@ -363,58 +370,245 @@ fn fallback_route_nodes(path_file: Option<&PathFile>) -> (String, String, Vec<Sw
 }
 
 /// Convert every parseable `Service_Definition` into a `[[extra_trains]]` entry.
-/// Services whose `.pat` reference cannot be resolved are skipped silently.
+/// Missing native services are reported; original traffic is never silently dropped.
 fn build_extra_trains(
     route_dir: &Path,
     activity: &ActivityFile,
     fallback_consist: &str,
-) -> Vec<TrainEntryDef> {
-    let mut out = Vec::new();
-    for (idx, svc) in activity.services.iter().enumerate() {
-        let Some(entry) = build_one_extra_train(route_dir, svc, fallback_consist, idx) else {
-            continue;
-        };
-        out.push(entry);
+    imported: Option<&Path>,
+) -> Result<Vec<TrainEntryDef>, MstsError> {
+    if activity.services.len() > 128 {
+        return Err(MstsError::msg(
+            "Native activity exceeds 128 traffic services",
+        ));
     }
-    out
+    let mut used_ids = std::collections::HashSet::new();
+    activity
+        .services
+        .iter()
+        .enumerate()
+        .map(|(idx, svc)| {
+            let mut service = build_one_extra_train(
+                route_dir,
+                svc,
+                fallback_consist,
+                idx,
+                activity.start_time_s,
+                imported,
+            )
+            .map_err(|e| MstsError::msg(format!("Native AI service {}: {e}", svc.name)))?;
+            let base = sanitize_id(&svc.name);
+            if !base.is_empty() && used_ids.insert(base.clone()) {
+                service.id = base;
+            } else {
+                used_ids.insert(service.id.clone());
+            }
+            service.output_csv = format!("run_{}.csv", service.id);
+            Ok(service)
+        })
+        .collect()
 }
-
 fn build_one_extra_train(
     route_dir: &Path,
     svc: &TrafficServiceDef,
     fallback_consist: &str,
     idx: usize,
-) -> Option<TrainEntryDef> {
-    let pat_path = resolve_asset_path(route_dir, &svc.path_file);
-    let path_file = PathFile::from_path(&pat_path).ok()?;
-
-    let start = path_file
+    clock_start: f64,
+    imported: Option<&Path>,
+) -> Result<TrainEntryDef, MstsError> {
+    let path = if svc.path_file.is_empty() {
+        ActivityFile::path_from_service(route_dir, &svc.name)
+            .ok_or_else(|| MstsError::msg("Missing original SRV/PathID"))?
+    } else {
+        svc.path_file.clone()
+    };
+    let pat_path = resolve_asset_path(route_dir, &path);
+    let path_file = PathFile::from_path(&pat_path)?;
+    let mut start = path_file
         .start_node()
         .map(|n| format!("n{n}"))
-        .unwrap_or_else(|| "start".to_string());
-    let destination = path_file
+        .unwrap_or_else(|| "start".into());
+    let mut destination = path_file
         .end_node()
         .map(|n| format!("n{n}"))
-        .unwrap_or_else(|| "end".to_string());
-
-    let consist = svc
+        .unwrap_or_else(|| "end".into());
+    let mut consist = svc
         .consist
         .as_deref()
         .map(sanitize_path)
-        .unwrap_or_else(|| fallback_consist.to_string());
-
-    let raw_id = if !svc.name.is_empty() {
-        sanitize_id(&svc.name)
-    } else {
-        String::new()
-    };
-    let id = if raw_id.is_empty() {
-        format!("svc{}", idx + 1)
-    } else {
-        raw_id
-    };
-
-    Some(TrainEntryDef {
+        .or_else(|| {
+            ActivityFile::train_config_from_service(route_dir, &svc.name)
+                .map(|n| format!("consists/{n}.con"))
+        })
+        .unwrap_or_else(|| fallback_consist.into());
+    let mut switches = Vec::new();
+    let mut waypoints = Vec::new();
+    let mut start_offset_m = 0.;
+    let mut stops = Vec::new();
+    let mut legs = Vec::new();
+    if let Some(imported) = imported {
+        let filename = Path::new(&consist)
+            .file_name()
+            .ok_or_else(|| MstsError::msg("Invalid consist name"))?;
+        let con = route_dir
+            .ancestors()
+            .take(4)
+            .find_map(|root| {
+                openrailsrs_formats::resolve_path_case_insensitive(
+                    &root.join("TRAINS/CONSISTS").join(filename),
+                )
+            })
+            .or_else(|| {
+                openrailsrs_formats::resolve_path_case_insensitive(&route_dir.join(&consist))
+            })
+            .ok_or_else(|| MstsError::msg(format!("Missing original formation {consist}")))?;
+        let formation = openrailsrs_train::load_consist_with_asset_root(
+            &con,
+            openrailsrs_train::consist_asset_root(&con),
+        )
+        .map_err(|e| MstsError::msg(e.to_string()))?;
+        let length = formation
+            .vehicles
+            .iter()
+            .map(|v| match v {
+                openrailsrs_train::Vehicle::Loco(l) => l.length_m,
+                openrailsrs_train::Vehicle::Wagon(w) => w.length_m,
+            })
+            .sum();
+        let hints =
+            placement_from_imported_route_with_consist(imported, &pat_path, 0., Some(length))?;
+        start = hints.start;
+        destination = hints.destination;
+        switches = hints.switches;
+        start_offset_m = hints.start_offset_m;
+        let loaded = load_route_from_dir(imported).map_err(|e| MstsError::msg(e.to_string()))?;
+        let mut graph = loaded.graph.clone();
+        for sw in &switches {
+            graph
+                .set_switch(
+                    &sw.node,
+                    match sw.position {
+                        openrailsrs_scenarios::model::SwitchPositionDef::Straight => {
+                            openrailsrs_track::SwitchPosition::Straight
+                        }
+                        openrailsrs_scenarios::model::SwitchPositionDef::Diverging => {
+                            openrailsrs_track::SwitchPosition::Diverging
+                        }
+                    },
+                )
+                .map_err(|e| MstsError::msg(e.to_string()))?;
+        }
+        if path_file.node_flags.iter().any(|f| f & 3 != 0) {
+            legs = crate::operational_path::operational_legs(
+                &graph,
+                &loaded.msts_aliases,
+                &pat_path,
+                length,
+            )?;
+        }
+        if let Some(first) = legs.first() {
+            start.clone_from(&first.start);
+            destination.clone_from(&first.destination);
+            start_offset_m = first.start_offset_m;
+            switches.clone_from(&first.switches);
+        } else {
+            waypoints = pat_waypoints_with_offset(
+                &graph,
+                &loaded.msts_aliases,
+                &path_file,
+                &start,
+                &destination,
+                start_offset_m,
+            )?;
+            // Keep the authored directed vectors, rather than re-running
+            // node-only BFS later with a different/default switch layout.
+            let edges = crate::path_placement::native_waypoint_edges_for_pat(
+                &graph,
+                &loaded.msts_aliases,
+                &pat_path,
+                &path_file,
+                &waypoints,
+            )?;
+            if edges.is_empty() {
+                return Err(MstsError::msg("Native AI PAT has no directed vectors"));
+            }
+            let end_chainage_m = crate::path_placement::native_terminal_chainage(
+                &graph,
+                &loaded.msts_aliases,
+                &pat_path,
+                &path_file,
+                &edges,
+            )?;
+            destination = graph.edge(edges.last().unwrap()).unwrap().to.0.clone();
+            switches = crate::path_placement::switches_for_edges(&graph, &edges);
+            legs.push(openrailsrs_scenarios::model::RouteLeg {
+                start: start.clone(),
+                destination: destination.clone(),
+                edges,
+                start_offset_m,
+                end_chainage_m,
+                reversed: false,
+                wait_s: 0.,
+                stops: vec![],
+                switches: switches.clone(),
+                operations: vec![],
+                service_id: None,
+                not_before_s: None,
+            });
+            waypoints.clear();
+        }
+        if !svc.stops.is_empty() {
+            let tdb = load_first_tdb(route_dir)
+                .ok_or_else(|| MstsError::msg("Traffic timetable requires original TDB"))?;
+            let native = ActivityFile {
+                start_time_s: svc.start_time_s,
+                player_stops: svc.stops.clone(),
+                ..Default::default()
+            };
+            let mut route = openrailsrs_scenarios::model::RouteSection {
+                start: start.clone(),
+                destination: destination.clone(),
+                switches: switches.clone(),
+                waypoints: waypoints.clone(),
+                start_offset_m: Some(start_offset_m),
+                legs: legs.clone(),
+                electric_supply: None,
+                path: ".".into(),
+                stops: Vec::new(),
+                assume_signals_clear: false,
+                edge_speed_limits: Vec::new(),
+            };
+            if route.legs.is_empty() {
+                crate::native_timetable::apply(&native, &tdb, &graph, &mut route)?;
+            } else {
+                crate::native_timetable::apply_legs(&native, &tdb, &graph, &mut route)?;
+            }
+            start = route.start;
+            destination = route.destination;
+            switches = route.switches;
+            waypoints = route.waypoints;
+            stops = route.stops;
+            legs = route.legs;
+        }
+        consist = con.to_string_lossy().into_owned();
+    }
+    let raw_id = sanitize_id(&svc.name);
+    let id = format!(
+        "{}-{}",
+        if raw_id.is_empty() {
+            "service"
+        } else {
+            &raw_id
+        },
+        idx + 1
+    );
+    Ok(TrainEntryDef {
+        legs,
+        presentation: vec![],
+        cab_equipment: vec![],
+        parked: false,
+        pre_roll_s: (-native_service_delay(svc.start_time_s, clock_start)).max(0.),
+        relative_stop_times: true,
         freight: None,
         systems: vec![],
         electric_pickups: vec![],
@@ -422,14 +616,18 @@ fn build_one_extra_train(
         consist,
         start,
         destination,
-        start_time_s: svc.start_time_s,
-        waypoints: Vec::new(),
-        start_offset_m: 0.0,
-        stops: Vec::new(),
+        start_time_s: native_service_delay(svc.start_time_s, clock_start).max(0.),
+        waypoints,
+        start_offset_m,
+        stops,
         davis: None,
-        switches: Vec::new(),
+        switches,
         output_csv: format!("run_{id}.csv"),
     })
+}
+
+fn native_service_delay(service: f64, activity: f64) -> f64 {
+    (service - activity + 43200.).rem_euclid(86400.) - 43200.
 }
 
 /// Build a TOML-friendly identifier from an arbitrary service name.

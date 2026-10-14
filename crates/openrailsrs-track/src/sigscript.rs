@@ -46,15 +46,15 @@ fn is_false(value: &bool) -> bool {
     !value
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SignalProgram(Vec<Statement>, Vec<String>);
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 enum Statement {
     Declare(Vec<String>),
     Assign(String, Expr),
     If(Expr, Vec<Statement>, Vec<Statement>),
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 enum Expr {
     Value(f64),
     Var(String),
@@ -608,6 +608,17 @@ fn validate_statements(
     Ok(())
 }
 impl SignalProgram {
+    pub fn compile_cached(source: &str) -> Result<Self, String> {
+        use sha2::{Digest, Sha256};
+        let key = format!("sigscript:{:x}", Sha256::digest(source.as_bytes()));
+        let compiler = env!("OPENRAILSRS_SIGNAL_COMPILER");
+        if let Some(program) = openrailsrs_content::source_cache::get(&key, compiler) {
+            return Ok(program);
+        }
+        let program = Self::compile(source)?;
+        openrailsrs_content::source_cache::put(&key, compiler, &[], &[], &program);
+        Ok(program)
+    }
     pub fn compile(source: &str) -> Result<Self, String> {
         let mut parser = Parser {
             tokens: tokens(source)?,

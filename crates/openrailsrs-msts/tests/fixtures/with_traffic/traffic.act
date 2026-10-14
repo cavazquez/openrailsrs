@@ -15,12 +15,12 @@ SIMISA@@@@@@@@@@JINX0T0t______
             ( Service_Definition "freight_north"
                 ( UiD 1 )
                 ( "service1.pat" )
-                ( Service_Init_Time 1800 )
+                ( Service_Init_Time 30600 )
             )
             ( Service_Definition "express"
                 ( UiD 2 )
                 ( "service2.pat" )
-                ( Service_Init_Time 600 )
+                ( Service_Init_Time 29400 )
             )
         )
     )

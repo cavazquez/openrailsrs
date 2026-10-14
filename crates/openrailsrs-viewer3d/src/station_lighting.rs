@@ -48,7 +48,7 @@ pub fn update(
     sun: Option<Res<crate::route_lighting::RouteSunState>>,
     origin: Res<crate::floating_origin::FloatingOrigin>,
     mut state: ResMut<StationLighting>,
-    camera: Query<&GlobalTransform, With<Camera3d>>,
+    camera: Query<&GlobalTransform, (With<Camera3d>, Without<crate::mirrors::MirrorCamera>)>,
     parts: Query<(
         &crate::world::WorldSceneryLod,
         &GlobalTransform,
@@ -58,6 +58,7 @@ pub fn update(
     )>,
     mut lamps: Query<(&mut Transform, &mut PointLight, &mut Visibility), With<StationLamp>>,
     quality: Option<Res<crate::adaptive_graphics::AdaptiveGraphics>>,
+    budget: Option<Res<crate::render_budget::RenderBudget>>,
     meshes: Res<Assets<Mesh>>,
 ) {
     let clock = live.session.time_s();
@@ -133,7 +134,11 @@ pub fn update(
     let limit = quality
         .as_ref()
         .map_or(24, |q| if q.level >= 2 { 8 } else { 24 });
-    points.truncate(limit);
+    points.truncate(
+        budget
+            .as_ref()
+            .map_or(limit, |b| limit.min(b.station_lights)),
+    );
     for i in state.lights.len()..points.len() {
         let id = commands
             .spawn((

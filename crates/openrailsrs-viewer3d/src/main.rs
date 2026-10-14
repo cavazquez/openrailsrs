@@ -427,6 +427,10 @@ fn main() {
                 render_creation: bevy::render::settings::RenderCreation::Automatic(Box::new(
                     bevy::render::settings::WgpuSettings {
                         force_fallback_adapter: renderer == RendererSelection::Cpu,
+                        // Streaming mixes short-lived scenery with persistent view
+                        // buffers. Smaller allocator blocks reduce pinned free space
+                        // without changing meshes, textures or visual quality.
+                        memory_hints: bevy::render::settings::MemoryHints::MemoryUsage,
                         ..default()
                     },
                 )),
@@ -1749,11 +1753,56 @@ fn begin_player_launch(
             .and_then(|mut bundle| {
                 if let Some(path) = request.resume {
                     let saved = openrailsrs_viewer3d::saved_game::SavedGame::read(&path)?;
+                    let pending_coupling = saved.pending_coupling.clone();
+                    let pending_control = saved.pending_control.clone();
+                    let history = if saved.control_history.is_empty() {
+                        saved.controlled_service.iter().cloned().collect::<Vec<_>>()
+                    } else {
+                        saved.control_history.clone()
+                    };
+                    let definition = openrailsrs_scenarios::load_scenario(&request.path)
+                        .map_err(|e| e.to_string())?;
+                    let source = |id: &str| {
+                        definition
+                            .extra_trains
+                            .iter()
+                            .find(|s| s.id == id)
+                            .map_or_else(|| definition.train.consist.clone(), |s| s.consist.clone())
+                    };
+                    for id in &history {
+                        bundle.consist.transfer_control(id, source(id))?;
+                    }
+
+                    for receipt in &saved.independent_couplings {
+                        bundle.consist.append_service(&receipt.donor)?;
+                    }
                     let live = bundle
                         .live
                         .as_mut()
                         .ok_or("La partida no tiene un tren de jugador")?;
                     bundle.saved_camera = Some(saved.restore(live)?);
+                    if let Some(id) = pending_control {
+                        let index = live
+                            .traffic
+                            .services
+                            .iter()
+                            .position(|s| s.id == id)
+                            .ok_or("Servicio no disponible")?;
+                        live.traffic.take_control(&mut live.session, index)?;
+                        bundle.consist.transfer_control(&id, source(&id))?;
+                    }
+                    bundle.consist.active_cab_vehicle = live.session.cab_vehicle();
+
+                    if let Some(id) = pending_coupling {
+                        let index = live
+                            .traffic
+                            .services
+                            .iter()
+                            .position(|s| s.id == id)
+                            .ok_or("Formación a recoger no disponible")?;
+                        live.traffic.couple_service(&mut live.session, index)?;
+                        bundle.consist.append_service(&id)?;
+                    }
                 }
                 Ok(bundle)
             });

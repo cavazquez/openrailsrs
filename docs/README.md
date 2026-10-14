@@ -35,3 +35,8 @@ Tercera entrega: [seguimiento por issue](PLAN_30_3.md), [pruebas manuales](PLAYE
 Cuarta entrega: [seguimiento de treinta equipos y efectos](PLAN_30_4.md),
 [pruebas manuales por issue](PLAYER_30_4_MANUAL.md), [evidencias de aceptación](PLAYER_30_4_QA.md) y
 [definiciones, autoridad física y referencias de vehículos](VEHICLE_SYSTEMS.md).
+
+Quinta entrega, cuarenta issues: [seguimiento del lote](PLAN_40_5.md), [operaciones y editor](TRAIN_OPERATIONS_FIFTH40.md),
+[tren, escenario y pruebas visuales](PLAN_40_5_VISUAL_QA.md),
+[mediciones y pruebas prolongadas](PERFORMANCE_FIFTH40.md) y
+[carpetas, URL del autor y contenido en Snap](OFFICIAL_CONTENT.md).

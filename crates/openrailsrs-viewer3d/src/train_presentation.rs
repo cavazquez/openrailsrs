@@ -19,9 +19,43 @@ pub fn prepare(mut state: ResMut<TrainPresentation>, live: Option<Res<LiveDrive>
     if let Some(live) = live
         && let Ok(s) = openrailsrs_scenarios::load_scenario(live.scenario_path())
     {
-        state.vehicles = s.train.presentation;
+        state.vehicles =
+            presentation_for_world(&s, &live.session.service_id, &live.traffic.couplings);
     }
 }
+fn presentation_for_world(
+    scenario: &openrailsrs_scenarios::ScenarioFile,
+    player: &str,
+    couplings: &[openrailsrs_sim::independent_coupling::CouplingReceipt],
+) -> Vec<openrailsrs_scenarios::presentation::VehiclePresentation> {
+    let source = |id: &str| {
+        if id == "Jugador" {
+            scenario.train.presentation.as_slice()
+        } else {
+            scenario
+                .extra_trains
+                .iter()
+                .find(|e| e.id == id)
+                .map_or(&[][..], |e| e.presentation.as_slice())
+        }
+    };
+    let mut vehicles = source(player).to_vec();
+    for coupling in couplings {
+        let offset = coupling.before.formation.cars.len();
+        for mut vehicle in source(&coupling.donor).iter().cloned() {
+            vehicle.vehicle += offset;
+            for connection in &mut vehicle.connections {
+                connection.neighbor += offset;
+            }
+            if let Some(jacobs) = &mut vehicle.jacobs {
+                jacobs.neighbor += offset;
+            }
+            vehicles.push(vehicle);
+        }
+    }
+    vehicles
+}
+
 pub fn supplied(session: &openrailsrs_sim::LiveDriveSession, vehicle: usize) -> bool {
     vehicle < session.formation.coupled_count
         && session.state.power_supply.vehicle_supplied(vehicle)
@@ -32,8 +66,15 @@ pub fn update(
     live: Res<LiveDrive>,
     settings: Res<crate::player_settings::PlayerSettings>,
     quality: Option<Res<crate::adaptive_graphics::AdaptiveGraphics>>,
+    budget: Option<Res<crate::render_budget::RenderBudget>>,
     sun: Option<Res<crate::route_lighting::RouteSunState>>,
-    camera: Query<&GlobalTransform, (With<Camera3d>, Without<PassengerLight>)>,
+    camera: Query<
+        &GlobalTransform,
+        (
+            (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+            Without<PassengerLight>,
+        ),
+    >,
     cars: Query<
         (
             Entity,
@@ -106,6 +147,9 @@ pub fn update(
     } else {
         12
     });
+    if let Some(budget) = budget {
+        active.truncate(budget.passenger_lights);
+    }
     for (entity, lamp, mut transform, mut light, mut visibility) in &mut lamps {
         let Ok((_, _, _, car)) = cars.get(lamp.car) else {
             commands.entity(entity).despawn();
@@ -146,5 +190,50 @@ mod tests {
         live.session.state.power_supply.cars[0].supply.train_supply = true;
         live.session.formation.coupled_count = 1;
         assert!(!super::supplied(&live.session, 1));
+    }
+}
+
+#[cfg(test)]
+mod ownership_tests {
+    #[test]
+    fn coupled_coaches_keep_their_own_lamps_doors_connections_and_shared_bogie_indices() {
+        let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let path = root.join("examples/traffic_passing/scenario_coupling.toml");
+        let mut scenario = openrailsrs_scenarios::load_scenario(&path).unwrap();
+        let session =
+            openrailsrs_sim::LiveDriveSession::from_scenario(path.parent().unwrap(), &scenario)
+                .unwrap();
+        scenario.extra_trains[0].presentation = scenario.train.presentation.clone();
+        scenario.extra_trains[0].presentation[0].jacobs =
+            Some(openrailsrs_scenarios::presentation::JacobsDef {
+                neighbor: 1,
+                own_support_m: 10.,
+                other_support_m: -10.,
+                bogie_matrix: "JACOBS".into(),
+            });
+        let receipt = openrailsrs_sim::independent_coupling::CouplingReceipt {
+            donor: "donor".into(),
+            before: session.snapshot(),
+            donor_before: session.snapshot(),
+        };
+        let merged = super::presentation_for_world(&scenario, "Jugador", &[receipt]);
+        assert_eq!(
+            merged.iter().map(|v| v.vehicle).collect::<Vec<_>>(),
+            [0, 1, 2, 3]
+        );
+        assert_eq!(merged[2].connections[0].neighbor, 3);
+        assert_eq!(merged[2].jacobs.as_ref().unwrap().neighbor, 3);
+        assert_eq!(
+            merged[3].boarding_doors,
+            scenario.train.presentation[1].boarding_doors
+        );
+        assert_eq!(
+            merged[3].passenger_lamps,
+            scenario.train.presentation[1].passenger_lamps
+        );
+        assert_eq!(
+            super::presentation_for_world(&scenario, "donor", &[]),
+            scenario.extra_trains[0].presentation
+        );
     }
 }

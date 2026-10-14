@@ -33,19 +33,36 @@ pub fn start_native_audio(
         .scenario_path()
         .parent()
         .unwrap_or(std::path::Path::new("."));
-    let mut specs = vec![ConsistSoundSpec {
-        id: 0,
-        consist: directory.join(&scenario.train.consist),
-        route: assets.route_dir.clone(),
-    }];
-    specs.extend(
+    let source = |id: &str| {
         scenario
             .extra_trains
+            .iter()
+            .find(|entry| entry.id == id)
+            .map_or(&scenario.train.consist, |entry| &entry.consist)
+    };
+    let mut specs = vec![ConsistSoundSpec {
+        id: 0,
+        vehicle_offset: 0,
+        consist: directory.join(source(&live.session.service_id)),
+        route: assets.route_dir.clone(),
+    }];
+    for receipt in &live.traffic.couplings {
+        specs.push(ConsistSoundSpec {
+            id: 0,
+            vehicle_offset: receipt.before.formation.cars.len(),
+            consist: directory.join(source(&receipt.donor)),
+            route: assets.route_dir.clone(),
+        });
+    }
+    specs.extend(
+        live.traffic
+            .services
             .iter()
             .enumerate()
             .map(|(i, t)| ConsistSoundSpec {
                 id: i + 1,
-                consist: directory.join(&t.consist),
+                vehicle_offset: 0,
+                consist: directory.join(source(&t.id)),
                 route: assets.route_dir.clone(),
             }),
     );
@@ -304,7 +321,7 @@ pub fn update_native_audio(
     follow: Res<CameraFollowMode>,
     passenger: Option<Res<crate::camera::PassengerCamState>>,
     presentation: Option<Res<crate::train_presentation::TrainPresentation>>,
-    camera: Query<&GlobalTransform, With<Camera3d>>,
+    camera: Query<&GlobalTransform, (With<Camera3d>, Without<crate::mirrors::MirrorCamera>)>,
     player: Query<(Entity, &GlobalTransform), With<LiveTrainMarker>>,
     traffic: Query<(Entity, &TrafficTrainMarker, &GlobalTransform)>,
     geometry: (

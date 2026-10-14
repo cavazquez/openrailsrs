@@ -1,4 +1,5 @@
 """Distribution must include resources while excluding downloads and private files."""
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -227,12 +228,32 @@ class PackagingTests(unittest.TestCase):
         resources = set(json.loads((root/'packaging/resources.json').read_text()))
         shaders = root/'crates/openrailsrs-bevy-scenery/assets/shaders'
         self.assertTrue(all(str(p.relative_to(root)) in resources for p in shaders.glob('*.wgsl')))
-        for relative in ('examples/electric_supply/scenario.toml',
+        for relative in ('docs/licenses/Bevy-LICENSE-APACHE',
+                         'docs/licenses/Bevy-LICENSE-MIT',
+                         'examples/electric_supply/scenario.toml',
                          'examples/traction_operation/scenario_steam.toml',
                          'examples/traction_operation/scenario_hotel.toml',
                          'examples/traction_operation/scenario_thermal.toml',
                          'examples/yard_training/scenario.toml'):
             self.assertIn(relative, resources)
+
+    def test_snap_build_tree_includes_new_rust_sources_and_explicit_resources_only(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for relative in ('Cargo.toml', 'snap/snapcraft.yaml', 'packaging/resources.json',
+                             'crates/new/src/lib.rs', 'examples/new/model.s',
+                             'private-note.txt', 'tmp/download/private.dat'):
+                path = root/relative; path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text('source')
+            (root/'packaging/resources.json').write_text('["examples/new/model.s"]')
+            tracked = b'Cargo.toml\0snap/snapcraft.yaml\0packaging/resources.json\0'
+            other = b'crates/new/src/lib.rs\0private-note.txt\0tmp/download/private.dat\0'
+            with patch.object(package_snap, 'ROOT', root), patch.object(package_snap.subprocess, 'check_output', side_effect=[tracked, other, 'a' * 40, b' M crates/new.rs']):
+                package_snap.prepare(root/'sources')
+            self.assertTrue((root/'sources/crates/new/src/lib.rs').is_file())
+            self.assertTrue((root/'sources/examples/new/model.s').is_file())
+            self.assertFalse((root/'sources/private-note.txt').exists())
+            self.assertFalse((root/'sources/tmp').exists())
 
     def test_snap_build_tree_excludes_previous_builds_and_untracked_downloads(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -247,6 +268,27 @@ class PackagingTests(unittest.TestCase):
             self.assertFalse((root/'sources/target').exists())
             self.assertFalse((root/'sources/tmp').exists())
             self.assertFalse((root/'sources/.git').exists())
+
+    def test_prepared_commit_is_retained_without_git_and_source_mutation_fails(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root/'packaging').mkdir()
+            (root/'packaging/resources.json').write_text('[]')
+            (root/'Cargo.toml').write_text('source snapshot')
+            metadata = dict(version=1, source_commit='a'*40, source_dirty=True,
+                files={'Cargo.toml':hashlib.sha256((root/'Cargo.toml').read_bytes()).hexdigest()})
+            (root/'packaging/source-build.json').write_text(json.dumps(metadata))
+            binaries = root/'compiled';binaries.mkdir()
+            for name in package_linux.BINS:(binaries/name).write_text('compiled')
+            with patch.object(package_linux, 'ROOT', root):
+                bundle=package_linux.assemble(binaries,root/'first')
+                build=json.loads((bundle/'BUILD.json').read_text())
+                self.assertEqual(build['source_commit'],'a'*40)
+                self.assertTrue(build['source_dirty'])
+                self.assertEqual(len(build['source_snapshot_sha256']),64)
+                (root/'Cargo.toml').write_text('changed after source preparation')
+                with self.assertRaisesRegex(ValueError,'Build source changed'):
+                    package_linux.assemble(binaries,root/'second')
 
 
 if __name__ == '__main__':

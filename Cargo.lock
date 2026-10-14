@@ -4927,6 +4927,9 @@ dependencies = [
 name = "openrailsrs-content"
 version = "0.1.0"
 dependencies = [
+ "serde",
+ "serde_json",
+ "sha2",
  "tempfile",
 ]
 
@@ -4960,6 +4963,7 @@ dependencies = [
  "pretty_assertions",
  "serde",
  "serde_json",
+ "sha2",
  "tempfile",
  "thiserror 2.0.21",
 ]
@@ -4993,6 +4997,7 @@ dependencies = [
 name = "openrailsrs-msts"
 version = "0.1.0"
 dependencies = [
+ "openrailsrs-content",
  "openrailsrs-core",
  "openrailsrs-formats",
  "openrailsrs-route",
@@ -5001,6 +5006,7 @@ dependencies = [
  "openrailsrs-train",
  "serde",
  "serde_json",
+ "sha2",
  "tempfile",
  "thiserror 2.0.21",
  "toml",
@@ -5071,6 +5077,7 @@ dependencies = [
  "openrailsrs-train",
  "openrailsrs-validate",
  "pretty_assertions",
+ "rayon",
  "serde",
  "serde_json",
  "sha2",
@@ -5084,9 +5091,11 @@ name = "openrailsrs-track"
 version = "0.1.0"
 dependencies = [
  "indexmap",
+ "openrailsrs-content",
  "openrailsrs-core",
  "serde",
  "serde_json",
+ "sha2",
  "tempfile",
  "thiserror 2.0.21",
 ]
@@ -5141,6 +5150,7 @@ dependencies = [
  "chrono-tz",
  "csv",
  "image",
+ "libc",
  "openrailsrs-ace",
  "openrailsrs-audio",
  "openrailsrs-bevy-scenery",

@@ -8,7 +8,7 @@ pub struct WetSurfaces {
     last_clock: Option<f64>,
     last_material_update: f64,
     last_applied_wetness: f32,
-    bases: HashMap<AssetId<StandardMaterial>, (Color, f32, f32)>,
+    bases: HashMap<AssetId<StandardMaterial>, (Color, f32, f32, f32, f32)>,
 }
 impl WetSurfaces {
     pub fn reset_clock(&mut self) {
@@ -36,6 +36,7 @@ pub fn update(
     mut scenery: ResMut<Assets<openrailsrs_bevy_scenery::OrSceneryMaterial>>,
     mut instances: Query<&mut crate::world_instancing::WorldInstanceAppearance>,
 ) {
+    let _profile = crate::performance::profile_system("wet_surfaces");
     let clock = live.session.time_s();
     let previous = state.last_clock.replace(clock);
     let dt = (clock - previous.unwrap_or(clock)).clamp(0.0, 1.0) as f32;
@@ -94,11 +95,14 @@ pub fn update(
         {
             continue;
         }
-        let (color, roughness, reflectance) = *state.bases.entry(handle.id()).or_insert((
-            material.base_color,
-            material.perceptual_roughness,
-            material.reflectance,
-        ));
+        let (color, roughness, reflectance, clearcoat, clearcoat_roughness) =
+            *state.bases.entry(handle.id()).or_insert((
+                material.base_color,
+                material.perceptual_roughness,
+                material.reflectance,
+                material.clearcoat,
+                material.clearcoat_perceptual_roughness,
+            ));
         let mut color = color.to_linear();
         color.red *= 1.0 - 0.16 * wetness;
         color.green *= 1.0 - 0.16 * wetness;
@@ -106,6 +110,11 @@ pub fn update(
         material.base_color = Color::LinearRgba(color);
         material.perceptual_roughness = roughness * (1.0 - 0.45 * wetness);
         material.reflectance = reflectance + (0.65 - reflectance).max(0.0) * wetness;
+        // A thin water film reflects lights without replacing the author's
+        // albedo or changing the material into an opaque chrome surface.
+        material.clearcoat = clearcoat.max(0.35 * wetness);
+        material.clearcoat_perceptual_roughness =
+            clearcoat_roughness * (1.0 - wetness) + 0.12 * wetness;
     }
     state.last_applied_wetness = wetness;
     let next_weather = Vec2::new(wetness, snow);

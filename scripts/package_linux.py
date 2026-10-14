@@ -15,6 +15,7 @@ RESOURCE_PREFIXES = (
     "examples/",
     "crates/openrailsrs-bevy-scenery/assets/",
     "crates/openrailsrs-viewer3d/assets/",
+    "docs/licenses/",
 )
 PRIVATE_DATA_PATTERNS = {
     "ruta personal del equipo": re.compile(
@@ -183,6 +184,33 @@ def assemble(binaries, destination):
         ], cwd=ROOT, stderr=subprocess.DEVNULL))
     except (OSError, subprocess.CalledProcessError):
         source_dirty = None
+    snapshot_sha256 = None
+    provenance = ROOT / "packaging/source-build.json"
+    if commit is None and provenance.is_file():
+        if provenance.is_symlink() or not provenance.resolve().is_relative_to(ROOT):
+            raise ValueError("Build source metadata escapes the source tree")
+        if provenance.stat().st_size > 4 * 1024 * 1024:
+            raise ValueError("Build source metadata is too large")
+        prepared = json.loads(provenance.read_text())
+        files = prepared.get("files")
+        if prepared.get("version") != 1 or not isinstance(files, dict) or not files or len(files) > 20000:
+            raise ValueError("Invalid build source metadata")
+        for relative, digest in files.items():
+            path = Path(relative)
+            if path.is_absolute() or ".." in path.parts or not isinstance(digest, str):
+                raise ValueError("Invalid build source path")
+            source = ROOT / path
+            if source.is_symlink() or not source.is_file() or not source.resolve().is_relative_to(ROOT):
+                raise ValueError(f"Build source missing: {relative}")
+            if hashlib.sha256(source.read_bytes()).hexdigest() != digest:
+                raise ValueError(f"Build source changed after preparation: {relative}")
+        commit = prepared.get("source_commit")
+        if commit is not None and (not isinstance(commit, str) or not re.fullmatch(r"[0-9a-f]{40}", commit)):
+            raise ValueError("Invalid prepared source commit")
+        source_dirty = prepared.get("source_dirty")
+        if source_dirty is not None and not isinstance(source_dirty, bool):
+            raise ValueError("Invalid prepared source state")
+        snapshot_sha256 = hashlib.sha256(json.dumps(files, sort_keys=True).encode()).hexdigest()
     glibc_versions = []
     for name in BINS:
         try:
@@ -199,7 +227,8 @@ def assemble(binaries, destination):
         with (destination / "LEEME.txt").open("a") as instructions:
             instructions.write(f"\nEstos binarios requieren glibc {required_glibc} o superior.\n")
     (destination / "BUILD.json").write_text(json.dumps({
-        "source_commit": commit, "source_dirty": source_dirty, "architecture": platform.machine(),
+        "source_commit": commit, "source_dirty": source_dirty, "source_snapshot_sha256": snapshot_sha256,
+        "architecture": platform.machine(),
         "build_libc": list(platform.libc_ver()), "required_glibc": required_glibc,
         "downloaded_content_included": False,
         "binary_sha256": {name: hashlib.sha256((destination / "bin" / name).read_bytes()).hexdigest()

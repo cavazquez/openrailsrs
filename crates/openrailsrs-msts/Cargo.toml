@@ -13,6 +13,8 @@ openrailsrs-formats = { path = "../openrailsrs-formats" }
 openrailsrs-scenarios = { path = "../openrailsrs-scenarios" }
 openrailsrs-route = { path = "../openrailsrs-route" }
 openrailsrs-track = { path = "../openrailsrs-track" }
+openrailsrs-content = { path = "../openrailsrs-content" }
+sha2 = "0.10.9"
 thiserror.workspace = true
 serde.workspace = true
 toml.workspace = true
@@ -21,3 +23,6 @@ toml.workspace = true
 serde_json.workspace = true
 openrailsrs-route = { path = "../openrailsrs-route" }
 tempfile = "3"
+
+[build-dependencies]
+sha2 = "0.10.9"

@@ -130,6 +130,18 @@ fn or_shadow_modulation(normal_light: f32, pcf_shadow: f32) -> f32 {
     return pcf_shadow * saturate(normal_light * 5.0 - 2.0);
 }
 
+#ifdef OIT_ENABLED
+#import bevy_core_pipeline::oit::oit_draw
+#endif
+
+fn or_submit_fragment(in: VertexOutput, color: vec4<f32>) -> vec4<f32> {
+#ifdef OIT_ENABLED
+    oit_draw(in.position, color);
+    discard;
+#endif
+    return color;
+}
+
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     var color = textureSample(base_texture, base_sampler, in.uv)
@@ -148,11 +160,11 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     color = vec4(mix(color.rgb * (1.0 - 0.16 * wet), vec3(0.78, 0.84, 0.89)*snow_detail.y, snow * 0.86), color.a);
 
     if (!lit) {
-        return vec4(color.rgb * params.night_color_modifier, color.a);
+        return or_submit_fragment(in, vec4(color.rgb * params.night_color_modifier, color.a));
     }
 
     if (kind == OR_KIND_FULL_BRIGHT) {
-        return vec4(color.rgb, color.a);
+        return or_submit_fragment(in, vec4(color.rgb, color.a));
     }
 
     let light_id = railway_lighting::railway_primary_directional_light();
@@ -256,5 +268,5 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
         in.position.xy,
     );
 #endif
-    return out_color;
+    return or_submit_fragment(in, out_color);
 }

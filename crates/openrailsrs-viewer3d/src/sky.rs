@@ -211,7 +211,10 @@ pub fn sync_route_atmosphere(
     mut clear: ResMut<ClearColor>,
     domes: Query<&MeshMaterial3d<RailwaySkyMaterial>, With<SkyDome>>,
     mut materials: ResMut<Assets<RailwaySkyMaterial>>,
-    mut cameras: Query<(&mut DistanceFog, Option<&bevy::light::VolumetricFog>), With<Camera3d>>,
+    mut cameras: Query<
+        (&mut DistanceFog, Option<&bevy::light::VolumetricFog>),
+        (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+    >,
 ) {
     let direction = sun.as_ref().map_or(Vec3::Y, |s| s.direction);
     let clock = live.as_ref().map_or(0.0, |l| l.clock_time_s());
@@ -285,7 +288,10 @@ fn blended_fog_visibility(visibility: f32, dense_fraction: f32, volumetric: bool
 pub fn toggle_distance_fog(
     keys: Res<ButtonInput<KeyCode>>,
     mut state: ResMut<FogState>,
-    mut cameras: Query<(Entity, Option<&mut DistanceFog>), With<Camera3d>>,
+    mut cameras: Query<
+        (Entity, Option<&mut DistanceFog>),
+        (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+    >,
     mut commands: Commands,
 ) {
     if !keys.just_pressed(KeyCode::KeyF) {

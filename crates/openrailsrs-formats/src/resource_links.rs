@@ -10,6 +10,29 @@ fn roots() -> &'static RwLock<Vec<PathBuf>> {
 pub fn configured() -> Vec<PathBuf> {
     roots().read().unwrap_or_else(|e| e.into_inner()).clone()
 }
+/// Explicit shared models of our prepared Chiltern examples. Native TRAINSET
+/// vehicles never use this fallback, even when a folder has the same name.
+pub fn bundled_stock_root(path: &Path) -> Option<PathBuf> {
+    for example in path.ancestors().take(12) {
+        let name = example.file_name()?.to_str()?;
+        if ![
+            "chiltern",
+            "chiltern_local",
+            "chiltern_extended",
+            "chiltern_timetable",
+        ]
+        .contains(&name)
+            || example.parent()?.file_name()? != "examples"
+        {
+            continue;
+        }
+        let root = example.parent()?.join("chiltern/trains");
+        if root.join("RF_Blue_Pullman/SHAPES/RF_WP_DMBSA.s").is_file() {
+            return Some(root);
+        }
+    }
+    None
+}
 pub fn configure(selected: &[PathBuf]) -> Result<(), String> {
     if selected.len() > 8 {
         return Err("Se admiten hasta ocho instalaciones originales compartidas".into());

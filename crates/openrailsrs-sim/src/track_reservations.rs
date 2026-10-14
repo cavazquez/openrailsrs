@@ -33,6 +33,8 @@ pub(crate) fn overlaps(a: &TrackOccupancy, b: &TrackOccupancy) -> bool {
 fn base(id: &str) -> &str {
     id.strip_suffix("_r").unwrap_or(id)
 }
+const POINT_CLEARANCE_M: f64 = 5.;
+
 fn point_touched(
     graph: &TrackGraph,
     node: &str,
@@ -57,7 +59,9 @@ fn point_touched(
         } else {
             None
         };
-        point.is_some_and(|at| p.start_m <= at + 5. && p.end_m >= at - 5.)
+        point.is_some_and(|at| {
+            p.start_m <= at + POINT_CLEARANCE_M && p.end_m >= at - POINT_CLEARANCE_M
+        })
     })
 }
 
@@ -143,7 +147,7 @@ impl LiveDriveSession {
         request.fixed_blocks = !heads.is_empty();
         let head = self.head_chainage_m();
         let horizon = (100. + self.velocity_mps().powi(2) / 1.4).max(500.);
-        let (start, end, end_index) =
+        let (start, mut end, mut end_index) =
             if let Some((start, _, signal)) = heads.iter().find(|h| h.0 >= head) {
                 if start - head > horizon {
                     return request;
@@ -170,8 +174,37 @@ impl LiveDriveSession {
             } else {
                 return request;
             };
-        for i in self.state.edge_index..end_index.min(self.state.path_edges.len().saturating_sub(1))
+        if let Some(hold) = self.passing_hold_chainage().filter(|hold| *hold < end) {
+            end = hold;
+            let mut before = 0.;
+            end_index = self
+                .path_data
+                .edges
+                .iter()
+                .position(|edge| {
+                    before += edge.length_m;
+                    hold <= before
+                })
+                .unwrap_or(end_index);
+        }
+        // A block boundary can be only a couple of metres before points (and
+        // several original heads may be closely spaced). Lock those points
+        // before clearing the preceding signal, using the same clearance that
+        // forbids changing a point near a travelling end. Waiting until the
+        // following signal was passed created an impossible conflict with the
+        // requesting train's own footprint and an instantaneous red aspect.
+        let mut lock_end_index = end_index.min(self.state.path_edges.len().saturating_sub(1));
+        let mut junction_chainage = self.path_data.edges[..=lock_end_index]
+            .iter()
+            .map(|edge| edge.length_m)
+            .sum::<f64>();
+        while lock_end_index + 1 < self.state.path_edges.len()
+            && junction_chainage <= end + POINT_CLEARANCE_M
         {
+            lock_end_index += 1;
+            junction_chainage += self.path_data.edges[lock_end_index].length_m;
+        }
+        for i in self.state.edge_index..lock_end_index {
             let incoming = &self.state.path_edges[i];
             let outgoing = &self.state.path_edges[i + 1];
             let node = &self.graph.edge(incoming).unwrap().to.0;
@@ -213,7 +246,11 @@ impl LiveDriveSession {
         reserved: &[TrackOccupancy],
         locks: &[SwitchLock],
     ) -> bool {
-        if self.formation.parked_head_chainage_m.is_some() {
+        // Explicit subpaths own their directed vectors, including native ACT
+        // waits and reversals. Inventing a detour here leaves the formation on
+        // track that the following leg cannot contain. Keep waiting for the
+        // authored route; examples without fixed legs still support diversion.
+        if !self.operational_legs.is_empty() || self.formation.parked_head_chainage_m.is_some() {
             return false;
         }
         let Some(current) = self.current_edge_id().and_then(|id| self.graph.edge(id)) else {
@@ -336,6 +373,7 @@ pub(crate) fn coordinate(
     services: &mut [TrafficService],
     footprint: &[TrackOccupancy],
 ) {
+    crate::passing_plan::plan(player, services, footprint);
     let now = player.state.time_s();
     let mut requests = vec![player.next_block_request()];
     requests.extend(
@@ -591,11 +629,13 @@ mod tests {
         other.service_id = "Z_opposite".into();
         let traffic = crate::LiveTraffic {
             services: vec![TrafficService {
+                parked: false,
                 id: other.service_id.clone(),
                 departure_s: 0.,
                 session: other,
                 departed: true,
             }],
+            ..Default::default()
         };
         (player, traffic, directory)
     }
@@ -641,6 +681,153 @@ mod tests {
             Some(7)
         );
     }
+    fn adjacent_heads_before_points() -> (LiveDriveSession, crate::LiveTraffic, tempfile::TempDir) {
+        let project = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let directory = tempfile::tempdir().unwrap();
+        let mut track = String::from("[route]\nid='adjacent-heads'\n");
+        for (id, x, y) in [
+            ("X", 0, 100),
+            ("Y", 1000, 100),
+            ("A", 0, 0),
+            ("B", 1000, 0),
+            ("C", 2000, 0),
+            ("D", 2000, 50),
+        ] {
+            track += &format!("[[nodes]]\nid='{id}'\nx_m={x}.0\ny_m={y}.0\n");
+            if id == "B" {
+                track += "kind={switch={stem_edge='main',diverging_edge='branch',default_position='straight'}}\n";
+            }
+        }
+        for (id, from, to) in [
+            ("anchor", "X", "Y"),
+            ("approach", "A", "B"),
+            ("main", "B", "C"),
+            ("branch", "B", "D"),
+        ] {
+            track += &format!(
+                "[[edges]]\nid='{id}'\nfrom='{from}'\nto='{to}'\nlength_m=1000.0\nspeed_limit_kmh=145.0\n"
+            );
+        }
+        for (id, edge, position) in [
+            ("first", "approach", 996.0),
+            ("second", "approach", 997.6),
+            ("exit", "branch", 700.0),
+        ] {
+            track += &format!(
+                "[[signals]]\nid='{id}'\nedge_id='{edge}'\nposition_m={position}\naspect='stop'\n[signals.script.native]\nname='home'\nfunction='NORMAL'\ngroup='{id}'\nsource='if (!enabled || block_state()!=BLOCK_CLEAR || !route_set()) {{state=0;}} else {{state=7;}}'\n"
+            );
+        }
+        std::fs::write(directory.path().join("track.toml"), track).unwrap();
+        let mut scenario =
+            openrailsrs_scenarios::load_scenario(project.join("examples/smoke/scenario.toml"))
+                .unwrap();
+        scenario.route.path = ".".into();
+        scenario.route.start = "X".into();
+        scenario.route.destination = "Y".into();
+        scenario.route.stops.clear();
+        scenario.route.waypoints.clear();
+        scenario.route.switches.clear();
+        scenario.sound_regions.clear();
+        scenario.extra_trains.clear();
+        scenario.train.consist = project
+            .join("examples/smoke/consists/freight.con")
+            .to_string_lossy()
+            .into();
+        let mut player = LiveDriveSession::from_scenario(directory.path(), &scenario).unwrap();
+        player.arrived = true;
+        scenario.route.start = "A".into();
+        scenario.route.destination = "D".into();
+        scenario.route.start_offset_m = Some(850.);
+        scenario
+            .route
+            .switches
+            .push(openrailsrs_scenarios::model::SwitchDef {
+                node: "B".into(),
+                position: openrailsrs_scenarios::model::SwitchPositionDef::Diverging,
+            });
+        let mut other = LiveDriveSession::from_scenario(directory.path(), &scenario).unwrap();
+        other.service_id = "Native_AI".into();
+        other.state.velocity_mps = 32.;
+        for vehicle in &mut other.state.vehicles {
+            vehicle.velocity_mps = 32.;
+        }
+        let traffic = crate::LiveTraffic {
+            services: vec![TrafficService {
+                parked: false,
+                id: other.service_id.clone(),
+                departure_s: 0.,
+                session: other,
+                departed: true,
+            }],
+            ..Default::default()
+        };
+        (player, traffic, directory)
+    }
+
+    #[test]
+    fn adjacent_native_heads_lock_nearby_points_before_the_front_enters_clearance() {
+        let (mut player, mut traffic, _directory) = adjacent_heads_before_points();
+        assert_eq!(
+            player.graph.switch_position("B"),
+            Some(SwitchPosition::Straight)
+        );
+        traffic.synchronize_occupancy(&mut player);
+        assert_eq!(
+            player.graph.switch_position("B"),
+            Some(SwitchPosition::Diverging)
+        );
+        assert_eq!(
+            traffic.services[0].session.native_signal_aspect("first"),
+            Some(7)
+        );
+        let mut self_conflict = false;
+        for _ in 0..150 {
+            traffic.advance(&mut player, 0.05, None, |_| {});
+            let train = &traffic.services[0].session;
+            self_conflict |= train.dispatcher.waiting_for.contains(&train.service_id);
+            if train.head_chainage_m() > 1100. {
+                break;
+            }
+        }
+        let train = &traffic.services[0].session;
+        assert!(
+            !self_conflict,
+            "a retained route must never wait for its own travelling end"
+        );
+        assert!(train.head_chainage_m() > 1050.);
+        assert!(
+            train.gameplay.failure.is_none(),
+            "{:?}",
+            train.gameplay.failure
+        );
+        assert_eq!(
+            train.graph.switch_position("B"),
+            Some(SwitchPosition::Diverging)
+        );
+    }
+
+    #[test]
+    fn early_point_lock_still_refuses_a_point_occupied_by_another_formation() {
+        let (mut player, mut traffic, _directory) = adjacent_heads_before_points();
+        let mut footprint = player.own_track_occupancy();
+        footprint.extend(traffic.services[0].session.own_track_occupancy());
+        footprint.push(TrackOccupancy {
+            edge: "main".into(),
+            start_m: 0.,
+            end_m: 30.,
+            owner: "Other parked cut".into(),
+        });
+        coordinate(&mut player, &mut traffic.services, &footprint);
+        let train = &mut traffic.services[0].session;
+        train.refresh_traffic_signals();
+        assert_eq!(train.dispatcher.waiting_for, ["Other parked cut"]);
+        assert_eq!(train.native_signal_aspect("first"), Some(0));
+        assert_eq!(
+            player.graph.switch_position("B"),
+            Some(SwitchPosition::Straight)
+        );
+    }
+
     #[test]
     fn corrupt_saved_reservation_is_rejected_before_state_changes() {
         let (mut player, mut traffic, _directory) = single_track();
@@ -650,6 +837,32 @@ mod tests {
         assert!(player.restore_snapshot(saved).is_err());
         assert_eq!(player.own_track_reservations[0].end_m, 900.);
     }
+    #[test]
+    fn an_authored_operational_leg_waits_without_inventing_a_detour() {
+        let (mut player, mut traffic, _directory) = passing_loop();
+        let edges = player.state.path_edges.clone();
+        player.operational_legs = vec![openrailsrs_scenarios::model::RouteLeg {
+            start: "A".into(),
+            destination: "B".into(),
+            edges: edges.clone(),
+            start_offset_m: player.head_chainage_m(),
+            end_chainage_m: player.path_data.total_length_m(),
+            reversed: false,
+            wait_s: 0.,
+            stops: vec![],
+            switches: vec![],
+            operations: vec![],
+            service_id: None,
+            not_before_s: None,
+        }];
+        traffic.advance(&mut player, 15., Some(0.75), |_| {});
+        assert_eq!(player.state.path_edges, edges);
+        assert_eq!(player.dispatcher.reroutes, 0);
+        assert!(!player.dispatcher.waiting_for.is_empty());
+        assert_eq!(player.native_signal_aspect("entry"), Some(0));
+        assert!(player.gameplay.failure.is_none());
+    }
+
     #[test]
     fn priority_selects_clear_block_but_cannot_take_existing_grant() {
         let (mut player, mut traffic, _directory) = single_track();
@@ -742,11 +955,13 @@ mod tests {
         other.state.pos_on_edge_m = 500.;
         let traffic = crate::LiveTraffic {
             services: vec![TrafficService {
+                parked: false,
                 id: other.service_id.clone(),
                 session: other,
                 departure_s: 0.,
                 departed: true,
             }],
+            ..Default::default()
         };
         (player, traffic, dir)
     }

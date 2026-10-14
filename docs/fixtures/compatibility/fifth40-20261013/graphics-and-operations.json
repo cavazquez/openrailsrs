@@ -1,0 +1,2477 @@
+{
+  "schema": 1,
+  "scope": "Executed scene captures and operation checks; metrics do not certify Open Rails visual or full physical parity. Final native crossing/corrected fixture captures are recorded separately.",
+  "reports": {
+    "visual-final2/report.json": {
+      "report_sha256": "f6d76d1389cb8bd7de43ab7648e7a7bfa43fc4d0d62506c5929981e50d2b5884",
+      "cases": {
+        "connections": {
+          "binary_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+          "odometer_m": 0.0,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 4,
+            "deformed": 4,
+            "disconnected": 0,
+            "eligible_parts": 4,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 0,
+            "stop": null,
+            "visible": 0
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 2
+          },
+          "snow_tracks": {
+            "gpu_segments": 0.0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 22.03433230899999,
+            "frame_p50_ms": 86,
+            "frame_p95_ms": 194,
+            "frame_p99_ms": 252,
+            "frames": 241,
+            "gameplay_frame_p50_ms": 86,
+            "gameplay_frame_p95_ms": 194,
+            "gameplay_frame_p99_ms": 252,
+            "gameplay_frames": 229,
+            "gameplay_hitches_over_100_ms": 71,
+            "gameplay_longest_frame_ms": 252.395771,
+            "hitches_over_100_ms": 75,
+            "loading_frames": 12,
+            "longest_frame_ms": 252.395771,
+            "peak_rss_mib": 443.31640625,
+            "rss_mib": 443.31640625,
+            "startup_longest_frame_ms": 223.58436500000002
+          },
+          "formation_vehicles": 2
+        },
+        "connections-cut": {
+          "binary_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+          "odometer_m": 0.0,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 0,
+            "deformed": 4,
+            "disconnected": 652,
+            "eligible_parts": 4,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 0,
+            "stop": null,
+            "visible": 0
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 2
+          },
+          "snow_tracks": {
+            "gpu_segments": 0.0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 22.053637123,
+            "frame_p50_ms": 100,
+            "frame_p95_ms": 139,
+            "frame_p99_ms": 204,
+            "frames": 296,
+            "gameplay_frame_p50_ms": 100,
+            "gameplay_frame_p95_ms": 135,
+            "gameplay_frame_p99_ms": 204,
+            "gameplay_frames": 285,
+            "gameplay_hitches_over_100_ms": 151,
+            "gameplay_longest_frame_ms": 219.264216,
+            "hitches_over_100_ms": 152,
+            "loading_frames": 11,
+            "longest_frame_ms": 219.264216,
+            "peak_rss_mib": 444.828125,
+            "rss_mib": 444.828125,
+            "startup_longest_frame_ms": 189.65737
+          },
+          "formation_vehicles": 2
+        },
+        "connections-curve": {
+          "binary_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+          "odometer_m": 36.285290085245144,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 4,
+            "deformed": 100,
+            "disconnected": 0,
+            "eligible_parts": 4,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 0,
+            "stop": null,
+            "visible": 0
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 2
+          },
+          "snow_tracks": {
+            "gpu_segments": 0.0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 60.05160910300001,
+            "frame_p50_ms": 98,
+            "frame_p95_ms": 112,
+            "frame_p99_ms": 119,
+            "frames": 841,
+            "gameplay_frame_p50_ms": 98,
+            "gameplay_frame_p95_ms": 112,
+            "gameplay_frame_p99_ms": 119,
+            "gameplay_frames": 829,
+            "gameplay_hitches_over_100_ms": 374,
+            "gameplay_longest_frame_ms": 184.471832,
+            "hitches_over_100_ms": 376,
+            "loading_frames": 12,
+            "longest_frame_ms": 262.688759,
+            "peak_rss_mib": 462.15625,
+            "rss_mib": 462.15625,
+            "startup_longest_frame_ms": 262.688759
+          },
+          "formation_vehicles": 2
+        },
+        "jacobs": {
+          "binary_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+          "odometer_m": 0.0,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 4,
+            "deformed": 4,
+            "disconnected": 0,
+            "eligible_parts": 4,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [
+            {
+              "matrix": "BOGIE2",
+              "rotation": [
+                0.0,
+                -0.7106333374977112,
+                0.0,
+                0.7035625576972961
+              ],
+              "translation": [
+                -103.0,
+                0.30000001192092896,
+                43.099998474121094
+              ],
+              "vehicle": 0
+            }
+          ],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 0,
+            "stop": null,
+            "visible": 0
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 2
+          },
+          "snow_tracks": {
+            "gpu_segments": 0.0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 22.007301349000016,
+            "frame_p50_ms": 94,
+            "frame_p95_ms": 107,
+            "frame_p99_ms": 174,
+            "frames": 315,
+            "gameplay_frame_p50_ms": 94,
+            "gameplay_frame_p95_ms": 107,
+            "gameplay_frame_p99_ms": 174,
+            "gameplay_frames": 304,
+            "gameplay_hitches_over_100_ms": 102,
+            "gameplay_longest_frame_ms": 229.628992,
+            "hitches_over_100_ms": 104,
+            "loading_frames": 11,
+            "longest_frame_ms": 229.628992,
+            "peak_rss_mib": 447.171875,
+            "rss_mib": 447.171875,
+            "startup_longest_frame_ms": 148.506123
+          },
+          "formation_vehicles": 2
+        },
+        "jacobs-curve": {
+          "binary_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+          "odometer_m": 35.06876297915428,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 4,
+            "deformed": 92,
+            "disconnected": 0,
+            "eligible_parts": 4,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [
+            {
+              "matrix": "BOGIE2",
+              "rotation": [
+                0.0,
+                -0.8064446449279785,
+                0.0,
+                0.591309666633606
+              ],
+              "translation": [
+                -13.589736938476562,
+                0.30000001192092896,
+                49.52338790893555
+              ],
+              "vehicle": 0
+            }
+          ],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 0,
+            "stop": null,
+            "visible": 0
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 2
+          },
+          "snow_tracks": {
+            "gpu_segments": 0.0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 60.16259505199997,
+            "frame_p50_ms": 96,
+            "frame_p95_ms": 116,
+            "frame_p99_ms": 173,
+            "frames": 858,
+            "gameplay_frame_p50_ms": 97,
+            "gameplay_frame_p95_ms": 115,
+            "gameplay_frame_p99_ms": 148,
+            "gameplay_frames": 845,
+            "gameplay_hitches_over_100_ms": 353,
+            "gameplay_longest_frame_ms": 294.333768,
+            "hitches_over_100_ms": 356,
+            "loading_frames": 13,
+            "longest_frame_ms": 294.333768,
+            "peak_rss_mib": 462.58203125,
+            "rss_mib": 462.58203125,
+            "startup_longest_frame_ms": 173.12915
+          },
+          "formation_vehicles": 2
+        },
+        "boarding": {
+          "binary_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+          "odometer_m": 0.0,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 0,
+            "deformed": 0,
+            "disconnected": 0,
+            "eligible_parts": 0,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 12,
+            "stop": 0,
+            "visible": 9
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 2
+          },
+          "snow_tracks": {
+            "gpu_segments": 0.0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 22.079610328999987,
+            "frame_p50_ms": 94,
+            "frame_p95_ms": 105,
+            "frame_p99_ms": 108,
+            "frames": 322,
+            "gameplay_frame_p50_ms": 94,
+            "gameplay_frame_p95_ms": 105,
+            "gameplay_frame_p99_ms": 108,
+            "gameplay_frames": 308,
+            "gameplay_hitches_over_100_ms": 102,
+            "gameplay_longest_frame_ms": 108.760919,
+            "hitches_over_100_ms": 105,
+            "loading_frames": 14,
+            "longest_frame_ms": 206.900321,
+            "peak_rss_mib": 482.765625,
+            "rss_mib": 482.765625,
+            "startup_longest_frame_ms": 206.900321
+          },
+          "formation_vehicles": 2
+        },
+        "boarding-restore": {
+          "binary_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+          "odometer_m": 0.0,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 0,
+            "deformed": 0,
+            "disconnected": 0,
+            "eligible_parts": 0,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 4,
+            "stop": 0,
+            "visible": 13
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 2
+          },
+          "snow_tracks": {
+            "gpu_segments": 0.0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 22.03282733599999,
+            "frame_p50_ms": 94,
+            "frame_p95_ms": 104,
+            "frame_p99_ms": 112,
+            "frames": 322,
+            "gameplay_frame_p50_ms": 95,
+            "gameplay_frame_p95_ms": 104,
+            "gameplay_frame_p99_ms": 111,
+            "gameplay_frames": 310,
+            "gameplay_hitches_over_100_ms": 103,
+            "gameplay_longest_frame_ms": 149.376344,
+            "hitches_over_100_ms": 104,
+            "loading_frames": 12,
+            "longest_frame_ms": 241.748996,
+            "peak_rss_mib": 506.8359375,
+            "rss_mib": 506.8359375,
+            "startup_longest_frame_ms": 241.748996
+          },
+          "formation_vehicles": 2
+        },
+        "boarding-rebase": {
+          "binary_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+          "odometer_m": 0.0,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 0,
+            "deformed": 0,
+            "disconnected": 0,
+            "eligible_parts": 0,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 4,
+            "stop": 0,
+            "visible": 13
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 2
+          },
+          "snow_tracks": {
+            "gpu_segments": 0.0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 22.020396631000004,
+            "frame_p50_ms": 102,
+            "frame_p95_ms": 114,
+            "frame_p99_ms": 117,
+            "frames": 297,
+            "gameplay_frame_p50_ms": 102,
+            "gameplay_frame_p95_ms": 114,
+            "gameplay_frame_p99_ms": 116,
+            "gameplay_frames": 286,
+            "gameplay_hitches_over_100_ms": 178,
+            "gameplay_longest_frame_ms": 117.351935,
+            "hitches_over_100_ms": 180,
+            "loading_frames": 11,
+            "longest_frame_ms": 264.16570299999995,
+            "peak_rss_mib": 485.671875,
+            "rss_mib": 485.671875,
+            "startup_longest_frame_ms": 264.16570299999995
+          },
+          "formation_vehicles": 2
+        },
+        "alighting": {
+          "binary_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+          "odometer_m": 0.0,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 0,
+            "deformed": 0,
+            "disconnected": 0,
+            "eligible_parts": 0,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 4,
+            "represented_boarding": 12,
+            "stop": 0,
+            "visible": 18
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 2
+          },
+          "snow_tracks": {
+            "gpu_segments": 0.0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 22.04124605300001,
+            "frame_p50_ms": 100,
+            "frame_p95_ms": 109,
+            "frame_p99_ms": 110,
+            "frames": 308,
+            "gameplay_frame_p50_ms": 100,
+            "gameplay_frame_p95_ms": 109,
+            "gameplay_frame_p99_ms": 110,
+            "gameplay_frames": 296,
+            "gameplay_hitches_over_100_ms": 127,
+            "gameplay_longest_frame_ms": 158.337049,
+            "hitches_over_100_ms": 128,
+            "loading_frames": 12,
+            "longest_frame_ms": 203.930295,
+            "peak_rss_mib": 484.67578125,
+            "rss_mib": 484.67578125,
+            "startup_longest_frame_ms": 203.930295
+          },
+          "formation_vehicles": 2
+        },
+        "wet": {
+          "binary_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+          "odometer_m": 0.0,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 0,
+            "deformed": 0,
+            "disconnected": 0,
+            "eligible_parts": 0,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 0,
+            "stop": null,
+            "visible": 0
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 2
+          },
+          "snow_tracks": {
+            "gpu_segments": 0.0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 22.083135435999996,
+            "frame_p50_ms": 93,
+            "frame_p95_ms": 102,
+            "frame_p99_ms": 110,
+            "frames": 325,
+            "gameplay_frame_p50_ms": 93,
+            "gameplay_frame_p95_ms": 102,
+            "gameplay_frame_p99_ms": 109,
+            "gameplay_frames": 311,
+            "gameplay_hitches_over_100_ms": 109,
+            "gameplay_longest_frame_ms": 110.15209800000001,
+            "hitches_over_100_ms": 112,
+            "loading_frames": 14,
+            "longest_frame_ms": 238.081471,
+            "peak_rss_mib": 473.88671875,
+            "rss_mib": 473.88671875,
+            "startup_longest_frame_ms": 238.081471
+          },
+          "formation_vehicles": 2
+        },
+        "dry": {
+          "binary_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+          "odometer_m": 0.0,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 0,
+            "deformed": 0,
+            "disconnected": 0,
+            "eligible_parts": 0,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 0,
+            "stop": null,
+            "visible": 0
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 2
+          },
+          "snow_tracks": {
+            "gpu_segments": 0.0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 22.035130304999996,
+            "frame_p50_ms": 92,
+            "frame_p95_ms": 101,
+            "frame_p99_ms": 102,
+            "frames": 330,
+            "gameplay_frame_p50_ms": 92,
+            "gameplay_frame_p95_ms": 101,
+            "gameplay_frame_p99_ms": 102,
+            "gameplay_frames": 319,
+            "gameplay_hitches_over_100_ms": 103,
+            "gameplay_longest_frame_ms": 155.31920499999998,
+            "hitches_over_100_ms": 104,
+            "loading_frames": 11,
+            "longest_frame_ms": 212.971778,
+            "peak_rss_mib": 464.20703125,
+            "rss_mib": 464.20703125,
+            "startup_longest_frame_ms": 212.971778
+          },
+          "formation_vehicles": 2
+        },
+        "snow": {
+          "binary_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+          "odometer_m": 0.0,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 0,
+            "deformed": 0,
+            "disconnected": 0,
+            "eligible_parts": 0,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 0,
+            "stop": null,
+            "visible": 0
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 2
+          },
+          "snow_tracks": {
+            "gpu_segments": 0.0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 1.0,
+          "performance": {
+            "elapsed_s": 22.071184800999983,
+            "frame_p50_ms": 94,
+            "frame_p95_ms": 109,
+            "frame_p99_ms": 111,
+            "frames": 316,
+            "gameplay_frame_p50_ms": 94,
+            "gameplay_frame_p95_ms": 109,
+            "gameplay_frame_p99_ms": 110,
+            "gameplay_frames": 302,
+            "gameplay_hitches_over_100_ms": 139,
+            "gameplay_longest_frame_ms": 110.84857500000001,
+            "hitches_over_100_ms": 142,
+            "loading_frames": 14,
+            "longest_frame_ms": 216.53727,
+            "peak_rss_mib": 516.9453125,
+            "rss_mib": 516.9453125,
+            "startup_longest_frame_ms": 216.53727
+          },
+          "formation_vehicles": 2
+        },
+        "snow-curve": {
+          "binary_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+          "odometer_m": 35.406170408411924,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 4,
+            "deformed": 84,
+            "disconnected": 0,
+            "eligible_parts": 4,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [
+            {
+              "matrix": "BOGIE2",
+              "rotation": [
+                0.0,
+                -0.8064446449279785,
+                0.0,
+                0.591309666633606
+              ],
+              "translation": [
+                -13.268753051757812,
+                0.30000001192092896,
+                49.624595642089844
+              ],
+              "vehicle": 0
+            }
+          ],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 0,
+            "stop": null,
+            "visible": 0
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 2
+          },
+          "snow_tracks": {
+            "gpu_segments": 64.0,
+            "maximum_depth_m": 0.08,
+            "sectors": 2,
+            "segments": 104
+          },
+          "snow_cover": 1.0,
+          "performance": {
+            "elapsed_s": 60.00408660500006,
+            "frame_p50_ms": 115,
+            "frame_p95_ms": 311,
+            "frame_p99_ms": 314,
+            "frames": 546,
+            "gameplay_frame_p50_ms": 115,
+            "gameplay_frame_p95_ms": 311,
+            "gameplay_frame_p99_ms": 314,
+            "gameplay_frames": 534,
+            "gameplay_hitches_over_100_ms": 329,
+            "gameplay_longest_frame_ms": 334.206406,
+            "hitches_over_100_ms": 331,
+            "loading_frames": 12,
+            "longest_frame_ms": 334.206406,
+            "peak_rss_mib": 471.65234375,
+            "rss_mib": 471.65234375,
+            "startup_longest_frame_ms": 218.381606
+          },
+          "formation_vehicles": 2
+        }
+      }
+    },
+    "visual-final3/report.json": {
+      "report_sha256": "dfccd5bcbeb8f1c1359b7ff49413c46e5d90bccdd56a81dc7c42a5a6acd79c7d",
+      "cases": {
+        "connections": {
+          "binary_sha256": "17ae83ec884efc582ac56b50e7ea32f44bb039ec76d9b8ee20155e18aeb57f6f",
+          "odometer_m": 0.0,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 4,
+            "deformed": 4,
+            "disconnected": 0,
+            "eligible_parts": 4,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 0,
+            "stop": null,
+            "visible": 0
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 2
+          },
+          "crossings": {},
+          "refilling": null,
+          "snow_tracks": {
+            "gpu_segments": 0.0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 22.064132881999996,
+            "frame_p50_ms": 88,
+            "frame_p95_ms": 157,
+            "frame_p99_ms": 199,
+            "frames": 316,
+            "gameplay_frame_p50_ms": 88,
+            "gameplay_frame_p95_ms": 156,
+            "gameplay_frame_p99_ms": 199,
+            "gameplay_frames": 303,
+            "gameplay_hitches_over_100_ms": 87,
+            "gameplay_longest_frame_ms": 204.283088,
+            "hitches_over_100_ms": 92,
+            "loading_frames": 13,
+            "longest_frame_ms": 204.283088,
+            "peak_rss_mib": 447.46484375,
+            "rss_mib": 447.46484375,
+            "startup_longest_frame_ms": 161.427691
+          },
+          "formation_vehicles": 2
+        },
+        "connections-curve": {
+          "binary_sha256": "17ae83ec884efc582ac56b50e7ea32f44bb039ec76d9b8ee20155e18aeb57f6f",
+          "odometer_m": 37.1797230963713,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 4,
+            "deformed": 104,
+            "disconnected": 0,
+            "eligible_parts": 4,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 0,
+            "stop": null,
+            "visible": 0
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 2
+          },
+          "crossings": {},
+          "refilling": null,
+          "snow_tracks": {
+            "gpu_segments": 0.0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 60.077527337999975,
+            "frame_p50_ms": 65,
+            "frame_p95_ms": 197,
+            "frame_p99_ms": 260,
+            "frames": 771,
+            "gameplay_frame_p50_ms": 65,
+            "gameplay_frame_p95_ms": 198,
+            "gameplay_frame_p99_ms": 260,
+            "gameplay_frames": 759,
+            "gameplay_hitches_over_100_ms": 298,
+            "gameplay_longest_frame_ms": 277.926994,
+            "hitches_over_100_ms": 302,
+            "loading_frames": 12,
+            "longest_frame_ms": 277.926994,
+            "peak_rss_mib": 449.0859375,
+            "rss_mib": 449.0859375,
+            "startup_longest_frame_ms": 174.791617
+          },
+          "formation_vehicles": 2
+        },
+        "jacobs-curve": {
+          "binary_sha256": "17ae83ec884efc582ac56b50e7ea32f44bb039ec76d9b8ee20155e18aeb57f6f",
+          "odometer_m": 36.85598155160907,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 4,
+            "deformed": 97,
+            "disconnected": 0,
+            "eligible_parts": 4,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [
+            {
+              "matrix": "BOGIE2",
+              "rotation": [
+                0.0,
+                -0.8064446449279785,
+                0.0,
+                0.591309666633606
+              ],
+              "translation": [
+                -9.022720336914062,
+                0.30000001192092896,
+                47.16746520996094
+              ],
+              "vehicle": 0
+            }
+          ],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 0,
+            "stop": null,
+            "visible": 0
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 2
+          },
+          "crossings": {},
+          "refilling": null,
+          "snow_tracks": {
+            "gpu_segments": 0.0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 59.997354956999985,
+            "frame_p50_ms": 79,
+            "frame_p95_ms": 213,
+            "frame_p99_ms": 234,
+            "frames": 714,
+            "gameplay_frame_p50_ms": 77,
+            "gameplay_frame_p95_ms": 213,
+            "gameplay_frame_p99_ms": 234,
+            "gameplay_frames": 700,
+            "gameplay_hitches_over_100_ms": 200,
+            "gameplay_longest_frame_ms": 271.122515,
+            "hitches_over_100_ms": 204,
+            "loading_frames": 14,
+            "longest_frame_ms": 271.122515,
+            "peak_rss_mib": 433.015625,
+            "rss_mib": 433.015625,
+            "startup_longest_frame_ms": 180.493009
+          },
+          "formation_vehicles": 2
+        },
+        "mirrors": {
+          "binary_sha256": "17ae83ec884efc582ac56b50e7ea32f44bb039ec76d9b8ee20155e18aeb57f6f",
+          "odometer_m": 0.0,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 0,
+            "deformed": 0,
+            "disconnected": 0,
+            "eligible_parts": 0,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 0,
+            "stop": null,
+            "visible": 0
+          },
+          "mirrors": {
+            "frames": 184,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 2
+          },
+          "crossings": {},
+          "refilling": null,
+          "snow_tracks": {
+            "gpu_segments": 0.0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 22.038753452999998,
+            "frame_p50_ms": 25,
+            "frame_p95_ms": 272,
+            "frame_p99_ms": 277,
+            "frames": 249,
+            "gameplay_frame_p50_ms": 25,
+            "gameplay_frame_p95_ms": 272,
+            "gameplay_frame_p99_ms": 277,
+            "gameplay_frames": 234,
+            "gameplay_hitches_over_100_ms": 78,
+            "gameplay_longest_frame_ms": 278.409046,
+            "hitches_over_100_ms": 83,
+            "loading_frames": 15,
+            "longest_frame_ms": 278.409046,
+            "peak_rss_mib": 476.75390625,
+            "rss_mib": 476.75390625,
+            "startup_longest_frame_ms": 201.690924
+          },
+          "formation_vehicles": 2
+        },
+        "mirrors-rain": {
+          "binary_sha256": "17ae83ec884efc582ac56b50e7ea32f44bb039ec76d9b8ee20155e18aeb57f6f",
+          "odometer_m": 0.0,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 0,
+            "deformed": 0,
+            "disconnected": 0,
+            "eligible_parts": 0,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 0,
+            "stop": null,
+            "visible": 0
+          },
+          "mirrors": {
+            "frames": 236,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 2
+          },
+          "crossings": {},
+          "refilling": null,
+          "snow_tracks": {
+            "gpu_segments": 0.0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 22.115240431000014,
+            "frame_p50_ms": 94,
+            "frame_p95_ms": 180,
+            "frame_p99_ms": 183,
+            "frames": 239,
+            "gameplay_frame_p50_ms": 93,
+            "gameplay_frame_p95_ms": 180,
+            "gameplay_frame_p99_ms": 182,
+            "gameplay_frames": 224,
+            "gameplay_hitches_over_100_ms": 40,
+            "gameplay_longest_frame_ms": 184.399969,
+            "hitches_over_100_ms": 44,
+            "loading_frames": 15,
+            "longest_frame_ms": 247.89292600000002,
+            "peak_rss_mib": 483.41015625,
+            "rss_mib": 483.41015625,
+            "startup_longest_frame_ms": 247.89292600000002
+          },
+          "formation_vehicles": 2
+        },
+        "boarding": {
+          "binary_sha256": "17ae83ec884efc582ac56b50e7ea32f44bb039ec76d9b8ee20155e18aeb57f6f",
+          "odometer_m": 0.0,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 0,
+            "deformed": 0,
+            "disconnected": 0,
+            "eligible_parts": 0,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 11,
+            "stop": 0,
+            "visible": 19
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 2
+          },
+          "crossings": {},
+          "refilling": null,
+          "snow_tracks": {
+            "gpu_segments": 0.0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 22.088867022999995,
+            "frame_p50_ms": 29,
+            "frame_p95_ms": 216,
+            "frame_p99_ms": 234,
+            "frames": 269,
+            "gameplay_frame_p50_ms": 25,
+            "gameplay_frame_p95_ms": 216,
+            "gameplay_frame_p99_ms": 223,
+            "gameplay_frames": 256,
+            "gameplay_hitches_over_100_ms": 86,
+            "gameplay_longest_frame_ms": 259.299962,
+            "hitches_over_100_ms": 90,
+            "loading_frames": 13,
+            "longest_frame_ms": 272.944828,
+            "peak_rss_mib": 457.0625,
+            "rss_mib": 457.0625,
+            "startup_longest_frame_ms": 272.944828
+          },
+          "formation_vehicles": 2
+        }
+      }
+    },
+    "native-visual-final/report.json": {
+      "report_sha256": "26ce4e419ca9343488de7e035238d04e5befc974ad0e562a0fc5f2eb073d14cf",
+      "cases": {
+        "northolt-exterior": {
+          "viewer_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+          "odometer_m": 0.0,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 0,
+            "deformed": 0,
+            "disconnected": 0,
+            "eligible_parts": 0,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 0,
+            "stop": 0,
+            "visible": 0
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 0
+          },
+          "snow_tracks": {
+            "gpu_segments": 0.0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 29.94407741999999,
+            "frame_p50_ms": 100,
+            "frame_p95_ms": 149,
+            "frame_p99_ms": 195,
+            "frames": 366,
+            "gameplay_frame_p50_ms": 106,
+            "gameplay_frame_p95_ms": 116,
+            "gameplay_frame_p99_ms": 118,
+            "gameplay_frames": 57,
+            "gameplay_hitches_over_100_ms": 38,
+            "gameplay_longest_frame_ms": 118.308104,
+            "hitches_over_100_ms": 187,
+            "loading_frames": 309,
+            "longest_frame_ms": 1741.298571,
+            "peak_rss_mib": 1403.8984375,
+            "rss_mib": 1403.8984375,
+            "startup_longest_frame_ms": 1741.298571
+          },
+          "formation_vehicles": 8
+        },
+        "northolt-cab": {
+          "viewer_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+          "odometer_m": 0.0,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 0,
+            "deformed": 0,
+            "disconnected": 0,
+            "eligible_parts": 0,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 0,
+            "stop": 0,
+            "visible": 0
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 0
+          },
+          "snow_tracks": {
+            "gpu_segments": 0.0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 32.50234389800002,
+            "frame_p50_ms": 102,
+            "frame_p95_ms": 115,
+            "frame_p99_ms": 155,
+            "frames": 399,
+            "gameplay_frame_p50_ms": 107,
+            "gameplay_frame_p95_ms": 115,
+            "gameplay_frame_p99_ms": 119,
+            "gameplay_frames": 57,
+            "gameplay_hitches_over_100_ms": 41,
+            "gameplay_longest_frame_ms": 119.43590900000001,
+            "hitches_over_100_ms": 230,
+            "loading_frames": 342,
+            "longest_frame_ms": 1707.753086,
+            "peak_rss_mib": 1922.33203125,
+            "rss_mib": 1922.33203125,
+            "startup_longest_frame_ms": 1707.753086
+          },
+          "formation_vehicles": 8
+        },
+        "south-ruislip-exterior": {
+          "viewer_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+          "odometer_m": 0.0,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 0,
+            "deformed": 0,
+            "disconnected": 0,
+            "eligible_parts": 0,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 0,
+            "stop": 0,
+            "visible": 0
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 0
+          },
+          "snow_tracks": {
+            "gpu_segments": 0.0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 40.91567232,
+            "frame_p50_ms": 94,
+            "frame_p95_ms": 106,
+            "frame_p99_ms": 111,
+            "frames": 558,
+            "gameplay_frame_p50_ms": 99,
+            "gameplay_frame_p95_ms": 111,
+            "gameplay_frame_p99_ms": 117,
+            "gameplay_frames": 57,
+            "gameplay_hitches_over_100_ms": 23,
+            "gameplay_longest_frame_ms": 116.758374,
+            "hitches_over_100_ms": 176,
+            "loading_frames": 501,
+            "longest_frame_ms": 1772.2805290000001,
+            "peak_rss_mib": 1523.10546875,
+            "rss_mib": 1186.11328125,
+            "startup_longest_frame_ms": 1772.2805290000001
+          },
+          "formation_vehicles": 8
+        },
+        "south-ruislip-cab": {
+          "viewer_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+          "odometer_m": 0.0,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 0,
+            "deformed": 0,
+            "disconnected": 0,
+            "eligible_parts": 0,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 0,
+            "stop": 0,
+            "visible": 0
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 0
+          },
+          "snow_tracks": {
+            "gpu_segments": 0.0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 49.106255611999956,
+            "frame_p50_ms": 100,
+            "frame_p95_ms": 117,
+            "frame_p99_ms": 246,
+            "frames": 604,
+            "gameplay_frame_p50_ms": 90,
+            "gameplay_frame_p95_ms": 255,
+            "gameplay_frame_p99_ms": 330,
+            "gameplay_frames": 57,
+            "gameplay_hitches_over_100_ms": 23,
+            "gameplay_longest_frame_ms": 329.554943,
+            "hitches_over_100_ms": 301,
+            "loading_frames": 547,
+            "longest_frame_ms": 1837.2253170000001,
+            "peak_rss_mib": 2013.6015625,
+            "rss_mib": 1996.140625,
+            "startup_longest_frame_ms": 1837.2253170000001
+          },
+          "formation_vehicles": 8
+        },
+        "gerrards-cross-exterior": {
+          "viewer_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+          "odometer_m": 0.0,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 0,
+            "deformed": 0,
+            "disconnected": 0,
+            "eligible_parts": 0,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 0,
+            "stop": 0,
+            "visible": 0
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 0
+          },
+          "snow_tracks": {
+            "gpu_segments": 0.0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 29.862550025000022,
+            "frame_p50_ms": 94,
+            "frame_p95_ms": 111,
+            "frame_p99_ms": 118,
+            "frames": 375,
+            "gameplay_frame_p50_ms": 96,
+            "gameplay_frame_p95_ms": 108,
+            "gameplay_frame_p99_ms": 109,
+            "gameplay_frames": 57,
+            "gameplay_hitches_over_100_ms": 25,
+            "gameplay_longest_frame_ms": 108.520645,
+            "hitches_over_100_ms": 149,
+            "loading_frames": 318,
+            "longest_frame_ms": 2247.3236079999997,
+            "peak_rss_mib": 1452.54296875,
+            "rss_mib": 1452.54296875,
+            "startup_longest_frame_ms": 2247.3236079999997
+          },
+          "formation_vehicles": 8
+        },
+        "gerrards-cross-cab": {
+          "viewer_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+          "odometer_m": 0.0,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 0,
+            "deformed": 0,
+            "disconnected": 0,
+            "eligible_parts": 0,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 0,
+            "stop": 0,
+            "visible": 0
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 0
+          },
+          "snow_tracks": {
+            "gpu_segments": 0.0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 31.691783412,
+            "frame_p50_ms": 93,
+            "frame_p95_ms": 107,
+            "frame_p99_ms": 184,
+            "frames": 409,
+            "gameplay_frame_p50_ms": 95,
+            "gameplay_frame_p95_ms": 110,
+            "gameplay_frame_p99_ms": 192,
+            "gameplay_frames": 57,
+            "gameplay_hitches_over_100_ms": 27,
+            "gameplay_longest_frame_ms": 192.30590999999998,
+            "hitches_over_100_ms": 138,
+            "loading_frames": 352,
+            "longest_frame_ms": 1959.690903,
+            "peak_rss_mib": 1864.36328125,
+            "rss_mib": 1864.36328125,
+            "startup_longest_frame_ms": 1959.690903
+          },
+          "formation_vehicles": 8
+        },
+        "contact-off": {
+          "viewer_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+          "odometer_m": 0.0,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 0,
+            "deformed": 0,
+            "disconnected": 0,
+            "eligible_parts": 0,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 0,
+            "stop": 0,
+            "visible": 0
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 0
+          },
+          "snow_tracks": {
+            "gpu_segments": 0.0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 29.079093830000012,
+            "frame_p50_ms": 100,
+            "frame_p95_ms": 113,
+            "frame_p99_ms": 120,
+            "frames": 363,
+            "gameplay_frame_p50_ms": 109,
+            "gameplay_frame_p95_ms": 116,
+            "gameplay_frame_p99_ms": 120,
+            "gameplay_frames": 57,
+            "gameplay_hitches_over_100_ms": 35,
+            "gameplay_longest_frame_ms": 119.965406,
+            "hitches_over_100_ms": 178,
+            "loading_frames": 306,
+            "longest_frame_ms": 1709.066683,
+            "peak_rss_mib": 1295.3515625,
+            "rss_mib": 1295.3515625,
+            "startup_longest_frame_ms": 1709.066683
+          },
+          "formation_vehicles": 8
+        },
+        "contact-high": {
+          "viewer_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+          "odometer_m": 0.0,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 0,
+            "deformed": 0,
+            "disconnected": 0,
+            "eligible_parts": 0,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 0,
+            "stop": 0,
+            "visible": 0
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 0
+          },
+          "snow_tracks": {
+            "gpu_segments": 0.0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 28.33406487100001,
+            "frame_p50_ms": 101,
+            "frame_p95_ms": 110,
+            "frame_p99_ms": 113,
+            "frames": 358,
+            "gameplay_frame_p50_ms": 100,
+            "gameplay_frame_p95_ms": 106,
+            "gameplay_frame_p99_ms": 106,
+            "gameplay_frames": 57,
+            "gameplay_hitches_over_100_ms": 29,
+            "gameplay_longest_frame_ms": 106.282415,
+            "hitches_over_100_ms": 196,
+            "loading_frames": 301,
+            "longest_frame_ms": 1678.998049,
+            "peak_rss_mib": 1265.796875,
+            "rss_mib": 1265.796875,
+            "startup_longest_frame_ms": 1678.998049
+          },
+          "formation_vehicles": 8
+        },
+        "forest-far": {
+          "viewer_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+          "odometer_m": 0.0,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 0,
+            "deformed": 0,
+            "disconnected": 0,
+            "eligible_parts": 0,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 0,
+            "stop": 0,
+            "visible": 0
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 0
+          },
+          "snow_tracks": {
+            "gpu_segments": 0.0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 27.106249826,
+            "frame_p50_ms": 94,
+            "frame_p95_ms": 105,
+            "frame_p99_ms": 107,
+            "frames": 362,
+            "gameplay_frame_p50_ms": 100,
+            "gameplay_frame_p95_ms": 106,
+            "gameplay_frame_p99_ms": 107,
+            "gameplay_frames": 57,
+            "gameplay_hitches_over_100_ms": 28,
+            "gameplay_longest_frame_ms": 107.109998,
+            "hitches_over_100_ms": 132,
+            "loading_frames": 305,
+            "longest_frame_ms": 1571.5318740000002,
+            "peak_rss_mib": 1284.74609375,
+            "rss_mib": 1284.74609375,
+            "startup_longest_frame_ms": 1571.5318740000002
+          },
+          "formation_vehicles": 8
+        },
+        "bridge-low": {
+          "viewer_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+          "odometer_m": 0.0,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 0,
+            "deformed": 0,
+            "disconnected": 0,
+            "eligible_parts": 0,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 0,
+            "stop": 0,
+            "visible": 0
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 0
+          },
+          "snow_tracks": {
+            "gpu_segments": 0.0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 40.643547750999964,
+            "frame_p50_ms": 100,
+            "frame_p95_ms": 112,
+            "frame_p99_ms": 114,
+            "frames": 536,
+            "gameplay_frame_p50_ms": 109,
+            "gameplay_frame_p95_ms": 114,
+            "gameplay_frame_p99_ms": 114,
+            "gameplay_frames": 57,
+            "gameplay_hitches_over_100_ms": 42,
+            "gameplay_longest_frame_ms": 113.830451,
+            "hitches_over_100_ms": 274,
+            "loading_frames": 479,
+            "longest_frame_ms": 1649.975774,
+            "peak_rss_mib": 1425.15234375,
+            "rss_mib": 1217.16015625,
+            "startup_longest_frame_ms": 1649.975774
+          },
+          "formation_vehicles": 8
+        }
+      }
+    },
+    "visual-phase16/report.json": {
+      "report_sha256": "1ade5438f5f89be2863f1eb58e3d8e07385a94cb557e584d4865cf073cbc17b9",
+      "cases": {
+        "boarding-close": {
+          "binary_sha256": "7a72515be24e03e7434538c86e78b8e31cacacc09c41d0b4c8e999fb078568ac",
+          "odometer_m": 0.0,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 0,
+            "deformed": 0,
+            "disconnected": 0,
+            "eligible_parts": 0,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 1,
+            "stop": 0,
+            "visible": 0
+          },
+          "camera_collision": {
+            "corrections": 0
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 2
+          },
+          "road_cars": [],
+          "road_crossings": {
+            "stops": [],
+            "unresolved": []
+          },
+          "crossings": {},
+          "refilling": null,
+          "snow_tracks": {
+            "gpu_changes": 0,
+            "gpu_segments": 0.0,
+            "material_uploads": 0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 22.000318494999988,
+            "frame_p50_ms": 25,
+            "frame_p95_ms": 28,
+            "frame_p99_ms": 43,
+            "frames": 854,
+            "gameplay_frame_p50_ms": 25,
+            "gameplay_frame_p95_ms": 28,
+            "gameplay_frame_p99_ms": 40,
+            "gameplay_frames": 838,
+            "gameplay_hitches_over_100_ms": 0,
+            "gameplay_longest_frame_ms": 85.007552,
+            "hitches_over_100_ms": 0,
+            "loading_frames": 16,
+            "longest_frame_ms": 85.007552,
+            "peak_rss_mib": 418.28125,
+            "rss_mib": 418.28125,
+            "startup_longest_frame_ms": 56.369831000000005
+          },
+          "formation_vehicles": 2
+        },
+        "snow-curve": {
+          "binary_sha256": "7a72515be24e03e7434538c86e78b8e31cacacc09c41d0b4c8e999fb078568ac",
+          "odometer_m": 35.406170408411924,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 4,
+            "deformed": 90,
+            "disconnected": 0,
+            "eligible_parts": 4,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [
+            {
+              "matrix": "BOGIE2",
+              "rotation": [
+                0.0,
+                -0.8064446449279785,
+                0.0,
+                0.591309666633606
+              ],
+              "translation": [
+                -10.2679443359375,
+                0.30000001192092896,
+                46.77484893798828
+              ],
+              "vehicle": 0
+            }
+          ],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 0,
+            "stop": null,
+            "visible": 0
+          },
+          "camera_collision": {
+            "corrections": 0
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 2
+          },
+          "road_cars": [],
+          "road_crossings": {
+            "stops": [],
+            "unresolved": []
+          },
+          "crossings": {},
+          "refilling": null,
+          "snow_tracks": {
+            "gpu_changes": 101,
+            "gpu_segments": 64.0,
+            "material_uploads": 101,
+            "maximum_depth_m": 0.08,
+            "sectors": 2,
+            "segments": 277
+          },
+          "snow_cover": 1.0,
+          "performance": {
+            "elapsed_s": 60.034884963000046,
+            "frame_p50_ms": 25,
+            "frame_p95_ms": 67,
+            "frame_p99_ms": 133,
+            "frames": 1994,
+            "gameplay_frame_p50_ms": 25,
+            "gameplay_frame_p95_ms": 67,
+            "gameplay_frame_p99_ms": 133,
+            "gameplay_frames": 1978,
+            "gameplay_hitches_over_100_ms": 61,
+            "gameplay_longest_frame_ms": 176.786877,
+            "hitches_over_100_ms": 61,
+            "loading_frames": 16,
+            "longest_frame_ms": 176.786877,
+            "peak_rss_mib": 440.16015625,
+            "rss_mib": 440.16015625,
+            "startup_longest_frame_ms": 83.76007800000001
+          },
+          "formation_vehicles": 2
+        },
+        "refill-restore": {
+          "binary_sha256": "7a72515be24e03e7434538c86e78b8e31cacacc09c41d0b4c8e999fb078568ac",
+          "odometer_m": 0.0,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 4,
+            "deformed": 4,
+            "disconnected": 0,
+            "eligible_parts": 4,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 0,
+            "stop": null,
+            "visible": 0
+          },
+          "camera_collision": {
+            "corrections": 0
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 2
+          },
+          "road_cars": [],
+          "road_crossings": {
+            "stops": [],
+            "unresolved": []
+          },
+          "crossings": {},
+          "refilling": {
+            "delivered_kg": 0.0,
+            "opening": 0.25000000000000006,
+            "returning": false,
+            "station": {
+              "capacity_kg": 45.359237,
+              "feed_kg_s": 0.45359237,
+              "id": "0:0:30",
+              "opening_time_s": 4.0,
+              "pickup_type": 7,
+              "speed_range_mps": [
+                0.0,
+                0.0
+              ]
+            },
+            "vehicle": 0
+          },
+          "snow_tracks": {
+            "gpu_changes": 0,
+            "gpu_segments": 0.0,
+            "material_uploads": 0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 22.040918305000012,
+            "frame_p50_ms": 49,
+            "frame_p95_ms": 110,
+            "frame_p99_ms": 126,
+            "frames": 436,
+            "gameplay_frame_p50_ms": 49,
+            "gameplay_frame_p95_ms": 107,
+            "gameplay_frame_p99_ms": 126,
+            "gameplay_frames": 423,
+            "gameplay_hitches_over_100_ms": 44,
+            "gameplay_longest_frame_ms": 136.107685,
+            "hitches_over_100_ms": 45,
+            "loading_frames": 13,
+            "longest_frame_ms": 136.107685,
+            "peak_rss_mib": 413.1953125,
+            "rss_mib": 413.1953125,
+            "startup_longest_frame_ms": 115.79218300000001
+          },
+          "formation_vehicles": 2
+        }
+      }
+    },
+    "traffic-operations-final/report.json": {
+      "report_sha256": "a2ee99dcb3bd00f9f66ea2b83f4bea7b50e1be391c5e1b831d0c52d5d759745d",
+      "cases": {
+        "control": {
+          "binary_sha256": "9cbaa96af2dcf4c7745941fbfcdeed653875c062021e7391dfcec9ef277485bb",
+          "odometer_m": 0.0,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 0,
+            "deformed": 0,
+            "disconnected": 0,
+            "eligible_parts": 0,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 0,
+            "stop": null,
+            "visible": 0
+          },
+          "camera_collision": {
+            "corrections": 0
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 0
+          },
+          "road_cars": [],
+          "road_crossings": {
+            "stops": [],
+            "unresolved": []
+          },
+          "crossings": {},
+          "refilling": null,
+          "snow_tracks": {
+            "gpu_changes": 0,
+            "gpu_segments": 0.0,
+            "material_uploads": 0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 48.47642418300009,
+            "frame_p50_ms": 25,
+            "frame_p95_ms": 25,
+            "frame_p99_ms": 26,
+            "frames": 1922,
+            "gameplay_frame_p50_ms": 25,
+            "gameplay_frame_p95_ms": 25,
+            "gameplay_frame_p99_ms": 26,
+            "gameplay_frames": 1915,
+            "gameplay_hitches_over_100_ms": 0,
+            "gameplay_longest_frame_ms": 38.109128999999996,
+            "hitches_over_100_ms": 0,
+            "loading_frames": 7,
+            "longest_frame_ms": 38.109128999999996,
+            "peak_rss_mib": 445.48046875,
+            "rss_mib": 445.48046875,
+            "startup_longest_frame_ms": 25.256466000000003
+          },
+          "formation_vehicles": 3
+        },
+        "coupling": {
+          "binary_sha256": "9cbaa96af2dcf4c7745941fbfcdeed653875c062021e7391dfcec9ef277485bb",
+          "odometer_m": 0.0,
+          "shader_pipelines": {
+            "failed": 0,
+            "pending": 0
+          },
+          "pending_gpu_uploads": 0,
+          "pending_terrain_tiles": 0,
+          "renderer": {
+            "backend": "Vulkan",
+            "device_type": "DiscreteGpu",
+            "hardware": true,
+            "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+          },
+          "flexible_connections": {
+            "connected_parts": 4,
+            "deformed": 4,
+            "disconnected": 0,
+            "eligible_parts": 4,
+            "maximum_endpoint_error_m": 0.0,
+            "span_rejected": 0
+          },
+          "jacobs_joints": [],
+          "platform_people": {
+            "rejected_paths": 0,
+            "represented_alighting": 0,
+            "represented_boarding": 0,
+            "stop": null,
+            "visible": 0
+          },
+          "camera_collision": {
+            "corrections": 0
+          },
+          "mirrors": {
+            "frames": 0,
+            "resolution": [
+              256,
+              160
+            ],
+            "views": 2
+          },
+          "road_cars": [],
+          "road_crossings": {
+            "stops": [],
+            "unresolved": []
+          },
+          "crossings": {},
+          "refilling": null,
+          "snow_tracks": {
+            "gpu_changes": 0,
+            "gpu_segments": 0.0,
+            "material_uploads": 0,
+            "maximum_depth_m": 0.08,
+            "sectors": 0,
+            "segments": 0
+          },
+          "snow_cover": 0.0,
+          "performance": {
+            "elapsed_s": 48.50192585500004,
+            "frame_p50_ms": 25,
+            "frame_p95_ms": 26,
+            "frame_p99_ms": 30,
+            "frames": 1912,
+            "gameplay_frame_p50_ms": 25,
+            "gameplay_frame_p95_ms": 26,
+            "gameplay_frame_p99_ms": 30,
+            "gameplay_frames": 1900,
+            "gameplay_hitches_over_100_ms": 0,
+            "gameplay_longest_frame_ms": 81.432423,
+            "hitches_over_100_ms": 0,
+            "loading_frames": 12,
+            "longest_frame_ms": 81.432423,
+            "peak_rss_mib": 454.046875,
+            "rss_mib": 454.046875,
+            "startup_longest_frame_ms": 25.412303
+          },
+          "formation_vehicles": 4
+        }
+      }
+    }
+  }
+}

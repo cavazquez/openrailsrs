@@ -1,0 +1,234 @@
+{
+  "schema": "openrailsrs-content-runtime-qa-v1",
+  "date": "2026-10-13",
+  "source": {
+    "source_commit": "d9dba7af1f531183de594af3201373d3b1b20590",
+    "source_dirty": true,
+    "source_snapshot_sha256": "70a4f47e091c8a2d70a0ee56d2bbd2d8b3de722934798b436c2ad01da6cd323f",
+    "architecture": "x86_64",
+    "build_libc": [
+      "glibc",
+      "2.39"
+    ],
+    "required_glibc": "2.39",
+    "downloaded_content_included": false,
+    "binary_sha256": {
+      "openrailsrs": "501df6c4c74ec79e3a6b809f92a2931f27f8d4b51d78e339102d956ae9c189a4",
+      "openrailsrs-viewer3d": "e8ad11edd9b7f6669501d98b9631b84c714842a517a021ecb0e53fb5a90436c9",
+      "openrailsrs-prepare-content": "961edf1083f74ff45b841deb12fb0c4886c97a22869f43836ecb650a7da31bf9"
+    }
+  },
+  "snap": {
+    "version": "0.1.0-alpha.5",
+    "confinement": "strict",
+    "architecture": "amd64",
+    "qa_revision": "x13",
+    "sha256": "a32652e5368b9e2acb9ba2966684d4bb1c3586676a43f1e7d1b34140225589d8",
+    "published_to_store": false,
+    "renderer": "llvmpipe / Vulkan",
+    "removable_media_connected": false
+  },
+  "packages": [
+    {
+      "package": "Demo Model 1",
+      "advertised_url": "https://static.openrails.org/files/DemoModel1.zip",
+      "download_url": "https://static.openrails.org/files/DemoModel1.zip",
+      "revision": null,
+      "download_sha256": "5e4a64e1cd44e23ee7833230348b6b76c43fc555060b152f6c6547e832a5189b",
+      "download_bytes": 272422379,
+      "install_bytes": 329994809,
+      "source_date": "2025-07-25T18:22:57+00:00",
+      "source_date_kind": "last-modified",
+      "route_count": 1,
+      "stock_file_count": 0,
+      "audited_formations": 0
+    },
+    {
+      "package": "Chiltern v4",
+      "advertised_url": "https://github.com/DocMartin7644/Chiltern-Route-v4.git",
+      "download_url": "https://codeload.github.com/DocMartin7644/Chiltern-Route-v4/zip/8236df20ed9f596b8cf15720c43bfbdd0c43125d",
+      "revision": {
+        "repository": "DocMartin7644/Chiltern-Route-v4",
+        "commit": "8236df20ed9f596b8cf15720c43bfbdd0c43125d",
+        "published_at": "2026-09-09T15:48:33Z",
+        "commit_date": "2026-09-09T13:14:08Z"
+      },
+      "download_sha256": "2fc79dd1c7f0eebc28ab008d6422c127dada14f39902c5de179b459977ec78a7",
+      "download_bytes": 7846564602,
+      "install_bytes": 9134514214,
+      "source_date": "2026-09-09T15:48:33Z",
+      "source_date_kind": "repository",
+      "route_count": 1,
+      "stock_file_count": 0,
+      "audited_formations": 188
+    },
+    {
+      "package": "Jeanprisca/MAJ",
+      "advertised_url": "https://github.com/Jeanprisca/MAJ.git",
+      "original_url": "https://github.com/Jeanprisca/MAJ",
+      "download_url": "https://codeload.github.com/Jeanprisca/MAJ/zip/6d02a4009f8397bbe997e541686e807bbdeeeff4",
+      "final_download_url": "https://codeload.github.com/Jeanprisca/MAJ/zip/6d02a4009f8397bbe997e541686e807bbdeeeff4",
+      "revision": {
+        "repository": "Jeanprisca/MAJ",
+        "commit": "6d02a4009f8397bbe997e541686e807bbdeeeff4",
+        "published_at": "2023-04-28T23:53:16Z",
+        "commit_date": "2023-04-28T23:53:10Z"
+      },
+      "download_sha256": "5f55a26978bb63552581ffdcafa14c767db784957fa4ba191fe161726b8b2364",
+      "download_bytes": 52913183,
+      "install_bytes": 74377484,
+      "source_date": "2023-04-28T23:53:16Z",
+      "source_date_kind": "repository",
+      "origin_verification": "player_confirmed",
+      "route_count": 0,
+      "stock_file_count": 179,
+      "audited_formations": 198
+    }
+  ],
+  "checks": {
+    "snap_folder_paste_browse_select": true,
+    "snap_folder_readonly_preserves_previous_choice": true,
+    "snap_restart_preserves_folder": true,
+    "snap_updates_preserve_manifest_and_library": true,
+    "snap_zip_url_reuses_original_demo": true,
+    "snap_original_repository_url_paste_preview_confirm_install_audit": true,
+    "snap_train_only_original_consists_visible_and_selectable": true,
+    "snap_partial_train_update_not_marked_playable": true,
+    "snap_original_route_readonly_prepare": true,
+    "portable_moved_binary_check": true,
+    "portable_folder_gui_select_and_preserve_old": true,
+    "portable_original_repository_download_prepare_and_reuse": true,
+    "portable_restart_train_selector": true,
+    "invalid_local_urls_pages_and_unconfirmed_sources_rejected": true,
+    "low_disk_real_download_aborted_without_partial_registration": true,
+    "snap_completed_gameplay_cab_and_exterior": false
+  },
+  "blue_pullman": {
+    "prepared_service": "Chiltern extendido: Northolt Park → Gerrards Cross",
+    "player_vehicles": 8,
+    "traffic_services": 2,
+    "station_stops": 6,
+    "initial_required_missing": [
+      "PULLMAN_GR.s"
+    ],
+    "initial_shared_vehicle_shapes_resolved": 8,
+    "source_after_prepare": "original DocMartin Chiltern v4, immutable payload reused without another download",
+    "menu_start_enabled_after_prepare": true,
+    "oracle_coverage_not_relabelled_as_resource_coverage": true,
+    "gameplay_remaining": "Cab gameplay completed in QA revision x14 after the submission-budget fix. Fresh exterior Playing screenshot still pending; final release is separately rebuilt.",
+    "loading_attempt": {
+      "timeout_s": 550,
+      "completed": false,
+      "native_signal_programs": 66,
+      "cab_geometry": {
+        "camera_eye": [
+          -109.28736114501953,
+          2.3088326454162598,
+          39.95805358886719
+        ],
+        "camera_inside_geometry": true,
+        "expected_eye": [
+          -109.28736114501953,
+          2.3088326454162598,
+          39.95805740356445
+        ],
+        "eye_error_m": 3.814697265625e-06,
+        "mesh_parts": 69,
+        "visible_mesh_parts": 69
+      },
+      "shape_publication_calls": 908,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "pending_gpu_uploads": 0,
+      "gameplay_frames": 0,
+      "peak_rss_mib": 3994.41796875
+    },
+    "driver_gameplay_acceptance": {
+      "completed_gameplay": true,
+      "image_sha256": "754f2d7582923d42791094d10d5f56347541dff84e3a2fcd16a6516b068cab40",
+      "scene_sha256": "149930ba19d9ccc9c201e5edf106428ffabe24e174904333ea681db55129a4ce",
+      "snap_sha256": "28535ce52baa3471f66e4cb2f9abe5c92ac4393a00bea8cc587ed50d2032286b",
+      "native_signal_programs": 66,
+      "formation_vehicles": 8,
+      "cab": {
+        "camera_eye": [
+          -109.2950210571289,
+          2.308786630630493,
+          39.961647033691406
+        ],
+        "camera_inside_geometry": true,
+        "expected_eye": [
+          -109.2950210571289,
+          2.308786392211914,
+          39.96165466308594
+        ],
+        "eye_error_m": 7.63311891205376e-06,
+        "mesh_parts": 69,
+        "visible_mesh_parts": 69
+      },
+      "frames": {
+        "elapsed_s": 834.0139209469997,
+        "frame_p50_ms": 298,
+        "frame_p95_ms": 930,
+        "frame_p99_ms": 2850,
+        "frames": 1788,
+        "gameplay_frame_p50_ms": 833,
+        "gameplay_frame_p95_ms": 2047,
+        "gameplay_frame_p99_ms": 4096,
+        "gameplay_frames": 160,
+        "gameplay_hitches_over_100_ms": 160,
+        "gameplay_longest_frame_ms": 7528.69877,
+        "hitches_over_100_ms": 1782,
+        "loading_frames": 1628,
+        "longest_frame_ms": 20145.057087,
+        "peak_rss_mib": 3993.5234375,
+        "rss_mib": 3912.5546875,
+        "startup_longest_frame_ms": 20145.057087
+      },
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "Cpu",
+        "hardware": false,
+        "name": "llvmpipe (LLVM 20.1.2, 256 bits)"
+      },
+      "limitations": [
+        "software renderer, not a GPU performance measurement",
+        "harness raced destroyed window during normal screenshot exit; successful fresh image and Playing frames independently verified"
+      ]
+    },
+    "exterior_readback_attempt": {
+      "accepted": false,
+      "actual_gameplay_frames": 160,
+      "scene_ready_at_capture": true,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "Cpu",
+        "hardware": false,
+        "name": "llvmpipe (LLVM 20.1.2, 256 bits)"
+      },
+      "reason": "Viewer exited after fixed2.5seconds before slow CPU readback wrote PNG; harness rejected missing fresh image. Capture now waits for delivered image and successful save; final Snap must re-run."
+    }
+  },
+  "tests": {
+    "url_installer": 12,
+    "official_content_installer": 18,
+    "packaging": 17
+  },
+  "limitations": [
+    "Draft artifact from the recorded dirty source snapshot; final release must be rebuilt after review/commit.",
+    "Strict Snap exercised in an isolated LXD container on X11 with software rendering, not a host Wayland session.",
+    "Jeanprisca/MAJ is an original train update with dependencies on the base pack: 0/198 complete formations is the expected honest audit, not a claim of complete TGV compatibility.",
+    "The existing Chiltern original archive was reused through a read-only view; its 8.5 GiB payload was not downloaded again or copied into the application.",
+    "These checks cover installation, required resources and launch binding; they do not certify all physical systems or visual parity with Open Rails.",
+    "Issue #412 requires a completed in-game cab and exterior render after the loading-budget fix; the successful menu/audit and loaded cab geometry are insufficient to close that final criterion."
+  ],
+  "snap_gameplay_qa": {
+    "revision": "x14",
+    "version": "0.1.0-alpha.5",
+    "sha256": "28535ce52baa3471f66e4cb2f9abe5c92ac4393a00bea8cc587ed50d2032286b",
+    "confinement": "strict",
+    "published_to_store": false
+  }
+}

@@ -116,10 +116,11 @@ pub fn operational_legs(
             .sum::<f64>()
             + end_offset;
         if end_chainage < start_offset {
-            // A legacy PAT may finish immediately after a reversal with its
-            // endpoint already under the formation. Its front has passed that
-            // endpoint; preserve the physical train rather than moving it back.
-            if index > 0 && reversed && last + 1 == file.pdps.len() {
+            // A short following subpath can end at a marker already under the
+            // formation. That leg has no remaining forward travel: retain the
+            // occupied footprint and its wait, including intermediate legs.
+            // The runtime still verifies every car before changing subpaths.
+            if index > 0 && end_chainage + train_length >= start_offset {
                 end_chainage = start_offset;
             } else {
                 return Err(MstsError::msg(format!(
@@ -145,6 +146,7 @@ pub fn operational_legs(
         reversed ^= file.node_flags[last] & 1 != 0;
         first = last;
     }
+    preserve_waiting_formation_prefixes(graph, &mut legs, train_length);
     // OR Train.CheckEndOfRoutePosition requires the rear traveller to clear
     // the last diverging junction before switching subpaths. A marker just
     // beyond that junction is insufficient for a long vehicle or formation.
@@ -176,4 +178,142 @@ pub fn operational_legs(
         }
     }
     Ok(legs)
+}
+
+/// Waiting points split an authored path without exchanging its travelling
+/// ends. The next subpath must retain the vectors under the rear traveller,
+/// even when the wait marker lies less than one formation length into its
+/// first vector. Reuse only the preceding directed path; never invent a route
+/// through a nearby or parallel track.
+fn preserve_waiting_formation_prefixes(
+    graph: &TrackGraph,
+    legs: &mut [RouteLeg],
+    train_length: f64,
+) {
+    for index in 1..legs.len() {
+        let (previous, current) = legs.split_at_mut(index);
+        let previous = &previous[index - 1];
+        let current = &mut current[0];
+        // Runtime accepts stopping up to 10 m before the authored wait marker.
+        // Keep the rear traveller in the following path throughout that margin.
+        let required_prefix = train_length + 10.;
+        if previous.reversed != current.reversed || current.start_offset_m >= required_prefix {
+            continue;
+        }
+        let Some(first) = current.edges.first() else {
+            continue;
+        };
+        let Some(join) = previous.edges.iter().rposition(|id| id == first) else {
+            continue;
+        };
+        let mut begin = join;
+        let mut extra_length = 0.;
+        while begin > 0 && current.start_offset_m + extra_length < required_prefix {
+            begin -= 1;
+            extra_length += graph.edge(&previous.edges[begin]).unwrap().length_m;
+        }
+        if begin == join {
+            continue;
+        }
+        let mut edges = previous.edges[begin..join].to_vec();
+        edges.append(&mut current.edges);
+        current.start = graph.edge(&edges[0]).unwrap().from.0.clone();
+        current.edges = edges;
+        current.start_offset_m += extra_length;
+        current.end_chainage_m += extra_length;
+        current.switches = switches_for_edges(graph, &current.edges);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use openrailsrs_core::{EdgeId, NodeId};
+    use openrailsrs_track::{Edge, Node, NodeKind};
+
+    fn graph() -> TrackGraph {
+        let mut graph = TrackGraph::new();
+        for index in 0..5 {
+            graph
+                .insert_node(Node {
+                    id: NodeId(format!("n{index}")),
+                    kind: NodeKind::Plain,
+                    x_m: index as f64 * 100.,
+                    y_m: 0.,
+                })
+                .unwrap();
+        }
+        for index in 0..4 {
+            graph
+                .insert_edge(Edge {
+                    id: EdgeId(format!("e{index}")),
+                    from: NodeId(format!("n{index}")),
+                    to: NodeId(format!("n{}", index + 1)),
+                    length_m: 100.,
+                    speed_limit_mps: 10.,
+                    grade_percent: 0.,
+                })
+                .unwrap();
+        }
+        graph
+    }
+    fn leg(edges: &[&str], start_offset_m: f64, end_chainage_m: f64) -> RouteLeg {
+        RouteLeg {
+            start: "n2".into(),
+            destination: "n4".into(),
+            edges: edges.iter().map(|id| (*id).into()).collect(),
+            start_offset_m,
+            end_chainage_m,
+            reversed: false,
+            wait_s: 0.,
+            stops: vec![],
+            switches: vec![],
+            operations: vec![],
+            service_id: None,
+            not_before_s: None,
+        }
+    }
+    #[test]
+    fn waiting_point_keeps_the_whole_long_formation_on_its_original_vectors() {
+        let graph = graph();
+        let mut legs = [
+            leg(&["e0", "e1", "e2"], 180., 220.),
+            leg(&["e2", "e3"], 20., 160.),
+        ];
+        preserve_waiting_formation_prefixes(&graph, &mut legs, 180.);
+        assert_eq!(legs[1].edges, ["e0", "e1", "e2", "e3"]);
+        assert_eq!(legs[1].start, "n0");
+        assert_eq!(legs[1].start_offset_m, 220.);
+        assert_eq!(legs[1].end_chainage_m, 360.);
+        // Both travelling ends retain their absolute positions. Only the
+        // coordinate origin of the following subpath has changed.
+        assert_eq!(legs[0].end_chainage_m, legs[1].start_offset_m);
+        assert_eq!(legs[0].end_chainage_m - 180., legs[1].start_offset_m - 180.);
+    }
+    #[test]
+    fn wait_prefix_contains_the_rear_when_stopped_before_the_marker() {
+        let graph = graph();
+        let mut legs = [
+            leg(&["e0", "e1", "e2"], 180., 280.),
+            leg(&["e2", "e3"], 80., 160.),
+        ];
+        preserve_waiting_formation_prefixes(&graph, &mut legs, 180.);
+        assert_eq!(legs[1].edges, ["e0", "e1", "e2", "e3"]);
+        assert_eq!(legs[1].start_offset_m, 280.);
+        assert!(legs[1].start_offset_m - 10. - 180. >= 0.);
+    }
+
+    #[test]
+    fn a_reversal_or_a_disconnected_wait_path_never_borrows_a_directed_prefix() {
+        let graph = graph();
+        let previous = leg(&["e0", "e1", "e2"], 180., 220.);
+        let mut reversed = leg(&["e2", "e3"], 20., 160.);
+        reversed.reversed = true;
+        let mut legs = [previous.clone(), reversed];
+        preserve_waiting_formation_prefixes(&graph, &mut legs, 180.);
+        assert_eq!(legs[1].edges, ["e2", "e3"]);
+        let mut legs = [previous, leg(&["e3"], 20., 80.)];
+        preserve_waiting_formation_prefixes(&graph, &mut legs, 180.);
+        assert_eq!(legs[1].edges, ["e3"]);
+    }
 }

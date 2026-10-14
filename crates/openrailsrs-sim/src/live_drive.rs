@@ -679,6 +679,25 @@ impl LiveDriveSession {
         let mut path_data = PathData::from_path(&path_edges, &graph);
         crate::freight::cap(&mut path_data, scenario.train.freight.as_ref());
         let mut state = TrainSimState::new(path_edges.clone());
+        for vehicle in &scenario.train.presentation {
+            if let Some(joint) = &vehicle.jacobs {
+                if vehicle.vehicle.abs_diff(joint.neighbor) != 1
+                    || joint.neighbor >= consist.vehicles.len()
+                    || vehicle.vehicle >= consist.vehicles.len()
+                {
+                    return Err(SimError::Msg(
+                        "Un bogie Jacobs debe unir cuerpos adyacentes existentes".into(),
+                    ));
+                }
+                let pair = [
+                    vehicle.vehicle.min(joint.neighbor),
+                    vehicle.vehicle.max(joint.neighbor),
+                ];
+                if !state.articulated_joints.contains(&pair) {
+                    state.articulated_joints.push(pair);
+                }
+            }
+        }
         state.weather_track = scenario.simulation.weather_track.clone();
         crate::vehicle_systems::configure(
             &mut state,
@@ -981,6 +1000,8 @@ impl LiveDriveSession {
             .is_some_and(|host| host.applies_brake())
         {
             Some("TCS · frenado automático")
+        } else if self.state.shunt_authority.is_some() {
+            Some("Límite de maniobra")
         } else {
             Some("Asistencia de tráfico")
         }
@@ -1081,6 +1102,14 @@ impl LiveDriveSession {
     /// Effective limit including caution signals on the current edge.
     pub fn effective_speed_limit_mps(&self) -> f64 {
         let base = self.temporary_speed_limit(self.speed_limit_mps());
+        let base = self.passing_hold_chainage().map_or(base, |target| {
+            base.min((0.9 * (target - self.head_chainage_m() - 1.).max(0.)).sqrt())
+        });
+        let base = self.state.shunt_authority.as_ref().map_or(base, |a| {
+            let remaining = a.start_m + a.distance_m - self.head_chainage_m();
+            base.min(a.speed_mps)
+                .min((0.44 * (remaining - 2.).max(0.)).sqrt())
+        });
         let Some(edge) = self.current_edge_id() else {
             return base;
         };
@@ -2020,6 +2049,14 @@ impl LiveDriveSession {
                 self.state.throttle = 0.0;
                 self.state.brake = 1.0;
             }
+            if self.state.shunt_authority.as_ref().is_some_and(|a| {
+                let remaining = a.start_m + a.distance_m - self.head_chainage_m();
+                self.velocity_mps() > a.speed_mps
+                    || remaining < self.velocity_mps().powi(2) / 0.44 + 2.
+            }) {
+                self.state.throttle = 0.;
+                self.state.brake = 1.;
+            }
             let red_distance = self.distance_to_red_signal_m();
             let previous_odometer = self.state.odometer_m;
             self.previous_render_chainage_m = self.head_chainage_m();
@@ -2191,6 +2228,9 @@ impl LiveDriveSession {
         self.tick_signals(step_dt);
         self.tick_announcements();
         self.tick_gameplay(step_dt);
+        self.finish_pending_door_closures();
+        self.update_shunt_authority();
+        self.tick_depot_work(step_dt);
         if self.script_tcs.is_some() {
             let context = self.script_context(step_dt);
             if let Some(host) = &mut self.script_tcs {

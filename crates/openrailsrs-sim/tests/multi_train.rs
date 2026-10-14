@@ -125,6 +125,12 @@ fn make_two_train_scenario(
             metadata: "run_primary.toml".into(),
         },
         extra_trains: vec![TrainEntryDef {
+            legs: vec![],
+            presentation: vec![],
+            cab_equipment: vec![],
+            parked: false,
+            pre_roll_s: 0.,
+            relative_stop_times: false,
             freight: None,
             systems: vec![],
             electric_pickups: vec![],

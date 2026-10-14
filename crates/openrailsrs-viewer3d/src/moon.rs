@@ -166,7 +166,14 @@ pub fn update(
     scene: Res<crate::track::TrackScene>,
     mode: Res<crate::launch::ViewerSceneryMode>,
     mut state: ResMut<MoonState>,
-    camera: Query<&Transform, (With<Camera3d>, Without<MoonDisk>, Without<MoonLight>)>,
+    camera: Query<
+        &Transform,
+        (
+            (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+            Without<MoonDisk>,
+            Without<MoonLight>,
+        ),
+    >,
     mut disk: Query<
         (
             &mut Transform,

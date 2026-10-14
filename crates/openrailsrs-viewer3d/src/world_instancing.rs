@@ -894,6 +894,10 @@ fn queue_world_instanced(
             // This draw owns its instance buffer and transforms; it does not
             // consume Bevy's preprocessed MeshUniforms or indirect parameters.
             // Keep it outside the ordinary mesh preprocessing queues.
+            // NonMesh bins persist between frames. A camera changing prepass
+            // or contact-shadow flags needs the previous pipeline association
+            // removed, otherwise its old bind-group layout is drawn once more.
+            opaque_phase.remove(*main_entity);
             opaque_phase.add(
                 Opaque3dBatchSetKey {
                     pipeline,
@@ -1245,7 +1249,10 @@ pub fn update_world_instanced_lod(
     cache: Option<Res<crate::world::WorldShapeLodCache>>,
     meshes: Res<Assets<Mesh>>,
     mut silhouettes: Option<ResMut<crate::scenery_lod::Silhouettes>>,
-    camera: Query<(&GlobalTransform, Option<&Projection>, Option<&Camera>), With<Camera3d>>,
+    camera: Query<
+        (&GlobalTransform, Option<&Projection>, Option<&Camera>),
+        (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+    >,
     settings: Option<Res<crate::player_settings::PlayerSettings>>,
     mode: Option<Res<crate::camera::CameraFollowMode>>,
     mut groups: Query<
@@ -1629,6 +1636,7 @@ mod tests {
                 signal_sub_obj: None,
                 signal_patch: None,
                 pickup: None,
+                crossing: None,
                 loop_animation: false,
             },
             ShapeInstancePlacement {
@@ -1641,6 +1649,7 @@ mod tests {
                 signal_sub_obj: None,
                 signal_patch: None,
                 pickup: None,
+                crossing: None,
                 loop_animation: false,
             },
             ShapeInstancePlacement {
@@ -1653,6 +1662,7 @@ mod tests {
                 signal_sub_obj: None,
                 signal_patch: None,
                 pickup: None,
+                crossing: None,
                 loop_animation: false,
             },
         ];
@@ -1738,6 +1748,7 @@ mod tests {
                 signal_sub_obj: None,
                 signal_patch: None,
                 pickup: None,
+                crossing: None,
                 loop_animation: false,
             })
             .collect();

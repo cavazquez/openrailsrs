@@ -1,7 +1,7 @@
 //! Native fuel pickup operation. Quantities are kg; the diesel tank remains litres.
 use crate::{LiveDriveSession, diesel_operation::DIESEL_KG_PER_L};
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct RefillStation {
     pub id: String,
     pub pickup_type: u32,
@@ -11,7 +11,7 @@ pub struct RefillStation {
     pub speed_range_mps: [f64; 2],
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct RefillOperation {
     pub station: RefillStation,
     pub vehicle: usize,
@@ -19,6 +19,30 @@ pub struct RefillOperation {
     pub opening: f64,
     pub delivered_kg: f64,
     pub returning: bool,
+}
+impl RefillOperation {
+    pub(crate) fn valid(&self, vehicles: usize) -> bool {
+        let s = &self.station;
+        self.vehicle < vehicles
+            && !s.id.is_empty()
+            && s.id.len() <= 256
+            && !s.id.chars().any(char::is_control)
+            && (5..=7).contains(&s.pickup_type)
+            && [
+                s.capacity_kg,
+                s.feed_kg_s,
+                s.opening_time_s,
+                self.delivered_kg,
+            ]
+            .iter()
+            .all(|v| v.is_finite() && *v >= 0. && *v <= 1e9)
+            && (0. ..=1.).contains(&self.opening)
+            && s.speed_range_mps
+                .iter()
+                .all(|v| v.is_finite() && (0. ..=100.).contains(v))
+            && s.speed_range_mps[0] <= s.speed_range_mps[1]
+            && self.delivered_kg <= s.capacity_kg
+    }
 }
 
 impl LiveDriveSession {
@@ -295,6 +319,8 @@ mod tests {
         let saved = s.snapshot();
         let mut fresh = session("scenario.toml", 7);
         fresh.restore_snapshot(saved).unwrap();
+        assert!(fresh.refilling.as_ref().unwrap().returning);
+        fresh.tick_refill(1.0);
         assert!(fresh.refilling.is_none());
         assert_eq!(fresh.state.refill_used_kg["1:2:3"], 4.);
         assert!(

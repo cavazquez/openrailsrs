@@ -7,14 +7,26 @@ fn parsed_tile(tile_x: i32, source: &str) -> WorldFile {
 }
 
 fn settle(app: &mut App) {
-    for _ in 0..80 {
+    let has_pending_publication = |app: &App| {
+        app.world().contains_resource::<WorldSpawnProgress>()
+            || app
+                .world()
+                .resource::<WorldSceneryStreamState>()
+                .pending_auxiliary_count()
+                != 0
+    };
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    while std::time::Instant::now() < deadline {
         app.update();
-        if !app.world().contains_resource::<WorldSpawnProgress>() {
+        if !has_pending_publication(app) {
             app.update(); // Flush indices and the final activation scan.
-            if !app.world().contains_resource::<WorldSpawnProgress>() {
+            if !has_pending_publication(app) {
                 return;
             }
         }
+        // Shape preparation is genuinely asynchronous. An empty ECS app can
+        // execute 80 frames before a disk worker gets its first CPU quantum.
+        std::thread::sleep(std::time::Duration::from_millis(1));
     }
     panic!("stream cycle did not finish");
 }
@@ -68,6 +80,7 @@ fn streaming_revisits_loaded_tiles_rebases_queued_meshes_and_releases_gpu_tiles(
         .init_resource::<Assets<StandardMaterial>>()
         .init_resource::<Assets<openrailsrs_bevy_scenery::OrForestMaterial>>()
         .init_resource::<WorldShapeLodCache>()
+        .init_resource::<crate::scenery_lod::Silhouettes>()
         .init_resource::<WorldSceneryStreamState>()
         .init_resource::<crate::world_tile_index::WorldTileEntityIndex>()
         .init_resource::<crate::world_tile_index::WorldShapeLiveRefs>()
@@ -112,6 +125,12 @@ fn streaming_revisits_loaded_tiles_rebases_queued_meshes_and_releases_gpu_tiles(
         .id();
     settle(&mut app);
     assert_eq!(entities_on_tile(&mut app, 0).len(), 1);
+    assert!(
+        app.world()
+            .resource::<crate::scenery_lod::Silhouettes>()
+            .contains(&route.path().join("SHAPES/minimal.s")),
+        "the real shape worker seeds the summary before scene publication"
+    );
     assert!(
         entities_on_tile(&mut app, 2).is_empty(),
         "prefetch must not build distant GPU objects"

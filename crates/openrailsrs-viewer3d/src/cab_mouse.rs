@@ -259,7 +259,10 @@ pub fn cab_mouse_controls(
     cvf: Res<CabCvfState>,
     mut live: ResMut<LiveDrive>,
     windows: Query<&Window, With<PrimaryWindow>>,
-    cameras: Query<(&Camera, &GlobalTransform), With<Camera3d>>,
+    cameras: Query<
+        (&Camera, &GlobalTransform),
+        (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+    >,
     parts: Query<
         (
             &Mesh3d,

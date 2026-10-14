@@ -2,11 +2,65 @@
 //! Occupancy includes entire formations; presentation never determines signals.
 use crate::{LiveDriveSession, SessionSnapshot};
 use openrailsrs_scenarios::{ScenarioFile, TrainEntryDef};
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
+impl LiveDriveSession {
+    fn shift_pre_run_clock(&mut self, offset: f64, start_clock: f64) {
+        self.state.time.0 = (self.state.time.0 - offset).max(0.);
+        self.service_clock_start_s = start_clock;
+        self.gameplay.shift_pre_run_clock(offset);
+        self.horn_pressed_until_s = (self.horn_pressed_until_s - offset).max(0.);
+        if let Some(t) = &mut self.state.power_supply.last_energy_time_s {
+            *t = (*t - offset).max(0.).min(self.state.time.0);
+        }
+        for car in &mut self.state.power_supply.cars {
+            for timer in [
+                &mut car.supply.main_started_s,
+                &mut car.supply.auxiliary_started_s,
+                &mut car.supply.relay_started_s,
+            ]
+            .into_iter()
+            .flatten()
+            {
+                *timer -= offset;
+            }
+        }
+        for record in &mut self.state.announcements.recent {
+            record.time_s = (record.time_s - offset).max(0.);
+        }
+        self.state
+            .driving_report
+            .samples
+            .retain(|sample| sample.time_s >= offset);
+        for sample in &mut self.state.driving_report.samples {
+            sample.time_s -= offset;
+        }
+        self.state.driving_report.last_sample_s = self
+            .state
+            .driving_report
+            .last_sample_s
+            .filter(|t| *t >= offset)
+            .map(|t| t - offset);
+        for timer in [
+            &mut self.dispatcher.wait_since_s,
+            &mut self.operational_wait_started,
+        ]
+        .into_iter()
+        .flatten()
+        {
+            *timer = (*timer - offset).max(0.);
+        }
+        self.dispatcher.last_route_search_s =
+            (self.dispatcher.last_route_search_s - offset).max(0.);
+        self.native_signals.needs_refresh = true;
+    }
+}
+
 pub struct TrafficService {
+    pub parked: bool,
     pub id: String,
     pub departure_s: f64,
     pub session: LiveDriveSession,
@@ -15,11 +69,17 @@ pub struct TrafficService {
 
 #[derive(Default)]
 pub struct LiveTraffic {
+    pub control_history: Vec<String>,
+    pub couplings: Vec<crate::independent_coupling::CouplingReceipt>,
     pub services: Vec<TrafficService>,
+    pub(crate) workers: usize,
+    pub(crate) pool: Option<rayon::ThreadPool>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TrafficSnapshot {
+    #[serde(default)]
+    pub parked: bool,
     pub id: String,
     pub session: SessionSnapshot,
     pub departed: bool,
@@ -27,6 +87,17 @@ pub struct TrafficSnapshot {
 
 impl LiveTraffic {
     pub fn from_scenario(directory: &Path, scenario: &ScenarioFile) -> Result<Self, String> {
+        let warm = scenario
+            .extra_trains
+            .iter()
+            .map(|e| e.pre_roll_s)
+            .fold(0., f64::max);
+        if !warm.is_finite() || !(0. ..=21600.).contains(&warm) {
+            return Err("Preparación de tráfico fuera del límite de seis horas simuladas".into());
+        }
+        if warm > 0. && scenario.simulation.rail_operations != Default::default() {
+            return Err("La preparación previa de AI original requiere una actividad sin planes de operación personalizados".into());
+        }
         let mut ids = HashSet::new();
         let mut services = vec![];
         for entry in &scenario.extra_trains {
@@ -37,28 +108,217 @@ impl LiveTraffic {
                 || entry.start_time_s < 0.0
                 || !entry.start_offset_m.is_finite()
                 || entry.start_offset_m < 0.0
+                || !entry.pre_roll_s.is_finite()
+                || entry.pre_roll_s < 0.
             {
                 return Err(format!("Servicio de tráfico inválido: {}", entry.id));
             }
-            let ai = service_scenario(scenario, entry);
+            let mut ai = service_scenario(scenario, entry);
+            let departure = warm + entry.start_time_s - entry.pre_roll_s;
+            for stop in &mut ai.route.stops {
+                let offset = if entry.relative_stop_times {
+                    departure
+                } else {
+                    warm
+                };
+                stop.arrive_s += offset;
+                stop.depart_s += offset;
+            }
+            let offset = if entry.relative_stop_times {
+                departure
+            } else {
+                warm
+            };
+            for leg in &mut ai.route.legs {
+                for stop in &mut leg.stops {
+                    stop.arrive_s += offset;
+                    stop.depart_s += offset;
+                }
+                if let Some(time) = &mut leg.not_before_s {
+                    *time += offset;
+                }
+            }
+            if warm > 0. {
+                ai.scenario.start_time_s =
+                    Some((scenario.scenario.start_time_s.unwrap_or(0.) - warm).rem_euclid(86400.));
+            }
             let mut session = LiveDriveSession::from_scenario(directory, &ai)
                 .map_err(|e| format!("{}: {e}", entry.id))?;
             session.service_id.clone_from(&entry.id);
             session.headlights = 2;
+            if entry.parked {
+                session.driver_direction = 0.5;
+                session.driver_throttle = 0.;
+                session.driver_brake = 1.;
+                for car in &mut session.formation.cars {
+                    car.handbrake = true;
+                    car.power_on = false;
+                    car.battery_on = false;
+                }
+                for diesel in &mut session.state.diesel.cars {
+                    diesel.command_running = false;
+                    diesel.phase = crate::diesel_operation::EnginePhase::Stopped;
+                    diesel.rpm = 0.;
+                    diesel.demanded_rpm = 0.;
+                }
+                session.rebuild_formation_physics();
+                session.sync_operating_brakes();
+            }
             services.push(TrafficService {
+                parked: entry.parked,
                 id: entry.id.clone(),
-                departure_s: entry.start_time_s,
+                departure_s: departure,
                 session,
-                departed: false,
+                departed: entry.parked,
             });
         }
-        Ok(Self { services })
+        let mut traffic = Self {
+            services,
+            ..Self::default()
+        };
+        let workers = std::env::var("OPENRAILSRS_TRAFFIC_THREADS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or_else(|| std::thread::available_parallelism().map_or(1, |n| n.get().min(4)));
+        if traffic.services.len() >= 4 {
+            traffic.set_worker_count(workers)?;
+        }
+        if warm > 0. {
+            // Pre-run the actual shared dispatcher, with the stationary player
+            // occupying its initial track. No visual offset guesses or teleport.
+            let mut anchor =
+                LiveDriveSession::from_scenario(directory, scenario).map_err(|e| e.to_string())?;
+            anchor.driver_brake = 1.;
+            anchor.driver_throttle = 0.;
+            anchor.driver_direction = 0.5;
+            for car in &mut anchor.formation.cars {
+                car.handbrake = true;
+            }
+            anchor.sync_operating_brakes();
+            let mut remaining = warm;
+            while remaining > 1e-8 {
+                openrailsrs_formats::cancellation::check().map_err(|e| e.to_string())?;
+                let step = remaining.min(0.5);
+                traffic.advance(&mut anchor, step, None, |_| {});
+                remaining -= step;
+            }
+            for (service, entry) in traffic.services.iter_mut().zip(&scenario.extra_trains) {
+                service.departure_s = entry.start_time_s;
+                service
+                    .session
+                    .shift_pre_run_clock(warm, scenario.scenario.start_time_s.unwrap_or(0.));
+                service
+                    .session
+                    .validate_snapshot(&service.session.snapshot())?;
+            }
+        }
+        Ok(traffic)
+    }
+
+    pub fn set_worker_count(&mut self, workers: usize) -> Result<(), String> {
+        if !(1..=8).contains(&workers) {
+            return Err("El tráfico admite de 1 a 8 hilos".into());
+        }
+        self.pool = if workers > 1 {
+            Some(
+                rayon::ThreadPoolBuilder::new()
+                    .num_threads(workers)
+                    .thread_name(|i| format!("rail-traffic-{i}"))
+                    .build()
+                    .map_err(|e| e.to_string())?,
+            )
+        } else {
+            None
+        };
+        self.workers = workers;
+        Ok(())
+    }
+    pub fn worker_count(&self) -> usize {
+        self.workers.max(1)
+    }
+    pub fn take_control(
+        &mut self,
+        player: &mut LiveDriveSession,
+        index: usize,
+    ) -> Result<(), String> {
+        self.validate_control(player, index)?;
+        let id = self.services[index].session.service_id.clone();
+        self.restore_control(player, index)?;
+        self.control_history.push(id);
+        player.driver_throttle = 0.;
+        player.driver_direction = 0.5;
+        self.synchronize_occupancy(player);
+        Ok(())
+    }
+    pub fn validate_control(&self, player: &LiveDriveSession, index: usize) -> Result<(), String> {
+        if self.control_history.len() >= 128 || !self.couplings.is_empty() {
+            return Err("Completá la maniobra actual antes de otro cambio de conductor".into());
+        }
+        let service = self.services.get(index).ok_or("Servicio desconocido")?;
+        if !service.departed || service.session.arrived {
+            return Err("El servicio tiene que estar activo".into());
+        }
+        if player.velocity_mps() > 0.1
+            || service.session.velocity_mps() > 0.1
+            || !(0.25..0.75).contains(&player.driver_direction)
+        {
+            return Err(
+                "Detené ambos servicios y poné tu inversor en neutro antes de cambiar de conductor"
+                    .into(),
+            );
+        }
+        if !service
+            .session
+            .formation
+            .cars
+            .iter()
+            .take(service.session.formation.coupled_count)
+            .any(|c| c.powered)
+        {
+            return Err("El servicio no tiene una locomotora operativa".into());
+        }
+        Ok(())
+    }
+    /// Reconstruct the same actor ownership before validating a saved world.
+    pub fn restore_control(
+        &mut self,
+        player: &mut LiveDriveSession,
+        index: usize,
+    ) -> Result<(), String> {
+        let service = self
+            .services
+            .get_mut(index)
+            .ok_or("Servicio guardado desconocido")?;
+        let old = player.service_id.clone();
+        std::mem::swap(player, &mut service.session);
+        service.id = old;
+        service.departed = true;
+        service.parked = false;
+        Ok(())
+    }
+
+    fn advance_services(&mut self, dt: f64) {
+        let step = |service: &mut TrafficService| {
+            if service.departed && !service.parked && !service.session.arrived {
+                service.session.speed_mul = 1.;
+                service.session.step_autodrive(dt, 0.75, |_| {});
+            }
+        };
+        // Grants and occupancy are already frozen by the serial coordinator.
+        // Only disjoint train states run concurrently, and publication retains
+        // their original order; no worker mutates another service or dispatcher.
+        if let Some(pool) = &self.pool {
+            pool.install(|| self.services.par_iter_mut().for_each(step));
+        } else {
+            self.services.iter_mut().for_each(step);
+        }
     }
 
     pub fn snapshot(&self) -> Vec<TrafficSnapshot> {
         self.services
             .iter()
             .map(|s| TrafficSnapshot {
+                parked: s.parked,
                 id: s.id.clone(),
                 session: s.session.snapshot(),
                 departed: s.departed,
@@ -71,6 +331,7 @@ impl LiveTraffic {
             .iter_mut()
             .map(|s| {
                 Ok(TrafficSnapshot {
+                    parked: s.parked,
                     id: s.id.clone(),
                     session: s.session.snapshot_with_scripts()?,
                     departed: s.departed,
@@ -125,6 +386,7 @@ impl LiveTraffic {
                 .session
                 .restore_prepared_snapshot(saved.session, host)?;
             service.departed = saved.departed;
+            service.parked = saved.parked;
         }
         Ok(())
     }
@@ -221,14 +483,16 @@ impl LiveTraffic {
             .iter()
             .any(|w| w.closed);
         if self.services.is_empty() && !timed_closures {
+            let before = player.time_s();
             if let Some(notch) = automatic {
                 player.step_autodrive(real_dt, notch, transition);
             } else {
                 player.step_realtime(real_dt, transition);
             }
+            self.update_crossings(player, (player.time_s() - before).max(0.));
             return;
         }
-        if player.arrived || !real_dt.is_finite() || real_dt <= 0.0 {
+        if !real_dt.is_finite() || real_dt <= 0.0 {
             return;
         }
         let speed = player.speed_mul;
@@ -236,7 +500,7 @@ impl LiveTraffic {
         let mut budget = player.sim_time_remainder + real_dt * speed;
         player.speed_mul = 1.0;
         player.sim_time_remainder = 0.0;
-        while budget + 1e-12 >= dt && !player.arrived {
+        while budget + 1e-12 >= dt {
             let clock = player.time_s();
             let mut occupied = player.own_occupied_edges();
             for service in &self.services {
@@ -245,6 +509,9 @@ impl LiveTraffic {
                 }
             }
             for service in &mut self.services {
+                if service.parked {
+                    service.session.state.time.0 = clock;
+                }
                 // A scheduled train appears when it departs, avoiding two
                 // formations superimposed at a shared spawn point before then.
                 if !service.departed {
@@ -263,28 +530,28 @@ impl LiveTraffic {
                 }
             }
             self.synchronize_occupancy(player);
+            self.update_crossings(player, dt);
             crate::rail_operations::coordinate(player, self);
-            if let Some(notch) = automatic {
+            if player.arrived {
+                // Finishing the player's service does not freeze other trains.
+                player.state.time.0 += dt;
+            } else if let Some(notch) = automatic {
                 player.step_autodrive(dt, notch, &mut transition);
             } else {
                 player.step_realtime(dt, &mut transition);
             }
-            for service in &mut self.services {
-                if service.departed && !service.session.arrived {
-                    service.session.speed_mul = 1.0;
-                    service.session.step_autodrive(dt, 0.75, |_| {});
-                }
-            }
+            self.advance_services(dt);
             budget -= dt;
         }
         player.speed_mul = speed;
-        player.sim_time_remainder = if player.arrived { 0.0 } else { budget };
+        player.sim_time_remainder = budget;
         self.synchronize_occupancy(player);
     }
 }
 
 fn service_scenario(player: &ScenarioFile, entry: &TrainEntryDef) -> ScenarioFile {
     let mut ai = player.clone();
+    ai.gameplay.shunting.clear();
     ai.scenario.name.clone_from(&entry.id);
     ai.extra_trains.clear();
     ai.simulation.rail_operations.connections.clear();
@@ -294,6 +561,7 @@ fn service_scenario(player: &ScenarioFile, entry: &TrainEntryDef) -> ScenarioFil
         .events
         .retain(|e| e.service.as_deref() == Some(entry.id.as_str()));
     ai.route.start.clone_from(&entry.start);
+    ai.route.legs.clone_from(&entry.legs);
     ai.route.destination.clone_from(&entry.destination);
     ai.route.start_offset_m = Some(entry.start_offset_m);
     ai.route.waypoints.clone_from(&entry.waypoints);
@@ -303,8 +571,9 @@ fn service_scenario(player: &ScenarioFile, entry: &TrainEntryDef) -> ScenarioFil
     ai.train.systems.clone_from(&entry.systems);
     ai.train.freight.clone_from(&entry.freight);
     ai.train.platform_sides.clear();
-    ai.train.cab_equipment.clear();
-    ai.train.presentation.clear();
+    ai.train.cab_equipment.clone_from(&entry.cab_equipment);
+    ai.train.presentation.clone_from(&entry.presentation);
+    ai.train.vehicle_profiles.clear();
     ai.train.power_load = Default::default();
     ai.train
         .electric_pickups

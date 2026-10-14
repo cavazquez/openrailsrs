@@ -98,6 +98,7 @@ fn spawn_textured_patches(
                 overlay_texture: overlay,
                 surface_weather: Vec2::ZERO,
                 enhancement: Vec4::ZERO,
+                snow_tracks: default(),
             }),
         );
     }
@@ -594,7 +595,9 @@ pub fn terrain_tile_stream_system(
     opts: Res<crate::launch::ViewerLaunchOpts>,
     mode: Res<crate::launch::ViewerSceneryMode>,
     progress: Option<Res<TerrainSpawnProgress>>,
+    forecast: Option<Res<crate::streaming_forecast::StreamingForecast>>,
 ) {
+    let _profile = crate::performance::profile_system("terrain_spawn.terrain_tile_stream_system");
     if !opts.live || !mode.loads_msts_scenery() || mode.is_tile_lab() {
         return;
     }
@@ -609,7 +612,9 @@ pub fn terrain_tile_stream_system(
     let center = window.center_world;
     let tile_x = msts_tile_x_index_for_coord(center.x);
     let tile_z = msts_tile_z_index_for_coord(center.z);
-    if stream.last_center_tile == Some((tile_x, tile_z)) {
+    if stream.last_center_tile == Some((tile_x, tile_z))
+        && forecast.as_ref().is_none_or(|f| !f.is_changed())
+    {
         return;
     }
     stream.last_center_tile = Some((tile_x, tile_z));
@@ -626,9 +631,13 @@ pub fn terrain_tile_stream_system(
     // Prefer catalog keys that fall inside the load window (same Chebyshev policy as WORLD).
     let candidates = stream.catalog.keys().copied().map(TileCoord::from);
     let stream_diff = policy.diff(cam_coord, &known, candidates);
+    let to_load = forecast.as_ref().map_or_else(
+        || stream_diff.to_load.clone(),
+        |f| f.requests(&policy, center, &known),
+    );
 
     let mut requested = 0usize;
-    for tile in &stream_diff.to_load {
+    for tile in &to_load {
         let key = (tile.x, tile.z);
         if stream.loaded.contains(&key) || stream.pending_load.contains(&key) {
             continue;
@@ -673,6 +682,8 @@ pub fn terrain_tile_bundle_materialize_system(
     mode: Res<crate::launch::ViewerSceneryMode>,
     progress: Option<Res<TerrainSpawnProgress>>,
 ) {
+    let _profile =
+        crate::performance::profile_system("terrain_spawn.terrain_tile_bundle_materialize_system");
     if !opts.live || !mode.loads_msts_scenery() || mode.is_tile_lab() || progress.is_some() {
         return;
     }
@@ -753,6 +764,8 @@ pub fn terrain_tile_spawn_stream_system(
     mut std_materials: ResMut<Assets<StandardMaterial>>,
     mut terrain_materials: ResMut<Assets<TerrainMaterial>>,
 ) {
+    let _profile =
+        crate::performance::profile_system("terrain_spawn.terrain_tile_spawn_stream_system");
     if !opts.live || mode.is_track_focused() || mode.is_tile_lab() || progress.is_some() {
         return;
     }
@@ -896,6 +909,8 @@ pub fn terrain_tile_unload_system(
     window: Res<crate::view_window::ViewWindow>,
     opts: Res<crate::launch::ViewerLaunchOpts>,
     mode: Res<crate::launch::ViewerSceneryMode>,
+    forecast: Option<Res<crate::streaming_forecast::StreamingForecast>>,
+    residency: Option<Res<crate::gpu_memory::ResidencyPolicy>>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut images: ResMut<Assets<Image>>,
@@ -907,6 +922,7 @@ pub fn terrain_tile_unload_system(
         &MeshMaterial3d<TerrainMaterial>,
     )>,
 ) {
+    let _profile = crate::performance::profile_system("terrain_spawn.terrain_tile_unload_system");
     if !opts.live || !mode.loads_msts_scenery() || mode.is_tile_lab() {
         return;
     }
@@ -914,7 +930,10 @@ pub fn terrain_tile_unload_system(
     use openrailsrs_bevy_scenery::stream::TileCoord;
     use openrailsrs_formats::{msts_tile_x_index_for_coord, msts_tile_z_index_for_coord};
     let center = window.center_world;
-    let policy = view_stream_window_policy(window.radius_m.max(stream.radius_m));
+    let mut policy = view_stream_window_policy(window.radius_m.max(stream.radius_m));
+    if residency.as_ref().is_some_and(|r| r.pressured) {
+        policy.unload_hysteresis = 0;
+    }
     let cam_coord = TileCoord::new(
         msts_tile_x_index_for_coord(center.x),
         msts_tile_z_index_for_coord(center.z),
@@ -929,6 +948,9 @@ pub fn terrain_tile_unload_system(
     let stream_diff = policy.diff_disk(cam_coord, &loaded_coords);
     let mut unloaded = std::collections::HashSet::new();
     for tile in &stream_diff.to_unload {
+        if forecast.as_ref().is_some_and(|f| f.keep(&policy, *tile)) {
+            continue;
+        }
         let key = (tile.x, tile.z);
         unloaded.insert(key);
         stream.loaded.remove(&key);
@@ -1084,7 +1106,7 @@ mod tests {
         // must use the publication origin, not the origin captured at launch.
         let mut camera = app
             .world_mut()
-            .query_filtered::<&mut Transform, With<Camera3d>>();
+            .query_filtered::<&mut Transform, (With<Camera3d>, Without<crate::mirrors::MirrorCamera>)>();
         camera.single_mut(app.world_mut()).unwrap().translation = Vec3::new(500.0, 5.0, 500.0);
         let deadline = Instant::now() + std::time::Duration::from_secs(3);
         while app.world().contains_resource::<TerrainSpawnProgress>() {

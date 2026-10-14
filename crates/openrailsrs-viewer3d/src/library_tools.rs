@@ -10,6 +10,8 @@ use std::{
     sync::{Mutex, mpsc},
 };
 pub enum Action {
+    Browse(PathBuf),
+    Storage(PathBuf),
     Scan,
     Export,
     ExportPortable(Vec<PathBuf>),
@@ -20,6 +22,8 @@ pub enum Action {
     Compare(PathBuf, PathBuf),
 }
 enum Reply {
+    Folder(PathBuf, Vec<PathBuf>),
+    Storage(PathBuf),
     Inventory(Vec<PathBuf>, Vec<TrashEntry>),
     Exported(PathBuf),
     Imported(Box<crate::player_backup::Imported>),
@@ -30,6 +34,7 @@ enum Reply {
 }
 #[derive(Resource, Default)]
 pub struct LibraryTools {
+    pub folder: Option<(PathBuf, Vec<PathBuf>)>,
     pub backups: Vec<PathBuf>,
     pub trash: Vec<TrashEntry>,
     pub plan: Option<RemovalPlan>,
@@ -59,7 +64,7 @@ impl LibraryTools {
         }
         self.readonly = matches!(
             action,
-            Action::Scan | Action::Inspect(_) | Action::Compare(_, _)
+            Action::Scan | Action::Inspect(_) | Action::Compare(_, _) | Action::Browse(_)
         );
         let generation = self
             .epoch
@@ -73,6 +78,23 @@ impl LibraryTools {
         std::thread::spawn(move || {
             let _scope = openrailsrs_formats::cancellation::Scope::new(latest, generation);
             let result = std::panic::catch_unwind(|| match action {
+                Action::Browse(path) => {
+                    let path = path
+                        .canonicalize()
+                        .map_err(|e| format!("No se puede abrir esta carpeta: {e}"))?;
+                    let mut directories = std::fs::read_dir(&path)
+                        .map_err(|e| e.to_string())?
+                        .flatten()
+                        .map(|e| e.path())
+                        .filter(|p| p.is_dir())
+                        .take(256)
+                        .collect::<Vec<_>>();
+                    directories.sort();
+                    Ok(Reply::Folder(path, directories))
+                }
+                Action::Storage(path) => {
+                    openrailsrs_content::select_content_dir(&data, &path).map(Reply::Storage)
+                }
                 Action::Scan => Ok(Reply::Inventory(
                     crate::player_backup::list(&data),
                     crate::content_management::trash(&data),
@@ -130,6 +152,17 @@ impl LibraryTools {
         match result {
             Err(error) => self.status = error,
             Ok(reply) => match reply {
+                Reply::Folder(path, directories) => {
+                    self.folder = Some((path, directories));
+                    self.status = "Elegí una carpeta para las próximas descargas".into();
+                }
+                Reply::Storage(path) => {
+                    self.status = format!(
+                        "Descargas nuevas en {}. Las copias anteriores siguen disponibles.",
+                        path.display()
+                    );
+                    content_changed = true;
+                }
                 Reply::Inventory(backups, trash) => {
                     self.backups = backups;
                     self.trash = trash;

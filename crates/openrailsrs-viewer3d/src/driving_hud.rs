@@ -80,11 +80,10 @@ enum HudField {
     Instruction,
 }
 
-fn spawn_driving_hud(mut commands: Commands, mut fonts: ResMut<Assets<Font>>) {
-    // Bundle Spanish glyphs instead of depending on the host's installed fonts.
-    let font = fonts.add(Font::from_bytes(
-        include_bytes!("../assets/fonts/DejaVuSansMono.ttf").to_vec(),
-    ));
+fn spawn_driving_hud(mut commands: Commands) {
+    // ViewerPlugin installs the bundled Spanish-capable font once at this UUID.
+    // New font IDs on every route retain separate glyph atlases indefinitely.
+    let font = Handle::<Font>::default();
     for (kind, right, width, fields) in [
         (
             HudPanel::Driving,
@@ -543,6 +542,34 @@ fn update_driving_hud(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn route_hud_recreation_reuses_one_bundled_font_asset() {
+        use bevy::ecs::system::RunSystemOnce;
+        let mut world = World::new();
+        world.init_resource::<Assets<Font>>();
+        world
+            .resource_mut::<Assets<Font>>()
+            .insert(
+                bevy::asset::AssetId::<Font>::default(),
+                Font::from_bytes(include_bytes!("../assets/fonts/DejaVuSansMono.ttf").to_vec()),
+            )
+            .unwrap();
+        for _ in 0..5 {
+            world.run_system_once(spawn_driving_hud).unwrap();
+            assert_eq!(world.resource::<Assets<Font>>().len(), 1);
+            for font in world.query::<&TextFont>().iter(&world) {
+                assert_eq!(font.font, bevy::text::FontSource::Handle(Handle::default()));
+            }
+            let roots: Vec<_> = world
+                .query_filtered::<Entity, With<crate::player_ui::ScreenHud>>()
+                .iter(&world)
+                .collect();
+            for root in roots {
+                world.despawn(root);
+            }
+        }
+    }
 
     #[test]
     fn bug_capture_keeps_panel_backgrounds_hidden_until_restoration() {

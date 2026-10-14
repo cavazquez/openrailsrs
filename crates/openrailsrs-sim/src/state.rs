@@ -20,6 +20,14 @@ pub struct TrainSimState {
     #[serde(default)]
     pub active_cab_vehicle: Option<usize>,
     #[serde(default)]
+    pub articulated_joints: Vec<[usize; 2]>,
+    #[serde(default)]
+    pub crossings: std::collections::BTreeMap<String, crate::level_crossing::CrossingState>,
+    #[serde(default)]
+    pub shunt_authority: Option<crate::shunt_authority::ShuntAuthority>,
+    #[serde(default)]
+    pub depot: crate::depot::DepotState,
+    #[serde(default)]
     pub vehicle_systems: Vec<crate::vehicle_systems::VehicleSystemState>,
     #[serde(default)]
     pub platform_sides: Vec<openrailsrs_scenarios::vehicle_systems::PlatformSideDef>,
@@ -109,6 +117,10 @@ impl TrainSimState {
             electric_brake_command: 0.,
             surface_conditions: None,
             active_cab_vehicle: None,
+            articulated_joints: vec![],
+            crossings: Default::default(),
+            shunt_authority: None,
+            depot: Default::default(),
             vehicle_systems: vec![],
             platform_sides: vec![],
             learning: None,

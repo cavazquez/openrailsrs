@@ -228,7 +228,10 @@ pub fn handle_cab_dmi_mouse(
     time: Res<Time>,
     mut ui: ResMut<EtcsUiState>,
     windows: Query<&Window, With<PrimaryWindow>>,
-    cameras: Query<(&Camera, &GlobalTransform), With<Camera3d>>,
+    cameras: Query<
+        (&Camera, &GlobalTransform),
+        (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+    >,
     screens: Query<(&CabNativeScreen, &GlobalTransform, &Mesh3d)>,
     meshes: Res<Assets<Mesh>>,
     live: Option<Res<LiveDrive>>,

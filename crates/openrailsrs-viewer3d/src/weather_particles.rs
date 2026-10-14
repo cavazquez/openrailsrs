@@ -12,13 +12,13 @@ use bevy::{
     mesh::{Indices, PrimitiveTopology, VertexAttributeValues},
     pbr::{ExtendedMaterial, MaterialExtension},
     prelude::*,
-    render::render_resource::{AsBindGroup, Extent3d, ShaderType, TextureDimension, TextureFormat},
+    render::render_resource::{AsBindGroup, ShaderType},
     shader::ShaderRef,
 };
 
 const GPU_CAPACITY: usize = 8192;
 const CPU_CAPACITY: usize = 2048;
-const GRID: usize = 64;
+const GRID: usize = crate::particle_textures::SHELTER_GRID;
 const HALF: f32 = 55.0;
 const HEIGHT: f32 = 40.0;
 
@@ -128,6 +128,7 @@ impl WeatherParticles {
             "gpu_backend":self.hanabi.entity.map(|_|"bevy_hanabi 0.19.0"),
             "gpu_capacity":self.hanabi.configuration.map_or(0,|(_,n)|n),
             "gpu_seed_initializations":self.hanabi.seed_initializations,
+            "shelter_image_ids":[format!("{:?}",self.shelter.id()),format!("{:?}",self.shelter_gpu.id())],
             "gpu_simulation_delta_s":self.gpu_delta_s,"snow_fraction":self.snow_fraction})
     }
     pub fn hud_text(&self) -> String {
@@ -246,33 +247,7 @@ fn spawn_layers(
     state: &mut WeatherParticles,
 ) {
     state.shelter_values = vec![-10000.0; GRID * GRID];
-    let data = state
-        .shelter_values
-        .iter()
-        .flat_map(|v| v.to_le_bytes())
-        .collect();
-    state.shelter = images.add(Image::new(
-        Extent3d {
-            width: GRID as u32,
-            height: GRID as u32,
-            depth_or_array_layers: 1,
-        },
-        TextureDimension::D2,
-        data,
-        TextureFormat::R32Float,
-        RenderAssetUsages::default(),
-    ));
-    state.shelter_gpu = images.add(Image::new_fill(
-        Extent3d {
-            width: GRID as u32,
-            height: GRID as u32,
-            depth_or_array_layers: 1,
-        },
-        TextureDimension::D2,
-        &[0, 0, 0, 255],
-        TextureFormat::Rgba8Unorm,
-        RenderAssetUsages::default(),
-    ));
+    (state.shelter, state.shelter_gpu) = crate::particle_textures::shelter(images);
     {
         let (gpu, capacity, first_seed) = (false, CPU_CAPACITY, 1);
         let mesh = meshes.add(particle_mesh(capacity, first_seed));
@@ -373,6 +348,7 @@ pub struct WeatherDraw<'w, 's> {
 }
 pub fn update(
     quality_limits: Option<Res<crate::adaptive_graphics::AdaptiveGraphics>>,
+    budget: Option<Res<crate::render_budget::RenderBudget>>,
     mut commands: Commands,
     time: Res<Time<Real>>,
     live: Option<Res<crate::live::LiveDrive>>,
@@ -385,7 +361,7 @@ pub fn update(
     origin: Res<crate::floating_origin::FloatingOrigin>,
     focus: Res<crate::world::RouteFocus>,
     terrain: Option<Res<crate::terrain::TerrainElevation>>,
-    cameras: Query<&GlobalTransform, With<Camera3d>>,
+    cameras: Query<&GlobalTransform, (With<Camera3d>, Without<crate::mirrors::MirrorCamera>)>,
     draw: WeatherDraw,
 ) {
     let WeatherDraw {
@@ -463,6 +439,9 @@ pub fn update(
         / [1, 2, 4][state.adaptive.level.min(2)]
         / quality_limits.as_ref().map_or(1, |q| q.factor()))
     .max(64);
+    let preferred = budget
+        .as_ref()
+        .map_or(preferred, |b| preferred.min(b.particles));
     let total = gpu_count + cpu_count;
     if total > preferred {
         gpu_count = gpu_count * preferred / total;

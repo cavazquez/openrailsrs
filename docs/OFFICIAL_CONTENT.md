@@ -43,7 +43,8 @@ y `previousSources`, para reconocer las instalaciones del enlace antiguo.
 Las descargas **no se versionan en Git ni fijan las futuras actualizaciones**.
 Cada paquete queda en `official-content/<id>-<hash>` dentro de la carpeta de
 datos del usuario. En cada actualización de GitHub se consulta la rama actual
-del autor, incluidas redirecciones de repositorio. El commit registrado identifica
+del autor. Sólo se aceptan cambios de nombre registrados por el catálogo;
+si el repositorio pasa a otro propietario, se pide revisar la nueva URL. El commit registrado identifica
 esa copia descargada; una actualización posterior se instala junto a ella.
 Chiltern conserva también el piloto local que ya tenías.
 
@@ -121,6 +122,78 @@ menú o con `openrailsrs-prepare-content`. Los ZIP gratuitos directos y reposito
 del catálogo tienen instalación automática. **Ver catálogo oficial** abre
 la página para los paquetes que usan una web, instalador o distribución comercial.
 
+## Instalar desde una URL
+
+En **Biblioteca → Descargas del autor → Instalar desde URL**, pegá la raíz del
+repositorio original (con o sin `.git`) o un ZIP directo reconocido por el catálogo.
+**Comprobar enlace** consulta los metadatos públicos de GitHub sin descargar el
+archivo. Muestra la cuenta de origen, revisión y fecha disponibles, tipo de
+proveedor, tamaño cuando el catálogo lo informa y carpeta de destino.
+
+Un repositorio fuera del catálogo requiere confirmar que es el origen publicado
+por su autor. Una cuenta GitHub no acredita por sí sola esa procedencia. Revisá
+el enlace en la página del autor antes de confirmar. Los ZIP de servidores ajenos
+al catálogo, páginas informativas, enlaces que requieren acceso y formatos que
+necesitan ejecutar un instalador se informan para instalación manual; no se ejecuta
+código descargado ni se buscan dependencias en espejos.
+
+La misma resolución está disponible en la CLI:
+
+```bash
+openrailsrs content --inspect-url --url https://github.com/DocMartin7644/Chiltern-Route-v4
+openrailsrs content --url https://github.com/DocMartin7644/Chiltern-Route-v4
+# Fuera del catálogo, sólo después de comprobar personalmente la procedencia:
+openrailsrs content --url https://github.com/AUTOR/PAQUETE --confirm-original
+```
+
+El instalador registra URL introducida, URL resuelta/final, revisión, SHA-256 y
+fechas del origen y de descarga por separado. Descarga, extracción y auditoría
+corren en segundo plano y permiten cancelar. Se controla el espacio libre al
+iniciar, durante la descarga y antes de extraer. Una caída de red, ZIP corrupto o
+cancelación no publica una instalación parcial ni reemplaza versiones anteriores.
+
+Los paquetes que sólo contienen trenes también se auditan: conservan las
+formaciones originales y agregan opciones individuales de cada ENG/WAG a la
+biblioteca. Pueden elegirse en cualquier mapa; los recursos obligatorios y la
+compatibilidad con su trocha o alimentación se comprueban por separado. Descargar
+archivos completos no acredita la física, scripts ni cobertura de oráculos.
+
+## Elegir otro disco para el contenido
+
+En **Biblioteca → Copias y respaldos → Carpeta para descargar contenido**, pegá
+una ruta absoluta o usá **Explorar carpeta** y **Usar esta carpeta**. La carpeta
+debe existir y permitir escritura. El visor crea `openrailsrs-content` dentro de
+ella y guarda la preferencia para próximos inicios. No mueve partidas, ajustes ni
+instalaciones existentes: las ubicaciones anteriores siguen apareciendo en la
+biblioteca. Retirar una edición de un disco externo usa una carpeta recuperable
+en ese mismo disco, sin copiar el paquete al disco del sistema.
+
+En Snap el destino habitual sigue siendo `$SNAP_USER_COMMON/openrailsrs/official-content`.
+Para un disco montado en `/media`, `/run/media` o `/mnt`, primero debe estar conectado
+el permiso `removable-media`; si no está habilitado, el visor informa que la carpeta
+no es accesible. Se rechazan destinos dentro de `/snap` y enlaces que sustituyan
+la carpeta gestionada. Cambiar de revisión del Snap conserva la preferencia y las
+ediciones instaladas en `common`.
+
+## Chiltern preparado y Blue Pullman
+
+Los ejemplos Chiltern comparten los modelos y texturas que vienen en
+`examples/chiltern/trains`; no hace falta descargar otra copia de esos modelos.
+La cabina original `PULLMAN_GR.s` y sus recursos adicionales pertenecen al paquete
+del autor. Si falta, el detalle ofrece **Actualizar desde el repositorio original**
+de DocMartin y muestra el destino escribible de la biblioteca. Nunca indica copiar
+dentro de `/snap`.
+
+Al instalar el paquete original, los ejemplos preparados conservan su servicio,
+paradas y tráfico y resuelven cabina/recursos desde esa edición. Los servicios del
+autor se ofrecen aparte. El contador de sistemas contrastados se refiere a los
+oráculos coincidentes para cada vehículo; no es un contador de archivos descargados.
+Los metadatos de trocha y alimentación ausentes se presentan como datos desconocidos.
+
+El [registro de pruebas de biblioteca, URL y Snap](fixtures/compatibility/content-runtime-20261013/README.md)
+incluye identidades de paquetes, actualización entre revisiones, reproducción
+manual y límites del ensayo en una distribución portátil y Snap estricto.
+
 ## Recursos faltantes y CAF 6000
 
 **Abrir carpeta del escenario** abre su ubicación real en el gestor de archivos;
@@ -149,7 +222,7 @@ las texturas y gráficos ausentes, sin detenerse en el primero de cada modelo.
 **Buscar en el repositorio original** y **Actualizar desde el repositorio
 original** aparecen solamente si el recurso pertenece a un paquete GitHub
 registrado en el catálogo integrado. Se usa la URL original del catálogo,
-incluso cuando GitHub redirige una ruta renombrada por su autor. Un manifiesto
+incluidos los cambios de nombre del mismo autor que están registrados en el catálogo. Un manifiesto
 no puede cambiar ese enlace mediante `revision.repository` o `download_url`.
 La búsqueda envía únicamente el nombre del archivo, sin rutas locales. La
 actualización conserva la copia anterior y la nueva se audita por separado.

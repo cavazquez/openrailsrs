@@ -235,10 +235,12 @@ pub struct PlayerSettings {
     pub view_distance_m: f32,
     pub projected_lod: bool,
     pub quality_limits: crate::adaptive_graphics::QualityLimits,
+    pub light_budget: usize,
     pub lod_pixels_cab: f32,
     pub lod_pixels_exterior: f32,
     pub cab_fov_deg: f32,
     pub shadows: bool,
+    pub improved_transparency: bool,
     pub automatic_cant: bool,
     pub fog: bool,
     pub fog_quality: FogQuality,
@@ -293,10 +295,12 @@ impl Default for PlayerSettings {
             view_distance_m: 2000.0,
             projected_lod: true,
             quality_limits: default(),
+            light_budget: 40,
             lod_pixels_cab: 96.,
             lod_pixels_exterior: 72.,
             cab_fov_deg: 60.0,
             shadows: true,
+            improved_transparency: true,
             automatic_cant: true,
             fog: true,
             fog_quality: FogQuality::Auto,
@@ -435,6 +439,9 @@ impl PlayerSettings {
         }
         if !self.quality_limits.valid() {
             return Err("Límites de calidad inválidos".into());
+        }
+        if !(4..=64).contains(&self.light_budget) {
+            return Err("El presupuesto de luces debe ser de 4 a 64".into());
         }
         if ![self.lod_pixels_cab, self.lod_pixels_exterior]
             .iter()

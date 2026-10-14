@@ -566,7 +566,10 @@ pub(crate) fn stop_billboard_screen_pos(
 
 pub(crate) fn update_stop_billboards(
     windows: Query<&Window>,
-    camera: Query<(&Camera, &GlobalTransform), With<Camera3d>>,
+    camera: Query<
+        (&Camera, &GlobalTransform),
+        (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+    >,
     mut labels: Query<(&StopBillboard, &mut Node, &mut Visibility), With<StopBillboard>>,
 ) {
     let Ok(window) = windows.single() else {

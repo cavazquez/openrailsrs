@@ -30,6 +30,14 @@ metadata = "run.json"
 
 [[train.presentation]]
 vehicle = 0
+[[train.presentation.mirrors]]
+position_m=[-1.65,2.8,-8.5]
+direction=[-0.12,-0.08,1.0]
+fov_degrees=55.0
+[[train.presentation.mirrors]]
+position_m=[1.65,2.8,-8.5]
+direction=[0.12,-0.08,1.0]
+fov_degrees=55.0
 [train.presentation.horn]
 position_m = [0.0, 3.2, -8.0]
 direction = [0.0, 0.0, -1.0]
@@ -41,6 +49,12 @@ damping_ratio = 0.8
 [[train.presentation]]
 vehicle = 1
 walk_boxes_m=[[[-0.4,1.9,-8.0],[0.4,2.1,8.0]]]
+[[train.presentation.boarding_doors]]
+position_m=[-1.52,0.55,-7.0]
+side="left"
+[[train.presentation.boarding_doors]]
+position_m=[1.52,0.55,-7.0]
+side="right"
 [train.presentation.suspension]
 empty_mass_kg = 25000.0
 stiffness_npm = 1200000.0

@@ -11,6 +11,12 @@ fn example() -> (std::path::PathBuf, ScenarioFile) {
 }
 fn service(s: &ScenarioFile) -> TrainEntryDef {
     TrainEntryDef {
+        legs: vec![],
+        presentation: vec![],
+        cab_equipment: vec![],
+        parked: false,
+        pre_roll_s: 0.,
+        relative_stop_times: false,
         freight: None,
         systems: vec![],
         id: "conector".into(),

@@ -118,4 +118,5 @@ pub use timetable::{
     timetable_commands, timetable_time_s,
 };
 
+pub mod read_trace;
 pub mod resource_links;

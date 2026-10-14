@@ -138,7 +138,7 @@ pub fn update(
     terrain: Option<Res<crate::terrain::TerrainElevation>>,
     audio: Res<NativeAudio>,
     mut state: ResMut<StormState>,
-    camera: Query<&Transform, With<Camera3d>>,
+    camera: Query<&Transform, (With<Camera3d>, Without<crate::mirrors::MirrorCamera>)>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {

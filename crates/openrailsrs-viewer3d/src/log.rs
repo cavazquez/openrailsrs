@@ -1,4 +1,5 @@
-use std::io::IsTerminal;
+use std::fmt::Arguments;
+use std::io::{IsTerminal, Write};
 use std::sync::OnceLock;
 use std::time::{Instant, SystemTime};
 
@@ -73,29 +74,65 @@ pub fn prefix() -> String {
     }
 }
 
+fn write_line(writer: &mut impl Write, args: Arguments<'_>) {
+    // A redirected log can fill its filesystem or lose its reader. Diagnostic
+    // output must not abort the simulation in either case.
+    let _ = writeln!(writer, "{args}");
+}
+
+pub fn message(args: Arguments<'_>) {
+    let mut stderr = std::io::stderr().lock();
+    if use_color() {
+        write_line(
+            &mut stderr,
+            format_args!("{} \x1b[1;32mopenrailsrs-viewer3d:\x1b[0m {args}", prefix()),
+        );
+    } else {
+        write_line(
+            &mut stderr,
+            format_args!("{} openrailsrs-viewer3d: {args}", prefix()),
+        );
+    }
+}
+
 /// Log a completed step with its own duration (since `since`).
 pub fn log_step(label: &str, since: Instant) {
     let step_ms = since.elapsed().as_secs_f64() * 1000.0;
     if use_color() {
-        eprintln!(
-            "{} \x1b[1;32mopenrailsrs-viewer3d:\x1b[0m {label} \x1b[33m({step_ms:.1}ms step)\x1b[0m",
-            prefix()
-        );
+        message(format_args!("{label} \x1b[33m({step_ms:.1}ms step)\x1b[0m"));
     } else {
-        eprintln!(
-            "{} openrailsrs-viewer3d: {label} ({step_ms:.1}ms step)",
-            prefix()
-        );
+        message(format_args!("{label} ({step_ms:.1}ms step)"));
     }
 }
 
 #[macro_export]
 macro_rules! viewer_log {
     ($($arg:tt)*) => {{
-        if std::io::IsTerminal::is_terminal(&std::io::stderr()) && std::env::var_os("NO_COLOR").is_none() {
-            eprintln!("{} \x1b[1;32mopenrailsrs-viewer3d:\x1b[0m {}", $crate::log::prefix(), format!($($arg)*));
-        } else {
-            eprintln!("{} openrailsrs-viewer3d: {}", $crate::log::prefix(), format!($($arg)*));
-        }
+        $crate::log::message(format_args!($($arg)*));
     }};
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct BrokenWriter(i32);
+    impl Write for BrokenWriter {
+        fn write(&mut self, _: &[u8]) -> std::io::Result<usize> {
+            Err(std::io::Error::from_raw_os_error(self.0))
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Err(std::io::Error::from_raw_os_error(self.0))
+        }
+    }
+
+    #[test]
+    fn full_log_and_closed_reader_do_not_abort_simulation() {
+        for error in [122, 32] {
+            write_line(&mut BrokenWriter(error), format_args!("driving {} m", 2500));
+        }
+        let mut bytes = Vec::new();
+        write_line(&mut bytes, format_args!("driving {} m", 2500));
+        assert_eq!(bytes, b"driving 2500 m\n");
+    }
 }

@@ -16,7 +16,7 @@ mod tests {
     fn setup_camera_and_prop(world: &mut World, cam_pos: Vec3, prop_pos: Vec3) -> Entity {
         world.run_system_once(spawn_camera).unwrap();
         let cam_ent = world
-            .query_filtered::<Entity, With<Camera3d>>()
+            .query_filtered::<Entity, (With<Camera3d>, Without<crate::mirrors::MirrorCamera>)>()
             .single(world)
             .expect("camera entity");
         world
@@ -38,7 +38,7 @@ mod tests {
             );
             world.run_system_once(apply_floating_origin).unwrap();
             let cam = world
-                .query_filtered::<&Transform, With<Camera3d>>()
+                .query_filtered::<&Transform, (With<Camera3d>, Without<crate::mirrors::MirrorCamera>)>()
                 .single(world)
                 .expect("camera");
             assert!(cam.translation.length() < FLOATING_ORIGIN_THRESHOLD_M);
@@ -55,7 +55,7 @@ mod tests {
             let prop_ent = setup_camera_and_prop(world, cam_pos, prop_pos);
             world.run_system_once(apply_floating_origin).unwrap();
             let cam = world
-                .query_filtered::<&Transform, With<Camera3d>>()
+                .query_filtered::<&Transform, (With<Camera3d>, Without<crate::mirrors::MirrorCamera>)>()
                 .single(world)
                 .expect("camera");
             let prop = world.get::<Transform>(prop_ent).expect("prop");

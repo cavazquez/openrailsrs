@@ -255,6 +255,9 @@ pub enum WorldItem {
         file_name: Option<String>,
         qdir: Option<[f64; 4]>,
         matrix3x3: Option<[f64; 9]>,
+        tr_item_refs: Vec<WorldTrItemRef>,
+        crossing_parameters: Option<[f64; 2]>,
+        crossing_timing: Option<[f64; 3]>,
         /// From preceding `Tr_Watermark`.
         static_detail_level: u32,
     },
@@ -292,6 +295,7 @@ impl WorldItem {
             WorldItem::Hazard { .. } => "Hazard",
             WorldItem::Platform { .. } => "Platform",
             WorldItem::Siding { .. } => "Siding",
+            WorldItem::Other { tag, .. } if tag.eq_ignore_ascii_case("LevelCr") => "LevelCr",
             WorldItem::Other { .. } => "Other",
         }
     }
@@ -405,6 +409,11 @@ impl WorldItem {
             WorldItem::Speedpost { tr_item_refs, .. }
             | WorldItem::Platform { tr_item_refs, .. }
             | WorldItem::Siding { tr_item_refs, .. } => tr_item_refs
+                .iter()
+                .filter(|r| r.db == 0)
+                .map(|r| r.item_id)
+                .collect(),
+            WorldItem::Other { tr_item_refs, .. } => tr_item_refs
                 .iter()
                 .filter(|r| r.db == 0)
                 .map(|r| r.item_id)
@@ -544,10 +553,12 @@ impl WorldFile {
 
     pub fn from_path(path: impl AsRef<Path>) -> Result<Self, FormatError> {
         let path = path.as_ref();
+        crate::read_trace::record(path);
         let bytes = std::fs::read(path).map_err(|e| FormatError::UnexpectedToken {
             offset: 0,
             message: format!("failed to read {}: {e}", path.display()),
         })?;
+        crate::read_trace::record_bytes(path, &bytes);
         Self::from_bytes(&bytes, Some(path))
     }
 
@@ -1350,9 +1361,33 @@ fn parse_world_item(items: &[Ast]) -> ParseWorldItem {
             file_name,
             qdir,
             matrix3x3,
+            tr_item_refs: find_tr_item_refs(fields),
+            crossing_parameters: find_numeric_array::<2>(fields, "LevelCrParameters"),
+            crossing_timing: find_numeric_array::<3>(fields, "LevelCrTiming"),
             static_detail_level: 0,
         },
     }))
+}
+fn find_numeric_array<const N: usize>(fields: &[Ast], name: &str) -> Option<[f64; N]> {
+    for field in fields {
+        if let Ast::List(items) = field
+            && matches!(items.first(),Some(Ast::Atom(Atom::Symbol(tag))) if tag.eq_ignore_ascii_case(name))
+        {
+            let values = items
+                .iter()
+                .skip(1)
+                .filter_map(|v| match v {
+                    Ast::Atom(Atom::Number(n)) => Some(*n),
+                    Ast::Atom(Atom::Integer(n)) => Some(*n as f64),
+                    _ => None,
+                })
+                .collect::<Vec<_>>();
+            if values.len() == N && values.iter().all(|v| v.is_finite()) {
+                return values.try_into().ok();
+            }
+        }
+    }
+    None
 }
 
 /// Last matching `UiD` wins (Open Rails sequential assign).

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Install curated Open Rails packages alongside existing content, never over it.
 
-Only entries in the bundled official catalogue are accepted. Preserve authors'
-licences. Downloads are not executed; audit/import is a separate player choice.
+Catalogued origins and player-confirmed GitHub repositories are supported.
+Preserve authors' licences. Downloads are never executed; audit/import follows installation.
 """
 import argparse
 from datetime import datetime, timezone
@@ -41,6 +41,73 @@ def catalog():
     return data
 
 
+def source_from_url(url, confirmed=False):
+    """Resolve only supported author origins. Never fetch an HTML landing page."""
+    if not isinstance(url, str) or len(url) > 2048 or any(c.isspace() for c in url):
+        raise ValueError('URL inválida: pegá un enlace HTTPS completo sin espacios')
+    u = urlparse(url)
+    validate_download_url(url)
+    if u.query or u.fragment:
+        raise ValueError('Pegá el enlace del repositorio o ZIP sin parámetros ni fragmentos')
+    ref = None
+    if u.hostname == 'github.com':
+        match = re.fullmatch(r'/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+?)(?:\.git)?/?', u.path)
+        archive = re.fullmatch(r'/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)/archive/(?:refs/heads/|refs/tags/)?([A-Za-z0-9_.\-/]+)\.zip', u.path)
+        if not match and not archive:
+            raise ValueError('Pegá la raíz del repositorio del autor o su ZIP de GitHub')
+        match = match or archive
+        owner, name = match.group(1), match.group(2)
+        if owner in ('.', '..') or name in ('.', '..'):
+            raise ValueError('Identidad de repositorio inválida')
+        if archive:
+            ref = archive.group(3)
+        normalized = f'https://github.com/{owner}/{name}.git'
+    elif u.hostname in ('static.openrails.org', 'ts-files.com') and u.path.lower().endswith('.zip'):
+        normalized = url
+    else:
+        raise ValueError('Este proveedor no admite instalación por URL; descargá desde la página original del autor')
+    entries = catalog()['routes']
+    for entry in entries:
+        if any(normalized.lower() == source['url'].lower()
+               for source in [entry, *entry.get('previousSources', [])]):
+            result = entry.copy()
+            result['requires_confirmation'] = False
+            result['input_url'] = url
+            if ref:
+                result['requested_ref'] = ref
+            return result
+    if u.hostname != 'github.com':
+        raise ValueError('El ZIP no está verificado en el catálogo. Usá su repositorio original de GitHub o la instalación manual')
+    result = dict(name=f'{owner}/{name}', author={'name': owner}, compensation='free',
+                  url=normalized, downloadSize=0, installSize=0,
+                  source_url=normalized, input_url=url, user_source=True,
+                  requires_confirmation=not confirmed,
+                  original_confirmed=bool(confirmed))
+    # User URLs have their own namespace. Slugging owner/repository would merge
+    # distinct origins (a-b/c and a/b-c) and even collide with catalogue names.
+    result['id'] = 'url-github-' + hashlib.sha256(normalized.lower().encode()).hexdigest()
+    if ref:
+        result['requested_ref'] = ref
+    return result
+
+
+def registered_sources():
+    path = player_data_dir() / 'original-url-sources.json'
+    if not path.is_file() or path.is_symlink() or path.stat().st_size > 128 * 1024:
+        return []
+    values = json.loads(path.read_text())
+    if not isinstance(values, list) or len(values) > 32:
+        raise ValueError('Registro de orígenes inválido')
+    result = []
+    for item in values:
+        if not isinstance(item, dict) or item.get('original_confirmed') is not True:
+            continue
+        source = source_from_url(item.get('url'), confirmed=True)
+        if source.get('user_source'):
+            result.append(source)
+    return result
+
+
 def player_data_dir(env=None, platform=None):
     env = os.environ if env is None else env
     platform = os.name if platform is None else platform
@@ -73,6 +140,18 @@ def provider(entry):
 
 
 def emit(phase, **fields):
+    # The GUI consumes bounded JSON lines. Keep the full inventory on disk;
+    # a large valid package must not lose its completion event to that limit.
+    manifest = fields.get('manifest')
+    if phase == 'complete' and isinstance(manifest, dict) and len(json.dumps(manifest).encode()) > 64 * 1024:
+        summary = manifest.copy()
+        for key in ('stock_files', 'routes'):
+            if isinstance(summary.get(key), list):
+                summary[key + '_count'] = len(summary[key])
+                summary[key] = summary[key][:16]
+        summary['inventory_truncated_in_event'] = True
+        fields['manifest'] = summary
+        fields['manifest_path'] = str(Path(fields['path']) / 'openrailsrs-content.json')
     print(json.dumps(dict(phase=phase, **fields), ensure_ascii=False), flush=True)
 
 
@@ -88,11 +167,39 @@ def validate_download_url(url):
         raise ValueError('Descarga o redirección fuera de los proveedores HTTPS del catálogo')
 
 
+def repository_identity(url):
+    u = urlparse(url)
+    match = re.match(r'^/(?:repos/)?([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)(?:/|$)', u.path)
+    if u.hostname in ('github.com', 'api.github.com', 'codeload.github.com') and match:
+        return '/'.join(match.groups()).removesuffix('.git').casefold()
+    return None
+
+
+def validate_redirect(source, target):
+    validate_download_url(target)
+    origin = urlparse(source)
+    redirected = urlparse(target)
+    source_repo = repository_identity(source)
+    target_repo = repository_identity(target)
+    if source_repo:
+        if target_repo == source_repo:
+            return
+        # Explicit author renames recorded by the bundled catalogue are allowed;
+        # arbitrary transfers to another repository require reviewing a new URL.
+        for entry in catalog()['routes']:
+            known = {repository_identity(s['url']) for s in [entry, *entry.get('previousSources', [])]}
+            if source_repo in known and target_repo in known:
+                return
+        raise ValueError('La redirección cambia el repositorio del autor; revisá su URL original')
+    if origin.hostname != redirected.hostname:
+        raise ValueError('La redirección cambia el servidor original del ZIP')
+
+
 class CuratedRedirectHandler(HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         # urllib otherwise sends the redirected GET before validating response.url.
         try:
-            validate_download_url(newurl)
+            validate_redirect(req.full_url, newurl)
         except ValueError:
             fp.close()
             raise
@@ -114,20 +221,39 @@ def resolve_download(entry):
     repo = urlparse(entry['url']).path.removeprefix('/').removesuffix('.git')
     with https_open('https://api.github.com/repos/' + repo) as response:
         metadata = json.loads(response.read(1024 * 1024))
-    repo, branch = metadata['full_name'], metadata['default_branch']
+    if not isinstance(metadata, dict) or not isinstance(metadata.get('full_name'), str) or not isinstance(metadata.get('default_branch'), str):
+        raise ValueError('El enlace no devuelve un repositorio público válido; revisá el origen o si requiere iniciar sesión')
+    if metadata['full_name'].casefold() != repo.casefold() and not any(
+            repo.casefold() == repository_identity(old['url'])
+            and metadata['full_name'].casefold() == repository_identity(current['url'])
+            for current in catalog()['routes'] for old in current.get('previousSources', [])):
+        raise ValueError('El repositorio cambió de origen. Revisá la URL actual del autor antes de descargar.')
+    repo, branch = metadata['full_name'], entry.get('requested_ref', metadata['default_branch'])
     if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repo):
         raise ValueError('Identidad del repositorio inválida')
     from urllib.parse import quote
     with https_open('https://api.github.com/repos/' + repo + '/commits/' + quote(branch, safe='')) as response:
         commit_data = json.loads(response.read(1024 * 1024))
-        commit = commit_data['sha']
-    if not re.fullmatch(r'[0-9a-f]{40}', commit):
+        commit = commit_data.get('sha') if isinstance(commit_data, dict) else None
+    if not isinstance(commit, str) or not re.fullmatch(r'[0-9a-f]{40}', commit):
         raise ValueError('Commit inválido')
     # Resolve the author's current branch on each update. Record the identity
     # of this download so old/new editions coexist; do not pin future updates.
     return f'https://codeload.github.com/{repo}/zip/{commit}', dict(
         repository=repo, commit=commit, published_at=metadata.get('pushed_at'),
         commit_date=commit_data.get('commit', {}).get('committer', {}).get('date'))
+
+
+def inspect_source(entry):
+    """Validate an accessible repository without downloading its archive."""
+    preview = entry.copy()
+    if provider(entry) == 'github':
+        _, revision = resolve_download(entry)
+        preview['resolved_repository'] = revision['repository']
+        preview['resolved_commit'] = revision['commit']
+        preview['source_date'] = revision.get('published_at') or revision.get('commit_date')
+    preview['package_type'] = 'repository' if provider(entry) == 'github' else 'zip'
+    return preview
 
 
 def installed_match(entry, destination, revision=None, headers=None):
@@ -237,9 +363,14 @@ def discover_content(directory):
             names = {p.name.casefold() for p in parent.iterdir()}
             if 'world' in names:
                 routes.append(str(parent.relative_to(directory)))
-    if not routes:
-        raise ValueError('El paquete no contiene una ruta nativa con WORLD; puede requerir un instalador del autor')
+    if not routes and not discover_stock(directory):
+        raise ValueError('El paquete no contiene una ruta nativa con WORLD ni vehículos ENG/WAG; puede requerir un instalador del autor')
     return sorted(set(routes))
+
+
+def discover_stock(directory):
+    return sorted(str(p.relative_to(directory)) for p in directory.rglob('*')
+                  if p.is_file() and p.suffix.casefold() in ('.eng', '.wag'))
 
 
 def install(entry, destination, cancel_file=None, opener=https_open):
@@ -267,6 +398,8 @@ def install(entry, destination, cancel_file=None, opener=https_open):
                 existing = installed_match(entry, destination, revision, response.headers)
                 if existing:
                     return existing
+                final_url = response.geturl() if hasattr(response, 'geturl') else url
+                validate_redirect(url, final_url)
                 length = response.headers.get('Content-Length')
                 last_modified = response.headers.get('Last-Modified')
                 entity_tag = response.headers.get('ETag')
@@ -305,6 +438,9 @@ def install(entry, destination, cancel_file=None, opener=https_open):
             installed = extract(archive, unpacked, cancel_file=cancel_file)
             cancelled(cancel_file)
             routes = discover_content(unpacked)
+            stock_files = discover_stock(unpacked)
+            if len(stock_files) > 20000:
+                raise ValueError('El paquete contiene demasiados vehículos')
             # Preserve relative references and all author licence files.
             source_date = (revision.get('published_at') or revision.get('commit_date')) if revision else None
             if not source_date and last_modified:
@@ -314,12 +450,14 @@ def install(entry, destination, cancel_file=None, opener=https_open):
                     pass
             manifest = dict(version=2, package=entry['name'],
                 catalog_source=entry.get('source_url', catalog()['source_url']),
-                author=entry['author'], advertised_url=entry['url'], download_url=url,
+                author=entry['author'], advertised_url=entry['url'], original_url=entry.get('input_url', entry['url']), download_url=url,
+                final_download_url=final_url,
                 revision=revision, download_sha256=checksum, download_bytes=done,
                 source_date=source_date, source_date_kind='repository' if revision else 'last-modified',
                 source_last_modified=last_modified, source_entity_tag=entity_tag,
                 downloaded_at=datetime.now(timezone.utc).isoformat(),
-                install_bytes=installed, routes=routes,
+                install_bytes=installed, routes=routes, stock_files=stock_files,
+                origin_verification='player_confirmed' if entry.get('user_source') else 'catalogue',
                 audit='pending; resource completeness does not guarantee systems parity')
             (unpacked / 'openrailsrs-content.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n')
             cancelled(cancel_file)
@@ -334,22 +472,44 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--list', action='store_true')
     p.add_argument('--package', help='Stable id from --list, e.g. demo-model-1 or chiltern')
+    p.add_argument('--url', help='Repositorio original o ZIP directo de un proveedor admitido')
+    p.add_argument('--inspect-url', action='store_true', help='Resolver el origen sin descargar')
+    p.add_argument('--confirm-original', action='store_true', help='Confirmar que un origen fuera del catálogo pertenece al autor')
+    p.add_argument('--revision', help='Rama, etiqueta o commit del repositorio original')
     p.add_argument('--destination', type=Path,
-                   default=player_data_dir() / 'official-content')
+                   default=Path(os.environ.get('OPENRAILSRS_CONTENT_DIR', player_data_dir() / 'official-content')))
     p.add_argument('--cancel-file', type=Path)
     a = p.parse_args()
     data = catalog()
     if a.list:
         print(json.dumps(data, ensure_ascii=False, indent=2))
         return
-    entry = next((e for e in data['routes'] if e['id'] == a.package
+    if a.url:
+        try:
+            entry = source_from_url(a.url, a.confirm_original)
+            if a.inspect_url:
+                print(json.dumps(inspect_source(entry), ensure_ascii=False))
+                return
+            if entry.get('requires_confirmation'):
+                p.error('Este origen no está en el catálogo. Verificá que sea el repositorio original del autor y usá --confirm-original')
+        except (ValueError, OSError) as error:
+            p.error(f'No se pudo resolver el origen: {error}. Revisá el enlace público y la conexión.')
+    else:
+        entry = next((e for e in [*data['routes'], *registered_sources()] if e['id'] == a.package
                   or any(source['id'] == a.package for source in e.get('previousSources', []))), None)
     if entry is None:
         p.error('Seleccioná un id del catálogo mediante --package; --list muestra las opciones')
+    if a.revision:
+        if provider(entry) != 'github' or len(a.revision) > 256 or not re.fullmatch(r'[A-Za-z0-9_.\-/]+', a.revision):
+            p.error('Revisión inválida')
+        entry = entry | {'requested_ref': a.revision}
     try:
         install(entry, a.destination, a.cancel_file)
     except Exception as error:
-        emit('error', message=str(error))
+        message = str(error)
+        if isinstance(error, zipfile.BadZipFile):
+            message = 'El archivo no es un ZIP válido: puede ser una página web, requerir inicio de sesión o estar corrupto. Obtené el archivo directo del autor.'
+        emit('error', message=message)
         raise SystemExit(1)
 
 

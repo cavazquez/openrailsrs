@@ -266,7 +266,10 @@ pub(crate) fn toggle_teleport_dialog(
     keys: Res<ButtonInput<KeyCode>>,
     mode: Res<CameraMode>,
     mut dialog: ResMut<TeleportDialog>,
-    camera: Query<(&Transform, Option<&OrbitState>), With<Camera3d>>,
+    camera: Query<
+        (&Transform, Option<&OrbitState>),
+        (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+    >,
 ) {
     if !keys.just_pressed(KeyCode::KeyG) {
         return;
@@ -357,7 +360,10 @@ pub fn try_submit_teleport(
     mode: CameraMode,
     camera: &mut Query<
         (&mut Transform, &mut OrbitState),
-        (With<Camera3d>, Without<crate::train::TrainMarker>),
+        (
+            (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+            Without<crate::train::TrainMarker>,
+        ),
     >,
 ) -> bool {
     let Some(target) = parse_coords(&dialog.buffer) else {
@@ -383,7 +389,10 @@ pub(crate) fn teleport_input_system(
     mut dialog: ResMut<TeleportDialog>,
     mut camera: Query<
         (&mut Transform, &mut OrbitState),
-        (With<Camera3d>, Without<crate::train::TrainMarker>),
+        (
+            (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+            Without<crate::train::TrainMarker>,
+        ),
     >,
 ) {
     if !dialog.open {
@@ -432,7 +441,10 @@ pub(crate) fn teleport_button_system(
     mut dialog: ResMut<TeleportDialog>,
     mut camera: Query<
         (&mut Transform, &mut OrbitState),
-        (With<Camera3d>, Without<crate::train::TrainMarker>),
+        (
+            (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+            Without<crate::train::TrainMarker>,
+        ),
     >,
     go: Query<&Interaction, (Changed<Interaction>, With<TeleportGoButton>)>,
     cancel: Query<&Interaction, (Changed<Interaction>, With<TeleportCancelButton>)>,

@@ -266,6 +266,9 @@ pub struct VehicleSystemState {
     pub definition: VehicleSystemsDef,
     pub door_fraction: [f64; 2],
     pub door_target: [bool; 2],
+    /// Finish only the passenger currently crossing before accepting closure.
+    #[serde(default)]
+    pub door_close_at_progress: [Option<f64>; 2],
 }
 impl VehicleSystemState {
     pub fn new(definition: VehicleSystemsDef) -> Self {
@@ -286,6 +289,7 @@ impl VehicleSystemState {
             definition,
             door_fraction: [0.; 2],
             door_target: [false; 2],
+            door_close_at_progress: [None; 2],
         }
     }
     pub fn valid(&self) -> bool {
@@ -314,8 +318,22 @@ impl VehicleSystemState {
                 .door_fraction
                 .iter()
                 .all(|v| v.is_finite() && (0. ..=1.).contains(v))
+            && self
+                .door_close_at_progress
+                .iter()
+                .enumerate()
+                .all(|(side, progress)| {
+                    progress.is_none_or(|progress| {
+                        progress.is_finite()
+                            && (0. ..=1.).contains(&progress)
+                            && self.door_target[side]
+                            && self.door_fraction[side] >= 0.98
+                    })
+                })
             && (self.definition.doors.is_some()
-                || self.door_fraction == [0.; 2] && self.door_target == [false; 2])
+                || self.door_fraction == [0.; 2]
+                    && self.door_target == [false; 2]
+                    && self.door_close_at_progress == [None; 2])
             && self.definition.doors.as_ref().is_none_or(|p| {
                 (p.left || self.door_fraction[0] == 0. && !self.door_target[0])
                     && (p.right || self.door_fraction[1] == 0. && !self.door_target[1])
@@ -416,6 +434,20 @@ impl LiveDriveSession {
                 return Err("Elegí el lado del andén habilitado".into());
             }
         }
+        let groups = self
+            .gameplay
+            .stop_targets
+            .get(self.gameplay.next_stop_idx)
+            .map_or(0, |stop| {
+                stop.passengers_on
+                    .saturating_add(stop.passengers_off.min(self.state.passengers))
+                    .min(64) as usize
+            });
+        let close_boundary = if open {
+            None
+        } else {
+            self.gameplay.passenger_close_boundary(groups)
+        };
         let flipped = self
             .consist
             .vehicles
@@ -441,7 +473,19 @@ impl LiveDriveSession {
             };
             for side in 0..2 {
                 if local.includes(side) && [p.left, p.right][side] {
-                    car.door_target[side] = open;
+                    if open {
+                        car.door_close_at_progress[side] = None;
+                        car.door_target[side] = true;
+                    } else if car.door_target[side]
+                        && car.door_fraction[side] >= 0.98
+                        && let Some(boundary) = close_boundary
+                    {
+                        // Repeated presses cannot postpone the same closure.
+                        car.door_close_at_progress[side].get_or_insert(boundary);
+                    } else {
+                        car.door_close_at_progress[side] = None;
+                        car.door_target[side] = false;
+                    }
                     applied = true;
                 }
             }
@@ -449,12 +493,42 @@ impl LiveDriveSession {
         if !applied {
             return Err("El vehículo no declara puertas habilitadas de ese lado".into());
         }
+        let pending = self
+            .state
+            .vehicle_systems
+            .iter()
+            .any(|car| car.door_close_at_progress.iter().any(Option::is_some));
         self.exterior.set_door(if open {
             crate::DoorState::Opening
+        } else if pending {
+            crate::DoorState::Open
         } else {
             crate::DoorState::Closing
         });
         Ok(())
+    }
+
+    pub(crate) fn finish_pending_door_closures(&mut self) {
+        let progress = self.gameplay.boarding_progress();
+        let boarding = matches!(
+            self.gameplay.phase,
+            crate::ServicePhase::Boarding | crate::ServicePhase::ReadyToDepart
+        );
+        let mut closed = false;
+        for car in &mut self.state.vehicle_systems {
+            for side in 0..2 {
+                if car.door_close_at_progress[side]
+                    .is_some_and(|boundary| !boarding || progress + 1e-9 >= boundary)
+                {
+                    car.door_close_at_progress[side] = None;
+                    car.door_target[side] = false;
+                    closed = true;
+                }
+            }
+        }
+        if closed {
+            self.exterior.set_door(crate::DoorState::Closing);
+        }
     }
     pub fn equipped_door_state(&self) -> Option<crate::DoorState> {
         let cars = self

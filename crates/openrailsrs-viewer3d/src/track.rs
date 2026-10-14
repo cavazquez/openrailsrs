@@ -626,7 +626,10 @@ pub fn tile_lab_frame_camera_once(
     mode: Res<ViewerSceneryMode>,
     mut done: Local<bool>,
     mut limit: ResMut<crate::camera::OrbitDistanceLimit>,
-    mut query: Query<(&mut Transform, &mut crate::camera::OrbitState), With<Camera3d>>,
+    mut query: Query<
+        (&mut Transform, &mut crate::camera::OrbitState),
+        (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+    >,
 ) {
     if *done || !mode.is_tile_lab() {
         return;
@@ -662,7 +665,10 @@ pub fn frame_orbit_camera_on_track(
     offset: Res<crate::world::RouteWorldOffset>,
     terrain: Option<Res<TerrainElevation>>,
     mut limit: ResMut<crate::camera::OrbitDistanceLimit>,
-    mut query: Query<(&mut Transform, &mut crate::camera::OrbitState), With<Camera3d>>,
+    mut query: Query<
+        (&mut Transform, &mut crate::camera::OrbitState),
+        (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+    >,
 ) {
     let Ok((mut transform, mut orbit)) = query.single_mut() else {
         return;

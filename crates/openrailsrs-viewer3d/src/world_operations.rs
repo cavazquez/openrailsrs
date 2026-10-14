@@ -150,3 +150,41 @@ pub fn update_operational_animations(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn pickup_uses_original_animation_frames_and_zero_speed_stays_instantaneous() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/player_lab/vehicles");
+        let mut shape =
+            openrailsrs_formats::ShapeFile::from_path(root.join("connections.s")).unwrap();
+        let station = RefillStation {
+            id: "fixture".into(),
+            pickup_type: 7,
+            capacity_kg: 5.,
+            feed_kg_s: 1.,
+            opening_time_s: 4.,
+            speed_range_mps: [0., 0.],
+        };
+        let short = FuelPickupAnimation::new(&shape, &station);
+        assert_eq!(short.operating_frames, 1.);
+        // WORLD animation parameters pass through f32 before the simulator's
+        // f64 clock. Compare within that precision while retaining the 1/17
+        // frame-range invariant.
+        assert!((short.opening_time_s - 4. / 17.).abs() < f64::from(f32::EPSILON));
+        shape.matrices[0].name = "ANIMATED_PARTS".into();
+        let full = FuelPickupAnimation::new(&shape, &station);
+        assert_eq!(full.operating_frames, 17.);
+        assert_eq!(full.opening_time_s, 4.);
+        let instant = FuelPickupAnimation::new(
+            &shape,
+            &RefillStation {
+                opening_time_s: 0.,
+                ..station
+            },
+        );
+        assert_eq!(instant.opening_time_s, 0.);
+    }
+}

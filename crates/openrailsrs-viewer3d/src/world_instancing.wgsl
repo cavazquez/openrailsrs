@@ -11,7 +11,7 @@
 #import bevy_core_pipeline::tonemapping::tone_mapping
 #import "shaders/railway_lighting.wgsl"::railway_spot_lighting
 #import "shaders/railway_lighting.wgsl"::{railway_primary_directional_light, railway_daylight}
-#import "shaders/snow_surface.wgsl"::snow_surface
+#import "shaders/snow_surface.wgsl"::{snow_surface, snow_depth}
 
 struct Vertex {
     @location(0) position: vec3<f32>,
@@ -69,6 +69,17 @@ fn vegetation_position(position: vec3<f32>, model: mat4x4<f32>) -> vec4<f32> {
     return model * vec4(p, 1.0);
 }
 
+// The imported UV frame stays unchanged across floating-origin rebases and
+// sector reloads. Facades, masked foliage and vegetation retain their geometry.
+fn weather_world_position(vertex: Vertex, model: mat4x4<f32>) -> vec4<f32> {
+    var world = appearance.world_from_local * vegetation_position(vertex.position, model);
+    if appearance.vegetation.x <= 0.0 && appearance.params.x == 0.0 {
+        let n=normalize((appearance.world_from_local * model * vec4(vertex.normal,0.0)).xyz);
+        world.y += snow_depth(vertex.uv * 6.0,n,appearance.surface_weather.y,0.05);
+    }
+    return world;
+}
+
 @vertex
 fn vertex(vertex: Vertex) -> VertexOutput {
     let model = mat4x4<f32>(
@@ -77,13 +88,12 @@ fn vertex(vertex: Vertex) -> VertexOutput {
         vertex.i_col2,
         vertex.i_col3,
     );
-    let local_pos = vegetation_position(vertex.position, model);
     // Entity Transform carries floating-origin; instances are in that local frame.
     // Each custom draw starts its own instance buffer at zero; mesh[0] belongs
     // to an unrelated scene entity when Bevy uses storage mesh uniforms.
     let world_from_local = appearance.world_from_local;
     var out: VertexOutput;
-    let world_pos4 = world_from_local * local_pos;
+    let world_pos4 = weather_world_position(vertex, model);
     out.clip_position = position_world_to_clip(world_pos4.xyz);
     out.world_position = world_pos4.xyz;
     let n = (model * vec4<f32>(vertex.normal, 0.0)).xyz;
@@ -203,10 +213,8 @@ fn vertex_shadow(vertex: Vertex) -> ShadowVertexOutput {
         vertex.i_col2,
         vertex.i_col3,
     );
-    let local_pos = vegetation_position(vertex.position, model);
-    let world_from_local = appearance.world_from_local;
     var out: ShadowVertexOutput;
-    out.clip_position = position_world_to_clip((world_from_local * local_pos).xyz);
+    out.clip_position = position_world_to_clip(weather_world_position(vertex, model).xyz);
     out.uv = vertex.uv;
     return out;
 }

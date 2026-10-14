@@ -1,0 +1,1559 @@
+{
+  "schema": 1,
+  "batch": "fifth40_20261013",
+  "reference": {
+    "open_rails": "1.6.1",
+    "native_route": "Installed Chiltern v4 TDB/RDB/WORLD, unchanged author assets",
+    "comparison": "Native metadata and equivalent rules; Bevy-specific visual extensions use their own acceptance, without forced pixel parity"
+  },
+  "manual_guide": "docs/PLAN_40_5_VISUAL_QA.md",
+  "issues": [
+    {
+      "number": 243,
+      "cases": [
+        "connections",
+        "connections-curve"
+      ],
+      "status": "passed_visual_and_core_scope"
+    },
+    {
+      "number": 244,
+      "cases": [
+        "connections-curve",
+        "connections-cut"
+      ],
+      "status": "passed_visual_and_core_scope"
+    },
+    {
+      "number": 245,
+      "cases": [
+        "connections-curve",
+        "connections-cut"
+      ],
+      "status": "passed_visual_and_core_scope"
+    },
+    {
+      "number": 253,
+      "cases": [
+        "jacobs-curve"
+      ],
+      "status": "passed_visual_and_core_scope"
+    },
+    {
+      "number": 254,
+      "cases": [
+        "boarding-close",
+        "boarding-restore",
+        "boarding-rebase",
+        "alighting"
+      ],
+      "status": "passed_visual_and_core_scope"
+    },
+    {
+      "number": 265,
+      "cases": [
+        "mirrors",
+        "mirrors-rain"
+      ],
+      "status": "passed_visual_and_core_scope"
+    },
+    {
+      "number": 273,
+      "cases": [
+        "northolt-exterior",
+        "south-ruislip-exterior",
+        "gerrards-cross-exterior",
+        "forest-far"
+      ],
+      "status": "passed_visual_and_core_scope"
+    },
+    {
+      "number": 276,
+      "cases": [
+        "contact-off",
+        "contact-high",
+        "bridge-low"
+      ],
+      "status": "passed_visual_and_core_scope"
+    },
+    {
+      "number": 277,
+      "cases": [
+        "northolt-cab",
+        "south-ruislip-cab",
+        "gerrards-cross-cab"
+      ],
+      "status": "passed_visual_and_core_scope"
+    },
+    {
+      "number": 278,
+      "cases": [
+        "wet",
+        "dry"
+      ],
+      "status": "passed_visual_and_core_scope"
+    },
+    {
+      "number": 282,
+      "cases": [
+        "crossing-closed",
+        "crossing-released"
+      ],
+      "status": "passed_visual_and_core_scope"
+    },
+    {
+      "number": 283,
+      "cases": [
+        "crossing-closed",
+        "crossing-released"
+      ],
+      "status": "passed_visual_and_core_scope"
+    },
+    {
+      "number": 284,
+      "cases": [
+        "boarding-restore",
+        "boarding-rebase",
+        "alighting"
+      ],
+      "status": "passed_visual_and_core_scope"
+    },
+    {
+      "number": 285,
+      "cases": [
+        "refill-restore"
+      ],
+      "status": "passed_visual_and_core_scope"
+    },
+    {
+      "number": 291,
+      "cases": [
+        "camera-collision"
+      ],
+      "status": "passed_visual_and_core_scope"
+    },
+    {
+      "number": 296,
+      "cases": [
+        "roofs-snow",
+        "snow-curve"
+      ],
+      "status": "passed_visual_and_core_scope"
+    },
+    {
+      "number": 297,
+      "cases": [
+        "snow-curve"
+      ],
+      "status": "passed_visual_and_core_scope"
+    }
+  ],
+  "cases": {
+    "connections": {
+      "status": "passed",
+      "binary_sha256": "17ae83ec884efc582ac56b50e7ea32f44bb039ec76d9b8ee20155e18aeb57f6f",
+      "metrics": {
+        "odometer_m": 0.0,
+        "gpu_tiles": 1,
+        "peak_rss_mib": 459.4,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "connections": {
+          "connected_parts": 4,
+          "deformed": 4,
+          "disconnected": 0,
+          "eligible_parts": 4,
+          "maximum_endpoint_error_m": 0.0,
+          "span_rejected": 0
+        },
+        "clock_time_s": 43221.15
+      },
+      "runtime_asset_set": "runtime-fdbc34a4cdd44701",
+      "owned_fixture_set": "owned_fixture-58d0b55d4ef576f1",
+      "frame_sha256": "00142fb3cff5e55abfbd0d557f9b8b736e65ab318fa9fbf624595fed34bef600",
+      "frame_name": "connections.png"
+    },
+    "connections-curve": {
+      "status": "passed",
+      "binary_sha256": "17ae83ec884efc582ac56b50e7ea32f44bb039ec76d9b8ee20155e18aeb57f6f",
+      "metrics": {
+        "odometer_m": 37.1797230963713,
+        "gpu_tiles": 1,
+        "peak_rss_mib": 455.2,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "connections": {
+          "connected_parts": 4,
+          "deformed": 104,
+          "disconnected": 0,
+          "eligible_parts": 4,
+          "maximum_endpoint_error_m": 0.0,
+          "span_rejected": 0
+        },
+        "clock_time_s": 43210.85
+      },
+      "runtime_asset_set": "runtime-fdbc34a4cdd44701",
+      "owned_fixture_set": "owned_fixture-0f2a236b9a743185",
+      "frame_sha256": "c3031600614055f47207cda6d564142306ccad6c75d2cbea4a92f90aaee0b143",
+      "frame_name": "connections-curve.png"
+    },
+    "connections-cut": {
+      "status": "passed",
+      "binary_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+      "metrics": {
+        "odometer_m": 0.0,
+        "gpu_tiles": 1,
+        "peak_rss_mib": 455.1,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "connections": {
+          "connected_parts": 0,
+          "deformed": 4,
+          "disconnected": 652,
+          "eligible_parts": 4,
+          "maximum_endpoint_error_m": 0.0,
+          "span_rejected": 0
+        },
+        "clock_time_s": 43203.9
+      },
+      "runtime_asset_set": "runtime-fdbc34a4cdd44701",
+      "frame_sha256": "140a15e07deaf7b845a3ebfc7ee7e4920f9b013ccc77e0855cc74b0a98c37325",
+      "frame_name": "connections-cut.png"
+    },
+    "jacobs-curve": {
+      "status": "passed",
+      "binary_sha256": "17ae83ec884efc582ac56b50e7ea32f44bb039ec76d9b8ee20155e18aeb57f6f",
+      "metrics": {
+        "odometer_m": 36.85598155160907,
+        "gpu_tiles": 1,
+        "peak_rss_mib": 439.2,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "joints": 1,
+        "clock_time_s": 43210.8,
+        "joint_poses": [
+          {
+            "matrix": "BOGIE2",
+            "rotation": [
+              0.0,
+              -0.8064446449279785,
+              0.0,
+              0.591309666633606
+            ],
+            "translation": [
+              -9.022720336914062,
+              0.30000001192092896,
+              47.16746520996094
+            ],
+            "vehicle": 0
+          }
+        ],
+        "connections": {
+          "connected_parts": 4,
+          "deformed": 97,
+          "disconnected": 0,
+          "eligible_parts": 4,
+          "maximum_endpoint_error_m": 0.0,
+          "span_rejected": 0
+        }
+      },
+      "runtime_asset_set": "runtime-fdbc34a4cdd44701",
+      "owned_fixture_set": "owned_fixture-0f2a236b9a743185",
+      "frame_sha256": "a668e2aff76764d1e816c265e4fb98f3e2f05aa5131ef227e7e0e2872374a0ef",
+      "frame_name": "jacobs-curve.png"
+    },
+    "mirrors": {
+      "status": "passed",
+      "binary_sha256": "17ae83ec884efc582ac56b50e7ea32f44bb039ec76d9b8ee20155e18aeb57f6f",
+      "metrics": {
+        "odometer_m": 0.0,
+        "gpu_tiles": 1,
+        "peak_rss_mib": 484.5,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "mirrors": {
+          "frames": 184,
+          "resolution": [
+            256,
+            160
+          ],
+          "views": 2
+        },
+        "clock_time_s": 43220.15
+      },
+      "runtime_asset_set": "runtime-fdbc34a4cdd44701",
+      "owned_fixture_set": "owned_fixture-0f2a236b9a743185",
+      "frame_sha256": "561d3e4ba7c40881a26bb2bf9252703d2a344b918891e3abd8b2d36885a08271",
+      "frame_name": "mirrors.png"
+    },
+    "mirrors-rain": {
+      "status": "passed",
+      "binary_sha256": "17ae83ec884efc582ac56b50e7ea32f44bb039ec76d9b8ee20155e18aeb57f6f",
+      "metrics": {
+        "odometer_m": 0.0,
+        "gpu_tiles": 1,
+        "peak_rss_mib": 489.4,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "mirrors": {
+          "frames": 236,
+          "resolution": [
+            256,
+            160
+          ],
+          "views": 2
+        },
+        "clock_time_s": 43220.65
+      },
+      "runtime_asset_set": "runtime-fdbc34a4cdd44701",
+      "owned_fixture_set": "owned_fixture-0f2a236b9a743185",
+      "frame_sha256": "019589757c4f44ee2e944c4ea542493ef72ab7031b70a2cd068b29156bc22c9d",
+      "frame_name": "mirrors-rain.png"
+    },
+    "boarding-restore": {
+      "status": "passed",
+      "binary_sha256": "72a44b5f0b4d9a79e274f44b03abaefab3f3d1749cfdeedcbc04103321d51a2f",
+      "metrics": {
+        "odometer_m": 0.0,
+        "gpu_tiles": 1,
+        "peak_rss_mib": 457.8,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "platform_people": {
+          "rejected_paths": 0,
+          "represented_alighting": 0,
+          "represented_boarding": 4,
+          "stop": 0,
+          "visible": 26
+        },
+        "actions": [
+          {
+            "result": {
+              "Ok": null
+            },
+            "simulation_s": 0.9000000000000002,
+            "boarding_progress": 0.0,
+            "door_fractions": [
+              [
+                0.0,
+                0.0
+              ]
+            ]
+          },
+          {
+            "result": {
+              "Ok": null
+            },
+            "simulation_s": 8.949999999999992,
+            "boarding_progress": 0.13555555555555526,
+            "door_fractions": [
+              [
+                1.0,
+                0.0
+              ]
+            ]
+          },
+          {
+            "result": {
+              "Ok": null
+            },
+            "simulation_s": 8.949999999999992,
+            "boarding_progress": 0.13555555555555526,
+            "door_fractions": [
+              [
+                1.0,
+                0.0
+              ]
+            ]
+          },
+          {
+            "result": {
+              "Ok": null
+            },
+            "simulation_s": 8.949999999999992,
+            "boarding_progress": 0.13555555555555526,
+            "door_fractions": [
+              [
+                1.0,
+                0.0
+              ]
+            ]
+          }
+        ],
+        "clock_time_s": 43208.95
+      },
+      "runtime_asset_set": "runtime-fdbc34a4cdd44701",
+      "owned_fixture_set": "owned_fixture-0f2a236b9a743185",
+      "frame_sha256": "9552903647f558adc3383deeb256de2d74df4edc8b2f0add64cd5b7efd6f6a6e",
+      "frame_name": "boarding-restore.png"
+    },
+    "boarding-rebase": {
+      "status": "passed",
+      "binary_sha256": "72a44b5f0b4d9a79e274f44b03abaefab3f3d1749cfdeedcbc04103321d51a2f",
+      "metrics": {
+        "odometer_m": 0.0,
+        "gpu_tiles": 1,
+        "peak_rss_mib": 467.3,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "platform_people": {
+          "rejected_paths": 0,
+          "represented_alighting": 0,
+          "represented_boarding": 4,
+          "stop": 0,
+          "visible": 26
+        },
+        "actions": [
+          {
+            "result": {
+              "Ok": null
+            },
+            "simulation_s": 0.9000000000000002,
+            "boarding_progress": 0.0,
+            "door_fractions": [
+              [
+                0.0,
+                0.0
+              ]
+            ]
+          },
+          {
+            "result": {
+              "Ok": null
+            },
+            "simulation_s": 8.949999999999992,
+            "boarding_progress": 0.13555555555555526,
+            "door_fractions": [
+              [
+                1.0,
+                0.0
+              ]
+            ]
+          },
+          {
+            "result": {
+              "Ok": null
+            },
+            "simulation_s": 8.949999999999992,
+            "boarding_progress": 0.13555555555555526,
+            "door_fractions": [
+              [
+                1.0,
+                0.0
+              ]
+            ]
+          },
+          {
+            "result": {
+              "Ok": null
+            },
+            "simulation_s": 8.949999999999992,
+            "boarding_progress": 0.13555555555555526,
+            "door_fractions": [
+              [
+                1.0,
+                0.0
+              ]
+            ]
+          },
+          {
+            "result": {
+              "Ok": null
+            },
+            "simulation_s": 8.949999999999992,
+            "boarding_progress": 0.13555555555555526,
+            "door_fractions": [
+              [
+                1.0,
+                0.0
+              ]
+            ]
+          },
+          {
+            "result": {
+              "Ok": null
+            },
+            "simulation_s": 8.949999999999992,
+            "boarding_progress": 0.13555555555555526,
+            "door_fractions": [
+              [
+                1.0,
+                0.0
+              ]
+            ]
+          }
+        ],
+        "clock_time_s": 43208.95,
+        "floating_origin_shift_m": [
+          -80.0,
+          0.0,
+          40.45000076293945
+        ],
+        "action_origins_m": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            500.0,
+            0.0,
+            0.0
+          ]
+        ]
+      },
+      "runtime_asset_set": "runtime-fdbc34a4cdd44701",
+      "owned_fixture_set": "owned_fixture-0f2a236b9a743185",
+      "frame_sha256": "b22793d42d13815b98421668166908f813ae6dfcb884a9d5d0af689e22308ac0",
+      "frame_name": "boarding-rebase.png"
+    },
+    "alighting": {
+      "status": "passed",
+      "binary_sha256": "97048367dd2984af238e367bc978fb5cdd4ed87383c2bacbceeb842ede28d24c",
+      "metrics": {
+        "odometer_m": 0.0,
+        "gpu_tiles": 1,
+        "peak_rss_mib": 471.0,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "clock_time_s": 43221.45,
+        "platform_people": {
+          "rejected_paths": 0,
+          "represented_alighting": 4,
+          "represented_boarding": 12,
+          "stop": 0,
+          "visible": 22
+        },
+        "actions": [
+          {
+            "result": {
+              "Ok": null
+            },
+            "simulation_s": 0.0,
+            "boarding_progress": 0.0,
+            "passengers": 12
+          },
+          {
+            "result": {
+              "Ok": null
+            },
+            "simulation_s": 0.9500000000000003,
+            "boarding_progress": 0.0,
+            "passengers": 12
+          }
+        ]
+      },
+      "runtime_asset_set": "runtime-fdbc34a4cdd44701",
+      "owned_fixture_set": "owned_fixture-fd69f508bdbff0c0",
+      "frame_sha256": "2feafc74e9e4c21ebc61e70ec4b86188081f7a7404ec8d6b08f8a089747a3701",
+      "frame_name": "alighting.png"
+    },
+    "boarding-close": {
+      "status": "passed",
+      "binary_sha256": "7a72515be24e03e7434538c86e78b8e31cacacc09c41d0b4c8e999fb078568ac",
+      "metrics": {
+        "odometer_m": 0.0,
+        "gpu_tiles": 1,
+        "peak_rss_mib": 424.4,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "platform_people": {
+          "rejected_paths": 0,
+          "represented_alighting": 0,
+          "represented_boarding": 1,
+          "stop": 0,
+          "visible": 0
+        },
+        "actions": [
+          {
+            "result": {
+              "Ok": null
+            },
+            "simulation_s": 0.9500000000000003,
+            "boarding_progress": 0.0,
+            "door_fractions": [
+              [
+                0.0,
+                0.0
+              ]
+            ]
+          },
+          {
+            "result": {
+              "Ok": null
+            },
+            "simulation_s": 3.4499999999999957,
+            "boarding_progress": 0.012222222222222221,
+            "door_fractions": [
+              [
+                1.0,
+                0.0
+              ]
+            ]
+          },
+          {
+            "result": {
+              "Ok": null
+            },
+            "simulation_s": 3.5499999999999954,
+            "boarding_progress": 0.014444444444444446,
+            "door_fractions": [
+              [
+                1.0,
+                0.0
+              ]
+            ]
+          },
+          {
+            "result": {
+              "Ok": null
+            },
+            "simulation_s": 3.5499999999999954,
+            "boarding_progress": 0.014444444444444446,
+            "door_fractions": [
+              [
+                1.0,
+                0.0
+              ]
+            ]
+          },
+          {
+            "result": {
+              "Ok": null
+            },
+            "simulation_s": 3.5499999999999954,
+            "boarding_progress": 0.014444444444444446,
+            "door_fractions": [
+              [
+                1.0,
+                0.0
+              ]
+            ]
+          },
+          {
+            "result": {
+              "Ok": null
+            },
+            "simulation_s": 8.549999999999986,
+            "boarding_progress": 0.03333333333333335,
+            "door_fractions": [
+              [
+                0.0,
+                0.0
+              ]
+            ]
+          }
+        ],
+        "clock_time_s": 43208.55
+      },
+      "runtime_asset_set": "runtime-fdbc34a4cdd44701",
+      "owned_fixture_set": "owned_fixture-0f2a236b9a743185",
+      "frame_sha256": "abaf2285fad2b3af1b3d7d348e62392bce50a00f760027ce78a70f8686ce962a",
+      "frame_name": "boarding-close.png"
+    },
+    "wet": {
+      "status": "passed",
+      "binary_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+      "metrics": {
+        "odometer_m": 0.0,
+        "gpu_tiles": 1,
+        "peak_rss_mib": 477.4,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "clock_time_s": 43221.3
+      },
+      "runtime_asset_set": "runtime-fdbc34a4cdd44701",
+      "frame_sha256": "80d01f9e677b9bbe4c8eec6ec90715f4cfa07b4db96dd59939865d7626dfeb46",
+      "frame_name": "wet.png"
+    },
+    "dry": {
+      "status": "passed",
+      "binary_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+      "metrics": {
+        "odometer_m": 0.0,
+        "gpu_tiles": 1,
+        "peak_rss_mib": 467.9,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "clock_time_s": 43221.55
+      },
+      "runtime_asset_set": "runtime-fdbc34a4cdd44701",
+      "frame_sha256": "fabda9ab83b6e9b5bf9702307bfe583d14a9a1a62752a13d6490fb86c0dac9a4",
+      "frame_name": "dry.png"
+    },
+    "camera-collision": {
+      "status": "passed",
+      "binary_sha256": "588a49923b7edd5372d8f5a6e37b9b49744f2b29e228c3b4381a82eba55a90a4",
+      "metrics": {
+        "odometer_m": 0.0,
+        "gpu_tiles": 1,
+        "peak_rss_mib": 506.1,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "camera_collision": {
+          "corrections": 1
+        },
+        "clock_time_s": 43203.9,
+        "floating_origin_shift_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "opaque_obstacle_count": 15,
+        "camera_position_world_m": [
+          88.0,
+          2.5,
+          -18.775999069213867
+        ]
+      },
+      "runtime_asset_set": "runtime-fdbc34a4cdd44701",
+      "owned_fixture_set": "owned_fixture-0f2a236b9a743185",
+      "frame_sha256": "f44449d9739bc5702226842f6845551e37d496b21c897f31872b5cc9ff9a2901",
+      "frame_name": "camera-collision.png"
+    },
+    "snow-curve": {
+      "status": "passed",
+      "binary_sha256": "97048367dd2984af238e367bc978fb5cdd4ed87383c2bacbceeb842ede28d24c",
+      "metrics": {
+        "odometer_m": 35.70364051646178,
+        "gpu_tiles": 1,
+        "peak_rss_mib": 425.2,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "snow_tracks": {
+          "gpu_changes": 100,
+          "gpu_segments": 64.0,
+          "material_uploads": 100,
+          "maximum_depth_m": 0.08,
+          "sectors": 2,
+          "segments": 278
+        },
+        "snow_cover": 1.0,
+        "clock_time_s": 43210.65,
+        "floating_origin_shift_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "process_vram_mib": 793.39453125,
+        "gpu_measurement_source": "linux_drm_fdinfo"
+      },
+      "runtime_asset_set": "runtime-fdbc34a4cdd44701",
+      "owned_fixture_set": "owned_fixture-6b02756ddf34a880",
+      "frame_sha256": "b8e95cf0ce2b6b54b93b22337d89e37142539984eca8ae78c6a720f96e4af7ee",
+      "frame_name": "snow-curve.png"
+    },
+    "refill-restore": {
+      "status": "passed",
+      "binary_sha256": "97048367dd2984af238e367bc978fb5cdd4ed87383c2bacbceeb842ede28d24c",
+      "metrics": {
+        "odometer_m": 0.0,
+        "gpu_tiles": 1,
+        "peak_rss_mib": 414.9,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "clock_time_s": 43202.95,
+        "refilling": {
+          "opening": 0.25000000000000006,
+          "returning": false,
+          "delivered_kg": 0.0
+        },
+        "station": {
+          "capacity_kg": 45.359237,
+          "feed_kg_s": 0.45359237,
+          "opening_time_s": 4.0,
+          "pickup_type": 7,
+          "speed_range_mps": [
+            0.0,
+            0.0
+          ]
+        },
+        "actions": [
+          {
+            "result": {
+              "Ok": null
+            },
+            "simulation_s": 1.950000000000001,
+            "refilling": {
+              "opening": 0.0,
+              "delivered_kg": 0.0
+            }
+          },
+          {
+            "result": {
+              "Ok": null
+            },
+            "simulation_s": 2.9499999999999975,
+            "refilling": {
+              "opening": 0.25000000000000006,
+              "delivered_kg": 0.0
+            }
+          },
+          {
+            "result": {
+              "Ok": null
+            },
+            "simulation_s": 2.9499999999999975,
+            "refilling": {
+              "opening": 0.25000000000000006,
+              "delivered_kg": 0.0
+            }
+          },
+          {
+            "result": {
+              "Ok": null
+            },
+            "simulation_s": 2.9499999999999975,
+            "refilling": {
+              "opening": 0.25000000000000006,
+              "delivered_kg": 0.0
+            }
+          }
+        ]
+      },
+      "runtime_asset_set": "runtime-fdbc34a4cdd44701",
+      "owned_fixture_set": "owned_fixture-fd69f508bdbff0c0",
+      "frame_sha256": "267d674a2b422a7b82cf1d083b72bbf357ffb8c5a0a5cb07e45ad8f20a7b4021",
+      "frame_name": "refill-restore.png"
+    },
+    "crossing-closed": {
+      "status": "passed",
+      "binary_sha256": "7a72515be24e03e7434538c86e78b8e31cacacc09c41d0b4c8e999fb078568ac",
+      "metrics": {
+        "odometer_m": 0.0,
+        "gpu_tiles": 2,
+        "peak_rss_mib": 2099.6,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "road_cars": 38,
+        "road_stop_points": 27,
+        "unresolved_crossings": 0,
+        "gates": [
+          {
+            "demand": true,
+            "fraction": 1.0,
+            "road_closed": true
+          },
+          {
+            "demand": true,
+            "fraction": 1.0,
+            "road_closed": true
+          }
+        ],
+        "queued_head_stop_errors_m": [
+          0.03664671587298862,
+          0.0007097307647931927
+        ],
+        "clock_time_s": 43211.95,
+        "floating_origin_shift_m": [
+          3.3922157287597656,
+          0.0,
+          -270.85479736328125
+        ]
+      },
+      "runtime_asset_set": "runtime-fdbc34a4cdd44701",
+      "frame_sha256": "574de28ffcb015a2afe61fe53d196dc57ba2726846963438bf8e406711a9734e",
+      "frame_name": "crossing-closed.png"
+    },
+    "crossing-released": {
+      "status": "passed",
+      "binary_sha256": "97048367dd2984af238e367bc978fb5cdd4ed87383c2bacbceeb842ede28d24c",
+      "metrics": {
+        "odometer_m": 380.9085425016196,
+        "gpu_tiles": 2,
+        "peak_rss_mib": 2017.7,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "road_cars": 38,
+        "road_stop_points": 27,
+        "unresolved_crossings": 0,
+        "gates": [
+          {
+            "demand": false,
+            "fraction": 0.0,
+            "road_closed": false
+          },
+          {
+            "demand": false,
+            "fraction": 0.0,
+            "road_closed": false
+          }
+        ],
+        "clock_time_s": 43253.25,
+        "floating_origin_shift_m": [
+          66.19853210449219,
+          0.0,
+          -274.5959777832031
+        ]
+      },
+      "runtime_asset_set": "runtime-fdbc34a4cdd44701",
+      "frame_sha256": "2a845db07e7f7f4451490df82027c9dfe0938da91b0d0faf9fa2a0f483b1d38d",
+      "frame_name": "crossing-released.png"
+    },
+    "northolt-exterior": {
+      "status": "passed",
+      "binary_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+      "metrics": {
+        "odometer_m": 0.0,
+        "gpu_tiles": 4,
+        "peak_rss_mib": 1405.2,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "clock_time_s": 35700.0
+      },
+      "runtime_asset_set": "runtime-fdbc34a4cdd44701",
+      "frame_sha256": "2635f616f676733b0a3039312b688f07dc159edf71cd5a918f87fed371b6c987",
+      "frame_name": "northolt-exterior.png"
+    },
+    "northolt-cab": {
+      "status": "passed",
+      "binary_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+      "metrics": {
+        "odometer_m": 0.0,
+        "gpu_tiles": 4,
+        "peak_rss_mib": 1922.8,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "clock_time_s": 35700.0
+      },
+      "runtime_asset_set": "runtime-fdbc34a4cdd44701",
+      "frame_sha256": "1fa520f3196387e13026ecc50be0ee695de8c3b99c11796d9ee8a4bb3a1f4de6",
+      "frame_name": "northolt-cab.png"
+    },
+    "south-ruislip-exterior": {
+      "status": "passed",
+      "binary_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+      "metrics": {
+        "odometer_m": 0.0,
+        "gpu_tiles": 4,
+        "peak_rss_mib": 1523.1,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "clock_time_s": 35700.0
+      },
+      "runtime_asset_set": "runtime-fdbc34a4cdd44701",
+      "frame_sha256": "a6f6f44339117d05f7773008c87de4117d5f154a3601059706b82cc7a8befacd",
+      "frame_name": "south-ruislip-exterior.png"
+    },
+    "south-ruislip-cab": {
+      "status": "passed",
+      "binary_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+      "metrics": {
+        "odometer_m": 0.0,
+        "gpu_tiles": 4,
+        "peak_rss_mib": 2013.6,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "clock_time_s": 35700.0
+      },
+      "runtime_asset_set": "runtime-fdbc34a4cdd44701",
+      "frame_sha256": "8ef140dde97d9828abf98a6ef587aad648444960ef8f07f6c2bf9d1fbbe7c8bb",
+      "frame_name": "south-ruislip-cab.png"
+    },
+    "gerrards-cross-exterior": {
+      "status": "passed",
+      "binary_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+      "metrics": {
+        "odometer_m": 0.0,
+        "gpu_tiles": 4,
+        "peak_rss_mib": 1456.9,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "clock_time_s": 35700.0
+      },
+      "runtime_asset_set": "runtime-fdbc34a4cdd44701",
+      "frame_sha256": "82394d746dfacc2fd4e650a38ca8013fee905c7188abc28d6d833646dbd99c87",
+      "frame_name": "gerrards-cross-exterior.png"
+    },
+    "gerrards-cross-cab": {
+      "status": "passed",
+      "binary_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+      "metrics": {
+        "odometer_m": 0.0,
+        "gpu_tiles": 4,
+        "peak_rss_mib": 1865.7,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "clock_time_s": 35700.0
+      },
+      "runtime_asset_set": "runtime-fdbc34a4cdd44701",
+      "frame_sha256": "6fa9789f6241a9270d72391e83b4a2c987a6ef6ab2cf97b164949d63ba2592ee",
+      "frame_name": "gerrards-cross-cab.png"
+    },
+    "contact-off": {
+      "status": "passed",
+      "binary_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+      "metrics": {
+        "odometer_m": 0.0,
+        "gpu_tiles": 4,
+        "peak_rss_mib": 1295.6,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "clock_time_s": 35700.0
+      },
+      "runtime_asset_set": "runtime-fdbc34a4cdd44701",
+      "frame_sha256": "3f68233bb39e97ec1c20819ad2b181d77ef61e01c7114f40b1bbaa91d8901b6e",
+      "frame_name": "contact-off.png"
+    },
+    "contact-high": {
+      "status": "passed",
+      "binary_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+      "metrics": {
+        "odometer_m": 0.0,
+        "gpu_tiles": 4,
+        "peak_rss_mib": 1266.0,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "clock_time_s": 35700.0
+      },
+      "runtime_asset_set": "runtime-fdbc34a4cdd44701",
+      "frame_sha256": "152188d363121f85c9add7b7d9397307367b763cac26cc1af67a76a106b47720",
+      "frame_name": "contact-high.png"
+    },
+    "forest-far": {
+      "status": "passed",
+      "binary_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+      "metrics": {
+        "odometer_m": 0.0,
+        "gpu_tiles": 4,
+        "peak_rss_mib": 1285.1,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "clock_time_s": 35700.0
+      },
+      "runtime_asset_set": "runtime-fdbc34a4cdd44701",
+      "frame_sha256": "85a553903eb733f0cde8eb91f05f2eb50d9064c6fb5afc7321f0b66ec13646c3",
+      "frame_name": "forest-far.png"
+    },
+    "bridge-low": {
+      "status": "passed",
+      "binary_sha256": "9a085b65706f3a55deb60619165379f97f919a176a6634c0010696efa3f09553",
+      "metrics": {
+        "odometer_m": 0.0,
+        "gpu_tiles": 4,
+        "peak_rss_mib": 1425.2,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "clock_time_s": 35700.0
+      },
+      "runtime_asset_set": "runtime-fdbc34a4cdd44701",
+      "frame_sha256": "f6991037579618a475fc52cac1b0c5f83a3208f2e1e2ce3ef4953c6ea26eddf7",
+      "frame_name": "bridge-low.png"
+    },
+    "roofs-snow": {
+      "status": "passed",
+      "binary_sha256": "588a49923b7edd5372d8f5a6e37b9b49744f2b29e228c3b4381a82eba55a90a4",
+      "metrics": {
+        "odometer_m": 0.0,
+        "gpu_tiles": 4,
+        "peak_rss_mib": 1444.7,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "snow_cover": 1.0,
+        "clock_time_s": 35700.0,
+        "process_vram_mib": 1280.53515625,
+        "gpu_measurement_source": "linux_drm_fdinfo"
+      },
+      "runtime_asset_set": "runtime-fdbc34a4cdd44701",
+      "frame_sha256": "7fd021bab59345a0d80e1d258921feb7a9bca602f4dfe7c0da2e627f1b5844b8",
+      "frame_name": "native-roofs-snow.png"
+    }
+  },
+  "pending": [],
+  "limits": {
+    "passenger_figures": 64,
+    "mirror_views": 4,
+    "mirror_resolution_px": [
+      256,
+      160
+    ],
+    "mirror_max_hz": 10,
+    "horizon_tiles": 64,
+    "pressured_horizon_tiles": 25,
+    "oit_storage_mib": 64,
+    "snow_sector_limit": 25,
+    "snow_segments_per_sector": 256,
+    "snow_gpu_segments": 64,
+    "terrain_snow_depth_m": 0.08,
+    "roof_snow_depth_m": 0.05
+  },
+  "excluded_from_acceptance": [
+    "Concurrent heavy native snow on the integrated GPU received RADV DeviceLost; this failed run is not a pass."
+  ],
+  "scope_notes": [
+    "Figures use declared accesses and safe opaque corridors, not a general station navigation mesh.",
+    "Jacobs constraints preserve longitudinal momentum; wheel-flange forces are not certified by these frames.",
+    "Native crossing rules are conservative occupation/approach rules, not every regional rule.",
+    "Frames identify their exact binary and runtime shader hashes; updated fixture lighting does not imply an Open Rails pixel match.",
+    "The final owned pickup is beside the car, with a volumetric arm; its paused quarter-open pose was inspected after restore. Fuel/coal/water transfer limits have separate focused simulator tests."
+  ],
+  "asset_sets": {
+    "runtime-fdbc34a4cdd44701": {
+      "kind": "runtime",
+      "manifest_sha256": "fdbc34a4cdd44701497f93925fdf133876e9a86c4f98fdfa4cbb66bfae88d9c1",
+      "files": {
+        "crates/openrailsrs-bevy-scenery/assets/shaders/cloud_field.wgsl": "972c5c29591626656d35a76d53dcdad31539721aad441136aea1b24811bdd64e",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/hanabi_weather_fragment.wgsl": "ec6e7efa2f69d0bec81e2232c800e12024f2763a40b940e518661013c2138960",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/moon.wgsl": "7da04d322f77d9c21ba283762920959e4ca496483e4e547209d0eb95e3487931",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_cab.wgsl": "fad7a2b58f33fdea467c5076b4070ad2ee5a5e8182b38a07ed4631b24af8014a",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_forest.wgsl": "2661056bfcebb195f663bef425def3f49653621b2f9bde7e0918786bf80cc57a",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_moment_blur.wgsl": "f0bf898137eb8cba44df2840428c7e6b3dca26c59d2d3706d94a247c3cc8acbe",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_moment_pack.wgsl": "218475b9e91288988ccb086749da4093398c0e3d29a4d7739c4c5df20169ba5f",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_moment_preview.wgsl": "b8359b6fb54ba7409cc7315ca4e1cd0e41ffabdc66f64ac2e0f69e82193f38ce",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_scenery.wgsl": "f6dcccb448116fd62d749dd214fb295a43c48a127738031b77a700fa8b03f692",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_scenery_bindings.wgsl": "308a0dd8959b54dee842751693afb47a6f85ab62280a01c456608a6b1c9fdcfc",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_scenery_prepass.wgsl": "b266628bf7024be63f3181bd9d514aa2498137d700f2cd0ec254cac0b3540bf1",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_shadow.wgsl": "ca9fe546c16fa82c0f758deb94d939e34e8fba2a76a60a18342db8af72ad010e",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/or_terrain.wgsl": "b18b56fc186a0c104ac57f8e94eccb23f37d7e718c1ed6f28f060376b15b1dfd",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/railway_lighting.wgsl": "ee12f381923662cc568bb14c034ba01aea366ccbe7de74988dfdf886bdd68ef4",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/railway_sky.wgsl": "9a0344db7d04774e469e17c1bcaa01d9af9e53d7c5b30d32e2edf793b5f3942f",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/snow_surface.wgsl": "93bf0fe7e155a3b91ca2cf6e1ed9be37e49c57743931dba9d77edc06f4b0276f",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/snow_vertex.wgsl": "d1c213ad7bf9bed5bf8d768e51f8f0720628980c0b3f2a9311067178ac4e6a23",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/surface_weather.wgsl": "830c03d3810afc1bd0d21d812cb7997ec513175982a609c698741f4a3ed6ce6a",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/terrain.wgsl": "e981280e8a0f4646db2d372bc54c781bff143eb2f0c8885ce9e69848a27deb76",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/terrain_common.wgsl": "fb5b9cdbcc5542cdb356b904cf3ceabcaf710a7d82e81c159036fa31e07c3874",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/terrain_snow_vertex.wgsl": "5559850ccfc3382f0e3ed0da61a2fa65916bb461e3bd5902455ba7e0afe66ff6",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/weather_particles.wgsl": "25077efabf986cec285c542ec0fbbd0b8dc4634442a3cbe3f14227404989e1d6",
+        "crates/openrailsrs-bevy-scenery/assets/shaders/windshield.wgsl": "da54244b4b1f0efbac2873c87aaf3f9d2ff223a7dd0950f11f3daa836754134b"
+      }
+    },
+    "owned_fixture-58d0b55d4ef576f1": {
+      "kind": "owned_fixture",
+      "manifest_sha256": "58d0b55d4ef576f10a414e0632f7d8cb94a1b40970d59e2811d03c32a2f89d66",
+      "files": {
+        "examples/player_lab/consists/connections.con": "3ec7560d3026991218e09299a801970cafcdcb57d602927b6a78498622e7c701",
+        "examples/player_lab/consists/lab.con": "56141328bc73a735ff43f95cb1ef61679d42c01ac01e4afe6b344cd9d8fceea2",
+        "examples/player_lab/curve_route/SHAPES/camera_wall.s": "275192139d43249c8527969af834765ced8f3aeb3e8ec74b03bd02a38ea061d3",
+        "examples/player_lab/curve_route/SHAPES/house_windows.s": "1d31342bb1afa2329db128e312c39bf7fc91b89bdeb034e0fc21c6c8ae51ea80",
+        "examples/player_lab/curve_route/SHAPES/platform_lamp.s": "15f6b568b0df71c5583ac5d88c11414db582fc9303765eff0db52539d5b2aefd",
+        "examples/player_lab/curve_route/SHAPES/station_windows.s": "1d31342bb1afa2329db128e312c39bf7fc91b89bdeb034e0fc21c6c8ae51ea80",
+        "examples/player_lab/curve_route/SHAPES/yard_shed.s": "cac4306668e7e42bd96d81f298250a54113270fbf72963dc9bf4a611cd1ed363",
+        "examples/player_lab/curve_route/TERRTEX/grass.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+        "examples/player_lab/curve_route/TERRTEX/microtex.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+        "examples/player_lab/curve_route/TEXTURES/yard.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+        "examples/player_lab/curve_route/WORLD/w-000000-000000.w": "477a403281167dd47daa7667f046da96396f2001bf2d260d48e515348500fbca",
+        "examples/player_lab/curve_route/track.toml": "9cae21fba370dc4676a9c9f3e4c8da1d019a913ba5e6be2f1d866e69c2aad0d8",
+        "examples/player_lab/route/SHAPES/camera_wall.s": "275192139d43249c8527969af834765ced8f3aeb3e8ec74b03bd02a38ea061d3",
+        "examples/player_lab/route/SHAPES/house_windows.s": "1d31342bb1afa2329db128e312c39bf7fc91b89bdeb034e0fc21c6c8ae51ea80",
+        "examples/player_lab/route/SHAPES/platform_lamp.s": "15f6b568b0df71c5583ac5d88c11414db582fc9303765eff0db52539d5b2aefd",
+        "examples/player_lab/route/SHAPES/station_windows.s": "1d31342bb1afa2329db128e312c39bf7fc91b89bdeb034e0fc21c6c8ae51ea80",
+        "examples/player_lab/route/SHAPES/yard_shed.s": "cac4306668e7e42bd96d81f298250a54113270fbf72963dc9bf4a611cd1ed363",
+        "examples/player_lab/route/TERRTEX/grass.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+        "examples/player_lab/route/TERRTEX/microtex.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+        "examples/player_lab/route/TEXTURES/yard.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+        "examples/player_lab/route/WORLD/w-000000-000000.w": "d6a2bc9b176025e49bf8e11a0709369ccca3f209250ad583f8f2a3b1d4e50d3c",
+        "examples/player_lab/route/loading-gauge.toml": "1d400feb14b058ebdcc39fca413b7d53079e082e43f9febe5ed04175a91a0ddc",
+        "examples/player_lab/route/track.toml": "eb4e1c47a7e592482037df932d921492a7c6b2d1c1cd250dea3a74b906aadfbc",
+        "examples/player_lab/scenario.toml": "f9adc155f5354cb9a90f9a942aaf48f7889bde09a63105fc4833cdcd2ac67d8b",
+        "examples/player_lab/scenario_connections.toml": "38bee6a3f9f243d3090d2285b3f882aaecf7ce68e329c1292a942077b4c7eb2a",
+        "examples/player_lab/scenario_connections_curve.toml": "3292eebc073afcf5e4f24166d39e45722a269cd1da9999f079488b4283e77def",
+        "examples/player_lab/scenario_jacobs.toml": "60e54f7c9029a4ba8fcb00db6b482d19d74172d64dccf4d79e56d3c49125e42a",
+        "examples/player_lab/scenario_jacobs_curve.toml": "1a76b1a3633865473abfe3a4d89b9dcc9decf59943c0fd116203193d25b574a8",
+        "examples/player_lab/vehicles/coach.s": "77fd2ee299e8b1f9863a94fc5d9827d6935a54f5ba82b4e9f8d1a902df659948",
+        "examples/player_lab/vehicles/connections.eng": "c6d51487833aa451b58f9a4bb7e85b09955ea77661669fb0163e08aced824dd7",
+        "examples/player_lab/vehicles/connections.s": "d23311e232cbb4d46ae8d86abbb00761b3d1d3d326f2c494a8a08dd6c5877e70",
+        "examples/player_lab/vehicles/lab.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+        "examples/player_lab/vehicles/lab.eng": "17861c351cc8abab98740ea36bd04645339bf14cc957ff899ae37ed7a89a6ea2",
+        "examples/player_lab/vehicles/lab.s": "0adf2a28552f40782dea14188f94e4125bcc7265a723aaa3e0b07e6247b6611f",
+        "examples/player_lab/vehicles/lab.wag": "0c48c1fab66ba3a8921a2f95709b33b7af327119c0ee74685184f8a40f18eaa7"
+      }
+    },
+    "owned_fixture-0f2a236b9a743185": {
+      "kind": "owned_fixture",
+      "manifest_sha256": "0f2a236b9a7431858a236a03b0686f141008b90c5efb8822393b2886cbdf5ace",
+      "files": {
+        "examples/player_lab/consists/connections.con": "3ec7560d3026991218e09299a801970cafcdcb57d602927b6a78498622e7c701",
+        "examples/player_lab/consists/lab.con": "56141328bc73a735ff43f95cb1ef61679d42c01ac01e4afe6b344cd9d8fceea2",
+        "examples/player_lab/consists/refill.con": "f088335f1fb7c610916095babcba2052aa274c9e95f0570e1022d42eb4cdd5fe",
+        "examples/player_lab/curve_route/SHAPES/camera_wall.s": "275192139d43249c8527969af834765ced8f3aeb3e8ec74b03bd02a38ea061d3",
+        "examples/player_lab/curve_route/SHAPES/fuel_tower.s": "1d80f618dd709550b9925014678523d44b30721cd19ef6e63270fad20a740c6a",
+        "examples/player_lab/curve_route/SHAPES/house_windows.s": "1d31342bb1afa2329db128e312c39bf7fc91b89bdeb034e0fc21c6c8ae51ea80",
+        "examples/player_lab/curve_route/SHAPES/platform_lamp.s": "15f6b568b0df71c5583ac5d88c11414db582fc9303765eff0db52539d5b2aefd",
+        "examples/player_lab/curve_route/SHAPES/station_windows.s": "1d31342bb1afa2329db128e312c39bf7fc91b89bdeb034e0fc21c6c8ae51ea80",
+        "examples/player_lab/curve_route/SHAPES/yard_shed.s": "cac4306668e7e42bd96d81f298250a54113270fbf72963dc9bf4a611cd1ed363",
+        "examples/player_lab/curve_route/TERRTEX/grass.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+        "examples/player_lab/curve_route/TERRTEX/microtex.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+        "examples/player_lab/curve_route/TEXTURES/yard.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+        "examples/player_lab/curve_route/WORLD/w-000000-000000.w": "2e324f0d9848ad8fe2d2bbc6f1f186d8f3e07dad6ffacc9f523da75854b6e703",
+        "examples/player_lab/curve_route/track.toml": "9cae21fba370dc4676a9c9f3e4c8da1d019a913ba5e6be2f1d866e69c2aad0d8",
+        "examples/player_lab/route/SHAPES/camera_wall.s": "275192139d43249c8527969af834765ced8f3aeb3e8ec74b03bd02a38ea061d3",
+        "examples/player_lab/route/SHAPES/fuel_tower.s": "1d80f618dd709550b9925014678523d44b30721cd19ef6e63270fad20a740c6a",
+        "examples/player_lab/route/SHAPES/house_windows.s": "1d31342bb1afa2329db128e312c39bf7fc91b89bdeb034e0fc21c6c8ae51ea80",
+        "examples/player_lab/route/SHAPES/platform_lamp.s": "15f6b568b0df71c5583ac5d88c11414db582fc9303765eff0db52539d5b2aefd",
+        "examples/player_lab/route/SHAPES/station_windows.s": "1d31342bb1afa2329db128e312c39bf7fc91b89bdeb034e0fc21c6c8ae51ea80",
+        "examples/player_lab/route/SHAPES/yard_shed.s": "cac4306668e7e42bd96d81f298250a54113270fbf72963dc9bf4a611cd1ed363",
+        "examples/player_lab/route/TERRTEX/grass.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+        "examples/player_lab/route/TERRTEX/microtex.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+        "examples/player_lab/route/TEXTURES/yard.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+        "examples/player_lab/route/WORLD/w-000000-000000.w": "1da346cfebc9a3c960d0c353d245596773117fb35e6385f0fc60315069c0a3ff",
+        "examples/player_lab/route/loading-gauge.toml": "1d400feb14b058ebdcc39fca413b7d53079e082e43f9febe5ed04175a91a0ddc",
+        "examples/player_lab/route/track.toml": "eb4e1c47a7e592482037df932d921492a7c6b2d1c1cd250dea3a74b906aadfbc",
+        "examples/player_lab/scenario.toml": "f9adc155f5354cb9a90f9a942aaf48f7889bde09a63105fc4833cdcd2ac67d8b",
+        "examples/player_lab/scenario_connections.toml": "38bee6a3f9f243d3090d2285b3f882aaecf7ce68e329c1292a942077b4c7eb2a",
+        "examples/player_lab/scenario_connections_curve.toml": "3292eebc073afcf5e4f24166d39e45722a269cd1da9999f079488b4283e77def",
+        "examples/player_lab/scenario_jacobs.toml": "60e54f7c9029a4ba8fcb00db6b482d19d74172d64dccf4d79e56d3c49125e42a",
+        "examples/player_lab/scenario_jacobs_curve.toml": "1a76b1a3633865473abfe3a4d89b9dcc9decf59943c0fd116203193d25b574a8",
+        "examples/player_lab/scenario_refill.toml": "b24da22bf4f914b96d8d9ab2ae9c1a63e9826c558a8986d1f41f29354fd24000",
+        "examples/player_lab/vehicles/coach.s": "77fd2ee299e8b1f9863a94fc5d9827d6935a54f5ba82b4e9f8d1a902df659948",
+        "examples/player_lab/vehicles/connections.eng": "c6d51487833aa451b58f9a4bb7e85b09955ea77661669fb0163e08aced824dd7",
+        "examples/player_lab/vehicles/connections.s": "d23311e232cbb4d46ae8d86abbb00761b3d1d3d326f2c494a8a08dd6c5877e70",
+        "examples/player_lab/vehicles/lab.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+        "examples/player_lab/vehicles/lab.eng": "17861c351cc8abab98740ea36bd04645339bf14cc957ff899ae37ed7a89a6ea2",
+        "examples/player_lab/vehicles/lab.s": "0adf2a28552f40782dea14188f94e4125bcc7265a723aaa3e0b07e6247b6611f",
+        "examples/player_lab/vehicles/lab.wag": "0c48c1fab66ba3a8921a2f95709b33b7af327119c0ee74685184f8a40f18eaa7",
+        "examples/player_lab/vehicles/refill.eng": "df0945b2ec9136366e1791f2beae245f205700dc471d3ad810b08b93b6144197"
+      }
+    },
+    "owned_fixture-6b02756ddf34a880": {
+      "kind": "owned_fixture",
+      "manifest_sha256": "6b02756ddf34a8800a0256299fdd0002bdd565453d32f4ec7c885a0fd16e2f8e",
+      "files": {
+        "examples/player_lab/consists/connections.con": "3ec7560d3026991218e09299a801970cafcdcb57d602927b6a78498622e7c701",
+        "examples/player_lab/consists/lab.con": "56141328bc73a735ff43f95cb1ef61679d42c01ac01e4afe6b344cd9d8fceea2",
+        "examples/player_lab/consists/refill.con": "f088335f1fb7c610916095babcba2052aa274c9e95f0570e1022d42eb4cdd5fe",
+        "examples/player_lab/curve_route/SHAPES/camera_wall.s": "dfd126c6909cc1b98a01b44dd98cbfd7139c2976ce3639f6100d216fa4054d91",
+        "examples/player_lab/curve_route/SHAPES/fuel_tower.s": "480380c02214f6876b0063d3018cdc29821c319c68a3c1162d115f2254e0e78f",
+        "examples/player_lab/curve_route/SHAPES/house_windows.s": "1d31342bb1afa2329db128e312c39bf7fc91b89bdeb034e0fc21c6c8ae51ea80",
+        "examples/player_lab/curve_route/SHAPES/platform_lamp.s": "15f6b568b0df71c5583ac5d88c11414db582fc9303765eff0db52539d5b2aefd",
+        "examples/player_lab/curve_route/SHAPES/station_windows.s": "1d31342bb1afa2329db128e312c39bf7fc91b89bdeb034e0fc21c6c8ae51ea80",
+        "examples/player_lab/curve_route/SHAPES/yard_shed.s": "cac4306668e7e42bd96d81f298250a54113270fbf72963dc9bf4a611cd1ed363",
+        "examples/player_lab/curve_route/TERRTEX/grass.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+        "examples/player_lab/curve_route/TERRTEX/microtex.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+        "examples/player_lab/curve_route/TEXTURES/yard.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+        "examples/player_lab/curve_route/WORLD/w-000000-000000.w": "2e324f0d9848ad8fe2d2bbc6f1f186d8f3e07dad6ffacc9f523da75854b6e703",
+        "examples/player_lab/curve_route/track.toml": "9cae21fba370dc4676a9c9f3e4c8da1d019a913ba5e6be2f1d866e69c2aad0d8",
+        "examples/player_lab/route/SHAPES/camera_wall.s": "dfd126c6909cc1b98a01b44dd98cbfd7139c2976ce3639f6100d216fa4054d91",
+        "examples/player_lab/route/SHAPES/fuel_tower.s": "480380c02214f6876b0063d3018cdc29821c319c68a3c1162d115f2254e0e78f",
+        "examples/player_lab/route/SHAPES/house_windows.s": "1d31342bb1afa2329db128e312c39bf7fc91b89bdeb034e0fc21c6c8ae51ea80",
+        "examples/player_lab/route/SHAPES/platform_lamp.s": "15f6b568b0df71c5583ac5d88c11414db582fc9303765eff0db52539d5b2aefd",
+        "examples/player_lab/route/SHAPES/station_windows.s": "1d31342bb1afa2329db128e312c39bf7fc91b89bdeb034e0fc21c6c8ae51ea80",
+        "examples/player_lab/route/SHAPES/yard_shed.s": "cac4306668e7e42bd96d81f298250a54113270fbf72963dc9bf4a611cd1ed363",
+        "examples/player_lab/route/TERRTEX/grass.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+        "examples/player_lab/route/TERRTEX/microtex.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+        "examples/player_lab/route/TEXTURES/yard.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+        "examples/player_lab/route/WORLD/w-000000-000000.w": "1da346cfebc9a3c960d0c353d245596773117fb35e6385f0fc60315069c0a3ff",
+        "examples/player_lab/route/loading-gauge.toml": "1d400feb14b058ebdcc39fca413b7d53079e082e43f9febe5ed04175a91a0ddc",
+        "examples/player_lab/route/track.toml": "eb4e1c47a7e592482037df932d921492a7c6b2d1c1cd250dea3a74b906aadfbc",
+        "examples/player_lab/scenario.toml": "f9adc155f5354cb9a90f9a942aaf48f7889bde09a63105fc4833cdcd2ac67d8b",
+        "examples/player_lab/scenario_connections.toml": "38bee6a3f9f243d3090d2285b3f882aaecf7ce68e329c1292a942077b4c7eb2a",
+        "examples/player_lab/scenario_connections_curve.toml": "3292eebc073afcf5e4f24166d39e45722a269cd1da9999f079488b4283e77def",
+        "examples/player_lab/scenario_jacobs.toml": "60e54f7c9029a4ba8fcb00db6b482d19d74172d64dccf4d79e56d3c49125e42a",
+        "examples/player_lab/scenario_jacobs_curve.toml": "1a76b1a3633865473abfe3a4d89b9dcc9decf59943c0fd116203193d25b574a8",
+        "examples/player_lab/scenario_refill.toml": "b24da22bf4f914b96d8d9ab2ae9c1a63e9826c558a8986d1f41f29354fd24000",
+        "examples/player_lab/vehicles/coach.s": "cd1df792a6354ee51aad2b84f96c0ce4e6e763364b3f3a7c20798d6c63323eb3",
+        "examples/player_lab/vehicles/connections.eng": "c6d51487833aa451b58f9a4bb7e85b09955ea77661669fb0163e08aced824dd7",
+        "examples/player_lab/vehicles/connections.s": "a3b836adf18594317f99dc8452b4b081528539e92108c40a4dafdd2f29363441",
+        "examples/player_lab/vehicles/lab.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+        "examples/player_lab/vehicles/lab.eng": "17861c351cc8abab98740ea36bd04645339bf14cc957ff899ae37ed7a89a6ea2",
+        "examples/player_lab/vehicles/lab.s": "0adf2a28552f40782dea14188f94e4125bcc7265a723aaa3e0b07e6247b6611f",
+        "examples/player_lab/vehicles/lab.wag": "0c48c1fab66ba3a8921a2f95709b33b7af327119c0ee74685184f8a40f18eaa7",
+        "examples/player_lab/vehicles/refill.eng": "df0945b2ec9136366e1791f2beae245f205700dc471d3ad810b08b93b6144197"
+      }
+    },
+    "owned_fixture-fd69f508bdbff0c0": {
+      "kind": "owned_fixture",
+      "manifest_sha256": "fd69f508bdbff0c08ab0db795fe151777ba1777ec88183a9e8bf236c91a5207a",
+      "files": {
+        "examples/player_lab/consists/connections.con": "3ec7560d3026991218e09299a801970cafcdcb57d602927b6a78498622e7c701",
+        "examples/player_lab/consists/lab.con": "56141328bc73a735ff43f95cb1ef61679d42c01ac01e4afe6b344cd9d8fceea2",
+        "examples/player_lab/consists/refill.con": "f088335f1fb7c610916095babcba2052aa274c9e95f0570e1022d42eb4cdd5fe",
+        "examples/player_lab/curve_route/SHAPES/camera_wall.s": "dfd126c6909cc1b98a01b44dd98cbfd7139c2976ce3639f6100d216fa4054d91",
+        "examples/player_lab/curve_route/SHAPES/fuel_tower.s": "edf4d03c223ab263e3d1784ae2de1555390419af536f2ea0a1b4339a7f13dd14",
+        "examples/player_lab/curve_route/SHAPES/house_windows.s": "1d31342bb1afa2329db128e312c39bf7fc91b89bdeb034e0fc21c6c8ae51ea80",
+        "examples/player_lab/curve_route/SHAPES/platform_lamp.s": "15f6b568b0df71c5583ac5d88c11414db582fc9303765eff0db52539d5b2aefd",
+        "examples/player_lab/curve_route/SHAPES/station_windows.s": "1d31342bb1afa2329db128e312c39bf7fc91b89bdeb034e0fc21c6c8ae51ea80",
+        "examples/player_lab/curve_route/SHAPES/yard_shed.s": "cac4306668e7e42bd96d81f298250a54113270fbf72963dc9bf4a611cd1ed363",
+        "examples/player_lab/curve_route/TERRTEX/grass.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+        "examples/player_lab/curve_route/TERRTEX/microtex.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+        "examples/player_lab/curve_route/TEXTURES/yard.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+        "examples/player_lab/curve_route/WORLD/w-000000-000000.w": "3e33f6517b2b3fdac5c07f0cebee08954ca01145c90d5e59546e300dea503b7d",
+        "examples/player_lab/curve_route/track.toml": "9cae21fba370dc4676a9c9f3e4c8da1d019a913ba5e6be2f1d866e69c2aad0d8",
+        "examples/player_lab/route/SHAPES/camera_wall.s": "dfd126c6909cc1b98a01b44dd98cbfd7139c2976ce3639f6100d216fa4054d91",
+        "examples/player_lab/route/SHAPES/fuel_tower.s": "edf4d03c223ab263e3d1784ae2de1555390419af536f2ea0a1b4339a7f13dd14",
+        "examples/player_lab/route/SHAPES/house_windows.s": "1d31342bb1afa2329db128e312c39bf7fc91b89bdeb034e0fc21c6c8ae51ea80",
+        "examples/player_lab/route/SHAPES/platform_lamp.s": "15f6b568b0df71c5583ac5d88c11414db582fc9303765eff0db52539d5b2aefd",
+        "examples/player_lab/route/SHAPES/station_windows.s": "1d31342bb1afa2329db128e312c39bf7fc91b89bdeb034e0fc21c6c8ae51ea80",
+        "examples/player_lab/route/SHAPES/yard_shed.s": "cac4306668e7e42bd96d81f298250a54113270fbf72963dc9bf4a611cd1ed363",
+        "examples/player_lab/route/TERRTEX/grass.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+        "examples/player_lab/route/TERRTEX/microtex.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+        "examples/player_lab/route/TEXTURES/yard.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+        "examples/player_lab/route/WORLD/w-000000-000000.w": "36a287ccdd024d4213aab61a680d85b549d9cc700ac4b65104e4ce99b4b8710b",
+        "examples/player_lab/route/loading-gauge.toml": "1d400feb14b058ebdcc39fca413b7d53079e082e43f9febe5ed04175a91a0ddc",
+        "examples/player_lab/route/track.toml": "eb4e1c47a7e592482037df932d921492a7c6b2d1c1cd250dea3a74b906aadfbc",
+        "examples/player_lab/scenario.toml": "f9adc155f5354cb9a90f9a942aaf48f7889bde09a63105fc4833cdcd2ac67d8b",
+        "examples/player_lab/scenario_connections.toml": "38bee6a3f9f243d3090d2285b3f882aaecf7ce68e329c1292a942077b4c7eb2a",
+        "examples/player_lab/scenario_connections_curve.toml": "3292eebc073afcf5e4f24166d39e45722a269cd1da9999f079488b4283e77def",
+        "examples/player_lab/scenario_jacobs.toml": "60e54f7c9029a4ba8fcb00db6b482d19d74172d64dccf4d79e56d3c49125e42a",
+        "examples/player_lab/scenario_jacobs_curve.toml": "1a76b1a3633865473abfe3a4d89b9dcc9decf59943c0fd116203193d25b574a8",
+        "examples/player_lab/scenario_refill.toml": "b24da22bf4f914b96d8d9ab2ae9c1a63e9826c558a8986d1f41f29354fd24000",
+        "examples/player_lab/vehicles/coach.s": "cd1df792a6354ee51aad2b84f96c0ce4e6e763364b3f3a7c20798d6c63323eb3",
+        "examples/player_lab/vehicles/connections.eng": "c6d51487833aa451b58f9a4bb7e85b09955ea77661669fb0163e08aced824dd7",
+        "examples/player_lab/vehicles/connections.s": "a3b836adf18594317f99dc8452b4b081528539e92108c40a4dafdd2f29363441",
+        "examples/player_lab/vehicles/lab.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+        "examples/player_lab/vehicles/lab.eng": "17861c351cc8abab98740ea36bd04645339bf14cc957ff899ae37ed7a89a6ea2",
+        "examples/player_lab/vehicles/lab.s": "0adf2a28552f40782dea14188f94e4125bcc7265a723aaa3e0b07e6247b6611f",
+        "examples/player_lab/vehicles/lab.wag": "0c48c1fab66ba3a8921a2f95709b33b7af327119c0ee74685184f8a40f18eaa7",
+        "examples/player_lab/vehicles/refill.eng": "df0945b2ec9136366e1791f2beae245f205700dc471d3ad810b08b93b6144197"
+      }
+    }
+  },
+  "focused_core_suites": [
+    {
+      "name": "visual-connection-tests2",
+      "status": "passed",
+      "log_sha256": "160c3d267729382cfa81f008a7f0de243f92410b960d46b66fa12416fcdea35e",
+      "tests": [
+        "train_connections::tests::authored_endpoints_follow_curve_slack_and_reversal_without_changing_the_near_end",
+        "train_connections::tests::bogie_part_queries_are_disjoint_from_car_and_train_root_transforms",
+        "train_connections::tests::lod_rebind_keeps_authored_topology_and_sources_immutable_through_pause_cut_and_restore"
+      ]
+    },
+    {
+      "name": "visual-doors-crossing-final",
+      "status": "passed",
+      "log_sha256": "cd6de791f1b8d7c96f3bd90a6d6bca60e5ca480ca71d134b1db3f92b617cce7d",
+      "tests": [
+        "platform_side_motion_and_config_changes_fail_without_opening_the_wrong_door",
+        "legacy_coarse_doors_upgrade_to_declared_state_and_empty_equipment_does_not_change_physics",
+        "closing_finishes_only_the_current_passenger_and_survives_pause_restore",
+        "independent_vehicle_and_sides_have_real_interlocks_and_survive_midstroke_save",
+        "reopening_cancels_queued_closure_and_waiting_passengers_do_not_delay_it",
+        "reversed_body_order_predicts_from_the_physically_leading_end",
+        "parked_cut_protects_crossing_after_the_locomotive_leaves",
+        "reversing_approach_uses_the_leading_rear_and_survives_restore",
+        "crossing_observes_approach_full_tail_multiple_services_and_saved_opening"
+      ]
+    },
+    {
+      "name": "visual-road-tests",
+      "status": "passed",
+      "log_sha256": "283e0d33cf8b47ac81f662d6bd9bb26bd4374df0d0beb30546c6d39749bbb035",
+      "tests": [
+        "road_cars::tests::sampling_a_curved_road_uses_chainage_instead_of_the_endpoint_chord",
+        "road_cars::tests::rdb_spawner_follows_connected_vectors_and_keeps_the_surface_height_datum",
+        "road_cars::tests::simultaneous_exit_cars_cannot_claim_the_same_entry",
+        "road_cars::tests::road_car_motion_keeps_world_position_after_multiple_origin_shifts",
+        "road_cars::tests::queues_follow_the_rdb_curve_wait_before_closed_crossings_then_clear_without_overlap",
+        "road_cars::tests::chiltern_mini1_road_car_has_distinct_part_materials",
+        "road_cars::tests::chiltern_tbescvan_road_car_materials_are_unlit_albedo",
+        "road_cars::tests::chiltern_fixture_tile_has_carspawners",
+        "road_cars::tests::chiltern_fixture_spawner_endpoints_finite"
+      ]
+    },
+    {
+      "name": "native-road-test",
+      "status": "passed",
+      "log_sha256": "a82465fe2545936c770fb22f37edadc4c06f29be5c98365f8840d8c9e82b7c97",
+      "tests": [
+        "road_cars::tests::native_chiltern_rdb_vectors_reach_both_authored_spawner_items"
+      ]
+    },
+    {
+      "name": "visual-asset-reload-test",
+      "status": "passed",
+      "log_sha256": "c41a2e0445d7164741c52c1a8aafdde0d583d5929d54734bbddca60ce0d12cb8",
+      "tests": [
+        "assets::tests::absolute_owned_legacy_bundle_keeps_world_and_height_buffers_after_reload"
+      ]
+    },
+    {
+      "name": "articulated-acceptance",
+      "status": "passed",
+      "log_sha256": "f1c6b1d5b4461338c3887ef2ba3cb85aa13ff3865598ee33b96a838c71356951",
+      "tests": [
+        "shared_bogie_constraints_conserve_articulated_train_during_drive_braking_restore_and_reverse"
+      ]
+    }
+  ],
+  "particle_image_lifetime_fix": {
+    "source": "crates/openrailsrs-viewer3d/src/particle_textures.rs",
+    "textures": 3,
+    "roles": [
+      "CPU R32Float shelter",
+      "Hanabi RGBA8 shelter",
+      "RGBA8 sRGB plume"
+    ],
+    "preservation": "Explicit whitelist at scene loading; scene images remain retired",
+    "plume_cpu_bytes": 16384,
+    "existing_uploader": "Bevy0.19.1 GpuImage preparation writes into and reuses texture/view for unchanged COPY_DST descriptors",
+    "test": {
+      "name": "particle_textures::tests::scene_transfers_keep_particle_texture_ids_and_refresh_shelter_bytes",
+      "scene_reloads": 12,
+      "status": "passed_workspace_check14",
+      "check_log_sha256": "f9cd57e1edd20c0409ddf34f7b35f97b5d3a605bd1b4726ff6c9027b9bb409a1"
+    },
+    "gpu_memory_acceptance": "pending_phase22_two_hour_real_time_run",
+    "limit": "Persistent image IDs prevent new Hanabi material keys. They do not, without allocator measurements, prove that all earlier GTT growth came from this cache.",
+    "historical_frames": "Earlier visual frames retain their exact binary/resource/PNG hashes and do not certify this later memory fix."
+  },
+  "bin_unpacking_lifetime_fix": {
+    "source": "crates/openrailsrs-viewer3d/src/render_retirement.rs",
+    "dependency": "Bevy 0.19.1 public APIs; no dependency modifications",
+    "defect": "Source buffers retire dead view/phase keys while the bind-group cache only inserts. Retired groups retain metadata, binned instances, work items and bin-to-indirect-offset buffers.",
+    "authority": "BinUnpackingBuffers.view_phase_buffers",
+    "order": "RenderApp RenderSystems::PrepareBindGroups, after prepare_preprocess_bind_groups and before RenderSystems::Render",
+    "release_enabled": true,
+    "tests": [
+      "render_retirement::tests::retiring_views_releases_buffer_owners_and_preserves_live_phases_and_subviews",
+      "render_retirement::tests::renderer_without_gpu_preprocessing_keeps_retirement_optional"
+    ],
+    "test_status": "pending_workspace_check",
+    "scene_reloads": 12,
+    "reported_fields": [
+      "cached_keys",
+      "source_keys",
+      "stale_keys_before",
+      "stale_keys_after",
+      "retired_keys"
+    ],
+    "gpu_memory_acceptance": "pending_new_binary_real_time_run",
+    "limit": "Removes proven retired-view owners. Active instance-buffer capacities and backend allocator reservations can remain high; prolonged stability requires a measured real GPU run.",
+    "cause_references": [
+      {
+        "dependency_source": "bevy_pbr-0.19.1/src/render/gpu_preprocess.rs",
+        "sha256": "864a0b799c20da0d72054d2750a5e6e0bbdf08a1061ab08e7dee4c64df661e0f",
+        "anchors": [
+          {
+            "description": "BinUnpackingBindGroups resource",
+            "line": 348,
+            "end_line": 356
+          },
+          {
+            "description": "prepare_preprocess_bind_groups ordering",
+            "line": 424,
+            "end_line": 432
+          },
+          {
+            "description": "bind-group insertion without dead-key retirement",
+            "line": 2802,
+            "end_line": 2895
+          },
+          {
+            "description": "four strong buffer bindings",
+            "line": 2900,
+            "end_line": 2945
+          }
+        ]
+      },
+      {
+        "dependency_source": "bevy_render-0.19.1/src/batching/gpu_preprocessing.rs",
+        "sha256": "c23620af30c3c90196bfa0acd6a5b167e093dd8b5925a4e37ce0f0e4efef72f3",
+        "anchors": [
+          {
+            "description": "view/phase source keys",
+            "line": 1125,
+            "end_line": 1166
+          },
+          {
+            "description": "source retirement for dead views",
+            "line": 2617,
+            "end_line": 2623
+          }
+        ]
+      },
+      {
+        "dependency_source": "bevy_render-0.19.1/src/lib.rs",
+        "sha256": "bfd9fb558db99b1c1e3ed0b25a5b10fe6bd11b740e1bc9acb958b1521d0bb174",
+        "anchors": [
+          {
+            "description": "source-write and bind preparation ordering",
+            "line": 326,
+            "end_line": 337
+          }
+        ]
+      },
+      {
+        "dependency_source": "wgpu-core-29.0.4/src/binding_model.rs",
+        "sha256": "e89f6d0b464d43be8dad281db0406d672b3aaa4ad4010e649a3c12113ba036e1",
+        "anchors": [
+          {
+            "description": "binding resolves to Arc<Buffer>",
+            "line": 1062,
+            "end_line": 1062
+          },
+          {
+            "description": "BindGroup owns used resources",
+            "line": 1217,
+            "end_line": 1235
+          }
+        ]
+      }
+    ]
+  }
+}

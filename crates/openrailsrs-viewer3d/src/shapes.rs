@@ -1699,7 +1699,7 @@ pub fn shape_render_asset_from_loaded(
 /// Like [`shape_render_asset_from_loaded`] but uses a pre-decoded ACE cache (from parallel prefetch).
 #[allow(clippy::too_many_arguments)]
 pub fn shape_render_asset_from_loaded_with_ace_cache(
-    loaded: LoadedShape,
+    mut loaded: LoadedShape,
     texture_dirs: &[&Path],
     meshes: &mut Assets<Mesh>,
     images: &mut Assets<Image>,
@@ -1719,7 +1719,41 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
         .iter()
         .map(|p| mesh_position_count(&p.mesh) / 3)
         .sum();
-    let combined_mesh = crate::shared_geometry::add(meshes, loaded.mesh);
+    // A combined bounds mesh is never drawn when individual authored parts
+    // exist. Keep a CPU bounds proxy instead of uploading the whole object
+    // twice; part meshes retain every original vertex and material.
+    let combined_mesh = if loaded.parts.is_empty() {
+        crate::shared_geometry::add(meshes, loaded.mesh)
+    } else {
+        let bounds = loaded
+            .mesh
+            .attribute(Mesh::ATTRIBUTE_POSITION)
+            .and_then(|a| a.as_float3());
+        let mut min = Vec3::splat(f32::MAX);
+        let mut max = Vec3::splat(f32::MIN);
+        if let Some(points) = bounds {
+            for point in points {
+                let p = Vec3::from_array(*point);
+                min = min.min(p);
+                max = max.max(p);
+            }
+        }
+        let corners = (0..8)
+            .map(|i| {
+                [
+                    if i & 1 == 0 { min.x } else { max.x },
+                    if i & 2 == 0 { min.y } else { max.y },
+                    if i & 4 == 0 { min.z } else { max.z },
+                ]
+            })
+            .collect::<Vec<_>>();
+        let mut mesh = Mesh::new(
+            bevy::mesh::PrimitiveTopology::PointList,
+            bevy::asset::RenderAssetUsages::MAIN_WORLD,
+        );
+        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, corners);
+        meshes.add(mesh)
+    };
 
     let mut has_any_texture = false;
     let mut parts = Vec::with_capacity(loaded.parts.len().max(1));
@@ -1767,7 +1801,7 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
             bounds_center: None,
         });
     }
-    for part in &loaded.parts {
+    for part in &mut loaded.parts {
         let tri_count = mesh_position_count(&part.mesh) / 3;
         let z_bias = part
             .z_bias
@@ -1795,7 +1829,15 @@ pub fn shape_render_asset_from_loaded_with_ace_cache(
                 part.mip_map_lod_bias,
                 texture_flags,
             );
-        let mut mesh = part.mesh.clone();
+        let mut mesh = if debug_shape_stats_enabled() {
+            // The diagnostic prints the source mesh sizes at the end.
+            part.mesh.clone()
+        } else {
+            // This function owns the prepared object. Moving each part into
+            // Assets avoids copying every vertex/index again on the UI thread.
+            let empty = Mesh::new(part.mesh.primitive_topology(), part.mesh.asset_usage);
+            std::mem::replace(&mut part.mesh, empty)
+        };
         // StandardMaterial + sidecar only (skip OrCab / no albedo) — #44.
         if or_cab_material.is_none()
             && !cab_interior
@@ -2773,7 +2815,11 @@ pub fn load_shape_file_and_loaded(
     path: &Path,
     camera_distance_m: Option<f32>,
 ) -> Option<(ShapeFile, LoadedShape)> {
-    let shape = parse_shape_file(path)?;
+    let shape = {
+        let _timer = crate::performance::ShapeTimer::start("source_read_parse", path);
+        parse_shape_file(path)?
+    };
+    let _timer = crate::performance::ShapeTimer::start("cpu_prepare", path);
     let options = world_mesh_options_for_shape(path);
     let loaded = loaded_shape_from_shape_file_with_options(&shape, camera_distance_m, options)?;
     Some((shape, loaded))

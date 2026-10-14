@@ -19,7 +19,7 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use bevy::prelude::*;
-use bevy::render::view::screenshot::{Screenshot, save_to_disk};
+use bevy::render::view::screenshot::{Screenshot, ScreenshotCaptured};
 
 use crate::viewer_log;
 use crate::world::WorldSpawnProgress;
@@ -35,6 +35,7 @@ pub struct CaptureState {
     ready_frames_needed: u32,
     ready_frames: u32,
     captured_at: Option<Instant>,
+    image_saved: bool,
     target_odometer_m: Option<f64>,
     pause_at_target: bool,
     after_service: bool,
@@ -58,7 +59,10 @@ pub fn capture_state_allowed(state: Res<State<crate::route_bootstrap::ViewerAppS
     *state.get() == crate::route_bootstrap::ViewerAppState::Playing
         || (*state.get() == crate::route_bootstrap::ViewerAppState::Menu
             && capture_enabled()
-            && env_truthy("OPENRAILSRS_SCREENSHOT_MENU"))
+            && env_truthy("OPENRAILSRS_SCREENSHOT_MENU")
+            // An armed menu selects the service for end-to-end QA. A capture
+            // requesting scene readiness must wait for the actual loaded game.
+            && !env_truthy("OPENRAILSRS_SCREENSHOT_AFTER_READY"))
 }
 
 fn env_truthy(name: &str) -> bool {
@@ -103,6 +107,7 @@ pub fn init_capture(mut commands: Commands) {
         ready_frames_needed,
         ready_frames: 0,
         captured_at: None,
+        image_saved: false,
         target_odometer_m,
         pause_at_target: env_truthy("OPENRAILSRS_SCREENSHOT_PAUSE_AT_TARGET"),
         after_service: env_truthy("OPENRAILSRS_SCREENSHOT_AFTER_SERVICE"),
@@ -181,7 +186,12 @@ pub fn capture_system(
             let distance_ok = distance_ok
                 && (!std::env::var("OPENRAILSRS_CAMERA_JOURNEY").is_ok_and(|v| v == "aba")
                     || scene.camera_journey.complete);
-            let should_capture = distance_ok
+            #[cfg(feature = "dev-tools")]
+            let endurance_ok = scene.soak.as_ref().is_none_or(|s| s.finished());
+            #[cfg(not(feature = "dev-tools"))]
+            let endurance_ok = true;
+            let should_capture = endurance_ok
+                && distance_ok
                 && lightning_ok
                 && if state.after_ready {
                     if scenery_ready(progress) && scene.ready() {
@@ -227,7 +237,7 @@ pub fn capture_system(
                 }
                 commands
                     .spawn(Screenshot::primary_window())
-                    .observe(save_to_disk(path.clone()));
+                    .observe(save_captured_image);
                 viewer_log!(
                     "openrailsrs-viewer3d: screenshot requested → {}",
                     path.display()
@@ -236,17 +246,129 @@ pub fn capture_system(
             }
         }
         Some(t) => {
-            // Give the render graph a few frames to flush the PNG to disk.
-            if t.elapsed() >= Duration::from_secs_f32(2.5) {
+            // Software rendering can take longer than a fixed two-second delay
+            // to return the readback. Only a successfully written fresh image
+            // completes the capture; an old file never counts as completion.
+            if state.image_saved {
                 viewer_log!("openrailsrs-viewer3d: screenshot done, exiting");
                 exit.write(AppExit::Success);
+            } else if t.elapsed() >= Duration::from_secs(180) {
+                viewer_log!("openrailsrs-viewer3d: screenshot readback timed out");
+                exit.write(AppExit::Error(std::num::NonZeroU8::new(1).unwrap()));
             }
         }
     }
 }
 
+fn save_captured_image(
+    captured: On<ScreenshotCaptured>,
+    mut state: ResMut<CaptureState>,
+    mut exit: MessageWriter<AppExit>,
+) {
+    let saved = captured
+        .image
+        .clone()
+        .try_into_dynamic()
+        .map_err(|e| e.to_string())
+        // HDR uses alpha for brightness; match Bevy's RGB screenshot output.
+        .and_then(|image| image.to_rgb8().save(&state.path).map_err(|e| e.to_string()));
+    match saved {
+        Ok(()) => {
+            state.image_saved = true;
+            viewer_log!(
+                "openrailsrs-viewer3d: screenshot saved → {}",
+                state.path.display()
+            );
+        }
+        Err(error) => {
+            viewer_log!("openrailsrs-viewer3d: cannot save screenshot: {error}");
+            exit.write(AppExit::Error(std::num::NonZeroU8::new(1).unwrap()));
+        }
+    }
+}
+
+#[cfg(test)]
+mod completion_tests {
+    use super::*;
+
+    #[test]
+    fn delayed_readback_replaces_stale_image_and_write_failure_never_completes() {
+        use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("frame.png");
+        std::fs::write(&path, b"stale capture").unwrap();
+        let mut app = App::new();
+        app.add_message::<AppExit>();
+        app.insert_resource(CaptureState {
+            path: path.clone(),
+            armed_at: Instant::now(),
+            delay: Duration::from_secs(60),
+            after_ready: true,
+            ready_frames_needed: 5,
+            ready_frames: 5,
+            captured_at: Some(Instant::now() - Duration::from_secs(10)),
+            image_saved: false,
+            target_odometer_m: None,
+            pause_at_target: false,
+            after_service: false,
+            during_lightning: false,
+        });
+        // An old PNG and elapsed time beyond the former exit delay are not a
+        // delivered readback. The actual image event must successfully write.
+        assert!(!app.world().resource::<CaptureState>().image_saved);
+        let image = Image::new_fill(
+            Extent3d {
+                width: 2,
+                height: 2,
+                depth_or_array_layers: 1,
+            },
+            TextureDimension::D2,
+            &[20, 40, 80, 255],
+            TextureFormat::Rgba8UnormSrgb,
+            Default::default(),
+        );
+        let entity = app
+            .world_mut()
+            .spawn_empty()
+            .observe(save_captured_image)
+            .id();
+        app.world_mut().trigger(ScreenshotCaptured {
+            entity,
+            image: image.clone(),
+        });
+        assert!(app.world().resource::<CaptureState>().image_saved);
+        assert_eq!(
+            image::open(&path).unwrap().to_rgb8().get_pixel(0, 0).0,
+            [20, 40, 80]
+        );
+        let fresh = std::fs::read(&path).unwrap();
+        {
+            let mut state = app.world_mut().resource_mut::<CaptureState>();
+            state.path = temp.path().join("missing-parent/frame.png");
+            state.image_saved = false;
+        }
+        app.world_mut()
+            .trigger(ScreenshotCaptured { entity, image });
+        assert!(!app.world().resource::<CaptureState>().image_saved);
+        assert!(
+            app.world()
+                .resource::<Messages<AppExit>>()
+                .iter_current_update_messages()
+                .any(|exit| matches!(exit, AppExit::Error(_)))
+        );
+        assert_eq!(std::fs::read(path).unwrap(), fresh);
+    }
+}
+
 #[derive(bevy::ecs::system::SystemParam)]
 pub struct CaptureScene<'w, 's> {
+    connections: Option<Res<'w, crate::train_connections::ConnectionDiagnostics>>,
+    joints: Option<Res<'w, crate::train_connections::JacobsJoints>>,
+    mirrors: Option<Res<'w, crate::mirrors::Mirrors>>,
+    people: Option<Res<'w, crate::platform_people::PlatformPeople>>,
+    snow_tracks: Option<Res<'w, crate::snow_tracks::SnowTracks>>,
+    #[cfg(feature = "dev-tools")]
+    soak: Option<Res<'w, crate::soak::Soak>>,
     terrain_progress: Option<Res<'w, crate::terrain_spawn::TerrainSpawnProgress>>,
     terrain_stream: Option<Res<'w, crate::terrain_spawn::TerrainTileStream>>,
     world: Option<Res<'w, crate::world::WorldScene>>,
@@ -262,6 +384,9 @@ pub struct CaptureScene<'w, 's> {
     storm: Option<Res<'w, crate::storm::StormState>>,
     performance: Res<'w, crate::performance::JourneyPerformance>,
     graphics_memory: Res<'w, crate::gpu_memory::GraphicsMemory>,
+    residency: Res<'w, crate::gpu_memory::ResidencyPolicy>,
+    cleanup: Res<'w, crate::scene_cleanup::SceneCleanup>,
+    render_budget: Res<'w, crate::render_budget::RenderBudget>,
     weather_particles: Res<'w, crate::weather_particles::WeatherParticles>,
     weather_state: Option<Res<'w, crate::weather_state::WeatherState>>,
     weather_journey: Option<Res<'w, crate::weather_journey_telemetry::WeatherJourneyTelemetry>>,
@@ -294,6 +419,16 @@ pub struct CaptureScene<'w, 's> {
     motion: Option<Res<'w, crate::train_motion::TrainMotion>>,
     station_lighting: Option<Res<'w, crate::station_lighting::StationLighting>>,
     weather_obstacles: Option<Res<'w, crate::effect_obstacles::EffectObstacles>>,
+    camera_collision: Option<Res<'w, crate::camera_collision::CameraCollision>>,
+    road_cars: Query<
+        'w,
+        's,
+        (
+            &'static crate::road_cars::RoadCarMotion,
+            &'static GlobalTransform,
+        ),
+    >,
+    road_crossings: Option<Res<'w, crate::crossing_visual::RoadCrossings>>,
     passenger_eye: Option<Res<'w, crate::camera::PassengerCamState>>,
     windows_schedule: Option<Res<'w, crate::building_windows::WindowSchedules>>,
     adaptive: Option<Res<'w, crate::adaptive_graphics::AdaptiveGraphics>>,
@@ -337,7 +472,7 @@ pub struct CaptureScene<'w, 's> {
             Option<&'static crate::camera::OrbitState>,
             Has<bevy::render::view::NoIndirectDrawing>,
         ),
-        With<Camera3d>,
+        (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
     >,
     train_parts: Query<
         'w,
@@ -360,6 +495,10 @@ pub struct CaptureScene<'w, 's> {
 impl CaptureScene<'_, '_> {
     pub(crate) fn ready(&self) -> bool {
         self.terrain_progress.is_none()
+            && self
+                .activation
+                .as_ref()
+                .is_none_or(|state| state.pending_auxiliary_count() == 0)
             && self
                 .terrain_stream
                 .as_ref()
@@ -429,6 +568,17 @@ impl CaptureScene<'_, '_> {
             "equipment_poses":self.equipment_poses.iter().filter(|(a,_)|matches!(a.kind,crate::rolling_stock_anim::RollingStockPartKind::LeftWindow|crate::rolling_stock_anim::RollingStockPartKind::RightWindow|crate::rolling_stock_anim::RollingStockPartKind::CabDoor|crate::rolling_stock_anim::RollingStockPartKind::Buffer)).map(|(a,t)|serde_json::json!({"kind":format!("{:?}",a.kind),"key":a.key,"translation":t.translation.to_array(),"rotation":t.rotation.to_array()})).collect::<Vec<_>>(),
         });
         let mut report = serde_json::json!({
+            "geometry_cache":crate::prepared_geometry::report(),
+            "shape_stages":crate::performance::shape_stages_report(),
+            "system_stages":crate::performance::system_stages_report(),
+            "residency": {"pressured":self.residency.pressured,"transitions":self.residency.transitions,"budget_mib":self.residency.budget_mib,"basis":self.residency.basis},
+            "scene_cleanup":self.cleanup.report(),
+            "source_cache":openrailsrs_content::source_cache::report(),
+            "flexible_connections":self.connections.as_deref(),
+            "jacobs_joints":self.joints.as_ref().map(|j|j.0.iter().map(|((vehicle,matrix),pose)|serde_json::json!({"vehicle":vehicle,"matrix":matrix,"translation":pose.translation.to_array(),"rotation":pose.rotation.to_array()})).collect::<Vec<_>>()),
+            "mirrors":self.mirrors.as_ref().map(|m|serde_json::json!({"views":m.views,"frames":m.rendered_frames,"resolution":m.resolution})),
+            "platform_people":self.people.as_deref(),
+            "snow_tracks":self.snow_tracks.as_ref().map(|s|s.report()),
             "odometer_m": live.map(|live| live.session.state.odometer_m),
             "service_complete": live.map(|live| live.session.arrived),
             "cpu_tiles": self.world.as_ref().map(|world| world.loaded_tiles.len()),
@@ -448,6 +598,7 @@ impl CaptureScene<'_, '_> {
             "performance": self.performance.report(),
             "equipment_actions": self.equipment_capture_report(),
             "renderer": self.pipelines.as_ref().and_then(|p|p.device()),
+            "render_resources": self.pipelines.as_ref().and_then(|p|p.render_resources()),
             "native_audio": self.audio.as_ref().and_then(|a| a.engine.as_ref().map(|engine|engine.report())),
             "shader_pipelines": self.pipelines.as_ref().map(|p| {
                 let (pending, failed) = p.counts();
@@ -497,6 +648,45 @@ impl CaptureScene<'_, '_> {
             "traffic_brake_assistance": l.session.traffic_brake_assistance,
             "braking_intervention": l.session.braking_intervention(),
             "traction_load_fraction": l.session.cab_telemetry().traction_load_fraction,
+        })));
+        report["camera_collision"] = serde_json::json!({
+            "corrections": self.camera_collision.as_ref().map(|state| state.corrections),
+        });
+        report["obstacles"] = serde_json::json!(self.weather_obstacles.as_ref().map(|obstacles| {
+            serde_json::json!({
+                "origin_m": obstacles.origin.to_array(),
+                "solid_count": obstacles.solids.len(),
+                "solids": obstacles.solids.iter().take(192).map(|solid| serde_json::json!({
+                    "min": solid.min.to_array(), "max": solid.max.to_array(),
+                    "train": solid.owner.is_some(),
+                })).collect::<Vec<_>>(),
+            })
+        }));
+        report["road_crossings"] = serde_json::json!(self.road_crossings.as_ref().map(|crossings| {
+            serde_json::json!({
+                "stops": crossings.stops.iter().take(128).map(|(point, closed)| serde_json::json!({
+                    "position_render_m": point.to_array(), "closed": closed,
+                })).collect::<Vec<_>>(),
+                "unresolved": crossings.unresolved.iter().take(128).collect::<Vec<_>>(),
+            })
+        }));
+        report["road_cars"] =
+            serde_json::json!(self.road_cars.iter().take(128).map(|(car, pose)| {
+            serde_json::json!({
+                "position_render_m": pose.translation().to_array(),
+                "start_render_m": car.start.to_array(), "end_render_m": car.end.to_array(),
+                "path_fraction": car.t, "speed_mps": car.speed_mps,
+                "length_m": car.length_m, "follows_rdb": car.curve.is_some(),
+            })
+        }).collect::<Vec<_>>());
+        report["crossings"] = serde_json::json!(live.map(|l| &l.session.state.crossings));
+        report["refilling"] = serde_json::json!(live.and_then(|l| l.session.refilling.as_ref()));
+        report["traffic_operations"] = serde_json::json!(live.map(|l| serde_json::json!({
+            "player_service":l.session.service_id,"control_history":l.traffic.control_history,
+            "cars":l.session.formation.cars.len(),"coupled":l.session.formation.coupled_count,
+            "other_services":l.traffic.services.iter().map(|s|serde_json::json!({"id":s.id,"cars":s.session.formation.cars.len(),"head_m":s.session.head_chainage_m(),"speed_mps":s.session.velocity_mps(),"departed":s.departed})).collect::<Vec<_>>(),
+            "coupling_receipts":l.traffic.couplings.len(),"passing":l.session.passing_status(),
+            "yard_deliveries":l.traffic.yard_inventory(&l.session),
         })));
         report["rail_adhesion"] =
             serde_json::json!(live.and_then(|l| l.session.state.rail_adhesion.as_ref()));
@@ -560,6 +750,8 @@ impl CaptureScene<'_, '_> {
             .as_ref()
             .map_or(serde_json::Value::Null, |s| s.report());
         report["shared_geometry"] = crate::shared_geometry::report();
+        report["prepared_geometry"] = crate::prepared_geometry::report();
+        report["render_budget"] = serde_json::to_value(&*self.render_budget).unwrap_or_default();
         report["adaptive_graphics"]=self.adaptive.as_ref().map_or(serde_json::Value::Null,|s|serde_json::json!({"level":s.level,"changes":s.changes,"filtered_ms":s.filtered_ms}));
         report["train_lamps"]=serde_json::json!(self.train_lamps.iter().filter(|(l,_,_)|l.intensity>0.).map(|(l,h,p)|serde_json::json!({"service":h.map(|h|h.service_index),"vehicle":h.map(|h|h.vehicle_index).or_else(||p.map(|p|p.vehicle)),"passenger":p.is_some(),"intensity":l.intensity,"shadows":l.shadow_maps_enabled,"range":l.range})).collect::<Vec<_>>());
         report["draw_calls"] = self.world_draws.report();

@@ -46,7 +46,10 @@ pub fn update(
     mut live: ResMut<crate::live::LiveDrive>,
     mut follow: ResMut<CameraFollowMode>,
     mut mode: ResMut<CameraMode>,
-    mut camera: Query<(&mut Transform, &mut OrbitState), With<Camera3d>>,
+    mut camera: Query<
+        (&mut Transform, &mut OrbitState),
+        (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+    >,
 ) {
     let Ok((mut tf, mut orbit)) = camera.single_mut() else {
         return;

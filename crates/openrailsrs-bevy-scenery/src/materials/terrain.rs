@@ -32,6 +32,8 @@ pub struct TerrainMaterial {
     /// Opt-in macro variation; x enabled, zw floating-origin offset.
     #[uniform(6)]
     pub enhancement: Vec4,
+    #[uniform(7)]
+    pub snow_tracks: crate::materials::SnowTrackData,
 }
 
 impl TerrainMaterial {
@@ -40,6 +42,9 @@ impl TerrainMaterial {
 }
 
 impl Material for TerrainMaterial {
+    fn vertex_shader() -> ShaderRef {
+        "shaders/terrain_snow_vertex.wgsl".into()
+    }
     fn fragment_shader() -> ShaderRef {
         TERRAIN_SHADER_PATH.into()
     }

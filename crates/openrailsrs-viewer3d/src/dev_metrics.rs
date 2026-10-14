@@ -267,7 +267,10 @@ fn install_tools(app: &mut App) {
 fn debug_picking_targets(
     mut commands: Commands,
     mode: Res<bevy::dev_tools::picking_debug::DebugPickingMode>,
-    cameras: Query<(Entity, Has<bevy::picking::mesh_picking::MeshPickingCamera>), With<Camera3d>>,
+    cameras: Query<
+        (Entity, Has<bevy::picking::mesh_picking::MeshPickingCamera>),
+        (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+    >,
     targets: Query<Entity, (With<Mesh3d>, Without<bevy::picking::Pickable>)>,
 ) {
     let enabled = *mode != bevy::dev_tools::picking_debug::DebugPickingMode::Disabled;

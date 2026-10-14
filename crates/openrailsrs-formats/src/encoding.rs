@@ -35,11 +35,13 @@ const BOM_UTF8: [u8; 3] = [0xEF, 0xBB, 0xBF];
 /// 4. Windows-1252 if no BOM but high bytes (`> 0x7F`) are present
 /// 5. Plain UTF-8 / ASCII otherwise
 pub fn read_msts_file_to_string(path: &Path) -> Result<String, FormatError> {
+    crate::read_trace::record(path);
     let bytes =
         crate::cancellation::read_bytes(path).map_err(|e| FormatError::UnexpectedToken {
             offset: 0,
             message: format!("failed to read {}: {e}", path.display()),
         })?;
+    crate::read_trace::record_bytes(path, &bytes);
     Ok(decode_msts_bytes(&bytes))
 }
 

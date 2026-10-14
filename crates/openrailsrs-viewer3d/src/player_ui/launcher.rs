@@ -238,12 +238,16 @@ pub(super) fn build_new_game(
                         if let Some(railway) = &preview.railway {
                             label(
                                 p,
-                                format!(
-                                    "Trocha {:.0} mm · {} · {:.0} V",
-                                    railway.gauge_m * 1000.0,
-                                    railway.supply.kind.label(),
-                                    railway.supply.voltage_v
-                                ),
+                                if railway.gauge_m > 0.0 {
+                                    format!(
+                                        "Trocha {:.0} mm · {} · {:.0} V",
+                                        railway.gauge_m * 1000.,
+                                        railway.supply.kind.label(),
+                                        railway.supply.voltage_v
+                                    )
+                                } else {
+                                    "Trocha y alimentación: sin datos del escenario original".into()
+                                },
                                 12.0,
                                 MUTED,
                             );
@@ -925,14 +929,14 @@ pub(super) fn build_library(
                 p,
                 format!(
                     "Carpeta de descargas: {}",
-                    player_data_dir().join("official-content").display()
+                    openrailsrs_content::content_dir().display()
                 ),
                 12.0,
                 MUTED,
             );
             label(
                 p,
-                "Solo se descarga del origen identificado en el catálogo. Los recursos faltantes y sus destinos se consultan en el detalle de la selección.",
+                "Se descarga del origen del catálogo o del repositorio original que confirmaste al pegar su URL. Los faltantes se consultan en el detalle de la selección.",
                 12.0,
                 MUTED,
             );

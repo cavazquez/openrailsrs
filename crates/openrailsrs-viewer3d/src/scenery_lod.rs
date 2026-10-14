@@ -8,8 +8,14 @@ use std::{
 };
 #[derive(Resource, Default)]
 pub struct Silhouettes {
-    levels: HashMap<PathBuf, Vec<bool>>,
-    radii: HashMap<PathBuf, f32>,
+    summaries: HashMap<PathBuf, PreparedSilhouette>,
+}
+/// Geometry-dependent decisions prepared with the shape on a worker. Camera
+/// distance, viewport, hysteresis and instance scale remain live inputs.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct PreparedSilhouette {
+    safe: Vec<bool>,
+    radius: f32,
 }
 fn bounds(shape: &ShapeFile, index: usize) -> Option<(Vec3, Vec3)> {
     let level = shape.lod_controls.first()?.distance_levels.get(index)?;
@@ -43,14 +49,18 @@ fn bounds(shape: &ShapeFile, index: usize) -> Option<(Vec3, Vec3)> {
     }
     min.is_finite().then_some((min, max))
 }
+#[cfg(test)]
 pub fn safe_levels(shape: &ShapeFile) -> Vec<bool> {
+    safe_levels_from_bounds(shape, bounds(shape, 0))
+}
+fn safe_levels_from_bounds(shape: &ShapeFile, base: Option<(Vec3, Vec3)>) -> Vec<bool> {
     let Some(levels) = shape.lod_controls.first().map(|c| &c.distance_levels) else {
         return vec![true];
     };
     if levels.len() <= 1 {
         return vec![true; levels.len()];
     }
-    let Some((min, max)) = bounds(shape, 0) else {
+    let Some((min, max)) = base else {
         return vec![true; levels.len()];
     };
     let extent = (max - min).max(Vec3::splat(0.02));
@@ -77,7 +87,35 @@ pub fn safe_levels(shape: &ShapeFile) -> Vec<bool> {
         })
         .collect()
 }
+pub(crate) fn prepare(shape: &ShapeFile) -> PreparedSilhouette {
+    let base = bounds(shape, 0);
+    PreparedSilhouette {
+        safe: safe_levels_from_bounds(shape, base),
+        radius: base.map_or(0., |(a, b)| (b - a).length() * 0.5),
+    }
+}
 impl Silhouettes {
+    pub(crate) fn seed(&mut self, path: PathBuf, summary: PreparedSilhouette) {
+        if self.summaries.len() > 4096 {
+            self.summaries.clear();
+        }
+        self.summaries.insert(path, summary);
+    }
+    #[cfg(test)]
+    pub(crate) fn contains(&self, path: &Path) -> bool {
+        self.summaries.contains_key(path)
+    }
+    fn summary(&mut self, path: &Path, shape: &ShapeFile) -> &PreparedSilhouette {
+        if self.summaries.len() > 4096 {
+            self.summaries.clear();
+        }
+        // Borrow the existing key on hits; PathBuf allocation and geometry
+        // traversal belong only to uncached synchronous tooling/fallbacks.
+        if !self.summaries.contains_key(path) {
+            self.summaries.insert(path.into(), prepare(shape));
+        }
+        &self.summaries[path]
+    }
     pub fn projected(
         &mut self,
         path: &Path,
@@ -89,23 +127,11 @@ impl Silhouettes {
         scale: f32,
         pixels: f32,
     ) -> usize {
-        if self.radii.len() > 4096 {
-            self.radii.clear();
-        }
-        let radius = *self
-            .radii
-            .entry(path.into())
-            .or_insert_with(|| bounds(shape, 0).map_or(0., |(a, b)| (b - a).length() * 0.5));
+        let radius = self.summary(path, shape).radius;
         projected_radius(shape, distance, current, fov, height, scale, pixels, radius)
     }
     pub fn choose(&mut self, path: &Path, shape: &ShapeFile, desired: usize) -> usize {
-        if self.levels.len() > 4096 {
-            self.levels.clear();
-        }
-        let safe = self
-            .levels
-            .entry(path.into())
-            .or_insert_with(|| safe_levels(shape));
+        let safe = &self.summary(path, shape).safe;
         (0..=desired.min(safe.len().saturating_sub(1)))
             .rev()
             .find(|i| safe[*i])
@@ -171,6 +197,40 @@ mod tests {
         assert_eq!(
             Silhouettes::default().choose(Path::new("bridge.s"), &shape, 1),
             0
+        );
+        let summary = prepare(&shape);
+        assert_eq!(summary.safe, vec![true, false]);
+        let mut seeded = Silhouettes::default();
+        seeded.seed(PathBuf::from("bridge.s"), summary);
+        // A seeded hit must not revisit source geometry on the main thread.
+        // Without the prepared summary this incomplete source would accept
+        // every band because it no longer has measurable bounds.
+        let mut unavailable_geometry = shape.clone();
+        unavailable_geometry.points.clear();
+        assert_eq!(
+            seeded.choose(Path::new("bridge.s"), &unavailable_geometry, 1),
+            0
+        );
+        let expected = projected_level(&shape, 100., 0, 0.8, 1080., 1., 72.);
+        assert_eq!(
+            seeded.projected(
+                Path::new("bridge.s"),
+                &unavailable_geometry,
+                100.,
+                0,
+                0.8,
+                1080.,
+                1.,
+                72.
+            ),
+            expected
+        );
+        // Reloading changed source replaces the prior summary, including its
+        // radius. This is a new publication, not a cached camera query.
+        seeded.seed(PathBuf::from("bridge.s"), prepare(&unavailable_geometry));
+        assert_eq!(
+            seeded.choose(Path::new("bridge.s"), &unavailable_geometry, 1),
+            1
         );
     }
 }
@@ -254,5 +314,23 @@ mod projected_acceptance {
         assert!(projected_level(&shape, 1600., 0, 0.8, 2160., 1., 72.) <= far);
         assert!(projected_level(&shape, 1600., 0, 0.8, 1080., 4., 72.) <= far);
         assert_eq!(projected_level(&shape, 1., 2, 0.8, 1080., 1., 72.), 0);
+        let mut cached = Silhouettes::default();
+        cached.seed(root.clone(), prepare(&shape));
+        for distance in [1., 25., 400., 1600., 3000.] {
+            for current in 0..3 {
+                for fov in [0.4, 0.8, 1.4] {
+                    for height in [720., 1080., 2160.] {
+                        for scale in [0.5, 1., 4.] {
+                            assert_eq!(
+                                cached.projected(
+                                    &root, &shape, distance, current, fov, height, scale, 72.
+                                ),
+                                projected_level(&shape, distance, current, fov, height, scale, 72.)
+                            );
+                        }
+                    }
+                }
+            }
+        }
     }
 }

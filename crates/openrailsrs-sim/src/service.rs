@@ -103,6 +103,26 @@ pub struct LiveGameplay {
 }
 
 impl LiveGameplay {
+    pub(crate) fn shift_pre_run_clock(&mut self, offset: f64) {
+        for target in &mut self.stop_targets {
+            target.arrive_s = (target.arrive_s - offset).max(0.);
+            target.depart_s = (target.depart_s - offset).max(0.);
+        }
+        for (_, time) in &mut self.passed_stops {
+            *time = (*time - offset).max(0.);
+        }
+        for record in &mut self.stop_results {
+            record.scheduled_arrive_s = (record.scheduled_arrive_s - offset).max(0.);
+            record.actual_arrive_s = (record.actual_arrive_s - offset).max(0.);
+            record.actual_depart_s = (record.actual_depart_s - offset).max(0.);
+        }
+        for record in &mut self.missed_stops {
+            record.time_s = (record.time_s - offset).max(0.);
+        }
+        if let Some((time, _, _)) = &mut self.arrival {
+            *time -= offset;
+        }
+    }
     pub fn new(destination_node: String, penalty: f64, stops: Vec<LiveStopTarget>) -> Self {
         let destination = stops
             .iter()
@@ -150,6 +170,40 @@ impl LiveGameplay {
             .get(self.next_stop_idx)
             .map(|stop| (self.required_boarding_s(stop) - self.boarding_elapsed_s).max(0.0))
             .unwrap_or(0.0)
+    }
+    pub fn boarding_progress(&self) -> f64 {
+        self.stop_targets
+            .get(self.next_stop_idx)
+            .map_or(0., |stop| {
+                let required = self.required_boarding_s(stop).max(0.1);
+                (self.boarding_elapsed_s / required).clamp(0., 1.)
+            })
+    }
+
+    /// A grouped passenger waits until its turn, then clears the doorway in at
+    /// most 1.5 seconds. A long authored dwell is not a slow walking animation.
+    pub fn passenger_motion(&self, slot: usize, count: usize) -> (f64, bool) {
+        let Some(stop) = self.stop_targets.get(self.next_stop_idx) else {
+            return (0., false);
+        };
+        if count == 0 {
+            return (0., false);
+        }
+        let phase = (self.boarding_progress() * count as f64 - slot as f64).clamp(0., 1.);
+        let seconds_per_slot = (self.required_boarding_s(stop) / count as f64).max(0.001);
+        let walking_fraction = (1.5 / seconds_per_slot).min(1.);
+        let motion = ((phase - (1. - walking_fraction)) / walking_fraction).clamp(0., 1.);
+        (motion, motion > 1e-9 && motion < 1. - 1e-9)
+    }
+
+    pub(crate) fn passenger_close_boundary(&self, count: usize) -> Option<f64> {
+        if self.phase != ServicePhase::Boarding || count == 0 {
+            return None;
+        }
+        let progress = self.boarding_progress();
+        let slot = (progress * count as f64).floor() as usize;
+        (slot < count && self.passenger_motion(slot, count).1)
+            .then_some((slot + 1) as f64 / count as f64)
     }
 
     pub fn remaining_schedule_s(&self, time_s: f64) -> f64 {

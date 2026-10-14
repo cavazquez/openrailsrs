@@ -259,6 +259,14 @@ impl VehicleSystemsDef {
                     && finite_range(p.roll_inertia_kg_m2, 1e3, 1e7)
             })
             && self.electric_brake.as_ref().is_none_or(|p| {
+                // OR 1.6.1 reads native fade speeds as floats in default MPH.
+                // Content may put its final zero-force knots above any reachable
+                // train speed (for example 1800 MPH); preserve those knots.
+                let maximum_speed = if p.native_response {
+                    f64::from(f32::MAX)
+                } else {
+                    400.
+                };
                 p.force_ramp_n_s.iter().all(|v| finite_range(*v, 0., 1e8))
                     && p.power_ramp_w_s.iter().all(|v| finite_range(*v, 0., 1e10))
                     && p.maximum_current_a.is_none_or(|v| finite_range(v, 0., 1e5))
@@ -268,16 +276,16 @@ impl VehicleSystemsDef {
                             && t.len() >= 2
                             && t.len() <= 256
                             && t.iter().all(|q| {
-                                finite_range(q[0], 0., 400.) && finite_range(q[1], 0., 1e6)
+                                finite_range(q[0], 0., maximum_speed) && finite_range(q[1], 0., 1e6)
                             })
                             && t.windows(2).all(|q| q[0][0] < q[1][0])
                     })
                     && p.notches.windows(2).all(|q| q[0].0 < q[1].0)
                     && p.force_curve.len() >= 2
                     && p.force_curve.len() <= 256
-                    && p.force_curve
-                        .iter()
-                        .all(|q| finite_range(q[0], 0., 400.) && finite_range(q[1], 0., 1e6))
+                    && p.force_curve.iter().all(|q| {
+                        finite_range(q[0], 0., maximum_speed) && finite_range(q[1], 0., 1e6)
+                    })
                     && p.force_curve.windows(2).all(|q| q[0][0] < q[1][0])
                     && finite_range(p.rheostat_max_w, 0., 1e12)
                     && finite_range(p.regenerative_max_w, 0., 2e7)

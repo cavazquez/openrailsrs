@@ -1175,7 +1175,10 @@ pub fn default_chiltern_root() -> Option<PathBuf> {
                 PathBuf::from(h).join("Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern")
             })
         })?;
-    p.join("WORLD").is_dir().then_some(p)
+    if p.join("WORLD").is_dir() {
+        return Some(p);
+    }
+    crate::official_content::prepared_author_route("chiltern-v4", "Chiltern")
 }
 #[derive(Clone, Debug)]
 pub struct QueuedPlayerLaunch {

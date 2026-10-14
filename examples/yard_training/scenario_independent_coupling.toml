@@ -1,0 +1,49 @@
+[scenario]
+name = "Patio: recoger una formación independiente"
+description = "Maniobra guiada de 1 km con tres vehículos propios de prueba. F9: frenos de mano, corte y acople. M: cambio junction. F7: objetivos."
+
+[route]
+path = "route"
+start = "a"
+destination = "destination"
+start_offset_m = 160.0
+assume_signals_clear = true
+
+[[route.stops]]
+node = "destination"
+name = "Salida del patio"
+offset_m = -20.0
+arrive_s = 600.0
+depart_s = 600.0
+dwell_s = 0.0
+
+[train]
+consist = "consists/yard.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+penalty_per_second_late = 0.0
+
+[simulation]
+duration = 1800.0
+time_step = 0.05
+seed = 42
+multi_body = true
+coupler_kind = "freight"
+legacy_power_cap = false
+train_air_lap_hold = true
+train_air_full_release_s = 3.0
+
+[output]
+csv = "run.csv"
+metadata = "run.json"
+
+[[extra_trains]]
+id="stock-parked"
+consist="consists/yard.con"
+start="a"
+destination="destination"
+start_offset_m=100.0
+parked=true
+output_csv="parked.csv"

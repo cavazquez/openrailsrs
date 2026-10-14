@@ -48,7 +48,7 @@ pub struct EffectObstacles {
     pub solids: Vec<Solid>,
     elapsed: f32,
     center: Option<Vec3>,
-    origin: Vec3,
+    pub(crate) origin: Vec3,
     statics: Vec<Solid>,
     pub refreshes: u64,
 }
@@ -200,7 +200,10 @@ pub struct ObstacleScene<'w, 's> {
             Has<crate::live::LiveTrainBody>,
             Option<&'static ChildOf>,
         ),
-        Without<crate::weather_particles::WeatherMesh>,
+        (
+            Without<crate::weather_particles::WeatherMesh>,
+            Without<crate::platform_people::PassengerFigure>,
+        ),
     >,
     materials: Res<'w, Assets<StandardMaterial>>,
     native: Res<'w, Assets<openrailsrs_bevy_scenery::OrSceneryMaterial>>,
@@ -209,10 +212,11 @@ pub struct ObstacleScene<'w, 's> {
 pub fn update(
     time: Res<Time<Real>>,
     origin: Res<crate::floating_origin::FloatingOrigin>,
-    camera: Query<&GlobalTransform, With<Camera3d>>,
+    camera: Query<&GlobalTransform, (With<Camera3d>, Without<crate::mirrors::MirrorCamera>)>,
     scene: ObstacleScene,
     mut obstacles: ResMut<EffectObstacles>,
 ) {
+    let _profile = crate::performance::profile_system("effect_obstacles");
     let Ok(camera) = camera.single() else {
         return;
     };

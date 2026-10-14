@@ -67,7 +67,10 @@ pub fn sync_view_window_from_train(
     follow: Res<CameraFollowMode>,
     camera_mode: Res<CameraMode>,
     train: Query<&Transform, With<LiveTrainMarker>>,
-    camera: Query<(&Transform, Option<&OrbitState>), With<Camera3d>>,
+    camera: Query<
+        (&Transform, Option<&OrbitState>),
+        (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+    >,
     origin: Res<crate::floating_origin::FloatingOrigin>,
 ) {
     if !opts.live {

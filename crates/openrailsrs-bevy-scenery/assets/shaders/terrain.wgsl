@@ -19,7 +19,8 @@
 @group(#{MATERIAL_BIND_GROUP}) @binding(6) var<uniform> enhancement: vec4<f32>;
 
 const SHADOW_BRIGHTNESS: f32 = 0.5;
-#import "shaders/snow_surface.wgsl"::snow_surface
+#import "shaders/snow_surface.wgsl"::{snow_surface, snow_track_cover, SnowTrackData}
+@group(#{MATERIAL_BIND_GROUP}) @binding(7) var<uniform> snow_tracks: SnowTrackData;
 const FULL_BRIGHTNESS: f32 = 1.0;
 
 @fragment
@@ -45,7 +46,7 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
         rgb *= 1.0 - puddle * 0.12;
     }
     let snow = snow_surface(in.uv, n, surface_weather.y);
-    rgb = mix(rgb * (1.0 - 0.16 * wet), vec3(0.78, 0.84, 0.89) * snow.y, snow.x * 0.86);
+    rgb = mix(rgb * (1.0 - 0.16 * wet), vec3(0.78, 0.84, 0.89) * snow.y, snow.x * snow_track_cover(in.world_position.xyz,snow_tracks) * 0.86);
     let light_id = railway_lighting::railway_primary_directional_light();
     let light = view_bindings::lights.directional_lights[light_id];
     let light_dir = light.direction_to_light;

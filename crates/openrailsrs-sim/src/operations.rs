@@ -111,7 +111,8 @@ impl FormationState {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum CarOperation {
     TrainBus,
     DoorsLeft,
@@ -137,6 +138,8 @@ fn default_traffic_brake_assistance() -> bool {
 /// The snapshot contains mutable state, never GPU assets or source content.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SessionSnapshot {
+    #[serde(default)]
+    pub refilling: Option<crate::refill::RefillOperation>,
     #[serde(default)]
     pub operational_operation: usize,
     #[serde(default)]
@@ -238,6 +241,7 @@ impl LiveDriveSession {
 
     pub fn snapshot(&self) -> SessionSnapshot {
         SessionSnapshot {
+            refilling: self.refilling.clone(),
             operational_operation: self.operational_operation,
             operational_leg: self.operational_leg,
             operational_prefix_m: self.operational_prefix_m,
@@ -300,6 +304,51 @@ impl LiveDriveSession {
 
     /// Validate completely before mutating the current game.
     pub fn validate_snapshot(&self, saved: &SessionSnapshot) -> Result<(), String> {
+        if saved
+            .refilling
+            .as_ref()
+            .is_some_and(|r| !r.valid(saved.formation.coupled_count))
+        {
+            return Err("Operación de carga guardada inválida".into());
+        }
+        if !saved.state.depot.valid() {
+            return Err("Mantenimiento guardado inválido".into());
+        }
+        if saved.state.depot.active.as_ref().is_some_and(|(id, t)| {
+            saved
+                .state
+                .rail_operations
+                .definition
+                .depots
+                .iter()
+                .find(|d| &d.id == id)
+                .is_none_or(|d| *t > d.maintenance_s)
+        }) {
+            return Err("Tarea de depósito incompatible".into());
+        }
+        if saved
+            .state
+            .shunt_authority
+            .as_ref()
+            .is_some_and(|a| !a.valid() || self.graph.signal(&a.signal).is_none())
+        {
+            return Err("Autorización de maniobra guardada inválida".into());
+        }
+        if saved.state.crossings.len() > 512
+            || saved.state.crossings.values().any(|c| {
+                !c.valid()
+                    || c.definition.lanes.iter().any(|l| {
+                        self.graph
+                            .edge(&l.edge)
+                            .is_none_or(|e| l.position_m > e.length_m)
+                    })
+            })
+        {
+            return Err("Paso a nivel guardado inválido".into());
+        }
+        if saved.state.articulated_joints != self.state.articulated_joints {
+            return Err("Articulación incompatible con esta formación".into());
+        }
         if saved
             .state
             .surface_conditions
@@ -784,7 +833,7 @@ impl LiveDriveSession {
                 .collect();
         }
         // Reconnecting a saved train must not restart a hose without a WORLD match.
-        self.refilling = None;
+        self.refilling = saved.refilling;
         self.gameplay = saved.gameplay;
         self.formation = saved.formation;
         if self.formation.parked_head_chainage_m.is_some() {
@@ -968,6 +1017,14 @@ impl LiveDriveSession {
 
     /// Park a secured trailing section; it remains on the track at its own position.
     pub fn uncouple_after(&mut self, index: usize) -> Result<(), String> {
+        if self
+            .state
+            .articulated_joints
+            .iter()
+            .any(|p| p[0] == index && p[1] == index + 1)
+        {
+            return Err("No se pueden separar cuerpos que comparten un bogie Jacobs".into());
+        }
         let keep = index + 1;
         if keep <= self.cab_vehicle() {
             return Err(
@@ -1397,7 +1454,7 @@ impl LiveDriveSession {
     }
 
     /// Reverse graph edges refer to the same physical track section.
-    fn edge_is_occupied(&self, id: &str, occupied: &HashMap<String, String>) -> bool {
+    pub(crate) fn edge_is_occupied(&self, id: &str, occupied: &HashMap<String, String>) -> bool {
         let base = id.strip_suffix("_r").unwrap_or(id);
         occupied.contains_key(base) || occupied.contains_key(&format!("{base}_r"))
     }
@@ -1424,6 +1481,24 @@ impl LiveDriveSession {
     }
 
     pub(crate) fn adopt_dispatch_path(&mut self, path: Vec<String>) -> Result<(), String> {
+        if path.is_empty()
+            || path.len() > 50000
+            || self.formation.parked_head_chainage_m.is_some()
+            || path.get(..=self.state.edge_index)
+                != self.state.path_edges.get(..=self.state.edge_index)
+            || path.windows(2).any(|pair| {
+                self.graph
+                    .edge(&pair[0])
+                    .zip(self.graph.edge(&pair[1]))
+                    .is_none_or(|(a, b)| a.to != b.from)
+            })
+            || path
+                .last()
+                .and_then(|id| self.graph.edge(id))
+                .is_none_or(|e| e.to.0 != self.gameplay.destination_node)
+        {
+            return Err("La alternativa debe conservar posición, destino, sección estacionada y continuidad del itinerario".into());
+        }
         let mut before = 0.;
         let mut chainages = HashMap::new();
         for edge in &path {
@@ -1445,6 +1520,12 @@ impl LiveDriveSession {
             if target.cum_dist_m < self.head_chainage_m() {
                 return Err("Parada detrás del tren".into());
             }
+        }
+        if targets[self.gameplay.next_stop_idx..]
+            .windows(2)
+            .any(|pair| pair[0].cum_dist_m >= pair[1].cum_dist_m)
+        {
+            return Err("La alternativa cambia el orden de las paradas pendientes".into());
         }
         self.gameplay.stop_targets = targets;
         self.path_data = PathData::from_path(&path, &self.graph);

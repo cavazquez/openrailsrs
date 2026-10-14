@@ -549,7 +549,10 @@ pub(crate) fn update_hud(
     atmosphere: HudAtmosphere,
     cab_diag: Option<Res<crate::cab_render::CabRenderDiagnostic>>,
     terrain: Option<Res<TerrainElevation>>,
-    camera: Query<(&Transform, Option<&crate::camera::OrbitState>), With<Camera3d>>,
+    camera: Query<
+        (&Transform, Option<&crate::camera::OrbitState>),
+        (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+    >,
     mut cache: Local<HudCache>,
     mut hud: Query<
         (

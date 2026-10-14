@@ -1,5 +1,5 @@
 // Preserve Bevy's standard material alpha, lighting and fog; cover upward surfaces.
-#import "shaders/snow_surface.wgsl"::snow_surface
+#import "shaders/snow_surface.wgsl"::{snow_surface, snow_track_cover, SnowTrackData}
 #import bevy_pbr::{
     pbr_fragment::pbr_input_from_standard_material,
     pbr_functions::alpha_discard,
@@ -14,6 +14,7 @@
 }
 #endif
 @group(#{MATERIAL_BIND_GROUP}) @binding(100) var<uniform> snow_cover: vec4<f32>;
+@group(#{MATERIAL_BIND_GROUP}) @binding(101) var<uniform> snow_tracks: SnowTrackData;
 #ifdef VISIBILITY_RANGE_DITHER
 #import bevy_pbr::pbr_functions::visibility_range_dither
 #endif
@@ -26,7 +27,7 @@ fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> Fragment
     var input = pbr_input_from_standard_material(in, is_front);
     input.material.base_color = alpha_discard(input.material, input.material.base_color);
     let snow = snow_surface(in.uv, in.world_normal, snow_cover.x);
-    let cover = snow.x;
+    let cover = snow.x * snow_track_cover(in.world_position.xyz, snow_tracks);
     input.material.base_color = vec4(mix(input.material.base_color.rgb,
         vec3(0.78, 0.84, 0.89) * snow.y, cover * 0.86), input.material.base_color.a);
     input.material.perceptual_roughness = mix(input.material.perceptual_roughness, 0.85, cover);

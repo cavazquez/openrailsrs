@@ -30,9 +30,8 @@ pub fn parse_electric_vehicle(ast: &Ast) -> Result<Option<ElectricVehicleParams>
         }
         for p in pantographs {
             let delay_s = number(p, "Delay", true)?.unwrap_or(0.);
-            if delay_s > 60. {
-                return Err(invalid("ORTSPantographs.Delay"));
-            }
+            // OR 1.6.1 Pantograph.Parse reads a Time without an upper bound.
+            // Author stock uses long finite delays to leave one pickup disabled.
             let offset_m = field_values(p, "ORTSRSOffset")
                 .last()
                 .and_then(|v| v.first())
@@ -101,6 +100,18 @@ fn number(ast: &Ast, key: &str, time: bool) -> Result<Option<f64>, FormatError> 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn author_disabled_pantograph_retains_its_long_native_delay() {
+        let ast = crate::parse_vehicle_text("Engine ( e Type ( Electric ) ORTSPantographs ( Pantograph ( Delay ( 0s ) ) Pantograph ( Delay ( 999999s ) ) Pantograph ( Delay ( 0s ) ) Pantograph ( Delay ( 0s ) ) ) )").unwrap();
+        let p = parse_electric_vehicle(&ast).unwrap().unwrap();
+        assert_eq!(p.pantographs.len(), 4);
+        assert_eq!(p.pantographs[1].delay_s, 999999.);
+        assert_eq!(p.pantograph_delay_s, 0.);
+        for delay in ["-1s", "NaN", "infs", "12bananas"] {
+            let ast = crate::parse_vehicle_text(&format!("Engine ( e Type ( Electric ) ORTSPantographs ( Pantograph ( Delay ( {delay} ) ) ) )")).unwrap();
+            assert!(parse_electric_vehicle(&ast).is_err(), "accepted {delay}");
+        }
+    }
     #[test]
     fn electric_type_and_native_delays_are_retained() {
         let ast = crate::parse_vehicle_text("Engine ( e Type ( Electric ) ORTSPowerOnDelay ( 200ms ) ORTSCircuitBreakerClosingDelay ( 1 s ) ORTSPantographs ( Pantograph ( Delay ( 3s ) ) ) )").unwrap();

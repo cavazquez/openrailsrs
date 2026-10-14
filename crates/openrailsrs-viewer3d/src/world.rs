@@ -156,6 +156,7 @@ pub fn scenery_entity_should_unload(
 /// One WORLD shape instance queued for spawn, with tile membership (#62).
 #[derive(Clone, Debug)]
 pub struct ShapeInstancePlacement {
+    pub crossing: Option<crate::crossing_visual::CrossingWorld>,
     pub bank: Option<std::sync::Arc<crate::superelevation::TrackBankDeformation>>,
     pub transform: Transform,
     /// Full Matrix3x3 linear when present (shear); overrides TRS in GPU instancing (#139).
@@ -512,6 +513,7 @@ pub struct CarSpawnerPatch {
 /// One scenery object from a loaded `.w` tile, ready for 3D spawn.
 #[derive(Clone, Debug, PartialEq)]
 pub struct WorldObject {
+    pub crossing: Option<crate::crossing_visual::CrossingWorld>,
     pub kind: &'static str,
     pub uid: Option<u32>,
     /// Ordinal in the source WORLD tile, stable across filtering and reloads.
@@ -1033,12 +1035,14 @@ fn try_object_from_item(
             pickup_type: *kind,
             capacity_kg: capacity * 0.45359237,
             feed_kg_s: feed * 0.45359237,
-            opening_time_s: pickup_anim_data.map_or(1., |a| if a[1] > 0. { a[1] } else { 1. }),
+            // OR uses zero AnimationSpeed for an instantaneous pickup arm.
+            opening_time_s: pickup_anim_data.map_or(1., |a| a[1].max(0.)),
             speed_range_mps: speed_range_mps.unwrap_or([0., 0.]),
         }),
         _ => None,
     };
     Ok(Some(WorldObject {
+        crossing: crate::crossing_visual::CrossingWorld::from_item(tile_x, tile_z, item),
         kind: item.kind(),
         uid: item.uid(),
         source_index: 0,
@@ -1587,6 +1591,7 @@ type AnimatedShapeSpawnEntry = (
     AnimatedShapeSpawnBundle,
     Option<crate::signal_animation::SignalSemaphore>,
     Option<crate::world_operations::FuelPickupAnimation>,
+    Option<crate::crossing_visual::CrossingAnimation>,
 );
 
 /// GPU-instanced static opaque WORLD group (#58).
@@ -1606,14 +1611,25 @@ type ParsedWorldShape = (
     Option<ShapeFile>,
     Option<crate::shapes::LoadedShape>,
     Vec<Option<crate::shapes::LoadedShape>>,
+    Vec<PathBuf>,
+    Option<crate::scenery_lod::PreparedSilhouette>,
 );
 type ShapeBatchReceiver = std::sync::Mutex<std::sync::mpsc::Receiver<Vec<ParsedWorldShape>>>;
 type TextureBatchReceiver =
     std::sync::Mutex<std::sync::mpsc::Receiver<crate::shapes::PrefetchedTextures>>;
 
+struct PendingLodPublication {
+    path: PathBuf,
+    shape: std::sync::Arc<ShapeFile>,
+    base: ShapeRenderAsset,
+    remaining: std::iter::Enumerate<std::vec::IntoIter<Option<crate::shapes::LoadedShape>>>,
+    assets: Vec<ShapeRenderAsset>,
+}
+
 #[derive(Resource)]
 pub struct WorldSpawnProgress {
     phase: WorldSpawnPhase,
+    foreground_budget: std::time::Duration,
     started: Instant,
     item_index: usize,
     /// Selected indices remain valid while tile materialize/unload is gated.
@@ -1636,6 +1652,7 @@ pub struct WorldSpawnProgress {
     shape_fallback_material: Option<Handle<StandardMaterial>>,
     parsed_shapes: Vec<(PathBuf, Option<crate::shapes::LoadedShape>)>,
     prepared_lods: HashMap<PathBuf, Vec<Option<crate::shapes::LoadedShape>>>,
+    prepared_silhouettes: HashMap<PathBuf, crate::scenery_lod::PreparedSilhouette>,
     shape_task: Option<ShapeBatchReceiver>,
     texture_task: Option<TextureBatchReceiver>,
     shape_load_paths: Vec<PathBuf>,
@@ -1649,6 +1666,7 @@ pub struct WorldSpawnProgress {
     shape_lod_assets: std::collections::HashMap<PathBuf, Vec<ShapeRenderAsset>>,
     texture_image_cache: std::collections::HashMap<(PathBuf, i32), Handle<Image>>,
     asset_build_index: usize,
+    pending_lod_publication: Option<PendingLodPublication>,
     instance_paths: Vec<PathBuf>,
     build_queue_index: usize,
     spawn_queue: Vec<ShapeSpawnBundle>,
@@ -1691,13 +1709,27 @@ impl WorldSpawnProgress {
             }
             WorldSpawnPhase::LoadingShapes => {
                 let total = self.shape_load_paths.len();
+                // Parsing the source is only the first part of this phase.
+                // Do not display 100% while primary meshes or LOD bands are
+                // still awaiting publication (especially on software renderers).
+                if total > 0 && self.shape_parse_index >= total {
+                    return if self.asset_build_index < self.parsed_shapes.len() {
+                        format!(
+                            "Publicando mallas 3D y texturas ({}/{})",
+                            self.asset_build_index,
+                            self.parsed_shapes.len()
+                        )
+                    } else {
+                        "Preparando detalle a distancia...".into()
+                    };
+                }
                 match self
                     .shape_parse_index
                     .checked_mul(100)
                     .and_then(|n| n.checked_div(total))
                 {
                     Some(pct) => format!(
-                        "Cargando mallas 3D y texturas ({}% — {}/{})",
+                        "Preparando mallas 3D y texturas ({}% — {}/{})",
                         pct, self.shape_parse_index, total
                     ),
                     None => "Cargando mallas 3D y texturas...".into(),
@@ -1728,6 +1760,7 @@ impl WorldSpawnProgress {
     fn new_from_item_index(placeholder_base: f32, item_index: usize) -> Self {
         Self {
             phase: WorldSpawnPhase::Classifying,
+            foreground_budget: std::time::Duration::from_millis(4),
             started: Instant::now(),
             item_index,
             item_indices: None,
@@ -1748,6 +1781,7 @@ impl WorldSpawnProgress {
             parsed_shapes: Vec::new(),
             shape_task: None,
             prepared_lods: HashMap::new(),
+            prepared_silhouettes: HashMap::new(),
             texture_task: None,
             shape_load_paths: Vec::new(),
             shape_parse_index: 0,
@@ -1760,6 +1794,7 @@ impl WorldSpawnProgress {
             shape_lod_assets: std::collections::HashMap::new(),
             texture_image_cache: std::collections::HashMap::new(),
             asset_build_index: 0,
+            pending_lod_publication: None,
             instance_paths: Vec::new(),
             build_queue_index: 0,
             spawn_queue: Vec::new(),
@@ -1853,6 +1888,8 @@ fn release_shape_render_asset_gpu(
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
 ) {
+    let _timer =
+        crate::performance::ShapeTimer::start("release_gpu_assets", Path::new("world shape"));
     if !crate::shared_geometry::owns(&asset.combined_mesh) {
         meshes.remove(asset.combined_mesh.id());
     }
@@ -2073,6 +2110,7 @@ fn classify_one_object(
                     signal_sub_obj: None,
                     signal_patch: None,
                     pickup: None,
+                    crossing: None,
                     loop_animation: false,
                 });
             return;
@@ -2144,6 +2182,7 @@ fn classify_one_object(
                         .flatten(),
                     signal_patch: obj.signal.clone().map(std::sync::Arc::new),
                     pickup: obj.pickup.clone(),
+                    crossing: obj.crossing.clone(),
                     loop_animation: obj.loop_animation,
                 });
             return;
@@ -2266,9 +2305,13 @@ fn append_shape_spawn_entries_for_transforms(
     }
     let clock = shape_file.is_some_and(openrailsrs_bevy_scenery::shapes::shape_has_native_clock);
     let animated = shape_file.is_some_and(shape_has_loop_animation)
-        && placements
-            .iter()
-            .any(|p| p.loop_animation || p.signal_sub_obj.is_some() || p.pickup.is_some() || clock);
+        && placements.iter().any(|p| {
+            p.loop_animation
+                || p.signal_sub_obj.is_some()
+                || p.pickup.is_some()
+                || p.crossing.is_some()
+                || clock
+        });
     let has_bank = placements.iter().any(|p| p.bank.is_some());
     let mergeable = !has_bank
         && !has_signal_filter
@@ -2433,6 +2476,7 @@ fn append_shape_spawn_entries_for_transforms(
                 if (inst.loop_animation
                     || inst.signal_sub_obj.is_some()
                     || inst.pickup.is_some()
+                    || inst.crossing.is_some()
                     || clock)
                     && shape_matrix_chain_is_animated(shape, matrix_idx)
                 {
@@ -2448,7 +2492,14 @@ fn append_shape_spawn_entries_for_transforms(
                     let pickup = inst.pickup.as_ref().map(|station| {
                         crate::world_operations::FuelPickupAnimation::new(shape, station)
                     });
-                    let controlled = inst.signal_sub_obj.is_some() || pickup.is_some() || clock;
+                    let crossing = inst
+                        .crossing
+                        .as_ref()
+                        .map(|c| crate::crossing_visual::CrossingAnimation::new(c, shape));
+                    let controlled = inst.signal_sub_obj.is_some()
+                        || pickup.is_some()
+                        || crossing.is_some()
+                        || clock;
                     anim_spawn_queue.push((
                         (
                             placement,
@@ -2473,6 +2524,7 @@ fn append_shape_spawn_entries_for_transforms(
                         ),
                         signal,
                         pickup,
+                        crossing,
                     ));
                 } else {
                     // A shape can animate one small matrix while most of its parts
@@ -2684,7 +2736,7 @@ fn prepare_lod_meshes(path: &Path, shape: &ShapeFile) -> Vec<Option<crate::shape
         .collect()
 }
 
-fn build_shape_lod_assets(
+fn build_shape_lod_asset(
     shape_path: &Path,
     shape: &ShapeFile,
     base_asset: &ShapeRenderAsset,
@@ -2695,46 +2747,39 @@ fn build_shape_lod_assets(
     texture_image_cache: &mut std::collections::HashMap<(PathBuf, i32), Handle<Image>>,
     ace_cache: &dyn crate::shapes::ShapeTextureSource,
     fallback_color: Color,
-    _fallback_material: &Handle<StandardMaterial>,
-    prepared: Vec<Option<crate::shapes::LoadedShape>>,
-) -> Vec<ShapeRenderAsset> {
+    band: usize,
+    loaded: Option<crate::shapes::LoadedShape>,
+) -> ShapeRenderAsset {
+    if band == 0 && primary_is_band_zero(shape) {
+        return base_asset.clone();
+    }
+    let Some(loaded) = loaded else {
+        // Empty bands preserve their authored slot, including intermediate gaps.
+        let mut empty = base_asset.clone();
+        empty.parts.clear();
+        return empty;
+    };
     let tex_dirs = texture_search_dirs_for_shape(shape_path, route_dir);
     let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
     let pbr = load_shape_pbr_sidecar(shape_path);
-    prepared
-        .into_iter()
-        .enumerate()
-        .map(|(band, loaded)| {
-            if band == 0 && primary_is_band_zero(shape) {
-                return base_asset.clone();
-            }
-            let Some(loaded) = loaded else {
-                // Keep empty bands at their authored index; filter_map previously
-                // shifted every later LOD and could leave geometry visible forever.
-                let mut empty = base_asset.clone();
-                empty.parts.clear();
-                return empty;
-            };
-            let mut asset = shape_render_asset_from_loaded_with_ace_cache(
-                loaded,
-                &tex_refs,
-                meshes,
-                images,
-                materials,
-                None,
-                texture_image_cache,
-                ace_cache,
-                fallback_color,
-                None,
-                false,
-                false,
-                pbr.as_ref(),
-                crate::shapes::world_texture_flags(base_asset.texture_flags),
-            );
-            apply_shape_descriptor_to_asset(shape_path, &mut asset);
-            asset
-        })
-        .collect()
+    let mut asset = shape_render_asset_from_loaded_with_ace_cache(
+        loaded,
+        &tex_refs,
+        meshes,
+        images,
+        materials,
+        None,
+        texture_image_cache,
+        ace_cache,
+        fallback_color,
+        None,
+        false,
+        false,
+        pbr.as_ref(),
+        crate::shapes::world_texture_flags(base_asset.texture_flags),
+    );
+    apply_shape_descriptor_to_asset(shape_path, &mut asset);
+    asset
 }
 
 fn prepare_shape_load_paths(progress: &mut WorldSpawnProgress) {
@@ -2750,6 +2795,65 @@ fn prepare_shape_load_paths(progress: &mut WorldSpawnProgress) {
         .parsed_shapes
         .reserve(progress.shape_load_paths.len());
 }
+fn prioritize_shape_load_paths(
+    progress: &mut WorldSpawnProgress,
+    forecast: &crate::streaming_forecast::StreamingForecast,
+    focus: &RouteFocus,
+) {
+    // Reorder only the unsubmitted suffix. A fixed oldest-first slot every
+    // fourth batch prevents scenery behind the camera from starving.
+    let first = progress
+        .shape_parse_index
+        .min(progress.shape_load_paths.len());
+    if progress.shape_task.is_some() {
+        return;
+    }
+    if first % 16 == 12 {
+        progress.shape_load_paths[first..].sort_unstable();
+        return;
+    }
+    progress.shape_load_paths[first..].sort_by(|a, b| {
+        let score = |path: &PathBuf| {
+            progress
+                .shape_instances
+                .get(path)
+                .into_iter()
+                .flatten()
+                .map(|p| forecast.priority_in_focus(p.transform.translation, focus))
+                .min_by(f32::total_cmp)
+                .unwrap_or(f32::MAX)
+        };
+        score(a).total_cmp(&score(b)).then(a.cmp(b))
+    });
+}
+
+// Resolving names on case-sensitive filesystems can scan large directories.
+// Keep this work with the source/geometry worker, including every authored LOD.
+fn world_shape_texture_paths(
+    path: &Path,
+    loaded: Option<&crate::shapes::LoadedShape>,
+    lods: &[Option<crate::shapes::LoadedShape>],
+    route_dir: &Path,
+) -> Vec<PathBuf> {
+    let _timer = crate::performance::ShapeTimer::start("resolve_texture_dependencies", path);
+    let Some(loaded) = loaded else {
+        return Vec::new();
+    };
+    let dirs = texture_search_dirs_for_shape(path, route_dir);
+    let refs: Vec<&Path> = dirs.iter().map(|p| p.as_path()).collect();
+    let flags = texture_flags_for_shape(path);
+    let mut textures = collect_loaded_shape_texture_paths_with_flags(loaded, &refs, flags);
+    for lod in lods.iter().flatten() {
+        textures.extend(collect_loaded_shape_texture_paths_with_flags(
+            lod, &refs, flags,
+        ));
+    }
+    let pbr = load_shape_pbr_sidecar(path);
+    textures.extend(collect_pbr_normal_map_texture_paths(pbr.as_ref(), &refs));
+    textures.sort_unstable();
+    textures.dedup();
+    textures
+}
 
 fn parse_next_shape_batch(progress: &mut WorldSpawnProgress, route_dir: &Path) -> bool {
     if progress.shape_parse_index >= progress.shape_load_paths.len() {
@@ -2764,15 +2868,69 @@ fn parse_next_shape_batch(progress: &mut WorldSpawnProgress, route_dir: &Path) -
         }
         let (sender, receiver) = std::sync::mpsc::channel();
         progress.shape_task = Some(std::sync::Mutex::new(receiver));
+        let worker_route_dir = route_dir.to_path_buf();
         std::thread::spawn(move || {
             let parsed = batch
                 .par_iter()
-                .map(|path| match load_shape_file_and_loaded(path, None) {
-                    Some((shape, loaded)) => {
-                        let lods = prepare_lod_meshes(path, &shape);
-                        (path.clone(), Some(shape), Some(loaded), lods)
+                .map(|path| {
+                    if let Some((shape, loaded, lods)) = crate::prepared_geometry::read(path) {
+                        let summary = {
+                            let _timer =
+                                crate::performance::ShapeTimer::start("prepare_silhouette", path);
+                            crate::scenery_lod::prepare(&shape)
+                        };
+                        let textures = world_shape_texture_paths(
+                            path,
+                            Some(&loaded),
+                            &lods,
+                            &worker_route_dir,
+                        );
+                        return (
+                            path.clone(),
+                            Some(shape),
+                            Some(loaded),
+                            lods,
+                            textures,
+                            Some(summary),
+                        );
                     }
-                    None => (path.clone(), None, None, vec![]),
+                    let source = crate::prepared_geometry::source_identity(path);
+                    match load_shape_file_and_loaded(path, None) {
+                        Some((shape, loaded)) => {
+                            let summary = {
+                                let _timer = crate::performance::ShapeTimer::start(
+                                    "prepare_silhouette",
+                                    path,
+                                );
+                                crate::scenery_lod::prepare(&shape)
+                            };
+                            let _timer =
+                                crate::performance::ShapeTimer::start("cpu_prepare_lods", path);
+                            let lods = prepare_lod_meshes(path, &shape);
+                            crate::prepared_geometry::write_verified(
+                                path,
+                                source.as_deref(),
+                                &shape,
+                                &loaded,
+                                &lods,
+                            );
+                            let textures = world_shape_texture_paths(
+                                path,
+                                Some(&loaded),
+                                &lods,
+                                &worker_route_dir,
+                            );
+                            (
+                                path.clone(),
+                                Some(shape),
+                                Some(loaded),
+                                lods,
+                                textures,
+                                Some(summary),
+                            )
+                        }
+                        None => (path.clone(), None, None, vec![], vec![], None),
+                    }
                 })
                 .collect();
             let _ = sender.send(parsed);
@@ -2789,49 +2947,29 @@ fn parse_next_shape_batch(progress: &mut WorldSpawnProgress, route_dir: &Path) -
     let parsed = match result {
         Ok(parsed) => parsed,
         Err(std::sync::mpsc::TryRecvError::Empty) => return true,
-        Err(std::sync::mpsc::TryRecvError::Disconnected) => {
-            batch.into_iter().map(|p| (p, None, None, vec![])).collect()
-        }
+        Err(std::sync::mpsc::TryRecvError::Disconnected) => batch
+            .into_iter()
+            .map(|p| (p, None, None, vec![], vec![], None))
+            .collect(),
     };
     progress.shape_task = None;
-    for (shape_path, shape_file, loaded, lods) in parsed {
+    for (shape_path, shape_file, loaded, lods, textures, summary) in parsed {
+        progress.texture_paths.extend(textures);
         progress.prepared_lods.insert(shape_path.clone(), lods);
+        if let Some(summary) = summary {
+            progress
+                .prepared_silhouettes
+                .insert(shape_path.clone(), summary);
+        }
         if let Some(shape) = shape_file {
             progress
                 .parsed_shape_files
                 .insert(shape_path.clone(), std::sync::Arc::new(shape));
         }
-        if let Some(ref loaded) = loaded {
+        if loaded.is_some() {
             progress
                 .load_diag
                 .record_path_loaded(&shape_path, MstsAssetKind::Shape);
-            let tex_dirs = texture_search_dirs_for_shape(&shape_path, route_dir);
-            let tex_refs: Vec<&Path> = tex_dirs.iter().map(|p| p.as_path()).collect();
-            progress
-                .texture_paths
-                .extend(collect_loaded_shape_texture_paths_with_flags(
-                    loaded,
-                    &tex_refs,
-                    texture_flags_for_shape(&shape_path),
-                ));
-            if let Some(lods) = progress.prepared_lods.get(&shape_path) {
-                for lod in lods.iter().flatten() {
-                    progress
-                        .texture_paths
-                        .extend(collect_loaded_shape_texture_paths_with_flags(
-                            lod,
-                            &tex_refs,
-                            texture_flags_for_shape(&shape_path),
-                        ));
-                }
-            }
-            let pbr = load_shape_pbr_sidecar(&shape_path);
-            progress
-                .texture_paths
-                .extend(collect_pbr_normal_map_texture_paths(
-                    pbr.as_ref(),
-                    &tex_refs,
-                ));
         } else {
             progress.load_diag.record_path_failed(
                 &shape_path,
@@ -3119,12 +3257,16 @@ struct WorldObjectKey {
 pub struct WorldSceneryStreamState {
     shapes: HashSet<WorldObjectKey>,
     auxiliary: HashSet<WorldObjectKey>,
+    pending_auxiliary: std::collections::VecDeque<WorldObject>,
     last_center: Option<Vec3>,
     last_item_count: usize,
     initial_ready: bool,
 }
 
 impl WorldSceneryStreamState {
+    pub(crate) fn pending_auxiliary_count(&self) -> usize {
+        self.pending_auxiliary.len()
+    }
     pub(crate) fn pending_shape_count(
         &self,
         world: &WorldScene,
@@ -3165,6 +3307,8 @@ impl WorldSceneryStreamState {
     fn forget_tiles(&mut self, tiles: &HashSet<(i32, i32)>) {
         self.shapes.retain(|key| !tiles.contains(&key.tile));
         self.auxiliary.retain(|key| !tiles.contains(&key.tile));
+        self.pending_auxiliary
+            .retain(|obj| !tiles.contains(&(obj.tile_x, obj.tile_z)));
         self.last_center = None;
     }
 
@@ -3194,7 +3338,7 @@ impl WorldSceneryStreamState {
 fn is_auxiliary_scenery(kind: &str) -> bool {
     matches!(
         kind,
-        "Dyntrack" | "Forest" | "HWater" | "Transfer" | "CarSpawner" | "Signal"
+        "Dyntrack" | "Forest" | "HWater" | "Transfer" | "CarSpawner" | "Signal" | "LevelCr"
     )
 }
 
@@ -3250,6 +3394,7 @@ pub fn world_stream_scenery_system(
     mut forest_materials: ResMut<Assets<openrailsrs_bevy_scenery::OrForestMaterial>>,
     mut cycle: ResMut<openrailsrs_bevy_scenery::ScenerySpawnCycle>,
 ) {
+    let _profile = crate::performance::profile_system("world.world_stream_scenery_system");
     let WorldSceneryView {
         world,
         progress,
@@ -3267,15 +3412,29 @@ pub fn world_stream_scenery_system(
         return;
     }
     let cull_center = window.center_world;
-    if !state.needs_scan(cull_center, world.items.len()) {
+    let scan = state.needs_scan(cull_center, world.items.len());
+    if !scan && state.pending_auxiliary.is_empty() {
         return;
     }
     let radius = shape_mesh_radius_m();
-    let selected_shapes = state.pending_shapes(&world, cull_center, radius);
-    let auxiliary = state.activate_auxiliary(&world, cull_center, radius);
+    let selected_shapes = if scan {
+        let selected = state.pending_shapes(&world, cull_center, radius);
+        let auxiliary = state.activate_auxiliary(&world, cull_center, radius);
+        state.pending_auxiliary.extend(auxiliary);
+        state.last_center = Some(cull_center);
+        state.last_item_count = world.items.len();
+        selected
+    } else {
+        Vec::new()
+    };
+    // Forests, transfers and track batches can each allocate sizeable buffers.
+    // Submit one authored auxiliary object per frame rather than every newly
+    // visible sector at once. Capture readiness includes this queue.
+    let auxiliary: Vec<_> = state.pending_auxiliary.pop_front().into_iter().collect();
     let new_items = auxiliary.as_slice();
-    state.last_center = Some(cull_center);
-    state.last_item_count = world.items.len();
+    let _auxiliary_timer = new_items
+        .first()
+        .map(|obj| crate::performance::ShapeTimer::start("publish_auxiliary", Path::new(obj.kind)));
     let forests = if !mode.loads_msts_scenery() {
         0
     } else {
@@ -3431,11 +3590,12 @@ pub fn world_tile_stream_system(
     window: Res<crate::view_window::ViewWindow>,
     opts: Res<crate::launch::ViewerLaunchOpts>,
     origin: Res<crate::floating_origin::FloatingOrigin>,
-    camera: Query<&Transform, With<Camera3d>>,
+    camera: Query<&Transform, (With<Camera3d>, Without<crate::mirrors::MirrorCamera>)>,
     progress: Option<Res<WorldSpawnProgress>>,
     mode: Res<crate::launch::ViewerSceneryMode>,
+    forecast: Option<Res<crate::streaming_forecast::StreamingForecast>>,
 ) {
-    // Tile-lab keeps exactly the tiles loaded at startup: no streaming.
+    let _profile = crate::performance::profile_system("world.world_tile_stream_system"); // Tile-lab keeps exactly the tiles loaded at startup: no streaming.
     if mode.is_tile_lab() || !mode.loads_msts_scenery() {
         return;
     }
@@ -3468,9 +3628,13 @@ pub fn world_tile_stream_system(
         .map(TileCoord::from)
         .collect();
     let stream_diff = policy.diff_disk(cam_coord, &known);
+    let to_load = forecast.as_ref().map_or_else(
+        || stream_diff.to_load.clone(),
+        |f| f.requests(&policy, center, &known),
+    );
 
     let mut requested = 0usize;
-    for tile in &stream_diff.to_load {
+    for tile in &to_load {
         let key = (tile.x, tile.z);
         if stream.loaded.contains(&key) || stream.pending.contains(&key) {
             continue;
@@ -3529,6 +3693,7 @@ pub fn world_tile_bundle_materialize_system(
     assets: WorldTileBundleAssets,
     view: WorldTileMaterializeView,
 ) {
+    let _profile = crate::performance::profile_system("world.world_tile_bundle_materialize_system");
     let WorldTileBundleAssets {
         handles,
         asset_server,
@@ -3600,6 +3765,8 @@ pub fn world_tile_bundle_materialize_system(
 
 #[derive(bevy::ecs::system::SystemParam)]
 pub struct WorldUnloadParams<'w, 's> {
+    residency: Option<Res<'w, crate::gpu_memory::ResidencyPolicy>>,
+    forecast: Option<Res<'w, crate::streaming_forecast::StreamingForecast>>,
     world: ResMut<'w, WorldScene>,
     stream: ResMut<'w, WorldTileStream>,
     handles: ResMut<'w, crate::tile_bundle::TileBundleHandles>,
@@ -3638,6 +3805,7 @@ pub fn world_tile_unload_system(
     mut p: WorldUnloadParams,
     mut retirement: Local<SceneryRetirement>,
 ) {
+    let _profile = crate::performance::profile_system("world.world_tile_unload_system");
     if !p.opts.live || !p.mode.loads_msts_scenery() || p.mode.is_tile_lab() {
         return;
     }
@@ -3666,9 +3834,17 @@ pub fn world_tile_unload_system(
         retirement.cleaning_assets = evicted > 0;
         return;
     }
-    let unload_radius = crate::launch::view_unload_radius_m().max(p.window.radius_m);
+    let pressured = p.residency.as_ref().is_some_and(|r| r.pressured);
+    let unload_radius = if pressured {
+        p.window.radius_m + 2048.
+    } else {
+        crate::launch::view_unload_radius_m().max(p.window.radius_m)
+    };
     let center = p.window.center_world;
-    let policy = view_stream_window_policy(p.window.radius_m.max(p.stream.radius_m));
+    let mut policy = view_stream_window_policy(p.window.radius_m.max(p.stream.radius_m));
+    if pressured {
+        policy.unload_hysteresis = 0;
+    }
     let cam_coord = TileCoord::new(
         msts_tile_x_index_for_coord(center.x),
         msts_tile_z_index_for_coord(center.z),
@@ -3684,7 +3860,12 @@ pub fn world_tile_unload_system(
     let stream_diff = policy.diff_disk(cam_coord, &loaded_coords);
 
     let mut unloaded_tiles = HashSet::new();
-    for tile in stream_diff.to_unload.iter().take(1) {
+    for tile in stream_diff
+        .to_unload
+        .iter()
+        .filter(|t| !p.forecast.as_ref().is_some_and(|f| f.keep(&policy, **t)))
+        .take(1)
+    {
         let key = (tile.x, tile.z);
         unloaded_tiles.insert(key);
         p.stream.loaded.remove(&key);
@@ -3694,13 +3875,21 @@ pub fn world_tile_unload_system(
         p.stream_state.distant_gpu_tiles(
             &p.world,
             center,
-            p.window.radius_m + WORLD_PRELOAD_MARGIN_M * 2.0,
+            p.window.radius_m + WORLD_PRELOAD_MARGIN_M * if pressured { 1.5 } else { 2.0 },
         )
     } else {
         HashSet::new()
     };
     // Retire one GPU tile per cycle; keep the rest eligible on later scans.
-    gpu_unloaded_tiles = gpu_unloaded_tiles.into_iter().take(1).collect();
+    gpu_unloaded_tiles = gpu_unloaded_tiles
+        .into_iter()
+        .filter(|k| {
+            !p.forecast
+                .as_ref()
+                .is_some_and(|f| f.keep(&policy, TileCoord::from(*k)))
+        })
+        .take(1)
+        .collect();
     gpu_unloaded_tiles.extend(&unloaded_tiles);
     if unloaded_tiles.is_empty() && gpu_unloaded_tiles.is_empty() {
         return;
@@ -3764,9 +3953,11 @@ pub fn world_tile_unload_system(
 
 #[derive(bevy::ecs::system::SystemParam)]
 pub struct WorldSpawnSession<'w> {
+    forecast: Option<Res<'w, crate::streaming_forecast::StreamingForecast>>,
     session: ResMut<'w, WorldShapeLodCache>,
     cycle: ResMut<'w, openrailsrs_bevy_scenery::ScenerySpawnCycle>,
     activation: ResMut<'w, WorldSceneryStreamState>,
+    silhouettes: Option<ResMut<'w, crate::scenery_lod::Silhouettes>>,
 }
 
 fn view_segments_by_tile(
@@ -3801,13 +3992,16 @@ pub fn progressive_world_spawn_system(
     spawn_session: WorldSpawnSession,
     progress: Option<ResMut<WorldSpawnProgress>>,
 ) {
+    let _profile = crate::performance::profile_system("world.progressive_world_spawn_system");
     let Some(mut progress) = progress else {
         return;
     };
     let WorldSpawnSession {
+        forecast,
         mut session,
         mut cycle,
         mut activation,
+        mut silhouettes,
     } = spawn_session;
     // Spawn culling must follow the mobile view window (camera/train), not only the
     // startup RouteFocus — otherwise streamed tiles far from the anchor never appear.
@@ -3846,7 +4040,7 @@ pub fn progressive_world_spawn_system(
     // Bound foreground work as well as item counts. A large unique asset may
     // consume this allowance alone, but no following asset compounds the hitch.
     let foreground_started = Instant::now();
-    let foreground_budget = std::time::Duration::from_millis(4);
+    let foreground_budget = progress.foreground_budget;
 
     match progress.phase {
         WorldSpawnPhase::Classifying => {
@@ -3919,6 +4113,9 @@ pub fn progressive_world_spawn_system(
         WorldSpawnPhase::LoadingShapes => {
             prepare_shape_load_paths(&mut progress);
             hydrate_spawn_from_session(&mut progress, &mut session);
+            if let Some(forecast) = forecast.as_ref() {
+                prioritize_shape_load_paths(&mut progress, forecast, &focus);
+            }
             if parse_next_shape_batch(&mut progress, &assets.route_dir) {
                 return;
             }
@@ -3934,12 +4131,61 @@ pub fn progressive_world_spawn_system(
             // Loan the decoded textures to this batch. Cloning this map copied
             // every mip of the route on every frame while building GPU assets.
             let ace_cache = std::mem::take(&mut progress.ace_cache);
+            // Primary meshes and bands share the same time allowance. Small
+            // bands can fill the remaining time; a large band stops this frame
+            // before another object can compound the hitch. Always do one unit.
             let end = (progress.asset_build_index + asset_batch).min(progress.parsed_shapes.len());
-            while progress.asset_build_index < end {
+            let mut did_work = false;
+            loop {
+                if did_work && foreground_started.elapsed() >= foreground_budget {
+                    break;
+                }
+                if let Some(mut pending) = progress.pending_lod_publication.take() {
+                    if let Some((band, loaded)) = pending.remaining.next() {
+                        let _timer = crate::performance::ShapeTimer::start(
+                            "publish_lod_gpu_assets",
+                            &pending.path,
+                        );
+                        pending.assets.push(build_shape_lod_asset(
+                            &pending.path,
+                            &pending.shape,
+                            &pending.base,
+                            &assets.route_dir,
+                            &mut meshes,
+                            &mut images,
+                            &mut materials,
+                            &mut progress.texture_image_cache,
+                            &ace_cache,
+                            fallback_color,
+                            band,
+                            loaded,
+                        ));
+                        did_work = true;
+                    }
+                    if pending.remaining.len() == 0 {
+                        progress
+                            .shape_lod_assets
+                            .insert(pending.path, pending.assets);
+                    } else {
+                        progress.pending_lod_publication = Some(pending);
+                    }
+                    continue;
+                }
+                if progress.asset_build_index >= end {
+                    break;
+                }
+                did_work = true;
                 let index = progress.asset_build_index;
                 let (shape_path, loaded) = &mut progress.parsed_shapes[index];
                 let shape_path = shape_path.clone();
                 let loaded = loaded.take();
+                if let Some(summary) = progress.prepared_silhouettes.remove(&shape_path)
+                    && let Some(cache) = silhouettes.as_mut()
+                {
+                    cache.seed(shape_path.clone(), summary);
+                }
+                let _timer =
+                    crate::performance::ShapeTimer::start("publish_gpu_assets", &shape_path);
                 progress.asset_build_index += 1;
                 let (shape_path, asset) = build_world_shape_asset(
                     shape_path,
@@ -3958,33 +4204,22 @@ pub fn progressive_world_spawn_system(
                         .prepared_lods
                         .remove(&shape_path)
                         .unwrap_or_default();
-                    let lod_assets = build_shape_lod_assets(
-                        &shape_path,
-                        &shape,
-                        &asset,
-                        &assets.route_dir,
-                        &mut meshes,
-                        &mut images,
-                        &mut materials,
-                        &mut progress.texture_image_cache,
-                        &ace_cache,
-                        fallback_color,
-                        &fallback_material,
-                        prepared,
-                    );
-                    if !lod_assets.is_empty() {
-                        progress
-                            .shape_lod_assets
-                            .insert(shape_path.clone(), lod_assets);
+                    if !prepared.is_empty() {
+                        progress.pending_lod_publication = Some(PendingLodPublication {
+                            path: shape_path.clone(),
+                            shape,
+                            base: asset.clone(),
+                            remaining: prepared.into_iter().enumerate(),
+                            assets: Vec::new(),
+                        });
                     }
                 }
                 progress.shape_cache.insert(shape_path, asset);
-                if foreground_started.elapsed() >= foreground_budget {
-                    break;
-                }
             }
             progress.ace_cache = ace_cache;
-            if progress.asset_build_index >= progress.parsed_shapes.len() {
+            if progress.asset_build_index >= progress.parsed_shapes.len()
+                && progress.pending_lod_publication.is_none()
+            {
                 // All source pixels/temporary meshes have become shared Bevy
                 // assets. Release them before building and submitting entities.
                 progress.ace_cache.clear_pixels();
@@ -4066,7 +4301,7 @@ pub fn progressive_world_spawn_system(
                 let mut left = spawn_batch.saturating_sub(static_spawned);
                 while progress.instanced_spawn_index < progress.instanced_spawn_queue.len()
                     && left > 0
-                    && foreground_started.elapsed() < foreground_budget
+                    && (left == spawn_batch || foreground_started.elapsed() < foreground_budget)
                 {
                     let mut bundle =
                         progress.instanced_spawn_queue[progress.instanced_spawn_index].clone();
@@ -4077,9 +4312,9 @@ pub fn progressive_world_spawn_system(
                 }
                 while progress.animated_spawn_index < progress.anim_spawn_queue.len()
                     && left > 0
-                    && foreground_started.elapsed() < foreground_budget
+                    && (left == spawn_batch || foreground_started.elapsed() < foreground_budget)
                 {
-                    let (mut bundle, signal, pickup) =
+                    let (mut bundle, signal, pickup, crossing) =
                         progress.anim_spawn_queue[progress.animated_spawn_index].clone();
                     bundle.0 = view_transform(bundle.0, &origin);
                     bundle.7.placement = view_transform(bundle.7.placement, &origin);
@@ -4089,6 +4324,9 @@ pub fn progressive_world_spawn_system(
                     }
                     if let Some(pickup) = pickup {
                         entity.insert(pickup);
+                    }
+                    if let Some(crossing) = crossing {
+                        entity.insert(crossing);
                     }
                     progress.animated_spawn_index += 1;
                     left -= 1;
@@ -4182,7 +4420,10 @@ pub fn update_world_scenery_lod(
     cache: Option<Res<WorldShapeLodCache>>,
     mut silhouettes: Option<ResMut<crate::scenery_lod::Silhouettes>>,
     progress: Option<Res<WorldSpawnProgress>>,
-    camera: Query<(&GlobalTransform, Option<&Projection>, Option<&Camera>), With<Camera3d>>,
+    camera: Query<
+        (&GlobalTransform, Option<&Projection>, Option<&Camera>),
+        (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+    >,
     settings: Option<Res<crate::player_settings::PlayerSettings>>,
     mode: Option<Res<crate::camera::CameraFollowMode>>,
     focus: Option<Res<RouteFocus>>,
@@ -4205,6 +4446,7 @@ pub fn update_world_scenery_lod(
         Option<&ViewVisibility>,
     )>,
 ) {
+    let _profile = crate::performance::profile_system("world.update_world_scenery_lod");
     let fallback = crate::player_settings::PlayerSettings::default();
     let settings = settings.as_deref().unwrap_or(&fallback);
     let mode = mode
@@ -4559,6 +4801,7 @@ pub fn spawn_world_boxes(
                         signal_sub_obj: None,
                         signal_patch: None,
                         pickup: None,
+                        crossing: None,
                         loop_animation: false,
                     });
                 continue;
@@ -4600,6 +4843,7 @@ pub fn spawn_world_boxes(
                         .flatten(),
                     signal_patch: obj.signal.clone().map(std::sync::Arc::new),
                     pickup: obj.pickup.clone(),
+                    crossing: obj.crossing.clone(),
                     loop_animation: obj.loop_animation,
                 });
             continue;
@@ -4740,13 +4984,16 @@ pub fn spawn_world_boxes(
     for bundle in instanced_spawn_batches {
         commands.spawn(bundle);
     }
-    for (bundle, signal, pickup) in anim_spawn_batches {
+    for (bundle, signal, pickup, crossing) in anim_spawn_batches {
         let mut entity = commands.spawn(bundle);
         if let Some(signal) = signal {
             entity.insert(signal);
         }
         if let Some(pickup) = pickup {
             entity.insert(pickup);
+        }
+        if let Some(crossing) = crossing {
+            entity.insert(crossing);
         }
     }
 
@@ -5061,6 +5308,7 @@ mod tests {
             signal_sub_obj: None,
             signal_patch: None,
             pickup: None,
+            crossing: None,
             loop_animation: false,
         };
         assert!(placement_has_shear(&sheared));
@@ -5081,6 +5329,7 @@ mod tests {
             signal_sub_obj: None,
             signal_patch: None,
             pickup: None,
+            crossing: None,
             loop_animation: false,
         };
         assert!(
@@ -5283,6 +5532,7 @@ mod tests {
             car_spawner: None,
             signal: None,
             pickup: None,
+            crossing: None,
             tr_item_ids: Vec::new(),
             static_detail_level: 0,
             loop_animation: false,
@@ -5602,6 +5852,7 @@ mod tests {
             signal_sub_obj: None,
             signal_patch: None,
             pickup: None,
+            crossing: None,
             loop_animation: false,
         };
         let scenery_loop = ShapeInstancePlacement {
@@ -5660,7 +5911,7 @@ mod tests {
                 let signal_binding = &animated_queue[1].0.7;
                 assert_eq!(signal_binding.speed, 0.0);
                 assert_eq!(signal_binding.frame_count, 0.0);
-                let (bundle, _, pickup) = &animated_queue[2];
+                let (bundle, _, pickup, _) = &animated_queue[2];
                 assert_eq!(bundle.7.speed, 0.);
                 assert_eq!(bundle.7.frame_count, 0.);
                 let pickup = pickup.as_ref().expect("operational pickup animation");
@@ -5870,6 +6121,157 @@ mod tests {
     }
 
     #[test]
+    fn separately_published_lods_preserve_primary_alias_and_empty_band_slots() {
+        let mut meshes = Assets::<Mesh>::default();
+        let mut images = Assets::<Image>::default();
+        let mut materials = Assets::<StandardMaterial>::default();
+        let mut handles = HashMap::new();
+        let textures = crate::shapes::PrefetchedTextures::default();
+        let shape = ShapeFile::default();
+        let mut base = dummy_shape_asset();
+        base.parts.push(dummy_shape_part(7, 2));
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("lod.s");
+        let primary = build_shape_lod_asset(
+            &path,
+            &shape,
+            &base,
+            temp.path(),
+            &mut meshes,
+            &mut images,
+            &mut materials,
+            &mut handles,
+            &textures,
+            Color::WHITE,
+            0,
+            None,
+        );
+        let empty = build_shape_lod_asset(
+            &path,
+            &shape,
+            &base,
+            temp.path(),
+            &mut meshes,
+            &mut images,
+            &mut materials,
+            &mut handles,
+            &textures,
+            Color::WHITE,
+            1,
+            None,
+        );
+        let loaded = crate::shapes::LoadedShape {
+            mesh: Mesh::from(Cuboid::default()),
+            texture_file: None,
+            parts: Vec::new(),
+        };
+        let expected_vertices = loaded.mesh.count_vertices();
+        let far = build_shape_lod_asset(
+            &path,
+            &shape,
+            &base,
+            temp.path(),
+            &mut meshes,
+            &mut images,
+            &mut materials,
+            &mut handles,
+            &textures,
+            Color::WHITE,
+            2,
+            Some(loaded),
+        );
+        let bands = [primary, empty, far];
+        assert_eq!(bands[0].parts[0].sub_object_idx, 7);
+        assert_eq!(bands[0].parts[0].prim_state_idx, 2);
+        assert!(bands[1].parts.is_empty());
+        assert_eq!(
+            meshes
+                .get(&bands[2].combined_mesh)
+                .unwrap()
+                .count_vertices(),
+            expected_vertices
+        );
+        assert_eq!(bands[2].parts.len(), 1);
+    }
+
+    #[test]
+    fn exhausted_publication_budget_still_finishes_instanced_queue() {
+        use crate::world_instancing::{
+            WorldInstanceBuffer, WorldInstanceData, WorldInstancedGroup,
+        };
+        use bevy::ecs::system::RunSystemOnce;
+        let mut app = crate::test_harness::minimal_app();
+        crate::test_harness::insert_replay_bundle(
+            &mut app,
+            TrackScene::from_graph(crate::test_harness::tiny_graph_with_signal()),
+            crate::train::ReplayState::default(),
+        );
+        app.init_resource::<crate::view_window::ViewWindow>()
+            .init_resource::<crate::overhead_wire::RouteWireConfig>()
+            .init_resource::<WorldShapeLodCache>()
+            .init_resource::<WorldSceneryStreamState>()
+            .init_resource::<openrailsrs_bevy_scenery::ScenerySpawnCycle>();
+        *app.world_mut().resource_mut::<CameraFollowMode>() = CameraFollowMode::ChaseCam;
+        let mesh = app
+            .world_mut()
+            .resource_mut::<Assets<Mesh>>()
+            .add(Cuboid::default());
+        let appearance = crate::world_instancing::appearance_from_standard_material(
+            app.world().resource::<Assets<StandardMaterial>>(),
+            &Handle::default(),
+        );
+        let mut progress = WorldSpawnProgress::new(1.);
+        progress.phase = WorldSpawnPhase::SpawningEntities;
+        progress.foreground_budget = std::time::Duration::ZERO;
+        for index in 0..3 {
+            progress.instanced_spawn_queue.push((
+                Transform::IDENTITY,
+                Mesh3d(mesh.clone()),
+                Name::new(format!("budget-{index}")),
+                WorldInstancedGroup {
+                    shape_path: PathBuf::new(),
+                    part_index: 0,
+                    sub_object_idx: 0,
+                    prim_state_idx: 0,
+                    lod_idx: 0,
+                    lod_enabled: false,
+                    instance_count: 1,
+                },
+                WorldTileBound {
+                    tile_x: 0,
+                    tile_z: 0,
+                },
+                WorldInstanceBuffer(std::sync::Arc::from([
+                    WorldInstanceData::from_view_placement(Transform::IDENTITY, None),
+                ])),
+                appearance.clone(),
+                bevy::camera::primitives::Aabb::from_min_max(Vec3::splat(-0.5), Vec3::splat(0.5)),
+            ));
+        }
+        app.insert_resource(progress);
+        for expected in 1..=3 {
+            app.world_mut()
+                .run_system_once(progressive_world_spawn_system)
+                .unwrap();
+            assert_eq!(
+                app.world_mut()
+                    .query::<&WorldInstancedGroup>()
+                    .iter(app.world())
+                    .count(),
+                expected
+            );
+        }
+        assert_eq!(
+            app.world().resource::<WorldSpawnProgress>().phase,
+            WorldSpawnPhase::SpawningPlaceholders
+        );
+        app.world_mut()
+            .run_system_once(progressive_world_spawn_system)
+            .unwrap();
+        assert!(!app.world().contains_resource::<WorldSpawnProgress>());
+    }
+
+    #[test]
     fn commit_spawn_to_session_merges_without_dropping_priors() {
         let prior = PathBuf::from("/shapes/prior.s");
         let fresh = PathBuf::from("/shapes/fresh.s");
@@ -5942,6 +6344,7 @@ mod tests {
                 signal_sub_obj: None,
                 signal_patch: None,
                 pickup: None,
+                crossing: None,
                 loop_animation: false,
             }],
         );

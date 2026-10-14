@@ -106,7 +106,14 @@ pub fn update_stars(
     live: Option<Res<LiveDrive>>,
     content: Res<ActivePlayerContent>,
     environment: Option<Res<crate::environment::LiveEnvironment>>,
-    cameras: Query<&Transform, (With<Camera3d>, Without<StarField>, Without<SkyDome>)>,
+    cameras: Query<
+        &Transform,
+        (
+            (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+            Without<StarField>,
+            Without<SkyDome>,
+        ),
+    >,
     mut stars: Query<
         (
             &mut Transform,

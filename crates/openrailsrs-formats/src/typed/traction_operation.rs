@@ -188,8 +188,15 @@ pub(super) fn parse_diesel(
         ];
     }
     let starting_rpm = quantity(ast, "StartingRPM", "rpm")?.unwrap_or(idle * 2. / 3.);
-    let confirmation_rpm = quantity(ast, "StartingConfirmRPM", "rpm")?.unwrap_or(idle * 1.1);
-    if starting_rpm <= 0. || confirmation_rpm <= starting_rpm || confirmation_rpm >= max {
+    let authored_confirmation_rpm = quantity(ast, "StartingConfirmRPM", "rpm")?;
+    // OR 1.6.1 DieselEngine.Initialize copies IdleRPM * 1.1 when absent, even
+    // for an auxiliary engine whose authored MaxRPM is only slightly above idle.
+    // Keep that default rather than rejecting or changing the author's RPMs.
+    let confirmation_rpm = authored_confirmation_rpm.unwrap_or(idle * 1.1);
+    if starting_rpm <= 0.
+        || confirmation_rpm <= starting_rpm
+        || authored_confirmation_rpm.is_some_and(|rpm| rpm >= max)
+    {
         return Err(invalid("StartingRPM / StartingConfirmRPM"));
     }
     let maximum_c = quantity(ast, "MaxTemperature", "c")?
@@ -272,6 +279,26 @@ Engine ( engine Type ( Steam ) NumberOfCylinders ( 2 )
         assert!((p.consumption_lph[0].1 - 7.570823568).abs() < 1e-8);
         assert_eq!(p.starting_rpm, 100.);
         assert_eq!(p.confirmation_rpm, 165.);
+    }
+
+    #[test]
+    fn narrow_auxiliary_rpm_range_retains_open_rails_startup_defaults() {
+        let ast = parse_vehicle_text(
+            "Engine ( e Type ( Diesel ) DieselEngineIdleRPM ( 1229 ) DieselEngineMaxRPM ( 1230 ) )",
+        )
+        .unwrap();
+        let p = parse_diesel(&ast, 1229., 1230.).unwrap().unwrap();
+        assert_eq!(p.starting_rpm, 1229. * 2. / 3.);
+        assert_eq!(p.confirmation_rpm, 1229. * 1.1);
+        assert_eq!(p.consumption_lph[0].0, 1229.);
+        assert_eq!(p.consumption_lph[1].0, 1230.);
+        for field in ["StartingRPM ( NaN )", "StartingConfirmRPM ( 1351.9 )"] {
+            let ast = parse_vehicle_text(&format!("Engine ( e Type ( Diesel ) {field} )")).unwrap();
+            assert!(
+                parse_diesel(&ast, 1229., 1230.).is_err(),
+                "accepted {field}"
+            );
+        }
     }
 
     #[test]

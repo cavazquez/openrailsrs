@@ -91,7 +91,7 @@ pub fn init_route_sun(
     focus: Res<RouteFocus>,
     origin: Res<FloatingOrigin>,
     content: Res<crate::player_launch::ActivePlayerContent>,
-    camera: Query<&Transform, With<Camera3d>>,
+    camera: Query<&Transform, (With<Camera3d>, Without<crate::mirrors::MirrorCamera>)>,
 ) {
     let Ok(camera) = camera.single() else { return };
     let world = camera.translation + focus.center + origin.shift;

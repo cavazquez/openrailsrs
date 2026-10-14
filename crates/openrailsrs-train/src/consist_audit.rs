@@ -70,6 +70,18 @@ impl MissingResource {
         }
     }
     pub fn guidance(&self) -> String {
+        if self.destinations.iter().any(|p| p.starts_with("/snap")) {
+            return format!(
+                "{}: {}\nReferenciado por: {}\nEl paquete Snap es de sólo lectura. Instalá el contenido del autor en Biblioteca; no copies archivos dentro de /snap.",
+                if self.required {
+                    "Falta"
+                } else {
+                    "Falta opcional"
+                },
+                self.name,
+                self.referenced_by.display()
+            );
+        }
         format!(
             "{}: {}\nReferenciado por: {}\nColocar en {}:\n{}",
             if self.required {
@@ -657,6 +669,7 @@ impl ConsistAuditor {
                 (mass, length, powered, shape, cab, metadata)
             };
         let authored_root = path.parent().unwrap_or(Path::new("."));
+        let bundled = openrailsrs_formats::resource_links::bundled_stock_root(path);
         let root = if authored_root.ancestors().any(|p| {
             p.file_name()
                 .is_some_and(|n| n.eq_ignore_ascii_case("TRAINSET"))
@@ -667,6 +680,7 @@ impl ConsistAuditor {
         } else {
             self.trainset_roots
                 .iter()
+                .chain(bundled.iter())
                 .find_map(|r| {
                     let p = r.join(authored_root.file_name()?);
                     resolve_path_case_insensitive(&p).filter(|p| p.is_dir())
@@ -928,36 +942,65 @@ impl ConsistAuditor {
             }
         }
         if let Some(name) = &cab.orts_3d_cab_shape {
-            match self.asset(&dirs, name, false) {
-                Some(p) => {
-                    if let Err(e) = self.inspect_shape(&p) {
+            let dirs_3d = vec![
+                root.join("CABVIEW3D"),
+                root.join("CABVIEW"),
+                root.join("CABVIEW2D"),
+                root.to_path_buf(),
+            ];
+            // Track declared candidates even when a shared CVF is selected:
+            // adding the native sibling must invalidate the cached pairing.
+            let shape = self.asset(&dirs_3d, name, false);
+            if let Some(name) = &cab.cab_view_file {
+                self.asset(&dirs_3d, name, false);
+            }
+            if let Some(path) = &shape {
+                self.track(&path.with_extension("cvf"), false);
+            }
+            // Use exactly the renderer's resolver, including the native OR
+            // fallback from a missing sibling to a differently named CabView.
+            match openrailsrs_formats::resolve_cab_assets(root, cab) {
+                Some(assets) => {
+                    if let Err(e) = self.inspect_shape(&assets.shape_path) {
                         stock.failure(e);
-                    } else if let Some(cvf) =
-                        resolve_path_case_insensitive(&p.with_extension("cvf"))
-                    {
-                        match self.inspect_cvf(&cvf, false) {
+                    } else {
+                        match self.inspect_cvf(&assets.cvf_path, false) {
                             Ok(()) => stock.cab_3d = true,
                             Err(e) => stock.failure(e),
                         }
-                    } else {
-                        let cvf = p.with_extension("cvf");
+                    }
+                }
+                None => match shape {
+                    Some(path) => {
+                        if let Err(e) = self.inspect_shape(&path) {
+                            stock.failure(e);
+                        }
+                        let sibling = path.with_extension("cvf");
+                        let mut candidates = vec![sibling.clone()];
+                        if let Some(name) = &cab.cab_view_file {
+                            candidates.extend(
+                                dirs_3d.iter().map(|dir| dir.join(name.replace('\\', "/"))),
+                            );
+                        }
                         stock.failure(ResourceFailure {
                             message: format!("Faltan los instrumentos CVF de {name}"),
                             missing_resources: vec![MissingResource::with_destinations(
-                                &p,
-                                &cvf.file_name().unwrap_or_default().to_string_lossy(),
-                                [cvf.clone()],
+                                reference,
+                                cab.cab_view_file.as_deref().unwrap_or(
+                                    &sibling.file_name().unwrap_or_default().to_string_lossy(),
+                                ),
+                                candidates,
                                 true,
                             )],
                         });
                     }
-                }
-                None => stock.failure(ResourceFailure::missing(
-                    format!("Falta la cabina 3D {name}"),
-                    reference,
-                    &dirs,
-                    name,
-                )),
+                    None => stock.failure(ResourceFailure::missing(
+                        format!("Falta la cabina 3D {name}"),
+                        reference,
+                        &dirs_3d,
+                        name,
+                    )),
+                },
             }
         } else if let Some(c) = openrailsrs_formats::resolve_cab_assets(root, cab) {
             stock.cab_3d = self.inspect_shape(&c.shape_path).is_ok()
@@ -1350,6 +1393,81 @@ mod tests {
         assert!(auditor.inspect_cvf(&path, false).is_ok());
         assert!(auditor.inspect_cvf(&path, true).is_err());
     }
+
+    #[test]
+    fn native_3d_cab_pairs_shared_controls_and_keeps_genuine_resource_failures() {
+        let tmp = tempfile::tempdir().unwrap();
+        let stock = tmp.path().join("TRAINS/TRAINSET/EMU");
+        let cab3d = stock.join("CABVIEW3D");
+        let common = tmp.path().join("TRAINS/TRAINSET/Common.Cab");
+        let cons = tmp.path().join("TRAINS/CONSISTS");
+        for directory in [&cab3d, &common, &cons] {
+            std::fs::create_dir_all(directory).unwrap();
+        }
+        // Quoted STF strings escape Windows separators, as in the author ENG.
+        std::fs::write(stock.join("power.eng"), r#"Wagon ( power Mass ( 40t ) Size ( 3m 4m 20m ) ) Engine ( power Type ( Electric ) MaxPower ( 500kW ) CabView ( "..\\..\\Common.Cab\\shared.cvf" ) ORTS3DCabFile ( interior.s ) )"#).unwrap();
+        std::fs::write(
+            cab3d.join("interior.s"),
+            "(shape (texture_filenames 1 panel.ace))",
+        )
+        .unwrap();
+        std::fs::write(cab3d.join("panel.ace"), b"original texture").unwrap();
+        let shared = common.join("shared.cvf");
+        std::fs::write(&shared, "Tr_CabViewFile ( CabViewFile ( unused-view.ace ) CabViewControls ( 1 TwoState ( Type ( HORN TWO_STATE ) NumFrames ( 2 2 1 ) ) ) )").unwrap();
+        let con = cons.join("emu.con");
+        std::fs::write(
+            &con,
+            "Train ( TrainCfg ( emu Engine ( EngineData ( power EMU ) ) ) )",
+        )
+        .unwrap();
+        let mut auditor = ConsistAuditor::default();
+        let valid = auditor.inspect(&con);
+        assert!(valid.player_ready(), "{:?}", valid.errors);
+        assert!(valid.cab_3d && !valid.cab_2d);
+        assert!(
+            valid
+                .dependencies
+                .iter()
+                .any(|path| { path.canonicalize().ok() == Some(shared.canonicalize().unwrap()) })
+        );
+        let cab = crate::load_consist_with_asset_root(&con, tmp.path().join("TRAINS")).unwrap();
+        assert_eq!(cab.vehicles.len(), 1);
+
+        std::fs::remove_file(cab3d.join("panel.ace")).unwrap();
+        let missing_texture = auditor.inspect(&con);
+        assert!(!missing_texture.player_ready());
+        assert!(
+            missing_texture
+                .missing_resources
+                .iter()
+                .any(|r| r.name == "panel.ace" && r.required)
+        );
+        std::fs::write(cab3d.join("panel.ace"), b"original texture").unwrap();
+        std::fs::remove_file(&shared).unwrap();
+        let missing_controls = auditor.inspect(&con);
+        assert!(!missing_controls.player_ready());
+        assert!(
+            missing_controls
+                .missing_resources
+                .iter()
+                .any(|r| r.name.contains("shared.cvf") && r.required)
+        );
+
+        // An unrelated valid cab cannot supply the explicit missing controls.
+        std::fs::write(cab3d.join("other.s"), "(shape (texture_filenames 0))").unwrap();
+        std::fs::write(
+            cab3d.join("other.cvf"),
+            "Tr_CabViewFile ( CabViewControls ( ) )",
+        )
+        .unwrap();
+        assert!(!auditor.inspect(&con).player_ready());
+        std::fs::write(&shared, "Tr_CabViewFile ( CabViewFile ( unused-view.ace ) CabViewControls ( 1 TwoState ( Type ( HORN TWO_STATE ) NumFrames ( 2 2 1 ) ) ) )").unwrap();
+        assert!(auditor.inspect(&con).player_ready());
+        // Native sibling priority is checked even after a shared pairing cached.
+        std::fs::write(cab3d.join("interior.cvf"), "Tr_CabViewFile ( CabViewControls ( 1 TwoState ( Type ( HORN TWO_STATE ) Position ( bad ) ) ) )").unwrap();
+        assert!(!auditor.inspect(&con).player_ready());
+    }
+
     #[test]
     fn a_working_cab_does_not_require_the_alternative_mode() {
         let tmp = tempfile::tempdir().unwrap();

@@ -116,7 +116,7 @@ pub fn tag_cab_interior_render_layers(
 /// Keep camera layer mask in sync with follow mode (CAB-B).
 pub fn sync_camera_render_layers(
     follow: Res<CameraFollowMode>,
-    mut cameras: Query<&mut RenderLayers, With<Camera3d>>,
+    mut cameras: Query<&mut RenderLayers, (With<Camera3d>, Without<crate::mirrors::MirrorCamera>)>,
 ) {
     // Cab2d needs world through ACE window alpha; hide train exterior via visibility.
     let target = if *follow == CameraFollowMode::DriverCam || follow.is_cab2d() {
@@ -160,7 +160,10 @@ pub fn update_cab_render_diagnostic(
     mut diag: ResMut<CabRenderDiagnostic>,
     driver_cab: Option<Res<LiveDriverCab>>,
     lead_car: Query<&GlobalTransform, With<CabLeadVehicle>>,
-    camera_q: Query<(&GlobalTransform, &Projection), With<Camera3d>>,
+    camera_q: Query<
+        (&GlobalTransform, &Projection),
+        (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+    >,
     cab_parts: Query<
         (&GlobalTransform, &Mesh3d, Option<&CabPartInfo>),
         (With<CabInteriorMarker>, With<Mesh3d>),

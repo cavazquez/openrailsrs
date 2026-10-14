@@ -18,12 +18,12 @@ pub struct ResolvedCabAssets {
 
 /// Resolve cab shape + CVF from parsed `.eng` fields and a trainset root.
 ///
-/// Priority: `ORTS3DCabFile` → `CabView` → first `.s` with sibling `.cvf` in a cabview folder.
+/// Priority: an explicit `ORTS3DCabFile` and its native CVF → `CabView` →
+/// legacy scan when no 3D shape was declared. An explicit missing shape is never
+/// substituted by a different cab in the installation.
 pub fn resolve_cab_assets(trainset_root: &Path, cab: &EngineCabView) -> Option<ResolvedCabAssets> {
-    if let Some(shape_ref) = cab.orts_3d_cab_shape.as_deref()
-        && let Some(assets) = resolve_from_shape_ref(trainset_root, shape_ref)
-    {
-        return Some(assets);
+    if let Some(shape_ref) = cab.orts_3d_cab_shape.as_deref() {
+        return resolve_from_shape_ref(trainset_root, shape_ref, cab.cab_view_file.as_deref());
     }
     if let Some(cvf_ref) = cab.cab_view_file.as_deref()
         && let Some(assets) = resolve_from_cab_view_ref(trainset_root, cvf_ref)
@@ -134,16 +134,33 @@ pub fn pick_cab_shape_in_dir(cab_dir: &Path) -> Option<PathBuf> {
     shapes.into_iter().next()
 }
 
-fn resolve_from_shape_ref(trainset_root: &Path, shape_ref: &str) -> Option<ResolvedCabAssets> {
+fn resolve_from_shape_ref(
+    trainset_root: &Path,
+    shape_ref: &str,
+    declared_cvf: Option<&str>,
+) -> Option<ResolvedCabAssets> {
     let shape_name = normalize_asset_name(shape_ref);
-    let cab_dir = find_cabview_dir(trainset_root)?;
-    let shape_path = resolve_file_in_dir(&cab_dir, &shape_name)?;
-    let cvf_path = resolve_cvf_in_dir(&cab_dir, &shape_path)?;
-    Some(ResolvedCabAssets {
-        cab_dir,
-        shape_path,
-        cvf_path,
-    })
+    let dirs = cabview_search_dirs(trainset_root);
+    for dir in &dirs {
+        let Some(shape_path) = resolve_file_in_dir(dir, &shape_name) else {
+            continue;
+        };
+        // OR 1.6.1 MSTSLocomotive.BuildCab3DView first uses the sibling CVF,
+        // then the declared CabView in CABVIEW3D/CABVIEW. Shared controls can
+        // have a different filename and leave the unused 2D panel unspecified.
+        let cvf_path = resolve_cvf_in_dir(&shape_path).or_else(|| {
+            let name = normalize_msts_filename(declared_cvf?);
+            dirs.iter()
+                .find_map(|directory| resolve_file_in_dir(directory, &name))
+        })?;
+        let cab_dir = shape_path.parent()?.to_path_buf();
+        return Some(ResolvedCabAssets {
+            cab_dir,
+            shape_path,
+            cvf_path,
+        });
+    }
+    None
 }
 
 fn resolve_from_cab_view_ref(trainset_root: &Path, cvf_ref: &str) -> Option<ResolvedCabAssets> {
@@ -207,7 +224,7 @@ fn resolve_file_in_dir(dir: &Path, name: &str) -> Option<PathBuf> {
     resolve_path_case_insensitive(&path).filter(|p| p.is_file())
 }
 
-fn resolve_cvf_in_dir(_cab_dir: &Path, shape_path: &Path) -> Option<PathBuf> {
+fn resolve_cvf_in_dir(shape_path: &Path) -> Option<PathBuf> {
     let cvf = cvf_path_for_shape(shape_path);
     if cvf.is_file() {
         return Some(cvf);
@@ -220,16 +237,61 @@ fn cvf_path_for_shape(shape_path: &Path) -> PathBuf {
 }
 
 fn normalize_asset_name(raw: &str) -> String {
-    raw.trim()
-        .trim_matches(|c| c == '(' || c == ')')
-        .trim()
-        .to_string()
+    normalize_msts_filename(raw.trim().trim_matches(|c| c == '(' || c == ')').trim())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::typed::EngineCabView;
+
+    #[test]
+    fn explicit_3d_shape_uses_its_declared_shared_cvf_then_prefers_a_sibling() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().join("TRAINS/TRAINSET/EMU");
+        let cab3d = root.join("CABVIEW3D");
+        let common = tmp.path().join("TRAINS/TRAINSET/Common.Cab");
+        std::fs::create_dir_all(&cab3d).unwrap();
+        std::fs::create_dir_all(&common).unwrap();
+        std::fs::write(cab3d.join("interior.s"), b"").unwrap();
+        std::fs::write(common.join("shared-controls.cvf"), b"").unwrap();
+        let cab = EngineCabView {
+            orts_3d_cab_shape: Some("INTERIOR.S".into()),
+            cab_view_file: Some("..\\..\\common.cab\\SHARED-CONTROLS.CVF".into()),
+            ..Default::default()
+        };
+        let resolved = resolve_cab_assets(&root, &cab).unwrap();
+        assert_eq!(resolved.shape_path, cab3d.join("interior.s"));
+        assert_eq!(
+            resolved.cvf_path.canonicalize().unwrap(),
+            common.join("shared-controls.cvf")
+        );
+        std::fs::write(cab3d.join("interior.cvf"), b"").unwrap();
+        assert_eq!(
+            resolve_cab_assets(&root, &cab).unwrap().cvf_path,
+            cab3d.join("interior.cvf")
+        );
+    }
+
+    #[test]
+    fn explicit_missing_shape_or_controls_never_select_an_unrelated_cab() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        let cab3d = root.join("CABVIEW3D");
+        std::fs::create_dir_all(&cab3d).unwrap();
+        std::fs::write(cab3d.join("other.s"), b"").unwrap();
+        std::fs::write(cab3d.join("other.cvf"), b"").unwrap();
+        let mut cab = EngineCabView {
+            orts_3d_cab_shape: Some("missing.s".into()),
+            cab_view_file: Some("other.cvf".into()),
+            ..Default::default()
+        };
+        assert!(resolve_cab_assets(root, &cab).is_none());
+        std::fs::write(cab3d.join("explicit.s"), b"").unwrap();
+        cab.orts_3d_cab_shape = Some("explicit.s".into());
+        cab.cab_view_file = Some("missing.cvf".into());
+        assert!(resolve_cab_assets(root, &cab).is_none());
+    }
 
     fn temp_trainset(label: &str) -> PathBuf {
         std::env::temp_dir().join(format!(

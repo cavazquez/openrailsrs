@@ -101,6 +101,12 @@ pub struct BrakeVehicleSpec {
     /// Wheel-rail μ cap when skid limit enabled; 0 = no cap (OR-P6c off).
     pub skid_adhesion_mu: f64,
 }
+impl BrakeCylinder {
+    pub(crate) fn connection_compatible(&self, other: &Self) -> bool {
+        self.native_vacuum.is_some() == other.native_vacuum.is_some()
+            && (self.full_pressure_bar - other.full_pressure_bar).abs() <= 0.01
+    }
+}
 
 /// OR `Train.WagonCoefficientFriction` dry default for brake adhesion cap.
 pub const OR_DEFAULT_BRAKE_ADHESION_MU: f64 = 0.25;

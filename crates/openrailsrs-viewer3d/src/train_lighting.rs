@@ -426,6 +426,7 @@ pub fn update_train_lights(
     settings: Res<crate::player_settings::PlayerSettings>,
     _cab: Res<crate::camera::LiveDriverCab>,
     quality: Option<Res<crate::adaptive_graphics::AdaptiveGraphics>>,
+    budget: Option<Res<crate::render_budget::RenderBudget>>,
     atmosphere: (
         Option<Res<crate::route_lighting::RouteSunState>>,
         Option<Res<crate::weather_state::WeatherState>>,
@@ -438,7 +439,13 @@ pub fn update_train_lights(
         ),
         Without<Headlamp>,
     >,
-    camera: Query<&GlobalTransform, (With<Camera3d>, Without<Headlamp>)>,
+    camera: Query<
+        &GlobalTransform,
+        (
+            (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+            Without<Headlamp>,
+        ),
+    >,
     mut lamps: Query<(
         Entity,
         &Headlamp,
@@ -457,6 +464,7 @@ pub fn update_train_lights(
     } else {
         8
     };
+    let limit = budget.as_ref().map_or(limit, |b| limit.min(b.train_lights));
     let mut ranked = lamps
         .iter()
         .filter_map(|(entity, lamp, _, _, spot, _)| {

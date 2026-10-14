@@ -18,6 +18,7 @@ fn main() {
         std::process::exit(2);
     }
     let spec = ConsistSoundSpec {
+        vehicle_offset: 0,
         id: 0,
         consist: PathBuf::from(&args[0]),
         route: PathBuf::from(&args[1]),

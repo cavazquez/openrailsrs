@@ -36,9 +36,11 @@ fn is_terrain_binary_subheader(body: &[u8]) -> bool {
 
 /// Read a file from disk and decode it with [`decode_msts_file_bytes`].
 pub fn read_msts_file_decoded(path: &Path) -> Result<String, FormatError> {
+    crate::read_trace::record(path);
     let bytes = std::fs::read(path).map_err(|e| FormatError::UnexpectedToken {
         offset: 0,
         message: format!("failed to read {}: {e}", path.display()),
     })?;
+    crate::read_trace::record_bytes(path, &bytes);
     decode_msts_file_bytes(&bytes)
 }

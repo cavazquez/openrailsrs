@@ -443,10 +443,10 @@ fn parse_activity_collects_traffic_services() {
     assert_eq!(act.services.len(), 2, "expected 2 services");
     assert_eq!(act.services[0].name, "freight_north");
     assert_eq!(act.services[0].path_file, "service1.pat");
-    assert!((act.services[0].start_time_s - 1800.0).abs() < 1e-6);
+    assert!((act.services[0].start_time_s - 30600.0).abs() < 1e-6);
     assert_eq!(act.services[1].name, "express");
     assert_eq!(act.services[1].path_file, "service2.pat");
-    assert!((act.services[1].start_time_s - 600.0).abs() < 1e-6);
+    assert!((act.services[1].start_time_s - 29400.0).abs() < 1e-6);
     assert_eq!(act.season.as_deref(), Some("Summer"));
 }
 
@@ -847,7 +847,23 @@ fn chiltern_birmingham_import_checks_pat_placement_and_route_edition() {
         direct.destination, "n17381",
         "destination must follow the full PAT beyond the neighbouring platform stub"
     );
-    let imported = import_activity_with_summary(route_dir, &act, Some(&out));
+    // The historical oracle graph has calibrated segment lengths. Native AI
+    // subpaths must use the actual edition's TDB geometry, rather than treating
+    // those legacy oracle values as native metre offsets.
+    let native = tempfile::tempdir().expect("native edition graph");
+    std::fs::write(
+        native.path().join("track.toml"),
+        import_route(route_dir).expect("import original TDB"),
+    )
+    .expect("write native graph");
+    if out.join("scenario.overlay.toml").is_file() {
+        std::fs::copy(
+            out.join("scenario.overlay.toml"),
+            native.path().join("scenario.overlay.toml"),
+        )
+        .expect("copy test overlay without changing its source");
+    }
+    let imported = import_activity_with_summary(route_dir, &act, Some(native.path()));
     let tdb = TrackDbFile::from_path(route_dir.join("Chiltern.tdb")).expect("native database");
     // OR logs and skips stale PlatformStartID entries. The native PAT placement
     // must remain valid and no adjacent signal may become a guessed platform.
@@ -855,7 +871,11 @@ fn chiltern_birmingham_import_checks_pat_placement_and_route_edition() {
         if tdb.items.iter().any(|item| {
             item.id == stop.platform_start_id && !matches!(item.kind, TrItemKind::Platform { .. })
         }) {
-            assert!(imported.is_ok());
+            assert!(
+                imported.is_ok(),
+                "native activity import failed: {:?}",
+                imported.as_ref().err()
+            );
         }
     }
     let (toml, _, overlay_applied) = imported.expect("import activity");

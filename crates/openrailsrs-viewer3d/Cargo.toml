@@ -54,13 +54,19 @@ chrono = { version = "0.4", default-features = false, features = ["clock", "serd
 chrono-tz = "0.10.4"
 ureq = { version = "3.4.2", default-features = false, features = ["rustls"] }
 bevy = { workspace = true, features = ["bevy_gizmos", "bevy_ui_render", "bevy_state"] }
-bevy_clipboard = "0.19.1"
+bevy_clipboard = { version = "0.19.1", features = ["system_clipboard"] }
 bevy_hanabi = { version = "=0.19.0", default-features = false, features = ["3d"] }
 bevy-inspector-egui = { version = "0.37", optional = true, default-features = false, features = ["bevy_pbr", "bevy_render"] }
 bevy_framepace = { version = "0.22", optional = true, default-features = false }
 bytemuck.workspace = true
 image = { workspace = true, features = ["png", "bmp"] }
 
+[target.'cfg(all(target_os = "linux", target_env = "gnu"))'.dependencies]
+libc = "0.2.189"
+
 [dev-dependencies]
 openrailsrs-core = { path = "../openrailsrs-core" }
 tempfile = "3"
+
+[build-dependencies]
+sha2 = "0.10.9"

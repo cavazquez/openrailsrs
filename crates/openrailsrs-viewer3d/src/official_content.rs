@@ -3,6 +3,7 @@ use crate::player_settings::{atomic_write, player_data_dir};
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use sha2::{Digest, Sha256};
 use std::{
     io::{BufRead, BufReader},
     path::{Path, PathBuf},
@@ -10,18 +11,18 @@ use std::{
     sync::{Mutex, mpsc},
 };
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ContentAuthor {
     pub name: String,
 }
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct PreviousContentSource {
     pub name: String,
     pub url: String,
     #[serde(rename = "softwareVersion", default)]
     pub content_version: Option<String>,
 }
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct OfficialPackage {
     pub name: String,
     pub author: ContentAuthor,
@@ -35,6 +36,20 @@ pub struct OfficialPackage {
     pub download_bytes: u64,
     #[serde(rename = "installSize", default)]
     pub install_bytes: u64,
+    #[serde(default)]
+    pub original_confirmed: bool,
+    #[serde(default)]
+    pub requires_confirmation: bool,
+    #[serde(default)]
+    pub requested_ref: Option<String>,
+    #[serde(default)]
+    pub package_type: Option<String>,
+    #[serde(default)]
+    pub resolved_commit: Option<String>,
+    #[serde(default)]
+    pub source_date: Option<String>,
+    #[serde(default)]
+    pub input_url: Option<String>,
 }
 impl OfficialPackage {
     fn matches_manifest(&self, manifest: &Value) -> bool {
@@ -68,6 +83,12 @@ impl OfficialPackage {
         }
     }
     pub fn id(&self) -> String {
+        if self.original_confirmed || self.requires_confirmation {
+            return format!(
+                "url-github-{:x}",
+                Sha256::digest(self.url.to_ascii_lowercase().as_bytes())
+            );
+        }
         self.name
             .to_ascii_lowercase()
             .split(|c: char| !c.is_ascii_alphanumeric())
@@ -86,6 +107,26 @@ impl OfficialPackage {
 #[derive(Deserialize)]
 struct Catalog {
     routes: Vec<OfficialPackage>,
+}
+fn valid_user_source(package: &OfficialPackage) -> bool {
+    let Some(repo) = package
+        .url
+        .strip_prefix("https://github.com/")
+        .and_then(|r| r.strip_suffix(".git"))
+    else {
+        return false;
+    };
+    let parts = repo.split('/').collect::<Vec<_>>();
+    package.original_confirmed
+        && package.compensation == "free"
+        && package.name == repo
+        && parts.len() == 2
+        && parts.iter().all(|p| {
+            !p.is_empty()
+                && ![".", ".."].contains(p)
+                && p.bytes()
+                    .all(|c| c.is_ascii_alphanumeric() || b"._-".contains(&c))
+        })
 }
 struct Job {
     download: Option<u64>,
@@ -112,30 +153,157 @@ pub struct OfficialContent {
     pub status: String,
     pub installed: Vec<PathBuf>,
     job: Option<Job>,
+    pub url_preview: Option<OfficialPackage>,
+    pub url_status: String,
+    url_probe: Option<Mutex<mpsc::Receiver<Result<OfficialPackage, String>>>>,
 }
 impl Default for OfficialContent {
     fn default() -> Self {
         let catalog: Catalog =
             serde_json::from_str(openrailsrs_content::CATALOG).expect("bundled official catalogue");
-        let selected = catalog
-            .routes
+        let mut packages = catalog.routes;
+        let source_file = player_data_dir().join("original-url-sources.json");
+        if std::fs::metadata(&source_file).is_ok_and(|m| m.len() <= 128 * 1024)
+            && let Ok(bytes) = std::fs::read(source_file)
+            && let Ok(extra) = serde_json::from_slice::<Vec<OfficialPackage>>(&bytes)
+        {
+            for package in extra.into_iter().take(32) {
+                if valid_user_source(&package) && !packages.iter().any(|p| p.id() == package.id()) {
+                    packages.push(package);
+                }
+            }
+        }
+        let selected = packages
             .iter()
             .position(|p| p.name == "Demo Model 1")
             .unwrap_or(0);
         let queue = crate::download_queue::Queue::load(
             &player_data_dir(),
-            &catalog
-                .routes
-                .iter()
-                .map(OfficialPackage::id)
-                .collect::<Vec<_>>(),
+            &packages.iter().map(OfficialPackage::id).collect::<Vec<_>>(),
         );
-        let mut resource=Self {queue,packages:catalog.routes,selected,status:"Elegí un paquete. Se instala por separado y se audita antes de ofrecer sus actividades.".into(),installed:vec![],job:None};
+        let mut resource=Self {queue,packages,selected,status:"Elegí un paquete. Se instala por separado y se audita antes de ofrecer sus actividades.".into(),installed:vec![],job:None,url_preview:None,url_status:String::new(),url_probe:None};
         resource.refresh_installed();
         resource
     }
 }
 impl OfficialContent {
+    pub fn inspect_url(&mut self, url: &str) -> Result<(), String> {
+        if self.url_probe.is_some() {
+            return Err("Resolviendo el enlace anterior".into());
+        }
+        if url.len() > 2048 {
+            return Err("El enlace es demasiado largo".into());
+        }
+        self.url_preview = None;
+        self.url_status = "Comprobando el enlace sin descargar…".into();
+        let url = url.trim().to_owned();
+        let (sender, receiver) = mpsc::channel();
+        self.url_probe = Some(Mutex::new(receiver));
+        std::thread::spawn(move || {
+            let result = (|| {
+                let output = openrailsrs_content::installer_command()?
+                    .args(["--inspect-url", "--url", &url])
+                    .output()
+                    .map_err(|e| e.to_string())?;
+                if !output.status.success() {
+                    return Err(String::from_utf8_lossy(&output.stderr)
+                        .chars()
+                        .take(2048)
+                        .collect());
+                }
+                serde_json::from_slice(&output.stdout)
+                    .map_err(|e| format!("Respuesta de origen inválida: {e}"))
+            })();
+            let _ = sender.send(result);
+        });
+        Ok(())
+    }
+    pub fn poll_url(&mut self) -> bool {
+        let Some(probe) = &self.url_probe else {
+            return false;
+        };
+        let Ok(probe) = probe.try_lock() else {
+            return false;
+        };
+        let reply = match probe.try_recv() {
+            Ok(reply) => reply,
+            Err(mpsc::TryRecvError::Empty) => return false,
+            Err(mpsc::TryRecvError::Disconnected) => {
+                Err("La comprobación terminó sin respuesta".into())
+            }
+        };
+        drop(probe);
+        self.url_probe = None;
+        match reply {
+            Ok(package) => {
+                self.url_status = if package.requires_confirmation {
+                    "Origen fuera del catálogo: verificá que sea el repositorio original del autor antes de confirmar.".into()
+                } else {
+                    "Origen reconocido en el catálogo. Revisá los datos antes de instalar.".into()
+                };
+                self.url_preview = Some(package);
+            }
+            Err(error) => self.url_status = error,
+        }
+        true
+    }
+    pub fn install_url(&mut self, confirm: bool) -> Result<(), String> {
+        let mut package = self
+            .url_preview
+            .clone()
+            .ok_or("Comprobá un enlace primero")?;
+        if package.requires_confirmation && !confirm {
+            return Err("Confirmá que este es el repositorio original del autor".into());
+        }
+        if package.requires_confirmation {
+            package.original_confirmed = true;
+            package.requires_confirmation = false;
+            if !valid_user_source(&package) {
+                return Err("El origen no es un repositorio admitido".into());
+            }
+        }
+        if let Some(index) = self.packages.iter().position(|p| p.id() == package.id()) {
+            if !self.packages[index].url.eq_ignore_ascii_case(&package.url) {
+                return Err(
+                    "El identificador ya pertenece a otro origen; la cola se conserva".into(),
+                );
+            }
+            if self
+                .queue
+                .entries
+                .iter()
+                .any(|entry| entry.package == package.id() && entry.phase.pending())
+            {
+                return Err(
+                    "Este origen ya está en la cola; se conserva la revisión solicitada".into(),
+                );
+            }
+            self.selected = index;
+            self.packages[index] = package;
+        } else {
+            if self
+                .packages
+                .iter()
+                .filter(|p| p.original_confirmed)
+                .count()
+                >= 32
+            {
+                return Err("Se admiten hasta 32 orígenes agregados por URL".into());
+            }
+            self.selected = self.packages.len();
+            self.packages.push(package);
+            let extra: Vec<_> = self
+                .packages
+                .iter()
+                .filter(|p| p.original_confirmed)
+                .collect();
+            atomic_write(
+                &player_data_dir().join("original-url-sources.json"),
+                &serde_json::to_vec_pretty(&extra).map_err(|e| e.to_string())?,
+            )?;
+        }
+        self.start()
+    }
     pub fn reaudit(&mut self, index: usize) -> Result<(), String> {
         if self.busy() {
             return Err("Ya hay una operación de contenido en curso".into());
@@ -145,8 +313,7 @@ impl OfficialContent {
             .get(index)
             .cloned()
             .ok_or("Paquete instalado no disponible")?;
-        let cancel = player_data_dir()
-            .join("official-content")
+        let cancel = openrailsrs_content::content_dir()
             .join(format!(".cancel-{}-audit-{index}", std::process::id()));
         std::fs::create_dir_all(cancel.parent().unwrap()).map_err(|e| e.to_string())?;
         if cancel.exists() {
@@ -211,7 +378,7 @@ impl OfficialContent {
         if !package.automatic() {
             return Err("Este paquete requiere visitar la página de su autor".into());
         }
-        let destination = player_data_dir().join("official-content");
+        let destination = openrailsrs_content::content_dir();
         std::fs::create_dir_all(&destination).map_err(|e| e.to_string())?;
         let cancel = destination.join(format!(
             ".cancel-{}-{}-{id}",
@@ -221,8 +388,19 @@ impl OfficialContent {
         if cancel.exists() {
             std::fs::remove_file(&cancel).map_err(|e| e.to_string())?;
         }
-        let mut child = openrailsrs_content::installer_command()?
-            .args(["--package", &package.id()])
+        let mut command = openrailsrs_content::installer_command()?;
+        if let Some(url) = &package.input_url {
+            command.args(["--url", url]);
+            if package.original_confirmed {
+                command.arg("--confirm-original");
+            }
+        } else {
+            command.args(["--package", &package.id()]);
+        }
+        if let Some(reference) = &package.requested_ref {
+            command.args(["--revision", reference]);
+        }
+        let mut child = command
             .arg("--destination")
             .arg(destination)
             .arg("--cancel-file")
@@ -507,6 +685,37 @@ pub fn prepared_routes() -> Vec<PreparedRoute> {
         .flat_map(|p| discover_prepared(p))
         .collect()
 }
+/// Bind prepared examples only to the verified author's installed route. An
+/// unrelated package reusing the Chiltern folder name is never selected.
+pub fn prepared_author_route(id: &str, name: &str) -> Option<PathBuf> {
+    let catalog: Catalog = serde_json::from_str(openrailsrs_content::CATALOG).ok()?;
+    let author = catalog.routes.iter().find(|p| p.id() == id)?;
+    let mut copies = prepared_routes()
+        .into_iter()
+        .filter_map(|route| {
+            if !route.native.file_name()?.eq_ignore_ascii_case(name)
+                || !route.native.join("WORLD").is_dir()
+            {
+                return None;
+            }
+            let manifest = route
+                .native
+                .ancestors()
+                .find_map(|p| read_manifest(&p.join("openrailsrs-content.json")))?;
+            author.matches_manifest(&manifest).then(|| {
+                (
+                    manifest["source_date"]
+                        .as_str()
+                        .unwrap_or_default()
+                        .to_owned(),
+                    route.native,
+                )
+            })
+        })
+        .collect::<Vec<_>>();
+    copies.sort();
+    copies.pop().map(|(_, p)| p)
+}
 /// Stock belongs to its author package even if importing the map has failed.
 /// Reuse the same confined manifest paths as route preparation.
 pub(crate) fn installed_stock_sources() -> Vec<(PathBuf, String)> {
@@ -561,15 +770,56 @@ fn discover_stock_sources(root: &Path) -> Vec<(PathBuf, String)> {
                 sources.push((consists, edition_label(&native, &manifest)));
             }
         }
+        for stock in manifest["stock_files"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .take(20000)
+        {
+            let Some(path) = stock
+                .as_str()
+                .and_then(|s| canonical_inside(&package.join(s), &package))
+            else {
+                continue;
+            };
+            let Some(trainset) = path.ancestors().find(|p| {
+                p.file_name()
+                    .is_some_and(|n| n.eq_ignore_ascii_case("TRAINSET"))
+            }) else {
+                continue;
+            };
+            let Some(trains) = trainset.parent().filter(|p| p.starts_with(&package)) else {
+                continue;
+            };
+            let Some(consists) =
+                openrailsrs_formats::resolve_path_case_insensitive(&trains.join("CONSISTS"))
+                    .and_then(|p| canonical_inside(&p, &package))
+                    .filter(|p| p.is_dir())
+            else {
+                continue;
+            };
+            if !sources.iter().any(|(p, _)| p == &consists) {
+                sources.push((consists, edition_label(&path, &manifest)));
+            }
+        }
+        if let Some(standalone) =
+            canonical_inside(&package.join("openrailsrs-import/standalone"), &package)
+                .filter(|p| p.is_dir())
+        {
+            sources.push((standalone, edition_label(&package, &manifest)));
+        }
     }
     sources.sort_by(|a, b| a.0.cmp(&b.0));
     sources
 }
 fn content_directories() -> Vec<PathBuf> {
-    std::iter::once(player_data_dir())
-        .chain(openrailsrs_content::legacy_data_dirs())
-        .map(|p| p.join("official-content"))
-        .collect()
+    let mut result = openrailsrs_content::content_roots(&player_data_dir());
+    result.extend(
+        openrailsrs_content::legacy_data_dirs()
+            .into_iter()
+            .map(|p| p.join("official-content")),
+    );
+    result
 }
 fn discover_prepared(directory: &Path) -> Vec<PreparedRoute> {
     let Ok(directory) = directory.canonicalize() else {
@@ -707,6 +957,100 @@ pub fn prepare_installed(directory: &Path, cancel: Option<&Path>) -> Result<Stri
             activities,
         });
     }
+    if routes.is_empty() {
+        let stock = manifest["stock_files"]
+            .as_array()
+            .ok_or("El paquete no tiene rutas ni lista de vehículos")?;
+        if stock.is_empty() || stock.len() > 20000 {
+            return Err("Lista de vehículos vacía o demasiado grande".into());
+        }
+        let import = directory.join("openrailsrs-import");
+        if import.exists() && canonical_inside(&import, directory).is_none() {
+            return Err("Importación fuera del paquete".into());
+        }
+        let standalone = import.join("standalone");
+        if standalone.exists() && canonical_inside(&standalone, directory).is_none() {
+            return Err("Formaciones fuera del paquete".into());
+        }
+        std::fs::create_dir_all(&standalone).map_err(|e| e.to_string())?;
+        let stock_paths = stock
+            .iter()
+            .map(|relative| {
+                relative
+                    .as_str()
+                    .and_then(|name| canonical_inside(&directory.join(name), directory))
+                    .filter(|path| path.is_file())
+                    .ok_or("Vehículo ausente o fuera del paquete".to_string())
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        let mut trainsets = Vec::new();
+        for path in &stock_paths {
+            if let Some(root) = path.ancestors().find(|path| {
+                path.file_name()
+                    .is_some_and(|n| n.eq_ignore_ascii_case("TRAINSET"))
+            }) && !trainsets.contains(&root.to_path_buf())
+            {
+                trainsets.push(root.to_path_buf());
+            }
+        }
+        let mut auditor = openrailsrs_train::ConsistAuditor::new(trainsets.clone());
+        // A train-only archive may already supply complete author formations.
+        // Audit those unchanged; generated one-car choices remain additional
+        // exploration options and never replace the author's composition.
+        for trainset in &trainsets {
+            let Some(consists) = trainset
+                .parent()
+                .and_then(|root| {
+                    openrailsrs_formats::resolve_path_case_insensitive(&root.join("CONSISTS"))
+                })
+                .and_then(|path| canonical_inside(&path, directory))
+            else {
+                continue;
+            };
+            for file in std::fs::read_dir(consists)
+                .into_iter()
+                .flatten()
+                .flatten()
+                .take(4096)
+            {
+                check()?;
+                let Some(file) = canonical_inside(&file.path(), directory).filter(|path| {
+                    path.is_file()
+                        && path
+                            .extension()
+                            .is_some_and(|e| e.eq_ignore_ascii_case("con"))
+                }) else {
+                    continue;
+                };
+                if seen_consists.insert(file.clone()) {
+                    let audit = auditor.inspect(&file);
+                    ready += usize::from(audit.player_ready());
+                    formations.push(audit);
+                }
+            }
+        }
+        for (index, path) in stock_paths.iter().enumerate() {
+            check()?;
+            let extension = path
+                .extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or_default();
+            let kind = if extension.eq_ignore_ascii_case("eng") {
+                "Engine"
+            } else if extension.eq_ignore_ascii_case("wag") {
+                "Wagon"
+            } else {
+                return Err("El archivo no es ENG/WAG".into());
+            };
+            let con = standalone.join(format!("vehicle-{index}.con"));
+            let escaped =
+                serde_json::to_string(&path.to_string_lossy()).map_err(|e| e.to_string())?;
+            atomic_write(&con, format!("(Train ({kind} {escaped}))\n").as_bytes())?;
+            let audit = auditor.inspect(&con);
+            ready += usize::from(audit.player_ready());
+            formations.push(audit);
+        }
+    }
     atomic_write(
         &directory.join("openrailsrs-audit.json"),
         &serde_json::to_vec_pretty(&formations).map_err(|e| e.to_string())?,
@@ -827,6 +1171,14 @@ fn source_for_missing(
                     && package.url.ends_with(".git")
                     && package.matches_manifest(&manifest)
             })
+        })
+        .or_else(|| {
+            let stock = missing.referenced_by.parent()?.file_name()?;
+            (stock == "RF_Blue_Pullman"
+                && openrailsrs_formats::resource_links::bundled_stock_root(&missing.referenced_by)
+                    .is_some())
+            .then(|| catalog.routes.iter().find(|p| p.id() == "chiltern-v4"))
+            .flatten()
         })?;
     let repo = package
         .url
@@ -856,6 +1208,84 @@ fn source_for_missing(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn user_origin(url: &str) -> OfficialPackage {
+        serde_json::from_value(serde_json::json!({
+            "name": url.strip_prefix("https://github.com/").unwrap().trim_end_matches(".git"),
+            "author": {"name": "Original"}, "compensation": "free", "url": url,
+            "original_confirmed": true
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn url_origin_ids_are_distinct_and_match_the_installer() {
+        let catalog: Catalog = serde_json::from_str(openrailsrs_content::CATALOG).unwrap();
+        let urls = [
+            "https://github.com/demo/model-1.git",
+            "https://github.com/a-b/c.git",
+            "https://github.com/a/b-c.git",
+        ];
+        let ids: Vec<_> = urls.iter().map(|url| user_origin(url).id()).collect();
+        assert_ne!(ids[0], ids[1]);
+        assert_ne!(ids[1], ids[2]);
+        assert!(
+            ids.iter()
+                .all(|id| !catalog.routes.iter().any(|p| p.id() == *id))
+        );
+        assert_eq!(user_origin("https://github.com/A-B/C.git").id(), ids[1]);
+        assert_eq!(
+            ids[1],
+            format!("url-github-{:x}", Sha256::digest(urls[1].as_bytes()))
+        );
+    }
+
+    #[test]
+    fn mismatched_origin_cannot_replace_a_catalogue_package_or_its_queued_job() {
+        let catalog: Catalog = serde_json::from_str(openrailsrs_content::CATALOG).unwrap();
+        let package = catalog.routes.into_iter().find(|p| p.automatic()).unwrap();
+        let data = tempfile::tempdir().unwrap();
+        let mut queue = crate::download_queue::Queue::load(data.path(), &[package.id()]);
+        queue.enqueue(package.id()).unwrap();
+        let mut forged = package.clone();
+        forged.url = "https://github.com/Another/Origin.git".into();
+        let mut content = OfficialContent {
+            packages: vec![package.clone()],
+            selected: 0,
+            queue,
+            status: String::new(),
+            installed: vec![],
+            job: None,
+            url_preview: Some(forged),
+            url_status: String::new(),
+            url_probe: None,
+        };
+        assert!(
+            content
+                .install_url(true)
+                .unwrap_err()
+                .contains("otro origen")
+        );
+        assert_eq!(content.packages[0].url, package.url);
+        assert_eq!(content.queue.entries.len(), 1);
+        assert_eq!(content.queue.entries[0].package, package.id());
+        let pending: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(data.path().join("download-queue.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(pending["entries"][0]["package"], package.id());
+        let mut same_origin = package.clone();
+        same_origin.requested_ref = Some("another-version".into());
+        content.url_preview = Some(same_origin);
+        assert!(
+            content
+                .install_url(true)
+                .unwrap_err()
+                .contains("revisión solicitada")
+        );
+        assert_eq!(content.packages[0].requested_ref, package.requested_ref);
+        assert_eq!(content.queue.entries.len(), 1);
+    }
     #[test]
     fn original_stock_is_discovered_without_a_prepared_route_and_confined_to_its_package() {
         let temp = tempfile::tempdir().unwrap();
@@ -907,6 +1337,62 @@ mod tests {
         assert!(result.contains("0/0 formaciones"));
         assert!(package.join("openrailsrs-import/Test/track.toml").is_file());
         assert!(package.join("openrailsrs-prepared.json").is_file());
+    }
+    #[test]
+    fn train_only_package_audits_author_formations_as_well_as_standalone_choices() {
+        let temp = tempfile::tempdir().unwrap();
+        let package = temp.path();
+        let stock = package.join("TRAINSET/Lab");
+        let consists = package.join("CONSISTS");
+        std::fs::create_dir_all(&stock).unwrap();
+        std::fs::create_dir_all(&consists).unwrap();
+        let source =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/player_lab/vehicles");
+        for name in ["lab.eng", "lab.wag", "lab.s", "coach.s", "lab.ace"] {
+            std::fs::copy(source.join(name), stock.join(name)).unwrap();
+        }
+        let original = b"(Train (Engine \"Lab/lab.eng\") (Wagon \"Lab/lab.wag\"))\n";
+        let con = consists.join("author.con");
+        std::fs::write(&con, original).unwrap();
+        std::fs::write(package.join("openrailsrs-content.json"),
+            br#"{"package":"Author train","routes":[],"stock_files":["TRAINSET/Lab/lab.eng","TRAINSET/Lab/lab.wag"]}"#).unwrap();
+        prepare_installed(package, None).unwrap();
+        let audits: Vec<serde_json::Value> =
+            serde_json::from_slice(&std::fs::read(package.join("openrailsrs-audit.json")).unwrap())
+                .unwrap();
+        assert_eq!(audits.len(), 3);
+        let authored = audits
+            .iter()
+            .find(|a| a["path"].as_str() == con.to_str())
+            .expect("Author formation audited");
+        assert_eq!(authored["vehicles"].as_u64(), Some(2));
+        assert_eq!(std::fs::read(con).unwrap(), original);
+        assert!(
+            package
+                .join("openrailsrs-import/standalone/vehicle-0.con")
+                .is_file()
+        );
+        assert!(
+            package
+                .join("openrailsrs-import/standalone/vehicle-1.con")
+                .is_file()
+        );
+    }
+    #[test]
+    fn stock_only_author_archive_can_supply_trainset_and_consists_at_its_root() {
+        let t = tempfile::tempdir().unwrap();
+        let library = t.path().join("official-content");
+        let package = library.join("original");
+        let consists = package.join("TGV/CONSISTS");
+        let stock = package.join("TGV/TRAINSET/Train");
+        std::fs::create_dir_all(&consists).unwrap();
+        std::fs::create_dir_all(&stock).unwrap();
+        std::fs::write(stock.join("loco.eng"), b"author").unwrap();
+        std::fs::write(package.join("openrailsrs-content.json"),
+            br#"{"package":"Author train","routes":[],"stock_files":["TGV/TRAINSET/Train/loco.eng"]}"#).unwrap();
+        let found = discover_stock_sources(&library);
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].0, consists);
     }
     fn fixture(root: &Path) -> (PathBuf, PreparedRoute) {
         let package = root.join("official-content/package");

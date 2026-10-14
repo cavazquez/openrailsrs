@@ -18,7 +18,7 @@ cab_door = true
 washer_capacity_l = 2.0
 washer_flow_lps = 0.02
 [simulation]
-duration = 300.0
+duration = 900.0
 time_step = 0.05
 seed = 42
 multi_body = true

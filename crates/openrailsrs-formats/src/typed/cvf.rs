@@ -923,7 +923,7 @@ fn parse_controls(items: &[Ast], out: &mut Vec<CabControl>) -> Result<(), Format
 
 fn parse_multi_state(items: &[Ast]) -> Result<CabControl, FormatError> {
     let control_type = parse_control_type(items)?;
-    let position = find_screen_rect(items, "MultiStateDisplay")?;
+    let position = control_position(items, "MultiStateDisplay")?;
     let graphic = find_string_in_list(items, "Graphic").unwrap_or_default();
     let states = parse_states(items)?;
     Ok(CabControl::MultiStateDisplay {
@@ -936,7 +936,7 @@ fn parse_multi_state(items: &[Ast]) -> Result<CabControl, FormatError> {
 
 fn parse_dial(items: &[Ast]) -> Result<CabControl, FormatError> {
     let control_type = parse_control_type(items)?;
-    let position = find_screen_rect(items, "Dial")?;
+    let position = control_position(items, "Dial")?;
     let graphic = find_string_in_list(items, "Graphic").unwrap_or_default();
     Ok(CabControl::Dial {
         control_type,
@@ -977,7 +977,7 @@ fn parse_dial_params(items: &[Ast]) -> CabDialParams {
 
 fn parse_digital(items: &[Ast]) -> Result<CabControl, FormatError> {
     let control_type = parse_control_type(items)?;
-    let position = find_screen_rect(items, "Digital")?;
+    let position = control_position(items, "Digital")?;
     Ok(CabControl::Digital {
         control_type,
         position,
@@ -987,12 +987,7 @@ fn parse_digital(items: &[Ast]) -> Result<CabControl, FormatError> {
 
 fn parse_gauge(items: &[Ast]) -> Result<CabControl, FormatError> {
     let control_type = parse_control_type(items)?;
-    let position = find_screen_rect(items, "Gauge").unwrap_or(ScreenRect {
-        x: 0.0,
-        y: 0.0,
-        width: 1.0,
-        height: 1.0,
-    });
+    let position = control_position(items, "Gauge")?;
     let graphic = find_string_in_list(items, "Graphic").unwrap_or_default();
     Ok(CabControl::Gauge {
         control_type,
@@ -1005,7 +1000,7 @@ fn parse_gauge(items: &[Ast]) -> Result<CabControl, FormatError> {
 fn parse_firebox(items: &[Ast]) -> Result<CabControl, FormatError> {
     Ok(CabControl::Gauge {
         control_type: parse_control_type(items)?,
-        position: find_screen_rect(items, "Firebox")?,
+        position: control_position(items, "Firebox")?,
         graphic: find_string_in_list(items, "FuelCoal").unwrap_or_default(),
         gauge: CabGaugeParams {
             orientation: 1,
@@ -1019,7 +1014,7 @@ fn parse_firebox(items: &[Ast]) -> Result<CabControl, FormatError> {
 
 fn parse_screen(items: &[Ast]) -> Result<CabControl, FormatError> {
     let control_type = parse_control_type(items)?;
-    let position = find_screen_rect(items, "ScreenDisplay").unwrap_or(ScreenRect {
+    let position = optional_control_position(items, "ScreenDisplay")?.unwrap_or(ScreenRect {
         x: 0.0,
         y: 0.0,
         width: 640.0,
@@ -1211,7 +1206,7 @@ fn parse_control_style(items: &[Ast]) -> Option<String> {
 
 fn parse_two_state(items: &[Ast]) -> Result<CabControl, FormatError> {
     let control_type = parse_control_type(items)?;
-    let position = find_screen_rect(items, "TwoStateDisplay")?;
+    let position = control_position(items, "TwoStateDisplay")?;
     let graphic = find_string_in_list(items, "Graphic").unwrap_or_default();
     Ok(CabControl::TwoStateDisplay {
         control_type,
@@ -1225,16 +1220,11 @@ fn parse_two_state(items: &[Ast]) -> Result<CabControl, FormatError> {
 
 fn parse_tri_state(items: &[Ast]) -> Result<CabControl, FormatError> {
     let control_type = parse_control_type(items)?;
-    let position = find_screen_rect(items, "TriStateDisplay").ok();
+    let position = control_position(items, "TriStateDisplay")?;
     let graphic = find_string_in_list(items, "Graphic").unwrap_or_default();
     Ok(CabControl::TriStateDisplay {
         control_type,
-        position: position.unwrap_or(ScreenRect {
-            x: 0.0,
-            y: 0.0,
-            width: 0.0,
-            height: 0.0,
-        }),
+        position,
         graphic,
         frames: normalize_lever_frames(parse_lever_frames(items)),
         mouse_control: parse_mouse_control(items),
@@ -1244,7 +1234,7 @@ fn parse_tri_state(items: &[Ast]) -> Result<CabControl, FormatError> {
 
 fn parse_lever(items: &[Ast]) -> Result<CabControl, FormatError> {
     let control_type = parse_control_type(items)?;
-    let position = find_screen_rect(items, "Lever").ok();
+    let position = optional_control_position(items, "Lever")?;
     let graphic = find_string_in_list(items, "Graphic").unwrap_or_default();
     let frames = normalize_lever_frames(parse_lever_frames(items));
     Ok(CabControl::Lever {
@@ -1418,24 +1408,54 @@ fn collect_type_token_strings(items: &[Ast]) -> Vec<String> {
     tokens
 }
 
+/// OR 1.6.1 CabViewControl leaves its rectangle zero when Position is absent.
+/// Shape-bound controls need no 2D rectangle; an authored invalid field is still
+/// an error, rather than being mistaken for the native default.
+fn control_position(items: &[Ast], context: &str) -> Result<ScreenRect, FormatError> {
+    Ok(
+        optional_control_position(items, context)?.unwrap_or(ScreenRect {
+            x: 0.,
+            y: 0.,
+            width: 0.,
+            height: 0.,
+        }),
+    )
+}
+
+fn optional_control_position(
+    items: &[Ast],
+    context: &str,
+) -> Result<Option<ScreenRect>, FormatError> {
+    match find_screen_rect(items, context) {
+        Ok(rect) => Ok(Some(rect)),
+        Err(FormatError::MissingField { key, .. }) if key == "Position" => Ok(None),
+        Err(error) => Err(error),
+    }
+}
+
 fn find_screen_rect(items: &[Ast], context: &str) -> Result<ScreenRect, FormatError> {
     if let Some(rect) = walk_lists_find(&Ast::List(items.to_vec()), &mut |list| {
-        if list.len() >= 2
-            && let Ast::Atom(Atom::Symbol(head)) = &list[0]
+        if let Some(Ast::Atom(Atom::Symbol(head))) = list.first()
             && head.eq_ignore_ascii_case("Position")
         {
-            return parse_screen_rect(list, "Position").ok();
+            return Some(parse_screen_rect(list, "Position"));
         }
         None
     }) {
-        return Ok(rect);
+        return rect;
     }
 
     for (i, item) in items.iter().enumerate() {
         if let Ast::Atom(Atom::Symbol(head)) = item
             && head.eq_ignore_ascii_case("Position")
-            && let Some(next) = items.get(i + 1)
         {
+            let next = items
+                .get(i + 1)
+                .ok_or_else(|| FormatError::UnexpectedAtom {
+                    key: "Position".into(),
+                    context: context.into(),
+                    expected: "four numbers (x y width height)".into(),
+                })?;
             return parse_screen_rect_value(None, Some(next));
         }
     }
@@ -1448,7 +1468,14 @@ fn find_screen_rect(items: &[Ast], context: &str) -> Result<ScreenRect, FormatEr
 
 fn parse_screen_rect(items: &[Ast], context: &str) -> Result<ScreenRect, FormatError> {
     let nums = parse_coordinate_numbers(items)?;
-    if nums.len() >= 4 {
+    let values = if items.first().is_some_and(|item| {
+        matches!(item, Ast::Atom(Atom::Symbol(key)) if key.eq_ignore_ascii_case("Position") || key.eq_ignore_ascii_case("CabViewWindow"))
+    }) {
+        &items[1..]
+    } else {
+        items
+    };
+    if nums.len() >= 4 && finite_coordinate_values(values) {
         return Ok(ScreenRect {
             x: nums[0],
             y: nums[1],
@@ -1460,6 +1487,13 @@ fn parse_screen_rect(items: &[Ast], context: &str) -> Result<ScreenRect, FormatE
         key: context.to_string(),
         context: "cvf".to_string(),
         expected: "four numbers (x y width height)".to_string(),
+    })
+}
+
+fn finite_coordinate_values(items: &[Ast]) -> bool {
+    items.iter().all(|item| match item {
+        Ast::Atom(atom) => atom_to_number(atom).is_some_and(|number| number.is_finite()),
+        Ast::List(values) => finite_coordinate_values(values),
     })
 }
 
@@ -1655,6 +1689,70 @@ fn collect_numbers(items: &[Ast]) -> Vec<f64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn shape_bound_controls_retain_open_rails_absent_position_defaults() {
+        let ast = crate::parse_from_first_paren("(Tr_CabViewFile (CabViewControls (TwoState (Type HORN TWO_STATE) (NumFrames 2 2 1)) (MultiStateDisplay (Type DIRECTION_DISPLAY MULTI_STATE_DISPLAY)) (Dial (Type SPEEDOMETER DIAL)) (Digital (Type SPEEDOMETER DIGITAL)) (Gauge (Type BRAKE_CYL GAUGE)) (Firebox (Type FIREBOX FIREBOX)) (TriState (Type FRONT_HLIGHT TRI_STATE)) (Lever (Type THROTTLE LEVER))))").unwrap();
+        let cab = CabViewFile::from_ast(&ast).unwrap();
+        assert_eq!(cab.controls.len(), 8);
+        for control in &cab.controls[..7] {
+            let position = match control {
+                CabControl::TwoStateDisplay { position, .. }
+                | CabControl::MultiStateDisplay { position, .. }
+                | CabControl::Dial { position, .. }
+                | CabControl::Digital { position, .. }
+                | CabControl::Gauge { position, .. }
+                | CabControl::TriStateDisplay { position, .. } => position,
+                other => panic!("unexpected control {other:?}"),
+            };
+            assert_eq!(
+                position,
+                &ScreenRect {
+                    x: 0.,
+                    y: 0.,
+                    width: 0.,
+                    height: 0.,
+                }
+            );
+        }
+        let CabControl::TwoStateDisplay { frames, .. } = &cab.controls[0] else {
+            panic!("original discrete control");
+        };
+        assert_eq!(frames.frames_count, 2);
+        assert!(matches!(
+            cab.controls[7],
+            CabControl::Lever { position: None, .. }
+        ));
+    }
+
+    #[test]
+    fn authored_invalid_control_position_never_becomes_an_absent_default() {
+        for kind in [
+            "TwoState",
+            "MultiStateDisplay",
+            "Dial",
+            "Digital",
+            "Gauge",
+            "Firebox",
+            "TriState",
+            "Lever",
+            "ScreenDisplay",
+        ] {
+            for position in [
+                "",
+                "0 0 10",
+                "0 0 1e999 10",
+                "0 0 NaN 10",
+                "0 0 10 10 banana",
+            ] {
+                let ast = crate::parse_from_first_paren(&format!("(Tr_CabViewFile (CabViewControls ({kind} (Type HORN TWO_STATE) (Position {position}))))")).unwrap();
+                assert!(
+                    CabViewFile::from_ast(&ast).is_err(),
+                    "accepted {kind} Position({position})"
+                );
+            }
+        }
+    }
 
     #[test]
     fn firebox_preserves_original_fire_and_coal_layers() {

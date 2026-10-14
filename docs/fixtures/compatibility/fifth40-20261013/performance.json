@@ -1,0 +1,5008 @@
+{
+  "schema": 1,
+  "reference_openrails": "1.6.1",
+  "bevy": "0.19.1",
+  "hanabi": "0.19.0",
+  "status": "Timing, caches, audio banks, quality and residency measured; final 7200-second lifetime test remains in progress.",
+  "hardware": {
+    "cpu": "AMD Ryzen 5 9600X",
+    "benchmark_gpu": "AMD Radeon RX 7600",
+    "benchmark_gpu_available_mib": 8176,
+    "endurance_gpu": "AMD integrated1002:13c0,PCI0000:0e:00.0",
+    "endurance_dedicated_mib": 512,
+    "os": "Linux7.0.0-38-generic",
+    "mesa": "26.0.8"
+  },
+  "build_options": {
+    "workspace_all_features": true,
+    "locked": true,
+    "dev_opt_level": 1,
+    "test_opt_level": 1,
+    "debug_symbols": 0,
+    "strip": "symbols",
+    "incremental": false,
+    "jobs": 2
+  },
+  "content": {
+    "route": "OriginalChiltern v4 scenery installed outside repository",
+    "scenario": "examples/chiltern_extended/scenario.toml",
+    "scenario_sha256": "faac5f908bfafd4a73ecf5be3e1c9601970c110b8926b7c80ac3221387baf5bf",
+    "formation": "examples/chiltern_extended/consists/birmingham_pullman.con",
+    "formation_sha256": "b267ebba70000bdb53eb90f78b3e48fdd40bfb303013fa50aa3d745eed91e9f6",
+    "scope": "Native author scenery and stock with repository corridor operational scenario; full original20AI activity acceptance is a separate receipt. No original content bytes copied here."
+  },
+  "global_reference": {
+    "scope": "Released-reference commitd9dba7af versus intermediate22. P99 unchanged26ms, maxima improve; cold initial maximum regresses. Preserve this global result when interpreting the within-batch repair.",
+    "raw_report_sha256": "0205bb425bb0e7a9b8a888d8743cfe498a6b62e14cdadc668b3bfb8b9556c73e",
+    "configuration": {
+      "scenario_sha256": "faac5f908bfafd4a73ecf5be3e1c9601970c110b8926b7c80ac3221387baf5bf",
+      "seed": 42,
+      "camera": "driver",
+      "window": [
+        1280,
+        720
+      ],
+      "view_distance_m": 500,
+      "speed_multiplier": 4,
+      "weather_particle_budget": 2048,
+      "audio": "private ALSA null",
+      "checkpoint_m": 2500,
+      "cache_scope": "cold/warm refers to this executable's private application-data cache; OS file cache and Mesa shader cache are not cleared",
+      "framepace": "off",
+      "concurrent_workloads": "No Cargo, Native20AI or Snap CPU jobs. Integrated GPU final22 endurance30fps runs concurrently for every reference/candidate case; benchmark GL and Vulkan both isolated on RX7600.",
+      "profile_systems": true,
+      "weathers": [
+        "downpour"
+      ]
+    },
+    "versions": {
+      "baseline": {
+        "binary_sha256": "fcc8bee54cd6310f5b723f50e9cc0caa8576c6bc0db14da2ef2efcb254dd2053",
+        "cases": {
+          "downpour-cold": {
+            "odometer_m": 2500.6907735943855,
+            "gpu_tiles": 2,
+            "visible_neighbourhood_pending": 0,
+            "pending_uploads": 0,
+            "gameplay": {
+              "gameplay_frames": 2027,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 25,
+              "gameplay_frame_p99_ms": 26,
+              "gameplay_longest_frame_ms": 47.092105000000004,
+              "gameplay_hitches_over_100_ms": 0
+            },
+            "startup_inclusive_max_ms": 1594.314617,
+            "loading_frames": 1102,
+            "rss_mib": 1928.7578125,
+            "peak_rss_mib": 1928.7578125,
+            "graphics_memory": {
+              "device_total_mib": 8688.0,
+              "device_used_mib": 2181.28515625,
+              "peak_process_vram_mib": 1383.7421875,
+              "process_gtt_mib": 82.20703125,
+              "process_vram_mib": 1383.7421875,
+              "source": "linux_drm_fdinfo"
+            },
+            "geometry_cache": null,
+            "system_stages": null,
+            "shape_stages": null
+          },
+          "downpour-warm": {
+            "odometer_m": 2501.1992980011064,
+            "gpu_tiles": 2,
+            "visible_neighbourhood_pending": 0,
+            "pending_uploads": 0,
+            "gameplay": {
+              "gameplay_frames": 2026,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 25,
+              "gameplay_frame_p99_ms": 26,
+              "gameplay_longest_frame_ms": 51.722771,
+              "gameplay_hitches_over_100_ms": 0
+            },
+            "startup_inclusive_max_ms": 1606.022961,
+            "loading_frames": 1090,
+            "rss_mib": 1731.9140625,
+            "peak_rss_mib": 1731.9140625,
+            "graphics_memory": {
+              "device_total_mib": 8688.0,
+              "device_used_mib": 2247.15234375,
+              "peak_process_vram_mib": 1383.8671875,
+              "process_gtt_mib": 82.20703125,
+              "process_vram_mib": 1383.8671875,
+              "source": "linux_drm_fdinfo"
+            },
+            "geometry_cache": null,
+            "system_stages": null,
+            "shape_stages": null
+          }
+        }
+      },
+      "candidate": {
+        "binary_sha256": "d14ebc6432dd4b946442861ab52a44854054cc805e474cb7aa89cf4f2c2a5efa",
+        "cases": {
+          "downpour-cold": {
+            "odometer_m": 2500.6907735943855,
+            "gpu_tiles": 5,
+            "visible_neighbourhood_pending": 0,
+            "pending_uploads": 0,
+            "gameplay": {
+              "gameplay_frames": 2035,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 25,
+              "gameplay_frame_p99_ms": 26,
+              "gameplay_longest_frame_ms": 40.088963,
+              "gameplay_hitches_over_100_ms": 0
+            },
+            "startup_inclusive_max_ms": 1720.052411,
+            "loading_frames": 1186,
+            "rss_mib": 1857.2578125,
+            "peak_rss_mib": 1857.2578125,
+            "graphics_memory": {
+              "active_device_pci": "0000:03:00.0",
+              "device_total_mib": 8176.0,
+              "device_used_mib": 2315.82421875,
+              "devices": [
+                {
+                  "device_total_mib": 8176.0,
+                  "device_used_mib": 2315.82421875,
+                  "pci": "0000:03:00.0",
+                  "process_gtt_mib": 80.171875,
+                  "process_vram_mib": 1786.65234375
+                },
+                {
+                  "device_total_mib": 512.0,
+                  "device_used_mib": 335.8671875,
+                  "pci": "0000:0e:00.0",
+                  "process_gtt_mib": 2.0,
+                  "process_vram_mib": 0.01171875
+                }
+              ],
+              "peak_process_vram_mib": 1786.6640625,
+              "process_gtt_mib": 82.171875,
+              "process_vram_mib": 1786.6640625,
+              "source": "linux_drm_fdinfo"
+            },
+            "geometry_cache": {
+              "gpu_handles_cached": false,
+              "hits": 0,
+              "max_disk_mib": 256,
+              "misses": 474,
+              "schema": 1
+            },
+            "system_stages": {
+              "camera_collision": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 13,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1752
+              },
+              "effect_obstacles": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 1659,
+                "p50_ms": 0.3,
+                "p99_ms": 1.3,
+                "total_us": 852376
+              },
+              "flexible_connections": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 62,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 17249
+              },
+              "horizon": {
+                "calls": 2432,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 34980,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 78798
+              },
+              "jacobs_bogie": {
+                "calls": 2432,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 42,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 23730
+              },
+              "level_crossing_register": {
+                "calls": 2432,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 8916,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 36487
+              },
+              "live_drive": {
+                "calls": 3089,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 2949,
+                "p50_ms": 0.2,
+                "p99_ms": 2.2,
+                "total_us": 944794
+              },
+              "mirrors": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 7,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1270
+              },
+              "platform_people": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 17,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 9174
+              },
+              "road_cars": {
+                "calls": 2432,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 108,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 43169
+              },
+              "snow_materials": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 37,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 7198
+              },
+              "snow_roof_markers": {
+                "calls": 2432,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 2,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 11
+              },
+              "snow_tracks": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 4,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 189
+              },
+              "streaming_forecast.update": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 18,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1573
+              },
+              "terrain_spawn.terrain_tile_bundle_materialize_system": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 205,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 2523
+              },
+              "terrain_spawn.terrain_tile_spawn_stream_system": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 107,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1293
+              },
+              "terrain_spawn.terrain_tile_stream_system": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 2227,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 67497
+              },
+              "terrain_spawn.terrain_tile_unload_system": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 103,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 8055
+              },
+              "wet_surfaces": {
+                "calls": 2432,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 840,
+                "p50_ms": 0.1,
+                "p99_ms": 0.6,
+                "total_us": 103989
+              },
+              "world.progressive_world_spawn_system": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 40489,
+                "p50_ms": 0.1,
+                "p99_ms": 8.9,
+                "total_us": 1918314
+              },
+              "world.update_world_scenery_lod": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 5269,
+                "p50_ms": 0.1,
+                "p99_ms": 4.5,
+                "total_us": 2259440
+              },
+              "world.world_stream_scenery_system": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 21675,
+                "p50_ms": 0.1,
+                "p99_ms": 5.2,
+                "total_us": 488001
+              },
+              "world.world_tile_bundle_materialize_system": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 1800,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 9457
+              },
+              "world.world_tile_stream_system": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 74,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 19203
+              },
+              "world.world_tile_unload_system": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 2867,
+                "p50_ms": 0.1,
+                "p99_ms": 1.7,
+                "total_us": 138099
+              }
+            },
+            "shape_stages": {
+              "cpu_prepare": {
+                "calls": 485,
+                "maximum_us": 1888,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 72205
+              },
+              "cpu_prepare_lods": {
+                "calls": 474,
+                "maximum_us": 57036,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 2803158
+              },
+              "geometry_cache_read": {
+                "calls": 474,
+                "maximum_us": 3624,
+                "slowest_shape": "MSGardenYew37e.s",
+                "total_us": 62470
+              },
+              "geometry_cache_write": {
+                "calls": 474,
+                "maximum_us": 10606,
+                "slowest_shape": "SD_uc2.s",
+                "total_us": 675802
+              },
+              "prepare_silhouette": {
+                "calls": 474,
+                "maximum_us": 55,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 2772
+              },
+              "publish_auxiliary": {
+                "calls": 26,
+                "maximum_us": 16399,
+                "slowest_shape": "CarSpawner",
+                "total_us": 34246
+              },
+              "publish_gpu_assets": {
+                "calls": 474,
+                "maximum_us": 39030,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 1153187
+              },
+              "publish_lod_gpu_assets": {
+                "calls": 276,
+                "maximum_us": 14035,
+                "slowest_shape": "CMhenlowshops.s",
+                "total_us": 445612
+              },
+              "resolve_texture_dependencies": {
+                "calls": 474,
+                "maximum_us": 47145,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 2120417
+              },
+              "source_read_parse": {
+                "calls": 485,
+                "maximum_us": 28241,
+                "slowest_shape": "RF_WP_DMBSA.s",
+                "total_us": 1023275
+              }
+            }
+          },
+          "downpour-warm": {
+            "odometer_m": 2500.6907735943855,
+            "gpu_tiles": 5,
+            "visible_neighbourhood_pending": 0,
+            "pending_uploads": 0,
+            "gameplay": {
+              "gameplay_frames": 2035,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 25,
+              "gameplay_frame_p99_ms": 26,
+              "gameplay_longest_frame_ms": 43.609068,
+              "gameplay_hitches_over_100_ms": 0
+            },
+            "startup_inclusive_max_ms": 1560.742644,
+            "loading_frames": 1157,
+            "rss_mib": 1941.5078125,
+            "peak_rss_mib": 1941.5078125,
+            "graphics_memory": {
+              "active_device_pci": "0000:03:00.0",
+              "device_total_mib": 8176.0,
+              "device_used_mib": 2315.65625,
+              "devices": [
+                {
+                  "device_total_mib": 8176.0,
+                  "device_used_mib": 2315.65625,
+                  "pci": "0000:03:00.0",
+                  "process_gtt_mib": 80.171875,
+                  "process_vram_mib": 1786.484375
+                },
+                {
+                  "device_total_mib": 512.0,
+                  "device_used_mib": 335.8671875,
+                  "pci": "0000:0e:00.0",
+                  "process_gtt_mib": 2.0,
+                  "process_vram_mib": 0.01171875
+                }
+              ],
+              "peak_process_vram_mib": 1786.49609375,
+              "process_gtt_mib": 82.171875,
+              "process_vram_mib": 1786.49609375,
+              "source": "linux_drm_fdinfo"
+            },
+            "geometry_cache": {
+              "gpu_handles_cached": false,
+              "hits": 469,
+              "max_disk_mib": 256,
+              "misses": 5,
+              "schema": 1
+            },
+            "system_stages": {
+              "camera_collision": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 13,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1345
+              },
+              "effect_obstacles": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 1552,
+                "p50_ms": 0.2,
+                "p99_ms": 1.2,
+                "total_us": 779900
+              },
+              "flexible_connections": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 55,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 16221
+              },
+              "horizon": {
+                "calls": 2418,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 22210,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 59178
+              },
+              "jacobs_bogie": {
+                "calls": 2418,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 302,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 21995
+              },
+              "level_crossing_register": {
+                "calls": 2418,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 11512,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 39274
+              },
+              "live_drive": {
+                "calls": 3085,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 2878,
+                "p50_ms": 0.2,
+                "p99_ms": 2.3,
+                "total_us": 908534
+              },
+              "mirrors": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 5,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 845
+              },
+              "platform_people": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 20,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 8119
+              },
+              "road_cars": {
+                "calls": 2418,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 107,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 42847
+              },
+              "snow_materials": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 52,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 6674
+              },
+              "snow_roof_markers": {
+                "calls": 2418,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 1,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 6
+              },
+              "snow_tracks": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 3,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 104
+              },
+              "streaming_forecast.update": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 30,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1534
+              },
+              "terrain_spawn.terrain_tile_bundle_materialize_system": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 401,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 2883
+              },
+              "terrain_spawn.terrain_tile_spawn_stream_system": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 150,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1237
+              },
+              "terrain_spawn.terrain_tile_stream_system": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 3251,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 63653
+              },
+              "terrain_spawn.terrain_tile_unload_system": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 23,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 7770
+              },
+              "wet_surfaces": {
+                "calls": 2418,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 818,
+                "p50_ms": 0.1,
+                "p99_ms": 0.6,
+                "total_us": 96371
+              },
+              "world.progressive_world_spawn_system": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 38626,
+                "p50_ms": 0.1,
+                "p99_ms": 8.7,
+                "total_us": 1889384
+              },
+              "world.update_world_scenery_lod": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 9585,
+                "p50_ms": 0.1,
+                "p99_ms": 4.4,
+                "total_us": 2217611
+              },
+              "world.world_stream_scenery_system": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 23991,
+                "p50_ms": 0.1,
+                "p99_ms": 5.0,
+                "total_us": 447212
+              },
+              "world.world_tile_bundle_materialize_system": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 1661,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 9219
+              },
+              "world.world_tile_stream_system": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 63,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 18388
+              },
+              "world.world_tile_unload_system": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 2394,
+                "p50_ms": 0.1,
+                "p99_ms": 1.6,
+                "total_us": 131257
+              }
+            },
+            "shape_stages": {
+              "cpu_prepare": {
+                "calls": 16,
+                "maximum_us": 1686,
+                "slowest_shape": "RF_WP_DMBSH.s",
+                "total_us": 14526
+              },
+              "cpu_prepare_lods": {
+                "calls": 5,
+                "maximum_us": 4961,
+                "slowest_shape": "IJ_semi_detached2_x2_var1.s",
+                "total_us": 14207
+              },
+              "geometry_cache_read": {
+                "calls": 474,
+                "maximum_us": 13400,
+                "slowest_shape": "ukfs4r_s_2x200m.s",
+                "total_us": 454570
+              },
+              "geometry_cache_write": {
+                "calls": 5,
+                "maximum_us": 97,
+                "slowest_shape": "IJ_semi_detached2_x2_var4.s",
+                "total_us": 394
+              },
+              "prepare_silhouette": {
+                "calls": 474,
+                "maximum_us": 88,
+                "slowest_shape": "ukfs4r_s_2x200m.s",
+                "total_us": 2902
+              },
+              "publish_auxiliary": {
+                "calls": 26,
+                "maximum_us": 23985,
+                "slowest_shape": "CarSpawner",
+                "total_us": 38164
+              },
+              "publish_gpu_assets": {
+                "calls": 474,
+                "maximum_us": 37317,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 1131614
+              },
+              "publish_lod_gpu_assets": {
+                "calls": 276,
+                "maximum_us": 19441,
+                "slowest_shape": "wootmethx.s",
+                "total_us": 452790
+              },
+              "resolve_texture_dependencies": {
+                "calls": 474,
+                "maximum_us": 37807,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 2039963
+              },
+              "source_read_parse": {
+                "calls": 16,
+                "maximum_us": 26357,
+                "slowest_shape": "RF_WP_DMBSA.s",
+                "total_us": 206298
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "within_batch_repair": {
+    "scope": "Exact archived intermediate15 versus exact reused22 receipts at identical parameters. This is repair of within-batch crossing/LOD/publication hitches, not a globalP99 claim. Candidate receipts reused explicitly; raw output and identity retained.",
+    "raw_report_sha256": "b14d13334e645d759c3bc27751f9208105f1a7d7f383f834af31a01e6595b0b6",
+    "configuration": {
+      "scenario_sha256": "faac5f908bfafd4a73ecf5be3e1c9601970c110b8926b7c80ac3221387baf5bf",
+      "seed": 42,
+      "camera": "driver",
+      "window": [
+        1280,
+        720
+      ],
+      "view_distance_m": 500,
+      "speed_multiplier": 4,
+      "weather_particle_budget": 2048,
+      "audio": "private ALSA null",
+      "checkpoint_m": 2500,
+      "cache_scope": "cold/warm refers to this executable's private application-data cache; OS file cache and Mesa shader cache are not cleared",
+      "framepace": "off",
+      "concurrent_workloads": "No Cargo, Native20AI or Snap CPU jobs. Only final22 integrated-GPU endurance30fps background, as in reused22receipts. GL and Vulkan both fixedRX7600. Reference15is intermediate in this batch; d9globalcomparison remains separately retained.",
+      "profile_systems": true,
+      "weathers": [
+        "downpour"
+      ]
+    },
+    "versions": {
+      "candidate": {
+        "binary_sha256": "d14ebc6432dd4b946442861ab52a44854054cc805e474cb7aa89cf4f2c2a5efa",
+        "cases": {
+          "downpour-cold": {
+            "odometer_m": 2500.6907735943855,
+            "gpu_tiles": 5,
+            "visible_neighbourhood_pending": 0,
+            "pending_uploads": 0,
+            "gameplay": {
+              "gameplay_frames": 2035,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 25,
+              "gameplay_frame_p99_ms": 26,
+              "gameplay_longest_frame_ms": 40.088963,
+              "gameplay_hitches_over_100_ms": 0
+            },
+            "startup_inclusive_max_ms": 1720.052411,
+            "loading_frames": 1186,
+            "rss_mib": 1857.2578125,
+            "peak_rss_mib": 1857.2578125,
+            "graphics_memory": {
+              "active_device_pci": "0000:03:00.0",
+              "device_total_mib": 8176.0,
+              "device_used_mib": 2315.82421875,
+              "devices": [
+                {
+                  "device_total_mib": 8176.0,
+                  "device_used_mib": 2315.82421875,
+                  "pci": "0000:03:00.0",
+                  "process_gtt_mib": 80.171875,
+                  "process_vram_mib": 1786.65234375
+                },
+                {
+                  "device_total_mib": 512.0,
+                  "device_used_mib": 335.8671875,
+                  "pci": "0000:0e:00.0",
+                  "process_gtt_mib": 2.0,
+                  "process_vram_mib": 0.01171875
+                }
+              ],
+              "peak_process_vram_mib": 1786.6640625,
+              "process_gtt_mib": 82.171875,
+              "process_vram_mib": 1786.6640625,
+              "source": "linux_drm_fdinfo"
+            },
+            "geometry_cache": {
+              "gpu_handles_cached": false,
+              "hits": 0,
+              "max_disk_mib": 256,
+              "misses": 474,
+              "schema": 1
+            },
+            "system_stages": {
+              "camera_collision": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 13,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1752
+              },
+              "effect_obstacles": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 1659,
+                "p50_ms": 0.3,
+                "p99_ms": 1.3,
+                "total_us": 852376
+              },
+              "flexible_connections": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 62,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 17249
+              },
+              "horizon": {
+                "calls": 2432,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 34980,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 78798
+              },
+              "jacobs_bogie": {
+                "calls": 2432,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 42,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 23730
+              },
+              "level_crossing_register": {
+                "calls": 2432,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 8916,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 36487
+              },
+              "live_drive": {
+                "calls": 3089,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 2949,
+                "p50_ms": 0.2,
+                "p99_ms": 2.2,
+                "total_us": 944794
+              },
+              "mirrors": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 7,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1270
+              },
+              "platform_people": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 17,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 9174
+              },
+              "road_cars": {
+                "calls": 2432,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 108,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 43169
+              },
+              "snow_materials": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 37,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 7198
+              },
+              "snow_roof_markers": {
+                "calls": 2432,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 2,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 11
+              },
+              "snow_tracks": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 4,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 189
+              },
+              "streaming_forecast.update": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 18,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1573
+              },
+              "terrain_spawn.terrain_tile_bundle_materialize_system": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 205,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 2523
+              },
+              "terrain_spawn.terrain_tile_spawn_stream_system": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 107,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1293
+              },
+              "terrain_spawn.terrain_tile_stream_system": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 2227,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 67497
+              },
+              "terrain_spawn.terrain_tile_unload_system": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 103,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 8055
+              },
+              "wet_surfaces": {
+                "calls": 2432,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 840,
+                "p50_ms": 0.1,
+                "p99_ms": 0.6,
+                "total_us": 103989
+              },
+              "world.progressive_world_spawn_system": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 40489,
+                "p50_ms": 0.1,
+                "p99_ms": 8.9,
+                "total_us": 1918314
+              },
+              "world.update_world_scenery_lod": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 5269,
+                "p50_ms": 0.1,
+                "p99_ms": 4.5,
+                "total_us": 2259440
+              },
+              "world.world_stream_scenery_system": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 21675,
+                "p50_ms": 0.1,
+                "p99_ms": 5.2,
+                "total_us": 488001
+              },
+              "world.world_tile_bundle_materialize_system": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 1800,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 9457
+              },
+              "world.world_tile_stream_system": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 74,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 19203
+              },
+              "world.world_tile_unload_system": {
+                "calls": 2431,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 2867,
+                "p50_ms": 0.1,
+                "p99_ms": 1.7,
+                "total_us": 138099
+              }
+            },
+            "shape_stages": {
+              "cpu_prepare": {
+                "calls": 485,
+                "maximum_us": 1888,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 72205
+              },
+              "cpu_prepare_lods": {
+                "calls": 474,
+                "maximum_us": 57036,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 2803158
+              },
+              "geometry_cache_read": {
+                "calls": 474,
+                "maximum_us": 3624,
+                "slowest_shape": "MSGardenYew37e.s",
+                "total_us": 62470
+              },
+              "geometry_cache_write": {
+                "calls": 474,
+                "maximum_us": 10606,
+                "slowest_shape": "SD_uc2.s",
+                "total_us": 675802
+              },
+              "prepare_silhouette": {
+                "calls": 474,
+                "maximum_us": 55,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 2772
+              },
+              "publish_auxiliary": {
+                "calls": 26,
+                "maximum_us": 16399,
+                "slowest_shape": "CarSpawner",
+                "total_us": 34246
+              },
+              "publish_gpu_assets": {
+                "calls": 474,
+                "maximum_us": 39030,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 1153187
+              },
+              "publish_lod_gpu_assets": {
+                "calls": 276,
+                "maximum_us": 14035,
+                "slowest_shape": "CMhenlowshops.s",
+                "total_us": 445612
+              },
+              "resolve_texture_dependencies": {
+                "calls": 474,
+                "maximum_us": 47145,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 2120417
+              },
+              "source_read_parse": {
+                "calls": 485,
+                "maximum_us": 28241,
+                "slowest_shape": "RF_WP_DMBSA.s",
+                "total_us": 1023275
+              }
+            }
+          },
+          "downpour-warm": {
+            "odometer_m": 2500.6907735943855,
+            "gpu_tiles": 5,
+            "visible_neighbourhood_pending": 0,
+            "pending_uploads": 0,
+            "gameplay": {
+              "gameplay_frames": 2035,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 25,
+              "gameplay_frame_p99_ms": 26,
+              "gameplay_longest_frame_ms": 43.609068,
+              "gameplay_hitches_over_100_ms": 0
+            },
+            "startup_inclusive_max_ms": 1560.742644,
+            "loading_frames": 1157,
+            "rss_mib": 1941.5078125,
+            "peak_rss_mib": 1941.5078125,
+            "graphics_memory": {
+              "active_device_pci": "0000:03:00.0",
+              "device_total_mib": 8176.0,
+              "device_used_mib": 2315.65625,
+              "devices": [
+                {
+                  "device_total_mib": 8176.0,
+                  "device_used_mib": 2315.65625,
+                  "pci": "0000:03:00.0",
+                  "process_gtt_mib": 80.171875,
+                  "process_vram_mib": 1786.484375
+                },
+                {
+                  "device_total_mib": 512.0,
+                  "device_used_mib": 335.8671875,
+                  "pci": "0000:0e:00.0",
+                  "process_gtt_mib": 2.0,
+                  "process_vram_mib": 0.01171875
+                }
+              ],
+              "peak_process_vram_mib": 1786.49609375,
+              "process_gtt_mib": 82.171875,
+              "process_vram_mib": 1786.49609375,
+              "source": "linux_drm_fdinfo"
+            },
+            "geometry_cache": {
+              "gpu_handles_cached": false,
+              "hits": 469,
+              "max_disk_mib": 256,
+              "misses": 5,
+              "schema": 1
+            },
+            "system_stages": {
+              "camera_collision": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 13,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1345
+              },
+              "effect_obstacles": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 1552,
+                "p50_ms": 0.2,
+                "p99_ms": 1.2,
+                "total_us": 779900
+              },
+              "flexible_connections": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 55,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 16221
+              },
+              "horizon": {
+                "calls": 2418,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 22210,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 59178
+              },
+              "jacobs_bogie": {
+                "calls": 2418,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 302,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 21995
+              },
+              "level_crossing_register": {
+                "calls": 2418,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 11512,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 39274
+              },
+              "live_drive": {
+                "calls": 3085,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 2878,
+                "p50_ms": 0.2,
+                "p99_ms": 2.3,
+                "total_us": 908534
+              },
+              "mirrors": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 5,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 845
+              },
+              "platform_people": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 20,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 8119
+              },
+              "road_cars": {
+                "calls": 2418,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 107,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 42847
+              },
+              "snow_materials": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 52,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 6674
+              },
+              "snow_roof_markers": {
+                "calls": 2418,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 1,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 6
+              },
+              "snow_tracks": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 3,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 104
+              },
+              "streaming_forecast.update": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 30,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1534
+              },
+              "terrain_spawn.terrain_tile_bundle_materialize_system": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 401,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 2883
+              },
+              "terrain_spawn.terrain_tile_spawn_stream_system": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 150,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1237
+              },
+              "terrain_spawn.terrain_tile_stream_system": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 3251,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 63653
+              },
+              "terrain_spawn.terrain_tile_unload_system": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 23,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 7770
+              },
+              "wet_surfaces": {
+                "calls": 2418,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 818,
+                "p50_ms": 0.1,
+                "p99_ms": 0.6,
+                "total_us": 96371
+              },
+              "world.progressive_world_spawn_system": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 38626,
+                "p50_ms": 0.1,
+                "p99_ms": 8.7,
+                "total_us": 1889384
+              },
+              "world.update_world_scenery_lod": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 9585,
+                "p50_ms": 0.1,
+                "p99_ms": 4.4,
+                "total_us": 2217611
+              },
+              "world.world_stream_scenery_system": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 23991,
+                "p50_ms": 0.1,
+                "p99_ms": 5.0,
+                "total_us": 447212
+              },
+              "world.world_tile_bundle_materialize_system": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 1661,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 9219
+              },
+              "world.world_tile_stream_system": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 63,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 18388
+              },
+              "world.world_tile_unload_system": {
+                "calls": 2417,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 2394,
+                "p50_ms": 0.1,
+                "p99_ms": 1.6,
+                "total_us": 131257
+              }
+            },
+            "shape_stages": {
+              "cpu_prepare": {
+                "calls": 16,
+                "maximum_us": 1686,
+                "slowest_shape": "RF_WP_DMBSH.s",
+                "total_us": 14526
+              },
+              "cpu_prepare_lods": {
+                "calls": 5,
+                "maximum_us": 4961,
+                "slowest_shape": "IJ_semi_detached2_x2_var1.s",
+                "total_us": 14207
+              },
+              "geometry_cache_read": {
+                "calls": 474,
+                "maximum_us": 13400,
+                "slowest_shape": "ukfs4r_s_2x200m.s",
+                "total_us": 454570
+              },
+              "geometry_cache_write": {
+                "calls": 5,
+                "maximum_us": 97,
+                "slowest_shape": "IJ_semi_detached2_x2_var4.s",
+                "total_us": 394
+              },
+              "prepare_silhouette": {
+                "calls": 474,
+                "maximum_us": 88,
+                "slowest_shape": "ukfs4r_s_2x200m.s",
+                "total_us": 2902
+              },
+              "publish_auxiliary": {
+                "calls": 26,
+                "maximum_us": 23985,
+                "slowest_shape": "CarSpawner",
+                "total_us": 38164
+              },
+              "publish_gpu_assets": {
+                "calls": 474,
+                "maximum_us": 37317,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 1131614
+              },
+              "publish_lod_gpu_assets": {
+                "calls": 276,
+                "maximum_us": 19441,
+                "slowest_shape": "wootmethx.s",
+                "total_us": 452790
+              },
+              "resolve_texture_dependencies": {
+                "calls": 474,
+                "maximum_us": 37807,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 2039963
+              },
+              "source_read_parse": {
+                "calls": 16,
+                "maximum_us": 26357,
+                "slowest_shape": "RF_WP_DMBSA.s",
+                "total_us": 206298
+              }
+            }
+          }
+        }
+      },
+      "baseline": {
+        "binary_sha256": "9cbaa96af2dcf4c7745941fbfcdeed653875c062021e7391dfcec9ef277485bb",
+        "cases": {
+          "downpour-cold": {
+            "odometer_m": 2500.6907735943855,
+            "gpu_tiles": 5,
+            "visible_neighbourhood_pending": 0,
+            "pending_uploads": 0,
+            "gameplay": {
+              "gameplay_frames": 1914,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 35,
+              "gameplay_frame_p99_ms": 46,
+              "gameplay_longest_frame_ms": 87.414435,
+              "gameplay_hitches_over_100_ms": 0
+            },
+            "startup_inclusive_max_ms": 1584.084499,
+            "loading_frames": 1084,
+            "rss_mib": 1957.34765625,
+            "peak_rss_mib": 1957.34765625,
+            "graphics_memory": {
+              "device_total_mib": 8688.0,
+              "device_used_mib": 2659.63671875,
+              "peak_process_vram_mib": 1791.00390625,
+              "process_gtt_mib": 82.20703125,
+              "process_vram_mib": 1791.00390625,
+              "source": "linux_drm_fdinfo"
+            },
+            "geometry_cache": {
+              "gpu_handles_cached": false,
+              "hits": 0,
+              "max_disk_mib": 256,
+              "misses": 472,
+              "schema": 1
+            },
+            "system_stages": {
+              "live_drive": {
+                "calls": 3073,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 2840,
+                "p50_ms": 0.2,
+                "p99_ms": 2.1,
+                "total_us": 915591
+              },
+              "streaming_forecast.update": {
+                "calls": 2265,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 35,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1588
+              },
+              "terrain_spawn.terrain_tile_bundle_materialize_system": {
+                "calls": 2265,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 191,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 2433
+              },
+              "terrain_spawn.terrain_tile_spawn_stream_system": {
+                "calls": 2265,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 113,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1172
+              },
+              "terrain_spawn.terrain_tile_stream_system": {
+                "calls": 2265,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 9550,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 71784
+              },
+              "terrain_spawn.terrain_tile_unload_system": {
+                "calls": 2265,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 37,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 6605
+              },
+              "world.progressive_world_spawn_system": {
+                "calls": 2265,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 57536,
+                "p50_ms": 0.1,
+                "p99_ms": 28.0,
+                "total_us": 3683515
+              },
+              "world.update_world_scenery_lod": {
+                "calls": 2265,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 5179,
+                "p50_ms": 0.1,
+                "p99_ms": 3.4,
+                "total_us": 1579834
+              },
+              "world.world_stream_scenery_system": {
+                "calls": 2265,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 36963,
+                "p50_ms": 0.1,
+                "p99_ms": 4.6,
+                "total_us": 410394
+              },
+              "world.world_tile_bundle_materialize_system": {
+                "calls": 2265,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 1677,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 8577
+              },
+              "world.world_tile_stream_system": {
+                "calls": 2265,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 56,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 17263
+              },
+              "world.world_tile_unload_system": {
+                "calls": 2265,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 5421,
+                "p50_ms": 0.1,
+                "p99_ms": 1.3,
+                "total_us": 130394
+              }
+            },
+            "shape_stages": {
+              "cpu_prepare": {
+                "calls": 483,
+                "maximum_us": 2250,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 70107
+              },
+              "cpu_prepare_lods": {
+                "calls": 472,
+                "maximum_us": 8602,
+                "slowest_shape": "Doc_FordPopularGreyOpen.s",
+                "total_us": 614952
+              },
+              "geometry_cache_read": {
+                "calls": 472,
+                "maximum_us": 8069,
+                "slowest_shape": "embank_s_2x100m_15m.s",
+                "total_us": 83224
+              },
+              "geometry_cache_write": {
+                "calls": 472,
+                "maximum_us": 8591,
+                "slowest_shape": "Doc_FordPopularGreyOpen.s",
+                "total_us": 606012
+              },
+              "publish_gpu_assets": {
+                "calls": 472,
+                "maximum_us": 38385,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 1484326
+              },
+              "source_read_parse": {
+                "calls": 483,
+                "maximum_us": 27882,
+                "slowest_shape": "RF_WP_DMBSA.s",
+                "total_us": 922856
+              }
+            }
+          },
+          "downpour-warm": {
+            "odometer_m": 2501.1992980011064,
+            "gpu_tiles": 5,
+            "visible_neighbourhood_pending": 0,
+            "pending_uploads": 0,
+            "gameplay": {
+              "gameplay_frames": 1927,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 34,
+              "gameplay_frame_p99_ms": 45,
+              "gameplay_longest_frame_ms": 96.613111,
+              "gameplay_hitches_over_100_ms": 0
+            },
+            "startup_inclusive_max_ms": 1623.082709,
+            "loading_frames": 1061,
+            "rss_mib": 1900.8359375,
+            "peak_rss_mib": 1900.8359375,
+            "graphics_memory": {
+              "device_total_mib": 8688.0,
+              "device_used_mib": 2656.90234375,
+              "peak_process_vram_mib": 1786.10546875,
+              "process_gtt_mib": 82.171875,
+              "process_vram_mib": 1786.10546875,
+              "source": "linux_drm_fdinfo"
+            },
+            "geometry_cache": {
+              "gpu_handles_cached": false,
+              "hits": 465,
+              "max_disk_mib": 256,
+              "misses": 5,
+              "schema": 1
+            },
+            "system_stages": {
+              "live_drive": {
+                "calls": 3072,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 2823,
+                "p50_ms": 0.2,
+                "p99_ms": 2.1,
+                "total_us": 921225
+              },
+              "streaming_forecast.update": {
+                "calls": 2262,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 15,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1622
+              },
+              "terrain_spawn.terrain_tile_bundle_materialize_system": {
+                "calls": 2262,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 244,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 2320
+              },
+              "terrain_spawn.terrain_tile_spawn_stream_system": {
+                "calls": 2262,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 299,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1671
+              },
+              "terrain_spawn.terrain_tile_stream_system": {
+                "calls": 2262,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 3526,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 67685
+              },
+              "terrain_spawn.terrain_tile_unload_system": {
+                "calls": 2262,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 38,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 6649
+              },
+              "world.progressive_world_spawn_system": {
+                "calls": 2262,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 52587,
+                "p50_ms": 0.1,
+                "p99_ms": 27.4,
+                "total_us": 3649751
+              },
+              "world.update_world_scenery_lod": {
+                "calls": 2262,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 4390,
+                "p50_ms": 0.1,
+                "p99_ms": 3.4,
+                "total_us": 1635710
+              },
+              "world.world_stream_scenery_system": {
+                "calls": 2262,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 31120,
+                "p50_ms": 0.1,
+                "p99_ms": 4.6,
+                "total_us": 411859
+              },
+              "world.world_tile_bundle_materialize_system": {
+                "calls": 2262,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 1639,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 8203
+              },
+              "world.world_tile_stream_system": {
+                "calls": 2262,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 42,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 17337
+              },
+              "world.world_tile_unload_system": {
+                "calls": 2262,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 4570,
+                "p50_ms": 0.1,
+                "p99_ms": 1.4,
+                "total_us": 124634
+              }
+            },
+            "shape_stages": {
+              "cpu_prepare": {
+                "calls": 16,
+                "maximum_us": 1788,
+                "slowest_shape": "RF_WP_DMBSA.s",
+                "total_us": 14677
+              },
+              "cpu_prepare_lods": {
+                "calls": 5,
+                "maximum_us": 107,
+                "slowest_shape": "IJ_semi_detached2_x2_var3.s",
+                "total_us": 454
+              },
+              "geometry_cache_read": {
+                "calls": 470,
+                "maximum_us": 9546,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 434404
+              },
+              "geometry_cache_write": {
+                "calls": 5,
+                "maximum_us": 104,
+                "slowest_shape": "IJ_semi_detached2_x2_var3.s",
+                "total_us": 438
+              },
+              "publish_gpu_assets": {
+                "calls": 470,
+                "maximum_us": 42038,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 1497889
+              },
+              "source_read_parse": {
+                "calls": 16,
+                "maximum_us": 28243,
+                "slowest_shape": "RF_WP_DMBSA.s",
+                "total_us": 206385
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "audio": {
+    "raw_report_sha256": "7950123bf4c289f2899ff4f5f06de38bb38b66b6359156f38ce5fcaa5e974f84",
+    "scope": "Real original SMS/WAV bank and vehicle resources with privateALSA-null; no manual listening or acoustic parity claim. Per-bank shared values overlap and must not be summed.",
+    "binary_sha256": {
+      "baseline": "fcc8bee54cd6310f5b723f50e9cc0caa8576c6bc0db14da2ef2efcb254dd2053",
+      "candidate": "72a44b5f0b4d9a79e274f44b03abaefab3f3d1749cfdeedcbc04103321d51a2f"
+    },
+    "programs": 48,
+    "streams": 174,
+    "sample_references": 69,
+    "active_voices": 38,
+    "unique_pcm_mib": {
+      "before": 10.446857452392578,
+      "after": 4.939460754394531
+    },
+    "cache": {
+      "sample_cache_hits": 4726,
+      "sample_cache_misses": 38,
+      "sample_cache_evictions": 0,
+      "file_open_us": 271,
+      "decode_us": 12806
+    },
+    "bank_vehicle_measurements": [
+      {
+        "program": "RF_BP_DMBSeng.sms",
+        "program_read_parse_us": 1233,
+        "referenced_samples": 21,
+        "resident_pcm_mib": 0.9818000793457031,
+        "resident_samples": 9,
+        "sample_decode_us": 2730,
+        "sample_file_open_us": 66,
+        "train": 0,
+        "vehicle": 0
+      },
+      {
+        "program": "RF_BP_DMBSwag.sms",
+        "program_read_parse_us": 1149,
+        "referenced_samples": 28,
+        "resident_pcm_mib": 1.7180633544921875,
+        "resident_samples": 12,
+        "sample_decode_us": 3948,
+        "sample_file_open_us": 25,
+        "train": 0,
+        "vehicle": 0
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 487,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 0,
+        "vehicle": 1
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 373,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 0,
+        "vehicle": 1
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 338,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 0,
+        "vehicle": 2
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 408,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 0,
+        "vehicle": 2
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 403,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 0,
+        "vehicle": 3
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 338,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 0,
+        "vehicle": 3
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 333,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 0,
+        "vehicle": 4
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 294,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 0,
+        "vehicle": 4
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 318,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 0,
+        "vehicle": 5
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 339,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 0,
+        "vehicle": 5
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 321,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 0,
+        "vehicle": 6
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 314,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 0,
+        "vehicle": 6
+      },
+      {
+        "program": "RF_BP_DMBSeng.sms",
+        "program_read_parse_us": 903,
+        "referenced_samples": 21,
+        "resident_pcm_mib": 0.9818000793457031,
+        "resident_samples": 9,
+        "sample_decode_us": 2730,
+        "sample_file_open_us": 66,
+        "train": 0,
+        "vehicle": 7
+      },
+      {
+        "program": "RF_BP_DMBSwag.sms",
+        "program_read_parse_us": 950,
+        "referenced_samples": 28,
+        "resident_pcm_mib": 1.7180633544921875,
+        "resident_samples": 12,
+        "sample_decode_us": 3948,
+        "sample_file_open_us": 25,
+        "train": 0,
+        "vehicle": 7
+      },
+      {
+        "program": "RF_BP_DMBSeng.sms",
+        "program_read_parse_us": 880,
+        "referenced_samples": 21,
+        "resident_pcm_mib": 0.9818000793457031,
+        "resident_samples": 9,
+        "sample_decode_us": 2730,
+        "sample_file_open_us": 66,
+        "train": 1,
+        "vehicle": 0
+      },
+      {
+        "program": "RF_BP_DMBSwag.sms",
+        "program_read_parse_us": 1079,
+        "referenced_samples": 28,
+        "resident_pcm_mib": 1.7180633544921875,
+        "resident_samples": 12,
+        "sample_decode_us": 3948,
+        "sample_file_open_us": 25,
+        "train": 1,
+        "vehicle": 0
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 919,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 1,
+        "vehicle": 1
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 344,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 1,
+        "vehicle": 1
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 322,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 1,
+        "vehicle": 2
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 317,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 1,
+        "vehicle": 2
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 329,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 1,
+        "vehicle": 3
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 2306,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 1,
+        "vehicle": 3
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 317,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 1,
+        "vehicle": 4
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 289,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 1,
+        "vehicle": 4
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 287,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 1,
+        "vehicle": 5
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 300,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 1,
+        "vehicle": 5
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 283,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 1,
+        "vehicle": 6
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 294,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 1,
+        "vehicle": 6
+      },
+      {
+        "program": "RF_BP_DMBSeng.sms",
+        "program_read_parse_us": 833,
+        "referenced_samples": 21,
+        "resident_pcm_mib": 0.9818000793457031,
+        "resident_samples": 9,
+        "sample_decode_us": 2730,
+        "sample_file_open_us": 66,
+        "train": 1,
+        "vehicle": 7
+      },
+      {
+        "program": "RF_BP_DMBSwag.sms",
+        "program_read_parse_us": 955,
+        "referenced_samples": 28,
+        "resident_pcm_mib": 1.7180633544921875,
+        "resident_samples": 12,
+        "sample_decode_us": 3948,
+        "sample_file_open_us": 25,
+        "train": 1,
+        "vehicle": 7
+      },
+      {
+        "program": "RF_BP_DMBSeng.sms",
+        "program_read_parse_us": 887,
+        "referenced_samples": 21,
+        "resident_pcm_mib": 0.9818000793457031,
+        "resident_samples": 9,
+        "sample_decode_us": 2730,
+        "sample_file_open_us": 66,
+        "train": 2,
+        "vehicle": 0
+      },
+      {
+        "program": "RF_BP_DMBSwag.sms",
+        "program_read_parse_us": 939,
+        "referenced_samples": 28,
+        "resident_pcm_mib": 1.7180633544921875,
+        "resident_samples": 12,
+        "sample_decode_us": 3948,
+        "sample_file_open_us": 25,
+        "train": 2,
+        "vehicle": 0
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 341,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 2,
+        "vehicle": 1
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 300,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 2,
+        "vehicle": 1
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 323,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 2,
+        "vehicle": 2
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 304,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 2,
+        "vehicle": 2
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 351,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 2,
+        "vehicle": 3
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 293,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 2,
+        "vehicle": 3
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 287,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 2,
+        "vehicle": 4
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 282,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 2,
+        "vehicle": 4
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 298,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 2,
+        "vehicle": 5
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 273,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 2,
+        "vehicle": 5
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 282,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 2,
+        "vehicle": 6
+      },
+      {
+        "program": "genpasswagmodern.sms",
+        "program_read_parse_us": 273,
+        "referenced_samples": 27,
+        "resident_pcm_mib": 2.56201171875,
+        "resident_samples": 19,
+        "sample_decode_us": 7139,
+        "sample_file_open_us": 188,
+        "train": 2,
+        "vehicle": 6
+      },
+      {
+        "program": "RF_BP_DMBSeng.sms",
+        "program_read_parse_us": 1294,
+        "referenced_samples": 21,
+        "resident_pcm_mib": 0.9818000793457031,
+        "resident_samples": 9,
+        "sample_decode_us": 2730,
+        "sample_file_open_us": 66,
+        "train": 2,
+        "vehicle": 7
+      },
+      {
+        "program": "RF_BP_DMBSwag.sms",
+        "program_read_parse_us": 969,
+        "referenced_samples": 28,
+        "resident_pcm_mib": 1.7180633544921875,
+        "resident_samples": 12,
+        "sample_decode_us": 3948,
+        "sample_file_open_us": 25,
+        "train": 2,
+        "vehicle": 7
+      }
+    ],
+    "limits": {
+      "samples": 64,
+      "unique_pcm_mib": 128,
+      "state_mailbox": 2
+    }
+  },
+  "native_cache": {
+    "binary_sha256": "1873a899d8614b1aacfcc61d82b423ebc999fee6fbae0fe57de5962ebc16f09e",
+    "results": [
+      {
+        "mode": "fresh",
+        "elapsed_s": 10.141715488000045,
+        "graph_sha256": "b4cdbfbef1d845a597cb04136e4597a54fa56c7edbed9c2c4e237e4b325446d0",
+        "graph_bytes": 42629796,
+        "cache_files": 0,
+        "cache_unchanged": false
+      },
+      {
+        "mode": "cold",
+        "elapsed_s": 9.921963737000624,
+        "graph_sha256": "b4cdbfbef1d845a597cb04136e4597a54fa56c7edbed9c2c4e237e4b325446d0",
+        "graph_bytes": 42629796,
+        "cache_files": 1,
+        "cache_unchanged": false
+      },
+      {
+        "mode": "warm",
+        "elapsed_s": 0.11127655600284925,
+        "graph_sha256": "b4cdbfbef1d845a597cb04136e4597a54fa56c7edbed9c2c4e237e4b325446d0",
+        "graph_bytes": 42629796,
+        "cache_files": 1,
+        "cache_unchanged": true
+      },
+      {
+        "mode": "warm-repeat",
+        "elapsed_s": 0.11427286699836259,
+        "graph_sha256": "b4cdbfbef1d845a597cb04136e4597a54fa56c7edbed9c2c4e237e4b325446d0",
+        "graph_bytes": 42629796,
+        "cache_files": 1,
+        "cache_unchanged": true
+      }
+    ],
+    "scope": "same executable, fresh/cold/warm import including native graph, metadata and compiled SIGSCR; rendering is measured separately"
+  },
+  "traffic": {
+    "camera": "headless",
+    "corridor": {
+      "runs": [
+        {
+          "driving_ms": 116.398009,
+          "initial_load_ms": 21.136975,
+          "services": 2,
+          "simulated_seconds": 60,
+          "state_sha256": "1211bfcd9981e8e8b593f4461d0eaeee24db95fddd45d97a7063f11e99f7f12b",
+          "workers": 1
+        },
+        {
+          "driving_ms": 132.83004,
+          "initial_load_ms": 18.452682000000003,
+          "services": 2,
+          "simulated_seconds": 60,
+          "state_sha256": "1211bfcd9981e8e8b593f4461d0eaeee24db95fddd45d97a7063f11e99f7f12b",
+          "workers": 2
+        },
+        {
+          "driving_ms": 138.026376,
+          "initial_load_ms": 17.130788000000003,
+          "services": 2,
+          "simulated_seconds": 60,
+          "state_sha256": "1211bfcd9981e8e8b593f4461d0eaeee24db95fddd45d97a7063f11e99f7f12b",
+          "workers": 4
+        },
+        {
+          "driving_ms": 160.844381,
+          "initial_load_ms": 25.854460999999997,
+          "services": 2,
+          "simulated_seconds": 60,
+          "state_sha256": "1211bfcd9981e8e8b593f4461d0eaeee24db95fddd45d97a7063f11e99f7f12b",
+          "workers": 8
+        }
+      ],
+      "scenario": "examples/chiltern_extended/scenario.toml",
+      "scenario_sha256": "faac5f908bfafd4a73ecf5be3e1c9601970c110b8926b7c80ac3221387baf5bf",
+      "scope": "repository corridor physics, switches and signalling; native rendering/content audit remains separate"
+    },
+    "formation_sha256": "56141328bc73a735ff43f95cb1ef61679d42c01ac01e4afe6b344cd9d8fceea2",
+    "graph_sha256": "eee13a2927393dd0732369b5d01e7d77782aedf5e57afd4bff5d7831b634c6ed",
+    "reference": "same binary, serial worker as algorithmic reference",
+    "runs": [
+      {
+        "driving_ms": 1259.461753,
+        "initial_load_ms": 33.182744,
+        "services": 32,
+        "simulated_seconds": 60,
+        "state_sha256": "2719cd3c6fbf6659da9e0b118a4f9606c621a5804265f3264e41e1181cc40150",
+        "workers": 1
+      },
+      {
+        "driving_ms": 1294.952703,
+        "initial_load_ms": 32.972403,
+        "services": 32,
+        "simulated_seconds": 60,
+        "state_sha256": "2719cd3c6fbf6659da9e0b118a4f9606c621a5804265f3264e41e1181cc40150",
+        "workers": 2
+      },
+      {
+        "driving_ms": 1317.226551,
+        "initial_load_ms": 33.78412,
+        "services": 32,
+        "simulated_seconds": 60,
+        "state_sha256": "2719cd3c6fbf6659da9e0b118a4f9606c621a5804265f3264e41e1181cc40150",
+        "workers": 4
+      },
+      {
+        "driving_ms": 1333.6985590000002,
+        "initial_load_ms": 32.494987,
+        "services": 32,
+        "simulated_seconds": 60,
+        "state_sha256": "2719cd3c6fbf6659da9e0b118a4f9606c621a5804265f3264e41e1181cc40150",
+        "workers": 8
+      }
+    ],
+    "schema": 2,
+    "seed": 42,
+    "binary_sha256": "5c4912dc642a0069e3c52d0f19ab90032a85717c97b11b6e3bcc44463dfdb784"
+  },
+  "residency": {
+    "raw_report_sha256": "3bbdcd87a87f4b4e9cbb386cd12d6c175ce1a841c3054a0816cb6fc2b8c48cb1",
+    "binary_sha256": "97048367dd2984af238e367bc978fb5cdd4ed87383c2bacbceeb842ede28d24c",
+    "configuration": {
+      "camera": "driver",
+      "seed": 42,
+      "window": [
+        1280,
+        720
+      ],
+      "view_distance_m": 500,
+      "speed_multiplier": 4,
+      "autodrive": 0.5,
+      "audio": "private ALSA null",
+      "profile_systems": true
+    },
+    "scope": "measured process residency against a reduced budget; physical device capacity is unchanged; no forced device OOM",
+    "cache_scope": "one fresh private application cache; the physical-policy run seeds it and the reduced-budget run reuses it; this is not a cache-speed comparison",
+    "configured_process_budget_mib": 1024,
+    "not_a_hard_residency_cap": true,
+    "cases": {
+      "physical": {
+        "odometer_m": 8001.869711371655,
+        "gpu_tiles": 9,
+        "pending_visible": 0,
+        "pending_uploads": 0,
+        "graphics_memory": {
+          "active_device_pci": "0000:03:00.0",
+          "device_total_mib": 8176.0,
+          "device_used_mib": 2834.29296875,
+          "devices": [
+            {
+              "device_total_mib": 8176.0,
+              "device_used_mib": 2834.29296875,
+              "pci": "0000:03:00.0",
+              "process_gtt_mib": 80.171875,
+              "process_vram_mib": 2303.2890625
+            },
+            {
+              "device_total_mib": 512.0,
+              "device_used_mib": 339.2890625,
+              "pci": "0000:0e:00.0",
+              "process_gtt_mib": 4.0,
+              "process_vram_mib": 0.0234375
+            }
+          ],
+          "peak_process_vram_mib": 2303.3125,
+          "process_gtt_mib": 84.171875,
+          "process_vram_mib": 2303.3125,
+          "source": "linux_drm_fdinfo"
+        },
+        "policy": {
+          "basis": "measured active-device usage / physical device total",
+          "budget_mib": 8176.0,
+          "pressured": false,
+          "transitions": 0
+        },
+        "render_budget": {
+          "memory_pressure": false,
+          "particles": 8192,
+          "passenger_lights": 8,
+          "station_lights": 24,
+          "train_lights": 8,
+          "upload_mib": 8,
+          "vegetation_divisor": 1
+        },
+        "releases": {
+          "terrain_meshes": 73,
+          "terrain_materials": 30,
+          "terrain_images": 30,
+          "shape_release_calls": 10
+        }
+      },
+      "reduced-process": {
+        "odometer_m": 8000.283933797005,
+        "gpu_tiles": 7,
+        "pending_visible": 0,
+        "pending_uploads": 0,
+        "graphics_memory": {
+          "active_device_pci": "0000:03:00.0",
+          "device_total_mib": 8176.0,
+          "device_used_mib": 2835.640625,
+          "devices": [
+            {
+              "device_total_mib": 8176.0,
+              "device_used_mib": 2835.640625,
+              "pci": "0000:03:00.0",
+              "process_gtt_mib": 80.171875,
+              "process_vram_mib": 2301.6171875
+            },
+            {
+              "device_total_mib": 512.0,
+              "device_used_mib": 338.7734375,
+              "pci": "0000:0e:00.0",
+              "process_gtt_mib": 4.0,
+              "process_vram_mib": 0.0234375
+            }
+          ],
+          "peak_process_vram_mib": 2301.75,
+          "process_gtt_mib": 84.171875,
+          "process_vram_mib": 2301.640625,
+          "source": "linux_drm_fdinfo"
+        },
+        "policy": {
+          "basis": "measured process residency / configured budget",
+          "budget_mib": 1024.0,
+          "pressured": true,
+          "transitions": 1
+        },
+        "render_budget": {
+          "memory_pressure": true,
+          "particles": 4096,
+          "passenger_lights": 8,
+          "station_lights": 4,
+          "train_lights": 8,
+          "upload_mib": 2,
+          "vegetation_divisor": 2
+        },
+        "releases": {
+          "terrain_meshes": 99,
+          "terrain_materials": 30,
+          "terrain_images": 30,
+          "shape_release_calls": 234
+        }
+      }
+    }
+  },
+  "quality_aba": {
+    "raw_report_sha256": "e818b76a808c1b0995544e5fd0b4380a2b45263becdef8652baa2c73ddfed248",
+    "binary_sha256": "d14ebc6432dd4b946442861ab52a44854054cc805e474cb7aa89cf4f2c2a5efa",
+    "configuration": {
+      "weather": "downpour",
+      "weather_seed": 42,
+      "camera": "driver",
+      "window": [
+        1280,
+        720
+      ],
+      "checkpoint_m": 2500,
+      "view_distance_m": 500,
+      "autodrive": 0.5,
+      "speed_multiplier": 4,
+      "configured_particles": 2048,
+      "shadows": true,
+      "framepace": "off",
+      "profile_systems": true,
+      "audio": "private ALSA null"
+    },
+    "cache_scope": "first run seeds a fresh application cache; the three comparisons reuse that same cache, OS/Mesa caches are not cleared",
+    "concurrent_workloads": "Only final22 integrated-GPU endurance30fps runs concurrently in all cases; no Cargo, Native20AI or Snap CPU jobs. Both compositor GL and Vulkan fixed to RX7600.",
+    "scope": "Fixed F10 settings normal/reduced/normal with identical rainfall1.0/seed/camera/physics. Budgets change correctly; no observedFPS or whole-launchGPU gain in this scene.",
+    "cases": {
+      "priming-cold": {
+        "quality_level": 0,
+        "performance": {
+          "odometer_m": 2501.1992980011064,
+          "gpu_tiles": 5,
+          "visible_neighbourhood_pending": 0,
+          "pending_uploads": 0,
+          "gameplay": {
+            "gameplay_frames": 2028,
+            "gameplay_frame_p50_ms": 25,
+            "gameplay_frame_p95_ms": 25,
+            "gameplay_frame_p99_ms": 26,
+            "gameplay_longest_frame_ms": 35.748784,
+            "gameplay_hitches_over_100_ms": 0
+          },
+          "startup_inclusive_max_ms": 1614.9396230000002,
+          "loading_frames": 1162,
+          "rss_mib": 1793.5078125,
+          "peak_rss_mib": 1793.5078125,
+          "graphics_memory": {
+            "active_device_pci": "0000:03:00.0",
+            "device_total_mib": 8176.0,
+            "device_used_mib": 2313.71484375,
+            "devices": [
+              {
+                "device_total_mib": 8176.0,
+                "device_used_mib": 2313.71484375,
+                "pci": "0000:03:00.0",
+                "process_gtt_mib": 80.171875,
+                "process_vram_mib": 1786.54296875
+              },
+              {
+                "device_total_mib": 512.0,
+                "device_used_mib": 335.87109375,
+                "pci": "0000:0e:00.0",
+                "process_gtt_mib": 2.0,
+                "process_vram_mib": 0.01171875
+              }
+            ],
+            "peak_process_vram_mib": 1786.5546875,
+            "process_gtt_mib": 82.171875,
+            "process_vram_mib": 1786.5546875,
+            "source": "linux_drm_fdinfo"
+          },
+          "geometry_cache": {
+            "gpu_handles_cached": false,
+            "hits": 0,
+            "max_disk_mib": 256,
+            "misses": 469,
+            "schema": 1
+          },
+          "system_stages": {
+            "camera_collision": {
+              "calls": 2420,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 11,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 1685
+            },
+            "effect_obstacles": {
+              "calls": 2420,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 1788,
+              "p50_ms": 0.3,
+              "p99_ms": 1.2,
+              "total_us": 786355
+            },
+            "flexible_connections": {
+              "calls": 2420,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 56,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 16274
+            },
+            "horizon": {
+              "calls": 2421,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 20551,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 58767
+            },
+            "jacobs_bogie": {
+              "calls": 2421,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 67,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 22137
+            },
+            "level_crossing_register": {
+              "calls": 2421,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 10119,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 36925
+            },
+            "live_drive": {
+              "calls": 3075,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 2951,
+              "p50_ms": 0.2,
+              "p99_ms": 2.2,
+              "total_us": 929083
+            },
+            "mirrors": {
+              "calls": 2420,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 7,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 762
+            },
+            "platform_people": {
+              "calls": 2420,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 33,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 8442
+            },
+            "road_cars": {
+              "calls": 2421,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 153,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 42368
+            },
+            "snow_materials": {
+              "calls": 2420,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 38,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 7073
+            },
+            "snow_roof_markers": {
+              "calls": 2421,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 3,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 11
+            },
+            "snow_tracks": {
+              "calls": 2420,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 6,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 130
+            },
+            "streaming_forecast.update": {
+              "calls": 2420,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 36,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 1687
+            },
+            "terrain_spawn.terrain_tile_bundle_materialize_system": {
+              "calls": 2420,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 441,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 2424
+            },
+            "terrain_spawn.terrain_tile_spawn_stream_system": {
+              "calls": 2420,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 101,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 1205
+            },
+            "terrain_spawn.terrain_tile_stream_system": {
+              "calls": 2420,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 2502,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 65221
+            },
+            "terrain_spawn.terrain_tile_unload_system": {
+              "calls": 2420,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 17,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 7690
+            },
+            "wet_surfaces": {
+              "calls": 2421,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 839,
+              "p50_ms": 0.1,
+              "p99_ms": 0.6,
+              "total_us": 96324
+            },
+            "world.progressive_world_spawn_system": {
+              "calls": 2420,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 41040,
+              "p50_ms": 0.1,
+              "p99_ms": 8.6,
+              "total_us": 1846988
+            },
+            "world.update_world_scenery_lod": {
+              "calls": 2420,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 8234,
+              "p50_ms": 0.1,
+              "p99_ms": 4.2,
+              "total_us": 2187133
+            },
+            "world.world_stream_scenery_system": {
+              "calls": 2420,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 19701,
+              "p50_ms": 0.1,
+              "p99_ms": 4.8,
+              "total_us": 443315
+            },
+            "world.world_tile_bundle_materialize_system": {
+              "calls": 2420,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 1644,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 9494
+            },
+            "world.world_tile_stream_system": {
+              "calls": 2420,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 50,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 18222
+            },
+            "world.world_tile_unload_system": {
+              "calls": 2420,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 2578,
+              "p50_ms": 0.1,
+              "p99_ms": 1.5,
+              "total_us": 132996
+            }
+          },
+          "shape_stages": {
+            "cpu_prepare": {
+              "calls": 480,
+              "maximum_us": 1938,
+              "slowest_shape": "KGB5080.s",
+              "total_us": 67523
+            },
+            "cpu_prepare_lods": {
+              "calls": 469,
+              "maximum_us": 45866,
+              "slowest_shape": "KGB5080.s",
+              "total_us": 2635968
+            },
+            "geometry_cache_read": {
+              "calls": 469,
+              "maximum_us": 3725,
+              "slowest_shape": "50mberm.s",
+              "total_us": 65743
+            },
+            "geometry_cache_write": {
+              "calls": 469,
+              "maximum_us": 11870,
+              "slowest_shape": "Doc_NortholtPkFncUp.s",
+              "total_us": 620388
+            },
+            "prepare_silhouette": {
+              "calls": 469,
+              "maximum_us": 54,
+              "slowest_shape": "KGB5080.s",
+              "total_us": 2560
+            },
+            "publish_auxiliary": {
+              "calls": 26,
+              "maximum_us": 15752,
+              "slowest_shape": "CarSpawner",
+              "total_us": 33180
+            },
+            "publish_gpu_assets": {
+              "calls": 469,
+              "maximum_us": 39608,
+              "slowest_shape": "KGB5080.s",
+              "total_us": 1100689
+            },
+            "publish_lod_gpu_assets": {
+              "calls": 276,
+              "maximum_us": 16523,
+              "slowest_shape": "CMhenlowshops.s",
+              "total_us": 441958
+            },
+            "resolve_texture_dependencies": {
+              "calls": 469,
+              "maximum_us": 41583,
+              "slowest_shape": "CMhenlowshops.s",
+              "total_us": 2009348
+            },
+            "source_read_parse": {
+              "calls": 480,
+              "maximum_us": 26003,
+              "slowest_shape": "RF_WP_DMBSA.s",
+              "total_us": 957067
+            }
+          }
+        },
+        "render_budget": {
+          "memory_pressure": false,
+          "particles": 2048,
+          "passenger_lights": 8,
+          "station_lights": 24,
+          "train_lights": 8,
+          "upload_mib": 8,
+          "vegetation_divisor": 1
+        },
+        "rain_strength": 1.0,
+        "gpu_whole_launch_busy_percent": 22.24031007751938
+      },
+      "normal-warm": {
+        "quality_level": 0,
+        "performance": {
+          "odometer_m": 2500.6907735943855,
+          "gpu_tiles": 5,
+          "visible_neighbourhood_pending": 0,
+          "pending_uploads": 0,
+          "gameplay": {
+            "gameplay_frames": 2028,
+            "gameplay_frame_p50_ms": 25,
+            "gameplay_frame_p95_ms": 25,
+            "gameplay_frame_p99_ms": 26,
+            "gameplay_longest_frame_ms": 36.81828,
+            "gameplay_hitches_over_100_ms": 0
+          },
+          "startup_inclusive_max_ms": 1740.958204,
+          "loading_frames": 1159,
+          "rss_mib": 1871.3125,
+          "peak_rss_mib": 1871.3125,
+          "graphics_memory": {
+            "active_device_pci": "0000:03:00.0",
+            "device_total_mib": 8176.0,
+            "device_used_mib": 2317.53125,
+            "devices": [
+              {
+                "device_total_mib": 8176.0,
+                "device_used_mib": 2317.53125,
+                "pci": "0000:03:00.0",
+                "process_gtt_mib": 80.20703125,
+                "process_vram_mib": 1786.19921875
+              },
+              {
+                "device_total_mib": 512.0,
+                "device_used_mib": 337.875,
+                "pci": "0000:0e:00.0",
+                "process_gtt_mib": 2.0,
+                "process_vram_mib": 0.01171875
+              }
+            ],
+            "peak_process_vram_mib": 1786.2109375,
+            "process_gtt_mib": 82.20703125,
+            "process_vram_mib": 1786.2109375,
+            "source": "linux_drm_fdinfo"
+          },
+          "geometry_cache": {
+            "gpu_handles_cached": false,
+            "hits": 464,
+            "max_disk_mib": 256,
+            "misses": 8,
+            "schema": 1
+          },
+          "system_stages": {
+            "camera_collision": {
+              "calls": 2409,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 226,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 1902
+            },
+            "effect_obstacles": {
+              "calls": 2409,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 1728,
+              "p50_ms": 0.3,
+              "p99_ms": 1.3,
+              "total_us": 819518
+            },
+            "flexible_connections": {
+              "calls": 2409,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 61,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 16476
+            },
+            "horizon": {
+              "calls": 2410,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 20384,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 63863
+            },
+            "jacobs_bogie": {
+              "calls": 2410,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 29,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 22512
+            },
+            "level_crossing_register": {
+              "calls": 2410,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 9380,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 38569
+            },
+            "live_drive": {
+              "calls": 3074,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 2941,
+              "p50_ms": 0.2,
+              "p99_ms": 2.2,
+              "total_us": 942886
+            },
+            "mirrors": {
+              "calls": 2409,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 5,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 1028
+            },
+            "platform_people": {
+              "calls": 2409,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 16,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 8574
+            },
+            "road_cars": {
+              "calls": 2410,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 107,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 43235
+            },
+            "snow_materials": {
+              "calls": 2409,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 34,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 7372
+            },
+            "snow_roof_markers": {
+              "calls": 2410,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 6,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 38
+            },
+            "snow_tracks": {
+              "calls": 2409,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 6,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 119
+            },
+            "streaming_forecast.update": {
+              "calls": 2409,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 141,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 1738
+            },
+            "terrain_spawn.terrain_tile_bundle_materialize_system": {
+              "calls": 2409,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 226,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 2459
+            },
+            "terrain_spawn.terrain_tile_spawn_stream_system": {
+              "calls": 2409,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 85,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 1268
+            },
+            "terrain_spawn.terrain_tile_stream_system": {
+              "calls": 2409,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 3420,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 68039
+            },
+            "terrain_spawn.terrain_tile_unload_system": {
+              "calls": 2409,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 29,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 7606
+            },
+            "wet_surfaces": {
+              "calls": 2410,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 822,
+              "p50_ms": 0.1,
+              "p99_ms": 0.6,
+              "total_us": 102445
+            },
+            "world.progressive_world_spawn_system": {
+              "calls": 2409,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 39176,
+              "p50_ms": 0.1,
+              "p99_ms": 8.8,
+              "total_us": 1868816
+            },
+            "world.update_world_scenery_lod": {
+              "calls": 2409,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 5557,
+              "p50_ms": 0.1,
+              "p99_ms": 4.6,
+              "total_us": 2188183
+            },
+            "world.world_stream_scenery_system": {
+              "calls": 2409,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 28166,
+              "p50_ms": 0.1,
+              "p99_ms": 5.0,
+              "total_us": 469958
+            },
+            "world.world_tile_bundle_materialize_system": {
+              "calls": 2409,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 2783,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 9674
+            },
+            "world.world_tile_stream_system": {
+              "calls": 2409,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 68,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 18478
+            },
+            "world.world_tile_unload_system": {
+              "calls": 2409,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 2704,
+              "p50_ms": 0.1,
+              "p99_ms": 1.6,
+              "total_us": 131522
+            }
+          },
+          "shape_stages": {
+            "cpu_prepare": {
+              "calls": 19,
+              "maximum_us": 1638,
+              "slowest_shape": "RF_WP_DMBSA.s",
+              "total_us": 15009
+            },
+            "cpu_prepare_lods": {
+              "calls": 8,
+              "maximum_us": 8281,
+              "slowest_shape": "GWR11ft+14ftdolls.s",
+              "total_us": 38716
+            },
+            "geometry_cache_read": {
+              "calls": 472,
+              "maximum_us": 10843,
+              "slowest_shape": "KGB5080.s",
+              "total_us": 447607
+            },
+            "geometry_cache_write": {
+              "calls": 8,
+              "maximum_us": 2328,
+              "slowest_shape": "GWR11ft+14ftdolls.s",
+              "total_us": 5665
+            },
+            "prepare_silhouette": {
+              "calls": 472,
+              "maximum_us": 271,
+              "slowest_shape": "Doc_NortholtPkLampsDn2.s",
+              "total_us": 3198
+            },
+            "publish_auxiliary": {
+              "calls": 26,
+              "maximum_us": 24331,
+              "slowest_shape": "CarSpawner",
+              "total_us": 45271
+            },
+            "publish_gpu_assets": {
+              "calls": 472,
+              "maximum_us": 37753,
+              "slowest_shape": "KGB5080.s",
+              "total_us": 1114988
+            },
+            "publish_lod_gpu_assets": {
+              "calls": 276,
+              "maximum_us": 12785,
+              "slowest_shape": "CMhenlowshops.s",
+              "total_us": 440041
+            },
+            "resolve_texture_dependencies": {
+              "calls": 472,
+              "maximum_us": 44677,
+              "slowest_shape": "CMhenlowshops.s",
+              "total_us": 2053927
+            },
+            "source_read_parse": {
+              "calls": 19,
+              "maximum_us": 26634,
+              "slowest_shape": "RF_WP_DMBSA.s",
+              "total_us": 218564
+            }
+          }
+        },
+        "render_budget": {
+          "memory_pressure": false,
+          "particles": 2048,
+          "passenger_lights": 8,
+          "station_lights": 24,
+          "train_lights": 8,
+          "upload_mib": 8,
+          "vegetation_divisor": 1
+        },
+        "rain_strength": 1.0,
+        "gpu_whole_launch_busy_percent": 21.78988326848249
+      },
+      "reduced-warm": {
+        "quality_level": 2,
+        "performance": {
+          "odometer_m": 2500.6907735943855,
+          "gpu_tiles": 5,
+          "visible_neighbourhood_pending": 0,
+          "pending_uploads": 0,
+          "gameplay": {
+            "gameplay_frames": 2038,
+            "gameplay_frame_p50_ms": 25,
+            "gameplay_frame_p95_ms": 25,
+            "gameplay_frame_p99_ms": 27,
+            "gameplay_longest_frame_ms": 39.983456000000004,
+            "gameplay_hitches_over_100_ms": 0
+          },
+          "startup_inclusive_max_ms": 1540.037536,
+          "loading_frames": 1175,
+          "rss_mib": 1853.5390625,
+          "peak_rss_mib": 1853.5390625,
+          "graphics_memory": {
+            "active_device_pci": "0000:03:00.0",
+            "device_total_mib": 8176.0,
+            "device_used_mib": 2313.13671875,
+            "devices": [
+              {
+                "device_total_mib": 8176.0,
+                "device_used_mib": 2313.13671875,
+                "pci": "0000:03:00.0",
+                "process_gtt_mib": 80.171875,
+                "process_vram_mib": 1785.96875
+              },
+              {
+                "device_total_mib": 512.0,
+                "device_used_mib": 338.4375,
+                "pci": "0000:0e:00.0",
+                "process_gtt_mib": 2.0,
+                "process_vram_mib": 0.01171875
+              }
+            ],
+            "peak_process_vram_mib": 1785.98046875,
+            "process_gtt_mib": 82.171875,
+            "process_vram_mib": 1785.98046875,
+            "source": "linux_drm_fdinfo"
+          },
+          "geometry_cache": {
+            "gpu_handles_cached": false,
+            "hits": 467,
+            "max_disk_mib": 256,
+            "misses": 8,
+            "schema": 1
+          },
+          "system_stages": {
+            "camera_collision": {
+              "calls": 2422,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 15,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 1856
+            },
+            "effect_obstacles": {
+              "calls": 2422,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 2011,
+              "p50_ms": 0.3,
+              "p99_ms": 1.4,
+              "total_us": 869866
+            },
+            "flexible_connections": {
+              "calls": 2422,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 58,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 17284
+            },
+            "horizon": {
+              "calls": 2423,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 21180,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 61299
+            },
+            "jacobs_bogie": {
+              "calls": 2423,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 37,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 23698
+            },
+            "level_crossing_register": {
+              "calls": 2423,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 9057,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 35012
+            },
+            "live_drive": {
+              "calls": 3093,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 3623,
+              "p50_ms": 0.2,
+              "p99_ms": 2.3,
+              "total_us": 968023
+            },
+            "mirrors": {
+              "calls": 2422,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 6,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 1263
+            },
+            "platform_people": {
+              "calls": 2422,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 20,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 9514
+            },
+            "road_cars": {
+              "calls": 2423,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 242,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 45473
+            },
+            "snow_materials": {
+              "calls": 2422,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 45,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 7889
+            },
+            "snow_roof_markers": {
+              "calls": 2423,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 3,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 22
+            },
+            "snow_tracks": {
+              "calls": 2422,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 4,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 145
+            },
+            "streaming_forecast.update": {
+              "calls": 2422,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 26,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 1673
+            },
+            "terrain_spawn.terrain_tile_bundle_materialize_system": {
+              "calls": 2422,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 210,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 2431
+            },
+            "terrain_spawn.terrain_tile_spawn_stream_system": {
+              "calls": 2422,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 81,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 1186
+            },
+            "terrain_spawn.terrain_tile_stream_system": {
+              "calls": 2422,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 2860,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 71566
+            },
+            "terrain_spawn.terrain_tile_unload_system": {
+              "calls": 2422,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 22,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 8146
+            },
+            "wet_surfaces": {
+              "calls": 2423,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 840,
+              "p50_ms": 0.1,
+              "p99_ms": 0.7,
+              "total_us": 110438
+            },
+            "world.progressive_world_spawn_system": {
+              "calls": 2422,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 38064,
+              "p50_ms": 0.1,
+              "p99_ms": 8.9,
+              "total_us": 1933587
+            },
+            "world.update_world_scenery_lod": {
+              "calls": 2422,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 5764,
+              "p50_ms": 0.1,
+              "p99_ms": 4.9,
+              "total_us": 2290488
+            },
+            "world.world_stream_scenery_system": {
+              "calls": 2422,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 16186,
+              "p50_ms": 0.1,
+              "p99_ms": 5.2,
+              "total_us": 481865
+            },
+            "world.world_tile_bundle_materialize_system": {
+              "calls": 2422,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 1539,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 9135
+            },
+            "world.world_tile_stream_system": {
+              "calls": 2422,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 61,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 19174
+            },
+            "world.world_tile_unload_system": {
+              "calls": 2422,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 2494,
+              "p50_ms": 0.1,
+              "p99_ms": 1.5,
+              "total_us": 132821
+            }
+          },
+          "shape_stages": {
+            "cpu_prepare": {
+              "calls": 19,
+              "maximum_us": 1654,
+              "slowest_shape": "RF_WP_DMBSA.s",
+              "total_us": 14692
+            },
+            "cpu_prepare_lods": {
+              "calls": 8,
+              "maximum_us": 6390,
+              "slowest_shape": "SpeedSign_60.s",
+              "total_us": 33117
+            },
+            "geometry_cache_read": {
+              "calls": 475,
+              "maximum_us": 9867,
+              "slowest_shape": "KGB5080.s",
+              "total_us": 464557
+            },
+            "geometry_cache_write": {
+              "calls": 8,
+              "maximum_us": 1601,
+              "slowest_shape": "VLILFSBCBB20SSV.s",
+              "total_us": 5084
+            },
+            "prepare_silhouette": {
+              "calls": 475,
+              "maximum_us": 65,
+              "slowest_shape": "KGB5080.s",
+              "total_us": 3088
+            },
+            "publish_auxiliary": {
+              "calls": 26,
+              "maximum_us": 16181,
+              "slowest_shape": "CarSpawner",
+              "total_us": 30428
+            },
+            "publish_gpu_assets": {
+              "calls": 475,
+              "maximum_us": 36694,
+              "slowest_shape": "KGB5080.s",
+              "total_us": 1153649
+            },
+            "publish_lod_gpu_assets": {
+              "calls": 276,
+              "maximum_us": 12925,
+              "slowest_shape": "CMhenlowshops.s",
+              "total_us": 449430
+            },
+            "resolve_texture_dependencies": {
+              "calls": 475,
+              "maximum_us": 39925,
+              "slowest_shape": "KGB5080.s",
+              "total_us": 2060441
+            },
+            "source_read_parse": {
+              "calls": 19,
+              "maximum_us": 25595,
+              "slowest_shape": "RF_WP_DMBSA.s",
+              "total_us": 210179
+            }
+          }
+        },
+        "render_budget": {
+          "memory_pressure": false,
+          "particles": 512,
+          "passenger_lights": 2,
+          "station_lights": 0,
+          "train_lights": 8,
+          "upload_mib": 8,
+          "vegetation_divisor": 4
+        },
+        "rain_strength": 1.0,
+        "gpu_whole_launch_busy_percent": 22.643410852713178
+      },
+      "normal-repeat-warm": {
+        "quality_level": 0,
+        "performance": {
+          "odometer_m": 2500.6907735943855,
+          "gpu_tiles": 5,
+          "visible_neighbourhood_pending": 0,
+          "pending_uploads": 0,
+          "gameplay": {
+            "gameplay_frames": 2030,
+            "gameplay_frame_p50_ms": 25,
+            "gameplay_frame_p95_ms": 25,
+            "gameplay_frame_p99_ms": 26,
+            "gameplay_longest_frame_ms": 30.802591,
+            "gameplay_hitches_over_100_ms": 0
+          },
+          "startup_inclusive_max_ms": 1714.877561,
+          "loading_frames": 1175,
+          "rss_mib": 1727.8671875,
+          "peak_rss_mib": 1727.8671875,
+          "graphics_memory": {
+            "active_device_pci": "0000:03:00.0",
+            "device_total_mib": 8176.0,
+            "device_used_mib": 2311.6484375,
+            "devices": [
+              {
+                "device_total_mib": 8176.0,
+                "device_used_mib": 2311.6484375,
+                "pci": "0000:03:00.0",
+                "process_gtt_mib": 80.171875,
+                "process_vram_mib": 1786.48046875
+              },
+              {
+                "device_total_mib": 512.0,
+                "device_used_mib": 339.0390625,
+                "pci": "0000:0e:00.0",
+                "process_gtt_mib": 2.0,
+                "process_vram_mib": 0.01171875
+              }
+            ],
+            "peak_process_vram_mib": 1786.4921875,
+            "process_gtt_mib": 82.171875,
+            "process_vram_mib": 1786.4921875,
+            "source": "linux_drm_fdinfo"
+          },
+          "geometry_cache": {
+            "gpu_handles_cached": false,
+            "hits": 469,
+            "max_disk_mib": 256,
+            "misses": 5,
+            "schema": 1
+          },
+          "system_stages": {
+            "camera_collision": {
+              "calls": 2418,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 16,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 1953
+            },
+            "effect_obstacles": {
+              "calls": 2418,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 1759,
+              "p50_ms": 0.3,
+              "p99_ms": 1.3,
+              "total_us": 850779
+            },
+            "flexible_connections": {
+              "calls": 2418,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 51,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 17343
+            },
+            "horizon": {
+              "calls": 2419,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 24610,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 65217
+            },
+            "jacobs_bogie": {
+              "calls": 2419,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 2042,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 24549
+            },
+            "level_crossing_register": {
+              "calls": 2419,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 10592,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 40854
+            },
+            "live_drive": {
+              "calls": 3080,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 2970,
+              "p50_ms": 0.3,
+              "p99_ms": 2.6,
+              "total_us": 967822
+            },
+            "mirrors": {
+              "calls": 2418,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 9,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 1286
+            },
+            "platform_people": {
+              "calls": 2418,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 15,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 9510
+            },
+            "road_cars": {
+              "calls": 2419,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 162,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 45363
+            },
+            "snow_materials": {
+              "calls": 2418,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 34,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 7609
+            },
+            "snow_roof_markers": {
+              "calls": 2419,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 1,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 9
+            },
+            "snow_tracks": {
+              "calls": 2418,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 4,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 122
+            },
+            "streaming_forecast.update": {
+              "calls": 2418,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 40,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 1665
+            },
+            "terrain_spawn.terrain_tile_bundle_materialize_system": {
+              "calls": 2418,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 207,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 2411
+            },
+            "terrain_spawn.terrain_tile_spawn_stream_system": {
+              "calls": 2418,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 389,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 1548
+            },
+            "terrain_spawn.terrain_tile_stream_system": {
+              "calls": 2418,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 3603,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 72540
+            },
+            "terrain_spawn.terrain_tile_unload_system": {
+              "calls": 2418,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 19,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 7888
+            },
+            "wet_surfaces": {
+              "calls": 2419,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 854,
+              "p50_ms": 0.1,
+              "p99_ms": 0.6,
+              "total_us": 104112
+            },
+            "world.progressive_world_spawn_system": {
+              "calls": 2418,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 38065,
+              "p50_ms": 0.1,
+              "p99_ms": 9.1,
+              "total_us": 1965662
+            },
+            "world.update_world_scenery_lod": {
+              "calls": 2418,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 5584,
+              "p50_ms": 0.1,
+              "p99_ms": 4.9,
+              "total_us": 2240013
+            },
+            "world.world_stream_scenery_system": {
+              "calls": 2418,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 16002,
+              "p50_ms": 0.1,
+              "p99_ms": 5.6,
+              "total_us": 488754
+            },
+            "world.world_tile_bundle_materialize_system": {
+              "calls": 2418,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 1543,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 9194
+            },
+            "world.world_tile_stream_system": {
+              "calls": 2418,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 61,
+              "p50_ms": 0.1,
+              "p99_ms": 0.1,
+              "total_us": 18797
+            },
+            "world.world_tile_unload_system": {
+              "calls": 2418,
+              "histogram_ceiling_ms": 204.8,
+              "histogram_width_ms": 0.1,
+              "maximum_us": 2515,
+              "p50_ms": 0.1,
+              "p99_ms": 1.6,
+              "total_us": 135549
+            }
+          },
+          "shape_stages": {
+            "cpu_prepare": {
+              "calls": 16,
+              "maximum_us": 2563,
+              "slowest_shape": "RF_WP_PSB.s",
+              "total_us": 15671
+            },
+            "cpu_prepare_lods": {
+              "calls": 5,
+              "maximum_us": 5605,
+              "slowest_shape": "IJ_semi_detached2_x2_var1.s",
+              "total_us": 15469
+            },
+            "geometry_cache_read": {
+              "calls": 474,
+              "maximum_us": 12458,
+              "slowest_shape": "Doc_NortholtPkFncUp.s",
+              "total_us": 512455
+            },
+            "geometry_cache_write": {
+              "calls": 5,
+              "maximum_us": 99,
+              "slowest_shape": "IJ_semi_detached2_x2_var4.s",
+              "total_us": 418
+            },
+            "prepare_silhouette": {
+              "calls": 474,
+              "maximum_us": 92,
+              "slowest_shape": "KGB5080.s",
+              "total_us": 3134
+            },
+            "publish_auxiliary": {
+              "calls": 26,
+              "maximum_us": 15996,
+              "slowest_shape": "CarSpawner",
+              "total_us": 29724
+            },
+            "publish_gpu_assets": {
+              "calls": 474,
+              "maximum_us": 36870,
+              "slowest_shape": "KGB5080.s",
+              "total_us": 1183911
+            },
+            "publish_lod_gpu_assets": {
+              "calls": 276,
+              "maximum_us": 17349,
+              "slowest_shape": "CMhenlowshops.s",
+              "total_us": 460662
+            },
+            "resolve_texture_dependencies": {
+              "calls": 474,
+              "maximum_us": 46433,
+              "slowest_shape": "housesemi1.s",
+              "total_us": 2123247
+            },
+            "source_read_parse": {
+              "calls": 16,
+              "maximum_us": 30052,
+              "slowest_shape": "RF_WP_PSB.s",
+              "total_us": 226732
+            }
+          }
+        },
+        "render_budget": {
+          "memory_pressure": false,
+          "particles": 2048,
+          "passenger_lights": 8,
+          "station_lights": 24,
+          "train_lights": 8,
+          "upload_mib": 8,
+          "vegetation_divisor": 1
+        },
+        "rain_strength": 1.0,
+        "gpu_whole_launch_busy_percent": 22.151162790697676
+      }
+    }
+  },
+  "allocation_lifetime": {
+    "status": "Final candidate26 actual 7200-second run in progress; lifetime stability not yet accepted.",
+    "only_functional_change_22_to_23": "wgpu MemoryHintsPerformance→MemoryUsage; identical simulation/resources/graphical settings",
+    "performance_control22": {
+      "state": "Intentionally interrupted allocation control; not a completed7200s run or definitive unbounded leak verdict.",
+      "viewer_sha256": "d14ebc6432dd4b946442861ab52a44854054cc805e474cb7aa89cf4f2c2a5efa",
+      "observed_wall_s": 1470.009043318,
+      "route_changes": 8,
+      "save_restore_cycles": 24,
+      "utc": "2026-10-13T23:36:26Z",
+      "reason": "Preserve Performance allocator control and begin full finalMemoryUsage policy acceptance. Measured sparse256MiB blocks pinned by0.214–6MiB live resources; no quality or simulation reduction.",
+      "comparable_labs": [
+        {
+          "wall_s": 240.031637779,
+          "allocated_mib": 505.3624496459961,
+          "reserved_mib": 2112.0,
+          "blocks": 10,
+          "gtt_mib": 2085.83984375,
+          "meshes": 35,
+          "images": 34
+        },
+        {
+          "wall_s": 840.003184666,
+          "allocated_mib": 489.9809799194336,
+          "reserved_mib": 2368.0,
+          "blocks": 11,
+          "gtt_mib": 2367.37109375,
+          "meshes": 27,
+          "images": 31
+        },
+        {
+          "wall_s": 1290.006118429,
+          "allocated_mib": 511.09151458740234,
+          "reserved_mib": 2368.0,
+          "blocks": 11,
+          "gtt_mib": 2382.90234375,
+          "meshes": 35,
+          "images": 40
+        }
+      ]
+    },
+    "sampling_scope": "ActualVulkan allocator allocations and reserved blocks every30s, live RenderApp assets/slabs/queues, DRM perPCI VRAM/GTT, RAM/audio. Backendunsupported isNone; no zero substitution. Reserved memory differs from live allocations. DefaultMemoryUsage uses8–64MiB device blocks instead of128–256MiB. SourceCache/OS/Mesa caches remain scoped separately.",
+    "memory_usage_control23": {
+      "state": "Interrupted actual allocator diagnosis; not a completed7200s run.",
+      "viewer_sha256": "80921b72a8d75dee6d0fcf766bf73e03c7504409a413a727b9d31541f530176f",
+      "wall_s": 1260.032941567,
+      "route_changes": 6,
+      "save_restore_cycles": 21,
+      "utc": "2026-10-13T23:57:49Z",
+      "reason": "Confirmed Bevy0.19.1 BinUnpackingBindGroups retains removed-view buffers; final application-side prune will be added through publicAPI and receive new actual2h acceptance. Smallerblocks alone not treated as lifetime fix.",
+      "last_allocator": {
+        "allocated_bytes": 1395505912,
+        "allocations": 23168,
+        "blocks": 25,
+        "largest_labels": [
+          {
+            "allocations": 810,
+            "bytes": 947708264,
+            "name": "Unlabeled texture"
+          },
+          {
+            "allocations": 1,
+            "bytes": 136314888,
+            "name": "directional_light_shadow_map_texture"
+          },
+          {
+            "allocations": 1,
+            "bytes": 136048912,
+            "name": "general mesh slab 0 (vertex buffer)"
+          },
+          {
+            "allocations": 1,
+            "bytes": 60466176,
+            "name": "general mesh slab 1 (index buffer)"
+          },
+          {
+            "allocations": 1,
+            "bytes": 25559048,
+            "name": "point_light_shadow_map_texture"
+          },
+          {
+            "allocations": 9819,
+            "bytes": 20462960,
+            "name": "(wgpu internal) Staging"
+          },
+          {
+            "allocations": 6654,
+            "bytes": 13082128,
+            "name": "Unlabeled buffer"
+          },
+          {
+            "allocations": 8,
+            "bytes": 8388480,
+            "name": "(wgpu internal) Indirect draw validation destination buffer"
+          },
+          {
+            "allocations": 8,
+            "bytes": 8388480,
+            "name": "(wgpu internal) Indirect draw validation metadata buffer"
+          },
+          {
+            "allocations": 2,
+            "bytes": 8041936,
+            "name": "view_depth_texture"
+          },
+          {
+            "allocations": 1,
+            "bytes": 6291456,
+            "name": "hanabi:buffer:slab0:particle"
+          },
+          {
+            "allocations": 1,
+            "bytes": 6291456,
+            "name": "hanabi:buffer:slab1:particle"
+          },
+          {
+            "allocations": 1,
+            "bytes": 4022160,
+            "name": "main_texture_a"
+          },
+          {
+            "allocations": 1,
+            "bytes": 3997696,
+            "name": "main_texture_b"
+          },
+          {
+            "allocations": 1,
+            "bytes": 3145728,
+            "name": "hanabi:buffer:sort:pairs"
+          },
+          {
+            "allocations": 1,
+            "bytes": 1048624,
+            "name": "general mesh slab 21 (vertex buffer)"
+          }
+        ],
+        "reserved_bytes": 1518072088,
+        "sparse_blocks": [
+          {
+            "allocated_bytes": 10485760,
+            "allocations": 4,
+            "largest_labels": [
+              {
+                "allocations": 4,
+                "bytes": 10485760,
+                "name": "Unlabeled texture"
+              }
+            ],
+            "reserved_bytes": 67108864
+          },
+          {
+            "allocated_bytes": 19414384,
+            "allocations": 9818,
+            "largest_labels": [
+              {
+                "allocations": 9818,
+                "bytes": 19414384,
+                "name": "(wgpu internal) Staging"
+              }
+            ],
+            "reserved_bytes": 33554432
+          },
+          {
+            "allocated_bytes": 56648480,
+            "allocations": 12,
+            "largest_labels": [
+              {
+                "allocations": 7,
+                "bytes": 28992256,
+                "name": "Unlabeled texture"
+              },
+              {
+                "allocations": 1,
+                "bytes": 25559048,
+                "name": "point_light_shadow_map_texture"
+              },
+              {
+                "allocations": 1,
+                "bytes": 1048560,
+                "name": "(wgpu internal) Indirect draw validation destination buffer"
+              },
+              {
+                "allocations": 1,
+                "bytes": 1048560,
+                "name": "(wgpu internal) Indirect draw validation metadata buffer"
+              },
+              {
+                "allocations": 2,
+                "bytes": 56,
+                "name": "Unlabeled buffer"
+              }
+            ],
+            "reserved_bytes": 67108864
+          },
+          {
+            "allocated_bytes": 1048576,
+            "allocations": 1,
+            "largest_labels": [
+              {
+                "allocations": 1,
+                "bytes": 1048576,
+                "name": "(wgpu internal) Staging"
+              }
+            ],
+            "reserved_bytes": 8388608
+          },
+          {
+            "allocated_bytes": 62497824,
+            "allocations": 37,
+            "largest_labels": [
+              {
+                "allocations": 24,
+                "bytes": 51999888,
+                "name": "Unlabeled texture"
+              },
+              {
+                "allocations": 5,
+                "bytes": 5242800,
+                "name": "(wgpu internal) Indirect draw validation destination buffer"
+              },
+              {
+                "allocations": 5,
+                "bytes": 5242800,
+                "name": "(wgpu internal) Indirect draw validation metadata buffer"
+              },
+              {
+                "allocations": 1,
+                "bytes": 12288,
+                "name": "hanabi:buffer:dispatch_indirect"
+              },
+              {
+                "allocations": 1,
+                "bytes": 32,
+                "name": "oit_settings"
+              }
+            ],
+            "reserved_bytes": 67108864
+          },
+          {
+            "allocated_bytes": 29229056,
+            "allocations": 6,
+            "largest_labels": [
+              {
+                "allocations": 6,
+                "bytes": 29229056,
+                "name": "Unlabeled texture"
+              }
+            ],
+            "reserved_bytes": 33554432
+          },
+          {
+            "allocated_bytes": 36032,
+            "allocations": 9,
+            "largest_labels": [
+              {
+                "allocations": 5,
+                "bytes": 35840,
+                "name": "render_statistics_read_buffer"
+              },
+              {
+                "allocations": 4,
+                "bytes": 192,
+                "name": "clustering metadata staging buffer"
+              }
+            ],
+            "reserved_bytes": 4194304
+          },
+          {
+            "allocated_bytes": 63648000,
+            "allocations": 14,
+            "largest_labels": [
+              {
+                "allocations": 12,
+                "bytes": 63268352,
+                "name": "Unlabeled texture"
+              },
+              {
+                "allocations": 2,
+                "bytes": 379648,
+                "name": "Unlabeled buffer"
+              }
+            ],
+            "reserved_bytes": 67108864
+          },
+          {
+            "allocated_bytes": 13447024,
+            "allocations": 15,
+            "largest_labels": [
+              {
+                "allocations": 1,
+                "bytes": 4036040,
+                "name": "view_depth_texture"
+              },
+              {
+                "allocations": 1,
+                "bytes": 4022160,
+                "name": "main_texture_a"
+              },
+              {
+                "allocations": 1,
+                "bytes": 3997696,
+                "name": "main_texture_b"
+              },
+              {
+                "allocations": 5,
+                "bytes": 1376512,
+                "name": "Unlabeled texture"
+              },
+              {
+                "allocations": 2,
+                "bytes": 14336,
+                "name": "render_statistics_resolve_buffer"
+              }
+            ],
+            "reserved_bytes": 16777216
+          },
+          {
+            "allocated_bytes": 64213344,
+            "allocations": 6756,
+            "largest_labels": [
+              {
+                "allocations": 101,
+                "bytes": 45804152,
+                "name": "Unlabeled texture"
+              },
+              {
+                "allocations": 1,
+                "bytes": 6291456,
+                "name": "hanabi:buffer:slab0:particle"
+              },
+              {
+                "allocations": 1,
+                "bytes": 4005896,
+                "name": "view_depth_texture"
+              },
+              {
+                "allocations": 4966,
+                "bytes": 3997680,
+                "name": "Unlabeled buffer"
+              },
+              {
+                "allocations": 1,
+                "bytes": 1048624,
+                "name": "general mesh slab 21 (vertex buffer)"
+              }
+            ],
+            "reserved_bytes": 67108864
+          },
+          {
+            "allocated_bytes": 6291408,
+            "allocations": 25,
+            "largest_labels": [
+              {
+                "allocations": 1,
+                "bytes": 3145728,
+                "name": "hanabi:buffer:sort:pairs"
+              },
+              {
+                "allocations": 10,
+                "bytes": 2568624,
+                "name": "Unlabeled texture"
+              },
+              {
+                "allocations": 1,
+                "bytes": 524288,
+                "name": "(wgpu internal) zero init buffer"
+              },
+              {
+                "allocations": 2,
+                "bytes": 32768,
+                "name": "skin uniform buffer"
+              },
+              {
+                "allocations": 1,
+                "bytes": 8784,
+                "name": "ssao_hilbert_index_lut"
+              }
+            ],
+            "reserved_bytes": 8388608
+          },
+          {
+            "allocated_bytes": 65213200,
+            "allocations": 267,
+            "largest_labels": [
+              {
+                "allocations": 95,
+                "bytes": 55651136,
+                "name": "Unlabeled texture"
+              },
+              {
+                "allocations": 1,
+                "bytes": 6291456,
+                "name": "hanabi:buffer:slab1:particle"
+              },
+              {
+                "allocations": 15,
+                "bytes": 2790800,
+                "name": "Unlabeled buffer"
+              },
+              {
+                "allocations": 1,
+                "bytes": 408288,
+                "name": "previous instance input uniform buffer"
+              },
+              {
+                "allocations": 21,
+                "bytes": 42768,
+                "name": "world_instance_buffer"
+              }
+            ],
+            "reserved_bytes": 67108864
+          },
+          {
+            "allocated_bytes": 65883184,
+            "allocations": 73,
+            "largest_labels": [
+              {
+                "allocations": 67,
+                "bytes": 61681760,
+                "name": "Unlabeled texture"
+              },
+              {
+                "allocations": 2,
+                "bytes": 2097120,
+                "name": "(wgpu internal) Indirect draw validation destination buffer"
+              },
+              {
+                "allocations": 2,
+                "bytes": 2097120,
+                "name": "(wgpu internal) Indirect draw validation metadata buffer"
+              },
+              {
+                "allocations": 1,
+                "bytes": 7168,
+                "name": "render_statistics_resolve_buffer"
+              },
+              {
+                "allocations": 1,
+                "bytes": 16,
+                "name": "Unlabeled buffer"
+              }
+            ],
+            "reserved_bytes": 67108864
+          },
+          {
+            "allocated_bytes": 65950848,
+            "allocations": 67,
+            "largest_labels": [
+              {
+                "allocations": 57,
+                "bytes": 65252704,
+                "name": "Unlabeled texture"
+              },
+              {
+                "allocations": 1,
+                "bytes": 491520,
+                "name": "instance input uniform buffer"
+              },
+              {
+                "allocations": 1,
+                "bytes": 163840,
+                "name": "mesh culling data buffer"
+              },
+              {
+                "allocations": 5,
+                "bytes": 29360,
+                "name": "Unlabeled buffer"
+              },
+              {
+                "allocations": 2,
+                "bytes": 10336,
+                "name": "world_instance_buffer"
+              }
+            ],
+            "reserved_bytes": 67108864
+          },
+          {
+            "allocated_bytes": 66087824,
+            "allocations": 453,
+            "largest_labels": [
+              {
+                "allocations": 136,
+                "bytes": 65862896,
+                "name": "Unlabeled texture"
+              },
+              {
+                "allocations": 144,
+                "bytes": 81088,
+                "name": "world_instance_buffer"
+              },
+              {
+                "allocations": 1,
+                "bytes": 78848,
+                "name": "bin unpacking metadata buffer"
+              },
+              {
+                "allocations": 8,
+                "bytes": 42240,
+                "name": "Unlabeled buffer"
+              },
+              {
+                "allocations": 162,
+                "bytes": 20736,
+                "name": "world_instance_appearance"
+              }
+            ],
+            "reserved_bytes": 67108864
+          },
+          {
+            "allocated_bytes": 66150656,
+            "allocations": 49,
+            "largest_labels": [
+              {
+                "allocations": 39,
+                "bytes": 65113152,
+                "name": "Unlabeled texture"
+              },
+              {
+                "allocations": 1,
+                "bytes": 1034496,
+                "name": "Unlabeled buffer"
+              },
+              {
+                "allocations": 4,
+                "bytes": 2368,
+                "name": "world_instance_buffer"
+              },
+              {
+                "allocations": 5,
+                "bytes": 640,
+                "name": "world_instance_appearance"
+              }
+            ],
+            "reserved_bytes": 67108864
+          }
+        ]
+      },
+      "last_graphics_memory": {
+        "active_device_pci": "0000:0e:00.0",
+        "device_total_mib": 512.0,
+        "device_used_mib": 454.56640625,
+        "devices": [
+          {
+            "device_total_mib": 8176.0,
+            "device_used_mib": 571.06640625,
+            "pci": "0000:03:00.0",
+            "process_gtt_mib": 2.0,
+            "process_vram_mib": 0.01171875
+          },
+          {
+            "device_total_mib": 512.0,
+            "device_used_mib": 454.56640625,
+            "pci": "0000:0e:00.0",
+            "process_gtt_mib": 1334.625,
+            "process_vram_mib": 417.04296875
+          }
+        ],
+        "peak_process_vram_mib": 466.22265625,
+        "process_gtt_mib": 1336.625,
+        "process_vram_mib": 417.0546875,
+        "source": "linux_drm_fdinfo"
+      },
+      "concurrency": "Compilationcheck15 during first~3minutes; afterward matchedRX comparison, then contentQA/release preparations allowed. No generalFPS claim from endurance."
+    },
+    "memory_usage_control_binary_sha256": "80921b72a8d75dee6d0fcf766bf73e03c7504409a413a727b9d31541f530176f",
+    "confirmed_retention": "Bevy0.19.1 BinUnpackingBindGroups retains bindings after corresponding view_phase_buffers keys are removed. Application-side cleanup will retain only live source keys after prepare_preprocess_bind_groups and report real stale/retired counts.",
+    "final_prune_acceptance_requirements": {
+      "actual_wall_s_at_least": 7200,
+      "executed_route_changes_not_scheduled_only": true,
+      "source_keys_positive_during_gameplay": true,
+      "cached_keys_positive_during_gameplay": true,
+      "retired_keys_positive_after_route_changes": true,
+      "stale_keys_after_prune": 0,
+      "same_route_camera_weather_cycles_compared": true,
+      "memory_queue_stability_not_duration_alone": true,
+      "unsupported_backend": "Absent GPU preprocessing produces zero key counts. Such zeros do not verify cleanup; positive source/cache/retired counters are required on the tested renderer."
+    },
+    "final_candidate24": {
+      "status": "Interrupted partial diagnosis; superseded by candidate26 full acceptance.",
+      "viewer_sha256": "a3084f1b9e6fec1274ecb7893f6e97a5682d01430323b5a6132111f047c99aeb",
+      "started_utc": "2026-10-14T00:10:46Z",
+      "requested_seconds": 7200,
+      "first_real_retirement": {
+        "wall_s": 210.013945079,
+        "route_changes": 1,
+        "save_restore_cycles": 3,
+        "scenario": "Laboratorio de fuelles, mangueras y acopladores",
+        "bin_unpacking_lifetime": {
+          "cached_keys": 2,
+          "retired_keys": 2,
+          "source_keys": 2,
+          "stale_keys_after": 0,
+          "stale_keys_before": 0
+        }
+      },
+      "acceptance_requires": [
+        "At least 7200 measured wall-clock seconds and actual executed route/save-restore changes.",
+        "Positive source and cached keys prove active GPU preprocessing; positive retired keys after transitions and no stale keys after pruning.",
+        "RAM, live allocator allocations, reserved memory and per-device VRAM/GTT evaluated separately across repeated comparable route/camera/weather cycles.",
+        "Fresh final screenshot, empty required shader/upload/near-resource queues and bounded fonts, entities and audio."
+      ],
+      "known_initial_background_load": "Root full-check18 Rust compilation/tests; subsequent release/Snap CPU builds will be recorded. No other viewer uses the integrated GPU."
+    },
+    "counter_limitations": [
+      "Bevy 0.19.1 MaterialBindGroupAllocator::allocations sums allocated_resource_count. Its insert/free paths count repeated bindings of the same newly inserted resource inconsistently. Reusing a texture for base color and emission can leave a positive counter drift after releasing the resource. Raw values are preserved, but this counter alone is not interpreted as live material ownership or proof of a leak. Vulkan allocator allocations/reservations, actual bindings and image/mesh owners remain separate evidence.",
+      "A zero bin-unpacking count on a backend without GPU preprocessing does not certify retirement. Candidate24 has positive source/cache keys and positive retired keys after transitions."
+    ],
+    "dead_view_diagnostic24": {
+      "status": "Intentionally interrupted diagnosis; not a complete7200-second acceptance or proof of lifetime stability.",
+      "viewer_sha256": "a3084f1b9e6fec1274ecb7893f6e97a5682d01430323b5a6132111f047c99aeb",
+      "observed_wall_s": 3300.027856608,
+      "route_changes": 18,
+      "actual_sampled_route_transitions": 18,
+      "save_restore_cycles": 55,
+      "complete_rows": 110,
+      "invalid_raw_lines_preserved": [
+        {
+          "line": 111,
+          "characters": 30425,
+          "error": "Expecting ':' delimiter: line 1 column 1421 (char 1420)"
+        }
+      ],
+      "last_bin_unpacking": {
+        "cached_keys": 2,
+        "retired_keys": 59,
+        "source_keys": 2,
+        "stale_keys_after": 0,
+        "stale_keys_before": 0
+      },
+      "max_stale_after": 0,
+      "last_rss_mib": 2991.15234375,
+      "scope": "Positive retired/cache/source keys verify execution of the public-API dead-view pruning. This interrupted diagnosis does not certify long-term stability. One raw telemetry line was truncated at disk quota and preserved as invalid; it was not repaired or used as acceptance."
+    },
+    "final_candidate26": {
+      "status": "In progress; no actual7200-second acceptance yet.",
+      "viewer_sha256": "24793d08bc7a6900ea817165dd2519492dbbdceacd043cf58c08a1fd6170ca4a",
+      "viewer_bytes": 172519328,
+      "started_utc": "2026-10-14T01:12:44Z",
+      "expected_end_utc": "2026-10-14T03:12:44Z",
+      "configuration": {
+        "seconds": 7200,
+        "route_interval_s": 180,
+        "framepace": 30,
+        "audio": "private ALSA null",
+        "vulkan_device": "1002:13c0",
+        "camera_weather_restore_interval_s": 60,
+        "wall_sample_interval_s": 30,
+        "speed_multiplier": 4,
+        "autodrive": 0.5,
+        "weather_seed": 42,
+        "particle_budget": 2048,
+        "quality_limits": {
+          "enabled": true,
+          "target_fps": 30,
+          "min_level": 0,
+          "max_level": 3
+        },
+        "gpu_memory_policy": "natural active physical device budget and default MemoryUsage allocation hints"
+      },
+      "additional_measurements": "Actual RenderMaterialBindings and ErasedRenderAssets<PreparedMaterial> maps by material type, optional Linux GNU mallinfo2 raw byte statistics, Vulkan live allocations/reserved blocks and per-PCI DRM VRAM/GTT. Missing resources are explicit, never zero-filled.",
+      "scope": "Final geometry compiler includes corrected native unnamed-matrix parsing. Candidate24 stays a partial diagnosis; candidate26 receives a new full 7200-second run. No allocator trimming or GPU resource-quality reduction is introduced by telemetry."
+    }
+  },
+  "limits": [
+    "No general FPS guarantee on other hardware/routes.",
+    "Initial-load maxima remain visible and can regress even where driving hitches improve.",
+    "Concurrent compilations/native simulations/softwareSnap renderers invalidated earlier causalFPS interpretations; retained observations state their workloads.",
+    "AudioALSA-null validates resources/event/device lifecycle, not human listening.",
+    "No final GPU/RAM lifetime or7200s completion claim until a full run with dead-view cache cleanup ends and comparable cycles are checked."
+  ],
+  "allocation_timing_comparison": {
+    "status": "Completed four real sequential RX checkpoints with no compilation/software render workloads.",
+    "only_functional_change": "MemoryHints::Performance→MemoryUsage",
+    "raw_report_sha256": "abd03a991134ed4256a800e11ce1fc1dc805eb0e9714b3a20472a384f8cfaf3e",
+    "configuration": {
+      "schema": 1,
+      "git_head": "d9dba7af1f531183de594af3201373d3b1b20590",
+      "scenario_sha256": "faac5f908bfafd4a73ecf5be3e1c9601970c110b8926b7c80ac3221387baf5bf",
+      "seed": 42,
+      "camera": "driver",
+      "window": [
+        1280,
+        720
+      ],
+      "view_distance_m": 500,
+      "speed_multiplier": 4,
+      "weather_particle_budget": 2048,
+      "audio": "private ALSA null",
+      "checkpoint_m": 2500,
+      "cache_scope": "cold/warm refers to this executable's private application-data cache; OS file cache and Mesa shader cache are not cleared",
+      "framepace": "off",
+      "concurrent_workloads": "No Cargo, Native20AI, content extraction or Snap CPU render jobs. Only final23 integrated-GPU endurance30fps background in all four cases. SameGL/Vulkan RX7600, resources, graphical quality, camera, weather and physics. Sole functional change WgpuMemoryHints Performance→MemoryUsage.",
+      "profile_systems": true,
+      "weathers": [
+        "downpour"
+      ],
+      "scope": "sequential launches; initial-load and gameplay histograms are separate; host-wide GPU busy may include other processes"
+    },
+    "versions": {
+      "baseline": {
+        "binary_sha256": "d14ebc6432dd4b946442861ab52a44854054cc805e474cb7aa89cf4f2c2a5efa",
+        "cases": {
+          "downpour-cold": {
+            "gameplay_p99_ms": 26,
+            "gameplay_max_ms": 38.714525,
+            "startup_inclusive_max_ms": 1634.477551,
+            "loading_frames": 1182,
+            "rss_mib": 1943.13671875,
+            "geometry_cache": {
+              "gpu_handles_cached": false,
+              "hits": 0,
+              "max_disk_mib": 256,
+              "misses": 475,
+              "schema": 1
+            },
+            "gpu_tiles": 5,
+            "pending_visible": 0,
+            "pending_uploads": 0,
+            "graphics_memory": {
+              "active_device_pci": "0000:03:00.0",
+              "device_total_mib": 8176.0,
+              "device_used_mib": 2381.2265625,
+              "devices": [
+                {
+                  "device_total_mib": 8176.0,
+                  "device_used_mib": 2381.2265625,
+                  "pci": "0000:03:00.0",
+                  "process_gtt_mib": 80.171875,
+                  "process_vram_mib": 1785.79296875
+                },
+                {
+                  "device_total_mib": 512.0,
+                  "device_used_mib": 457.84765625,
+                  "pci": "0000:0e:00.0",
+                  "process_gtt_mib": 2.0,
+                  "process_vram_mib": 0.01171875
+                }
+              ],
+              "peak_process_vram_mib": 1785.8046875,
+              "process_gtt_mib": 82.171875,
+              "process_vram_mib": 1785.8046875,
+              "source": "linux_drm_fdinfo"
+            }
+          },
+          "downpour-warm": {
+            "gameplay_p99_ms": 26,
+            "gameplay_max_ms": 47.731778000000006,
+            "startup_inclusive_max_ms": 1588.9407680000002,
+            "loading_frames": 1147,
+            "rss_mib": 1933.5234375,
+            "geometry_cache": {
+              "gpu_handles_cached": false,
+              "hits": 467,
+              "max_disk_mib": 256,
+              "misses": 5,
+              "schema": 1
+            },
+            "gpu_tiles": 5,
+            "pending_visible": 0,
+            "pending_uploads": 0,
+            "graphics_memory": {
+              "active_device_pci": "0000:03:00.0",
+              "device_total_mib": 8176.0,
+              "device_used_mib": 2381.62109375,
+              "devices": [
+                {
+                  "device_total_mib": 8176.0,
+                  "device_used_mib": 2381.62109375,
+                  "pci": "0000:03:00.0",
+                  "process_gtt_mib": 80.171875,
+                  "process_vram_mib": 1786.1875
+                },
+                {
+                  "device_total_mib": 512.0,
+                  "device_used_mib": 457.84765625,
+                  "pci": "0000:0e:00.0",
+                  "process_gtt_mib": 2.0,
+                  "process_vram_mib": 0.01171875
+                }
+              ],
+              "peak_process_vram_mib": 1786.19921875,
+              "process_gtt_mib": 82.171875,
+              "process_vram_mib": 1786.19921875,
+              "source": "linux_drm_fdinfo"
+            }
+          }
+        }
+      },
+      "candidate": {
+        "binary_sha256": "80921b72a8d75dee6d0fcf766bf73e03c7504409a413a727b9d31541f530176f",
+        "cases": {
+          "downpour-cold": {
+            "gameplay_p99_ms": 26,
+            "gameplay_max_ms": 39.688204,
+            "startup_inclusive_max_ms": 1652.278452,
+            "loading_frames": 1192,
+            "rss_mib": 1855.40234375,
+            "geometry_cache": {
+              "gpu_handles_cached": false,
+              "hits": 0,
+              "max_disk_mib": 256,
+              "misses": 474,
+              "schema": 1
+            },
+            "gpu_tiles": 5,
+            "pending_visible": 0,
+            "pending_uploads": 0,
+            "graphics_memory": {
+              "active_device_pci": "0000:03:00.0",
+              "device_total_mib": 8176.0,
+              "device_used_mib": 2041.55859375,
+              "devices": [
+                {
+                  "device_total_mib": 8176.0,
+                  "device_used_mib": 2041.55859375,
+                  "pci": "0000:03:00.0",
+                  "process_gtt_mib": 20.171875,
+                  "process_vram_mib": 1446.12109375
+                },
+                {
+                  "device_total_mib": 512.0,
+                  "device_used_mib": 327.85546875,
+                  "pci": "0000:0e:00.0",
+                  "process_gtt_mib": 2.0,
+                  "process_vram_mib": 0.01171875
+                }
+              ],
+              "peak_process_vram_mib": 1446.1328125,
+              "process_gtt_mib": 22.171875,
+              "process_vram_mib": 1446.1328125,
+              "source": "linux_drm_fdinfo"
+            }
+          },
+          "downpour-warm": {
+            "gameplay_p99_ms": 26,
+            "gameplay_max_ms": 32.609105,
+            "startup_inclusive_max_ms": 1593.678717,
+            "loading_frames": 1160,
+            "rss_mib": 1907.2109375,
+            "geometry_cache": {
+              "gpu_handles_cached": false,
+              "hits": 464,
+              "max_disk_mib": 256,
+              "misses": 5,
+              "schema": 1
+            },
+            "gpu_tiles": 5,
+            "pending_visible": 0,
+            "pending_uploads": 0,
+            "graphics_memory": {
+              "active_device_pci": "0000:03:00.0",
+              "device_total_mib": 8176.0,
+              "device_used_mib": 2092.80078125,
+              "devices": [
+                {
+                  "device_total_mib": 8176.0,
+                  "device_used_mib": 2092.80078125,
+                  "pci": "0000:03:00.0",
+                  "process_gtt_mib": 20.171875,
+                  "process_vram_mib": 1509.21484375
+                },
+                {
+                  "device_total_mib": 512.0,
+                  "device_used_mib": 457.859375,
+                  "pci": "0000:0e:00.0",
+                  "process_gtt_mib": 2.0,
+                  "process_vram_mib": 0.01171875
+                }
+              ],
+              "peak_process_vram_mib": 1509.2265625,
+              "process_gtt_mib": 22.171875,
+              "process_vram_mib": 1509.2265625,
+              "source": "linux_drm_fdinfo"
+            }
+          }
+        }
+      }
+    },
+    "interpretation": "P99 unchanged26ms cold/warm. Cold driving maximum worsens0.97ms, warm improves15.12ms; initial maxima worsen17.80/4.74ms. No blanketFPS gain or hidden reduction in graphical quality."
+  }
+}

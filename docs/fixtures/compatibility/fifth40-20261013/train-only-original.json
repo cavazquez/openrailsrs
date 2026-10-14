@@ -1,0 +1,489 @@
+{
+  "reference": {
+    "name": "Open Rails",
+    "version": "1.6.1",
+    "source_files": [
+      {
+        "path": "Source/Orts.Simulation/Simulation/RollingStocks/SubSystems/PowerSupplies/Pantograph.cs",
+        "sha256": "16f21ff5ff353f0b517f15df30d77b7e41fb090a77bb2c0cbfbfedaa31750e35"
+      },
+      {
+        "path": "Source/Orts.Simulation/Simulation/RollingStocks/SubSystems/PowerSupplies/DieselEngine.cs",
+        "sha256": "235e31567592ffed2450d528a77818e0f908357f5ce5f0bd860f573428529be2"
+      },
+      {
+        "path": "Source/Orts.Formats.Msts/CabViewFile.cs",
+        "sha256": "687d355bb731ab24e2b20e0c84cb699f431dcf8541da747bb991dd61a82f532e"
+      },
+      {
+        "path": "Source/Orts.Simulation/Simulation/RollingStocks/MSTSLocomotive.cs",
+        "sha256": "3175d74766d1af67bf054ac6c4df7f723cec84f958e4a0d7164bff86424e9efe"
+      },
+      {
+        "path": "Source/Orts.Parsers.Msts/STFReader.cs",
+        "sha256": "2ce3c74bbd1328bad09d3cb1f90459a505cd7419741b533db42590e1bbcdcefb"
+      },
+      {
+        "path": "Source/Orts.Formats.Msts/ShapeFile.cs",
+        "sha256": "b848b56d5822fd011ef8c5af2c71aed12409d22abcc30df8080fd777949ad800"
+      }
+    ]
+  },
+  "status": "host_resource_audit_and_original_loading_visual_pass; final_clean_snap_acceptance_pending",
+  "scope": "Installation, resource audit and host loading/cab/exterior of one original train-only base pack on a synthetic 25 kV lab. Does not certify C# systems, sound, full physics parity or every route.",
+  "original": {
+    "package": "Jeanprisca/SNCF-TGV-Atlantique",
+    "author": {
+      "name": "Jeanprisca"
+    },
+    "original_url": "https://github.com/Jeanprisca/SNCF-TGV-Atlantique",
+    "download_url": "https://codeload.github.com/Jeanprisca/SNCF-TGV-Atlantique/zip/10967835842c02ed5ae4a3f480c1dca9fb4ef609",
+    "revision": {
+      "repository": "Jeanprisca/SNCF-TGV-Atlantique",
+      "commit": "10967835842c02ed5ae4a3f480c1dca9fb4ef609",
+      "published_at": "2023-04-28T23:12:52Z",
+      "commit_date": "2023-04-28T23:12:37Z"
+    },
+    "download_sha256": "40f03ebfdc5db4c84a81b5627886ace603ec1a8ae4bb17e51b57103f1b32e691",
+    "download_bytes": 1222745339,
+    "install_bytes": 1265374533,
+    "downloaded_at": "2026-10-13T23:39:09.531057+00:00",
+    "origin_verification": "player_confirmed"
+  },
+  "route_count": 0,
+  "stock_files": 232,
+  "snap_before": {
+    "revision": "x14",
+    "version": "0.1.0-alpha.5",
+    "archive_sha256": "28535ce52baa3471f66e4cb2f9abe5c92ac4393a00bea8cc587ed50d2032286b",
+    "native_formations": 20,
+    "player_ready": 0
+  },
+  "host_candidate": {
+    "cli_sha256": "e1304252591f14e67d7ebabe1eacfb411c3da1c00b2079f42c667a6a020ff6fa",
+    "native_formations": 20,
+    "content_valid": 2,
+    "player_ready": 2,
+    "ready": [
+      {
+        "formation": "SNCF_TGV-325-FR.con",
+        "vehicles": 12,
+        "powered_vehicles": 3,
+        "length_m": 235.15999999999997,
+        "mass_kg": 444000.0,
+        "cab_2d": false,
+        "cab_3d": true,
+        "warnings": 62
+      },
+      {
+        "formation": "SNCF_TGV-325-FR_Sharpe.con",
+        "vehicles": 12,
+        "powered_vehicles": 2,
+        "length_m": 235.15999999999997,
+        "mass_kg": 444000.0,
+        "cab_2d": false,
+        "cab_3d": true,
+        "warnings": 61
+      }
+    ],
+    "incomplete": [
+      {
+        "formation": "SNCF_TGV-324+325_UM-Sharpe.con",
+        "errors": 4,
+        "required_missing": [
+          "AlerterLeft.ace",
+          "Base_BPURG_D_512_OA.ace",
+          "Base_BPURG_G_512_OA.ace",
+          "acelabell.ace"
+        ]
+      },
+      {
+        "formation": "SNCF_TGV-324+340-FR.con",
+        "errors": 8,
+        "required_missing": [
+          "AlerterLeft.ace",
+          "Base_BPURG_D_512_OA.ace",
+          "Base_BPURG_G_512_OA.ace",
+          "acelabell.ace"
+        ]
+      },
+      {
+        "formation": "SNCF_TGV-324-FR-Sharpes.con",
+        "errors": 4,
+        "required_missing": [
+          "AlerterLeft.ace",
+          "Base_BPURG_D_512_OA.ace",
+          "Base_BPURG_G_512_OA.ace",
+          "acelabell.ace"
+        ]
+      },
+      {
+        "formation": "SNCF_TGV-324-FR.con",
+        "errors": 4,
+        "required_missing": [
+          "AlerterLeft.ace",
+          "Base_BPURG_D_512_OA.ace",
+          "Base_BPURG_G_512_OA.ace",
+          "acelabell.ace"
+        ]
+      },
+      {
+        "formation": "SNCF_TGV-340+343-FR.con",
+        "errors": 8,
+        "required_missing": [
+          "AlerterLeft.ace",
+          "Base_BPURG_D_512_OA.ace",
+          "Base_BPURG_G_512_OA.ace",
+          "acelabell.ace"
+        ]
+      },
+      {
+        "formation": "SNCF_TGV-340-FR-Sharpes.con",
+        "errors": 4,
+        "required_missing": [
+          "AlerterLeft.ace",
+          "Base_BPURG_D_512_OA.ace",
+          "Base_BPURG_G_512_OA.ace",
+          "acelabell.ace"
+        ]
+      },
+      {
+        "formation": "SNCF_TGV-340_ASCT-FR.con",
+        "errors": 4,
+        "required_missing": [
+          "AlerterLeft.ace",
+          "Base_BPURG_D_512_OA.ace",
+          "Base_BPURG_G_512_OA.ace",
+          "acelabell.ace"
+        ]
+      },
+      {
+        "formation": "SNCF_TGV-343+340_UM-Sharpe.con",
+        "errors": 8,
+        "required_missing": [
+          "AlerterLeft.ace",
+          "Base_BPURG_D_512_OA.ace",
+          "Base_BPURG_G_512_OA.ace",
+          "acelabell.ace"
+        ]
+      },
+      {
+        "formation": "SNCF_TGV-343-FR-Sharpes.con",
+        "errors": 4,
+        "required_missing": [
+          "AlerterLeft.ace",
+          "Base_BPURG_D_512_OA.ace",
+          "Base_BPURG_G_512_OA.ace",
+          "acelabell.ace"
+        ]
+      },
+      {
+        "formation": "SNCF_TGV-343_ASCT-FR.con",
+        "errors": 4,
+        "required_missing": [
+          "AlerterLeft.ace",
+          "Base_BPURG_D_512_OA.ace",
+          "Base_BPURG_G_512_OA.ace",
+          "acelabell.ace"
+        ]
+      },
+      {
+        "formation": "SNCF_TGV-356+343-FR.con",
+        "errors": 8,
+        "required_missing": [
+          "AlerterLeft.ace",
+          "Base_BPURG_D_512_OA.ace",
+          "Base_BPURG_G_512_OA.ace",
+          "acelabell.ace"
+        ]
+      },
+      {
+        "formation": "SNCF_TGV-356-FR-Sharpes.con",
+        "errors": 4,
+        "required_missing": [
+          "AlerterLeft.ace",
+          "Base_BPURG_D_512_OA.ace",
+          "Base_BPURG_G_512_OA.ace",
+          "acelabell.ace"
+        ]
+      },
+      {
+        "formation": "SNCF_TGV-356_ASCT-FR.con",
+        "errors": 4,
+        "required_missing": [
+          "AlerterLeft.ace",
+          "Base_BPURG_D_512_OA.ace",
+          "Base_BPURG_G_512_OA.ace",
+          "acelabell.ace"
+        ]
+      },
+      {
+        "formation": "SNCF_TGV-360+356_UM-Sharpe.con",
+        "errors": 8,
+        "required_missing": [
+          "AlerterLeft.ace",
+          "Base_BPURG_D_512_OA.ace",
+          "Base_BPURG_G_512_OA.ace",
+          "acelabell.ace"
+        ]
+      },
+      {
+        "formation": "SNCF_TGV-360-FR-Sharpes.con",
+        "errors": 4,
+        "required_missing": [
+          "AlerterLeft.ace",
+          "Base_BPURG_D_512_OA.ace",
+          "Base_BPURG_G_512_OA.ace",
+          "Cab_TGVA-3D_TCS_V2023.s",
+          "acelabell.ace"
+        ]
+      },
+      {
+        "formation": "SNCF_TGV-360_ASCT+343-FR.con",
+        "errors": 8,
+        "required_missing": [
+          "AlerterLeft.ace",
+          "Base_BPURG_D_512_OA.ace",
+          "Base_BPURG_G_512_OA.ace",
+          "acelabell.ace"
+        ]
+      },
+      {
+        "formation": "SNCF_TGV-360_ASCT-FR.con",
+        "errors": 4,
+        "required_missing": [
+          "AlerterLeft.ace",
+          "Base_BPURG_D_512_OA.ace",
+          "Base_BPURG_G_512_OA.ace",
+          "acelabell.ace"
+        ]
+      },
+      {
+        "formation": "SNCF_TGV-400-FR_Sharpe.con",
+        "errors": 2,
+        "required_missing": [
+          "trains/SNCF_TGV-a-400/Atl-M1-24099_FR-Sharpes.eng",
+          "trains/SNCF_TGV-a-400/atl-M2-24100_FR-Sharpes.eng"
+        ]
+      }
+    ],
+    "glibc_limit": "Host CLI requires GLIBC_2.43 and was not run inside core24; this is not final Snap acceptance.",
+    "runtime_loading": {
+      "status": "failed_before_playing",
+      "viewer_sha256": "a3084f1b9e6fec1274ecb7893f6e97a5682d01430323b5a6132111f047c99aeb",
+      "error": "Equipos declarados fuera de la formación o inválidos",
+      "confirmed_cause": "Native dynamic-brake fade curve retains 1800 default-MPH = 804.672 m/s and its 805.172 m/s terminal knot; runtime rejected knots above 400 m/s. No author fields were changed.",
+      "diagnostic_after_curve_fix": {
+        "candidate": "25",
+        "live_equipment_accepted": true,
+        "voltage_v": 25000,
+        "render_capture_valid": false,
+        "harness_mistake": "--track-dev renders a debug box without a CabLeadVehicle; a normal cab/exterior retry is required."
+      }
+    }
+  },
+  "bounded_fixes": [
+    "Retain finite native pantograph delay 999999s; reject invalid units/nonfinite/negative delays.",
+    "Retain OR default startup RPM thresholds for the narrow 1229/1230 RPM auxiliary engine; explicit invalid thresholds remain errors.",
+    "An absent control Position uses the native zero/unset default; malformed or nonfinite coordinates fail.",
+    "One cab resolver shared by renderer and auditor: explicit shape + sibling CVF first, then explicitly declared CabView; missing explicit models are never replaced by a scan.",
+    "Preserve native dynamic-brake speed knots representable by OR float fields rather than clipping to 400 m/s; keep ordered finite nonnegative curves, valid forces and size bounds.",
+    "Keep anonymous native matrices in their authored numeric table slots; named later meshes, hierarchy and vertex-state indices are not shifted. Native mesh bytes are unchanged."
+  ],
+  "anonymous_field_examples": {
+    "pantograph_delays_s": [
+      0,
+      999999,
+      0,
+      0
+    ],
+    "diesel_idle_rpm": 1229,
+    "diesel_max_rpm": 1230,
+    "default_starting_rpm": 819.3333333333334,
+    "default_confirmation_rpm": 1351.9,
+    "shape": "interior.s",
+    "declared_cvf": "../../Common.Cab/shared.cvf",
+    "dynamic_brake_fade_default_mph": 1800,
+    "dynamic_brake_terminal_knots_mps": [
+      804.672,
+      805.172
+    ]
+  },
+  "maj_coexistence": {
+    "original_url": "https://github.com/Jeanprisca/MAJ",
+    "revision": "6d02a4009f8397bbe997e541686e807bbdeeeff4",
+    "download_sha256": "5f55a26978bb63552581ffdcafa14c767db784957fa4ba191fe161726b8b2364",
+    "native_formations": 19,
+    "player_ready_with_base_trainset": 0,
+    "files_overlaid": false,
+    "qa_copy_files": 798,
+    "qa_copy_byte_identical": true,
+    "scope": "This update remains incomplete when installed separately; the positive case is the original base pack only."
+  },
+  "qa_storage": {
+    "temporary_bind_mount_inside_test_user_home": true,
+    "filesystem": "tmpfs",
+    "free_before_bytes": 3446697984,
+    "owner_preserved": true,
+    "host_diagnostic_group_read_only": true,
+    "other_access": false,
+    "snap_interfaces_added": false,
+    "executed_author_installers": false,
+    "author_resources_versioned": false
+  },
+  "focused_regression": {
+    "command": "CARGO_PROFILE_DEV_OPT_LEVEL=1 CARGO_PROFILE_TEST_OPT_LEVEL=1 CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0 CARGO_PROFILE_DEV_STRIP=symbols CARGO_PROFILE_TEST_STRIP=symbols CARGO_INCREMENTAL=0 CARGO_BUILD_JOBS=2 cargo test -p openrailsrs-train --all-features --lib native_3d_cab_pairs_shared_controls_and_keeps_genuine_resource_failures",
+    "pass": true,
+    "source_changes_after_cli_build": "Only the test fixture corrected STF escaping, native loader root and restoration of the 3D-only placeholder."
+  },
+  "pending": [
+    "Repeat resource preparation and re-audit with the final clean core24 Snap.",
+    "Show the original TGV325 formation in the final Snap train selector.",
+    "Repeat the normal live synthetic 25 kV cab and exterior captures inside the final strict Snap."
+  ],
+  "host_runtime_candidate25": {
+    "viewer_sha256": "b18442e7a3d21b9895c74ade1bd65a71ec503eb264b6e94acacabb26bf2fbaa7",
+    "native_equipment_accepted": true,
+    "fixture": "Own synthetic electric_supply lab with a 25 kV scenario override; not an original TGV route.",
+    "shader_pipelines_failed": 0,
+    "shader_pipelines_pending": 0,
+    "loaded_vehicle_shapes": 12,
+    "textured_exterior_parts": 1886,
+    "cab": {
+      "visible_mesh_parts": 364,
+      "eye_error_m": 0.0,
+      "camera_inside_geometry": true,
+      "screenshot_sha256": "1c133093b088f4ceefd133c8e13358daa2380f15de6675e6fcf265fa9d24e934",
+      "report_sha256": "f720ab5a74ab3cbcaab6256c129a71a80ef7881f685537784ff2fa5565e8b6f3"
+    },
+    "exterior": {
+      "visual_acceptance": false,
+      "reason": "Panels and roof pieces are misplaced because the parser omitted11 unnamed native matrices, shifting all subsequent matrix indices.",
+      "screenshot_sha256": "f14a8a8801e6bf339900bf95a89d351360bf7a3e08619e1fc009db575d6d35d3",
+      "report_sha256": "9bf94f4f4e97d6f822b062713acd56077f9c8c5cc06940f37b0ff99b829dc304"
+    },
+    "performance_claim": null
+  },
+  "runtime_regression": {
+    "command": "CARGO_PROFILE_DEV_OPT_LEVEL=1 CARGO_PROFILE_TEST_OPT_LEVEL=1 CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0 CARGO_PROFILE_DEV_STRIP=symbols CARGO_PROFILE_TEST_STRIP=symbols CARGO_INCREMENTAL=0 CARGO_BUILD_JOBS=2 cargo test -p openrailsrs-sim --all-features --test native_content_equipment",
+    "tests_passed": 2,
+    "failures": 0,
+    "scope": "Representative native fade knots and long pickup delay through LiveDrive plus save/restore; malformed state and references stay rejected."
+  },
+  "native_shape_diagnosis": {
+    "declared_matrix_count": 134,
+    "hierarchy_count": 134,
+    "dumped_matrix_blocks": 134,
+    "parsed_matrix_count_before_fix": 123,
+    "unnamed_matrix_count": 11,
+    "originals_changed": false,
+    "reference": "Open Rails1.6.1 ShapeFile.cs matrix(SBR) preserves an absent Label and reads all12 coefficients; matrices collection keeps every index.",
+    "fix_status": "Original shape parse and host visual acceptance confirmed with candidate 26.",
+    "parsed_matrix_count_after_fix": 134,
+    "hierarchy_count_after_fix": 134,
+    "maximum_vertex_state_matrix_index_after_fix": 133,
+    "after_fix_unnamed_matrix_count": 11,
+    "probe_scope": "Read-only parse of the unchanged original compressed binary locomotive shape; anonymous table slots are preserved."
+  },
+  "host_candidate26": {
+    "viewer_sha256": "24793d08bc7a6900ea817165dd2519492dbbdceacd043cf58c08a1fd6170ca4a",
+    "cli_sha256": "185500fa159b8c4ded3f13d7cbc77cbdd741efe00e85b0e3dc283b92722328dc",
+    "original_formation": "SNCF_TGV-325-FR_Sharpe.con",
+    "own_fixture": "Application examples/electric_supply/route, synthetic 25 kV supply; not an original route from the TGV author. Laboratory has deliberately coloured terrain.",
+    "command": "openrailsrs-viewer3d --direct --live --viewing-distance 400 <QA>/tgv325-electrified.toml",
+    "resources_changed": false,
+    "native_equipment_accepted": true,
+    "loaded_shapes": 12,
+    "textured_exterior_parts": 1886,
+    "visual_result": "Cab complete; nose, body and roof assembled without the detached panels observed on candidate 25.",
+    "captures": [
+      {
+        "mode": "driver",
+        "started_at": 1791940283.0114677,
+        "finished_at": 1791940310.442206,
+        "formation": "SNCF_TGV-325-FR_Sharpe.con",
+        "vehicles": 12,
+        "screenshot_sha256": "1c133093b088f4ceefd133c8e13358daa2380f15de6675e6fcf265fa9d24e934",
+        "report_sha256": "03446bb7525c0b6f455165d929a2926acb42e0b43524626c3c1f9afc6ac06787",
+        "scenario_sha256": "10367a70fe568b261622cd7acb2e451e1eff5de0b44a7ac987c2d5c55c3e765a",
+        "capture_environment": {
+          "OPENRAILSRS_FOLLOW": "driver",
+          "OPENRAILSRS_CAM_DIST": "220",
+          "OPENRAILSRS_CAM_PITCH": "0.25",
+          "OPENRAILSRS_CAM_YAW": "1.6",
+          "OPENRAILSRS_SCREENSHOT_AFTER_READY": "1",
+          "OPENRAILSRS_SCREENSHOT_READY_FRAMES": "180"
+        },
+        "renderer": {
+          "backend": "Vulkan",
+          "device_type": "DiscreteGpu",
+          "hardware": true,
+          "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+        },
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "cab_view": {
+          "camera_eye": [
+            133.364990234375,
+            3.0899999141693115,
+            42.0099983215332
+          ],
+          "camera_inside_geometry": true,
+          "expected_eye": [
+            133.364990234375,
+            3.0899999141693115,
+            42.0099983215332
+          ],
+          "eye_error_m": 0.0,
+          "mesh_parts": 364,
+          "visible_mesh_parts": 364
+        },
+        "visual_inspected": true
+      },
+      {
+        "mode": "exterior",
+        "started_at": 1791940310.475131,
+        "finished_at": 1791940335.901736,
+        "formation": "SNCF_TGV-325-FR_Sharpe.con",
+        "vehicles": 12,
+        "screenshot_sha256": "827432a4929548615cfebff8d3957a733ccd72a86cf04010fd85fc00853c1320",
+        "report_sha256": "66cc2be8830ca87dcdc2f5adb97144f88ea2e0d8bf537e3bc6a038e323459b34",
+        "scenario_sha256": "10367a70fe568b261622cd7acb2e451e1eff5de0b44a7ac987c2d5c55c3e765a",
+        "capture_environment": {
+          "OPENRAILSRS_FOLLOW": "orbit",
+          "OPENRAILSRS_CAM_DIST": "95",
+          "OPENRAILSRS_CAM_PITCH": "0.18",
+          "OPENRAILSRS_CAM_YAW": "0.4",
+          "OPENRAILSRS_CAPTURE_OR_FOCUS": "1",
+          "OPENRAILSRS_SCREENSHOT_AFTER_READY": "1",
+          "OPENRAILSRS_SCREENSHOT_READY_FRAMES": "180"
+        },
+        "renderer": {
+          "backend": "Vulkan",
+          "device_type": "DiscreteGpu",
+          "hardware": true,
+          "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+        },
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "cab_view": null,
+        "visual_inspected": true
+      }
+    ],
+    "concurrent_cpu_work": "check24",
+    "performance_claim": null,
+    "snap_acceptance": false
+  },
+  "matrix_regression": {
+    "ascii_test": "typed::shape::tests::anonymous_matrix_keeps_coefficients_and_following_named_slot",
+    "binary_test": "shape_binary::tests::binary_shape_keeps_anonymous_matrices_in_134_slot_native_hierarchy",
+    "original_shape_count": 134,
+    "unnamed_slots": 11,
+    "primitive_reference_slot": 133,
+    "regression_results": "Recorded by the separate check.json; visual and parse acceptance do not substitute for that check."
+  }
+}

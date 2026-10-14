@@ -4,7 +4,7 @@ use std::fs::File;
 use std::path::Path;
 
 use anyhow::{Context, Result};
-use openrailsrs_sim::{LiveDriveSession, ServicePhase, csv_out::RunCsvWriter};
+use openrailsrs_sim::{LiveDriveSession, LiveTraffic, ServicePhase, csv_out::RunCsvWriter};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -18,6 +18,7 @@ struct ServiceOutcome<'a> {
     failure: Option<&'a str>,
     completion_scope: &'a str,
     stops: &'a [openrailsrs_sim::ServiceStopResult],
+    traffic: Vec<serde_json::Value>,
 }
 
 pub fn run(scenario_path: &Path, out_dir: &Path, frame_dt: f64) -> Result<bool> {
@@ -30,6 +31,8 @@ pub fn run(scenario_path: &Path, out_dir: &Path, frame_dt: f64) -> Result<bool> 
         .context("scenario has no directory")?;
     let scenario = openrailsrs_scenarios::load_scenario(scenario_path)?;
     let mut session = LiveDriveSession::from_scenario(scenario_dir, &scenario)?;
+    let mut traffic =
+        LiveTraffic::from_scenario(scenario_dir, &scenario).map_err(anyhow::Error::msg)?;
     std::fs::create_dir_all(out_dir)?;
     let mut csv = RunCsvWriter::new(File::create(out_dir.join("run.csv"))?)?;
     csv.write_sample(&session.state)?;
@@ -46,7 +49,7 @@ pub fn run(scenario_path: &Path, out_dir: &Path, frame_dt: f64) -> Result<bool> 
     ])?;
     while !session.arrived && session.time_s() < scenario.simulation.duration {
         let before = session.time_s();
-        session.step_autodrive(frame_dt, 0.75, |_| {});
+        traffic.advance(&mut session, frame_dt, Some(0.75), |_| {});
         if session.time_s() > before {
             csv.write_sample(&session.state)?;
             let signal = session.next_signal_ahead();
@@ -82,6 +85,20 @@ pub fn run(scenario_path: &Path, out_dir: &Path, frame_dt: f64) -> Result<bool> 
         failure: session.gameplay.failure.as_deref(),
         completion_scope: "Resolved route and declared passenger stops; not arbitrary ACT scripted events",
         stops: &session.gameplay.stop_results,
+        traffic: traffic
+            .services
+            .iter()
+            .map(|s| {
+                serde_json::json!({
+                    "id":s.id,"departed":s.departed,"arrived":s.session.arrived,
+                    "head_m":s.session.head_chainage_m(),"distance_m":s.session.state.odometer_m,
+                    "time_s":s.session.time_s(),"phase":s.session.gameplay.phase,
+                    "failure":s.session.gameplay.failure,
+                    "native_signal_errors":s.session.native_signals.errors,
+                    "occupied_sections":s.session.own_track_occupancy(),
+                })
+            })
+            .collect(),
     };
     let json = serde_json::to_string_pretty(&outcome)?;
     std::fs::write(out_dir.join("outcome.json"), &json)?;

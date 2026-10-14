@@ -1063,6 +1063,95 @@ mod tests {
     }
 
     #[test]
+    fn binary_shape_keeps_anonymous_matrices_in_134_slot_native_hierarchy() {
+        // Representative native layout: eleven unnamed matrices occur before
+        // the later bogie/collector slots. Empty labels are valid in OR 1.6.1.
+        const COUNT: usize = 134;
+        let unnamed = [8, 17, 19, 20, 21, 26, 35, 54, 55, 60, 72];
+        let mut matrix_table = (COUNT as u32).to_le_bytes().to_vec();
+        for index in 0..COUNT {
+            let mut coefficients = Vec::new();
+            for value in [
+                1_f32,
+                0.,
+                0.,
+                0.,
+                1.,
+                0.,
+                0.,
+                0.,
+                1.,
+                index as f32,
+                1.,
+                index as f32 * 0.25,
+            ] {
+                coefficients.extend_from_slice(&value.to_le_bytes());
+            }
+            let name = if unnamed.contains(&index) {
+                String::new()
+            } else {
+                format!("NODE{index}")
+            };
+            matrix_table.extend(binary_block_with_label(65, &name, &coefficients));
+        }
+        let mut shape_body = binary_block(66, &matrix_table);
+        let mut vertex_states = 1u32.to_le_bytes().to_vec();
+        let native_state: Vec<u8> = [0_i32, 133, -5, 0]
+            .into_iter()
+            .flat_map(i32::to_le_bytes)
+            .collect();
+        vertex_states.extend(binary_block(46, &native_state));
+        shape_body.extend(binary_block(47, &vertex_states));
+        let mut hierarchy = (COUNT as u32).to_le_bytes().to_vec();
+        let parents: Vec<i32> = (0..COUNT)
+            .map(|index| match index {
+                0 => -1,
+                115..=116 => 114,
+                _ => 0,
+            })
+            .collect();
+        hierarchy.extend(parents.iter().copied().flat_map(i32::to_le_bytes));
+        let header = [
+            binary_block(35, &2000_f32.to_le_bytes()),
+            binary_block(67, &hierarchy),
+        ]
+        .concat();
+        let level = binary_block(37, &binary_block(34, &header));
+        let levels = [1u32.to_le_bytes().to_vec(), level].concat();
+        let control = binary_block(32, &binary_block(36, &levels));
+        let controls = [1u32.to_le_bytes().to_vec(), control].concat();
+        shape_body.extend(binary_block(31, &controls));
+        let payload = SimisaPayload {
+            bytes: binary_block(71, &shape_body),
+            is_text: false,
+            data_offset: 0,
+            token_offset: 0,
+        };
+        let shape = crate::shape_from_binary_payload(&payload).unwrap();
+        assert_eq!(shape.matrices.len(), COUNT);
+        assert_eq!(shape.lod_controls[0].distance_levels[0].hierarchy, parents);
+        for (index, matrix) in shape.matrices.iter().enumerate() {
+            assert_eq!(
+                matrix.name,
+                if unnamed.contains(&index) {
+                    String::new()
+                } else {
+                    format!("NODE{index}")
+                }
+            );
+            assert_eq!(
+                matrix.matrix.rows[3],
+                [index as f64, 1., index as f64 * 0.25]
+            );
+        }
+        // A primitive's vertex state still addresses the authored final slot,
+        // rather than a shifted earlier transform or an out-of-range identity.
+        assert_eq!(shape.vtx_states[0].matrix_idx, 133);
+        assert_eq!(shape.matrices[133].name, "NODE133");
+        assert_eq!(shape.matrices[133].matrix.rows[3], [133., 1., 33.25]);
+    }
+
+    #[test]
     fn minimal_ascii_shape_still_parses_via_container() {
         let bytes = std::fs::read(
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/minimal.s"),

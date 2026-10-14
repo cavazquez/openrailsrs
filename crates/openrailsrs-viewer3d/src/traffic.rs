@@ -108,7 +108,15 @@ pub fn spawn_traffic(
                 Name::new(format!("traffic:{}", service.id)),
             ))
             .with_children(|train| {
-                for (car_index, vehicle) in consist.vehicles_for(&service.id).iter().enumerate() {
+                // After a driver transfer the abandoned player is an AI service.
+                // Its visual definition remains the scenario's primary consist.
+                let label = if service.id == "Jugador" && !consist.by_label.contains_key("Jugador")
+                {
+                    "primary"
+                } else {
+                    &service.id
+                };
+                for (car_index, vehicle) in consist.vehicles_for(label).iter().enumerate() {
                     let Some(path) = crate::rolling_stock::resolve_consist_vehicle_shape_path(
                         &dirs,
                         vehicle,

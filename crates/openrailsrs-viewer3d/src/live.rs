@@ -90,6 +90,50 @@ impl LiveTrainCameraFrame {
 }
 
 impl LiveDrive {
+    pub fn compatible_control(&self, index: usize) -> Result<(), String> {
+        if !self.traffic.couplings.is_empty() {
+            return Err(
+                "Finalizá la maniobra antes de transferir el mando de una formación unida".into(),
+            );
+        }
+        let original =
+            openrailsrs_scenarios::load_scenario(&self.scenario_path).map_err(|e| e.to_string())?;
+        let entry = original
+            .extra_trains
+            .get(index)
+            .ok_or("Servicio desconocido")?;
+        let root = self
+            .scenario_path
+            .parent()
+            .unwrap_or(std::path::Path::new("."));
+        let own = root
+            .join(&original.train.consist)
+            .canonicalize()
+            .map_err(|e| e.to_string())?;
+        let other = root
+            .join(&entry.consist)
+            .canonicalize()
+            .map_err(|e| e.to_string())?;
+        if own != other
+            || self.session.formation.cars.len()
+                != self
+                    .traffic
+                    .services
+                    .get(index)
+                    .ok_or("Servicio desconocido")?
+                    .session
+                    .formation
+                    .cars
+                    .len()
+        {
+            return Err("El cambio de conductor requiere la misma formación instalada; otros modelos necesitan reconstruir sus cabinas y recursos".into());
+        }
+        Ok(())
+    }
+    pub fn take_control(&mut self, index: usize) -> Result<(), String> {
+        self.compatible_control(index)?;
+        self.traffic.take_control(&mut self.session, index)
+    }
     pub fn from_scenario_path(path: &std::path::Path) -> Result<Self, String> {
         let scenario_dir = path
             .parent()
@@ -324,7 +368,13 @@ pub fn enable_live_defaults(
     framing: Option<Res<LiveTrainCameraFrame>>,
     mut limit: ResMut<OrbitDistanceLimit>,
     train: Query<&Transform, (With<LiveTrainMarker>, Without<Camera3d>)>,
-    mut cam: Query<(&mut Transform, &mut OrbitState), (With<Camera3d>, Without<LiveTrainMarker>)>,
+    mut cam: Query<
+        (&mut Transform, &mut OrbitState),
+        (
+            (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+            Without<LiveTrainMarker>,
+        ),
+    >,
 ) {
     if std::env::var("OPENRAILSRS_CAPTURE_WIPER").is_ok_and(|v| v == "1") {
         live.session.wiper_active = true;
@@ -400,6 +450,7 @@ pub fn advance_live_sim(
     atmosphere: Option<Res<crate::weather_state::WeatherState>>,
     mut ui: Option<ResMut<crate::player_ui::PlayerUiState>>,
 ) {
+    let _profile = crate::performance::profile_system("live_drive");
     if live.paused || loading.is_some() {
         return;
     }

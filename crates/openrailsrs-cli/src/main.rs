@@ -61,6 +61,13 @@ enum Commands {
         list: bool,
         #[arg(long)]
         package: Option<String>,
+        #[arg(long, conflicts_with = "package")]
+        url: Option<String>,
+        #[arg(long)]
+        confirm_original: bool,
+        /// Resolve a public original repository without downloading its archive.
+        #[arg(long, requires = "url")]
+        inspect_url: bool,
         #[arg(long)]
         destination: Option<PathBuf>,
     },
@@ -432,14 +439,25 @@ fn main() -> anyhow::Result<()> {
         Commands::Content {
             list,
             package,
+            url,
+            confirm_original,
+            inspect_url,
             destination,
         } => {
             let mut command =
                 openrailsrs_content::installer_command().map_err(anyhow::Error::msg)?;
-            if list || package.is_none() {
+            if list || (package.is_none() && url.is_none()) {
                 command.arg("--list");
             } else if let Some(package) = package {
                 command.args(["--package", &package]);
+            } else if let Some(url) = url {
+                command.args(["--url", &url]);
+                if confirm_original {
+                    command.arg("--confirm-original");
+                }
+            }
+            if inspect_url {
+                command.arg("--inspect-url");
             }
             if let Some(destination) = destination {
                 command.arg("--destination").arg(destination);

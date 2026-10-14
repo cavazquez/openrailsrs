@@ -339,6 +339,8 @@ fn baked_part_local_rotation(
 /// Runs after the lead marker pose is written; children keep authored mesh frame + Flip.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_consist_car_track_poses(
+    mut joints: Option<ResMut<crate::train_connections::JacobsJoints>>,
+    presentation: Option<Res<crate::train_presentation::TrainPresentation>>,
     live: Option<Res<LiveDrive>>,
     replay: Option<Res<ReplayState>>,
     scene: Res<TrackScene>,
@@ -361,6 +363,7 @@ pub fn update_consist_car_track_poses(
         (
             &TrainCarTrackOffset,
             Option<&TrainCarSupports>,
+            Option<&crate::rolling_stock::ConsistCarIndex>,
             &ChildOf,
             &mut Transform,
         ),
@@ -377,8 +380,15 @@ pub fn update_consist_car_track_poses(
         .track_db()
         .map(|tdb| resolver_cache.resolver(tdb, Some(assets.tsection())));
     let terrain_ref = terrain.as_deref();
+    if let Some(joints) = joints.as_mut() {
+        joints.0.clear();
+    }
 
-    for (car, supports, child_of, mut tf) in &mut cars {
+    let offsets = cars
+        .iter()
+        .filter_map(|(o, _, i, _, _)| i.map(|i| ((o.track_index, i.0), (o.offset_m, o.flipped))))
+        .collect::<HashMap<_, _>>();
+    for (car, supports, index, child_of, mut tf) in &mut cars {
         let Ok(parent_tf) = parents.get(child_of.parent()) else {
             continue;
         };
@@ -387,13 +397,82 @@ pub fn update_consist_car_track_poses(
         else {
             continue;
         };
+        let mut offset_m = car.offset_m;
+        let mut supports = supports.copied();
+        if car.track_index == 0
+            && let Some(index) = index
+            && let Some(presentation) = presentation.as_ref()
+        {
+            for definition in &presentation.vehicles {
+                let Some(joint) = &definition.jacobs else {
+                    continue;
+                };
+                if index.0 != definition.vehicle && index.0 != joint.neighbor {
+                    continue;
+                }
+                if live_ref.is_some_and(|l| {
+                    (definition.vehicle < l.session.formation.coupled_count)
+                        != (joint.neighbor < l.session.formation.coupled_count)
+                }) {
+                    continue;
+                }
+                let Some(&(own, own_flip)) = offsets.get(&(0, definition.vehicle)) else {
+                    continue;
+                };
+                let Some(&(other, other_flip)) = offsets.get(&(0, joint.neighbor)) else {
+                    continue;
+                };
+                let own_sign = if own_flip { -1. } else { 1. };
+                let other_sign = if other_flip { -1. } else { 1. };
+                let shared = (own - joint.own_support_m * own_sign + other
+                    - joint.other_support_m * other_sign)
+                    * 0.5;
+                if index.0 == definition.vehicle
+                    && let Some(joints) = joints.as_mut()
+                    && let Some(pose) = car_world_pose_at_head_offset(
+                        &scene.graph,
+                        live_ref,
+                        car.track_index,
+                        &head_edge,
+                        head_pos,
+                        f64::from(shared),
+                        car.flipped,
+                        tdb_resolver.as_ref(),
+                        &scene,
+                        offset.delta,
+                        &focus,
+                        terrain_ref,
+                        &origin,
+                    )
+                {
+                    joints.0.insert(
+                        (definition.vehicle, joint.bogie_matrix.to_ascii_uppercase()),
+                        pose,
+                    );
+                }
+                let anchor = if index.0 == definition.vehicle {
+                    joint.own_support_m
+                } else {
+                    joint.other_support_m
+                };
+                let sign = if car.flipped { -1. } else { 1. };
+                offset_m = shared + anchor * sign;
+                if let Some(s) = supports.as_mut() {
+                    if anchor < 0. {
+                        s.front_m = -anchor;
+                    } else {
+                        s.rear_m = -anchor;
+                    }
+                }
+            }
+        }
         let Some(car_world) = car_world_pose_with_supports(
             &scene.graph,
             live_ref,
             car.track_index,
             &head_edge,
             head_pos,
-            f64::from(car.offset_m),
+            f64::from(offset_m),
             car.flipped,
             tdb_resolver.as_ref(),
             &scene,
@@ -401,7 +480,7 @@ pub fn update_consist_car_track_poses(
             &focus,
             terrain_ref,
             &origin,
-            supports.copied(),
+            supports,
         ) else {
             continue;
         };
@@ -578,6 +657,9 @@ pub fn insert_part_anim(
     prim_state_idx: i32,
     radius_m: f32,
 ) {
+    entity.insert(crate::train_connections::NativePartMatrix(
+        matrix_name(shape, matrix_idx_for_prim_state(shape, prim_state_idx)).to_string(),
+    ));
     let Some((marker, _kind, binding, wheel, bogie, keyed)) =
         part_anim_bundle(shape, prim_state_idx, radius_m)
     else {

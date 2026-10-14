@@ -16,14 +16,16 @@ pub struct TrashEntry {
     pub directory: String,
     pub label: String,
     pub original_name: String,
+    #[serde(default)]
+    pub library: Option<PathBuf>,
 }
 fn managed(data: &Path, path: &Path) -> Result<PathBuf, String> {
-    let root = data
-        .join("official-content")
-        .canonicalize()
-        .map_err(|e| e.to_string())?;
     let path = path.canonicalize().map_err(|e| e.to_string())?;
-    if path.parent() != Some(root.as_path()) || !path.is_dir() {
+    let allowed = openrailsrs_content::content_roots(data)
+        .into_iter()
+        .filter_map(|p| p.canonicalize().ok())
+        .any(|root| path.parent() == Some(root.as_path()));
+    if !allowed || !path.is_dir() {
         return Err("Sólo se pueden retirar copias instaladas en la biblioteca del visor".into());
     }
     let manifest = path
@@ -34,6 +36,20 @@ fn managed(data: &Path, path: &Path) -> Result<PathBuf, String> {
         return Err("El manifiesto sale de la instalación".into());
     }
     Ok(path)
+}
+fn recovery_root(data: &Path, library: Option<&Path>) -> Result<PathBuf, String> {
+    let Some(library) = library else {
+        return Ok(data.join("content-trash"));
+    };
+    let library = library.canonicalize().map_err(|e| e.to_string())?;
+    if !openrailsrs_content::content_roots(data)
+        .into_iter()
+        .filter_map(|p| p.canonicalize().ok())
+        .any(|p| p == library)
+    {
+        return Err("La recuperación no pertenece a una biblioteca registrada".into());
+    }
+    Ok(library.join(".openrailsrs-trash"))
 }
 fn files(data: &Path) -> Vec<PathBuf> {
     let mut files = (1..=3)
@@ -89,29 +105,31 @@ pub fn inspect_removal(data: &Path, path: &Path) -> Result<RemovalPlan, String> 
             }
         }
     }
-    if let Ok(packages) = std::fs::read_dir(data.join("official-content")) {
-        for package in packages.flatten().take(512) {
-            let candidate = package.path();
-            if candidate == path {
-                continue;
-            }
-            for name in ["openrailsrs-prepared.json", "openrailsrs-ready.json"] {
-                let Some(file) = candidate.join(name).canonicalize().ok().filter(|p| {
-                    candidate
-                        .canonicalize()
-                        .ok()
-                        .is_some_and(|root| p.starts_with(root))
-                }) else {
+    for root in openrailsrs_content::content_roots(data) {
+        if let Ok(packages) = std::fs::read_dir(root) {
+            for package in packages.flatten().take(512) {
+                let candidate = package.path();
+                if candidate == path {
                     continue;
-                };
-                if std::fs::metadata(&file).is_ok_and(|m| m.len() <= 8 * 1024 * 1024)
-                    && let Ok(bytes) = std::fs::read(file)
-                    && let Ok(value) = serde_json::from_slice::<serde_json::Value>(&bytes)
-                    && references(&value, &path)
-                {
-                    plan.packages
-                        .push(crate::official_content::installed_label(&candidate));
-                    break;
+                }
+                for name in ["openrailsrs-prepared.json", "openrailsrs-ready.json"] {
+                    let Some(file) = candidate.join(name).canonicalize().ok().filter(|p| {
+                        candidate
+                            .canonicalize()
+                            .ok()
+                            .is_some_and(|root| p.starts_with(root))
+                    }) else {
+                        continue;
+                    };
+                    if std::fs::metadata(&file).is_ok_and(|m| m.len() <= 8 * 1024 * 1024)
+                        && let Ok(bytes) = std::fs::read(file)
+                        && let Ok(value) = serde_json::from_slice::<serde_json::Value>(&bytes)
+                        && references(&value, &path)
+                    {
+                        plan.packages
+                            .push(crate::official_content::installed_label(&candidate));
+                        break;
+                    }
                 }
             }
         }
@@ -130,7 +148,12 @@ pub fn remove(data: &Path, path: &Path) -> Result<TrashEntry, String> {
         "content-{}",
         chrono::Utc::now().timestamp_nanos_opt().unwrap_or_default()
     );
-    let root = data.join("content-trash");
+    let library = plan
+        .path
+        .parent()
+        .filter(|p| *p != data.join("official-content"))
+        .map(Path::to_path_buf);
+    let root = recovery_root(data, library.as_deref())?;
     std::fs::create_dir_all(&root).map_err(|e| e.to_string())?;
     let destination = root.join(&directory);
     if destination.exists() {
@@ -141,6 +164,7 @@ pub fn remove(data: &Path, path: &Path) -> Result<TrashEntry, String> {
         directory,
         label: plan.label,
         original_name,
+        library,
     };
     // Own the wrapper; the author's tree is moved as an unchanged child.
     std::fs::create_dir(&destination).map_err(|e| e.to_string())?;
@@ -168,28 +192,38 @@ fn leaf(name: &str) -> bool {
         )
 }
 pub fn trash(data: &Path) -> Vec<TrashEntry> {
-    let root = data.join("content-trash");
+    let roots = std::iter::once(data.join("content-trash")).chain(
+        openrailsrs_content::content_roots(data)
+            .into_iter()
+            .map(|p| p.join(".openrailsrs-trash")),
+    );
     let mut entries = vec![];
-    if let Ok(files) = std::fs::read_dir(&root) {
-        for file in files.flatten().take(128) {
-            if let Ok(path) = file.path().canonicalize()
-                && root
-                    .canonicalize()
-                    .is_ok_and(|r| path.parent() == Some(r.as_path()))
-            {
-                let manifest = path.join("recovery.json");
-                if manifest.canonicalize().is_ok_and(|p| p.starts_with(&path))
-                    && std::fs::metadata(&manifest).is_ok_and(|m| m.len() <= 16384)
-                    && let Ok(bytes) = std::fs::read(manifest)
-                    && let Ok(entry) = serde_json::from_slice::<TrashEntry>(&bytes)
-                    && entry.schema == 1
-                    && leaf(&entry.directory)
-                    && leaf(&entry.original_name)
-                    && path
-                        .file_name()
-                        .is_some_and(|n| n == entry.directory.as_str())
+    for root in roots {
+        if let Ok(files) = std::fs::read_dir(&root) {
+            for file in files.flatten().take(128) {
+                if let Ok(path) = file.path().canonicalize()
+                    && root
+                        .canonicalize()
+                        .is_ok_and(|r| path.parent() == Some(r.as_path()))
                 {
-                    entries.push(entry);
+                    let manifest = path.join("recovery.json");
+                    if manifest.canonicalize().is_ok_and(|p| p.starts_with(&path))
+                        && std::fs::metadata(&manifest).is_ok_and(|m| m.len() <= 16384)
+                        && let Ok(bytes) = std::fs::read(manifest)
+                        && let Ok(entry) = serde_json::from_slice::<TrashEntry>(&bytes)
+                        && entry.schema == 1
+                        && leaf(&entry.directory)
+                        && leaf(&entry.original_name)
+                        && recovery_root(data, entry.library.as_deref())
+                            .ok()
+                            .and_then(|p| p.canonicalize().ok())
+                            == root.canonicalize().ok()
+                        && path
+                            .file_name()
+                            .is_some_and(|n| n == entry.directory.as_str())
+                    {
+                        entries.push(entry);
+                    }
                 }
             }
         }
@@ -200,8 +234,7 @@ pub fn restore(data: &Path, entry: &TrashEntry) -> Result<PathBuf, String> {
     if entry.schema != 1 || !leaf(&entry.directory) || !leaf(&entry.original_name) {
         return Err("Referencia de recuperación inválida".into());
     }
-    let root = data
-        .join("content-trash")
+    let root = recovery_root(data, entry.library.as_deref())?
         .canonicalize()
         .map_err(|e| e.to_string())?;
     let source = root
@@ -218,7 +251,11 @@ pub fn restore(data: &Path, entry: &TrashEntry) -> Result<PathBuf, String> {
     if package.parent() != Some(source.as_path()) || !package.is_dir() {
         return Err("Contenido recuperable inválido".into());
     }
-    let destination = data.join("official-content").join(&entry.original_name);
+    let destination = entry
+        .library
+        .clone()
+        .unwrap_or_else(|| data.join("official-content"))
+        .join(&entry.original_name);
     if destination.symlink_metadata().is_ok() {
         return Err("La versión ya está instalada; se conserva la copia recuperable".into());
     }
@@ -367,5 +404,32 @@ mod tests {
         assert_eq!((diff.changed, diff.added, diff.removed), (1, 1, 1));
         assert_eq!(std::fs::read(a.join("same.eng")).unwrap(), b"before");
         assert!(compare(t.path(), &a, &a).is_err());
+    }
+    #[test]
+    fn external_library_removal_stays_on_its_volume_and_recovers_after_selection_changes() {
+        let t = tempfile::tempdir().unwrap();
+        let data = t.path().join("player");
+        let first = t.path().join("first-disk");
+        let second = t.path().join("second-disk");
+        std::fs::create_dir(&first).unwrap();
+        std::fs::create_dir(&second).unwrap();
+        let library = openrailsrs_content::select_content_dir(&data, &first).unwrap();
+        let package = library.join("route-123");
+        std::fs::create_dir(&package).unwrap();
+        std::fs::write(package.join("openrailsrs-content.json"), b"{}").unwrap();
+        std::fs::write(package.join("original.eng"), b"original unchanged").unwrap();
+        let entry = remove(&data, &package).unwrap();
+        assert_eq!(entry.library.as_ref(), Some(&library));
+        assert!(!data.join("content-trash").exists());
+        assert!(library.join(".openrailsrs-trash").is_dir());
+        openrailsrs_content::select_content_dir(&data, &second).unwrap();
+        let recovered = trash(&data);
+        assert_eq!(recovered.len(), 1);
+        assert_eq!(restore(&data, &recovered[0]).unwrap(), package);
+        assert_eq!(
+            std::fs::read(package.join("original.eng")).unwrap(),
+            b"original unchanged"
+        );
+        assert!(trash(&data).is_empty());
     }
 }

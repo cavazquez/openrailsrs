@@ -1,0 +1,3 @@
+SIMISA@@@@@@@@@@JINX0D0t______
+Wagon ( lab Type ( Engine ) WagonShape ( connections.s ) Mass ( 40t ) Size ( 3m 4m 20m ) BrakeSystemType ( Air_single_pipe ) MaxBrakeForce ( 120kN ) )
+Engine ( lab Type ( Diesel ) ORTSElectricTrainSupply ( Mode ( Auto ) DieselEngineMinRPM ( 300 ) ) MaxPower ( 1MW ) MaxForce ( 100kN ) MaxVelocity ( 100km/h ) DieselEngineIdleRPM ( 300 ) DieselEngineMaxRPM ( 900 ) DieselEngineMaxRPMChangeRate ( 80 ) MaxDieselLevel ( 500l ) DieselUsedPerHourAtIdle ( 18l ) DieselUsedPerHourAtMaxPower ( 180l ) )

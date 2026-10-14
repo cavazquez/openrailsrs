@@ -957,7 +957,10 @@ pub fn toggle_mode_system(
     mut mode: ResMut<CameraMode>,
     mut query: Query<
         (&Transform, &mut OrbitState, &mut FlyState),
-        (With<Camera3d>, Without<crate::train::TrainMarker>),
+        (
+            (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+            Without<crate::train::TrainMarker>,
+        ),
     >,
 ) {
     let defaults = crate::player_settings::PlayerSettings::default();
@@ -1327,7 +1330,10 @@ pub fn follow_train_camera(
     >,
     mut orbit_query: Query<
         (&mut Transform, &mut OrbitState),
-        (With<Camera3d>, Without<crate::train::TrainMarker>),
+        (
+            (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+            Without<crate::train::TrainMarker>,
+        ),
     >,
 ) {
     let (settings, cvf, passenger, train_motion) = cab_preferences;
@@ -1614,7 +1620,10 @@ pub fn orbit_camera_system(
     mut wheel: MessageReader<MouseWheel>,
     mut query: Query<
         (&mut Transform, &mut OrbitState),
-        (With<Camera3d>, Without<crate::train::TrainMarker>),
+        (
+            (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+            Without<crate::train::TrainMarker>,
+        ),
     >,
     ui: Option<Res<crate::player_ui::PlayerUiState>>,
     pointer: Option<Res<crate::player_ui::UiPointerCapture>>,
@@ -1786,7 +1795,10 @@ pub fn fly_camera_system(
     mut wheel: MessageReader<MouseWheel>,
     mut query: Query<
         (&mut Transform, &mut FlyState),
-        (With<Camera3d>, Without<crate::train::TrainMarker>),
+        (
+            (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+            Without<crate::train::TrainMarker>,
+        ),
     >,
     ui: Option<Res<crate::player_ui::PlayerUiState>>,
     pointer: Option<Res<crate::player_ui::UiPointerCapture>>,
@@ -1855,7 +1867,10 @@ pub fn constrain_exterior_camera_to_terrain(
     terrain: Option<Res<crate::terrain::TerrainElevation>>,
     focus: Res<crate::world::RouteFocus>,
     origin: Res<crate::floating_origin::FloatingOrigin>,
-    mut cameras: Query<(&mut Transform, &mut OrbitState), With<Camera3d>>,
+    mut cameras: Query<
+        (&mut Transform, &mut OrbitState),
+        (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+    >,
 ) {
     if !opts.live
         || scenery.is_tile_lab()
@@ -1971,7 +1986,7 @@ pub fn update_driver_camera_fov(
             &mut Exposure,
             &Transform,
         ),
-        With<Camera3d>,
+        (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
     >,
 ) {
     let Ok((mut projection, mut ambient, mut tonemapping, mut exposure, pose)) = query.single_mut()
@@ -2097,7 +2112,8 @@ mod tests {
             Option<&Mesh3d>,
             Option<&NotShadowCaster>,
             Has<bevy::render::view::NoIndirectDrawing>,
-        ), With<Camera3d>>();
+        ), (With<Camera3d>, Without<crate::mirrors::MirrorCamera>)>(
+        );
         let (mesh, no_shadow, explicit_draws) = cameras.single(world).expect("viewer camera");
         assert!(mesh.is_none());
         assert!(no_shadow.is_some());
@@ -2305,7 +2321,7 @@ mod tests {
                 .unwrap();
             let world = app.world_mut();
             let mut query =
-                world.query_filtered::<(&Exposure, &Tonemapping, &AmbientLight), With<Camera3d>>();
+                world.query_filtered::<(&Exposure, &Tonemapping, &AmbientLight), (With<Camera3d>, Without<crate::mirrors::MirrorCamera>)>();
             let (exposure, tone, ambient) = query.single(world).unwrap();
             assert_eq!(exposure.ev100, Exposure::SUNLIGHT.ev100, "{mode:?}");
             assert_eq!(*tone, live_tonemapping());

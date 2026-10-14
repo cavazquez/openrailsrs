@@ -29,6 +29,7 @@ pub struct ConsistVehicleVisual {
 /// Loaded consists keyed by replay track label (`primary`, extra `id`, …).
 #[derive(Resource, Clone, Default)]
 pub struct TrainConsistScene {
+    pub primary_service_id: Option<String>,
     pub active_cab_vehicle: usize,
     pub scenario_dir: Option<PathBuf>,
     /// Primary consist path from `scenario.toml` (`train.consist`).
@@ -39,6 +40,37 @@ pub struct TrainConsistScene {
 }
 
 impl TrainConsistScene {
+    pub fn transfer_control(&mut self, id: &str, consist: String) -> Result<(), String> {
+        let target = self
+            .by_label
+            .remove(id)
+            .ok_or("Modelos del servicio no disponibles")?;
+        let previous = self
+            .by_label
+            .insert("primary".into(), target)
+            .unwrap_or_default();
+        let old = self
+            .primary_service_id
+            .take()
+            .unwrap_or_else(|| "Jugador".into());
+        self.by_label.insert(old, previous);
+        self.primary_service_id = Some(id.into());
+        self.primary_consist_rel = Some(consist);
+        Ok(())
+    }
+    pub fn append_service(&mut self, id: &str) -> Result<(), String> {
+        let donor = self
+            .by_label
+            .remove(id)
+            .ok_or("Faltan los modelos de la formación a recoger")?;
+        let primary = self.by_label.entry("primary".into()).or_default();
+        let length = primary.iter().map(|c| c.length_m).sum::<f32>();
+        for mut car in donor {
+            car.offset_m -= length;
+            primary.push(car);
+        }
+        Ok(())
+    }
     pub fn cab_vehicle(&self) -> Option<&ConsistVehicleVisual> {
         self.vehicles_for("primary").get(self.active_cab_vehicle)
     }
@@ -221,6 +253,12 @@ pub fn resolve_consist_vehicle_shape_path(
             }
         }
         if let Some(path) = crate::shapes::resolve_shape_path(root, name) {
+            return Some(path);
+        }
+        if let Some(shared) = openrailsrs_formats::resource_links::bundled_stock_root(root)
+            .map(|p| p.join(&*trainset))
+            && let Some(path) = crate::shapes::resolve_shape_path(&shared, name)
+        {
             return Some(path);
         }
     }

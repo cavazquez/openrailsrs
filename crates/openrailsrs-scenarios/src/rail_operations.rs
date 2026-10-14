@@ -3,9 +3,106 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 #[serde(default)]
 pub struct RailOperationsDef {
+    pub passing_plans: Vec<PassingPlanDef>,
+    pub yard_deliveries: Vec<YardDeliveryDef>,
+    pub depots: Vec<DepotDef>,
     pub connections: Vec<ConnectionDef>,
     pub works: Vec<TrackWorkDef>,
     pub incidents: Vec<IncidentDef>,
+}
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct PassingPlanDef {
+    pub id: String,
+    pub waiting_service: String,
+    pub passing_service: String,
+    pub siding_edge: String,
+    pub position_m: f64,
+    pub clear_edge: String,
+    /// Complete directed alternatives. The dispatcher preserves pending stops.
+    pub alternatives: Vec<Vec<String>>,
+}
+impl PassingPlanDef {
+    pub fn valid(&self) -> bool {
+        [
+            &self.id,
+            &self.waiting_service,
+            &self.passing_service,
+            &self.siding_edge,
+            &self.clear_edge,
+        ]
+        .into_iter()
+        .all(|s| text(s))
+            && self.waiting_service != self.passing_service
+            && self.position_m.is_finite()
+            && self.position_m > 0.
+            && !self.alternatives.is_empty()
+            && self.alternatives.len() <= 8
+            && self
+                .alternatives
+                .iter()
+                .all(|path| !path.is_empty() && path.len() <= 4096 && path.iter().all(|e| text(e)))
+    }
+}
+/// Exact wagon identities and a physical siding interval, independent of camera
+/// labels. Vehicle numbers refer to the scenario's consist order.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct YardDeliveryDef {
+    #[serde(default)]
+    pub service: Option<String>,
+    pub id: String,
+    pub destination: String,
+    pub edge: String,
+    pub start_m: f64,
+    pub end_m: f64,
+    pub vehicles: Vec<usize>,
+}
+impl YardDeliveryDef {
+    pub fn valid(&self) -> bool {
+        self.service.as_ref().is_none_or(|s| text(s))
+            && text(&self.id)
+            && text(&self.destination)
+            && text(&self.edge)
+            && self.start_m.is_finite()
+            && self.end_m.is_finite()
+            && self.start_m >= 0.
+            && self.end_m > self.start_m
+            && !self.vehicles.is_empty()
+            && self.vehicles.len() <= 256
+            && self
+                .vehicles
+                .iter()
+                .enumerate()
+                .all(|(i, v)| *v < 256 && !self.vehicles[..i].contains(v))
+    }
+}
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct DepotDef {
+    pub id: String,
+    pub edge: String,
+    pub start_m: f64,
+    pub end_m: f64,
+    pub maintenance_s: f64,
+    pub oil_l: f64,
+    pub coolant_l: f64,
+}
+impl DepotDef {
+    pub fn valid(&self) -> bool {
+        text(&self.id)
+            && text(&self.edge)
+            && [
+                self.start_m,
+                self.end_m,
+                self.maintenance_s,
+                self.oil_l,
+                self.coolant_l,
+            ]
+            .iter()
+            .all(|v| v.is_finite() && *v >= 0.)
+            && self.end_m > self.start_m
+            && (30. ..=1800.).contains(&self.maintenance_s)
+            && self.oil_l <= 10000.
+            && self.coolant_l <= 10000.
+    }
 }
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct ConnectionDef {
@@ -40,7 +137,28 @@ pub struct IncidentDef {
 }
 impl RailOperationsDef {
     pub fn valid(&self) -> bool {
-        self.connections.len() <= 128
+        self.passing_plans.len() <= 64
+            && self
+                .passing_plans
+                .iter()
+                .enumerate()
+                .all(|(i, p)| p.valid() && self.passing_plans[..i].iter().all(|q| q.id != p.id))
+            && self.yard_deliveries.len() <= 64
+            && self.yard_deliveries.iter().enumerate().all(|(i, d)| {
+                d.valid()
+                    && self.yard_deliveries[..i].iter().all(|other| {
+                        other.id != d.id
+                            && (other.service != d.service
+                                || !other.vehicles.iter().any(|v| d.vehicles.contains(v)))
+                    })
+            })
+            && self.connections.len() <= 128
+            && self.depots.len() <= 64
+            && self
+                .depots
+                .iter()
+                .enumerate()
+                .all(|(i, d)| d.valid() && self.depots[..i].iter().all(|p| p.id != d.id))
             && self.works.len() <= 256
             && self.incidents.len() <= 128
             && self.connections.iter().all(|c| {

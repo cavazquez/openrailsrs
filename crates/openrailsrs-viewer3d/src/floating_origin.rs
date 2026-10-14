@@ -58,7 +58,10 @@ pub(crate) fn track_dev_recenter_at_subject(
     focus: Res<RouteFocus>,
     mut origin: ResMut<FloatingOrigin>,
     mut queries: ParamSet<(
-        Query<(&mut Transform, &mut OrbitState), With<Camera3d>>,
+        Query<
+            (&mut Transform, &mut OrbitState),
+            (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+        >,
         Query<&Transform, Or<(With<TrainMarker>, With<LiveTrainMarker>)>>,
         Query<
             &mut Transform,
@@ -144,7 +147,10 @@ pub(crate) fn apply_floating_origin(
     mut origin: ResMut<FloatingOrigin>,
     mut queries: ParamSet<(
         Query<&Transform, Or<(With<LiveTrainMarker>, With<TrainMarker>)>>,
-        Query<(&mut Transform, &mut OrbitState), With<Camera3d>>,
+        Query<
+            (&mut Transform, &mut OrbitState),
+            (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+        >,
         Query<
             &mut Transform,
             (

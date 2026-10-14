@@ -6,6 +6,9 @@ use std::{
 };
 pub const CATALOG: &str = include_str!("../../../docs/fixtures/content/official-catalog.json");
 const INSTALLER: &[u8] = include_bytes!("../../../scripts/download_official_content.py");
+pub mod source_cache;
+mod storage;
+pub use storage::{content_dir, content_roots, select_content_dir};
 
 /// Resources of a moved binary/Snap, with source-checkout fallback for developers.
 pub fn resource_dir(fallback: &Path) -> PathBuf {
@@ -147,11 +150,14 @@ fn installer_command_in(directory: &Path) -> Result<Command, String> {
         Command::new(std::env::var_os("OPENRAILSRS_PYTHON").unwrap_or("python3".into()));
     command.arg(script);
     command.env("OPENRAILSRS_PLAYER_DIR", data_dir());
+    command.env("OPENRAILSRS_CONTENT_DIR", content_dir());
     Ok(command)
 }
 fn write_resource(path: &Path, bytes: &[u8]) -> Result<(), String> {
     use std::io::Write;
-    let temp = path.with_extension(format!("{}.tmp", std::process::id()));
+    static WRITE_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let id = WRITE_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let temp = path.with_extension(format!("{}.{id}.tmp", std::process::id()));
     let result = (|| {
         let mut file = std::fs::OpenOptions::new()
             .write(true)

@@ -13,3 +13,20 @@ pub use or_terrain::*;
 pub use scenery::*;
 pub use terrain::*;
 pub use terrain_flags::*;
+
+/// At most 64 paired wheel segments shared by snow receivers; no growing GPU buffer.
+#[derive(Clone, Debug, PartialEq, bevy::render::render_resource::ShaderType)]
+pub struct SnowTrackData {
+    pub meta: bevy::prelude::Vec4,
+    pub bounds: bevy::prelude::Vec4,
+    pub segments: [bevy::prelude::Vec4; 128],
+}
+impl Default for SnowTrackData {
+    fn default() -> Self {
+        Self {
+            meta: bevy::prelude::Vec4::ZERO,
+            bounds: bevy::prelude::Vec4::ZERO,
+            segments: [bevy::prelude::Vec4::ZERO; 128],
+        }
+    }
+}

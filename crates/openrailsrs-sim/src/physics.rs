@@ -1026,6 +1026,14 @@ pub fn step(
                     1.0,
                 )
                 .max(0.0);
+                if !state.articulated_joints.is_empty() {
+                    crate::articulation::constrain(
+                        &mut state.vehicles,
+                        &mut state.couplers,
+                        &state.articulated_joints,
+                        &masses,
+                    );
+                }
             }
             mean_v
         }

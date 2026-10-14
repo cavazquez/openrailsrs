@@ -61,6 +61,10 @@ pub use runner::{
 pub use scripted_driver::{Keyframe, ScriptedDriver};
 pub use service::{LiveGameplay, LiveStopTarget, ServicePhase, ServiceStopResult};
 pub use state::TrainSimState;
+mod articulation;
+pub mod depot;
+pub mod level_crossing;
+pub mod shunt_authority;
 pub use steam::BoilerState;
 
 pub mod native_signals;
@@ -92,3 +96,6 @@ pub mod auxiliary_work;
 pub mod steam_equipment;
 
 pub mod freight;
+pub mod independent_coupling;
+mod passing_plan;
+pub mod yard_delivery;

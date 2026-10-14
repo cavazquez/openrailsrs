@@ -511,6 +511,7 @@ pub struct SceneryResources<'w> {
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update(
     quality_limits: Option<Res<crate::adaptive_graphics::AdaptiveGraphics>>,
+    render_budget: Option<Res<crate::render_budget::RenderBudget>>,
     mut commands: Commands,
     time: Res<Time<Real>>,
     preferences: Res<crate::player_settings::PlayerSettings>,
@@ -519,7 +520,13 @@ pub fn update(
     window: Res<crate::view_window::ViewWindow>,
     mut state: ResMut<EnhancedScenery>,
     resources: SceneryResources,
-    cameras: Query<&Transform, (With<Camera3d>, Without<GrassChunk>)>,
+    cameras: Query<
+        &Transform,
+        (
+            (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+            Without<GrassChunk>,
+        ),
+    >,
     mut chunks: Query<(
         Entity,
         &GrassChunk,
@@ -548,7 +555,11 @@ pub fn update(
         .map_or(Vec2::ZERO, |camera| camera.translation.xz());
     let profile = SceneryProfile::from_env().unwrap_or(preferences.scenery_profile);
     let quality = SceneryQuality::from_env().unwrap_or(preferences.scenery_quality);
-    let quality = if quality_limits.as_ref().is_some_and(|q| q.level >= 2) {
+    let quality = if quality_limits.as_ref().is_some_and(|q| q.level >= 2)
+        || render_budget
+            .as_ref()
+            .is_some_and(|b| b.vegetation_divisor >= 2)
+    {
         SceneryQuality::Low
     } else {
         quality

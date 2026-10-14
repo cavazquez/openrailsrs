@@ -1,0 +1,53 @@
+[scenario]
+name = "Tráfico: encuentro en vía única"
+description = "F9 muestra la espera protegida y el tráfico. Conducí al apartadero y detenete antes de su salida. El local conserva su parada; vuelve a salir sólo cuando la cola del expreso despeja la vía compartida. Ejemplo propio sin contenido comercial."
+[route]
+path = "route"
+start = "a"
+destination = "destination"
+start_offset_m = 80.0
+waypoints = ["a", "junction", "exit", "destination"]
+assume_signals_clear = false
+[[route.stops]]
+node = "junction"
+name = "Parada del local"
+offset_m = -15.0
+arrive_s = 30.0
+depart_s = 60.0
+dwell_s = 30.0
+passengers_on = 10
+passengers_off = 0
+[train]
+consist = "../yard_training/consists/yard.con"
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+penalty_per_second_late = 0.0
+[simulation]
+duration = 1200.0
+time_step = 0.05
+seed = 42
+multi_body = true
+coupler_kind = "freight"
+legacy_power_cap = false
+train_air_lap_hold = true
+train_air_full_release_s = 3.0
+[[simulation.rail_operations.passing_plans]]
+id = "paso-programado"
+waiting_service = "Jugador"
+passing_service = "express"
+siding_edge = "siding"
+position_m = 120.0
+clear_edge = "shared"
+alternatives = [["approach", "siding", "siding_exit", "exit_track"]]
+[[extra_trains]]
+id = "express"
+consist = "../yard_training/consists/yard.con"
+start = "destination"
+destination = "a"
+waypoints = ["destination", "exit", "junction", "a"]
+start_offset_m = 80.0
+output_csv = "express.csv"
+[output]
+csv = "run.csv"
+metadata = "run.json"

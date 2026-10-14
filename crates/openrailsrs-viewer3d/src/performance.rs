@@ -7,11 +7,317 @@ use std::sync::{
     atomic::{AtomicU64, Ordering},
 };
 
+/// CPU lifecycle attribution is bounded independently of the number of shapes.
+/// Paths are reduced to basenames so exported reports do not expose home paths.
+#[derive(Default, Serialize)]
+struct ShapeStage {
+    calls: u64,
+    total_us: u64,
+    maximum_us: u64,
+    slowest_shape: String,
+}
+static SHAPE_STAGES: std::sync::OnceLock<
+    std::sync::Mutex<std::collections::BTreeMap<&'static str, ShapeStage>>,
+> = std::sync::OnceLock::new();
+pub struct ShapeTimer {
+    stage: &'static str,
+    name: String,
+    started: std::time::Instant,
+}
+impl ShapeTimer {
+    pub fn start(stage: &'static str, path: &std::path::Path) -> Self {
+        Self {
+            stage,
+            name: path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .chars()
+                .take(160)
+                .collect(),
+            started: std::time::Instant::now(),
+        }
+    }
+}
+impl Drop for ShapeTimer {
+    fn drop(&mut self) {
+        let us = self.started.elapsed().as_micros().min(u64::MAX as u128) as u64;
+        let mut stages = SHAPE_STAGES.get_or_init(Default::default).lock().unwrap();
+        let slot = stages.entry(self.stage).or_default();
+        slot.calls += 1;
+        slot.total_us = slot.total_us.saturating_add(us);
+        if us > slot.maximum_us {
+            slot.maximum_us = us;
+            slot.slowest_shape.clone_from(&self.name);
+        }
+    }
+}
+pub fn shape_stages_report() -> serde_json::Value {
+    serde_json::to_value(&*SHAPE_STAGES.get_or_init(Default::default).lock().unwrap())
+        .unwrap_or_default()
+}
+
+#[derive(Default)]
+struct SystemStage {
+    calls: u64,
+    total_us: u64,
+    maximum_us: u64,
+    bins: Vec<u64>,
+}
+static SYSTEM_STAGES: std::sync::OnceLock<
+    std::sync::Mutex<std::collections::BTreeMap<&'static str, SystemStage>>,
+> = std::sync::OnceLock::new();
+
+/// Opt-in CPU attribution. Fixed histogram storage; no per-frame file writes.
+pub struct SystemTimer {
+    name: &'static str,
+    started: std::time::Instant,
+}
+pub fn profile_system(name: &'static str) -> Option<SystemTimer> {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    ENABLED
+        .get_or_init(|| std::env::var("OPENRAILSRS_PROFILE_SYSTEMS").is_ok_and(|v| v == "1"))
+        .then(|| SystemTimer {
+            name,
+            started: std::time::Instant::now(),
+        })
+}
+impl Drop for SystemTimer {
+    fn drop(&mut self) {
+        let us = self.started.elapsed().as_micros().min(u64::MAX as u128) as u64;
+        let mut stages = SYSTEM_STAGES.get_or_init(Default::default).lock().unwrap();
+        let slot = stages.entry(self.name).or_default();
+        slot.calls += 1;
+        slot.total_us = slot.total_us.saturating_add(us);
+        slot.maximum_us = slot.maximum_us.max(us);
+        if slot.bins.is_empty() {
+            slot.bins = vec![0; 2048];
+        }
+        slot.bins[(us as usize / 100).min(2047)] += 1;
+    }
+}
+pub fn system_stages_report() -> serde_json::Value {
+    let stages = SYSTEM_STAGES.get_or_init(Default::default).lock().unwrap();
+    let report: std::collections::BTreeMap<_, _> = stages
+        .iter()
+        .map(|(name, stage)| {
+            let percentile = |percent: u64| {
+                let target = (stage.calls * percent).div_ceil(100);
+                let mut seen = 0;
+                stage
+                    .bins
+                    .iter()
+                    .position(|count| {
+                        seen += count;
+                        seen >= target
+                    })
+                    .map(|bin| (bin + 1) as f64 / 10.)
+            };
+            (
+                *name,
+                serde_json::json!({"calls":stage.calls,"total_us":stage.total_us,
+                "maximum_us":stage.maximum_us,"p50_ms":percentile(50),"p99_ms":percentile(99),
+                "histogram_width_ms":0.1,"histogram_ceiling_ms":204.8}),
+            )
+        })
+        .collect();
+    serde_json::to_value(report).unwrap_or_default()
+}
+
 #[derive(Resource, Clone, Default, bevy::render::extract_resource::ExtractResource)]
 pub struct ScenePipelineStatus {
     counts: Arc<AtomicU64>,
     uploads: Arc<AtomicU64>,
     device: Arc<std::sync::Mutex<Option<RendererDevice>>>,
+    render_resources: Arc<std::sync::Mutex<Option<RenderResourceReport>>>,
+}
+#[derive(Clone, Debug, Serialize)]
+pub struct RenderResourceReport {
+    pub views: usize,
+    pub meshes: usize,
+    pub images: usize,
+    pub mesh_slabs: usize,
+    pub mesh_slab_bytes: u64,
+    pub indexed_mesh_allocations: usize,
+    /// Bindless allocators only; non-bindless materials report zero by Bevy API.
+    pub material_slabs: usize,
+    pub material_slab_bytes: u64,
+    pub bindless_material_allocations: u64,
+    /// Upstream may overcount duplicate bindings within one material; not live owners.
+    pub bindless_material_allocations_scope: &'static str,
+    pub material_owners: MaterialOwnershipReport,
+    pub oit_node_capacity: Option<usize>,
+    pub oit_head_capacity: Option<usize>,
+    pub pipelines: usize,
+    /// Backend-dependent, opt-in. None means unsupported or disabled, never zero usage.
+    pub allocator: Option<GpuAllocatorReport>,
+    pub bin_unpacking_lifetime: Option<BinGroupCleanupStats>,
+}
+
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct MaterialOwnerCounts {
+    pub available: bool,
+    pub total: Option<usize>,
+    pub by_type: std::collections::BTreeMap<String, usize>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct MaterialOwnershipReport {
+    pub bindings: MaterialOwnerCounts,
+    pub prepared: MaterialOwnerCounts,
+}
+
+fn material_type_name(id: std::any::TypeId) -> String {
+    use std::any::TypeId;
+    macro_rules! known {
+        ($($ty:ty => $name:literal),* $(,)?) => {
+            $(if id == TypeId::of::<$ty>() { return $name.to_owned(); })*
+        };
+    }
+    known!(
+        StandardMaterial => "StandardMaterial",
+        openrailsrs_bevy_scenery::materials::terrain::TerrainMaterial => "TerrainMaterial",
+        openrailsrs_bevy_scenery::materials::or_terrain::OrTerrainMaterial => "OrTerrainMaterial",
+        openrailsrs_bevy_scenery::materials::scenery::OrSceneryMaterial => "OrSceneryMaterial",
+        openrailsrs_bevy_scenery::materials::cab::OrCabMaterial => "OrCabMaterial",
+        openrailsrs_bevy_scenery::materials::forest::OrForestMaterial => "OrForestMaterial",
+        crate::weather_particles::ParticleMaterial => "ParticleMaterial",
+        crate::surface_weather::SnowMaterial => "SnowMaterial",
+        crate::sky::RailwaySkyMaterial => "RailwaySkyMaterial",
+        crate::moon::MoonMaterial => "MoonMaterial",
+    );
+    // Keep unexpected types separate too. TypeId is binary-specific and carries
+    // no asset path; known types above have stable human-readable labels.
+    format!("unknown:{id:?}")
+}
+
+fn material_owner_counts(
+    ids: Option<impl Iterator<Item = bevy::asset::UntypedAssetId>>,
+) -> MaterialOwnerCounts {
+    let Some(ids) = ids else {
+        return MaterialOwnerCounts::default();
+    };
+    let mut by_type = std::collections::HashMap::<std::any::TypeId, usize>::new();
+    let mut total = 0;
+    for id in ids {
+        *by_type.entry(id.type_id()).or_default() += 1;
+        total += 1;
+    }
+    MaterialOwnerCounts {
+        available: true,
+        total: Some(total),
+        by_type: by_type
+            .into_iter()
+            .map(|(id, count)| (material_type_name(id), count))
+            .collect(),
+    }
+}
+
+/// Optional 30-second endurance statistics, never a HUD/frame allocator probe.
+/// mallinfo2 accounts for libc allocations, not all process PSS or GPU mappings.
+#[derive(Clone, Debug, Serialize)]
+pub struct CpuHeapAllocatorReport {
+    pub available: bool,
+    pub allocator: &'static str,
+    pub arena: Option<u64>,
+    pub uordblks: Option<u64>,
+    pub fordblks: Option<u64>,
+    pub hblkhd: Option<u64>,
+    pub scope: &'static str,
+}
+
+pub fn heap_allocator_report() -> CpuHeapAllocatorReport {
+    #[cfg(all(target_os = "linux", target_env = "gnu"))]
+    {
+        // SAFETY: mallinfo2 takes no pointers or arguments and only reads libc's
+        // allocator statistics. It does not release, move or mutate our objects.
+        let info = unsafe { libc::mallinfo2() };
+        CpuHeapAllocatorReport {
+            available: true,
+            allocator: "glibc mallinfo2",
+            arena: Some(info.arena as u64),
+            uordblks: Some(info.uordblks as u64),
+            fordblks: Some(info.fordblks as u64),
+            hblkhd: Some(info.hblkhd as u64),
+            scope: "Raw bytes: arena includes libc heap capacity; uordblks/fordblks describe arena use/free space, hblkhd separate mmap allocation space. These statistics do not equal total PSS, Rust live-object bytes or all driver allocations. No malloc_trim is called.",
+        }
+    }
+    #[cfg(not(all(target_os = "linux", target_env = "gnu")))]
+    {
+        CpuHeapAllocatorReport {
+            available: false,
+            allocator: "unsupported platform",
+            arena: None,
+            uordblks: None,
+            fordblks: None,
+            hblkhd: None,
+            scope: "glibc mallinfo2 is available only for Linux GNU targets; unavailable readings are not zero-filled.",
+        }
+    }
+}
+
+/// Real before/after values from the dead-view bind-group cleanup, not estimates.
+#[derive(Resource, Clone, Debug, Default, Serialize)]
+pub struct BinGroupCleanupStats {
+    pub cached_keys: usize,
+    pub source_keys: usize,
+    pub stale_keys_before: usize,
+    pub stale_keys_after: usize,
+    pub retired_keys: u64,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct GpuAllocatorReport {
+    pub allocated_bytes: u64,
+    pub reserved_bytes: u64,
+    pub allocations: usize,
+    pub blocks: usize,
+    pub largest_labels: Vec<GpuAllocationLabel>,
+    pub sparse_blocks: Vec<GpuAllocationBlock>,
+}
+#[derive(Clone, Debug, Serialize)]
+pub struct GpuAllocationLabel {
+    pub name: String,
+    pub bytes: u64,
+    pub allocations: usize,
+}
+#[derive(Clone, Debug, Serialize)]
+pub struct GpuAllocationBlock {
+    pub reserved_bytes: u64,
+    pub allocated_bytes: u64,
+    pub allocations: usize,
+    pub largest_labels: Vec<GpuAllocationLabel>,
+}
+
+fn allocation_labels<'a>(
+    allocations: impl Iterator<Item = (&'a str, u64)>,
+    limit: usize,
+) -> Vec<GpuAllocationLabel> {
+    let mut labels = std::collections::HashMap::<String, (u64, usize)>::new();
+    for (name, bytes) in allocations {
+        // Reports keep names useful without exporting authored absolute paths.
+        let name: String = name
+            .rsplit(['/', '\\'])
+            .next()
+            .unwrap_or(name)
+            .chars()
+            .take(160)
+            .collect();
+        let entry = labels.entry(name).or_default();
+        entry.0 = entry.0.saturating_add(bytes);
+        entry.1 += 1;
+    }
+    let mut labels: Vec<_> = labels
+        .into_iter()
+        .map(|(name, (bytes, allocations))| GpuAllocationLabel {
+            name,
+            bytes,
+            allocations,
+        })
+        .collect();
+    labels.sort_unstable_by(|a, b| b.bytes.cmp(&a.bytes).then_with(|| a.name.cmp(&b.name)));
+    labels.truncate(limit);
+    labels
 }
 #[derive(Clone, Debug, Serialize)]
 pub struct RendererDevice {
@@ -21,6 +327,9 @@ pub struct RendererDevice {
     pub hardware: bool,
 }
 impl ScenePipelineStatus {
+    pub fn render_resources(&self) -> Option<RenderResourceReport> {
+        self.render_resources.lock().unwrap().clone()
+    }
     pub fn device(&self) -> Option<RendererDevice> {
         self.device.lock().unwrap().clone()
     }
@@ -121,6 +430,20 @@ pub fn update_pipeline_status(
     required: Res<RequiredRenderAssets>,
     meshes: Res<bevy::render::render_asset::RenderAssets<bevy::render::mesh::RenderMesh>>,
     images: Res<bevy::render::render_asset::RenderAssets<bevy::render::texture::GpuImage>>,
+    allocator: Res<bevy::render::mesh::allocator::MeshAllocator>,
+    material_allocators: Res<bevy::pbr::MaterialBindGroupAllocators>,
+    material_owners: (
+        Option<Res<bevy::pbr::RenderMaterialBindings>>,
+        Option<
+            Res<bevy::render::erased_render_asset::ErasedRenderAssets<bevy::pbr::PreparedMaterial>>,
+        >,
+    ),
+    bin_group_cleanup: Option<Res<BinGroupCleanupStats>>,
+    views: Query<&bevy::render::view::ExtractedView>,
+    oit: Option<Res<bevy::core_pipeline::oit::OitBuffers>>,
+    render_device: Res<bevy::render::renderer::RenderDevice>,
+    mut last_resources: Local<Option<std::time::Instant>>,
+    mut allocator_report: Local<(Option<std::time::Instant>, Option<GpuAllocatorReport>)>,
 ) {
     use bevy::render::render_resource::CachedPipelineState;
     if status.device.lock().unwrap().is_none() {
@@ -158,6 +481,93 @@ pub fn update_pipeline_status(
     status
         .uploads
         .store(pending_uploads as u64, Ordering::Relaxed);
+    let now = std::time::Instant::now();
+    if last_resources.is_none_or(|last| now.duration_since(last).as_secs_f32() >= 1.) {
+        *last_resources = Some(now);
+        static ALLOCATIONS_ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        let enabled = *ALLOCATIONS_ENABLED.get_or_init(|| {
+            std::env::var_os("OPENRAILSRS_SOAK_SECONDS").is_some()
+                || std::env::var("OPENRAILSRS_GPU_ALLOCATIONS").is_ok_and(|v| v == "1")
+        });
+        if enabled
+            && allocator_report
+                .0
+                .is_none_or(|last| now.duration_since(last).as_secs_f32() >= 30.)
+        {
+            allocator_report.0 = Some(now);
+            allocator_report.1 =
+                render_device
+                    .wgpu_device()
+                    .generate_allocator_report()
+                    .map(|report| {
+                        let mut sparse_blocks: Vec<_> = report
+                            .blocks
+                            .iter()
+                            .map(|block| {
+                                let live = &report.allocations[block.allocations.clone()];
+                                GpuAllocationBlock {
+                                    reserved_bytes: block.size,
+                                    allocated_bytes: live.iter().map(|a| a.size).sum(),
+                                    allocations: live.len(),
+                                    largest_labels: allocation_labels(
+                                        live.iter().map(|a| (a.name.as_str(), a.size)),
+                                        5,
+                                    ),
+                                }
+                            })
+                            .collect();
+                        sparse_blocks.sort_unstable_by_key(|b| {
+                            std::cmp::Reverse(b.reserved_bytes.saturating_sub(b.allocated_bytes))
+                        });
+                        sparse_blocks.truncate(16);
+                        GpuAllocatorReport {
+                            allocated_bytes: report.total_allocated_bytes,
+                            reserved_bytes: report.total_reserved_bytes,
+                            allocations: report.allocations.len(),
+                            blocks: report.blocks.len(),
+                            largest_labels: allocation_labels(
+                                report.allocations.iter().map(|a| (a.name.as_str(), a.size)),
+                                16,
+                            ),
+                            sparse_blocks,
+                        }
+                    });
+        }
+        *status.render_resources.lock().unwrap() = Some(RenderResourceReport {
+            views: views.iter().count(),
+            meshes: meshes.iter().count(),
+            images: images.iter().count(),
+            mesh_slabs: allocator.slab_count(),
+            mesh_slab_bytes: allocator.slabs_size(),
+            indexed_mesh_allocations: allocator.index_allocation_count(),
+            material_slabs: material_allocators.values().map(|a| a.slab_count()).sum(),
+            material_slab_bytes: material_allocators
+                .values()
+                .map(|a| a.slabs_size() as u64)
+                .sum(),
+            bindless_material_allocations: material_allocators
+                .values()
+                .map(|a| a.allocations())
+                .sum(),
+            bindless_material_allocations_scope: "Raw upstream allocated_resource_count may overcount repeated bindings within a material; use material_owners for actual map ownership.",
+            material_owners: MaterialOwnershipReport {
+                bindings: material_owner_counts(
+                    material_owners.0.as_ref().map(|m| m.keys().copied()),
+                ),
+                prepared: material_owner_counts(
+                    material_owners
+                        .1
+                        .as_ref()
+                        .map(|m| m.iter().map(|(id, _)| id)),
+                ),
+            },
+            oit_node_capacity: oit.as_ref().map(|o| o.nodes.capacity()),
+            oit_head_capacity: oit.as_ref().map(|o| o.heads.capacity()),
+            pipelines: cache.pipelines().count(),
+            allocator: allocator_report.1.clone(),
+            bin_unpacking_lifetime: bin_group_cleanup.as_deref().cloned(),
+        });
+    }
 }
 
 /// Opt-in diagnostics include unresolved imports that Bevy retries silently.
@@ -404,6 +814,99 @@ pub fn measure_journey(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn material_owner_maps_distinguish_absence_empty_and_retired_types() {
+        let unavailable =
+            material_owner_counts(None::<std::iter::Empty<bevy::asset::UntypedAssetId>>);
+        assert!(!unavailable.available);
+        assert_eq!(unavailable.total, None);
+        let mut materials = Assets::<StandardMaterial>::default();
+        let first = materials.add(StandardMaterial::default()).id();
+        let second = materials.add(StandardMaterial::default()).id();
+        let cab = Handle::<crate::or_cab_material::OrCabMaterial>::default().id();
+        let mut prepared = bevy::render::erased_render_asset::ErasedRenderAssets::<u8>::default();
+        let empty = material_owner_counts(Some(prepared.iter().map(|(id, _)| id)));
+        assert!(empty.available);
+        assert_eq!(empty.total, Some(0));
+        prepared.insert(first, 1);
+        prepared.insert(second, 2);
+        prepared.insert(cab, 3);
+        let current = material_owner_counts(Some(prepared.iter().map(|(id, _)| id)));
+        assert_eq!(current.total, Some(3));
+        assert_eq!(current.by_type.get("StandardMaterial"), Some(&2));
+        assert_eq!(current.by_type.get("OrCabMaterial"), Some(&1));
+        prepared.remove(first);
+        prepared.remove(cab);
+        let retired = material_owner_counts(Some(prepared.iter().map(|(id, _)| id)));
+        assert_eq!(retired.total, Some(1));
+        assert_eq!(retired.by_type.get("StandardMaterial"), Some(&1));
+        assert!(!retired.by_type.contains_key("OrCabMaterial"));
+    }
+
+    #[test]
+    fn material_owner_maps_keep_unexpected_types_separate() {
+        let images = Handle::<Image>::default().id().untyped();
+        let meshes = Handle::<Mesh>::default().id().untyped();
+        let report = material_owner_counts(Some([images, meshes].into_iter()));
+        assert_eq!(report.total, Some(2));
+        assert_eq!(report.by_type.len(), 2);
+        assert!(
+            report
+                .by_type
+                .keys()
+                .all(|name| name.starts_with("unknown:"))
+        );
+    }
+
+    #[test]
+    fn heap_allocator_availability_does_not_fabricate_zero_readings() {
+        let report = heap_allocator_report();
+        let fields = [
+            report.arena,
+            report.uordblks,
+            report.fordblks,
+            report.hblkhd,
+        ];
+        if cfg!(all(target_os = "linux", target_env = "gnu")) {
+            assert!(report.available);
+            assert!(fields.iter().all(Option::is_some));
+        } else {
+            assert!(!report.available);
+            assert!(fields.iter().all(Option::is_none));
+        }
+    }
+
+    #[test]
+    fn gpu_allocation_labels_are_aggregated_bounded_and_do_not_export_paths() {
+        let labels = allocation_labels(
+            [
+                ("/private/route/shelter", 16),
+                ("C:\\private\\route\\shelter", 32),
+                ("mesh vertex buffer", 512),
+                ("small", 1),
+            ]
+            .into_iter(),
+            2,
+        );
+        assert_eq!(labels.len(), 2);
+        assert_eq!(
+            (
+                labels[0].name.as_str(),
+                labels[0].bytes,
+                labels[0].allocations
+            ),
+            ("mesh vertex buffer", 512, 1)
+        );
+        assert_eq!(
+            (
+                labels[1].name.as_str(),
+                labels[1].bytes,
+                labels[1].allocations
+            ),
+            ("shelter", 48, 2)
+        );
+    }
+
     #[test]
     fn delayed_mesh_upload_and_replacement_retry_once_when_ready() {
         let mut meshes = Assets::<Mesh>::default();

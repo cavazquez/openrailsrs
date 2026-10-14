@@ -1,0 +1,70 @@
+[scenario]
+name = "Patio: clasificar y recoger vagones por destino"
+description = "Maniobra guiada de 1 km con tres vehículos propios de prueba. F9: frenos de mano, corte y acople. M: cambio junction. F7: objetivos."
+
+[route]
+path = "route"
+start = "a"
+destination = "destination"
+start_offset_m = 160.0
+assume_signals_clear = true
+
+[[route.stops]]
+node = "destination"
+name = "Salida del patio"
+offset_m = -20.0
+arrive_s = 600.0
+depart_s = 600.0
+dwell_s = 0.0
+
+[train]
+consist = "consists/yard.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+penalty_per_second_late = 0.0
+
+[[gameplay.shunting]]
+kind = "cut"
+count = 1
+instruction = "F9: aplicá los frenos de mano de los coches 2 y 3; seleccioná el coche 1 y desacoplá detrás de él."
+[[gameplay.shunting]]
+kind = "move_clear"
+position_m = 240.0
+instruction = "Avanzá 80 m con la locomotora sola y detenete a 240 m del origen (M muestra la posición)."
+[[gameplay.shunting]]
+kind = "switch"
+node = "junction"
+switch_position = "diverging"
+instruction = "En M seleccioná el cambio junction y ponelo en desvío. El cambio debe estar libre."
+[[gameplay.shunting]]
+kind = "pick_up"
+count = 3
+instruction = "Volvé en reversa al enganche (posición 160 m), a menos de 1 m y detenido. F9: acoplá, conectá la manguera del coche 2, abrí ambas llaves del corte y soltá los frenos de mano."
+[[gameplay.shunting]]
+kind = "depart"
+position_m = 400.0
+instruction = "Poné Adelante y salí con los tres vehículos por el desvío; luego detenete en Salida del patio y abrí las puertas para finalizar."
+
+[simulation]
+duration = 1800.0
+time_step = 0.05
+seed = 42
+multi_body = true
+coupler_kind = "freight"
+legacy_power_cap = false
+train_air_lap_hold = true
+train_air_full_release_s = 3.0
+
+[output]
+csv = "run.csv"
+metadata = "run.json"
+
+[[simulation.rail_operations.yard_deliveries]]
+id = "lote-norte"
+destination = "Depósito Norte"
+edge = "approach"
+start_m = 95.0
+end_m = 140.0
+vehicles = [1, 2]

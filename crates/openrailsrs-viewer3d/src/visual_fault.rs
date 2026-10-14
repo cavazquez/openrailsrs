@@ -9,7 +9,13 @@ pub struct VisualOccluder;
 
 pub fn inject(
     mut commands: Commands,
-    camera: Query<&Transform, (With<Camera3d>, Without<VisualOccluder>)>,
+    camera: Query<
+        &Transform,
+        (
+            (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+            Without<VisualOccluder>,
+        ),
+    >,
     mut train: Query<&mut Visibility, With<crate::live::LiveTrainBody>>,
     mut occluder: Query<&mut Transform, With<VisualOccluder>>,
     mut meshes: ResMut<Assets<Mesh>>,

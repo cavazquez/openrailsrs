@@ -152,11 +152,20 @@ def run_checkpoint(args, name, target, pause):
             "OPENRAILSRS_SCREENSHOT_MIN_ODOMETER_M": str(target),
             "OPENRAILSRS_SCREENSHOT_PAUSE_AT_TARGET": "1" if pause else "0",
             "OPENRAILSRS_SCREENSHOT_AFTER_SERVICE": "1" if after_service else "0",
-            "OPENRAILSRS_SCREENSHOT_DELAY_S": str(args.timeout_s - 10),
+            "OPENRAILSRS_SCREENSHOT_DELAY_S": str(getattr(args, "capture_delay_s", args.timeout_s - 10)),
         }
     )
+    if getattr(args, "audio_null", False):
+        # Exercise the real audio worker and CPAL/ALSA device lifecycle without
+        # opening the user's speakers. The null PCM is private to this process.
+        alsa = args.out_dir / ".alsa-null.conf"
+        alsa.write_text('pcm.!default { type null }\nctl.!default { type hw card 0 }\n')
+        env.pop("OPENRAILSRS_DISABLE_AUDIO", None)
+        env["ALSA_CONFIG_PATH"] = str(alsa)
     if getattr(args,"resources_dir",None) is not None:
         env["OPENRAILSRS_RESOURCES"]=str(args.resources_dir)
+    if getattr(args,"vram_budget_mib",None) is not None:
+        env["OPENRAILSRS_VRAM_BUDGET_MIB"]=str(args.vram_budget_mib)
     if getattr(args,"capture_equipment",False):env["OPENRAILSRS_CAPTURE_EQUIPMENT"]="1"
     if getattr(args,"capture_bug_report",False):env["OPENRAILSRS_CAPTURE_BUG_REPORT"]="1"
     if hasattr(args, "camera_yaw"):
@@ -185,6 +194,7 @@ def run_checkpoint(args, name, target, pause):
         ("weather_pace", "OPENRAILSRS_WEATHER_PACE"),
         ("weather_quality", "OPENRAILSRS_WEATHER_QUALITY"),
         ("framepace", "OPENRAILSRS_FRAMEPACE"),
+        ("profile_systems", "OPENRAILSRS_PROFILE_SYSTEMS"),
         ("present_mode", "OPENRAILSRS_PRESENT_MODE"),
         ("scenery_profile", "OPENRAILSRS_SCENERY_PROFILE"),
         ("scenery_quality", "OPENRAILSRS_SCENERY_QUALITY"),
@@ -199,7 +209,8 @@ def run_checkpoint(args, name, target, pause):
         ("capture_sander", "OPENRAILSRS_CAPTURE_SANDER"),
     ):
         if getattr(args, attr, None) is not None:
-            env[key] = str(getattr(args, attr))
+            value = getattr(args, attr)
+            env[key] = "1" if value is True else "0" if value is False else str(value)
     if getattr(args, "real_time", False):
         env["OPENRAILSRS_REAL_TIME"] = "1"
     if getattr(args, "real_weather", False):
@@ -211,6 +222,9 @@ def run_checkpoint(args, name, target, pause):
     env["OPENRAILSRS_TRAIN_EFFECT_EXECUTION"] = getattr(args, "train_effect_execution", "auto")
     if getattr(args, "texture_cache", "on") == "off":
         env["OPENRAILSRS_TEXTURE_CACHE"] = "off"
+    for cache_name in ("source_cache", "geometry_cache"):
+        if getattr(args, cache_name, "on") == "off":
+            env[f"OPENRAILSRS_{cache_name.upper()}"] = "off"
     if getattr(args, "texture_upload", "auto") == "rgba":
         env["OPENRAILSRS_TEXTURE_UPLOAD"] = "rgba"
     if getattr(args, "debug_materials", False):
@@ -226,6 +240,11 @@ def run_checkpoint(args, name, target, pause):
                 "WGPU_ALLOW_UNDERLYING_NONCOMPLIANT_ADAPTER": "1",
             }
         )
+    if getattr(args, "soak_seconds", 0):
+        env["OPENRAILSRS_SOAK_SECONDS"] = str(args.soak_seconds)
+        env["OPENRAILSRS_SOAK_OUT"] = str(prefix.with_suffix(".soak.jsonl"))
+        if getattr(args,"soak_route_interval_s",None):env["OPENRAILSRS_SOAK_ROUTE_INTERVAL_S"]=str(args.soak_route_interval_s)
+        if getattr(args,"soak_routes",None):env["OPENRAILSRS_SOAK_ROUTES"]=json.dumps(args.soak_routes)
     viewer = None
     peak_kib = 0
     cpu_start = cpu_end = None
@@ -376,6 +395,16 @@ def run_checkpoint(args, name, target, pause):
         "gpu_busy_percent_by_device": {pci: sum(values) / len(values) for pci, values in gpu_busy.items()},
         "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
     }
+    if getattr(args, "headless_wayland", False):
+        compositor_log = prefix.with_suffix(".xvfb.log").read_text(errors="replace")
+        report["host_usage"]["private_compositor"] = {
+            "gl_renderer": next((line.split("GL renderer:", 1)[1].strip()
+                                 for line in compositor_log.splitlines() if "GL renderer:" in line), None),
+            "egl_device": next((line.split("Using rendering device:", 1)[1].strip()
+                                for line in compositor_log.splitlines() if "Using rendering device:" in line), None),
+            "DRI_PRIME": env.get("DRI_PRIME"),
+            "scope": "GL renderer identifies effective offload device; EGL device may retain enumeration node",
+        }
     if getattr(args, "pullman_cab_reference", None):
         report["cab_foreground"] = compare_pullman_cab_foreground(
             args.pullman_cab_reference, image
@@ -385,7 +414,7 @@ def run_checkpoint(args, name, target, pause):
             raise RuntimeError(f"{name}: opaque Pullman cab panels disappeared or changed; see {image}")
     if not image.is_file() or report["odometer_m"] < target:
         raise RuntimeError(f"{name}: actual travel checkpoint missing")
-    if report["unactivated_near_shapes"] != 0 or not report["gpu_entities"]:
+    if report["unactivated_near_shapes"] != 0 or (getattr(args, "require_world_scenery", True) and not report["gpu_entities"]):
         raise RuntimeError(f"{name}: scenery incomplete: {report}")
     if report.get("shader_pipelines") != {"pending": 0, "failed": 0}:
         raise RuntimeError(

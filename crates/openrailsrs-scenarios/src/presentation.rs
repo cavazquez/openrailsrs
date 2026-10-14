@@ -9,6 +9,65 @@ pub struct VehiclePresentation {
     pub passenger_lamps: Vec<PassengerLampDef>,
     /// Axis-aligned permitted eye volumes in the authored MSTS car frame.
     pub walk_boxes_m: Vec<[[f32; 3]; 2]>,
+    /// Original mesh name and endpoints in the imported car's local Bevy frame
+    /// (after MSTS Z conversion, before the car's world transform).
+    pub connections: Vec<FlexibleConnectionDef>,
+    pub jacobs: Option<JacobsDef>,
+    pub mirrors: Vec<MirrorDef>,
+    pub boarding_doors: Vec<PassengerDoorDef>,
+}
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct PassengerDoorDef {
+    pub position_m: [f32; 3],
+    pub side: crate::vehicle_systems::DoorSide,
+}
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct MirrorDef {
+    pub position_m: [f32; 3],
+    pub direction: [f32; 3],
+    pub fov_degrees: f32,
+}
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum ConnectionKind {
+    Gangway,
+    AirHose,
+    ElectricCable,
+    Coupler,
+}
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct FlexibleConnectionDef {
+    pub matrix: String,
+    pub neighbor: usize,
+    pub own_m: [f32; 3],
+    pub rest_far_m: [f32; 3],
+    pub other_m: [f32; 3],
+    pub kind: ConnectionKind,
+    pub maximum_span_m: f32,
+}
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct JacobsDef {
+    pub neighbor: usize,
+    /// Native longitudinal coordinate, positive toward the car's rear (MSTS Z),
+    /// matching the original bogie matrices and TrainCarSupports.
+    pub own_support_m: f32,
+    pub other_support_m: f32,
+    pub bogie_matrix: String,
+}
+fn coordinate(p: &[f32; 3]) -> bool {
+    p.iter().all(|v| v.is_finite() && v.abs() <= 100.)
+}
+impl FlexibleConnectionDef {
+    pub fn valid(&self) -> bool {
+        self.matrix.len() <= 128
+            && !self.matrix.is_empty()
+            && self.neighbor < 256
+            && coordinate(&self.own_m)
+            && coordinate(&self.rest_far_m)
+            && coordinate(&self.other_m)
+            && self.maximum_span_m.is_finite()
+            && (0.02..=4.).contains(&self.maximum_span_m)
+    }
 }
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct SuspensionDef {
@@ -66,6 +125,31 @@ pub struct PassengerLampDef {
 impl VehiclePresentation {
     pub fn valid(&self) -> bool {
         self.walk_boxes_m.len() <= 32
+            && self.boarding_doors.len() <= 8
+            && self
+                .boarding_doors
+                .iter()
+                .all(|d| coordinate(&d.position_m) && d.position_m[0].abs() >= 1.)
+            && self.mirrors.len() <= 2
+            && self.mirrors.iter().all(|m| {
+                coordinate(&m.position_m)
+                    && coordinate(&m.direction)
+                    && m.direction.iter().map(|p| p * p).sum::<f32>() > 0.01
+                    && m.fov_degrees.is_finite()
+                    && (25. ..=90.).contains(&m.fov_degrees)
+            })
+            && self.connections.len() <= 16
+            && self.connections.iter().all(FlexibleConnectionDef::valid)
+            && self.jacobs.as_ref().is_none_or(|j| {
+                j.neighbor < 256
+                    && j.neighbor != self.vehicle
+                    && j.own_support_m.is_finite()
+                    && j.other_support_m.is_finite()
+                    && j.own_support_m.abs() <= 50.
+                    && j.other_support_m.abs() <= 50.
+                    && !j.bogie_matrix.is_empty()
+                    && j.bogie_matrix.len() <= 128
+            })
             && self.walk_boxes_m.iter().all(|b| {
                 b.iter().flatten().all(|v| v.is_finite() && v.abs() <= 100.)
                     && (0..3).all(|i| b[0][i] < b[1][i])

@@ -214,6 +214,7 @@ pub fn tdb_track_stream_system(
     mut stream: ResMut<TdbTrackStream>,
     segments_query: Query<(Entity, &TdbTrackSegment)>,
 ) {
+    let _profile = crate::performance::profile_system("tdb_track.tdb_track_stream_system");
     let Some(tdb) = assets.track_db() else {
         return;
     };

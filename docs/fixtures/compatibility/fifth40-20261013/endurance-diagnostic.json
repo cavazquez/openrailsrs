@@ -1,0 +1,327 @@
+{
+  "endurance": true,
+  "wall_s": 7200.049405552,
+  "rows": 240,
+  "cycles": 120,
+  "save_restore_cycles": 120,
+  "route_changes": 39,
+  "audio_null": true,
+  "audio_samples": 240,
+  "scenario_ranges": {
+    "Chiltern extendido: Northolt Park → Gerrards Cross": {
+      "entities": {
+        "min": 3832,
+        "max": 12489,
+        "first": 6820,
+        "last": 12395
+      },
+      "meshes": {
+        "min": 1689,
+        "max": 5199,
+        "first": 2638,
+        "last": 5199
+      },
+      "images": {
+        "min": 342,
+        "max": 797,
+        "first": 473,
+        "last": 796
+      },
+      "fonts": {
+        "min": 1,
+        "max": 1,
+        "first": 1,
+        "last": 1
+      },
+      "font_atlases": {
+        "min": 12,
+        "max": 12,
+        "first": 12,
+        "last": 12
+      },
+      "pending_uploads": {
+        "min": 0,
+        "max": 0,
+        "first": 0,
+        "last": 0
+      }
+    },
+    "Laboratorio de fuelles, mangueras y acopladores": {
+      "entities": {
+        "min": 762,
+        "max": 773,
+        "first": 771,
+        "last": 763
+      },
+      "meshes": {
+        "min": 28,
+        "max": 42,
+        "first": 41,
+        "last": 28
+      },
+      "images": {
+        "min": 26,
+        "max": 32,
+        "first": 30,
+        "last": 26
+      },
+      "fonts": {
+        "min": 1,
+        "max": 1,
+        "first": 1,
+        "last": 1
+      },
+      "font_atlases": {
+        "min": 12,
+        "max": 12,
+        "first": 12,
+        "last": 12
+      },
+      "pending_uploads": {
+        "min": 0,
+        "max": 0,
+        "first": 0,
+        "last": 0
+      }
+    },
+    "Depósito: preparación y mantenimiento": {
+      "entities": {
+        "min": 812,
+        "max": 814,
+        "first": 814,
+        "last": 814
+      },
+      "meshes": {
+        "min": 36,
+        "max": 37,
+        "first": 37,
+        "last": 37
+      },
+      "images": {
+        "min": 27,
+        "max": 29,
+        "first": 29,
+        "last": 29
+      },
+      "fonts": {
+        "min": 1,
+        "max": 1,
+        "first": 1,
+        "last": 1
+      },
+      "font_atlases": {
+        "min": 12,
+        "max": 12,
+        "first": 12,
+        "last": 12
+      },
+      "pending_uploads": {
+        "min": 0,
+        "max": 0,
+        "first": 0,
+        "last": 0
+      }
+    }
+  },
+  "resource_ranges": {
+    "Chiltern extendido: Northolt Park → Gerrards Cross": {
+      "performance.rss_mib": {
+        "min": 2251.140625,
+        "max": 3307.7421875,
+        "first": 2251.140625,
+        "last": 3307.7421875
+      },
+      "performance.peak_rss_mib": {
+        "min": 2251.140625,
+        "max": 3504.65234375,
+        "first": 2251.140625,
+        "last": 3471.78125
+      },
+      "graphics_memory.process_vram_mib": {
+        "min": 296.3046875,
+        "max": 298.76953125,
+        "first": 296.3046875,
+        "last": 298.23046875
+      },
+      "graphics_memory.process_gtt_mib": {
+        "min": 2082.68359375,
+        "max": 3082.10546875,
+        "first": 2082.68359375,
+        "last": 3082.10546875
+      },
+      "graphics_memory.device_used_mib": {
+        "min": 829.83203125,
+        "max": 3174.79296875,
+        "first": 839.46875,
+        "last": 839.02734375
+      },
+      "native_audio.decoded_mib": {
+        "min": 3.6659507751464844,
+        "max": 5.144256591796875,
+        "first": 4.687629699707031,
+        "last": 5.144256591796875
+      },
+      "native_audio.active_voices": {
+        "min": 26,
+        "max": 72,
+        "first": 38,
+        "last": 56
+      },
+      "native_audio.programs": {
+        "min": 48,
+        "max": 48,
+        "first": 48,
+        "last": 48
+      },
+      "native_audio.streams": {
+        "min": 174,
+        "max": 174,
+        "first": 174,
+        "last": 174
+      },
+      "native_audio.samples": {
+        "min": 69,
+        "max": 69,
+        "first": 69,
+        "last": 69
+      }
+    },
+    "Laboratorio de fuelles, mangueras y acopladores": {
+      "performance.rss_mib": {
+        "min": 2419.828125,
+        "max": 3108.05859375,
+        "first": 2419.828125,
+        "last": 3003.76953125
+      },
+      "performance.peak_rss_mib": {
+        "min": 2419.828125,
+        "max": 3108.05859375,
+        "first": 2419.828125,
+        "last": 3003.76953125
+      },
+      "graphics_memory.process_vram_mib": {
+        "min": 296.41796875,
+        "max": 297.3515625,
+        "first": 296.41796875,
+        "last": 297.3515625
+      },
+      "graphics_memory.process_gtt_mib": {
+        "min": 2111.90234375,
+        "max": 3061.80859375,
+        "first": 2111.90234375,
+        "last": 3061.80859375
+      },
+      "graphics_memory.device_used_mib": {
+        "min": 829.17578125,
+        "max": 3173.4765625,
+        "first": 2438.53125,
+        "last": 836.15625
+      },
+      "native_audio.decoded_mib": {
+        "min": 0.0,
+        "max": 0.0,
+        "first": 0.0,
+        "last": 0.0
+      },
+      "native_audio.active_voices": {
+        "min": 0,
+        "max": 0,
+        "first": 0,
+        "last": 0
+      },
+      "native_audio.programs": {
+        "min": 0,
+        "max": 0,
+        "first": 0,
+        "last": 0
+      },
+      "native_audio.streams": {
+        "min": 0,
+        "max": 0,
+        "first": 0,
+        "last": 0
+      },
+      "native_audio.samples": {
+        "min": 0,
+        "max": 0,
+        "first": 0,
+        "last": 0
+      }
+    },
+    "Depósito: preparación y mantenimiento": {
+      "performance.rss_mib": {
+        "min": 2419.83203125,
+        "max": 3108.05859375,
+        "first": 2419.83203125,
+        "last": 3003.76953125
+      },
+      "performance.peak_rss_mib": {
+        "min": 2419.83203125,
+        "max": 3108.05859375,
+        "first": 2419.83203125,
+        "last": 3003.76953125
+      },
+      "graphics_memory.process_vram_mib": {
+        "min": 296.41796875,
+        "max": 297.3515625,
+        "first": 296.41796875,
+        "last": 297.3515625
+      },
+      "graphics_memory.process_gtt_mib": {
+        "min": 2112.52734375,
+        "max": 3061.80859375,
+        "first": 2112.52734375,
+        "last": 3061.80859375
+      },
+      "graphics_memory.device_used_mib": {
+        "min": 829.5390625,
+        "max": 2741.24609375,
+        "first": 829.5390625,
+        "last": 837.66796875
+      },
+      "native_audio.decoded_mib": {
+        "min": 0.0,
+        "max": 0.0,
+        "first": 0.0,
+        "last": 0.0
+      },
+      "native_audio.active_voices": {
+        "min": 0,
+        "max": 0,
+        "first": 0,
+        "last": 0
+      },
+      "native_audio.programs": {
+        "min": 0,
+        "max": 0,
+        "first": 0,
+        "last": 0
+      },
+      "native_audio.streams": {
+        "min": 0,
+        "max": 0,
+        "first": 0,
+        "last": 0
+      },
+      "native_audio.samples": {
+        "min": 0,
+        "max": 0,
+        "first": 0,
+        "last": 0
+      }
+    }
+  },
+  "memory_scope": "DRM dedicated VRAM and shared GTT are separate; neither GPU field is inferred from process RSS; unavailable readings are omitted, not zero-filled",
+  "schema": "openrailsrs-endurance-diagnostic-v1",
+  "accepted_stability": false,
+  "reason": "Shared GTT and RSS still grow across repeated scenes; render allocator investigation and a corrected trial are required.",
+  "viewer_sha256": "7a72515be24e03e7434538c86e78b8e31cacacc09c41d0b4c8e999fb078568ac",
+  "report_sha256": "17791b93dae8a5f62b1ceb5fcafc5ce0cfe8167b2b7002aa84aca09fc9546f89",
+  "telemetry_sha256": "73f417cb475bde00992f31c2fc67bfd6d933f0bf31aa3f72da4b3eebe4de3c67",
+  "termination": {
+    "viewer_exit": 0,
+    "wrapper_exit": 143,
+    "wrapper_scope": "Weston cleanup after final report and screenshot"
+  },
+  "restore_scope": "Simulation serialization/restoration in memory every60s; full SavedGame file round-trips tested separately."
+}

@@ -20,6 +20,7 @@ use std::{
 
 #[derive(Clone, Debug)]
 pub struct ConsistSoundSpec {
+    pub vehicle_offset: usize,
     pub id: usize,
     pub consist: PathBuf,
     pub route: PathBuf,
@@ -293,12 +294,32 @@ pub struct SoundReport {
     pub streams: usize,
     pub samples: usize,
     pub decoded_mib: f32,
+    pub sample_cache_hits: u64,
+    pub sample_cache_misses: u64,
+    pub sample_cache_evictions: u64,
+    pub decode_us: u64,
+    pub file_open_us: u64,
+    /// Per-program figures overlap when vehicles share a decoded WAV. Only
+    /// decoded_mib is the unique pool total; these rows must not be summed.
+    pub banks: Vec<BankReport>,
     pub active_voices: usize,
     pub warnings: Vec<String>,
     pub device: bool,
     pub wiper_fallback: bool,
     pub voices: Vec<VoiceReport>,
     pub update_us: u64,
+}
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct BankReport {
+    pub train: usize,
+    pub vehicle: usize,
+    pub program: String,
+    pub program_read_parse_us: u64,
+    pub referenced_samples: usize,
+    pub resident_samples: usize,
+    pub resident_pcm_mib: f32,
+    pub sample_file_open_us: u64,
+    pub sample_decode_us: u64,
 }
 #[derive(Clone, Debug, Serialize)]
 pub struct VoiceReport {
@@ -318,6 +339,9 @@ struct Wave {
     samples: SamplesBuffer,
     rate: f32,
     loop_range_s: Option<(f64, f64)>,
+    allocation: Option<Arc<usize>>,
+    file_open_us: u64,
+    decode_us: u64,
 }
 #[derive(Clone, Copy, PartialEq)]
 enum SoundLocation {
@@ -333,6 +357,8 @@ struct Bank {
     program_name: String,
     curve_only: bool,
     samples: HashMap<String, Wave>,
+    pending_samples: HashMap<String, PathBuf>,
+    read_parse_us: u64,
 }
 impl Bank {
     fn audible(
@@ -369,6 +395,135 @@ pub struct NativeSoundBank {
     banks: Vec<Bank>,
     external_pass_through: HashMap<(usize, usize), f32>,
     pub report: SoundReport,
+    pool: WavePool,
+}
+#[derive(Default)]
+struct WavePool {
+    cache: HashMap<PathBuf, (Wave, u64)>,
+    allocations: Vec<std::sync::Weak<usize>>,
+    tick: u64,
+    hits: u64,
+    misses: u64,
+    evictions: u64,
+    decode_us: u64,
+    file_open_us: u64,
+}
+impl WavePool {
+    fn resident_bytes(&self) -> usize {
+        self.allocations
+            .iter()
+            .filter_map(std::sync::Weak::upgrade)
+            .map(|v| *v)
+            .sum()
+    }
+    fn get(&mut self, path: &std::path::Path) -> Result<Wave, String> {
+        self.tick += 1;
+        if let Some((wave, tick)) = self.cache.get_mut(path) {
+            self.hits += 1;
+            *tick = self.tick;
+            return Ok(wave.clone());
+        }
+        self.misses += 1;
+        let encoded = std::fs::metadata(path).map_err(|e| e.to_string())?.len();
+        if encoded > 64 * 1024 * 1024 {
+            return Err("WAV demasiado grande (máximo 64 MiB)".into());
+        }
+        let reserve = (encoded as usize)
+            .saturating_mul(8)
+            .clamp(4096, 64 * 1024 * 1024);
+        while self.cache.len() >= 64
+            || self.resident_bytes() > 96 * 1024 * 1024
+            || self.resident_bytes().saturating_add(reserve) > 128 * 1024 * 1024
+        {
+            let oldest = self
+                .cache
+                .iter()
+                .filter(|(_, (w, _))| {
+                    w.allocation
+                        .as_ref()
+                        .is_none_or(|a| Arc::strong_count(a) == 1)
+                })
+                .min_by_key(|(_, (_, at))| *at)
+                .map(|(p, _)| p.clone());
+            let Some(path) = oldest else {
+                break;
+            };
+            self.cache.remove(&path);
+            self.evictions += 1;
+        }
+        self.allocations.retain(|w| w.strong_count() > 0);
+        let available = (128 * 1024 * 1024usize).saturating_sub(self.resident_bytes());
+        if available < 4096 {
+            return Err("Los bucles activos ocupan el presupuesto de audio".into());
+        }
+        let started = std::time::Instant::now();
+        if std::fs::metadata(path).map_err(|e| e.to_string())?.len() > 64 * 1024 * 1024 {
+            return Err("WAV demasiado grande (máximo 64 MiB)".into());
+        }
+        // Decoder reads/seeks the file instead of copying its encoded body twice.
+        let file = std::fs::File::open(path).map_err(|e| e.to_string())?;
+        let file_open_us = started.elapsed().as_micros() as u64;
+        let decode_started = std::time::Instant::now();
+        let decoder = Decoder::try_from(file).map_err(|e| e.to_string())?;
+        let channels = decoder.channels();
+        let rate = decoder.sample_rate();
+        let limit = (available / 4).min(16_000_000);
+        let data = decoder.take(limit + 1).collect::<Vec<_>>();
+        if data.len() > limit {
+            return Err("El WAV supera el presupuesto de decodificación".into());
+        }
+        let allocation = Arc::new(data.len() * 4);
+        let decode_us = decode_started.elapsed().as_micros() as u64;
+        self.allocations.push(Arc::downgrade(&allocation));
+        let wave = Wave {
+            samples: SamplesBuffer::new(channels, rate, data),
+            rate: rate.get() as f32,
+            loop_range_s: loop_range_file(path, rate.get() as f32),
+            allocation: Some(allocation),
+            file_open_us,
+            decode_us,
+        };
+        self.decode_us += decode_us;
+        self.file_open_us += file_open_us;
+        self.cache
+            .insert(path.to_path_buf(), (wave.clone(), self.tick));
+        Ok(wave)
+    }
+}
+fn loop_range_file(path: &std::path::Path, rate: f32) -> Option<(f64, f64)> {
+    use std::io::{Read, Seek, SeekFrom};
+    let mut file = std::fs::File::open(path).ok()?;
+    let length = file.metadata().ok()?.len();
+    let mut bytes = vec![0u8; 12];
+    file.read_exact(&mut bytes).ok()?;
+    let mut cursor = 12u64;
+    for _ in 0..4096 {
+        if cursor + 8 > length {
+            break;
+        }
+        file.seek(SeekFrom::Start(cursor)).ok()?;
+        let mut header = [0u8; 8];
+        file.read_exact(&mut header).ok()?;
+        let size = u32::from_le_bytes(header[4..8].try_into().ok()?) as u64;
+        let next = cursor
+            .checked_add(8)?
+            .checked_add(size)?
+            .checked_add(size % 2)?;
+        if next > length {
+            break;
+        }
+        if matches!(&header[..4], b"smpl" | b"cue ") && size <= 1024 * 1024 {
+            bytes.extend(header);
+            let old = bytes.len();
+            bytes.resize(old + size as usize, 0);
+            file.read_exact(&mut bytes[old..]).ok()?;
+            if !size.is_multiple_of(2) {
+                bytes.push(0);
+            }
+        }
+        cursor = next;
+    }
+    loop_range(&bytes, rate)
 }
 
 /// OR 1.6.1 SoundSource.SetRolloffFactor + OpenAL inverse-distance-clamped.
@@ -551,8 +706,9 @@ impl NativeSoundBank {
             banks: vec![],
             external_pass_through: HashMap::new(),
             report: SoundReport::default(),
+            pool: WavePool::default(),
         };
-        let mut waves: HashMap<PathBuf, Wave> = HashMap::new();
+        let mut waves: std::collections::HashSet<PathBuf> = std::collections::HashSet::new();
         for spec in specs {
             let parsed = read_msts_file_to_string(&spec.consist)
                 .and_then(|t| parse_vehicle_text(&t))
@@ -571,6 +727,7 @@ impl NativeSoundBank {
             // A program per vehicle is needed for distinct rolling sound. Share
             // decoded WAVs even when the same program serves all eight coaches.
             for (vehicle, entry) in entries.into_iter().enumerate() {
+                let vehicle = vehicle + spec.vehicle_offset;
                 let rel = match entry {
                     ConsistEntry::Engine { path, .. } | ConsistEntry::Wagon { path, .. } => path,
                 };
@@ -665,6 +822,7 @@ impl NativeSoundBank {
                         ));
                         continue;
                     };
+                    let program_started = std::time::Instant::now();
                     let program = match SmsProgram::from_path(&path) {
                         Ok(p) => p,
                         Err(_e) => {
@@ -684,7 +842,7 @@ impl NativeSoundBank {
                                 crate::mix::resource_name(&path.to_string_lossy())
                             )
                         }));
-                    let mut samples = HashMap::new();
+                    let mut pending_samples = HashMap::new();
                     for stream in &program.streams {
                         for trigger in &stream.triggers {
                             for command in &trigger.commands {
@@ -692,7 +850,7 @@ impl NativeSoundBank {
                                     continue;
                                 };
                                 for name in files {
-                                    if samples.contains_key(name) {
+                                    if pending_samples.contains_key(name) {
                                         continue;
                                     }
                                     let search = vec![
@@ -709,66 +867,23 @@ impl NativeSoundBank {
                                         ));
                                         continue;
                                     };
-                                    if !waves.contains_key(&file) {
-                                        let loaded = (|| -> Result<Wave, String> {
-                                            let bytes =
-                                                std::fs::read(&file).map_err(|e| e.to_string())?;
-                                            let decoder = Decoder::try_from(std::io::Cursor::new(
-                                                bytes.clone(),
-                                            ))
-                                            .map_err(|e| e.to_string())?;
-                                            let channels = decoder.channels();
-                                            let rate = decoder.sample_rate();
-                                            // Bound each WAV and the whole bank. A corrupt/custom content
-                                            // file must not exhaust RAM before the train starts.
-                                            let data: Vec<_> = decoder.take(16_000_001).collect();
-                                            if data.len() > 16_000_000
-                                                || result.report.decoded_mib
-                                                    + data.len() as f32 * 4.0 / 1048576.0
-                                                    > 128.0
-                                            {
-                                                return Err(
-                                                    "WAV decode budget exceeded (128 MiB bank)"
-                                                        .into(),
-                                                );
-                                            }
-                                            result.report.decoded_mib +=
-                                                data.len() as f32 * 4.0 / 1048576.0;
-                                            Ok(Wave {
-                                                samples: SamplesBuffer::new(channels, rate, data),
-                                                rate: rate.get() as f32,
-                                                loop_range_s: loop_range(&bytes, rate.get() as f32),
-                                            })
-                                        })();
-                                        match loaded {
-                                            Ok(w) => {
-                                                waves.insert(file.clone(), w);
-                                            }
-                                            Err(e) => {
-                                                result.report.warnings.push(format!(
-                                                    "{}: {e}",
-                                                    crate::mix::resource_name(
-                                                        &file.to_string_lossy()
-                                                    )
-                                                ));
-                                                continue;
-                                            }
-                                        }
-                                    }
-                                    samples.insert(name.clone(), waves[&file].clone());
+                                    waves.insert(file.clone());
+                                    pending_samples.insert(name.clone(), file);
                                 }
                             }
                         }
                     }
                     result.report.streams += program.streams.len();
                     result.banks.push(Bank {
+                        read_parse_us: program_started.elapsed().as_micros() as u64,
                         train: spec.id,
                         vehicle,
                         location,
                         program,
                         program_name: crate::mix::resource_name(&path.to_string_lossy()),
                         curve_only: curve_refs.iter().any(|r| r.0 == name && r.1 == location),
-                        samples,
+                        samples: HashMap::new(),
+                        pending_samples,
                     });
                 }
             }
@@ -1187,7 +1302,22 @@ impl Playback {
                                 } else {
                                     choice % files.len()
                                 };
-                                let Some(wave) = bank.samples.get(&files[index]) else {
+                                let wave = if let Some(wave) = bank.samples.get(&files[index]) {
+                                    wave.clone()
+                                } else if let Some(path) = bank.pending_samples.get(&files[index]) {
+                                    match self.bank.pool.get(path) {
+                                        Ok(wave) => wave,
+                                        Err(error) => {
+                                            if self.bank.report.warnings.len() < 64 {
+                                                self.bank.report.warnings.push(format!(
+                                                    "{}: {error}",
+                                                    crate::mix::resource_name(&files[index])
+                                                ));
+                                            }
+                                            continue;
+                                        }
+                                    }
+                                } else {
                                     continue;
                                 };
                                 voice.resource = crate::mix::resource_name(&files[index]);
@@ -1370,6 +1500,43 @@ impl Playback {
 
     fn report(&self) -> SoundReport {
         let mut report = self.bank.report.clone();
+        report.decoded_mib = self.bank.pool.resident_bytes() as f32 / 1048576.;
+        report.sample_cache_hits = self.bank.pool.hits;
+        report.sample_cache_misses = self.bank.pool.misses;
+        report.sample_cache_evictions = self.bank.pool.evictions;
+        report.decode_us = self.bank.pool.decode_us;
+        report.file_open_us = self.bank.pool.file_open_us;
+        report.banks = self
+            .bank
+            .banks
+            .iter()
+            .take(256)
+            .map(|b| {
+                let mut paths = b.pending_samples.values().collect::<Vec<_>>();
+                paths.sort();
+                paths.dedup();
+                let waves = paths
+                    .iter()
+                    .filter_map(|p| self.bank.pool.cache.get(*p).map(|(w, _)| w))
+                    .collect::<Vec<_>>();
+                BankReport {
+                    train: b.train,
+                    vehicle: b.vehicle,
+                    program: b.program_name.clone(),
+                    program_read_parse_us: b.read_parse_us,
+                    referenced_samples: paths.len(),
+                    resident_samples: waves.len(),
+                    resident_pcm_mib: waves
+                        .iter()
+                        .filter_map(|w| w.allocation.as_ref())
+                        .map(|n| **n)
+                        .sum::<usize>() as f32
+                        / 1048576.,
+                    sample_file_open_us: waves.iter().map(|w| w.file_open_us).sum(),
+                    sample_decode_us: waves.iter().map(|w| w.decode_us).sum(),
+                }
+            })
+            .collect();
         report.active_voices = self
             .voices
             .iter()
@@ -1655,6 +1822,8 @@ mod tests {
             program,
             program_name: "test.sms".into(),
             curve_only: false,
+            pending_samples: HashMap::new(),
+            read_parse_us: 0,
             samples: HashMap::from([("tone.wav".into(), test_wave())]),
         }
     }
@@ -1670,6 +1839,7 @@ mod tests {
                     banks,
                     external_pass_through: HashMap::new(),
                     report: SoundReport::default(),
+                    pool: WavePool::default(),
                 },
                 &mixer,
             ),
@@ -1827,6 +1997,7 @@ mod tests {
         )
         .unwrap();
         let bank = NativeSoundBank::load(&[ConsistSoundSpec {
+            vehicle_offset: 0,
             id: 0,
             consist,
             route,
@@ -2191,6 +2362,8 @@ mod tests {
             program,
             program_name: "test.sms".into(),
             curve_only: false,
+            pending_samples: HashMap::new(),
+            read_parse_us: 0,
             samples: HashMap::new(),
         };
         assert!(bank.audible(SoundLocation::Exterior, 0, true));
@@ -2242,6 +2415,9 @@ mod tests {
             ),
             rate: 8.0,
             loop_range_s: Some((0.25, 0.625)),
+            allocation: None,
+            file_open_us: 0,
+            decode_us: 0,
         }
     }
     #[test]
@@ -2294,12 +2470,17 @@ mod tests {
                 program: program.clone(),
                 program_name: "test.sms".into(),
                 curve_only: false,
+                pending_samples: HashMap::new(),
+                read_parse_us: 0,
                 samples: HashMap::from([(
                     "tone.wav".into(),
                     Wave {
                         samples,
                         rate: 44100.0,
                         loop_range_s: None,
+                        allocation: None,
+                        file_open_us: 0,
+                        decode_us: 0,
                     },
                 )]),
             }
@@ -2314,6 +2495,7 @@ mod tests {
                 banks,
                 external_pass_through: HashMap::new(),
                 report: SoundReport::default(),
+                pool: WavePool::default(),
             },
             &mixer,
         );
@@ -2546,4 +2728,51 @@ mod tests {
         assert!(playback.voices[0][0].gain > 0.);
         assert_eq!(playback.voices[1][0].gain, 0.);
     }
+}
+#[test]
+fn decoded_pool_reuses_shared_samples_and_evicts_idle_entries_without_breaking_active_loops() {
+    let root = tempfile::tempdir().unwrap();
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(b"RIFF");
+    bytes.extend_from_slice(&40u32.to_le_bytes());
+    bytes.extend_from_slice(b"WAVEfmt ");
+    bytes.extend_from_slice(&16u32.to_le_bytes());
+    bytes.extend_from_slice(&1u16.to_le_bytes());
+    bytes.extend_from_slice(&1u16.to_le_bytes());
+    bytes.extend_from_slice(&44100u32.to_le_bytes());
+    bytes.extend_from_slice(&88200u32.to_le_bytes());
+    bytes.extend_from_slice(&2u16.to_le_bytes());
+    bytes.extend_from_slice(&16u16.to_le_bytes());
+    bytes.extend_from_slice(b"data");
+    bytes.extend_from_slice(&4u32.to_le_bytes());
+    bytes.extend_from_slice(&[0u8; 4]);
+    let mut pool = WavePool::default();
+    let first = root.path().join("first.wav");
+    std::fs::write(&first, &bytes).unwrap();
+    let active = pool.get(&first).unwrap();
+    let shared = pool.get(&first).unwrap();
+    assert!(Arc::ptr_eq(
+        active.allocation.as_ref().unwrap(),
+        shared.allocation.as_ref().unwrap()
+    ));
+    assert_eq!(pool.misses, 1);
+    assert_eq!(pool.hits, 1);
+    drop(shared);
+    for i in 0..80 {
+        let path = root.path().join(format!("sample-{i}.wav"));
+        std::fs::write(&path, &bytes).unwrap();
+        drop(pool.get(&path).unwrap());
+    }
+    assert_eq!(pool.cache.len(), 64);
+    assert!(pool.cache.contains_key(&first));
+    assert!(pool.evictions >= 17);
+    assert!(pool.resident_bytes() <= 128 * 1024 * 1024);
+    assert_eq!(pool.get(&first).unwrap().samples.clone().count(), 2);
+    drop(active);
+    for i in 81..160 {
+        let path = root.path().join(format!("sample-{i}.wav"));
+        std::fs::write(&path, &bytes).unwrap();
+        drop(pool.get(&path).unwrap());
+    }
+    assert!(!pool.cache.contains_key(&first));
 }

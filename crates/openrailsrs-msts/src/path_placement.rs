@@ -298,12 +298,31 @@ fn destination_from_world_pdps(
                     last.graph_z_m() - previous.graph_z_m(),
                 )
             });
-            let (_, _, end) = snap_world_to_edge(
+            // The last PDP lies on the vector leaving the previous authored
+            // junction. A neighbouring parallel vector can be slightly closer
+            // in world space, but cannot be the endpoint of this PAT.
+            let previous_junction = world_pdps.iter().rev().skip(1).find_map(|p| {
+                nearest_node_id(graph, p).filter(|id| {
+                    graph.node(id).is_some_and(|n| {
+                        matches!(n.kind, openrailsrs_track::NodeKind::Switch { .. })
+                            && sq_dist_node(p.graph_x_m(), p.graph_z_m(), n) < 0.25
+                    })
+                })
+            });
+            let allowed = previous_junction.as_deref().map(|id| {
+                graph
+                    .outgoing_edges(id)
+                    .iter()
+                    .cloned()
+                    .collect::<HashSet<_>>()
+            });
+            let (_, _, end) = snap_world_to_edge_filtered(
                 graph,
                 last.graph_x_m(),
                 last.graph_z_m(),
                 direction,
                 Some(polylines),
+                allowed.as_ref(),
             )?;
             end
         };
@@ -387,8 +406,21 @@ pub(crate) fn snap_world_to_edge(
     path_dir: Option<(f64, f64)>,
     polylines: Option<&NativePathPolylines>,
 ) -> Result<(String, f64, String), MstsError> {
+    snap_world_to_edge_filtered(graph, px, pz, path_dir, polylines, None)
+}
+fn snap_world_to_edge_filtered(
+    graph: &TrackGraph,
+    px: f64,
+    pz: f64,
+    path_dir: Option<(f64, f64)>,
+    polylines: Option<&NativePathPolylines>,
+    allowed: Option<&HashSet<String>>,
+) -> Result<(String, f64, String), MstsError> {
     let mut best: Option<(f64, String, String, f64, f64, f64)> = None;
     for (eid, edge) in graph.edges_iter() {
+        if allowed.is_some_and(|ids| !ids.contains(eid)) {
+            continue;
+        }
         let Some(from) = graph.node(&edge.from.0) else {
             continue;
         };
@@ -940,6 +972,10 @@ fn switches_from_pat(
         // Align switches to each ordered waypoint hop, before runtime traversal.
         let waypoints =
             pat_waypoints_from_world(graph, path_file, start, destination, start_offset_m)?;
+        // Generic placement also serves the previously calibrated graph-only
+        // pilot, whose historical switch metadata differs from the native TDB.
+        // Native AI import separately retains strict directed vectors and rejects
+        // impossible crossings; keep this legacy placement API compatible.
         let mut edges = Vec::new();
         for pair in waypoints.windows(2) {
             edges.extend(
@@ -986,6 +1022,288 @@ fn switches_for_route(
     let edge_ids = edge_path_ignoring_switches(graph, start, destination)
         .map_err(|e| MstsError::Msg(e.to_string()))?;
     Ok(switches_for_edges(graph, &edge_ids))
+}
+
+/// End at the last authored PDP inside its directed vector, preserving the
+/// native endpoint rather than driving AI all the way to the next junction.
+pub(crate) fn native_terminal_chainage(
+    graph: &TrackGraph,
+    aliases: &HashMap<u32, MstsAlias>,
+    pat: &Path,
+    path: &PathFile,
+    edges: &[String],
+) -> Result<f64, MstsError> {
+    let last_edge = edges
+        .last()
+        .ok_or_else(|| MstsError::msg("Empty native path"))?;
+    let before = edges[..edges.len() - 1]
+        .iter()
+        .filter_map(|id| graph.edge(id))
+        .map(|e| e.length_m)
+        .sum::<f64>();
+    let edge = graph
+        .edge(last_edge)
+        .ok_or_else(|| MstsError::msg("Missing native end vector"))?;
+    let Some(last) = path.pdps.last().and_then(|p| p.world) else {
+        return Ok(before + edge.length_m);
+    };
+    let polylines = native_path_polylines(graph, aliases, pat)?;
+    let allowed = HashSet::from([last_edge.clone()]);
+    let (_, offset, _) = snap_world_to_edge_filtered(
+        graph,
+        last.graph_x_m(),
+        last.graph_z_m(),
+        None,
+        polylines.as_ref(),
+        Some(&allowed),
+    )?;
+    Ok(before + offset)
+}
+
+/// Resolve the endpoint using the native vector containing the final PDP, as
+/// OR AIPath's Traveller does. A later route edit can add junctions after the
+/// last authored PDP; limiting the end to one vector leaving an earlier
+/// junction would then send an AI backwards to a junction it already passed.
+/// Generic calibrated player placement keeps its historical API separately.
+pub(crate) fn native_waypoint_edges_for_pat(
+    graph: &TrackGraph,
+    aliases: &HashMap<u32, MstsAlias>,
+    pat: &Path,
+    path: &PathFile,
+    waypoints: &[String],
+) -> Result<Vec<String>, MstsError> {
+    let Some(last) = path
+        .pdps
+        .iter()
+        .rev()
+        .find(|p| !p.is_invalid())
+        .and_then(|p| p.world)
+    else {
+        return native_waypoint_edges(graph, path, waypoints);
+    };
+    if waypoints.is_empty() {
+        return Err(MstsError::msg("Native PAT has no initial waypoint"));
+    }
+    let mut ordered = waypoints[..waypoints.len() - 1].to_vec();
+    if ordered.is_empty() {
+        ordered.push(waypoints[0].clone());
+    }
+    if let Some(node) = nearest_node_id(graph, &last).filter(|id| {
+        graph
+            .node(id)
+            .is_some_and(|node| sq_dist_node(last.graph_x_m(), last.graph_z_m(), node) < 0.0025)
+    }) {
+        if ordered.last() != Some(&node) {
+            ordered.push(node);
+        }
+        return native_waypoint_edges(graph, path, &ordered);
+    }
+    let polylines = native_path_polylines(graph, aliases, pat)?;
+    let prefix = native_waypoint_edges(graph, path, &ordered)?;
+    let anchor = ordered.last().unwrap();
+    let node = graph
+        .node(anchor)
+        .ok_or_else(|| MstsError::msg("Missing terminal anchor"))?;
+    let limit = (4. * (last.graph_x_m() - node.x_m).hypot(last.graph_z_m() - node.y_m) + 500.)
+        .clamp(500., 20_000.);
+    let distance_to_vector = |id: &str| {
+        let edge = graph.edge(id).unwrap();
+        let a = graph.node(&edge.from.0).unwrap();
+        let b = graph.node(&edge.to.0).unwrap();
+        let chord = [(a.x_m, a.y_m), (b.x_m, b.y_m)];
+        let points = polylines
+            .as_ref()
+            .and_then(|p| p.get(id))
+            .map(Vec::as_slice)
+            .unwrap_or(&chord);
+        points
+            .windows(2)
+            .map(|p| {
+                let dx = p[1].0 - p[0].0;
+                let dz = p[1].1 - p[0].1;
+                let square = dx * dx + dz * dz;
+                let t = if square > 1e-12 {
+                    ((last.graph_x_m() - p[0].0) * dx + (last.graph_z_m() - p[0].1) * dz) / square
+                } else {
+                    0.
+                }
+                .clamp(0., 1.);
+                (last.graph_x_m() - p[0].0 - t * dx).powi(2)
+                    + (last.graph_z_m() - p[0].1 - t * dz).powi(2)
+            })
+            .reduce(f64::min)
+            .unwrap_or(f64::INFINITY)
+    };
+    // Traveller resolves the native vector containing the endpoint. Choose
+    // among locally reachable forward vectors, rather than a geometrically
+    // closer parallel track or the orientation of a long PDP chord.
+    let mut best = prefix
+        .last()
+        .map(|id| (distance_to_vector(id), 0., prefix.clone()));
+    let initial = (anchor.clone(), prefix.last().cloned().unwrap_or_default());
+    let mut pending = VecDeque::from([(initial.clone(), 0., Vec::<String>::new())]);
+    let mut distances = HashMap::from([(initial.clone(), 0.)]);
+    let initial_direction = path
+        .pdps
+        .iter()
+        .filter_map(|p| p.world)
+        .take(2)
+        .collect::<Vec<_>>();
+    while let Some((state, travel, segment)) = pending.pop_front() {
+        if travel > limit {
+            continue;
+        }
+        for id in graph.outgoing_edges(&state.0) {
+            let edge = graph.edge(id).unwrap();
+            if !state.1.is_empty() {
+                let reverse = state
+                    .1
+                    .strip_suffix("_r")
+                    .map(str::to_owned)
+                    .unwrap_or_else(|| format!("{}_r", state.1));
+                if id == &reverse {
+                    continue;
+                }
+                if let Some(openrailsrs_track::NodeKind::Switch {
+                    stem_edge,
+                    diverging_edge,
+                }) = graph.node(&state.0).map(|n| &n.kind)
+                {
+                    let blade = |id: &str| id == stem_edge.0 || id == diverging_edge.0;
+                    if blade(&reverse) && blade(id) {
+                        continue;
+                    }
+                }
+            } else if state == initial && initial_direction.len() == 2 {
+                let dx = initial_direction[1].graph_x_m() - initial_direction[0].graph_x_m();
+                let dz = initial_direction[1].graph_z_m() - initial_direction[0].graph_z_m();
+                let a = graph.node(&edge.from.0).unwrap();
+                let b = graph.node(&edge.to.0).unwrap();
+                if (b.x_m - a.x_m) * dx + (b.y_m - a.y_m) * dz < 0. {
+                    continue;
+                }
+            }
+            let mut next_segment = segment.clone();
+            next_segment.push(id.clone());
+            let d2 = distance_to_vector(id);
+            if best.as_ref().is_none_or(|(old, old_travel, _)| {
+                d2 + 1e-6 < *old || ((d2 - *old).abs() < 1e-6 && travel < *old_travel)
+            }) {
+                let mut edges = prefix.clone();
+                edges.extend(next_segment.iter().cloned());
+                best = Some((d2, travel, edges));
+            }
+            let next = (edge.to.0.clone(), id.clone());
+            let next_travel = travel + edge.length_m;
+            if next_travel <= limit && distances.get(&next).is_none_or(|old| next_travel < *old) {
+                distances.insert(next.clone(), next_travel);
+                pending.push_back((next, next_travel, next_segment));
+            }
+        }
+    }
+    let Some((_, _, edges)) = best.filter(|(d, _, edges)| *d <= 25. && !edges.is_empty()) else {
+        return Err(MstsError::msg(
+            "Native endpoint is not within 5 m of a continuous forward TDB vector",
+        ));
+    };
+    Ok(edges)
+}
+
+/// A native PAT chooses the initial direction and crosses each three-pin
+/// junction through its common pin. Node-only BFS can turn between both blade
+/// branches or start backwards, producing an impossible but shorter corridor.
+pub(crate) fn native_waypoint_edges(
+    graph: &TrackGraph,
+    path: &PathFile,
+    waypoints: &[String],
+) -> Result<Vec<String>, MstsError> {
+    use std::collections::{HashMap, VecDeque};
+    let anchors = path
+        .pdps
+        .iter()
+        .filter_map(|p| p.world)
+        .take(2)
+        .collect::<Vec<_>>();
+    let direction = (anchors.len() == 2).then(|| {
+        (
+            anchors[1].graph_x_m() - anchors[0].graph_x_m(),
+            anchors[1].graph_z_m() - anchors[0].graph_z_m(),
+        )
+    });
+    let mut edges = Vec::<String>::new();
+    for (hop, pair) in waypoints.windows(2).enumerate() {
+        if pair[0] == pair[1] {
+            continue;
+        }
+        let initial = (pair[0].clone(), edges.last().cloned().unwrap_or_default());
+        let mut pending = VecDeque::from([initial.clone()]);
+        let mut parents = HashMap::from([(initial.clone(), None)]);
+        let mut finish = None;
+        while let Some(state) = pending.pop_front() {
+            for id in graph.outgoing_edges(&state.0) {
+                let Some(edge) = graph.edge(id) else {
+                    continue;
+                };
+                if !state.1.is_empty() {
+                    let reverse = state
+                        .1
+                        .strip_suffix("_r")
+                        .map(str::to_owned)
+                        .unwrap_or_else(|| format!("{}_r", state.1));
+                    if id == &reverse {
+                        continue;
+                    }
+                    if let Some(openrailsrs_track::NodeKind::Switch {
+                        stem_edge,
+                        diverging_edge,
+                    }) = graph.node(&state.0).map(|n| &n.kind)
+                    {
+                        let blade = |e: &str| e == stem_edge.0 || e == diverging_edge.0;
+                        if blade(&reverse) && blade(id) {
+                            continue;
+                        }
+                    }
+                } else if hop == 0
+                    && state == initial
+                    && let Some((dx, dz)) = direction
+                    && let (Some(a), Some(b)) = (graph.node(&edge.from.0), graph.node(&edge.to.0))
+                    && (b.x_m - a.x_m) * dx + (b.y_m - a.y_m) * dz < 0.
+                {
+                    continue;
+                }
+                let next = (edge.to.0.clone(), id.clone());
+                if parents.contains_key(&next) {
+                    continue;
+                }
+                parents.insert(next.clone(), Some(state.clone()));
+                if next.0 == pair[1] {
+                    finish = Some(next);
+                    break;
+                }
+                pending.push_back(next);
+            }
+            if finish.is_some() {
+                break;
+            }
+        }
+        let mut current = finish.ok_or_else(|| {
+            MstsError::msg(format!(
+                "No continuous native PAT hop {} to {}",
+                pair[0], pair[1]
+            ))
+        })?;
+        let mut segment = Vec::new();
+        while current != initial {
+            segment.push(current.1.clone());
+            current = parents
+                .get(&current)
+                .and_then(Clone::clone)
+                .ok_or_else(|| MstsError::msg("Broken native PAT predecessor"))?;
+        }
+        segment.reverse();
+        edges.extend(segment);
+    }
+    Ok(edges)
 }
 
 pub(crate) fn switches_for_edges(graph: &TrackGraph, edge_ids: &[String]) -> Vec<SwitchDef> {
@@ -1193,6 +1511,292 @@ mod tests {
             switches_from_pat(&path, &graph, &HashMap::new(), "start", "end", 0.0).unwrap();
         assert_eq!(switches.len(), 1);
         assert!(matches!(switches[0].position, SwitchPositionDef::Straight));
+    }
+
+    #[test]
+    fn native_endpoint_stays_on_the_vector_leaving_the_last_authored_junction() {
+        let mut graph = TrackGraph::new();
+        for (id, x, z) in [
+            ("before", -100., 0.),
+            ("junction", 0., 0.),
+            ("correct_end", 1000., 0.),
+            ("parallel_start", 0., 1.),
+            ("wrong_end", 1000., 1.),
+        ] {
+            let kind = if id == "junction" {
+                NodeKind::Switch {
+                    stem_edge: EdgeId("correct".into()),
+                    diverging_edge: EdgeId("back".into()),
+                }
+            } else {
+                NodeKind::Plain
+            };
+            graph
+                .insert_node(Node {
+                    id: NodeId(id.into()),
+                    kind,
+                    x_m: x,
+                    y_m: z,
+                })
+                .unwrap();
+        }
+        for (id, from, to) in [
+            ("lead", "before", "junction"),
+            ("back", "junction", "before"),
+            ("correct", "junction", "correct_end"),
+            ("parallel", "parallel_start", "wrong_end"),
+        ] {
+            graph
+                .insert_edge(Edge {
+                    id: EdgeId(id.into()),
+                    from: NodeId(from.into()),
+                    to: NodeId(to.into()),
+                    length_m: 1000.,
+                    speed_limit_mps: 20.,
+                    grade_percent: 0.,
+                })
+                .unwrap();
+        }
+        let worlds = [(-50., 0.), (0., 0.), (500., -0.9)].map(|(x, z)| {
+            openrailsrs_formats::TrackVectorPoint {
+                tile_x: 0,
+                tile_z: 0,
+                x,
+                y: 0.,
+                z,
+            }
+        });
+        let polylines = HashMap::from([
+            ("correct".into(), vec![(0., 0.), (1000., 0.)]),
+            ("parallel".into(), vec![(0., 1.), (1000., 1.)]),
+        ]);
+        assert_eq!(
+            destination_from_world_pdps(&graph, "before", &worlds, Some(&polylines)).unwrap(),
+            "correct_end"
+        );
+    }
+
+    #[test]
+    fn native_pat_keeps_initial_direction_and_never_turns_between_blade_branches() {
+        let mut graph = TrackGraph::new();
+        for (id, x, z) in [
+            ("start", 0., 0.),
+            ("behind", -10., 0.),
+            ("forward", 100., 0.),
+            ("next", 110., 0.),
+            ("end", 200., 0.),
+        ] {
+            let kind = if id == "behind" {
+                NodeKind::Switch {
+                    stem_edge: EdgeId("back_r".into()),
+                    diverging_edge: EdgeId("wrong".into()),
+                }
+            } else {
+                NodeKind::Plain
+            };
+            graph
+                .insert_node(Node {
+                    id: NodeId(id.into()),
+                    kind,
+                    x_m: x,
+                    y_m: z,
+                })
+                .unwrap();
+        }
+        for (id, from, to) in [
+            ("back", "start", "behind"),
+            ("back_r", "behind", "start"),
+            ("wrong", "behind", "next"),
+            ("ahead", "start", "forward"),
+            ("join", "forward", "next"),
+            ("finish", "next", "end"),
+        ] {
+            graph
+                .insert_edge(Edge {
+                    id: EdgeId(id.into()),
+                    from: NodeId(from.into()),
+                    to: NodeId(to.into()),
+                    length_m: 100.,
+                    speed_limit_mps: 20.,
+                    grade_percent: 0.,
+                })
+                .unwrap();
+        }
+        let path = PathFile {
+            pdps: [(0., 0.), (110., 0.), (200., 0.)]
+                .into_iter()
+                .map(|(x, z)| openrailsrs_formats::PathDataPoint {
+                    node_id: None,
+                    junction_flag: 2,
+                    invalid_flag: 0,
+                    world: Some(openrailsrs_formats::TrackVectorPoint {
+                        tile_x: 0,
+                        tile_z: 0,
+                        x,
+                        y: 0.,
+                        z,
+                    }),
+                })
+                .collect(),
+            ..Default::default()
+        };
+        let edges = native_waypoint_edges(
+            &graph,
+            &path,
+            &["start".into(), "next".into(), "end".into()],
+        )
+        .unwrap();
+        assert_eq!(edges, ["ahead", "join", "finish"]);
+        assert!(native_waypoint_edges(&graph, &path, &["start".into(), "behind".into()]).is_err());
+    }
+
+    #[test]
+    fn native_endpoint_after_added_junctions_keeps_its_actual_terminal_vector() {
+        let mut graph = TrackGraph::new();
+        for (id, x) in [
+            ("start", 0.),
+            ("authored", 100.),
+            ("added_a", 150.),
+            ("added_b", 200.),
+            ("end", 300.),
+        ] {
+            graph
+                .insert_node(Node {
+                    id: NodeId(id.into()),
+                    kind: NodeKind::Plain,
+                    x_m: x,
+                    y_m: 0.,
+                })
+                .unwrap();
+        }
+        for (id, from, to, length) in [
+            ("first", "start", "authored", 100.),
+            ("a", "authored", "added_a", 50.),
+            ("b", "added_a", "added_b", 50.),
+            ("last", "added_b", "end", 100.),
+        ] {
+            graph
+                .insert_edge(Edge {
+                    id: EdgeId(id.into()),
+                    from: NodeId(from.into()),
+                    to: NodeId(to.into()),
+                    length_m: length,
+                    speed_limit_mps: 20.,
+                    grade_percent: 0.,
+                })
+                .unwrap();
+        }
+        let mut path = PathFile {
+            pdps: [0., 100., 220.]
+                .into_iter()
+                .map(|x| openrailsrs_formats::PathDataPoint {
+                    node_id: None,
+                    junction_flag: if x == 100. { 2 } else { 1 },
+                    invalid_flag: 0,
+                    world: Some(openrailsrs_formats::TrackVectorPoint {
+                        tile_x: 0,
+                        tile_z: 0,
+                        x,
+                        y: 0.,
+                        z: 0.,
+                    }),
+                })
+                .collect(),
+            ..Default::default()
+        };
+        // Historical endpoint placement selected an earlier reachable node.
+        // Native AI must use the physical vector containing the final PDP.
+        let old = ["start".into(), "authored".into(), "added_a".into()];
+        let edges = native_waypoint_edges_for_pat(
+            &graph,
+            &HashMap::new(),
+            Path::new("fixture.pat"),
+            &path,
+            &old,
+        )
+        .unwrap();
+        assert_eq!(edges, ["first", "a", "b", "last"]);
+        assert_eq!(
+            native_terminal_chainage(
+                &graph,
+                &HashMap::new(),
+                Path::new("fixture.pat"),
+                &path,
+                &edges
+            )
+            .unwrap(),
+            220.
+        );
+        // A long chord across a curve can point backwards at the endpoint.
+        // Keep the direction of continuous traversal through the PAT instead
+        // of adding the opposing direction of the same physical vector.
+        graph
+            .insert_edge(Edge {
+                id: EdgeId("last_r".into()),
+                from: NodeId("end".into()),
+                to: NodeId("added_b".into()),
+                length_m: 100.,
+                speed_limit_mps: 20.,
+                grade_percent: 0.,
+            })
+            .unwrap();
+        let mut previous = path.pdps.last().unwrap().clone();
+        previous.world.as_mut().unwrap().x = 250.;
+        path.pdps.insert(path.pdps.len() - 1, previous);
+        let edges = native_waypoint_edges_for_pat(
+            &graph,
+            &HashMap::new(),
+            Path::new("fixture.pat"),
+            &path,
+            &old,
+        )
+        .unwrap();
+        assert_eq!(edges, ["first", "a", "b", "last"]);
+        // A neighbouring parallel track can fit approximate PDP coordinates
+        // better, but cannot be reached through the authored incoming vector.
+        for (id, x) in [("foreign_a", 200.), ("foreign_b", 300.)] {
+            graph
+                .insert_node(Node {
+                    id: NodeId(id.into()),
+                    kind: NodeKind::Plain,
+                    x_m: x,
+                    y_m: -0.09,
+                })
+                .unwrap();
+        }
+        graph
+            .insert_edge(Edge {
+                id: EdgeId("parallel".into()),
+                from: NodeId("foreign_a".into()),
+                to: NodeId("foreign_b".into()),
+                length_m: 100.,
+                speed_limit_mps: 20.,
+                grade_percent: 0.,
+            })
+            .unwrap();
+        path.pdps.last_mut().unwrap().world.as_mut().unwrap().z = 0.1;
+        let edges = native_waypoint_edges_for_pat(
+            &graph,
+            &HashMap::new(),
+            Path::new("fixture.pat"),
+            &path,
+            &old,
+        )
+        .unwrap();
+        assert_eq!(edges, ["first", "a", "b", "last"]);
+        path.pdps.last_mut().unwrap().world.as_mut().unwrap().z = 0.;
+        // An endpoint on a junction stops at that junction, without including
+        // another vector or permitting an immediate reversal into the train.
+        path.pdps.last_mut().unwrap().world.as_mut().unwrap().x = 150.;
+        let edges = native_waypoint_edges_for_pat(
+            &graph,
+            &HashMap::new(),
+            Path::new("fixture.pat"),
+            &path,
+            &old,
+        )
+        .unwrap();
+        assert_eq!(edges, ["first", "a"]);
     }
 
     #[test]

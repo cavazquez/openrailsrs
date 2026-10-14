@@ -311,6 +311,21 @@ pub struct ShuntingStep {
 /// `[[extra_trains]]` with their own route, consist, and departure time.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct TrainEntryDef {
+    /// Ordered original PAT subpaths, retaining reversal and wait points.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub legs: Vec<RouteLeg>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub presentation: Vec<crate::presentation::VehiclePresentation>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub cab_equipment: Vec<crate::cab_equipment::CabEquipmentDef>,
+    /// Original AI running before the activity starts; bounded pre-simulation.
+    #[serde(default)]
+    pub pre_roll_s: f64,
+    /// Native TRF times are relative to the service's own initial time.
+    #[serde(default)]
+    pub relative_stop_times: bool,
+    #[serde(default)]
+    pub parked: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub freight: Option<crate::freight::FreightService>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -472,7 +487,9 @@ impl ScenarioFile {
         }
         if self.train.freight.as_ref().is_some_and(|p| !p.valid())
             || self.extra_trains.iter().any(|e| {
-                e.freight.as_ref().is_some_and(|p| !p.valid())
+                !e.pre_roll_s.is_finite()
+                    || !(0. ..=21600.).contains(&e.pre_roll_s)
+                    || e.freight.as_ref().is_some_and(|p| !p.valid())
                     || !crate::vehicle_systems::valid_definitions(&e.systems, &[])
             })
         {
@@ -541,37 +558,51 @@ impl ScenarioFile {
             ));
         }
         if self.route.legs.len() > 256
-            || self.route.legs.iter().any(|leg| {
-                leg.edges.is_empty()
-                    || leg.edges.len() > 50_000
-                    || ![leg.start_offset_m, leg.end_chainage_m, leg.wait_s]
-                        .iter()
-                        .all(|n| n.is_finite() && *n >= 0.0)
-                    || leg.end_chainage_m < leg.start_offset_m
-                    || leg.operations.len() > 256
-                    || leg.operations.iter().any(|op| {
-                        !op.chainage_m.is_finite()
-                            || op.chainage_m < leg.start_offset_m - 1.0
-                            || op.chainage_m > leg.end_chainage_m + 1.0
-                            || op.section.trim().is_empty()
-                            || op.section.len() > 256
-                            || match op.action {
-                                TimetableAction::Detach { keep } => !(1..=256).contains(&keep),
-                                TimetableAction::PickUp { count } => !(1..=256).contains(&count),
-                            }
-                    })
-                    || leg
-                        .operations
-                        .windows(2)
-                        .any(|ops| ops[0].chainage_m > ops[1].chainage_m)
-                    || leg
-                        .not_before_s
-                        .is_some_and(|n| !n.is_finite() || !(0.0..=172800.0).contains(&n))
-                    || leg
-                        .service_id
-                        .as_ref()
-                        .is_some_and(|id| id.trim().is_empty() || id.len() > 256)
+            || self.extra_trains.iter().any(|e| {
+                e.legs.len() > 256
+                    || e.presentation.len() > 256
+                    || e.presentation.iter().any(|v| !v.valid())
+                    || e.cab_equipment.len() > 256
+                    || e.cab_equipment.iter().any(|c| !c.valid())
             })
+            || self
+                .route
+                .legs
+                .iter()
+                .chain(self.extra_trains.iter().flat_map(|e| &e.legs))
+                .any(|leg| {
+                    leg.edges.is_empty()
+                        || leg.edges.len() > 50_000
+                        || ![leg.start_offset_m, leg.end_chainage_m, leg.wait_s]
+                            .iter()
+                            .all(|n| n.is_finite() && *n >= 0.0)
+                        || leg.end_chainage_m < leg.start_offset_m
+                        || leg.operations.len() > 256
+                        || leg.operations.iter().any(|op| {
+                            !op.chainage_m.is_finite()
+                                || op.chainage_m < leg.start_offset_m - 1.0
+                                || op.chainage_m > leg.end_chainage_m + 1.0
+                                || op.section.trim().is_empty()
+                                || op.section.len() > 256
+                                || match op.action {
+                                    TimetableAction::Detach { keep } => !(1..=256).contains(&keep),
+                                    TimetableAction::PickUp { count } => {
+                                        !(1..=256).contains(&count)
+                                    }
+                                }
+                        })
+                        || leg
+                            .operations
+                            .windows(2)
+                            .any(|ops| ops[0].chainage_m > ops[1].chainage_m)
+                        || leg
+                            .not_before_s
+                            .is_some_and(|n| !n.is_finite() || !(0.0..=172800.0).contains(&n))
+                        || leg
+                            .service_id
+                            .as_ref()
+                            .is_some_and(|id| id.trim().is_empty() || id.len() > 256)
+                })
         {
             return Err(ScenarioError::Validation(
                 "Invalid operational itinerary".into(),

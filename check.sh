@@ -5,6 +5,23 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
+# Historical CLI integration suites publish their traces into examples. Preserve
+# the player's existing results even when a test, build or oracle fails.
+mkdir -p "$ROOT/tmp"
+CHECK_TRACE_PARENT="$(mktemp -d "$ROOT/tmp/check-traces.XXXXXX")"
+CHECK_TRACE_SNAPSHOT="$CHECK_TRACE_PARENT/snapshot"
+python3 scripts/preserve_example_outputs.py snapshot "$CHECK_TRACE_SNAPSHOT"
+restore_check_traces() {
+    local check_status=$?
+    if ! python3 scripts/preserve_example_outputs.py restore "$CHECK_TRACE_SNAPSHOT"; then
+        echo "No se pudieron restaurar las trazas; copia conservada en $CHECK_TRACE_SNAPSHOT" >&2
+        exit 1
+    fi
+    rm -rf -- "$CHECK_TRACE_PARENT"
+    exit "$check_status"
+}
+trap restore_check_traces EXIT
+
 # Match the playable launcher and share one compact Bevy build across checks.
 export CARGO_PROFILE_DEV_OPT_LEVEL="${CARGO_PROFILE_DEV_OPT_LEVEL:-1}"
 export CARGO_PROFILE_TEST_OPT_LEVEL="${CARGO_PROFILE_TEST_OPT_LEVEL:-1}"
@@ -43,6 +60,7 @@ unset OPENRAILSRS_CAPTURE_OR_FOCUS OPENRAILSRS_LOOK_YAW OPENRAILSRS_LOOK_PITCH
 unset OPENRAILSRS_CAPTURE_SANDER
 unset OPENRAILSRS_CAPTURE_EQUIPMENT OPENRAILSRS_CAPTURE_BUG_REPORT
 unset OPENRAILSRS_CAPTURE_ACTIONS OPENRAILSRS_SHADER_DIAGNOSTICS
+unset OPENRAILSRS_SOAK_SECONDS OPENRAILSRS_SOAK_OUT OPENRAILSRS_SOAK_ROUTES
 
 echo "==> rustfmt (cargo fmt --check)"
 cargo fmt --all -- --check
@@ -72,6 +90,7 @@ python3 -m unittest discover -s scripts -p test_train_effects.py
 python3 -m unittest discover -s scripts -p test_train_atmosphere.py
 python3 -m unittest discover -s scripts -p test_native_pilot.py
 python3 -m unittest discover -s scripts -p test_official_content.py
+python3 -m unittest discover -s scripts -p test_content_url.py
 python3 -m unittest discover -s scripts -p test_website.py
 python3 -m unittest discover -s scripts -p test_packaging.py
 python3 -m unittest discover -s scripts -p test_formation_physics.py

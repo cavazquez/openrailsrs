@@ -202,7 +202,10 @@ pub fn update_ground_fog(
     mut diagnostics: ResMut<FogDiagnostics>,
     mut cameras: Query<
         (Entity, &Transform, Option<&mut VolumetricFog>),
-        (With<Camera3d>, Without<GroundFog>),
+        (
+            (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+            Without<GroundFog>,
+        ),
     >,
     trains: Query<&Transform, (With<LiveTrainMarker>, Without<GroundFog>, Without<Camera3d>)>,
     sun: Query<Entity, (With<RouteSunLight>, Without<VolumetricLight>)>,

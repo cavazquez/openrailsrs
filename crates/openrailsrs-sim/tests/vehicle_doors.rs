@@ -21,6 +21,88 @@ fn session() -> LiveDriveSession {
         .collect();
     LiveDriveSession::from_scenario(&dir, &scenario).unwrap()
 }
+fn boarding_session(dwell_s: f64, passengers: u32) -> LiveDriveSession {
+    let mut s = session();
+    s.gameplay
+        .stop_targets
+        .push(openrailsrs_sim::LiveStopTarget {
+            node_id: "yard_a".into(),
+            cum_dist_m: s.head_chainage_m(),
+            arrive_s: 0.,
+            depart_s: dwell_s,
+            dwell_s,
+            name: "Andén de prueba".into(),
+            is_terminal: false,
+            passengers_on: passengers,
+            passengers_off: 0,
+        });
+    s.command_doors(Some(1), DoorSide::Left, true).unwrap();
+    s.step_realtime(2.55, |_| {});
+    s
+}
+
+#[test]
+fn closing_finishes_only_the_current_passenger_and_survives_pause_restore() {
+    let mut s = boarding_session(30., 20);
+    assert!(s.gameplay.passenger_motion(0, 20).1);
+    s.command_doors(Some(1), DoorSide::Left, false).unwrap();
+    let boundary = s.state.vehicle_systems[1].door_close_at_progress[0];
+    assert_eq!(boundary, Some(0.05));
+    assert!(s.state.vehicle_systems[1].door_target[0]);
+    let clock = s.time_s();
+    let progress = s.gameplay.boarding_progress();
+    for _ in 0..120 {
+        s.step_realtime(0., |_| {});
+    }
+    assert_eq!(s.time_s(), clock);
+    assert_eq!(s.gameplay.boarding_progress(), progress);
+    assert_eq!(
+        s.state.vehicle_systems[1].door_close_at_progress[0],
+        boundary
+    );
+
+    let mut restored = boarding_session(30., 20);
+    restored.restore_snapshot(s.snapshot()).unwrap();
+    // Repeating the close request must not extend the current transfer.
+    s.command_doors(Some(1), DoorSide::Left, false).unwrap();
+    assert_eq!(
+        s.state.vehicle_systems[1].door_close_at_progress[0],
+        boundary
+    );
+    s.step_realtime(1.5, |_| {});
+    restored.step_realtime(1.5, |_| {});
+    assert_eq!(s.state.vehicle_systems, restored.state.vehicle_systems);
+    assert!(s.gameplay.passenger_motion(0, 20).0 > 0.999999);
+    assert_eq!(s.state.vehicle_systems[1].door_close_at_progress[0], None);
+    assert!(!s.state.vehicle_systems[1].door_target[0]);
+    assert!(s.state.vehicle_systems[1].door_fraction[0] < 1.);
+    assert!(
+        s.gameplay.remaining_boarding_s() > 25.,
+        "closing does not require or fabricate a completed stop"
+    );
+}
+
+#[test]
+fn reopening_cancels_queued_closure_and_waiting_passengers_do_not_delay_it() {
+    let mut s = boarding_session(30., 20);
+    s.command_doors(Some(1), DoorSide::Left, false).unwrap();
+    assert!(s.state.vehicle_systems[1].door_close_at_progress[0].is_some());
+    s.command_doors(Some(1), DoorSide::Left, true).unwrap();
+    s.step_realtime(2., |_| {});
+    assert_eq!(s.state.vehicle_systems[1].door_close_at_progress[0], None);
+    assert_eq!(s.state.vehicle_systems[1].door_fraction[0], 1.);
+    assert!(s.state.vehicle_systems[1].door_target[0]);
+
+    let mut long = boarding_session(120., 1);
+    assert_eq!(long.gameplay.passenger_motion(0, 1), (0., false));
+    long.command_doors(Some(1), DoorSide::Left, false).unwrap();
+    assert_eq!(
+        long.state.vehicle_systems[1].door_close_at_progress[0],
+        None
+    );
+    assert!(!long.state.vehicle_systems[1].door_target[0]);
+}
+
 #[test]
 fn independent_vehicle_and_sides_have_real_interlocks_and_survive_midstroke_save() {
     let mut s = session();

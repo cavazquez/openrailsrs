@@ -51,7 +51,7 @@ use super::atom_to_number;
 use super::atom_to_string;
 
 /// 3-component vector (point / normal).
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, Default, PartialEq)]
 pub struct Vec3 {
     pub x: f64,
     pub y: f64,
@@ -59,7 +59,7 @@ pub struct Vec3 {
 }
 
 /// 2-component texture coordinate.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, Default, PartialEq)]
 pub struct Vec2 {
     pub u: f64,
     pub v: f64,
@@ -68,7 +68,7 @@ pub struct Vec2 {
 /// One row in `prim_states`: ties together a shader, a texture index and a
 /// vertex state.  We keep raw numeric ids so the consumer (Fase 23) can resolve
 /// them against `texture_filenames` / `shader_names`.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq)]
 pub struct PrimState {
     /// Optional human-readable name (`prim_state "name" ...`).
     pub name: Option<String>,
@@ -96,7 +96,7 @@ pub struct PrimState {
 /// `vertex_indices` holds local `sub_object.vertices` indices in groups of three
 /// `(a,b,c)` after the MSTS count prefix is stripped (#173). The helper
 /// [`Primitive::triangle_count`] returns `vertex_indices.len() / 3`.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq)]
 pub struct Primitive {
     /// Index into the parent shape's `prim_states` table (OR default `0`).
     pub prim_state_idx: i32,
@@ -114,7 +114,7 @@ impl Primitive {
 ///
 /// Primitive `vertex_idxs` refer to this table first; each vertex then points
 /// into the global point, normal and UV arrays.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq)]
 pub struct Vertex {
     /// Index into [`ShapeFile::points`].
     pub point_idx: i32,
@@ -129,7 +129,7 @@ pub struct Vertex {
 }
 
 /// A `sub_object` inside a `distance_level`.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq)]
 pub struct SubObject {
     /// Vertex count declared by `vertices <count>`.
     pub vertex_count: usize,
@@ -141,7 +141,7 @@ pub struct SubObject {
 }
 
 /// One LOD entry: a draw distance and the meshes drawn at that distance.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq)]
 pub struct DistanceLevel {
     /// Selection distance in metres (`dlevel_selection`).
     pub selection_m: f64,
@@ -155,19 +155,19 @@ pub struct DistanceLevel {
 }
 
 /// A `lod_control` block: a list of distance levels.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq)]
 pub struct LodControl {
     pub distance_levels: Vec<DistanceLevel>,
 }
 
 /// 4x3 transform matrix (MSTS stores 12 floats per matrix).
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, Default, PartialEq)]
 pub struct Matrix43 {
     pub rows: [[f64; 3]; 4],
 }
 
 /// Named transform inside `matrices`.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq)]
 pub struct NamedMatrix {
     pub name: String,
     pub matrix: Matrix43,
@@ -177,7 +177,7 @@ pub struct NamedMatrix {
 ///
 /// MSTS layout (lenient): `( vtx_state flags matrix_idx LightMatIdx LightCfgIdx … )`
 /// — see Open Rails `Orts.Formats.Msts.vtx_state`.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq)]
 pub struct VtxState {
     /// Raw flags word.
     pub flags: i32,
@@ -201,7 +201,7 @@ impl Default for VtxState {
 }
 
 /// Animation key types supported by MSTS shapes.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq)]
 pub enum AnimController {
     /// Linear position interpolation: `(time_s, [x, y, z])`.
     LinearPos { keys: Vec<(f32, [f32; 3])> },
@@ -212,7 +212,7 @@ pub enum AnimController {
 }
 
 /// One animated node in a shape animation.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq)]
 pub struct AnimNode {
     /// Node name (matches a matrix name in [`ShapeFile::matrices`]).
     pub name: String,
@@ -220,7 +220,7 @@ pub struct AnimNode {
 }
 
 /// A named animation block (`animation` inside `animations`).
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq)]
 pub struct Animation {
     /// Total frame count declared in the animation header.
     pub frame_count: u32,
@@ -232,7 +232,7 @@ pub struct Animation {
 /// Slot in the shape `textures` table (maps to `images` via `image_idx`).
 ///
 /// Open Rails layout: `texture ( ImageIdx FilterMode MipMapLODBias [BorderColor] )`.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq)]
 pub struct ShapeTextureSlot {
     /// Index into [`ShapeFile::texture_filenames`] / `images`.
     pub image_idx: i32,
@@ -256,7 +256,7 @@ impl Default for ShapeTextureSlot {
 }
 
 /// OR `TexAddrMode` from the first `uv_op` (1=Wrap, 2=Mirror, 3=Clamp, 4=Border).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MstsTexAddrMode {
     Wrap,
     Mirror,
@@ -276,7 +276,7 @@ pub fn msts_tex_addr_mode(raw: i32) -> Option<MstsTexAddrMode> {
 }
 
 /// Kind of `uv_op_*` recognised for address-mode extraction (v1).
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum UvOpKind {
     Copy,
     ReflectMap,
@@ -288,7 +288,7 @@ pub enum UvOpKind {
 }
 
 /// One `uv_op_*` entry inside `light_model_cfg / uv_ops`.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq)]
 pub struct UvOp {
     pub kind: UvOpKind,
     /// OR `TexAddrMode` (1–4); first op drives the sampler.
@@ -298,14 +298,14 @@ pub struct UvOp {
 }
 
 /// One `light_model_cfg` (flags + UV ops).
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq)]
 pub struct LightModelCfg {
     pub flags: i32,
     pub uv_ops: Vec<UvOp>,
 }
 
 /// Parsed `.s` ASCII file.
-#[derive(Clone, Debug, Default)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default)]
 pub struct ShapeFile {
     /// Texture filenames declared via `texture_filenames` or `images`.
     pub texture_filenames: Vec<String>,
@@ -1012,7 +1012,7 @@ pub fn materialize_legacy_point_index_vertices(sub: &mut SubObject) {
 }
 
 /// Topology error for an `indexed_trilist` that violates the OR local-index contract (#173).
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct TrilistTopologyError {
     pub sub_object_idx: usize,
     pub prim_ord: usize,
@@ -1146,10 +1146,17 @@ fn collect_matrices(ast: &Ast) -> Vec<NamedMatrix> {
 }
 
 fn parse_named_matrix(items: &[Ast]) -> Option<NamedMatrix> {
-    let name = items.iter().skip(1).find_map(|a| match a {
-        Ast::Atom(at) => atom_to_string(at),
-        _ => None,
-    })?;
+    // OR matrix(SBR) allows an absent Label. Anonymous matrices still occupy
+    // their authored table slot: hierarchy, vertex states and animations refer
+    // to those numeric slots, so dropping one shifts every subsequent part.
+    let name = items
+        .iter()
+        .skip(1)
+        .find_map(|a| match a {
+            Ast::Atom(at) => atom_to_string(at),
+            _ => None,
+        })
+        .unwrap_or_default();
     let nums: Vec<f64> = items
         .iter()
         .skip(1)
@@ -1694,6 +1701,26 @@ fn parse_controller(items: &[Ast]) -> Option<AnimController> {
 mod tests {
     use super::*;
     use crate::ast::{Ast, Atom};
+
+    #[test]
+    fn anonymous_matrix_keeps_coefficients_and_following_named_slot() {
+        let source = r#"( shape
+            ( matrices 3
+                ( matrix "MAIN" 1 0 0 0 1 0 0 0 1 0 0 0 )
+                ( matrix 1 0 0 0 1 0 0 0 1 0 4 1 )
+                ( matrix "BOGIE1" 1 0 0 0 1 0 0 0 1 0 0 6 )
+            )
+            ( vtx_states 1 ( vtx_state 0 2 -5 0 ) )
+        )"#;
+        let ast = crate::parser::parse_first(source).unwrap();
+        let shape = ShapeFile::from_ast(&ast).unwrap();
+        assert_eq!(shape.matrices.len(), 3);
+        assert_eq!(shape.matrices[1].name, "");
+        assert_eq!(shape.matrices[1].matrix.rows[3], [0., 4., 1.]);
+        let referenced = &shape.matrices[shape.vtx_states[0].matrix_idx as usize];
+        assert_eq!(referenced.name, "BOGIE1");
+        assert_eq!(referenced.matrix.rows[3], [0., 0., 6.]);
+    }
 
     #[test]
     fn parse_vertex_uv_indices_strips_msts_count_prefix() {

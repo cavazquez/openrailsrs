@@ -1,0 +1,18 @@
+{
+  "review": "Security Review",
+  "confirmed_findings": 2,
+  "ace": {
+    "limits": "encoded bytes, expanded bytes and retained decoded pixels",
+    "default_bytes": 268435456,
+    "horizon_bytes": 33554432,
+    "regression_tests": "8 decoder integration tests passed, including 3 new limit/pixel cases"
+  },
+  "url": {
+    "identity": "url-github- + SHA256(lowercase canonical repository URL)",
+    "replacement": "different origins rejected before touching a package or its queue",
+    "python_tests": 13,
+    "rust_tests": 2
+  },
+  "installer_tests": 18,
+  "packaging_tests": 17
+}

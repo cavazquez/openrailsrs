@@ -45,6 +45,8 @@ const ACE_MAGIC: &[u8; 4] = b"@ACE";
 // ── SIMISA container prefixes ────────────────────────────────────────────────
 const SIMISA_COMPRESSED: &[u8; 8] = b"SIMISA@F";
 const SIMISA_UNCOMPRESSED: &[u8; 16] = b"SIMISA@@@@@@@@@@";
+/// Ceiling for encoded bytes, expanded bytes and retained decoded pixels.
+pub const DEFAULT_ACE_LIMIT: usize = 256 * 1024 * 1024;
 
 // ── OR SimisAceFormatOptions flags ───────────────────────────────────────────
 const OPT_MIPMAPS: u32 = 0x01;
@@ -129,12 +131,22 @@ pub enum AceError {
     Png(#[from] image::ImageError),
     #[error("decompression error: {0}")]
     Decompress(String),
+    #[error("ace texture exceeds its {limit}-byte memory limit")]
+    LimitExceeded { limit: usize },
 }
 
 /// Read and decode an `.ace` file from disk.
 pub fn read_ace(path: impl AsRef<Path>) -> Result<AceFile, AceError> {
-    let bytes = std::fs::read(path.as_ref())?;
-    AceFile::read_bytes(&bytes)
+    read_ace_limited(path, DEFAULT_ACE_LIMIT)
+}
+
+/// Read a texture without trusting its file size or compression header.
+pub fn read_ace_limited(path: impl AsRef<Path>, maximum_bytes: usize) -> Result<AceFile, AceError> {
+    let file = std::fs::File::open(path.as_ref())?;
+    let mut bytes = Vec::new();
+    file.take((maximum_bytes as u64).saturating_add(1))
+        .read_to_end(&mut bytes)?;
+    AceFile::read_bytes_limited(&bytes, maximum_bytes)
 }
 
 /// Encode `mip0` to a PNG file at `path`.
@@ -155,20 +167,31 @@ impl AceFile {
     /// Detects all supported container formats and dispatches to the
     /// appropriate body parser.
     pub fn read_bytes(bytes: &[u8]) -> Result<Self, AceError> {
+        Self::read_bytes_limited(bytes, DEFAULT_ACE_LIMIT)
+    }
+
+    /// Limit both decompression and decoded pixel allocations. The declared
+    /// SIMISA size is not trusted: a forged small size cannot bypass this limit.
+    pub fn read_bytes_limited(bytes: &[u8], maximum_bytes: usize) -> Result<Self, AceError> {
+        if bytes.len() > maximum_bytes {
+            return Err(AceError::LimitExceeded {
+                limit: maximum_bytes,
+            });
+        }
         if bytes.starts_with(SIMISA_COMPRESSED) {
             // Compressed: SIMISA@F + u32 uncompressed_size + @@@@ + zlib(DEFLATE)
             // The zlib stream (0x78 0x9C …) starts at byte 16.
             if bytes.len() < 18 {
                 return Err(AceError::Truncated(bytes.len()));
             }
-            let decompressed = zlib_decompress(&bytes[16..])?;
-            parse_or_body(&decompressed)
+            let decompressed = zlib_decompress(&bytes[16..], maximum_bytes)?;
+            parse_or_body(&decompressed, maximum_bytes)
         } else if bytes.starts_with(SIMISA_UNCOMPRESSED) {
             // Uncompressed: 16-byte SIMISA header, body at offset 16.
-            parse_or_body(&bytes[16..])
+            parse_or_body(&bytes[16..], maximum_bytes)
         } else if bytes.len() >= 4 && bytes[..4] == *ACE_MAGIC {
             // Project-internal synthetic format used by test fixtures.
-            parse_synthetic_body(&bytes[4..])
+            parse_synthetic_body(&bytes[4..], maximum_bytes)
         } else {
             Err(AceError::UnknownMagic { offset: 0 })
         }
@@ -180,7 +203,7 @@ impl AceFile {
 /// Parse an ACE body after the SIMISA container header has been consumed.
 ///
 /// Layout matches Open Rails `AceFile.cs :: Texture2DFromReader`.
-fn parse_or_body(body: &[u8]) -> Result<AceFile, AceError> {
+fn parse_or_body(body: &[u8], maximum_bytes: usize) -> Result<AceFile, AceError> {
     // 4-byte magic
     if body.get(..4) != Some(b"\x01\x00\x00\x00") {
         return Err(AceError::UnknownMagic { offset: 0 });
@@ -203,7 +226,12 @@ fn parse_or_body(body: &[u8]) -> Result<AceFile, AceError> {
 
     // Channel descriptors — each is u64 size + u64 type (16 bytes)
     let channels_start = 152;
-    let channels_end = channels_start + channel_count * 16;
+    let channels_end = channel_count
+        .checked_mul(16)
+        .and_then(|bytes| bytes.checked_add(channels_start))
+        .ok_or(AceError::LimitExceeded {
+            limit: maximum_bytes,
+        })?;
     if body.len() < channels_end {
         return Err(AceError::Truncated(body.len()));
     }
@@ -226,6 +254,7 @@ fn parse_or_body(body: &[u8]) -> Result<AceFile, AceError> {
     } else {
         1
     };
+    check_pixel_budget(width, height, image_count, maximum_bytes)?;
 
     let data_offset = channels_end;
 
@@ -471,7 +500,7 @@ fn parse_or_structured(
 /// ```text
 /// u32 width  u32 height  u32 format_id  u8 mip_count  u8 channels  u16 reserved  pixels…
 /// ```
-fn parse_synthetic_body(body: &[u8]) -> Result<AceFile, AceError> {
+fn parse_synthetic_body(body: &[u8], maximum_bytes: usize) -> Result<AceFile, AceError> {
     if body.len() < 16 {
         return Err(AceError::Truncated(body.len()));
     }
@@ -483,6 +512,7 @@ fn parse_synthetic_body(body: &[u8]) -> Result<AceFile, AceError> {
     if width == 0 || height == 0 || width > 8192 || height > 8192 {
         return Err(AceError::InvalidDimensions { width, height });
     }
+    check_pixel_budget(width, height, 1, maximum_bytes)?;
 
     let format = match format_id {
         0 => AceFormat::Rgba8,
@@ -573,13 +603,40 @@ fn dxt_format(format: AceFormat) -> texpresso::Format {
 
 // ── ZLIB decompression ────────────────────────────────────────────────────────
 
-fn zlib_decompress(bytes: &[u8]) -> Result<Vec<u8>, AceError> {
-    let mut decoder = flate2::read::ZlibDecoder::new(bytes);
+fn zlib_decompress(bytes: &[u8], maximum_bytes: usize) -> Result<Vec<u8>, AceError> {
+    let decoder = flate2::read::ZlibDecoder::new(bytes);
     let mut out = Vec::new();
     decoder
+        .take((maximum_bytes as u64).saturating_add(1))
         .read_to_end(&mut out)
         .map_err(|e| AceError::Decompress(e.to_string()))?;
+    if out.len() > maximum_bytes {
+        return Err(AceError::LimitExceeded {
+            limit: maximum_bytes,
+        });
+    }
     Ok(out)
+}
+
+fn check_pixel_budget(
+    width: u32,
+    height: u32,
+    levels: usize,
+    limit: usize,
+) -> Result<(), AceError> {
+    let pixels = |level: usize| {
+        ((width >> level).max(1) as usize)
+            .checked_mul((height >> level).max(1) as usize)
+            .and_then(|n| n.checked_mul(4))
+    };
+    // mip0 is retained separately from the mip chain.
+    let total = (0..levels).fold(pixels(0), |sum, level| {
+        sum.and_then(|s| pixels(level).and_then(|n| s.checked_add(n)))
+    });
+    if total.is_none_or(|n| n > limit) {
+        return Err(AceError::LimitExceeded { limit });
+    }
+    Ok(())
 }
 
 // ── Little-endian helpers ─────────────────────────────────────────────────────
@@ -657,7 +714,7 @@ mod tests {
 
     #[test]
     fn raw_dxt_preserves_authored_mips_and_or_small_level_reuse() {
-        let ace = parse_or_body(&raw_dxt_mips_body()).expect("DXT mip chain");
+        let ace = parse_or_body(&raw_dxt_mips_body(), DEFAULT_ACE_LIMIT).expect("DXT mip chain");
         assert_eq!(ace.mips_count, 4);
         assert_eq!(
             ace.mips
@@ -682,7 +739,10 @@ mod tests {
     fn raw_dxt_rejects_a_truncated_lower_mip() {
         let mut body = raw_dxt_mips_body();
         body.truncate(152 + 16 + 4 + 32 + 4 + 3);
-        assert!(matches!(parse_or_body(&body), Err(AceError::Truncated(_))));
+        assert!(matches!(
+            parse_or_body(&body, DEFAULT_ACE_LIMIT),
+            Err(AceError::Truncated(_))
+        ));
     }
 
     #[test]
@@ -690,7 +750,7 @@ mod tests {
         let mut body = raw_dxt_mips_body();
         body[12..16].copy_from_slice(&4u32.to_le_bytes());
         assert!(matches!(
-            parse_or_body(&body),
+            parse_or_body(&body, DEFAULT_ACE_LIMIT),
             Err(AceError::InvalidDimensions { .. })
         ));
     }

@@ -5,6 +5,9 @@ use std::collections::{BTreeMap, BTreeSet};
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct RailOperationsState {
+    pub passing_started: BTreeSet<String>,
+    pub passing_seen: BTreeSet<String>,
+    pub passing_complete: BTreeSet<String>,
     pub definition: openrailsrs_scenarios::rail_operations::RailOperationsDef,
     pub connection_started: BTreeMap<usize, f64>,
     pub connections: BTreeMap<usize, String>,
@@ -24,6 +27,18 @@ pub enum IncidentChoice {
 impl RailOperationsState {
     pub fn valid(&self) -> bool {
         self.definition.valid()
+            && [
+                &self.passing_started,
+                &self.passing_seen,
+                &self.passing_complete,
+            ]
+            .into_iter()
+            .all(|set| {
+                set.len() <= 64
+                    && set
+                        .iter()
+                        .all(|id| self.definition.passing_plans.iter().any(|p| &p.id == id))
+            })
             && self.connection_started.len() <= 128
             && self.connections.len() <= 128
             && self.decisions.len() <= 128

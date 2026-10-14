@@ -18,6 +18,8 @@ Fases y prioridades: [`ROADMAP.md`](ROADMAP.md). Docs: [`docs/README.md`](docs/R
 
 La cuarta entrega amplía los equipos por vehículo: motores, pantógrafos, puertas, cabinas, alimentación entre coches, propulsión dual, frenos y auxiliares de vapor. También incorpora recorridos de mercancías, circulación por interiores permitidos y mejoras de iluminación, protección bajo techos, niebla y vidrio mojado. La [guía de los treinta cambios](docs/PLAYER_30_4_MANUAL.md) explica cómo probarlos y distingue los perfiles originales verificados de los modelos propios.
 
+La quinta entrega incorpora uniones flexibles y bogies compartidos, pasajeros visibles, espejos, pasos a nivel con tránsito original, nieve con espesor y huellas, encuentros, maniobras, patios y jornadas. La biblioteca permite instalar desde una URL original y elegir una carpeta de contenido escribible. La [guía de los cuarenta cambios](docs/PLAN_40_5.md) reúne las pruebas manuales y el alcance de cada función; las [mediciones de rendimiento](docs/PERFORMANCE_FIFTH40.md) separan carga, conducción, memoria y audio.
+
 La [web del proyecto](https://cavazquez.github.io/openrailsrs/) presenta el recorrido,
 capturas reales, la experiencia, instalación y estado de compatibilidad. Su fuente
 está en [`website/`](website/README.md), con layout y contenido separados y páginas de experiencia, contenido, instalación y compatibilidad.
@@ -75,6 +77,8 @@ El lote de [treinta mejoras de octubre](docs/PLAN_30.md) amplía luces originale
 El [segundo lote de treinta mejoras](docs/PLAN_30_2.md) incorpora tutoriales con repetición, prácticas en estaciones, exploración libre, desafíos meteorológicos, informe de conducción y asesor de frenado. Añade equipos de cabina y carteles compatibles, ajustes por versión de vehículo, sombras de contacto, agua animada y una biblioteca con cola, comparación de ediciones, recuperación, respaldos y reportes revisables. Cada punto tiene instrucciones de prueba y límites concretos.
 
 El [tercer lote](docs/PLAN_30_3.md) añade campañas por jornadas, conexiones y obras temporales, decisiones ante demoras, tutorial de vapor y retroceso de práctica. Desde el menú se pueden crear formaciones y servicios propios, comprobar gálibo declarado, vincular instalaciones originales y exportar partidas portátiles. Incorpora clima por sectores y aguanieve, luces de coches y ventanas de edificios compatibles, acústica contextual, anuncios autorizados, LOD proyectado, calidad adaptativa, geometría compartida y mandos analógicos. Incluye grabación/reproducción de incidencias Rust, contratos de rendimiento y un ejemplo de API de vehículos. La [guía manual de los treinta cambios](docs/PLAYER_30_3_MANUAL.md) indica qué elegir, qué observar y qué recursos se necesitan; el seguimiento distingue implementación de aceptación pendiente.
+
+Para probar la quinta entrega, consultá las guías de [operaciones](docs/TRAIN_OPERATIONS_FIFTH40.md), [tren y escenario](docs/PLAN_40_5_VISUAL_QA.md) y [contenido](docs/OFFICIAL_CONTENT.md). Los [ensayos y sus límites](docs/PERFORMANCE_FIFTH40.md) distinguen recursos disponibles, sistemas contrastados y resultados medidos.
 
 ### Partida, contenido y controles
 

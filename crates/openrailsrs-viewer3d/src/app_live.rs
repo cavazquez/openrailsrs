@@ -158,7 +158,7 @@ mod tests {
                 expected_focus,
             );
             let cam = world
-                .query_filtered::<&Transform, With<Camera3d>>()
+                .query_filtered::<&Transform, (With<Camera3d>, Without<crate::mirrors::MirrorCamera>)>()
                 .single(world)
                 .expect("camera");
             assert!(
@@ -256,7 +256,7 @@ mod tests {
                 .run_system_once(crate::camera::follow_train_camera)
                 .unwrap();
             let actual = world
-                .query_filtered::<&Transform, With<Camera3d>>()
+                .query_filtered::<&Transform, (With<Camera3d>, Without<crate::mirrors::MirrorCamera>)>()
                 .single(world)
                 .unwrap();
             assert!(actual.translation.distance(expected.translation) < 1e-5);
@@ -335,7 +335,7 @@ mod tests {
             world.run_system_once(sync_camera_render_layers).unwrap();
 
             let driver_layers = world
-                .query_filtered::<&RenderLayers, With<Camera3d>>()
+                .query_filtered::<&RenderLayers, (With<Camera3d>, Without<crate::mirrors::MirrorCamera>)>()
                 .single(world)
                 .expect("camera");
             assert_eq!(*driver_layers, camera_layers_driver());
@@ -361,7 +361,7 @@ mod tests {
 
             let outdoor = camera_layers_outdoor();
             let cam_layers = world
-                .query_filtered::<&RenderLayers, With<Camera3d>>()
+                .query_filtered::<&RenderLayers, (With<Camera3d>, Without<crate::mirrors::MirrorCamera>)>()
                 .single(world)
                 .expect("camera layers chase");
             assert_eq!(*cam_layers, outdoor, "chase camera must use layers [0,1]");
@@ -506,7 +506,7 @@ mod tests {
             *world.resource_mut::<CameraFollowMode>() = CameraFollowMode::DriverCam;
             world.run_system_once(sync_camera_render_layers).unwrap();
             let cam_layers = world
-                .query_filtered::<&RenderLayers, With<Camera3d>>()
+                .query_filtered::<&RenderLayers, (With<Camera3d>, Without<crate::mirrors::MirrorCamera>)>()
                 .single(world)
                 .expect("camera layers");
             assert_eq!(*cam_layers, driver);
@@ -514,7 +514,7 @@ mod tests {
             *world.resource_mut::<CameraFollowMode>() = CameraFollowMode::ChaseCam;
             world.run_system_once(sync_camera_render_layers).unwrap();
             let cam_layers = world
-                .query_filtered::<&RenderLayers, With<Camera3d>>()
+                .query_filtered::<&RenderLayers, (With<Camera3d>, Without<crate::mirrors::MirrorCamera>)>()
                 .single(world)
                 .expect("camera layers chase");
             assert_eq!(*cam_layers, exterior);

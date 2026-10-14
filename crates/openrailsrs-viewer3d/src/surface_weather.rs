@@ -12,8 +12,13 @@ use std::collections::{HashMap, HashSet};
 pub struct SnowSurface {
     #[uniform(100)]
     pub cover: Vec4,
+    #[uniform(101)]
+    pub tracks: openrailsrs_bevy_scenery::materials::SnowTrackData,
 }
 impl MaterialExtension for SnowSurface {
+    fn vertex_shader() -> ShaderRef {
+        "shaders/snow_vertex.wgsl".into()
+    }
     fn fragment_shader() -> ShaderRef {
         "shaders/surface_weather.wgsl".into()
     }
@@ -40,6 +45,7 @@ pub fn mark_world_roofs(
         ),
     >,
 ) {
+    let _profile = crate::performance::profile_system("snow_roof_markers");
     if weather.atmosphere.snow_cover <= 0.001 {
         return;
     }
@@ -64,6 +70,7 @@ pub fn sync(
     mut snow: ResMut<Assets<SnowMaterial>>,
     mut cache: ResMut<SnowMaterials>,
     mut events: MessageReader<AssetEvent<StandardMaterial>>,
+    tracks: Option<Res<crate::snow_tracks::SnowTracks>>,
     outdoor: Query<
         (Entity, &MeshMaterial3d<StandardMaterial>),
         (
@@ -72,6 +79,7 @@ pub fn sync(
         ),
     >,
 ) {
+    let _profile = crate::performance::profile_system("snow_materials");
     let changed: HashSet<_> = events
         .read()
         .filter_map(|event| match event {
@@ -81,16 +89,22 @@ pub fn sync(
         .collect();
     cache.by_source.retain(|id, _| originals.contains(*id));
     let cover_changed = (wet.snow_cover - cache.last_cover).abs() > 1e-4;
-    if cover_changed || !changed.is_empty() {
+    if cover_changed || !changed.is_empty() || tracks.as_ref().is_some_and(|t| t.is_changed()) {
         for (id, handle) in &cache.by_source {
             let Some(base) = originals.get(*id) else {
                 continue;
             };
-            if changed.contains(id) || cover_changed {
+            if changed.contains(id)
+                || cover_changed
+                || tracks.as_ref().is_some_and(|t| t.is_changed())
+            {
                 // Share the original texture handles; never allocate new images.
                 if let Some(mut material) = snow.get_mut(handle) {
                     material.base = base.clone();
                     material.extension.cover.x = wet.snow_cover;
+                    if let Some(tracks) = tracks.as_ref() {
+                        material.extension.tracks = tracks.gpu.clone();
+                    }
                 }
             }
         }
@@ -113,7 +127,10 @@ pub fn sync(
                 snow.add(SnowMaterial {
                     base: base.clone(),
                     extension: SnowSurface {
-                        cover: Vec4::new(wet.snow_cover, 0.0, 0.0, 0.0),
+                        cover: Vec4::new(wet.snow_cover, 0.05, 0.0, 0.0),
+                        tracks: tracks
+                            .as_ref()
+                            .map_or_else(Default::default, |t| t.gpu.clone()),
                     },
                 })
             })

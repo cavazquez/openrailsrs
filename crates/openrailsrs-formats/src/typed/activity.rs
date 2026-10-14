@@ -42,6 +42,7 @@ pub struct PlayerStationStop {
 /// `Traffic_Definition` blocks.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct TrafficServiceDef {
+    pub stops: Vec<PlayerStationStop>,
     /// Service name as declared in `Service_Definition "<name>"`.
     pub name: String,
     /// Relative path to the AI `.pat` file.
@@ -158,7 +159,7 @@ impl ActivityFile {
         let duration_s = parse_duration(ast);
         let season = find_string_field(ast, &["Season"]);
         let mut services = Vec::new();
-        collect_service_defs(ast, &mut services);
+        collect_service_defs(ast, &mut services)?;
         let failed_signals = collect_failed_signals(ast);
         let restricted_zones = collect_restricted_zones(ast);
         let activity_objects = collect_activity_objects(ast);
@@ -203,6 +204,55 @@ impl ActivityFile {
             file.player_path = pat_path_from_service_id(&id);
             file.player_service_id = Some(id);
         }
+        // The ACT contains service overrides; the referenced TRF supplies the
+        // station times. Resolve only a local, simple author-provided name.
+        if let Some(name) =
+            find_string_field(&ast, &["Traffic_Definition"]).filter(|name| !name.is_empty())
+        {
+            let name = name.strip_suffix(".trf").unwrap_or(&name);
+            if !valid_service_name(name)
+                || name.len() > 256
+                || name.contains(['/', '\\', ':'])
+                || name == "."
+                || name == ".."
+                || name.chars().any(char::is_control)
+            {
+                return Err(FormatError::UnexpectedAtom {
+                    key: "Traffic_Definition".into(),
+                    context: "activity".into(),
+                    expected: "a local traffic filename".into(),
+                });
+            }
+            let parent = path.as_ref().parent().unwrap_or(std::path::Path::new("."));
+            let root = if parent
+                .file_name()
+                .is_some_and(|n| n.to_string_lossy().eq_ignore_ascii_case("ACTIVITIES"))
+            {
+                parent.parent().unwrap_or(parent)
+            } else {
+                parent
+            };
+            let traffic_path = crate::resolve_path_case_insensitive(
+                &root.join("TRAFFIC").join(format!("{name}.trf")),
+            )
+            .ok_or_else(|| FormatError::UnexpectedAtom {
+                key: name.into(),
+                context: "TRAFFIC".into(),
+                expected: "the referenced original TRF file".into(),
+            })?;
+            let text = crate::encoding::read_msts_file_to_string(&traffic_path)?;
+            let traffic = crate::parse_activity_text(&text)?;
+            let mut definitions = Vec::new();
+            collect_service_defs(&traffic, &mut definitions)?;
+            for definition in definitions {
+                if let Some(existing) = file.services.iter_mut().find(|s| {
+                    s.name == definition.name
+                        && (s.start_time_s - definition.start_time_s).abs() < 0.1
+                }) {
+                    existing.stops = definition.stops;
+                }
+            }
+        }
         Ok(file)
     }
 
@@ -212,6 +262,13 @@ impl ActivityFile {
     /// actual `.srv` filename.  Both the full id and the base name (without the
     /// trailing parenthetical, e.g. `"Foo(player)"` → `"Foo"`) are tried.
     pub fn train_config_from_service(route_dir: &Path, service_id: &str) -> Option<String> {
+        if service_id.is_empty()
+            || service_id.len() > 256
+            || service_id.contains(['/', '\\'])
+            || service_id.chars().any(char::is_control)
+        {
+            return None;
+        }
         let trimmed = service_id
             .rfind('(')
             .map(|i| service_id[..i].trim())
@@ -232,6 +289,30 @@ impl ActivityFile {
                 if let Some(name) = extract_train_config_from_text(&text) {
                     return Some(name);
                 }
+            }
+        }
+        None
+    }
+    pub fn path_from_service(route_dir: &Path, service_id: &str) -> Option<String> {
+        // A service identifier is a filename, not an arbitrary filesystem path.
+        if service_id.is_empty()
+            || service_id.len() > 256
+            || service_id.contains(['/', '\\'])
+            || service_id.chars().any(char::is_control)
+        {
+            return None;
+        }
+        let trimmed = service_id
+            .rfind('(')
+            .map_or(service_id, |i| service_id[..i].trim());
+        for id in [service_id, trimmed] {
+            let path = route_dir.join("SERVICES").join(format!("{id}.srv"));
+            let Ok(text) = crate::encoding::read_msts_file_case_insensitive(&path) else {
+                continue;
+            };
+            let ast = parse_from_first_paren(&text).ok()?;
+            if let Some(id) = find_string_field(&ast, &["PathID"]) {
+                return Some(pat_path_from_service_id(&id));
             }
         }
         None
@@ -458,28 +539,41 @@ fn collect_player_stops(ast: &Ast) -> Result<Vec<PlayerStationStop>, FormatError
 }
 
 /// Recursively walk the AST collecting every `Service_Definition` block.
-fn collect_service_defs(ast: &Ast, out: &mut Vec<TrafficServiceDef>) {
-    let Ast::List(items) = ast else { return };
+fn collect_service_defs(ast: &Ast, out: &mut Vec<TrafficServiceDef>) -> Result<(), FormatError> {
+    let Ast::List(items) = ast else { return Ok(()) };
 
     if let Some(Ast::Atom(Atom::Symbol(head))) = items.first()
         && head.eq_ignore_ascii_case("Service_Definition")
     {
-        if let Some(svc) = parse_one_service(items) {
+        if let Some(svc) = parse_one_service(items)? {
             out.push(svc);
         }
-        return;
+        return Ok(());
     }
 
-    for child in items {
-        collect_service_defs(child, out);
+    for pair in items.windows(2) {
+        if matches!(&pair[0],Ast::Atom(Atom::Symbol(name)) if name.eq_ignore_ascii_case("Service_Definition"))
+            && let Ast::List(body) = &pair[1]
+        {
+            let normalized = std::iter::once(pair[0].clone())
+                .chain(body.iter().cloned())
+                .collect::<Vec<_>>();
+            if let Some(service) = parse_one_service(&normalized)? {
+                out.push(service);
+            }
+        }
     }
+    for child in items {
+        collect_service_defs(child, out)?;
+    }
+    Ok(())
 }
 
 /// Convert a `(Service_Definition "<name>" ...)` list into a `TrafficServiceDef`.
 ///
 /// Returns `None` when no `.pat` reference can be found anywhere inside the
 /// service body — those entries are unusable for an `extra_trains` import.
-fn parse_one_service(items: &[Ast]) -> Option<TrafficServiceDef> {
+fn parse_one_service(items: &[Ast]) -> Result<Option<TrafficServiceDef>, FormatError> {
     let name = items
         .iter()
         .skip(1)
@@ -489,17 +583,38 @@ fn parse_one_service(items: &[Ast]) -> Option<TrafficServiceDef> {
         })
         .unwrap_or_default();
     let path_file = find_pat_path(items).unwrap_or_default();
-    if path_file.is_empty() {
-        return None;
+    if path_file.is_empty() && name.is_empty() {
+        return Ok(None);
     }
-    let start_time_s = find_service_init_time(items).unwrap_or(0.0);
+    let start_time_s = find_service_init_time(items)
+        .or_else(|| {
+            items.get(2).and_then(|a| match a {
+                Ast::Atom(Atom::Integer(n)) => Some(*n as f64),
+                Ast::Atom(Atom::Number(n)) => Some(*n),
+                _ => None,
+            })
+        })
+        .unwrap_or(0.0);
     let consist = find_service_consist(items);
-    Some(TrafficServiceDef {
+    Ok(Some(TrafficServiceDef {
+        stops: {
+            let mut body = items.to_vec();
+            body[0] = Ast::Atom(Atom::Symbol("Player_Traffic_Definition".into()));
+            let wrapper = Ast::List(vec![
+                Ast::Atom(Atom::Symbol("Player_Service_Definition".into())),
+                Ast::List(body),
+            ]);
+            if named_blocks(&wrapper, "ArrivalTime").is_empty() {
+                Vec::new()
+            } else {
+                collect_player_stops(&wrapper)?
+            }
+        },
         name,
         path_file,
         consist,
         start_time_s,
-    })
+    }))
 }
 
 /// Search recursively for any string atom ending in `.pat`.
@@ -910,5 +1025,46 @@ mod timetable_tests {
         )
         .unwrap();
         assert!(ActivityFile::from_ast(&ast).is_err());
+    }
+}
+
+#[cfg(test)]
+mod traffic_file_tests {
+    use super::*;
+    #[test]
+    fn resolves_original_trf_clock_and_station_records_and_rejects_traversal_or_incomplete_times() {
+        let t = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(t.path().join("ACTIVITIES")).unwrap();
+        std::fs::create_dir_all(t.path().join("TRAFFIC")).unwrap();
+        let act = t.path().join("ACTIVITIES/drive.act");
+        std::fs::write(&act,"Tr_Activity ( Tr_Activity_Header ( Name ( Drive ) StartTime ( 9 0 0 ) ) Tr_Activity_File ( Traffic_Definition ( \"morning\" Service_Definition ( \"express\" 32520 UiD ( 1 ) ) ) ) )").unwrap();
+        let trf = t.path().join("TRAFFIC/morning.trf");
+        let text = "Traffic_Definition ( \"morning\" Service_Definition ( \"express\" 32520 ArrivalTime ( 32600 ) DepartTime ( 32630 ) SkipCount ( 0 ) DistanceDownPath ( 500 ) PlatformStartID ( 12 ) ) )";
+        std::fs::write(&trf, text).unwrap();
+        let file = ActivityFile::from_path(&act).unwrap();
+        assert_eq!(file.services.len(), 1);
+        assert_eq!(file.services[0].start_time_s, 32520.);
+        assert_eq!(file.services[0].stops[0].departure_time_s, 32630.);
+        std::fs::write(
+            &trf,
+            text.replace(
+                "Traffic_Definition ( \"morning\"",
+                "Traffic_Definition ( \"morning\" Service_Definition ( \"unused-template\" 32520 )",
+            ),
+        )
+        .unwrap();
+        assert_eq!(
+            ActivityFile::from_path(&act).unwrap().services.len(),
+            1,
+            "TRF templates absent from the ACT must not become live trains"
+        );
+        std::fs::write(&trf, text.replace("DepartTime ( 32630 )", "")).unwrap();
+        assert!(ActivityFile::from_path(&act).is_err());
+        std::fs::write(
+            &act,
+            "Tr_Activity ( Traffic_Definition ( \"../../outside\" ) )",
+        )
+        .unwrap();
+        assert!(ActivityFile::from_path(&act).is_err());
     }
 }

@@ -15,7 +15,6 @@ use bevy::{
     light::NotShadowCaster,
     mesh::{Indices, PrimitiveTopology},
     prelude::*,
-    render::render_resource::{Extent3d, TextureDimension, TextureFormat},
 };
 use std::collections::HashMap;
 
@@ -82,6 +81,7 @@ impl TrainEffects {
             "gpu_spawn_requests":self.gpu_spawn_requests,"cpu_mesh_updates":self.cpu_mesh_updates,
             "quality_level":self.adaptive.level,"simulation_clock_s":self.last_clock,
             "gpu_simulation_delta_s":self.gpu_delta_s,
+            "plume_image_id":self.gpu_assets.as_ref().map(|a|format!("{:?}",a.texture.id())),
             "max_cpu_particle_speed_mps":cpu_speed,
             "max_particle_speed_mps":(!has_gpu).then_some(cpu_speed)})
     }
@@ -242,27 +242,7 @@ pub fn spawn(
         "openrailsrs-viewer3d: {} native exhaust/steam emitters (max {MAX_PARTICLES} particles)",
         effects.emitters.len()
     );
-    let mut pixels = vec![255u8; 64 * 64 * 4];
-    for y in 0..64 {
-        for x in 0..64 {
-            let p = Vec2::new(x as f32 - 31.5, y as f32 - 31.5) / 31.5;
-            let noise =
-                (p.x * 15.0 + (p.y * 9.0).sin()).sin() * (p.y * 13.0 + (p.x * 11.0).cos()).cos();
-            let edge = (1.0 - p.length() + noise * 0.13).clamp(0.0, 1.0);
-            pixels[(y * 64 + x) * 4 + 3] = (edge.powf(1.3) * (0.65 + noise * 0.25) * 230.0) as u8;
-        }
-    }
-    let texture = images.add(Image::new(
-        Extent3d {
-            width: 64,
-            height: 64,
-            depth_or_array_layers: 1,
-        },
-        TextureDimension::D2,
-        pixels,
-        TextureFormat::Rgba8UnormSrgb,
-        RenderAssetUsages::RENDER_WORLD,
-    ));
+    let texture = crate::particle_textures::plume(&mut images);
     let material = materials.add(StandardMaterial {
         base_color_texture: Some(texture.clone()),
         alpha_mode: AlphaMode::Blend,
@@ -475,7 +455,8 @@ pub struct TrainEffectScene<'w, 's> {
             &'static TrainCarTrackOffset,
         ),
     >,
-    camera: Query<'w, 's, &'static Transform, With<Camera3d>>,
+    camera:
+        Query<'w, 's, &'static Transform, (With<Camera3d>, Without<crate::mirrors::MirrorCamera>)>,
     mesh: Query<'w, 's, &'static Mesh3d, With<ExhaustMesh>>,
     meshes: ResMut<'w, Assets<Mesh>>,
     obstacles: Option<Res<'w, crate::effect_obstacles::EffectObstacles>>,

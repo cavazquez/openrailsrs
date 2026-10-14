@@ -1,0 +1,77 @@
+{
+  "schema": 1,
+  "completed": true,
+  "command": "CARGO_BUILD_JOBS=2 bash ./check.sh",
+  "log_sha256": "4b0b8d67d182942a47a88e400f2582a5685dcc886424da21fd0bc75a18f1e201",
+  "rust_suites": 152,
+  "rust": {
+    "passed": 2048,
+    "failed": 0,
+    "ignored": 49
+  },
+  "python_suites": 23,
+  "python_tests": 114,
+  "markers": [
+    "==> rustfmt (cargo fmt --check)",
+    "==> clippy (-D warnings)",
+    "==> tests",
+    "==> native service capture integrity and replay regressions",
+    "==> build",
+    "==> pinned Open Rails acceptance oracles",
+    "==> complete station service",
+    "OK: check.sh complet\u00f3 sin errores."
+  ],
+  "player_traces_preserved": true,
+  "scope": "Final source26: full check, original TGV fields/cab/equipment and anonymous matrix slots; retired-view binding pruning and actual material-map/GNU heap telemetry. Hardware endurance and packaged builds have separate receipts.",
+  "capture_regression": {
+    "delayed_readback_test": "capture::completion_tests::delayed_readback_replaces_stale_image_and_write_failure_never_completes",
+    "success_requires": "ScreenshotCaptured delivered and fresh image write succeeded",
+    "readback_timeout_s": 180,
+    "stale_file_is_not_success": true
+  },
+  "particle_texture_regression": {
+    "test": "particle_textures::tests::scene_transfers_keep_particle_texture_ids_and_refresh_shelter_bytes",
+    "route_transfers": 12,
+    "persistent_image_ids": 3,
+    "transient_images_retired": true,
+    "shelter_bytes_refreshed": true
+  },
+  "source_variant": "phase26",
+  "viewer_sha256": "24793d08bc7a6900ea817165dd2519492dbbdceacd043cf58c08a1fd6170ca4a",
+  "render_retirement_regression": {
+    "tests": [
+      "render_retirement::tests::retiring_views_releases_buffer_owners_and_preserves_live_phases_and_subviews",
+      "render_retirement::tests::renderer_without_gpu_preprocessing_keeps_retirement_optional"
+    ],
+    "route_transfers": 12,
+    "active_phases_and_subviews_preserved": true,
+    "retired_owners_released": true,
+    "normal_release_enabled": true
+  },
+  "original_cab_pairing_regression": {
+    "explicit_native_3d_cab_and_shared_cvf": true,
+    "unrelated_cab_never_substituted": true,
+    "genuine_missing_resources_rejected": true,
+    "malformed_sibling_invalidates_cached_pairing": true
+  },
+  "native_equipment_regression": {
+    "terminal_fade_mps": 804.672,
+    "disabled_pickup_delay_s": 999999,
+    "runtime_and_resume": true,
+    "invalid_values_and_references_rejected": true
+  },
+  "native_shape_matrix_regression": {
+    "anonymous_slots_preserved": 11,
+    "native_matrix_slots": 134,
+    "following_named_lookup_unchanged": true,
+    "hierarchy_and_vertex_references_preserved": true,
+    "ascii_and_binary": true
+  },
+  "material_owner_telemetry_regression": {
+    "actual_bindings_and_prepared_maps": true,
+    "unavailable_not_zero_filled": true,
+    "empty_and_retired_types": true,
+    "unexpected_material_types_separate": true,
+    "heap_snapshot_optional_gnu": true
+  }
+}

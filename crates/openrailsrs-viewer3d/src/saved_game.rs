@@ -10,6 +10,13 @@ use crate::live::LiveDrive;
 use crate::player_launch::{ActivePlayerContent, PlayerWeather, QueuedPlayerLaunch};
 use crate::player_settings::{atomic_write, player_data_dir};
 
+fn validate_pending_id(id: &str) -> Result<(), String> {
+    if id.is_empty() || id.len() > 256 || id.chars().any(char::is_control) {
+        return Err("Identificador de servicio inválido".into());
+    }
+    Ok(())
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SavedCamera {
     pub follow: String,
@@ -68,6 +75,16 @@ impl SavedCamera {
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SavedGame {
+    #[serde(default)]
+    pub control_history: Vec<String>,
+    #[serde(default)]
+    pub pending_control: Option<String>,
+    #[serde(default)]
+    pub pending_coupling: Option<String>,
+    #[serde(default)]
+    pub independent_couplings: Vec<openrailsrs_sim::independent_coupling::CouplingReceipt>,
+    #[serde(default)]
+    pub controlled_service: Option<String>,
     pub version: u32,
     #[serde(default)]
     pub created_utc: Option<i64>,
@@ -136,6 +153,13 @@ impl SavedPlayerOptions {
     }
 }
 impl SavedGame {
+    fn encoded(&self) -> Result<Vec<u8>, String> {
+        let bytes = serde_json::to_vec_pretty(self).map_err(|e| e.to_string())?;
+        if bytes.len() > 16 * 1024 * 1024 {
+            return Err("Partida demasiado grande para guardar".into());
+        }
+        Ok(bytes)
+    }
     pub fn save(
         live: &mut LiveDrive,
         content: &ActivePlayerContent,
@@ -145,6 +169,12 @@ impl SavedGame {
         settings: Option<&crate::player_settings::PlayerSettings>,
     ) -> Result<(), String> {
         let game = Self {
+            control_history: live.traffic.control_history.clone(),
+            pending_control: None,
+            pending_coupling: None,
+            independent_couplings: live.traffic.couplings.clone(),
+            controlled_service: (live.session.service_id != "Jugador")
+                .then(|| live.session.service_id.clone()),
             version: 1,
             created_utc: Some(chrono::Utc::now().timestamp()),
             train_name: live
@@ -169,7 +199,7 @@ impl SavedGame {
             weather_checkpoint: weather.and_then(crate::weather_state::WeatherState::checkpoint),
             camera,
         };
-        let bytes = serde_json::to_vec_pretty(&game).map_err(|e| e.to_string())?;
+        let bytes = game.encoded()?;
         atomic_write(path, &bytes)?;
         // A replaced slot remains available in history. Private application
         // archives are independent of downloaded route/vehicle content.
@@ -183,6 +213,20 @@ impl SavedGame {
         }
         Ok(())
     }
+    /// Queue an operation on a disposable reconstructed world. Failure to
+    /// write/load leaves the currently displayed formation untouched.
+    pub fn queue_coupling(path: &Path, id: &str) -> Result<(), String> {
+        validate_pending_id(id)?;
+        let mut game = Self::read(path)?;
+        game.pending_coupling = Some(id.into());
+        atomic_write(path, &game.encoded()?)
+    }
+    pub fn queue_control(path: &Path, id: &str) -> Result<(), String> {
+        validate_pending_id(id)?;
+        let mut game = Self::read(path)?;
+        game.pending_control = Some(id.into());
+        atomic_write(path, &game.encoded()?)
+    }
     pub fn read(path: &Path) -> Result<Self, String> {
         if std::fs::metadata(path).map_err(|e| e.to_string())?.len() > 16 * 1024 * 1024 {
             return Err("Partida demasiado grande".into());
@@ -195,6 +239,38 @@ impl SavedGame {
         }
         let game: Self = serde_json::from_slice(bytes)
             .map_err(|e| format!("No se puede leer la partida: {e}"))?;
+        if game.control_history.len() > 128
+            || game
+                .control_history
+                .iter()
+                .chain(game.pending_control.iter())
+                .any(|id| id.is_empty() || id.len() > 256 || id.chars().any(char::is_control))
+        {
+            return Err("Historial de conductores inválido".into());
+        }
+        if !game.control_history.is_empty() {
+            let last = game.control_history.last().unwrap();
+            let controlled = game.controlled_service.as_deref().unwrap_or("Jugador");
+            if last != controlled {
+                return Err(
+                    "El historial de conductores no coincide con el servicio guardado".into(),
+                );
+            }
+        }
+        if game
+            .controlled_service
+            .as_ref()
+            .is_some_and(|id| id.is_empty() || id.len() > 256 || id.chars().any(char::is_control))
+        {
+            return Err("Servicio controlado inválido".into());
+        }
+        if game
+            .pending_coupling
+            .as_ref()
+            .is_some_and(|id| id.is_empty() || id.len() > 256 || id.chars().any(char::is_control))
+        {
+            return Err("Formación a recoger inválida".into());
+        }
         if game.player_options.as_ref().is_some_and(|o| {
             !o.journey_setup.valid()
                 || !o.weather_track.valid()
@@ -269,18 +345,70 @@ impl SavedGame {
         })
     }
     pub fn restore(self, live: &mut LiveDrive) -> Result<SavedCamera, String> {
+        // Replaying a role permutation or joining formations changes topology.
+        // Do it on a disposable simulation so malformed history, incompatible
+        // scripts or failed coupling leave the caller's current world intact.
+        if !self.control_history.is_empty()
+            || self.controlled_service.is_some()
+            || !self.independent_couplings.is_empty()
+        {
+            let mut candidate = LiveDrive::from_scenario_path(live.scenario_path())?;
+            let camera = self.restore_into(&mut candidate)?;
+            *live = candidate;
+            return Ok(camera);
+        }
+        self.restore_into(live)
+    }
+    fn restore_into(self, live: &mut LiveDrive) -> Result<SavedCamera, String> {
         self.validate_route_available()?;
-        live.session.validate_snapshot(&self.session)?;
-        live.traffic.validate_snapshot(&self.traffic)?;
-        openrailsrs_sim::SessionSnapshot::validate_shared_dispatcher(
-            std::iter::once(&self.session).chain(self.traffic.iter().map(|s| &s.session)),
-        )?;
-        let player_host = live.session.prepare_script_restore(&self.session)?;
-        let traffic_hosts = live.traffic.prepare_script_restore(&self.traffic)?;
+        let history = if self.control_history.is_empty() {
+            self.controlled_service.iter().cloned().collect::<Vec<_>>()
+        } else {
+            self.control_history.clone()
+        };
+        let mut swapped = Vec::new();
+        for id in &history {
+            let index = live
+                .traffic
+                .services
+                .iter()
+                .position(|s| &s.id == id)
+                .ok_or("El servicio controlado ya no existe")?;
+            swapped.push((
+                index,
+                live.traffic.services[index].departed,
+                live.traffic.services[index].parked,
+            ));
+            live.traffic.restore_control(&mut live.session, index)?;
+        }
+        live.traffic
+            .reconstruct_couplings(&mut live.session, &self.independent_couplings)?;
+        let preparation = (|| {
+            live.session.validate_snapshot(&self.session)?;
+            live.traffic.validate_snapshot(&self.traffic)?;
+            openrailsrs_sim::SessionSnapshot::validate_shared_dispatcher(
+                std::iter::once(&self.session).chain(self.traffic.iter().map(|s| &s.session)),
+            )?;
+            let player_host = live.session.prepare_script_restore(&self.session)?;
+            let traffic_hosts = live.traffic.prepare_script_restore(&self.traffic)?;
+            Ok::<_, String>((player_host, traffic_hosts))
+        })();
+        let (player_host, traffic_hosts) = match preparation {
+            Ok(prepared) => prepared,
+            Err(error) => {
+                for (index, departed, parked) in swapped.into_iter().rev() {
+                    live.traffic.restore_control(&mut live.session, index)?;
+                    live.traffic.services[index].departed = departed;
+                    live.traffic.services[index].parked = parked;
+                }
+                return Err(error);
+            }
+        };
         live.session
             .restore_prepared_snapshot(self.session, player_host)?;
         live.traffic
             .restore_prepared_snapshot(self.traffic, traffic_hosts)?;
+        live.traffic.control_history = history;
         live.traffic.synchronize_occupancy(&mut live.session);
         live.start_clock_s = self.start_clock_s;
         live.season = self.season;
@@ -310,7 +438,7 @@ pub fn restore_camera(
             &mut crate::camera::FlyState,
             &mut Transform,
         ),
-        With<Camera3d>,
+        (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
     >,
 ) {
     let Some(saved) = saved else { return };
@@ -384,6 +512,17 @@ pub(crate) fn canonical_scenario(path: &Path) -> Result<String, String> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn invalid_pending_operations_do_not_change_the_saved_game() {
+        let data = tempfile::tempdir().unwrap();
+        let path = data.path().join("save.json");
+        std::fs::write(&path, b"existing save").unwrap();
+        for id in ["", "bad\nservice", &"x".repeat(257)] {
+            assert!(super::SavedGame::queue_control(&path, id).is_err());
+            assert!(super::SavedGame::queue_coupling(&path, id).is_err());
+            assert_eq!(std::fs::read(&path).unwrap(), b"existing save");
+        }
+    }
     use super::*;
     #[test]
     fn source_relative_save_can_resume_from_a_different_directory() {
@@ -477,6 +616,65 @@ mod tests {
         assert_eq!(
             original.session.state.odometer_m,
             resumed.session.state.odometer_m
+        );
+    }
+    #[test]
+    fn different_formation_driver_transfer_and_coupling_are_atomic_and_survive_saved_game() {
+        let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let temp = tempfile::tempdir().unwrap();
+        let camera = SavedCamera::capture(
+            CameraFollowMode::ChaseCam,
+            &OrbitState::default(),
+            &DriverLookOffset::default(),
+            &FloatingOrigin::default(),
+        );
+        let content = ActivePlayerContent::default();
+        let control = repo.join("examples/traffic_passing/scenario_control.toml");
+        let mut original = LiveDrive::from_scenario_path(&control).unwrap();
+        original.session.driver_direction = 0.5;
+        let old_vehicles = original.session.formation.cars.len();
+        original
+            .traffic
+            .take_control(&mut original.session, 0)
+            .unwrap();
+        assert_ne!(original.session.formation.cars.len(), old_vehicles);
+        let fuel = original.session.state.diesel.cars[0].fuel_l;
+        let save = temp.path().join("driver.json");
+        SavedGame::save(&mut original, &content, camera.clone(), &save, None, None).unwrap();
+        let game = SavedGame::read(&save).unwrap();
+        let mut fresh = LiveDrive::from_scenario_path(&control).unwrap();
+        game.restore(&mut fresh).unwrap();
+        assert_eq!(fresh.session.service_id, "other");
+        assert_eq!(fresh.session.state.diesel.cars[0].fuel_l, fuel);
+        assert_eq!(fresh.traffic.services[0].id, "Jugador");
+        let before = serde_json::to_value(fresh.session.snapshot()).unwrap();
+        let mut bad = SavedGame::read(&save).unwrap();
+        bad.control_history.push("missing-service".into());
+        assert!(bad.restore(&mut fresh).is_err());
+        assert_eq!(
+            before,
+            serde_json::to_value(fresh.session.snapshot()).unwrap()
+        );
+        let coupling = repo.join("examples/traffic_passing/scenario_coupling.toml");
+        let mut original = LiveDrive::from_scenario_path(&coupling).unwrap();
+        original
+            .traffic
+            .couple_service(&mut original.session, 0)
+            .unwrap();
+        let save = temp.path().join("coupled.json");
+        SavedGame::save(&mut original, &content, camera, &save, None, None).unwrap();
+        let game = SavedGame::read(&save).unwrap();
+        let mut fresh = LiveDrive::from_scenario_path(&coupling).unwrap();
+        game.restore(&mut fresh).unwrap();
+        assert_eq!(fresh.session.formation.cars.len(), 4);
+        assert!(fresh.traffic.services.is_empty());
+        let before = serde_json::to_value(fresh.session.snapshot()).unwrap();
+        let mut bad = SavedGame::read(&save).unwrap();
+        bad.independent_couplings[0].donor = "missing-service".into();
+        assert!(bad.restore(&mut fresh).is_err());
+        assert_eq!(
+            before,
+            serde_json::to_value(fresh.session.snapshot()).unwrap()
         );
     }
 }

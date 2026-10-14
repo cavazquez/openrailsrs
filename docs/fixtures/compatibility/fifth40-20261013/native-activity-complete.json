@@ -1,0 +1,140 @@
+{
+  "reference": "Open Rails 1.6.1",
+  "content": "DocMartin7644/Chiltern-Route-v4",
+  "revision": "8236df20ed9f596b8cf15720c43bfbdd0c43125d",
+  "activity": "RS_Football Special.act",
+  "completion_scope": "Resolved route and declared passenger stops; not arbitrary ACT scripted events",
+  "status": "pass",
+  "player": {
+    "success": true,
+    "phase": "completed",
+    "time_s": 3781.0000000049895,
+    "distance_m": 62664.94846144024,
+    "score": 1000.0,
+    "failure": null,
+    "stops": [
+      {
+        "name": "Banbury General",
+        "node": "n6758",
+        "scheduled_arrive_s": 60.0,
+        "actual_arrive_s": 31.000000000000306,
+        "actual_depart_s": 60.99999999999867,
+        "position_error_m": 3.7491603991110765,
+        "arrival_speed_mps": 0.07935295448421568,
+        "dwell_s": 29.050000000000278,
+        "delay_s": 0.0,
+        "early_departure_s": 0.0
+      },
+      {
+        "name": "Bicester North",
+        "node": "n5439",
+        "scheduled_arrive_s": 1260.0,
+        "actual_arrive_s": 825.8499999997966,
+        "actual_depart_s": 1380.9999999992917,
+        "position_error_m": 3.785508246626705,
+        "arrival_speed_mps": 0.09584688669463373,
+        "dwell_s": 553.2000000000446,
+        "delay_s": 0.0,
+        "early_departure_s": 0.0
+      },
+      {
+        "name": "Princes Risborough",
+        "node": "n5509",
+        "scheduled_arrive_s": 2760.0,
+        "actual_arrive_s": 2353.099999999795,
+        "actual_depart_s": 2881.0000000017153,
+        "position_error_m": 3.8591160700743785,
+        "arrival_speed_mps": 0.09579136300218258,
+        "dwell_s": 525.9500000000694,
+        "delay_s": 0.0,
+        "early_departure_s": 0.0
+      },
+      {
+        "name": "High Wycombe",
+        "node": "n4306",
+        "scheduled_arrive_s": 3660.0,
+        "actual_arrive_s": 3535.0000000040945,
+        "actual_depart_s": 3781.0000000049895,
+        "position_error_m": 3.733844969261554,
+        "arrival_speed_mps": 0.07456453417198775,
+        "dwell_s": 244.05000000002124,
+        "delay_s": 0.0,
+        "early_departure_s": 0.0
+      }
+    ]
+  },
+  "traffic": {
+    "ai_count": 20,
+    "phases": {
+      "approaching": 7,
+      "completed": 13
+    },
+    "departed_count": 19,
+    "failed_count": 0,
+    "native_signal_errors": {},
+    "previously_failed_services": {
+      "rs_hinksey-slough0925ka": "completed",
+      "rs_footballspecial2": "completed",
+      "rs_taunton-banbjcn0415d": "completed"
+    },
+    "note": "The player completes the declared itinerary. Some author AI services remain active or parked at the player's finishing time."
+  },
+  "build": {
+    "git_head": "d9dba7af1f531183de594af3201373d3b1b20590",
+    "uncommitted_issue_fixes": true,
+    "cli_sha256": "721054dc71430ee2c8f68438ace9a1c2c015a5d1c46d6d77364352e1086a41c4",
+    "resume_example_sha256": "b82373eab50c642cc3424097554eaa9fcdd419418eaa66f75ac7cc5e13062f81",
+    "profile": {
+      "dev_opt_level": 1,
+      "dev_debug": 0,
+      "dev_strip": "symbols",
+      "incremental": false
+    },
+    "features": "workspace all-features",
+    "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)"
+  },
+  "configuration": {
+    "scenario_sha256": "892886bb0c5445b2d85684e6de657cd4ee21474729f5590dd2978fb0386f0747",
+    "native_track_sha256": "b4cdbfbef1d845a597cb04136e4597a54fa56c7edbed9c2c4e237e4b325446d0",
+    "frame_dt_s": 0.5,
+    "simulation": {
+      "duration": 10800.0,
+      "time_step": 1.0,
+      "seed": 42,
+      "legacy_power_cap": true,
+      "train_air_lap_hold": false,
+      "train_air_full_release_s": 3.0,
+      "brake_shoe_speed_factor": false,
+      "brake_skid_limit": false,
+      "multi_body": false,
+      "coupler_kind": "",
+      "orts_inherit_partial_run_up": false,
+      "rail_operations": {
+        "passing_plans": [],
+        "yard_deliveries": [],
+        "depots": [],
+        "connections": [],
+        "works": [],
+        "incidents": []
+      }
+    },
+    "traffic_threads": 4,
+    "autodrive_throttle": 0.75,
+    "fresh_worlds": 1,
+    "runtime_physics_quantum_s": 0.05
+  },
+  "assume_signals_clear": false,
+  "outputs_sha256": {
+    "outcome.json": "339b2057f0bedc2d0c9449e3defd31bbbba3ae5885997e0864c6a0c81d8e2d3c",
+    "run.csv": "2261841a1268e295f47047cde07cb408c5bdd9afe793ec0b14020cfd259c2d93",
+    "service-diagnostics.csv": "1e9fc3ed0e85fc0f01679255ef82b660bf1cb640895a8241bbb391a5a6bd9dc1"
+  },
+  "reproduce": "OPENRAILSRS_TRAFFIC_THREADS=4 openrailsrs play-service /path/to/imported/scenario.toml --out-dir /path/to/native-proof --frame-dt 0.5",
+  "resume_proof": "native-activity-resume.json",
+  "validation_scope": "Regression and completion of one original ACT with native PAT waits/reversals and SIGSCR enabled; not a full Open Rails physics parity claim.",
+  "execution_observation": {
+    "command_wrapper_exit_code": 143,
+    "application_outcome": "All completion and actor assertions passed; final CSV row is Completed at3781 s and the printed JSON is complete.",
+    "reason_for_wrapper_termination": "Not established; retained explicitly rather than reported as exit0."
+  }
+}

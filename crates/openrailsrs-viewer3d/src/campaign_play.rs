@@ -10,6 +10,8 @@ pub struct CampaignEntry {
 }
 #[derive(Clone, Serialize, Deserialize)]
 pub struct MaterialLedger {
+    #[serde(default)]
+    pub clock_time_s: Option<f64>,
     pub sources: Vec<String>,
     pub state: openrailsrs_sim::TrainSimState,
     pub cars: Vec<openrailsrs_sim::operations::CarOperationState>,
@@ -282,6 +284,51 @@ impl CampaignPlay {
             return Ok(());
         }
         let mut snapshot = live.session.snapshot();
+        if ledger
+            .state
+            .vehicle_systems
+            .iter()
+            .map(|s| &s.definition)
+            .collect::<Vec<_>>()
+            != snapshot
+                .state
+                .vehicle_systems
+                .iter()
+                .map(|s| &s.definition)
+                .collect::<Vec<_>>()
+        {
+            return Err("La jornada cambió los equipos del material; mantené la misma configuración para conservar baterías y averías".into());
+        }
+        snapshot.state.vehicle_systems = ledger.state.vehicle_systems.clone();
+        snapshot.state.electric = ledger.state.electric.clone();
+        snapshot.state.power_supply = ledger.state.power_supply.clone();
+        // A jornada starts a new simulation clock. Preserve the age of relay
+        // and supply timers rather than treating their old timestamps as future
+        // events, and start the energy integration interval at the new clock.
+        let clock_shift = snapshot.state.time.0 - ledger.state.time.0;
+        for car in &mut snapshot.state.power_supply.cars {
+            for timer in [
+                &mut car.supply.main_started_s,
+                &mut car.supply.auxiliary_started_s,
+                &mut car.supply.relay_started_s,
+            ]
+            .into_iter()
+            .flatten()
+            {
+                *timer += clock_shift;
+            }
+        }
+        if snapshot.state.power_supply.last_energy_time_s.is_some() {
+            snapshot.state.power_supply.last_energy_time_s = Some(snapshot.state.time.0);
+        }
+        snapshot.state.steam_boilers = ledger.state.steam_boilers.clone();
+        snapshot.state.fuel_consumption_g = ledger.state.fuel_consumption_g;
+        snapshot.state.cumulative_energy_j = ledger.state.cumulative_energy_j;
+        snapshot.state.regen_energy_j = ledger.state.regen_energy_j;
+        let start_clock = ledger
+            .clock_time_s
+            .filter(|v| v.is_finite() && *v >= 0.)
+            .map_or(live.start_clock_s, |clock| live.start_clock_s.max(clock));
         snapshot.state.diesel = ledger.state.diesel.clone();
         snapshot.state.diesel_rpm = ledger.state.diesel_rpm.clone();
         snapshot.state.boiler_state = ledger.state.boiler_state.clone();
@@ -313,6 +360,7 @@ impl CampaignPlay {
         }
         live.session.validate_snapshot(&snapshot)?;
         live.session.restore_snapshot(snapshot)?;
+        live.start_clock_s = start_clock;
         self.status="Material de la jornada anterior: reservas y estado conservados; nueva posición y horario.".into();
         Ok(())
     }
@@ -342,6 +390,7 @@ impl CampaignPlay {
         self.progress.schema = 1;
         self.progress.last_mission = Some(def.id.clone());
         self.progress.material = Some(MaterialLedger {
+            clock_time_s: Some(live.clock_time_s()),
             sources: material_sources(live)?,
             state: live.session.state.clone(),
             cars: live.session.formation.cars.clone(),
@@ -404,6 +453,85 @@ pub fn valid_context(c: &CampaignContext) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn two_complete_driven_jornadas_keep_material_and_resume_mid_service() {
+        let temp = tempfile::tempdir().unwrap();
+        let project = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let menu = crate::player_launch::PlayerLaunchMenu::discover(&project, None);
+        let mut campaigns = CampaignPlay {
+            data: Some(temp.path().to_path_buf()),
+            ..default()
+        };
+        campaigns.discover(&project);
+        let index = campaigns
+            .entries
+            .iter()
+            .position(|e| e.definition.campaign.name == "Dos jornadas · material propio")
+            .unwrap();
+        campaigns.select(index).unwrap();
+        let mut last_fuel = None;
+        let mut last_clock = 0.;
+        for day in 0..2 {
+            let request = campaigns.start(day, &menu).unwrap();
+            let mut drive = crate::live::LiveDrive::from_scenario_path(&request.path).unwrap();
+            campaigns.activate(&mut drive).unwrap();
+            if let Some(fuel) = last_fuel {
+                assert_eq!(drive.session.state.diesel.cars[0].fuel_l, fuel);
+                assert!(drive.clock_time_s() >= last_clock);
+                assert!(drive.session.state.power_supply.cars[0].supply.main);
+                assert!(drive.session.state.power_supply.cars[0].supply.auxiliary);
+                drive
+                    .session
+                    .validate_snapshot(&drive.session.snapshot())
+                    .unwrap();
+            }
+            let initial_fuel = drive.session.state.diesel.cars[0].fuel_l;
+            let mut resumed = false;
+            for _ in 0..18000 {
+                drive
+                    .traffic
+                    .advance(&mut drive.session, 0.05, Some(0.75), |_| {});
+                if !resumed && drive.session.time_s() >= 60. {
+                    let snapshot = drive.session.snapshot();
+                    let others = drive.traffic.snapshot();
+                    let mut restore =
+                        crate::live::LiveDrive::from_scenario_path(&request.path).unwrap();
+                    restore.start_clock_s = drive.start_clock_s;
+                    restore.session.restore_snapshot(snapshot).unwrap();
+                    restore.traffic.restore_snapshot(others).unwrap();
+                    assert_eq!(
+                        restore.session.state.diesel.cars[0].fuel_l,
+                        drive.session.state.diesel.cars[0].fuel_l
+                    );
+                    drive = restore;
+                    resumed = true;
+                }
+                if drive.session.arrived {
+                    break;
+                }
+            }
+            assert!(resumed);
+            assert_eq!(
+                drive.session.gameplay.phase,
+                openrailsrs_sim::ServicePhase::Completed
+            );
+            assert!(drive.session.state.odometer_m > 9900.);
+            assert!(drive.session.state.diesel.cars[0].fuel_l < initial_fuel);
+            last_fuel = Some(drive.session.state.diesel.cars[0].fuel_l);
+            last_clock = drive.clock_time_s();
+            campaigns.finish(&drive).unwrap();
+            assert!(
+                campaigns
+                    .progress
+                    .results
+                    .completed
+                    .contains_key(if day == 0 { "day1" } else { "day2" })
+            );
+            campaigns.discover(&project);
+            campaigns.select(index).unwrap();
+        }
+    }
+
     #[test]
     fn campaign_progress_and_real_material_continue_without_cli_and_resume_keeps_context() {
         let temp = tempfile::tempdir().unwrap();

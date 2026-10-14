@@ -6,6 +6,64 @@ use std::path::PathBuf;
 
 use openrailsrs_ace::{AceFile, AceFormat, read_ace, write_png};
 
+#[test]
+fn compressed_expansion_is_bounded_even_with_a_forged_small_declared_size() {
+    use std::io::Write;
+    let mut encoder = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::best());
+    encoder.write_all(&vec![0; 2 * 1024 * 1024]).unwrap();
+    let mut bytes = b"SIMISA@F".to_vec();
+    bytes.extend_from_slice(&1u32.to_le_bytes());
+    bytes.extend_from_slice(b"@@@@");
+    bytes.extend_from_slice(&encoder.finish().unwrap());
+    assert!(bytes.len() < 32 * 1024);
+    assert!(matches!(
+        AceFile::read_bytes_limited(&bytes, 32 * 1024),
+        Err(openrailsrs_ace::AceError::LimitExceeded { limit: 32768 })
+    ));
+}
+
+#[test]
+fn compact_dxt_header_cannot_allocate_pixels_beyond_the_budget() {
+    let bytes = synth_ace(8192, 8192, 1, &[]);
+    assert!(matches!(
+        AceFile::read_bytes_limited(&bytes, 32 * 1024 * 1024),
+        Err(openrailsrs_ace::AceError::LimitExceeded { .. })
+    ));
+    let mut native = synth_or_ace_uncompressed(1, 1, &[1, 2, 3, 255]);
+    native[24..28].copy_from_slice(&8192u32.to_le_bytes());
+    native[28..32].copy_from_slice(&8192u32.to_le_bytes());
+    assert!(matches!(
+        AceFile::read_bytes_limited(&native, 32 * 1024 * 1024),
+        Err(openrailsrs_ace::AceError::LimitExceeded { .. })
+    ));
+}
+
+#[test]
+fn limited_reader_preserves_valid_structured_and_compressed_texture_pixels() {
+    use std::io::Write;
+    let pixels = [1, 2, 3, 255, 4, 5, 6, 127, 7, 8, 9, 0, 10, 11, 12, 255];
+    let native = synth_or_ace_uncompressed(2, 2, &pixels);
+    let mut encoder = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::default());
+    encoder.write_all(&native[16..]).unwrap();
+    let mut compressed = b"SIMISA@F".to_vec();
+    compressed.extend_from_slice(&((native.len() - 16) as u32).to_le_bytes());
+    compressed.extend_from_slice(b"@@@@");
+    compressed.extend_from_slice(&encoder.finish().unwrap());
+    for bytes in [&native, &compressed] {
+        assert_eq!(
+            AceFile::read_bytes_limited(bytes, 1024).unwrap().mip0,
+            pixels
+        );
+    }
+    let path = tmp_path("bounded_file.ace");
+    std::fs::write(&path, vec![0; 1025]).unwrap();
+    assert!(matches!(
+        openrailsrs_ace::read_ace_limited(&path, 1024),
+        Err(openrailsrs_ace::AceError::LimitExceeded { limit: 1024 })
+    ));
+    std::fs::remove_file(path).unwrap();
+}
+
 /// Returns a unique temporary path per test so parallel runs don't race.
 fn tmp_path(suffix: &str) -> PathBuf {
     std::env::temp_dir().join(format!("openrailsrs_ace_{suffix}"))

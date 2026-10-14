@@ -14,7 +14,7 @@ use crate::player_launch::{
 };
 use crate::player_settings::{PlayerAction, PlayerSettings, player_data_dir};
 use crate::route_bootstrap::ViewerAppState;
-use crate::saved_game::{PendingSavedCamera, SavedCamera, SavedGame, slot_path};
+use crate::saved_game::{SavedCamera, SavedGame, slot_path};
 use crate::weather_journey::WeatherMode;
 use crate::weather_state::WeatherProfile;
 
@@ -178,6 +178,7 @@ impl Plugin for PlayerUiPlugin {
                 (
                     player_keys,
                     choice_keys,
+                    library::input_keys,
                     crate::save_history::history_keys,
                     crate::save_history::poll_history,
                     poll_content_download,
@@ -263,6 +264,9 @@ pub struct PlayerUiState {
     new_game_advanced: bool,
     choice_search: [ChoiceSearch; 3],
     choice_focus: Option<ChoiceKind>,
+    library_focus: Option<usize>,
+    library_url: String,
+    library_folder: String,
     route_picker: ChoiceKind,
     library_tab: LibraryTab,
     settings_tab: SettingsTab,
@@ -298,6 +302,9 @@ impl Default for PlayerUiState {
             new_game_advanced: false,
             choice_search: default(),
             choice_focus: None,
+            library_focus: None,
+            library_url: String::new(),
+            library_folder: String::new(),
             route_picker: ChoiceKind::Route,
             library_tab: LibraryTab::Installed,
             settings_tab: SettingsTab::General,
@@ -317,6 +324,26 @@ impl Default for PlayerUiState {
 }
 #[derive(Resource, Default)]
 pub struct UiPointerCapture(pub bool);
+/// Called after a scene's entities are retired and before another route loads.
+/// Keep the global UI camera and player preferences; drop scene image handles.
+pub fn reset_scene_ui(world: &mut World) {
+    if let Some(mut ui) = world.get_resource_mut::<PlayerUiState>() {
+        ui.root = None;
+        ui.panel = PlayerPanel::None;
+        ui.navigation.clear();
+        ui.rebuild = true;
+        ui.map_initialized = false;
+        ui.map_selection = None;
+        ui.in_start_menu = false;
+        ui.pause_before = false;
+    }
+    if world.contains_resource::<previews::Previews>() {
+        world.insert_resource(previews::Previews::default());
+    }
+    if let Some(mut pointer) = world.get_resource_mut::<UiPointerCapture>() {
+        pointer.0 = false;
+    }
+}
 pub fn world_input_available(
     ui: Option<Res<PlayerUiState>>,
     #[cfg(feature = "dev-inspector")] inspector: Option<Res<crate::dev_inspector::InspectorState>>,
@@ -362,6 +389,15 @@ struct TrackMonitorRoot;
 struct TrackMonitorBody;
 #[derive(Component, Clone, Debug)]
 enum UiCommand {
+    CoupleService(usize),
+    LibraryFocus(usize),
+    LibraryPaste(usize),
+    LibraryUrlInspect,
+    LibraryUrlInstall(bool),
+    LibraryBrowse,
+    LibraryDirectory(usize),
+    LibraryParent,
+    LibraryStorage,
     ContentFolder(Option<usize>),
     CopyContentDiagnostics,
     Open(PlayerPanel),
@@ -448,6 +484,12 @@ enum UiCommand {
     ServiceStopEdit(usize, u8, f64),
     ServiceToggleStop(usize),
     ServiceGenerate,
+    ItineraryPoint(String),
+    ItineraryReverse,
+    ItineraryWait(f64),
+    ShuntAuthority,
+    DepotWork(String),
+    TakeControl(usize),
     ServiceUndo,
     ServiceSave,
     FormationEditorStart,
@@ -515,6 +557,8 @@ enum MenuField {
 }
 #[derive(Clone, Copy, Debug)]
 enum SettingField {
+    ImprovedTransparency,
+    LightBudget,
     ContactShadows,
     ProjectedLod,
     AdaptiveGraphics,
@@ -875,6 +919,7 @@ fn open_panel(ui: &mut PlayerUiState, live: &mut Option<ResMut<LiveDrive>>, pane
     ui.rebuild = true;
     ui.awaiting_key = None;
     ui.choice_focus = None;
+    ui.library_focus = None;
     ui.notice.clear();
     if let Some(l) = live {
         l.paused = if panel == PlayerPanel::Traction {
@@ -895,6 +940,7 @@ fn close_panel(ui: &mut PlayerUiState, live: &mut Option<ResMut<LiveDrive>>) {
     };
     ui.awaiting_key = None;
     ui.choice_focus = None;
+    ui.library_focus = None;
     ui.notice.clear();
     ui.rebuild = true;
     if let Some(l) = live {
@@ -919,6 +965,13 @@ fn player_keys(
         return;
     }
     if ui.history_focus {
+        return;
+    }
+    if ui.library_focus.is_some() {
+        if keys.just_pressed(KeyCode::Escape) {
+            ui.library_focus = None;
+            ui.rebuild = true;
+        }
         return;
     }
     if ui.choice_focus.is_some() {
@@ -1010,7 +1063,7 @@ struct CameraForSave<'w, 's> {
             &'static crate::camera::FlyState,
             &'static Transform,
         ),
-        With<Camera3d>,
+        (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
     >,
 }
 #[derive(SystemParam)]
@@ -1068,6 +1121,26 @@ fn handle_buttons(
             },
             UiCommand::CopyContentDiagnostics=>clipboard.as_mut().ok_or("Portapapeles no disponible".into()).and_then(|c|c.set_text(crate::official_content::diagnostic_text(&menu)).map_err(|e|format!("No se pudo copiar: {e}"))).map(|()|{ui.notice="Diagnóstico copiado: incluye los faltantes y sus ubicaciones".into();}),
             UiCommand::ContentDownload=>downloads.start(),
+            UiCommand::LibraryFocus(field)=>{ui.library_focus=Some(*field);Ok(())},
+            UiCommand::LibraryPaste(field)=>clipboard.as_mut().ok_or("Portapapeles no disponible".into()).and_then(|c|library::clipboard_text(c)).map(|value|{
+                let value=value.chars().take(2048).collect();
+                if *field==0 {ui.library_url=value;}else{ui.library_folder=value;}
+            }),
+            UiCommand::LibraryUrlInspect=>{ui.library_focus=None;downloads.inspect_url(&ui.library_url)},
+            UiCommand::LibraryUrlInstall(confirm)=>downloads.install_url(*confirm),
+            UiCommand::LibraryBrowse=>{
+                ui.library_focus=None;
+                let path=if ui.library_folder.is_empty(){player_data_dir()}else{std::path::PathBuf::from(&ui.library_folder)};
+                tools.request(crate::library_tools::Action::Browse(path))
+            },
+            UiCommand::LibraryDirectory(index)=>tools.folder.as_ref().and_then(|(_,dirs)|dirs.get(*index)).cloned().ok_or("Carpeta no disponible".into()).and_then(|path|{ui.library_folder=path.to_string_lossy().into_owned();tools.request(crate::library_tools::Action::Browse(path))}),
+            UiCommand::LibraryParent=>tools.folder.as_ref().and_then(|(p,_)|p.parent()).map(std::path::Path::to_path_buf).ok_or("Esta carpeta no tiene padre".into()).and_then(|path|{ui.library_folder=path.to_string_lossy().into_owned();tools.request(crate::library_tools::Action::Browse(path))}),
+            UiCommand::LibraryStorage=>{
+                if downloads.busy() || downloads.queue.entries.iter().any(|e|e.phase.pending()) {
+                    Err("Terminá o cancelá las descargas antes de cambiar la carpeta".into())
+                }else if tools.folder.is_none(){Err("Abrí la carpeta elegida para comprobarla".into())}
+                else {let path=tools.folder.as_ref().unwrap().0.clone();tools.request(crate::library_tools::Action::Storage(path))}
+            },
             UiCommand::ContentAudit(index)=>downloads.reaudit(*index),
             UiCommand::ContentCancel=>downloads.cancel(),
             UiCommand::QueueCancel(id)=>downloads.cancel_job(*id),
@@ -1091,6 +1164,31 @@ fn handle_buttons(
             UiCommand::ServiceStopEdit(i,field,delta)=>service.edit_stop(*i,*field,*delta),
             UiCommand::ServiceToggleStop(i)=>service.toggle_stop(*i),
             UiCommand::ServiceGenerate=>service.generate(),
+            UiCommand::ItineraryPoint(node)=>service.itinerary_point(node),
+            UiCommand::ItineraryReverse=>service.itinerary_reverse(),
+            UiCommand::ItineraryWait(delta)=>service.itinerary_wait(*delta),
+            UiCommand::ShuntAuthority=>if let Some(MapSelection::Signal(id))=ui.map_selection.clone(){live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.authorize_shunting(&id,200.))}else{Err("Seleccioná la señal de maniobra en el mapa".into())},
+            UiCommand::DepotWork(id)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.begin_depot_work(id)),
+            UiCommand::TakeControl(index)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|{
+                l.traffic.validate_control(&l.session,*index)?;
+                let id=l.traffic.services[*index].id.clone();
+                let (orbit,_,_)=camera.cameras.single().map_err(|_|"Cámara no disponible")?;
+                let saved=SavedCamera::capture(*camera.follow,orbit,&camera.look,&camera.origin);
+                let path=crate::player_settings::player_data_dir().join("driver-transfer.json");
+                SavedGame::save(l,&content,saved,&path,weather.as_deref(),Some(&settings))?;
+                SavedGame::queue_control(&path,&id)?;launch.0=Some(SavedGame::prepare_resume(&path)?);Ok(())
+            }),
+            UiCommand::CoupleService(index)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l| {
+                let (orbit,_,_) = camera.cameras.single().map_err(|_|"Cámara no disponible")?;
+                let saved = SavedCamera::capture(*camera.follow,orbit,&camera.look,&camera.origin);
+                let path = crate::player_settings::player_data_dir().join("formation-transfer.json");
+                l.traffic.validate_coupling(&l.session,*index)?;
+                let id=l.traffic.services[*index].id.clone();
+                SavedGame::save(l,&content,saved,&path,weather.as_deref(),Some(&settings))?;
+                SavedGame::queue_coupling(&path,&id)?;
+                launch.0=Some(SavedGame::prepare_resume(&path)?);
+                Ok(())
+            }),
             UiCommand::ServiceUndo=>service.undo(),
             UiCommand::ServiceSave=>service.save(&player_data_dir()).map(|_|menu.refresh_installed_content()),
             UiCommand::FormationEditorStart=>{
@@ -1260,27 +1358,12 @@ fn handle_buttons(
                 })
                     .map(|()|{ui.notice=format!("Partida guardada en la ranura {} · {:.0} m · {:.1} {}",slot+1,l.session.state.odometer_m,settings.display_speed_mps(l.session.velocity_mps()),settings.speed_unit_label());})
             }else{Err("No hay una partida activa".into())},
-            UiCommand::Load(slot)=>if let Some(l)=live.as_mut(){
-                SavedGame::read(&slot_path(*slot)).and_then(|saved|{
-                    let selected_weather=saved.weather;
-                    let environment=saved.environment.unwrap_or(crate::environment::EnvironmentSelection { manual_weather: selected_weather, ..default() });
-                    let checkpoint=saved.weather_checkpoint.clone();
-                    let options=saved.player_options.clone();
-                    let camera=saved.restore(l)?;
-                    if let Some(options)=options {options.apply(&mut settings);}
-                    content.weather=selected_weather;content.environment=environment;
-                    if let Some(checkpoint)=checkpoint {
-                        checkpoint.apply_settings(&mut settings);
-                        if let Some(state)=weather.as_mut(){**state=checkpoint.restore(l.session.time_s());}
-                    } else {
-                        settings.weather_profile=WeatherProfile::Automatic;
-                        if let Some(state)=weather.as_mut(){**state=default();}
-                    }
-                    menu.environment=environment;menu.weather=environment.manual_weather;settings.environment=environment;
-                    commands.insert_resource(PendingSavedCamera(camera));Ok(())
+            UiCommand::Load(slot)=> {
+                SavedGame::prepare_resume(&slot_path(*slot)).map(|request| {
+                    launch.0=Some(request);
+                    ui.notice="Restaurando ruta, formaciones y partida guardada".into();
                 })
-                    .map(|()|{ui.notice="Partida restaurada y pausada; Continuar reanuda la conducción".into();})
-            }else{Err("No hay una partida activa".into())},
+            },
             UiCommand::Cycle(field,delta)=>{match field {
                 MenuField::Path=>menu.path=cycle(menu.path,menu.paths.len()+1,*delta),
                 MenuField::Time=>menu.start_time_s=(menu.start_time_s+f64::from(*delta)*900.0).rem_euclid(86400.0),
@@ -1359,6 +1442,8 @@ fn handle_buttons(
                 SettingField::CabLodPixels=>settings.lod_pixels_cab=(settings.lod_pixels_cab+step).clamp(24.,512.),
                 SettingField::ExteriorLodPixels=>settings.lod_pixels_exterior=(settings.lod_pixels_exterior+step).clamp(24.,512.),
                 SettingField::ContactShadows=>settings.contact_shadow_quality=(settings.contact_shadow_quality+1)%3,
+                SettingField::ImprovedTransparency=>settings.improved_transparency = !settings.improved_transparency,
+                SettingField::LightBudget=>settings.light_budget=if settings.light_budget>=64{8}else{settings.light_budget+8},
                 SettingField::Shadows=>settings.shadows= !settings.shadows,SettingField::Fog=>settings.fog= !settings.fog,
                 SettingField::Units=>settings.toggle_speed_units(),
                 SettingField::FogQuality=>settings.fog_quality=settings.fog_quality.next(),
@@ -1555,10 +1640,14 @@ fn build_panel(
                 PlayerPanel::NewGame => launcher::build_new_game(p, &ui, &menu, &settings, previews.as_deref()),
                 PlayerPanel::Continue => launcher::build_continue(p,&ui,&history),
                 PlayerPanel::Content => {
+                    library::build_inputs(p,&ui,&downloads,&tools);
                     if ui.library_tab==LibraryTab::Tools {
                         label(p,"Instalaciones originales compartidas",18.,TEXT);
                         label(p,"Se usan sólo al faltar una referencia nativa. No se buscan archivos fuera de estas instalaciones ni se descargan reemplazos.",12.,MUTED);
-                        for (index,(root,name)) in menu.original_installations().iter().enumerate(){button(p,format!("{} {name} · {}",if settings.shared_installations.contains(root){"●"}else{"○"},root.display()),UiCommand::LinkInstallation(index));}
+                        for (index,(root,name)) in menu.original_installations().iter().enumerate(){
+                            button(p,format!("{} {}",if settings.shared_installations.contains(root){"●"}else{"○"},name.chars().take(64).collect::<String>()),UiCommand::LinkInstallation(index));
+                            library::path_label(p,root);
+                        }
                         for root in &settings.shared_installations{if !root.is_dir(){label(p,format!("Instalación no disponible: {}",root.display()),12.,CAUTION);}}
                     }
                     launcher::build_library(p, ui.library_tab, &downloads, &menu, &tools);
@@ -1654,6 +1743,11 @@ fn build_panel(
                 PlayerPanel::Formation => {
                     if let Some(l) = live.as_ref() {
                         build_formation(p, &ui, &l.session);
+                        for d in l.traffic.yard_inventory(&l.session) {label(p,format!("Destino {} · {} · {}",d.destination,d.id,d.reason),14.,if d.accepted {GOOD}else{CAUTION});}
+                        for (index,service) in l.traffic.services.iter().enumerate(){if service.departed && !service.session.arrived {button(p,format!("Tomar control: {} · {:.0} km/h",service.id,service.session.velocity_mps()*3.6),UiCommand::TakeControl(index));}}
+                        for (index,service) in l.traffic.services.iter().enumerate(){if service.session.velocity_mps()<0.1 {button(p,format!("Recoger formación: {} · extremo trasero a delantero",service.id),UiCommand::CoupleService(index));}}
+                        if let Some(status)=l.session.depot_status(){label(p,status,14.,ACCENT);for d in &l.session.state.rail_operations.definition.depots {button(p,format!("Mantenimiento en {}",d.id),UiCommand::DepotWork(d.id.clone()));}}
+                        if let Some(status)=l.session.shunting_authority_status(){label(p,status,14.,CAUTION);}
                     }
                 }
                 PlayerPanel::Map => {
@@ -1754,6 +1848,15 @@ fn selector(p: &mut ChildSpawnerCommands<'_>, name: &str, value: String, field: 
     });
 }
 fn content_diagnostics(p: &mut ChildSpawnerCommands<'_>, menu: &PlayerLaunchMenu, full: bool) {
+    label(
+        p,
+        format!(
+            "Biblioteca escribible: {}",
+            openrailsrs_content::content_dir().display()
+        ),
+        12.,
+        MUTED,
+    );
     row(p, |p| {
         button(
             p,
@@ -1883,6 +1986,9 @@ fn poll_content_download(
     mut ui: ResMut<PlayerUiState>,
 ) {
     let was_busy = downloads.busy();
+    if downloads.poll_url() {
+        ui.rebuild = true;
+    }
     let ready = downloads.poll();
     if ready {
         menu.refresh_installed_content();
@@ -2182,6 +2288,9 @@ fn build_formation(p: &mut ChildSpawnerCommands<'_>, ui: &PlayerUiState, s: &Liv
     }
     if let Some(instruction) = s.shunting_instruction() {
         label(p, instruction, 14.0, GOOD);
+    }
+    if let Some(status) = s.passing_status() {
+        label(p, status, 14., CAUTION);
     }
     label(
         p,
@@ -2551,6 +2660,14 @@ fn build_settings(
             );
             button(
                 p,
+                format!(
+                    "Mejorar cristales superpuestos: {}",
+                    yes(s.improved_transparency)
+                ),
+                UiCommand::Setting(SettingField::ImprovedTransparency, 0.),
+            );
+            button(
+                p,
                 format!("Escenografía: {}", s.scenery_profile.label()),
                 UiCommand::Setting(SettingField::SceneryProfile, 0.0),
             );
@@ -2558,6 +2675,11 @@ fn build_settings(
                 p,
                 format!("Vegetación: {}", s.scenery_quality.label()),
                 UiCommand::Setting(SettingField::SceneryQuality, 0.0),
+            );
+            button(
+                p,
+                format!("Luces simultáneas: {} · prioriza los faros", s.light_budget),
+                UiCommand::Setting(SettingField::LightBudget, 0.),
             );
             settings_row(
                 p,
@@ -3314,6 +3436,11 @@ fn build_map(p: &mut ChildSpawnerCommands<'_>, ui: &PlayerUiState, live: &LiveDr
             p,
             "Precaución",
             UiCommand::DispatchSignal(Some(SignalAspect::Caution)),
+        );
+        button(
+            p,
+            "Maniobra · 200 m / 15 km/h / 120 s",
+            UiCommand::ShuntAuthority,
         );
         button(
             p,

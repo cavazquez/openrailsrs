@@ -1,0 +1,61 @@
+{
+  "after_resume_time_s": 25.00000000000022,
+  "ai_count": 20,
+  "assume_signals_clear": false,
+  "checkpoint_bytes": 8282654,
+  "checkpoint_time_s": 20.0,
+  "malformed_traffic_rejected_atomically": true,
+  "max_clock_position_velocity_error": 0.0,
+  "native_signal_aspects_equal": true,
+  "scope": "Native core player and traffic snapshots; renderer and camera use the separate SavedGame tests",
+  "traffic_failures": [],
+  "reference": "Open Rails 1.6.1",
+  "content": "DocMartin7644/Chiltern-Route-v4",
+  "revision": "8236df20ed9f596b8cf15720c43bfbdd0c43125d",
+  "activity": "RS_Football Special.act",
+  "reproduce": "cargo run --locked -p openrailsrs-sim --example native_activity_resume -- /path/to/imported/scenario.toml /path/to/resume-proof",
+  "build": {
+    "git_head": "d9dba7af1f531183de594af3201373d3b1b20590",
+    "uncommitted_issue_fixes": true,
+    "cli_sha256": "721054dc71430ee2c8f68438ace9a1c2c015a5d1c46d6d77364352e1086a41c4",
+    "resume_example_sha256": "b82373eab50c642cc3424097554eaa9fcdd419418eaa66f75ac7cc5e13062f81",
+    "profile": {
+      "dev_opt_level": 1,
+      "dev_debug": 0,
+      "dev_strip": "symbols",
+      "incremental": false
+    },
+    "features": "workspace all-features",
+    "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)"
+  },
+  "configuration": {
+    "scenario_sha256": "892886bb0c5445b2d85684e6de657cd4ee21474729f5590dd2978fb0386f0747",
+    "native_track_sha256": "b4cdbfbef1d845a597cb04136e4597a54fa56c7edbed9c2c4e237e4b325446d0",
+    "frame_dt_s": 0.5,
+    "simulation": {
+      "duration": 10800.0,
+      "time_step": 1.0,
+      "seed": 42,
+      "legacy_power_cap": true,
+      "train_air_lap_hold": false,
+      "train_air_full_release_s": 3.0,
+      "brake_shoe_speed_factor": false,
+      "brake_skid_limit": false,
+      "multi_body": false,
+      "coupler_kind": "",
+      "orts_inherit_partial_run_up": false,
+      "rail_operations": {
+        "passing_plans": [],
+        "yard_deliveries": [],
+        "depots": [],
+        "connections": [],
+        "works": [],
+        "incidents": []
+      }
+    },
+    "traffic_threads": 2,
+    "autodrive_throttle": 0.75,
+    "fresh_worlds": 2,
+    "runtime_physics_quantum_s": 0.05
+  }
+}

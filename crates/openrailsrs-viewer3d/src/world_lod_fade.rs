@@ -49,7 +49,7 @@ pub fn tick(
     mut commands: Commands,
     // Camera/visual transitions continue while the train simulation is paused.
     time: Res<Time<Real>>,
-    camera: Query<&GlobalTransform, With<Camera3d>>,
+    camera: Query<&GlobalTransform, (With<Camera3d>, Without<crate::mirrors::MirrorCamera>)>,
     mut fades: Query<(Entity, &GlobalTransform, &mut LodFade)>,
 ) {
     let Ok(camera) = camera.single() else { return };

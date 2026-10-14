@@ -449,7 +449,41 @@ mod tests {
                 .resource::<Assets<MstsWorldTileAsset>>()
                 .get(bundle.world.as_ref().unwrap())
                 .unwrap();
-            assert_eq!(world.world.items.len(), 5);
+            let mut inventory = world
+                .world
+                .items
+                .iter()
+                .map(|item| (item.uid(), item.kind(), item.file_name()))
+                .collect::<Vec<_>>();
+            inventory.sort_unstable();
+            assert_eq!(
+                inventory,
+                vec![
+                    (Some(1), "Static", Some("yard_shed.s")),
+                    (Some(6), "HWater", Some("yard.ace")),
+                    (Some(20), "Static", Some("house_windows.s")),
+                    (Some(21), "Static", Some("station_windows.s")),
+                    (Some(22), "Static", Some("platform_lamp.s")),
+                    (Some(23), "Static", Some("camera_wall.s")),
+                    (Some(30), "Pickup", Some("fuel_tower.s")),
+                ],
+                "every owned object and its type must survive each reload"
+            );
+            let pickup = world.world.items.iter().find(|item| item.uid() == Some(30));
+            let Some(openrailsrs_formats::WorldItem::Pickup {
+                pickup_type,
+                pickup_capacity,
+                pickup_anim_data,
+                speed_range_mps,
+                ..
+            }) = pickup
+            else {
+                panic!("owned animated diesel pickup must survive reload");
+            };
+            assert_eq!(*pickup_type, Some(7));
+            assert_eq!(*pickup_capacity, Some([100.0, 1.0]));
+            assert_eq!(*pickup_anim_data, Some([0.0, 4.0]));
+            assert_eq!(*speed_range_mps, Some([0.0, 0.0]));
             drop(handle);
             for _ in 0..8 {
                 app.update();

@@ -11,6 +11,8 @@ pub struct Candidate {
 }
 #[derive(Resource, Default)]
 pub struct ServiceBuilder {
+    pub graph: Option<openrailsrs_track::TrackGraph>,
+    pub formation_length_m: f64,
     pub scenario: Option<ScenarioFile>,
     pub candidates: Vec<Candidate>,
     pub origin: usize,
@@ -33,11 +35,10 @@ impl ServiceBuilder {
         mut scenario: ScenarioFile,
         native_root: Option<PathBuf>,
     ) -> Result<(), String> {
-        if !scenario.route.legs.is_empty() {
-            return Err("Elegí un PAT simple para el editor de servicios. Este editor trabaja sobre un itinerario existente en un único sentido; no edita inversiones ni maniobras.".into());
-        }
         let probe = openrailsrs_sim::LiveDriveSession::from_scenario(Path::new("."), &scenario)
             .map_err(|e| e.to_string())?;
+        self.graph = Some(probe.graph.clone());
+        self.formation_length_m = probe.formation.cars.iter().map(|c| c.length_m).sum();
         self.candidates = vec![Candidate {
             name: format!("Origen · {}", scenario.route.start),
             node: scenario.route.start.clone(),
@@ -123,6 +124,149 @@ impl ServiceBuilder {
             self.undo.remove(0);
         }
         self.scenario = Some(candidate);
+        Ok(())
+    }
+    pub fn itinerary_point(&mut self, node: &str) -> Result<(), String> {
+        let graph = self
+            .graph
+            .as_ref()
+            .ok_or("Abrí una ruta para editar su itinerario")?;
+        let old = self.scenario.as_ref().ok_or("Abrí un servicio")?;
+        let mut candidate = old.clone();
+        let (mut start, reversed, mut start_offset) = candidate.route.legs.last().map_or(
+            (
+                candidate.route.start.clone(),
+                false,
+                candidate.route.start_offset_m.unwrap_or(0.),
+            ),
+            |leg| (leg.destination.clone(), leg.reversed, leg.end_chainage_m),
+        );
+        if start == node {
+            return Err("Elegí otro punto del mapa".into());
+        }
+        let mut path = connected_path(graph, &start, node)?;
+        if let Some(previous) = candidate.route.legs.last() {
+            start = previous.start.clone();
+            let mut prefix = previous.edges.clone();
+            prefix.extend(path);
+            path = prefix;
+        } else {
+            start_offset = candidate.route.start_offset_m.unwrap_or(0.);
+        }
+        if path.len() > 4096 || candidate.route.legs.len() >= 64 {
+            return Err("El itinerario supera el límite de tramos".into());
+        }
+        let length = path
+            .iter()
+            .filter_map(|id| graph.edge(id))
+            .map(|e| e.length_m)
+            .sum::<f64>();
+        if length <= start_offset + self.formation_length_m {
+            return Err("El tramo es demasiado corto para esta formación".into());
+        }
+        if candidate.route.legs.is_empty() {
+            candidate.route.stops.clear();
+            candidate.route.destination = node.into();
+        }
+        let switches = switches_for_path(graph, &path);
+        candidate
+            .route
+            .legs
+            .push(openrailsrs_scenarios::model::RouteLeg {
+                operations: vec![],
+                service_id: None,
+                not_before_s: None,
+                start,
+                destination: node.into(),
+                edges: path,
+                start_offset_m: start_offset,
+                end_chainage_m: length,
+                reversed,
+                wait_s: 0.,
+                stops: vec![],
+                switches,
+            });
+        self.commit_itinerary(old.clone(), candidate)
+    }
+    pub fn itinerary_reverse(&mut self) -> Result<(), String> {
+        let old = self.scenario.as_ref().ok_or("Abrí un servicio")?;
+        let mut candidate = old.clone();
+        let graph = self.graph.as_ref().ok_or("Ruta no disponible")?;
+        let leg = candidate
+            .route
+            .legs
+            .last_mut()
+            .ok_or("Elegí dos puntos del mapa primero")?;
+        let edges = leg
+            .edges
+            .iter()
+            .rev()
+            .map(|id| {
+                if let Some(id) = id.strip_suffix("_r") {
+                    id.to_string()
+                } else {
+                    format!("{id}_r")
+                }
+            })
+            .collect::<Vec<_>>();
+        if edges.iter().any(|e| graph.edge(e).is_none()) {
+            return Err("El recorrido no tiene vías dirigidas para regresar por ese tramo".into());
+        }
+        let total = leg
+            .edges
+            .iter()
+            .filter_map(|id| graph.edge(id))
+            .map(|e| e.length_m)
+            .sum::<f64>();
+        let switches = switches_for_path(graph, &edges);
+        let next = openrailsrs_scenarios::model::RouteLeg {
+            operations: vec![],
+            service_id: None,
+            not_before_s: None,
+            start: leg.destination.clone(),
+            destination: leg.start.clone(),
+            edges,
+            start_offset_m: total - leg.end_chainage_m + self.formation_length_m,
+            end_chainage_m: total,
+            reversed: !leg.reversed,
+            wait_s: 0.,
+            stops: vec![],
+            switches,
+        };
+        if candidate.route.legs.len() >= 64 {
+            return Err("Límite de tramos alcanzado".into());
+        }
+        candidate.route.legs.push(next);
+        self.commit_itinerary(old.clone(), candidate)
+    }
+    pub fn itinerary_wait(&mut self, delta: f64) -> Result<(), String> {
+        let old = self.scenario.as_ref().ok_or("Abrí un servicio")?;
+        let mut candidate = old.clone();
+        let leg = candidate
+            .route
+            .legs
+            .last_mut()
+            .ok_or("Elegí un tramo primero")?;
+        leg.wait_s = (leg.wait_s + delta).clamp(0., 1800.);
+        self.commit_itinerary(old.clone(), candidate)
+    }
+    fn commit_itinerary(
+        &mut self,
+        old: ScenarioFile,
+        candidate: ScenarioFile,
+    ) -> Result<(), String> {
+        validate_itinerary(
+            self.graph.as_ref().ok_or("Ruta no disponible")?,
+            &candidate,
+            self.formation_length_m,
+        )?;
+        validate_times(&candidate)?;
+        self.undo.push(old);
+        if self.undo.len() > 64 {
+            self.undo.remove(0);
+        }
+        self.scenario = Some(candidate);
+        self.status = "Itinerario propio actualizado; guardar valida conexiones y recursos".into();
         Ok(())
     }
     pub fn toggle_stop(&mut self, index: usize) -> Result<(), String> {
@@ -285,6 +429,11 @@ impl ServiceBuilder {
     pub fn save(&mut self, data: &Path) -> Result<PathBuf, String> {
         let scenario = self.scenario.as_ref().ok_or("No hay servicio editable")?;
         validate_times(scenario)?;
+        validate_itinerary(
+            self.graph.as_ref().ok_or("Ruta no disponible")?,
+            scenario,
+            self.formation_length_m,
+        )?;
         openrailsrs_sim::LiveDriveSession::from_scenario(Path::new("."), scenario)
             .map_err(|e| e.to_string())?;
         let mut value = toml::Value::try_from(scenario).map_err(|e| e.to_string())?;
@@ -308,9 +457,157 @@ impl ServiceBuilder {
         Ok(path)
     }
 }
+fn validate_itinerary(
+    graph: &openrailsrs_track::TrackGraph,
+    scenario: &ScenarioFile,
+    train_length: f64,
+) -> Result<(), String> {
+    use openrailsrs_sim::path_data::PathData;
+    let normalize = |(edge, position): (String, f64)| {
+        let length = graph.edge(&edge).map_or(0., |e| e.length_m);
+        if let Some(base) = edge.strip_suffix("_r") {
+            (base.to_owned(), length - position)
+        } else {
+            (edge, position)
+        }
+    };
+    for (i, leg) in scenario.route.legs.iter().enumerate() {
+        let mut node = leg.start.as_str();
+        let mut total = 0.;
+        for id in &leg.edges {
+            let edge = graph
+                .edge(id)
+                .ok_or("El itinerario contiene una vía desconocida")?;
+            if edge.from.0 != node {
+                return Err("El itinerario tiene vías desconectadas o en otro sentido".into());
+            }
+            node = &edge.to.0;
+            total += edge.length_m;
+        }
+        if leg.edges.is_empty()
+            || node != leg.destination
+            || !(0. ..=1800.).contains(&leg.wait_s)
+            || leg.start_offset_m < train_length
+            || leg.end_chainage_m > total + 0.001
+            || leg.end_chainage_m <= leg.start_offset_m + 1.
+        {
+            return Err(
+                "El tramo no conserva destino, espera o espacio para toda la formación".into(),
+            );
+        }
+        if let Some(previous) = i.checked_sub(1).and_then(|i| scenario.route.legs.get(i)) {
+            let before = PathData::from_path(&previous.edges, graph);
+            let after = PathData::from_path(&leg.edges, graph);
+            for offset in [0., train_length / 2., train_length] {
+                let old_position = PathData::position_at_odometer(
+                    &previous.edges,
+                    &before.edges,
+                    previous.end_chainage_m - offset,
+                )
+                .map(normalize);
+                let new_position = PathData::position_at_odometer(
+                    &leg.edges,
+                    &after.edges,
+                    leg.start_offset_m
+                        - if leg.reversed != previous.reversed {
+                            train_length - offset
+                        } else {
+                            offset
+                        },
+                )
+                .map(normalize);
+                if !old_position
+                    .zip(new_position)
+                    .is_some_and(|(a, b)| a.0 == b.0 && (a.1 - b.1).abs() < 0.01)
+                {
+                    return Err("La inversión o continuación desplaza vehículos fuera de su vía; elegí un tramo que conserve toda la formación".into());
+                }
+            }
+        }
+    }
+    Ok(())
+}
+fn switches_for_path(
+    graph: &openrailsrs_track::TrackGraph,
+    path: &[String],
+) -> Vec<openrailsrs_scenarios::SwitchDef> {
+    path.windows(2)
+        .filter_map(|pair| {
+            let node = &graph.edge(&pair[0])?.to.0;
+            let openrailsrs_track::NodeKind::Switch {
+                stem_edge,
+                diverging_edge,
+            } = &graph.node(node)?.kind
+            else {
+                return None;
+            };
+            let base = |s: &str| s.strip_suffix("_r").unwrap_or(s).to_owned();
+            let position =
+                if base(&pair[1]) == base(&stem_edge.0) || base(&pair[0]) == base(&stem_edge.0) {
+                    openrailsrs_scenarios::SwitchPositionDef::Straight
+                } else if base(&pair[1]) == base(&diverging_edge.0)
+                    || base(&pair[0]) == base(&diverging_edge.0)
+                {
+                    openrailsrs_scenarios::SwitchPositionDef::Diverging
+                } else {
+                    return None;
+                };
+            Some(openrailsrs_scenarios::SwitchDef {
+                node: node.clone(),
+                position,
+            })
+        })
+        .collect()
+}
+fn connected_path(
+    graph: &openrailsrs_track::TrackGraph,
+    start: &str,
+    end: &str,
+) -> Result<Vec<String>, String> {
+    let mut todo = std::collections::VecDeque::from([start.to_string()]);
+    let mut previous = std::collections::BTreeMap::<String, (String, String)>::new();
+    let mut seen = std::collections::BTreeSet::from([start.to_string()]);
+    while let Some(node) = todo.pop_front() {
+        if node == end {
+            let mut path = vec![];
+            let mut n = end;
+            while n != start {
+                let (parent, edge) = previous.get(n).ok_or("Conexión incompleta")?;
+                path.push(edge.clone());
+                n = parent;
+            }
+            path.reverse();
+            return Ok(path);
+        }
+        let mut edges = graph.outgoing_edges(&node).to_vec();
+        edges.sort();
+        for id in edges {
+            if let Some(edge) = graph.edge(&id)
+                && seen.insert(edge.to.0.clone())
+            {
+                previous.insert(edge.to.0.clone(), (node.clone(), id));
+                todo.push_back(edge.to.0.clone());
+            }
+        }
+        if seen.len() > 100000 {
+            return Err("La ruta supera el límite del editor".into());
+        }
+    }
+    Err("No hay una conexión dirigida entre esos puntos".into())
+}
 
 fn validate_times(s: &ScenarioFile) -> Result<(), String> {
     s.validate().map_err(|e| e.to_string())?;
+    for leg in &s.route.legs {
+        if leg
+            .stops
+            .iter()
+            .any(|s| s.depart_s < s.arrive_s + s.dwell_s)
+            || leg.stops.windows(2).any(|p| p[0].depart_s > p[1].arrive_s)
+        {
+            return Err("Horarios incompatibles dentro de un tramo".into());
+        }
+    }
     if s.route
         .stops
         .iter()
@@ -422,5 +719,83 @@ mod tests {
         builder.origin = 2;
         builder.destination = 0;
         assert!(builder.generate().is_err());
+    }
+    #[test]
+    fn graphical_itinerary_validates_all_legs_reversal_wait_undo_and_separate_save() {
+        let mut original = scenario();
+        let temp = tempfile::tempdir().unwrap();
+        let source =
+            std::fs::read_to_string(Path::new(&original.route.path).join("track.toml")).unwrap();
+        let mut graph: toml::Value = toml::from_str(&source).unwrap();
+        let edges = graph["edges"].as_array().unwrap().clone();
+        for mut edge in edges {
+            let id = edge["id"].as_str().unwrap().to_owned();
+            let from = edge["from"].clone();
+            let to = edge["to"].clone();
+            edge["id"] = toml::Value::String(format!("{id}_r"));
+            edge["from"] = to;
+            edge["to"] = from;
+            graph["edges"].as_array_mut().unwrap().push(edge);
+        }
+        std::fs::write(
+            temp.path().join("track.toml"),
+            toml::to_string(&graph).unwrap(),
+        )
+        .unwrap();
+        original.route.path = temp.path().to_string_lossy().into_owned();
+        original.route.start_offset_m = Some(80.);
+        let mut editor = ServiceBuilder::default();
+        editor.load_scenario(original.clone(), None).unwrap();
+        editor.itinerary_point("mid").unwrap();
+        editor.itinerary_wait(60.).unwrap();
+        editor.itinerary_reverse().unwrap();
+        editor.itinerary_point("unknown-node").unwrap_err();
+        assert_eq!(editor.scenario.as_ref().unwrap().route.legs.len(), 2);
+        let saved = editor.save(temp.path()).unwrap();
+        let loaded = openrailsrs_scenarios::load_scenario(saved).unwrap();
+        assert_eq!(loaded.route.legs[0].wait_s, 60.);
+        assert!(loaded.route.legs[1].reversed);
+        let mut session =
+            openrailsrs_sim::LiveDriveSession::from_scenario(Path::new("."), &loaded).unwrap();
+        for _ in 0..8000 {
+            session.step_autodrive(0.05, 0.5, |_| {});
+            if session.arrived {
+                break;
+            }
+        }
+        assert!(session.arrived, "{:?}", session.gameplay.phase);
+        assert!(session.time_s() >= 60.);
+        editor.undo().unwrap();
+        assert_eq!(editor.scenario.as_ref().unwrap().route.legs.len(), 1);
+        let before = toml::to_string(editor.scenario.as_ref().unwrap()).unwrap();
+        assert!(editor.itinerary_wait(f64::NAN).is_err());
+        assert_eq!(
+            before,
+            toml::to_string(editor.scenario.as_ref().unwrap()).unwrap()
+        );
+        let mut invalid = loaded.clone();
+        invalid.route.legs[1].start_offset_m += 10.;
+        assert!(
+            validate_itinerary(
+                editor.graph.as_ref().unwrap(),
+                &invalid,
+                editor.formation_length_m
+            )
+            .is_err()
+        );
+        invalid = loaded;
+        invalid.route.legs[1].edges[0] = "missing".into();
+        assert!(
+            validate_itinerary(
+                editor.graph.as_ref().unwrap(),
+                &invalid,
+                editor.formation_length_m
+            )
+            .is_err()
+        );
+        assert_eq!(
+            std::fs::read_to_string(temp.path().join("track.toml")).unwrap(),
+            toml::to_string(&graph).unwrap()
+        );
     }
 }

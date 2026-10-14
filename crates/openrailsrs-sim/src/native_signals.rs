@@ -41,7 +41,7 @@ impl NativeSignalRuntime {
                 let program = if let Some(program) = compiled.get(&native.source) {
                     Arc::clone(program)
                 } else {
-                    let program = SignalProgram::compile(&native.source)
+                    let program = SignalProgram::compile_cached(&native.source)
                         .map_err(|e| format!("{}: {e}", native.name))?;
                     // Validate all aspects used by the route, not just an easy clear branch.
                     for next in 0..8 {

@@ -301,7 +301,13 @@ fn capture_pointer(
 }
 fn attach_context(
     mut commands: Commands,
-    cameras: Query<Entity, (With<Camera3d>, Without<PrimaryEguiContext>)>,
+    cameras: Query<
+        Entity,
+        (
+            (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+            Without<PrimaryEguiContext>,
+        ),
+    >,
     contexts: Query<Entity, With<PrimaryEguiContext>>,
 ) {
     // The loading and HUD cameras must never own a second primary Egui pass.
@@ -324,7 +330,10 @@ fn picking_targets(
     mut commands: Commands,
     state: Res<InspectorState>,
     #[cfg(feature = "dev-tools")] debug: Res<bevy::dev_tools::picking_debug::DebugPickingMode>,
-    cameras: Query<(Entity, Has<bevy::picking::mesh_picking::MeshPickingCamera>), With<Camera3d>>,
+    cameras: Query<
+        (Entity, Has<bevy::picking::mesh_picking::MeshPickingCamera>),
+        (With<Camera3d>, Without<crate::mirrors::MirrorCamera>),
+    >,
     targets: Query<Entity, (With<Mesh3d>, Without<bevy::picking::Pickable>)>,
 ) {
     let enabled = state.enabled;

@@ -112,42 +112,79 @@ fn is_zero(v: &f64) -> bool {
 /// Read the first `*.tdb` file found in `route_dir` and convert it to a
 /// `track.toml` TOML string.
 pub fn import_route(route_dir: &Path) -> Result<String, MstsError> {
-    let tdb_path = find_tdb(route_dir)?;
-    let (tdb, catalog) = load_tdb(route_dir, &tdb_path)?;
-    ensure_non_empty_tdb(&tdb, &tdb_path)?;
-    let route_id = find_route_id(route_dir, &tdb_path);
-    let toml = convert_tdb_to_toml(&tdb, &route_id, None, Some(&catalog))?;
-    let toml = bind_electric_supply(route_dir, &toml)?;
-    native_signal_import::bind(route_dir, &tdb_path, &toml, &[])
+    cached_import(route_dir, None).map(|(text, _, _)| text)
 }
-
-/// Same as `import_route` but applies activity-level overrides (failed signals
-/// and restricted speed zones) to the generated `track.toml`.
 pub fn import_route_with_activity(route_dir: &Path, act_path: &Path) -> Result<String, MstsError> {
-    let tdb_path = find_tdb(route_dir)?;
-    let (tdb, catalog) = load_tdb(route_dir, &tdb_path)?;
-    ensure_non_empty_tdb(&tdb, &tdb_path)?;
-    let route_id = find_route_id(route_dir, &tdb_path);
-    let activity = ActivityFile::from_path(act_path)?;
-    let toml = convert_tdb_to_toml(&tdb, &route_id, Some(&activity), Some(&catalog))?;
-    let toml = bind_electric_supply(route_dir, &toml)?;
-    native_signal_import::bind(route_dir, &tdb_path, &toml, &activity.failed_signals)
+    cached_import(route_dir, Some(act_path)).map(|(text, _, _)| text)
 }
-
-/// Same as `import_route` but also returns a count summary `(nodes, edges)`.
 pub fn import_route_with_summary(route_dir: &Path) -> Result<(String, usize, usize), MstsError> {
+    cached_import(route_dir, None)
+}
+fn cached_import(
+    route_dir: &Path,
+    activity: Option<&Path>,
+) -> Result<(String, usize, usize), MstsError> {
+    let key = format!(
+        "native-route:{}:{}",
+        route_dir
+            .canonicalize()
+            .unwrap_or_else(|_| route_dir.to_path_buf())
+            .display(),
+        activity
+            .map(|p| p
+                .canonicalize()
+                .unwrap_or_else(|_| p.to_path_buf())
+                .to_string_lossy()
+                .into_owned())
+            .unwrap_or_default()
+    );
+    let compiler = env!("OPENRAILSRS_IMPORT_COMPILER");
+    if let Some(value) = openrailsrs_content::source_cache::get(&key, compiler) {
+        return Ok(value);
+    }
+    let trace = openrailsrs_formats::read_trace::ReadTrace::default();
     let tdb_path = find_tdb(route_dir)?;
     let (tdb, catalog) = load_tdb(route_dir, &tdb_path)?;
     ensure_non_empty_tdb(&tdb, &tdb_path)?;
-    let route_id = find_route_id(route_dir, &tdb_path);
+    let native = activity.map(ActivityFile::from_path).transpose()?;
+    let text = convert_tdb_to_toml(
+        &tdb,
+        &find_route_id(route_dir, &tdb_path),
+        native.as_ref(),
+        Some(&catalog),
+    )?;
+    let text = bind_electric_supply(route_dir, &text)?;
+    let text = native_signal_import::bind(
+        route_dir,
+        &tdb_path,
+        &text,
+        native
+            .as_ref()
+            .map_or(&[][..], |a| a.failed_signals.as_slice()),
+    )?;
     let (nodes, edges) = count_nodes_edges(&tdb);
-    let toml = convert_tdb_to_toml(&tdb, &route_id, None, Some(&catalog))?;
-    let toml = bind_electric_supply(route_dir, &toml)?;
-    Ok((
-        native_signal_import::bind(route_dir, &tdb_path, &toml, &[])?,
-        nodes,
-        edges,
-    ))
+    let value = (text, nodes, edges);
+    let directories = [
+        route_dir.to_path_buf(),
+        route_dir.join("WORLD"),
+        route_dir.join("OpenRails"),
+        route_dir.join("TRAFFIC"),
+        route_dir
+            .parent()
+            .and_then(Path::parent)
+            .unwrap_or(route_dir)
+            .join("GLOBAL"),
+    ];
+    if trace.consistent() {
+        openrailsrs_content::source_cache::put_verified(
+            &key,
+            compiler,
+            &trace.fingerprints(),
+            &directories,
+            &value,
+        );
+    }
+    Ok(value)
 }
 
 /// Update `x_m`/`y_m` on an existing `track.toml` from the route `.tdb` without replacing edges.

@@ -25,9 +25,19 @@ pub mod capture;
 mod contact_shadows;
 mod content_management;
 pub mod content_validation;
+mod crossing_visual;
 #[cfg(feature = "dev-tools")]
 mod equipment_capture;
 pub mod etcs;
+mod horizon;
+mod mirrors;
+mod platform_people;
+pub mod scene_cleanup;
+mod snow_tracks;
+#[cfg(feature = "dev-tools")]
+mod soak;
+mod train_connections;
+mod transparency;
 mod visual_fault;
 pub use openrailsrs_or_shader::coordinates;
 pub mod driving_hud;
@@ -48,6 +58,7 @@ pub mod or_shader {
 }
 pub mod cab_mouse;
 mod cab_profile;
+mod camera_collision;
 mod destination_boards;
 #[cfg(feature = "dev-tools")]
 pub mod dev_camera;
@@ -72,6 +83,7 @@ pub mod night_sky;
 pub mod official_content;
 pub mod overhead_wire;
 pub mod overspeed_flash;
+mod particle_textures;
 pub mod performance;
 pub mod placement_audit;
 mod player_backup;
@@ -81,6 +93,9 @@ pub mod player_study;
 pub mod player_ui;
 mod portable_save;
 pub mod precipitation;
+mod prepared_geometry;
+mod render_budget;
+mod render_retirement;
 mod resource_estimate;
 pub mod road_cars;
 pub mod rolling_stock;
@@ -99,6 +114,7 @@ pub mod signal_subobj;
 pub mod signals;
 pub mod sky;
 pub mod storm;
+mod streaming_forecast;
 pub mod superelevation;
 pub mod surface_weather;
 pub mod tdb_track;
@@ -195,6 +211,8 @@ fn install_ui_font(mut fonts: ResMut<Assets<Font>>) {
 
 impl Plugin for ViewerPlugin {
     fn build(&self, app: &mut App) {
+        scene_cleanup::install(app);
+        render_retirement::install(app);
         #[cfg(feature = "dev-inspector")]
         if app.get_sub_app(bevy::render::RenderApp).is_some() {
             dev_inspector::install(app);
@@ -202,6 +220,8 @@ impl Plugin for ViewerPlugin {
         #[cfg(any(feature = "dev-tools", feature = "experimental-framepace"))]
         if app.get_sub_app(bevy::render::RenderApp).is_some() {
             dev_metrics::install(app);
+            #[cfg(feature = "dev-tools")]
+            soak::install(app);
         }
         // Bevy's native limiter shares the budget between images and meshes.
         // A large scenery stream must not submit its entire upload in one frame.
@@ -354,10 +374,28 @@ impl Plugin for ViewerPlugin {
                     .run_if(in_state(ViewerAppState::Playing)),
             );
         enhanced_scenery::install(app);
+        mirrors::install(app);
+        platform_people::install(app);
+        horizon::install(app);
+        crossing_visual::install(app);
         app.init_resource::<ground_fog::FogDiagnostics>()
             .add_systems(Startup, ground_fog::prepare_shader_fix)
             .add_systems(Update, ground_fog::apply_shader_fix);
         app.init_resource::<gpu_memory::GraphicsMemory>()
+            .init_resource::<gpu_memory::ResidencyPolicy>()
+            .add_systems(
+                Update,
+                gpu_memory::update_residency.before(render_budget::update),
+            )
+            .init_resource::<train_connections::ConnectionDiagnostics>()
+            .init_resource::<train_connections::JacobsJoints>()
+            .add_systems(
+                PostUpdate,
+                train_connections::update
+                    .after(bevy::transform::TransformSystems::Propagate)
+                    .run_if(in_state(ViewerAppState::Playing))
+                    .run_if(live::live_mode_active),
+            )
             .init_resource::<weather_execution::RendererSelection>()
             .init_resource::<weather_particles::WeatherParticles>()
             .add_systems(Update, weather_execution::verify_renderer)
@@ -373,6 +411,19 @@ impl Plugin for ViewerPlugin {
                     .run_if(in_state(ViewerAppState::Playing)),
             );
         app.add_plugins(bevy::pbr::MaterialPlugin::<surface_weather::SnowMaterial>::default())
+            .init_resource::<snow_tracks::SnowTracks>()
+            .add_systems(
+                Update,
+                transparency::update.run_if(in_state(ViewerAppState::Playing)),
+            )
+            .add_systems(OnExit(ViewerAppState::Playing), snow_tracks::reset)
+            .add_systems(
+                PostUpdate,
+                snow_tracks::update
+                    .after(bevy::transform::TransformSystems::Propagate)
+                    .run_if(in_state(ViewerAppState::Playing))
+                    .run_if(live::live_mode_active),
+            )
             .init_resource::<surface_weather::SnowMaterials>()
             .add_systems(
                 Update,
@@ -407,7 +458,27 @@ impl Plugin for ViewerPlugin {
                 .after(live::spawn_live_train)
                 .run_if(live::live_mode_active),
         );
-        app.init_resource::<effect_obstacles::EffectObstacles>()
+        app.init_resource::<camera_collision::CameraCollision>()
+            .init_resource::<streaming_forecast::StreamingForecast>()
+            .add_systems(
+                Update,
+                streaming_forecast::update
+                    .after(view_window::sync_view_window_from_train)
+                    .before(world::world_tile_stream_system)
+                    .before(terrain::terrain_tile_stream_system)
+                    .run_if(live::live_mode_active)
+                    .run_if(in_state(ViewerAppState::Playing)),
+            )
+            .insert_resource(bevy::render::render_asset::RenderAssetBytesPerFrame::new(
+                8 * 1024 * 1024,
+            ))
+            .init_resource::<render_budget::RenderBudget>()
+            .add_systems(
+                Update,
+                render_budget::update.after(adaptive_graphics::update),
+            )
+            .add_systems(Update, render_budget::shadows.after(render_budget::update))
+            .init_resource::<effect_obstacles::EffectObstacles>()
             .add_systems(
                 PostUpdate,
                 effect_obstacles::update
@@ -584,6 +655,8 @@ impl Plugin for ViewerPlugin {
                         .after(train::update_train_markers),
                     rolling_stock_anim::update_rolling_stock_part_anim
                         .after(rolling_stock_anim::update_consist_car_track_poses),
+                    train_connections::shared_bogies
+                        .after(rolling_stock_anim::update_rolling_stock_part_anim),
                 )
                     .chain()
                     .run_if(in_state(ViewerAppState::Playing)),
@@ -927,6 +1000,11 @@ impl Plugin for ViewerPlugin {
                         .after(camera::orbit_camera_system)
                         .after(camera::follow_train_camera)
                         .after(camera::fly_camera_system)
+                        .after(floating_origin::apply_floating_origin)
+                        .before(view_window::sync_view_window_from_train)
+                        .run_if(live::live_mode_active),
+                    camera_collision::update
+                        .after(camera::constrain_exterior_camera_to_terrain)
                         .after(floating_origin::apply_floating_origin)
                         .before(view_window::sync_view_window_from_train)
                         .run_if(live::live_mode_active),

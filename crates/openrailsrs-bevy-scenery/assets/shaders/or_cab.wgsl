@@ -59,6 +59,18 @@ fn or_apply_fixed_brightness(
     return rgb * mix(shadow_b, full_b, OR_LIKE_AMBIENT);
 }
 
+#ifdef OIT_ENABLED
+#import bevy_core_pipeline::oit::oit_draw
+#endif
+
+fn or_submit_fragment(in: VertexOutput, color: vec4<f32>) -> vec4<f32> {
+#ifdef OIT_ENABLED
+    oit_draw(in.position, color);
+    discard;
+#endif
+    return color;
+}
+
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     var color = textureSample(base_texture, base_sampler, in.uv)
@@ -68,23 +80,23 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
 #endif
 
 #ifdef OR_CAB_DEBUG_UV
-    return vec4(fract(in.uv), 0.0, 1.0);
+    return or_submit_fragment(in, vec4(fract(in.uv), 0.0, 1.0));
 #endif
 
 #ifdef OR_CAB_DEBUG_VCOLOR
-    return vec4(in.color.rgb, 1.0);
+    return or_submit_fragment(in, vec4(in.color.rgb, 1.0));
 #endif
 
 #ifdef OR_CAB_DEBUG_ALBEDO
     if (params.reference_alpha >= 0.0 && color.a < params.reference_alpha) {
         discard;
     }
-    return vec4(color.rgb, color.a);
+    return or_submit_fragment(in, vec4(color.rgb, color.a));
 #endif
 
     // Blend / Add cab glass: output texture alpha as-is (no cutout discard).
     if (params.flags >= OR_FLAG_BLEND) {
-        return vec4(color.rgb, color.a);
+        return or_submit_fragment(in, vec4(color.rgb, color.a));
     }
 
     // OR solid opaque: ReferenceAlpha < 0 forces alpha = 1 (SceneryShader.fx _PSSceneryFade).
@@ -107,15 +119,15 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
             params.half_shadow_brightness,
         );
         rgb = max(rgb, color.rgb * params.cab_min_brightness);
-        return vec4(rgb, color.a);
+        return or_submit_fragment(in, vec4(rgb, color.a));
     }
 
     if (!lit) {
-        return vec4(color.rgb, color.a);
+        return or_submit_fragment(in, vec4(color.rgb, color.a));
     }
 
     if (kind >= OR_KIND_FULL_BRIGHT) {
-        return vec4(color.rgb, color.a);
+        return or_submit_fragment(in, vec4(color.rgb, color.a));
     }
 
     let n = normalize(in.world_normal);
@@ -145,5 +157,5 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     }
 
     lit_rgb = max(lit_rgb, color.rgb * params.cab_min_brightness);
-    return vec4(lit_rgb, color.a);
+    return or_submit_fragment(in, vec4(lit_rgb, color.a));
 }
