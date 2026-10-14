@@ -1,0 +1,298 @@
+{
+  "schema": 1,
+  "created_utc": "2026-10-14T23:18:01.757741+00:00",
+  "scope": "Second sequential batch of five functional issues. All fifteen original criteria are retained; existing executions retain their original identities. No new full check, build or GPU run was needed.",
+  "runtime_commit": "a1b59e14bea6db433c0746dd0f1f2644dc5bc4dd",
+  "issues": [
+    {
+      "number": 273,
+      "title": "Plan 063: Mantener horizonte convincente con terreno cargado por sectores",
+      "criteria": [
+        {
+          "text": "Presentar terreno distante continuo compatible con el contenido cercano.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Las vistas preservadas de Northolt Park, South Ruislip, Gerrards Cross y forest-far muestran terreno distante asociado al relieve cercano; horizon.rs conserva su identidad."
+        },
+        {
+          "text": "Evitar huecos y saltos al avanzar, elevar cámara o cambiar distancia de visión.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La regresión nominal de streaming pasó en check39: recarga sectores, rebasa el origen y libera tiles; el horizonte acotado retira el detalle distante al llegar el cercano."
+        },
+        {
+          "text": "Capturar cabina/exterior o vistas relevantes con condiciones reproducibles; comprobar pausa, cambios de cámara, origen flotante y coste del efecto.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Se conservan encuadres nativos reproducibles y el perfil de horizon. La secuencia gráfica propia de fase36 registra pausa/restauración, cámara y rebase de 500 m con el sistema activo; no es una captura nueva39 ni paridad por píxel."
+        }
+      ],
+      "scope": "Horizonte acotado a alturas y muestras del contenido instalado; no reconstruye un país ni acredita igualdad por píxel con Open Rails.",
+      "evidence": [
+        "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/northolt-exterior",
+        "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/south-ruislip-exterior",
+        "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/gerrards-cross-exterior",
+        "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/forest-far",
+        "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/horizon",
+        "test:streaming_revisits_loaded_tiles_rebases_queued_meshes_and_releases_gpu_tiles",
+        "docs/validation/FIFTH40_PHASE36_SUBCRITERIA.json#/cases/glass-exterior"
+      ]
+    },
+    {
+      "number": 276,
+      "title": "Plan 066: Afinar sombras de trenes, edificios y vegetación",
+      "criteria": [
+        {
+          "text": "Comparar sombras con luz y cámaras reproducibles incluyendo objetos instanciados.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Los pares preservados contact-off/contact-high usan el mismo reloj y encuadre; la fase de sombras de instancias tiene regresiones nominales PASS en check39."
+        },
+        {
+          "text": "Evitar sombras generadas por cámara o cielo y limitar transiciones de cascadas.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Cámara sin malla y cielo excluido de sombras; las regresiones actuales confirman emisión/recepción de sombras instanciadas y el presupuesto por defecto de tres cascadas hasta 200 m."
+        },
+        {
+          "text": "Capturar cabina/exterior o vistas relevantes con condiciones reproducibles; comprobar pausa, cambios de cámara, origen flotante y coste del efecto.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Los encuadres y el coste de actualización LOD se conservan con su ejecución original; la secuencia propia fase36 aporta pausa/restauración, cámara y cambio de origen. bridge-low no se presenta como una vista bajo un puente."
+        }
+      ],
+      "scope": "Sombras de contenido cargado y clasificación de instancias; tres cascadas hasta 200 m por defecto. La vista bridge-low histórica no acredita estar debajo de un puente.",
+      "evidence": [
+        "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/contact-off",
+        "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/contact-high",
+        "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/bridge-low",
+        "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/world.update_world_scenery_lod",
+        "test:viewer_camera_has_no_mesh_and_is_explicitly_not_a_shadow_caster",
+        "test:sky_dome_does_not_cast_or_receive_scene_shadows",
+        "test:instancing_shader_casts_directional_shadows",
+        "test:instancing_shader_receives_directional_shadows",
+        "test:default_shadow_budget_is_200_m_with_three_cascades",
+        "docs/validation/FIFTH40_PHASE36_SUBCRITERIA.json#/cases/glass-exterior"
+      ]
+    },
+    {
+      "number": 277,
+      "title": "Plan 067: Mejorar cristales y transparencias superpuestas",
+      "criteria": [
+        {
+          "text": "Conservar semántica alpha original y profundidad de cabina, ventanas y vegetación.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Las cabinas originales preservadas mantienen sus interiores y la separación entre materiales opacos, recorte alpha y mezcla/aditivo tiene tres regresiones PASS en check39."
+        },
+        {
+          "text": "Comprobar capas superpuestas sin desaparición de interiores o halos opacos.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La mejora OIT conserva los modos alpha del autor y profundidad opaca; se limita a 64 MiB y se retira si la presión gráfica o la resolución no permiten al menos dos capas."
+        },
+        {
+          "text": "Capturar cabina/exterior o vistas relevantes con condiciones reproducibles; comprobar pausa, cambios de cámara, origen flotante y coste del efecto.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "glass-driver y glass-exterior de fase36 registran nueve acciones correctas cada uno, pausa/restauración del mismo tiempo, rebase de 500 m, capturas y almacenamiento OIT acotado; conservan su binario y renderer originales."
+        }
+      ],
+      "scope": "OIT opcional y acotado; puede desactivarse por presión gráfica o resolución. No reemplaza cabinas o texturas ausentes ni corrige cualquier recurso de terceros.",
+      "evidence": [
+        "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/northolt-cab",
+        "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/south-ruislip-cab",
+        "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/gerrards-cross-cab",
+        "test:blend_atex_diff_dual_pass_when_ace_alpha_bits_gt_1",
+        "test:texdiff_stays_single_opaque_pass",
+        "test:addatex_is_additive_without_opaque_prepass",
+        "docs/validation/FIFTH40_PHASE36_SUBCRITERIA.json#/cases/glass-driver",
+        "docs/validation/FIFTH40_PHASE36_SUBCRITERIA.json#/cases/glass-exterior"
+      ]
+    },
+    {
+      "number": 278,
+      "title": "Plan 068: Agregar reflejos de lluvia en rieles y superficies compatibles",
+      "criteria": [
+        {
+          "text": "Usar mojado efectivo para apariencia de reflejos acotados.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "El par seco/mojado preservado verifica una respuesta reversible del material; wet_surfaces.rs conserva los parámetros de origen y actualiza materiales existentes sin duplicar texturas."
+        },
+        {
+          "text": "Conservar textura del autor y estabilidad en cabina, exterior y modos de calidad.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La respuesta de mojado no depende del presupuesto de partículas ni de la vista; preserva textura/alpha y parámetros base. Las secuencias propias cubren cabina y exterior. La primera fase36 no se atribuye como comparación entre dos calidades efectivas distintas."
+        },
+        {
+          "text": "Capturar cabina/exterior o vistas relevantes con condiciones reproducibles; comprobar pausa, cambios de cámara, origen flotante y coste del efecto.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "wet-driver y wet-exterior de fase36 registran mojado 0,62, nueve acciones correctas, pausa/restauración, rebase de 500 m y el coste observado de wet_surfaces; se conserva además el par seco/mojado original."
+        }
+      ],
+      "scope": "Respuesta de mojado de materiales compatibles, conservando texturas del autor; no son reflejos completos de todos los objetos ni una comparación de rendimiento entre calidades.",
+      "evidence": [
+        "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/wet",
+        "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/dry",
+        "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/wet_surfaces",
+        "docs/validation/FIFTH40_PHASE36_SUBCRITERIA.json#/cases/wet-driver",
+        "docs/validation/FIFTH40_PHASE36_SUBCRITERIA.json#/cases/wet-exterior"
+      ]
+    },
+    {
+      "number": 291,
+      "title": "Plan 081: Evitar que cámara exterior atraviese objetos sólidos",
+      "criteria": [
+        {
+          "text": "Consultar colisiones cercanas contra edificios y objetos ferroviarios.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La captura propia preservada consulta 15 sólidos y registra una corrección real; el caso posterior collision conserva cuatro correcciones con obstáculos presentes."
+        },
+        {
+          "text": "Resolver movimiento y zoom sin saltos, manteniendo restricción sobre terreno.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Las tres regresiones nominales PASS en check39 cubren pared/deslizamiento, zoom y esquinas, solapamiento al cargar y restricción sobre el suelo."
+        },
+        {
+          "text": "Capturar cabina/exterior o vistas relevantes con condiciones reproducibles; comprobar pausa, cambios de cámara, origen flotante y coste del efecto.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "collision de fase36 registra ocho acciones correctas, pausa/restauración a 3,95 s, rebase máximo de 500 m, cuatro correcciones y coste del sistema; la captura mantiene su identidad original."
+        }
+      ],
+      "scope": "Colisión contra sólidos cercanos cargados y clasificados como tales, con límite del terreno; la vegetación transparente no se convierte automáticamente en una pared.",
+      "evidence": [
+        "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/camera-collision",
+        "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/camera_collision",
+        "test:eye_cannot_tunnel_through_a_wall_but_slides_along_it",
+        "test:consecutive_zoom_and_corner_motion_stay_clear_without_repeated_jumps",
+        "test:initial_stream_overlap_exits_the_volume_and_never_exits_below_the_floor",
+        "docs/validation/FIFTH40_PHASE36_SUBCRITERIA.json#/cases/collision"
+      ]
+    }
+  ],
+  "current_regression_execution": {
+    "shared_check_and_ci_context": "docs/validation/FIFTH40_SMALL_BATCH_01.json#/current_regression_execution",
+    "named_tests": {
+      "streaming_revisits_loaded_tiles_rebases_queued_meshes_and_releases_gpu_tiles": {
+        "source": "crates/openrailsrs-viewer3d/src/world_stream_tests.rs",
+        "result": "passed",
+        "check39_log_line": 3111,
+        "check39_end_line": 3159
+      },
+      "viewer_camera_has_no_mesh_and_is_explicitly_not_a_shadow_caster": {
+        "source": "crates/openrailsrs-viewer3d/src/camera.rs",
+        "result": "passed",
+        "check39_log_line": 2424
+      },
+      "sky_dome_does_not_cast_or_receive_scene_shadows": {
+        "source": "crates/openrailsrs-bevy-scenery/src/atmosphere.rs",
+        "result": "passed",
+        "check39_log_line": 191
+      },
+      "instancing_shader_casts_directional_shadows": {
+        "source": "crates/openrailsrs-viewer3d/src/world_instancing.rs",
+        "result": "passed",
+        "check39_log_line": 3232
+      },
+      "instancing_shader_receives_directional_shadows": {
+        "source": "crates/openrailsrs-viewer3d/src/world_instancing.rs",
+        "result": "passed",
+        "check39_log_line": 3233
+      },
+      "default_shadow_budget_is_200_m_with_three_cascades": {
+        "source": "crates/openrailsrs-viewer3d/src/scene.rs",
+        "result": "passed",
+        "check39_log_line": 2766
+      },
+      "blend_atex_diff_dual_pass_when_ace_alpha_bits_gt_1": {
+        "source": "crates/openrailsrs-bevy-scenery/src/shapes/material.rs",
+        "result": "passed",
+        "check39_log_line": 240
+      },
+      "texdiff_stays_single_opaque_pass": {
+        "source": "crates/openrailsrs-bevy-scenery/src/shapes/material.rs",
+        "result": "passed",
+        "check39_log_line": 246
+      },
+      "addatex_is_additive_without_opaque_prepass": {
+        "source": "crates/openrailsrs-bevy-scenery/src/shapes/material.rs",
+        "result": "passed",
+        "check39_log_line": 237
+      },
+      "eye_cannot_tunnel_through_a_wall_but_slides_along_it": {
+        "source": "crates/openrailsrs-viewer3d/src/camera_collision.rs",
+        "result": "passed",
+        "check39_log_line": 2427
+      },
+      "consecutive_zoom_and_corner_motion_stay_clear_without_repeated_jumps": {
+        "source": "crates/openrailsrs-viewer3d/src/camera_collision.rs",
+        "result": "passed",
+        "check39_log_line": 2426
+      },
+      "initial_stream_overlap_exits_the_volume_and_never_exits_below_the_floor": {
+        "source": "crates/openrailsrs-viewer3d/src/camera_collision.rs",
+        "result": "passed",
+        "check39_log_line": 2428
+      }
+    }
+  },
+  "current_sources_matching_preserved_scope": {
+    "crates/openrailsrs-viewer3d/src/world_stream_tests.rs": "ab49f7c90d9266b43f1b20f7357ccb1460cef1ff4f5e0c58d9db0ec7013399cf",
+    "crates/openrailsrs-viewer3d/src/horizon.rs": "05f7baf8945c9439dc50fac2483f359f5ac563522ee55436fd1b836096092510",
+    "crates/openrailsrs-viewer3d/src/camera.rs": "52ee791f3a9a824570a46bf2c6a8b2a39695afde02761f26b97ce98fee29bae1",
+    "crates/openrailsrs-bevy-scenery/src/atmosphere.rs": "c21f7cb22218f8dfe3e336953cdfdfb99c098a7530feb84ff26c2e62120298b4",
+    "crates/openrailsrs-viewer3d/src/world_instancing.rs": "8a0f9df59c20a1e071554bd66bc760868f8377d25fa4bc38f38c492fc88472b2",
+    "crates/openrailsrs-viewer3d/src/scene.rs": "eee0aa5f9f6790b2426edcfab78ee33225c4fdf36df1cc0cb98178cf05406470",
+    "crates/openrailsrs-bevy-scenery/src/shapes/material.rs": "67e3493433f918e8eeee4791fa5c89ac7759c9182e39b83181efcc2a3f56bf4d",
+    "crates/openrailsrs-viewer3d/src/transparency.rs": "057fc4f23f387bd453fae75c6e50232b0a56ee2a0c019fb567ab646b04044d95",
+    "crates/openrailsrs-viewer3d/src/wet_surfaces.rs": "828c638bd11bae20b294c5d8b451ac492fd2b088a6b5ef80f73aca5988bf2150",
+    "crates/openrailsrs-viewer3d/src/camera_collision.rs": "b0fb75d4bb97c7530e069c0f7e394bd463f105ff9c3d02b66839a4b90f7fcbc2"
+  },
+  "preserved_evidence": [
+    {
+      "path": "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json",
+      "sha256": "24dce75393004319388c28a2912fd8d62dad4cfc470f63b3864b664f5b6985a6",
+      "json_pointers": [
+        "/cases/northolt-exterior",
+        "/cases/south-ruislip-exterior",
+        "/cases/gerrards-cross-exterior",
+        "/cases/forest-far",
+        "/cases/contact-off",
+        "/cases/contact-high",
+        "/cases/bridge-low",
+        "/cases/northolt-cab",
+        "/cases/south-ruislip-cab",
+        "/cases/gerrards-cross-cab",
+        "/cases/wet",
+        "/cases/dry",
+        "/cases/camera-collision"
+      ]
+    },
+    {
+      "path": "docs/fixtures/compatibility/fifth40-20261013/performance.json",
+      "sha256": "1f0dbaf0b2f85421818053862f0739ed43e1f27e730708892ee3fd368f4c3bc0",
+      "json_pointers": [
+        "/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/horizon",
+        "/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/world.update_world_scenery_lod",
+        "/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/wet_surfaces",
+        "/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/camera_collision"
+      ]
+    },
+    {
+      "path": "docs/validation/FIFTH40_PHASE36_SUBCRITERIA.json",
+      "sha256": "a571f8de069ca0596554a9f35ffae69302270e079f914f6ba761e12e25ca138b",
+      "json_pointers": [
+        "/cases/glass-exterior",
+        "/cases/glass-driver",
+        "/cases/wet-driver",
+        "/cases/wet-exterior",
+        "/cases/collision"
+      ]
+    }
+  ],
+  "preserved_shader_and_fixture_identity": {
+    "receipt": "docs/validation/FIFTH40_PHASE36_SUBCRITERIA.json#/identity",
+    "shaders_compared": 23,
+    "fixtures_compared": 49,
+    "sha256_changes": []
+  },
+  "manual": "docs/MANUAL_FIFTH40.md",
+  "limits": [
+    "The public visual receipts preserve their original viewer, assets, renderer, actions and frame identities. This batch creates no new screenshots or frame-time measurements.",
+    "All twelve named regression tests have PASS in check39; the matching runtime CI also passed. No full check was repeated for this documentation.",
+    "The first phase36 numeric quality overrides were ignored; its frames do not prove two distinct effective precipitation qualities. The wet-material response is independent from that particle budget.",
+    "Stage costs remain historical observations, including concurrently running work; no exclusive FPS improvement, memory endurance, final Snap or Store publication is certified. Those are separate issues."
+  ],
+  "preserved_execution_policy": "All preserved pointers retain their original binary, assets, renderer, frame hash and scope in the referenced receipt. Nothing is rerun or relabelled as phase39."
+}
