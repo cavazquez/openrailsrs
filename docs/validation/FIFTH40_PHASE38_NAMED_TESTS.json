@@ -1,0 +1,3659 @@
+{
+  "schema": 1,
+  "candidate": 38,
+  "runtime_commit": "656ae35f05000e1b1e13e93d35a4c45615e4ed96",
+  "status": "73_current_rust_1_current_required_python_16_preserved_python37_with_unchanged_dependencies",
+  "counts": {
+    "required_distinct_named_tests": 90,
+    "criterion_references": 230,
+    "required_rust_named_pass_check38": 73,
+    "required_python_named_pass_separate38": 1,
+    "required_python_preserved_named37_unchanged": 16,
+    "required_python_names_not_in_check38_stdout": 17,
+    "separate_python38_total_named_passes": 5,
+    "supplementary_python38_not_in_required90": 4,
+    "missing_or_ambiguous": 0,
+    "changed_required_source_files_since37": 4,
+    "observed_python37_dependency_files": 14,
+    "observed_python37_dependencies_unchanged": 13
+  },
+  "private_audit": {
+    "file": "<private-qa>/named-test-execution38-audit.json",
+    "sha256": "ad22c62b3272bb0f0195677ddd4acbbe316ee6fd207dafd3cde087548f89f00b",
+    "bytes": 185485
+  },
+  "full_check38": {
+    "receipt": {
+      "file": "<private-qa>/check38-attempt3/check38-receipt.json",
+      "sha256": "eb1bc36202222252264a5d1fddd8b04bc207f8dd811418969a4bf16621fead36",
+      "bytes": 1039
+    },
+    "stdout": {
+      "file": "<private-qa>/check38-attempt3/check38.log",
+      "sha256": "a4b15b0d0718a58e7bc885d9852a355dbe472919607b9d1f0784631c3dc325be",
+      "bytes": 240700
+    },
+    "rust": {
+      "passed": 2083,
+      "failed": 0,
+      "ignored": 49,
+      "summaries": 152
+    },
+    "python_aggregate_only": {
+      "tests": 127,
+      "summaries": 25
+    },
+    "source_inputs_unchanged": true,
+    "user_traces_unchanged": true
+  },
+  "public_check_receipt": "docs/validation/FIFTH40_PHASE38_BUILD_AND_CHECK.json",
+  "source_manifests": {
+    "runtime38": {
+      "file": "<private-qa>/phase38-build2/phase38-inputs-before.json",
+      "sha256": "f7bbb9b3e212e433f554387a192cb250435badb0cf0e02d5de6fcce7a7bc9739",
+      "bytes": 120901
+    },
+    "check38": {
+      "file": "<private-qa>/check38-attempt3/check38-inputs-before.json",
+      "sha256": "a57284650840d66f13a41882b980a20020f667fa39c1aa26b32e36456932cb7e",
+      "bytes": 5028621
+    }
+  },
+  "source_files": {
+    "crates/openrailsrs-audio/src/native.rs": {
+      "sha256": "9e70e1534d4b5b2cd97c46b3acd812fb08ca94f13a892573cd8c60260593343f",
+      "bytes": 109363,
+      "historical37_sha256": "9e70e1534d4b5b2cd97c46b3acd812fb08ca94f13a892573cd8c60260593343f",
+      "changed_since37": false,
+      "check38_pointer": "/crates~1openrailsrs-audio~1src~1native.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-audio~1src~1native.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-bevy-scenery/src/atmosphere.rs": {
+      "sha256": "c21f7cb22218f8dfe3e336953cdfdfb99c098a7530feb84ff26c2e62120298b4",
+      "bytes": 4748,
+      "historical37_sha256": "c21f7cb22218f8dfe3e336953cdfdfb99c098a7530feb84ff26c2e62120298b4",
+      "changed_since37": false,
+      "check38_pointer": "/crates~1openrailsrs-bevy-scenery~1src~1atmosphere.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-bevy-scenery~1src~1atmosphere.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-bevy-scenery/src/shapes/material.rs": {
+      "sha256": "67e3493433f918e8eeee4791fa5c89ac7759c9182e39b83181efcc2a3f56bf4d",
+      "bytes": 29467,
+      "historical37_sha256": "67e3493433f918e8eeee4791fa5c89ac7759c9182e39b83181efcc2a3f56bf4d",
+      "changed_since37": false,
+      "check38_pointer": "/crates~1openrailsrs-bevy-scenery~1src~1shapes~1material.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-bevy-scenery~1src~1shapes~1material.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-content/src/source_cache.rs": {
+      "sha256": "002116b71f600fb6e123f77b6537bd9e087c19a5b6f2c0e217362be6d387c6e4",
+      "bytes": 8844,
+      "historical37_sha256": "002116b71f600fb6e123f77b6537bd9e087c19a5b6f2c0e217362be6d387c6e4",
+      "changed_since37": false,
+      "check38_pointer": "/crates~1openrailsrs-content~1src~1source_cache.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-content~1src~1source_cache.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-sim/src/refill.rs": {
+      "sha256": "bfce8d95a42b2469a20d96d1edd6ed6255ff0331e44707ecc88edb88fca00343",
+      "bytes": 14059,
+      "historical37_sha256": "bfce8d95a42b2469a20d96d1edd6ed6255ff0331e44707ecc88edb88fca00343",
+      "changed_since37": false,
+      "check38_pointer": "/crates~1openrailsrs-sim~1src~1refill.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-sim~1src~1refill.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-sim/tests/articulated_train.rs": {
+      "sha256": "392036182985ffc1194670e1159c4a27cb380c0072b9dda18b95996211ee0ac4",
+      "bytes": 2369,
+      "historical37_sha256": "392036182985ffc1194670e1159c4a27cb380c0072b9dda18b95996211ee0ac4",
+      "changed_since37": false,
+      "check38_pointer": "/crates~1openrailsrs-sim~1tests~1articulated_train.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-sim~1tests~1articulated_train.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-sim/tests/parallel_traffic.rs": {
+      "sha256": "98cf1d718eca2a18ab48aca47d47c7d48c4e476f7c8690731cc7b3603e38e8eb",
+      "bytes": 8165,
+      "historical37_sha256": "98cf1d718eca2a18ab48aca47d47c7d48c4e476f7c8690731cc7b3603e38e8eb",
+      "changed_since37": false,
+      "check38_pointer": "/crates~1openrailsrs-sim~1tests~1parallel_traffic.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-sim~1tests~1parallel_traffic.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-sim/tests/passing_services.rs": {
+      "sha256": "cdc8249d06095c481bf1467b8989ac8e215cb75bd156c172048ae2602536ee24",
+      "bytes": 8190,
+      "historical37_sha256": "cdc8249d06095c481bf1467b8989ac8e215cb75bd156c172048ae2602536ee24",
+      "changed_since37": false,
+      "check38_pointer": "/crates~1openrailsrs-sim~1tests~1passing_services.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-sim~1tests~1passing_services.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-sim/tests/shunt_authority.rs": {
+      "sha256": "744a9bb61622affb1dca83cf5b85618bd88e722298719f2e54d6ecd2f176f009",
+      "bytes": 3057,
+      "historical37_sha256": "744a9bb61622affb1dca83cf5b85618bd88e722298719f2e54d6ecd2f176f009",
+      "changed_since37": false,
+      "check38_pointer": "/crates~1openrailsrs-sim~1tests~1shunt_authority.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-sim~1tests~1shunt_authority.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-sim/tests/vehicle_doors.rs": {
+      "sha256": "549cf8b392f80f07b51c9822fab96775483237a3b8d57b1fc75956c1a82f4e0a",
+      "bytes": 6836,
+      "historical37_sha256": "549cf8b392f80f07b51c9822fab96775483237a3b8d57b1fc75956c1a82f4e0a",
+      "changed_since37": false,
+      "check38_pointer": "/crates~1openrailsrs-sim~1tests~1vehicle_doors.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-sim~1tests~1vehicle_doors.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-sim/tests/world_operations.rs": {
+      "sha256": "9781ee96cad98b6917b1e886b36dfe5725cf516e403578afcf17bba78e8b48e5",
+      "bytes": 6044,
+      "historical37_sha256": "9781ee96cad98b6917b1e886b36dfe5725cf516e403578afcf17bba78e8b48e5",
+      "changed_since37": false,
+      "check38_pointer": "/crates~1openrailsrs-sim~1tests~1world_operations.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-sim~1tests~1world_operations.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-sim/tests/yard_operations.rs": {
+      "sha256": "d2cdb48084ef1101d6fa56584bc3049957dc2f8256abd231b8ea20dce7f6a14a",
+      "bytes": 9118,
+      "historical37_sha256": "d2cdb48084ef1101d6fa56584bc3049957dc2f8256abd231b8ea20dce7f6a14a",
+      "changed_since37": false,
+      "check38_pointer": "/crates~1openrailsrs-sim~1tests~1yard_operations.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-sim~1tests~1yard_operations.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-train/src/consist_audit.rs": {
+      "sha256": "2effddf56cf6eee77edf87553427abe3c66efcd1de23e90d7936c7411dce6262",
+      "bytes": 65666,
+      "historical37_sha256": "2effddf56cf6eee77edf87553427abe3c66efcd1de23e90d7936c7411dce6262",
+      "changed_since37": false,
+      "check38_pointer": "/crates~1openrailsrs-train~1src~1consist_audit.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-train~1src~1consist_audit.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-viewer3d/src/camera.rs": {
+      "sha256": "52ee791f3a9a824570a46bf2c6a8b2a39695afde02761f26b97ce98fee29bae1",
+      "bytes": 114747,
+      "historical37_sha256": "52ee791f3a9a824570a46bf2c6a8b2a39695afde02761f26b97ce98fee29bae1",
+      "changed_since37": false,
+      "check38_pointer": "/crates~1openrailsrs-viewer3d~1src~1camera.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-viewer3d~1src~1camera.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-viewer3d/src/camera_collision.rs": {
+      "sha256": "b0fb75d4bb97c7530e069c0f7e394bd463f105ff9c3d02b66839a4b90f7fcbc2",
+      "bytes": 7243,
+      "historical37_sha256": "b0fb75d4bb97c7530e069c0f7e394bd463f105ff9c3d02b66839a4b90f7fcbc2",
+      "changed_since37": false,
+      "check38_pointer": "/crates~1openrailsrs-viewer3d~1src~1camera_collision.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-viewer3d~1src~1camera_collision.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-viewer3d/src/campaign_play.rs": {
+      "sha256": "ba5a2e94c4f8f19d3336253c9b0ac7b681a9cd2d3d0797e64545333235b4f3ee",
+      "bytes": 26594,
+      "historical37_sha256": "ba5a2e94c4f8f19d3336253c9b0ac7b681a9cd2d3d0797e64545333235b4f3ee",
+      "changed_since37": false,
+      "check38_pointer": "/crates~1openrailsrs-viewer3d~1src~1campaign_play.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-viewer3d~1src~1campaign_play.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-viewer3d/src/content_validation.rs": {
+      "sha256": "0b16315809b26a1396d0e05e8223caaf4a96f9c8739daab3ded1ed254d0e349e",
+      "bytes": 5073,
+      "historical37_sha256": "0b16315809b26a1396d0e05e8223caaf4a96f9c8739daab3ded1ed254d0e349e",
+      "changed_since37": false,
+      "check38_pointer": "/crates~1openrailsrs-viewer3d~1src~1content_validation.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-viewer3d~1src~1content_validation.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-viewer3d/src/official_content.rs": {
+      "sha256": "0f27fed2200e041191f16eef13bc88538fee374af46ff6fd54566071950dc63d",
+      "bytes": 66803,
+      "historical37_sha256": "26574d83d7feadb73e532ba780f602cf95ef7cfab1aa2a0d645684078a9f526f",
+      "changed_since37": true,
+      "check38_pointer": "/crates~1openrailsrs-viewer3d~1src~1official_content.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-viewer3d~1src~1official_content.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-viewer3d/src/platform_people.rs": {
+      "sha256": "07616c93d6053a1bd2438cdaa6c1f34c7523e941285760c8ac8e896b3c1f31e3",
+      "bytes": 10650,
+      "historical37_sha256": "07616c93d6053a1bd2438cdaa6c1f34c7523e941285760c8ac8e896b3c1f31e3",
+      "changed_since37": false,
+      "check38_pointer": "/crates~1openrailsrs-viewer3d~1src~1platform_people.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-viewer3d~1src~1platform_people.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-viewer3d/src/player_ui.rs": {
+      "sha256": "79516299357befbf93de4b90ec5c4338fb89b759100fd5c90a84fe4661600055",
+      "bytes": 245732,
+      "historical37_sha256": "79516299357befbf93de4b90ec5c4338fb89b759100fd5c90a84fe4661600055",
+      "changed_since37": false,
+      "check38_pointer": "/crates~1openrailsrs-viewer3d~1src~1player_ui.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-viewer3d~1src~1player_ui.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-viewer3d/src/prepared_geometry.rs": {
+      "sha256": "4e4eb4193aa01d73c7f3949e9574a9cc8c59b78ee804d74db6f687055323e5f9",
+      "bytes": 40199,
+      "historical37_sha256": "1b99073e4061e43af671205f968092f1ee57a59b66d68bba22b6d254641c538b",
+      "changed_since37": true,
+      "check38_pointer": "/crates~1openrailsrs-viewer3d~1src~1prepared_geometry.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-viewer3d~1src~1prepared_geometry.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-viewer3d/src/road_cars.rs": {
+      "sha256": "18100d313efdf31ffe074f6ce0642bed8b38a2d9ecc59a4e966ddb260216240d",
+      "bytes": 61905,
+      "historical37_sha256": "fea513284fa0f46f46be70b148851fb5437d73a0453639a3c987d45a32e80f83",
+      "changed_since37": true,
+      "check38_pointer": "/crates~1openrailsrs-viewer3d~1src~1road_cars.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-viewer3d~1src~1road_cars.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-viewer3d/src/saved_game.rs": {
+      "sha256": "212ed80b6ef747e572cbcb3210f53079b4fe64eb57e88420245796391366239e",
+      "bytes": 27189,
+      "historical37_sha256": "212ed80b6ef747e572cbcb3210f53079b4fe64eb57e88420245796391366239e",
+      "changed_since37": false,
+      "check38_pointer": "/crates~1openrailsrs-viewer3d~1src~1saved_game.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-viewer3d~1src~1saved_game.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-viewer3d/src/scene.rs": {
+      "sha256": "eee0aa5f9f6790b2426edcfab78ee33225c4fdf36df1cc0cb98178cf05406470",
+      "bytes": 10752,
+      "historical37_sha256": "eee0aa5f9f6790b2426edcfab78ee33225c4fdf36df1cc0cb98178cf05406470",
+      "changed_since37": false,
+      "check38_pointer": "/crates~1openrailsrs-viewer3d~1src~1scene.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-viewer3d~1src~1scene.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-viewer3d/src/service_builder.rs": {
+      "sha256": "71d6e3d6b610c32c856dcddfc368c0eaec253d0efedb36a9acff48470d321921",
+      "bytes": 30854,
+      "historical37_sha256": "71d6e3d6b610c32c856dcddfc368c0eaec253d0efedb36a9acff48470d321921",
+      "changed_since37": false,
+      "check38_pointer": "/crates~1openrailsrs-viewer3d~1src~1service_builder.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-viewer3d~1src~1service_builder.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-viewer3d/src/snow_tracks.rs": {
+      "sha256": "1b9409c8c19da65aade6c5f2637dd0f195369a5acd0187de6ef1764f2fd974e7",
+      "bytes": 8180,
+      "historical37_sha256": "1b9409c8c19da65aade6c5f2637dd0f195369a5acd0187de6ef1764f2fd974e7",
+      "changed_since37": false,
+      "check38_pointer": "/crates~1openrailsrs-viewer3d~1src~1snow_tracks.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-viewer3d~1src~1snow_tracks.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-viewer3d/src/streaming_forecast.rs": {
+      "sha256": "3c23887225372b3ca4c5058be3a8048bf30aeb8c1fd3a71f0c0a2f1f9276fb3a",
+      "bytes": 8420,
+      "historical37_sha256": "3c23887225372b3ca4c5058be3a8048bf30aeb8c1fd3a71f0c0a2f1f9276fb3a",
+      "changed_since37": false,
+      "check38_pointer": "/crates~1openrailsrs-viewer3d~1src~1streaming_forecast.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-viewer3d~1src~1streaming_forecast.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-viewer3d/src/train_connections.rs": {
+      "sha256": "b1994f3e1bccdf11662698b1c2f148f2dc54620dfcf21eef165a938c5eee64eb",
+      "bytes": 15843,
+      "historical37_sha256": "b1994f3e1bccdf11662698b1c2f148f2dc54620dfcf21eef165a938c5eee64eb",
+      "changed_since37": false,
+      "check38_pointer": "/crates~1openrailsrs-viewer3d~1src~1train_connections.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-viewer3d~1src~1train_connections.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-viewer3d/src/world.rs": {
+      "sha256": "ce47c95abe753b7122772fc433893327198b3677e6c71b215752aa8507f944c5",
+      "bytes": 243036,
+      "historical37_sha256": "3ea21dc91cc98e398b5d83c37128dc387cabe3bd0f6fd80d03b4f448f64e0245",
+      "changed_since37": true,
+      "check38_pointer": "/crates~1openrailsrs-viewer3d~1src~1world.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-viewer3d~1src~1world.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-viewer3d/src/world_instancing.rs": {
+      "sha256": "8a0f9df59c20a1e071554bd66bc760868f8377d25fa4bc38f38c492fc88472b2",
+      "bytes": 75480,
+      "historical37_sha256": "8a0f9df59c20a1e071554bd66bc760868f8377d25fa4bc38f38c492fc88472b2",
+      "changed_since37": false,
+      "check38_pointer": "/crates~1openrailsrs-viewer3d~1src~1world_instancing.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-viewer3d~1src~1world_instancing.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-viewer3d/src/world_operations.rs": {
+      "sha256": "e7a7c46703d5f2606c84b0736a90719b37830e2d434d9d93dea21df7bbdd6aef",
+      "bytes": 6349,
+      "historical37_sha256": "e7a7c46703d5f2606c84b0736a90719b37830e2d434d9d93dea21df7bbdd6aef",
+      "changed_since37": false,
+      "check38_pointer": "/crates~1openrailsrs-viewer3d~1src~1world_operations.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-viewer3d~1src~1world_operations.rs/sha256",
+      "matches_runtime38": true
+    },
+    "crates/openrailsrs-viewer3d/src/world_stream_tests.rs": {
+      "sha256": "ab49f7c90d9266b43f1b20f7357ccb1460cef1ff4f5e0c58d9db0ec7013399cf",
+      "bytes": 9370,
+      "historical37_sha256": "ab49f7c90d9266b43f1b20f7357ccb1460cef1ff4f5e0c58d9db0ec7013399cf",
+      "changed_since37": false,
+      "check38_pointer": "/crates~1openrailsrs-viewer3d~1src~1world_stream_tests.rs/sha256",
+      "matches_check38": true,
+      "runtime38_pointer": "/crates~1openrailsrs-viewer3d~1src~1world_stream_tests.rs/sha256",
+      "matches_runtime38": true
+    },
+    "scripts/test_content_url.py": {
+      "sha256": "0676dba7716f06e6e27e1cd6110b9c09a9512ef00cdb3751047c63dc0e0b95df",
+      "bytes": 10600,
+      "historical37_sha256": "0676dba7716f06e6e27e1cd6110b9c09a9512ef00cdb3751047c63dc0e0b95df",
+      "changed_since37": false,
+      "check38_pointer": "/scripts~1test_content_url.py/sha256",
+      "matches_check38": true
+    },
+    "scripts/test_coupling_reference.py": {
+      "sha256": "8ac46c4a423477a3b2c7f735363f707ca72f677637d7669e1ae78d10f7b76b42",
+      "bytes": 4149,
+      "historical37_sha256": "8ac46c4a423477a3b2c7f735363f707ca72f677637d7669e1ae78d10f7b76b42",
+      "changed_since37": false,
+      "check38_pointer": "/scripts~1test_coupling_reference.py/sha256",
+      "matches_check38": true
+    },
+    "scripts/test_official_content.py": {
+      "sha256": "ed6a04410e1a94626a68ad87516b5cd5856f62f7bc12e304b1801780bc70c998",
+      "bytes": 17025,
+      "historical37_sha256": "ed6a04410e1a94626a68ad87516b5cd5856f62f7bc12e304b1801780bc70c998",
+      "changed_since37": false,
+      "check38_pointer": "/scripts~1test_official_content.py/sha256",
+      "matches_check38": true
+    },
+    "scripts/test_packaging.py": {
+      "sha256": "46ebd688c5326871a067ddeb4b362a36a8806140db64858e3058ffbc8368faeb",
+      "bytes": 17859,
+      "historical37_sha256": "46ebd688c5326871a067ddeb4b362a36a8806140db64858e3058ffbc8368faeb",
+      "changed_since37": false,
+      "check38_pointer": "/scripts~1test_packaging.py/sha256",
+      "matches_check38": true
+    }
+  },
+  "changed_required_sources_since37": [
+    "crates/openrailsrs-viewer3d/src/official_content.rs",
+    "crates/openrailsrs-viewer3d/src/prepared_geometry.rs",
+    "crates/openrailsrs-viewer3d/src/road_cars.rs",
+    "crates/openrailsrs-viewer3d/src/world.rs"
+  ],
+  "separate_python38": {
+    "stdout": {
+      "file": "<private-qa>/coupling-provenance38-tests.log",
+      "sha256": "11918104be38b6e0cb938e419715860ca268752944d240316fecd4a77f918fb7",
+      "bytes": 992
+    },
+    "nominal_passes": [
+      {
+        "test": "test_comparison_rejects_nan_force_and_lost_restored_fuel",
+        "runtime_name": "test_coupling_reference.CouplingReferenceTests.test_comparison_rejects_nan_force_and_lost_restored_fuel",
+        "line_start": 1,
+        "line_end": 1,
+        "text": "test_comparison_rejects_nan_force_and_lost_restored_fuel (test_coupling_reference.CouplingReferenceTests.test_comparison_rejects_nan_force_and_lost_restored_fuel) ... ok",
+        "status": "passed"
+      },
+      {
+        "test": "test_depot_control_preserves_nondefault_states_and_finite_supply",
+        "runtime_name": "test_coupling_reference.CouplingReferenceTests.test_depot_control_preserves_nondefault_states_and_finite_supply",
+        "line_start": 2,
+        "line_end": 2,
+        "text": "test_depot_control_preserves_nondefault_states_and_finite_supply (test_coupling_reference.CouplingReferenceTests.test_depot_control_preserves_nondefault_states_and_finite_supply) ... ok",
+        "status": "passed"
+      },
+      {
+        "test": "test_real_original_transfer_and_three_static_equilibria_pass",
+        "runtime_name": "test_coupling_reference.CouplingReferenceTests.test_real_original_transfer_and_three_static_equilibria_pass",
+        "line_start": 3,
+        "line_end": 3,
+        "text": "test_real_original_transfer_and_three_static_equilibria_pass (test_coupling_reference.CouplingReferenceTests.test_real_original_transfer_and_three_static_equilibria_pass) ... ok",
+        "status": "passed"
+      },
+      {
+        "test": "test_reference_binds_pinned_dll_source_and_capture_helpers",
+        "runtime_name": "test_coupling_reference.CouplingReferenceTests.test_reference_binds_pinned_dll_source_and_capture_helpers",
+        "line_start": 4,
+        "line_end": 4,
+        "text": "test_reference_binds_pinned_dll_source_and_capture_helpers (test_coupling_reference.CouplingReferenceTests.test_reference_binds_pinned_dll_source_and_capture_helpers) ... ok",
+        "status": "passed"
+      },
+      {
+        "test": "test_reference_cannot_reset_pressure_or_keep_a_donor_reservation",
+        "runtime_name": "test_coupling_reference.CouplingReferenceTests.test_reference_cannot_reset_pressure_or_keep_a_donor_reservation",
+        "line_start": 5,
+        "line_end": 5,
+        "text": "test_reference_cannot_reset_pressure_or_keep_a_donor_reservation (test_coupling_reference.CouplingReferenceTests.test_reference_cannot_reset_pressure_or_keep_a_donor_reservation) ... ok",
+        "status": "passed"
+      }
+    ],
+    "summary_lines": [
+      [
+        8,
+        "Ran 5 tests in 0.007s"
+      ],
+      [
+        10,
+        "OK"
+      ]
+    ],
+    "inputs_at_audit": {
+      "scripts/test_coupling_reference.py": {
+        "file": "scripts/test_coupling_reference.py",
+        "sha256": "8ac46c4a423477a3b2c7f735363f707ca72f677637d7669e1ae78d10f7b76b42",
+        "bytes": 4149
+      },
+      "scripts/verify_coupling_reference.py": {
+        "file": "scripts/verify_coupling_reference.py",
+        "sha256": "a77f590fd7392ff2434dcbd46d95df09cc9956f6f10cb68dd905c7615939dd8a",
+        "bytes": 7948
+      },
+      "oracles/coupling-reference.json": {
+        "file": "oracles/coupling-reference.json",
+        "sha256": "856bfa60d0be9fac22c6e05a8d05f3cf510a4bd7cebc253f87b0015329d195a4",
+        "bytes": 49310
+      },
+      "oracles/coupling-rust32.json": {
+        "file": "oracles/coupling-rust32.json",
+        "sha256": "2eeb73e081d6e32a94ab14f6c14c633890ca882f0266ce6621493a90fa778927",
+        "bytes": 81954
+      },
+      "oracles/coupling-reference-provenance.json": {
+        "file": "oracles/coupling-reference-provenance.json",
+        "sha256": "ca34aced1ef6cd90ff8f9fd2960cda001787098e7e79cc585a19adc0e648c071",
+        "bytes": 21674
+      },
+      "docs/fixtures/compatibility/fifth40-20261013/depot-state-continuity.json": {
+        "file": "docs/fixtures/compatibility/fifth40-20261013/depot-state-continuity.json",
+        "sha256": "8370d34533630b1c72335a475040716e998c81f161ee54ce65a68c7809e3fd33",
+        "bytes": 56359
+      },
+      "tools/openrails-reference/DepotStateCompare.rs": {
+        "file": "tools/openrails-reference/DepotStateCompare.rs",
+        "sha256": "ded13d0c477c2e4dda9796ed689885cf0c81d3a55343d1885f8646332c07db7f",
+        "bytes": 8626
+      }
+    },
+    "replay_receipt": {
+      "file": "<private-qa>/coupling-replay38/receipt.json",
+      "sha256": "a481c61f9bfef65a87ada90494dc11a949b55e6e5fea84b6bec90d21bcbc7f3c",
+      "bytes": 2291
+    },
+    "fresh_tests_executed_by_this_audit": false
+  },
+  "preserved_python37": {
+    "receipt": {
+      "file": "<private-qa>/python-named-directed37/receipt.json",
+      "sha256": "065dd6f818d3f3e536873f1d0f7720d3c530f79085f2bfa0e6cad039e44e6484",
+      "bytes": 13856
+    },
+    "stdout": {
+      "file": "<private-qa>/python-named-directed37/verbose.log",
+      "sha256": "762e0d9f25184978b4d8928a26af833a14739d7b7d02675a9919d4222da89de7",
+      "bytes": 2895
+    },
+    "counts": {
+      "run": 17,
+      "passed": 17,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "nominal_execution_still37": true,
+    "dependency_scope_basis": "Unchanged modules/imports plus the exact selected test method. Aggregate dynamic opened-file record is preserved and partition scope is explicit."
+  },
+  "historical_public_receipt": "docs/validation/FIFTH40_PHASE37_NAMED_TESTS.json",
+  "tests": [
+    {
+      "source": "crates/openrailsrs-audio/src/native.rs",
+      "test": "cab_passenger_and_exterior_switch_without_restarting_loops",
+      "line": 2452,
+      "criteria": [
+        [
+          314,
+          2
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "9e70e1534d4b5b2cd97c46b3acd812fb08ca94f13a892573cd8c60260593343f",
+      "private_audit_pointer": "/tests/0",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "native::tests::cab_passenger_and_exterior_switch_without_restarting_loops",
+        "status": "passed",
+        "line_start": 41,
+        "line_end": 41,
+        "start_text": "test native::tests::cab_passenger_and_exterior_switch_without_restarting_loops ... ok",
+        "end_text": "test native::tests::cab_passenger_and_exterior_switch_without_restarting_loops ... ok",
+        "run_line": 33,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_audio-8756383e16697b1f)",
+        "summary_line": 76,
+        "summary_text": "test result: ok. 39 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-audio/src/native.rs",
+      "test": "decoded_pool_reuses_shared_samples_and_evicts_idle_entries_without_breaking_active_loops",
+      "line": 2733,
+      "criteria": [
+        [
+          314,
+          2
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "9e70e1534d4b5b2cd97c46b3acd812fb08ca94f13a892573cd8c60260593343f",
+      "private_audit_pointer": "/tests/1",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "native::decoded_pool_reuses_shared_samples_and_evicts_idle_entries_without_breaking_active_loops",
+        "status": "passed",
+        "line_start": 39,
+        "line_end": 39,
+        "start_text": "test native::decoded_pool_reuses_shared_samples_and_evicts_idle_entries_without_breaking_active_loops ... ok",
+        "end_text": "test native::decoded_pool_reuses_shared_samples_and_evicts_idle_entries_without_breaking_active_loops ... ok",
+        "run_line": 33,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_audio-8756383e16697b1f)",
+        "summary_line": 76,
+        "summary_text": "test result: ok. 39 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-audio/src/native.rs",
+      "test": "shared_sound_resolves_without_a_local_sound_folder",
+      "line": 2396,
+      "criteria": [
+        [
+          412,
+          1
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "9e70e1534d4b5b2cd97c46b3acd812fb08ca94f13a892573cd8c60260593343f",
+      "private_audit_pointer": "/tests/2",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "native::tests::shared_sound_resolves_without_a_local_sound_folder",
+        "status": "passed",
+        "line_start": 61,
+        "line_end": 61,
+        "start_text": "test native::tests::shared_sound_resolves_without_a_local_sound_folder ... ok",
+        "end_text": "test native::tests::shared_sound_resolves_without_a_local_sound_folder ... ok",
+        "run_line": 33,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_audio-8756383e16697b1f)",
+        "summary_line": 76,
+        "summary_text": "test result: ok. 39 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-bevy-scenery/src/atmosphere.rs",
+      "test": "sky_dome_does_not_cast_or_receive_scene_shadows",
+      "line": 101,
+      "criteria": [
+        [
+          276,
+          1
+        ],
+        [
+          276,
+          2
+        ],
+        [
+          276,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "c21f7cb22218f8dfe3e336953cdfdfb99c098a7530feb84ff26c2e62120298b4",
+      "private_audit_pointer": "/tests/3",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "atmosphere::tests::sky_dome_does_not_cast_or_receive_scene_shadows",
+        "status": "passed",
+        "line_start": 100,
+        "line_end": 100,
+        "start_text": "test atmosphere::tests::sky_dome_does_not_cast_or_receive_scene_shadows ... ok",
+        "end_text": "test atmosphere::tests::sky_dome_does_not_cast_or_receive_scene_shadows ... ok",
+        "run_line": 86,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_bevy_scenery-f9d90e5f2db9b773)",
+        "summary_line": 279,
+        "summary_text": "test result: ok. 189 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-bevy-scenery/src/shapes/material.rs",
+      "test": "addatex_is_additive_without_opaque_prepass",
+      "line": 810,
+      "criteria": [
+        [
+          277,
+          1
+        ],
+        [
+          277,
+          2
+        ],
+        [
+          277,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "67e3493433f918e8eeee4791fa5c89ac7759c9182e39b83181efcc2a3f56bf4d",
+      "private_audit_pointer": "/tests/4",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "shapes::material::tests::addatex_is_additive_without_opaque_prepass",
+        "status": "passed",
+        "line_start": 146,
+        "line_end": 146,
+        "start_text": "test shapes::material::tests::addatex_is_additive_without_opaque_prepass ... ok",
+        "end_text": "test shapes::material::tests::addatex_is_additive_without_opaque_prepass ... ok",
+        "run_line": 86,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_bevy_scenery-f9d90e5f2db9b773)",
+        "summary_line": 279,
+        "summary_text": "test result: ok. 189 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-bevy-scenery/src/shapes/material.rs",
+      "test": "blend_atex_diff_dual_pass_when_ace_alpha_bits_gt_1",
+      "line": 786,
+      "criteria": [
+        [
+          277,
+          1
+        ],
+        [
+          277,
+          2
+        ],
+        [
+          277,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "67e3493433f918e8eeee4791fa5c89ac7759c9182e39b83181efcc2a3f56bf4d",
+      "private_audit_pointer": "/tests/5",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "shapes::material::tests::blend_atex_diff_dual_pass_when_ace_alpha_bits_gt_1",
+        "status": "passed",
+        "line_start": 149,
+        "line_end": 149,
+        "start_text": "test shapes::material::tests::blend_atex_diff_dual_pass_when_ace_alpha_bits_gt_1 ... ok",
+        "end_text": "test shapes::material::tests::blend_atex_diff_dual_pass_when_ace_alpha_bits_gt_1 ... ok",
+        "run_line": 86,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_bevy_scenery-f9d90e5f2db9b773)",
+        "summary_line": 279,
+        "summary_text": "test result: ok. 189 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-bevy-scenery/src/shapes/material.rs",
+      "test": "texdiff_stays_single_opaque_pass",
+      "line": 802,
+      "criteria": [
+        [
+          277,
+          1
+        ],
+        [
+          277,
+          2
+        ],
+        [
+          277,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "67e3493433f918e8eeee4791fa5c89ac7759c9182e39b83181efcc2a3f56bf4d",
+      "private_audit_pointer": "/tests/6",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "shapes::material::tests::texdiff_stays_single_opaque_pass",
+        "status": "passed",
+        "line_start": 155,
+        "line_end": 155,
+        "start_text": "test shapes::material::tests::texdiff_stays_single_opaque_pass ... ok",
+        "end_text": "test shapes::material::tests::texdiff_stays_single_opaque_pass ... ok",
+        "run_line": 86,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_bevy_scenery-f9d90e5f2db9b773)",
+        "summary_line": 279,
+        "summary_text": "test result: ok. 189 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-content/src/source_cache.rs",
+      "test": "changed_includes_namespace_parser_and_corruption_invalidate_the_result",
+      "line": 263,
+      "criteria": [
+        [
+          384,
+          1
+        ],
+        [
+          384,
+          2
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "002116b71f600fb6e123f77b6537bd9e087c19a5b6f2c0e217362be6d387c6e4",
+      "private_audit_pointer": "/tests/7",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "source_cache::tests::changed_includes_namespace_parser_and_corruption_invalidate_the_result",
+        "status": "passed",
+        "line_start": 497,
+        "line_end": 497,
+        "start_text": "test source_cache::tests::changed_includes_namespace_parser_and_corruption_invalidate_the_result ... ok",
+        "end_text": "test source_cache::tests::changed_includes_namespace_parser_and_corruption_invalidate_the_result ... ok",
+        "run_line": 494,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_content-c69aef1a7244b39e)",
+        "summary_line": 507,
+        "summary_text": "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-sim/src/refill.rs",
+      "test": "filling_is_partition_independent_and_stops_if_train_moves",
+      "line": 334,
+      "criteria": [
+        [
+          285,
+          1
+        ],
+        [
+          285,
+          2
+        ],
+        [
+          285,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "bfce8d95a42b2469a20d96d1edd6ed6255ff0331e44707ecc88edb88fca00343",
+      "private_audit_pointer": "/tests/8",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "refill::tests::filling_is_partition_independent_and_stops_if_train_moves",
+        "status": "passed",
+        "line_start": 1283,
+        "line_end": 1283,
+        "start_text": "test refill::tests::filling_is_partition_independent_and_stops_if_train_moves ... ok",
+        "end_text": "test refill::tests::filling_is_partition_independent_and_stops_if_train_moves ... ok",
+        "run_line": 1195,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_sim-e9a56cd984bfb07e)",
+        "summary_line": 1316,
+        "summary_text": "test result: ok. 117 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 13.68s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-sim/src/refill.rs",
+      "test": "finite_diesel_supply_waits_for_connection_and_preserves_consumption_and_save",
+      "line": 307,
+      "criteria": [
+        [
+          285,
+          1
+        ],
+        [
+          285,
+          2
+        ],
+        [
+          285,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "bfce8d95a42b2469a20d96d1edd6ed6255ff0331e44707ecc88edb88fca00343",
+      "private_audit_pointer": "/tests/9",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "refill::tests::finite_diesel_supply_waits_for_connection_and_preserves_consumption_and_save",
+        "status": "passed",
+        "line_start": 1284,
+        "line_end": 1284,
+        "start_text": "test refill::tests::finite_diesel_supply_waits_for_connection_and_preserves_consumption_and_save ... ok",
+        "end_text": "test refill::tests::finite_diesel_supply_waits_for_connection_and_preserves_consumption_and_save ... ok",
+        "run_line": 1195,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_sim-e9a56cd984bfb07e)",
+        "summary_line": 1316,
+        "summary_text": "test result: ok. 117 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 13.68s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-sim/src/refill.rs",
+      "test": "rejects_bad_profile_distance_missing_intake_and_full_tank_without_mutation",
+      "line": 376,
+      "criteria": [
+        [
+          285,
+          1
+        ],
+        [
+          285,
+          2
+        ],
+        [
+          285,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "bfce8d95a42b2469a20d96d1edd6ed6255ff0331e44707ecc88edb88fca00343",
+      "private_audit_pointer": "/tests/10",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "refill::tests::rejects_bad_profile_distance_missing_intake_and_full_tank_without_mutation",
+        "status": "passed",
+        "line_start": 1285,
+        "line_end": 1285,
+        "start_text": "test refill::tests::rejects_bad_profile_distance_missing_intake_and_full_tank_without_mutation ... ok",
+        "end_text": "test refill::tests::rejects_bad_profile_distance_missing_intake_and_full_tank_without_mutation ... ok",
+        "run_line": 1195,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_sim-e9a56cd984bfb07e)",
+        "summary_line": 1316,
+        "summary_text": "test result: ok. 117 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 13.68s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-sim/src/refill.rs",
+      "test": "water_fills_only_tender_without_repairing_boiler_and_cancel_does_not_transfer",
+      "line": 354,
+      "criteria": [
+        [
+          285,
+          1
+        ],
+        [
+          285,
+          2
+        ],
+        [
+          285,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "bfce8d95a42b2469a20d96d1edd6ed6255ff0331e44707ecc88edb88fca00343",
+      "private_audit_pointer": "/tests/11",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "refill::tests::water_fills_only_tender_without_repairing_boiler_and_cancel_does_not_transfer",
+        "status": "passed",
+        "line_start": 1286,
+        "line_end": 1286,
+        "start_text": "test refill::tests::water_fills_only_tender_without_repairing_boiler_and_cancel_does_not_transfer ... ok",
+        "end_text": "test refill::tests::water_fills_only_tender_without_repairing_boiler_and_cancel_does_not_transfer ... ok",
+        "run_line": 1195,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_sim-e9a56cd984bfb07e)",
+        "summary_line": 1316,
+        "summary_text": "test result: ok. 117 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 13.68s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/articulated_train.rs",
+      "test": "shared_bogie_constraints_conserve_articulated_train_during_drive_braking_restore_and_reverse",
+      "line": 4,
+      "criteria": [
+        [
+          253,
+          1
+        ],
+        [
+          253,
+          2
+        ],
+        [
+          253,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "392036182985ffc1194670e1159c4a27cb380c0072b9dda18b95996211ee0ac4",
+      "private_audit_pointer": "/tests/12",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "shared_bogie_constraints_conserve_articulated_train_during_drive_braking_restore_and_reverse",
+        "status": "passed",
+        "line_start": 1329,
+        "line_end": 1329,
+        "start_text": "test shared_bogie_constraints_conserve_articulated_train_during_drive_braking_restore_and_reverse ... ok",
+        "end_text": "test shared_bogie_constraints_conserve_articulated_train_during_drive_braking_restore_and_reverse ... ok",
+        "run_line": 1326,
+        "run_target": "     Running tests/articulated_train.rs (target/debug/deps/articulated_train-152031388f43d7fa)",
+        "summary_line": 1331,
+        "summary_text": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/parallel_traffic.rs",
+      "test": "driver_transfers_to_stopped_service_preserves_resources_and_restore_reconstructs_roles",
+      "line": 66,
+      "criteria": [
+        [
+          341,
+          1
+        ],
+        [
+          341,
+          2
+        ],
+        [
+          341,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "98cf1d718eca2a18ab48aca47d47c7d48c4e476f7c8690731cc7b3603e38e8eb",
+      "private_audit_pointer": "/tests/13",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "driver_transfers_to_stopped_service_preserves_resources_and_restore_reconstructs_roles",
+        "status": "passed",
+        "line_start": 1558,
+        "line_end": 1558,
+        "start_text": "test driver_transfers_to_stopped_service_preserves_resources_and_restore_reconstructs_roles ... ok",
+        "end_text": "test driver_transfers_to_stopped_service_preserves_resources_and_restore_reconstructs_roles ... ok",
+        "run_line": 1555,
+        "run_target": "     Running tests/parallel_traffic.rs (target/debug/deps/parallel_traffic-586a5502e3dab553)",
+        "summary_line": 1564,
+        "summary_text": "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/parallel_traffic.rs",
+      "test": "one_and_eight_workers_produce_identical_moving_trains_and_restore",
+      "line": 33,
+      "criteria": [
+        [
+          393,
+          1
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "98cf1d718eca2a18ab48aca47d47c7d48c4e476f7c8690731cc7b3603e38e8eb",
+      "private_audit_pointer": "/tests/14",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "one_and_eight_workers_produce_identical_moving_trains_and_restore",
+        "status": "passed",
+        "line_start": 1559,
+        "line_end": 1559,
+        "start_text": "test one_and_eight_workers_produce_identical_moving_trains_and_restore ... ok",
+        "end_text": "test one_and_eight_workers_produce_identical_moving_trains_and_restore ... ok",
+        "run_line": 1555,
+        "run_target": "     Running tests/parallel_traffic.rs (target/debug/deps/parallel_traffic-586a5502e3dab553)",
+        "summary_line": 1564,
+        "summary_text": "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/parallel_traffic.rs",
+      "test": "parked_services_have_real_handbrakes_and_remain_stationary_until_the_driver_takes_over",
+      "line": 123,
+      "criteria": [
+        [
+          341,
+          1
+        ],
+        [
+          341,
+          2
+        ],
+        [
+          341,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "98cf1d718eca2a18ab48aca47d47c7d48c4e476f7c8690731cc7b3603e38e8eb",
+      "private_audit_pointer": "/tests/15",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "parked_services_have_real_handbrakes_and_remain_stationary_until_the_driver_takes_over",
+        "status": "passed",
+        "line_start": 1560,
+        "line_end": 1560,
+        "start_text": "test parked_services_have_real_handbrakes_and_remain_stationary_until_the_driver_takes_over ... ok",
+        "end_text": "test parked_services_have_real_handbrakes_and_remain_stationary_until_the_driver_takes_over ... ok",
+        "run_line": 1555,
+        "run_target": "     Running tests/parallel_traffic.rs (target/debug/deps/parallel_traffic-586a5502e3dab553)",
+        "summary_line": 1564,
+        "summary_text": "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/parallel_traffic.rs",
+      "test": "preexisting_native_ai_is_simulated_before_the_activity_and_restores_without_resetting_reserves",
+      "line": 98,
+      "criteria": [
+        [
+          333,
+          1
+        ],
+        [
+          333,
+          2
+        ],
+        [
+          333,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "98cf1d718eca2a18ab48aca47d47c7d48c4e476f7c8690731cc7b3603e38e8eb",
+      "private_audit_pointer": "/tests/16",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "preexisting_native_ai_is_simulated_before_the_activity_and_restores_without_resetting_reserves",
+        "status": "passed",
+        "line_start": 1561,
+        "line_end": 1561,
+        "start_text": "test preexisting_native_ai_is_simulated_before_the_activity_and_restores_without_resetting_reserves ... ok",
+        "end_text": "test preexisting_native_ai_is_simulated_before_the_activity_and_restores_without_resetting_reserves ... ok",
+        "run_line": 1555,
+        "run_target": "     Running tests/parallel_traffic.rs (target/debug/deps/parallel_traffic-586a5502e3dab553)",
+        "summary_line": 1564,
+        "summary_text": "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/parallel_traffic.rs",
+      "test": "repeated_driver_swaps_restore_the_whole_role_permutation",
+      "line": 152,
+      "criteria": [
+        [
+          341,
+          1
+        ],
+        [
+          341,
+          2
+        ],
+        [
+          341,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "98cf1d718eca2a18ab48aca47d47c7d48c4e476f7c8690731cc7b3603e38e8eb",
+      "private_audit_pointer": "/tests/17",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "repeated_driver_swaps_restore_the_whole_role_permutation",
+        "status": "passed",
+        "line_start": 1562,
+        "line_end": 1562,
+        "start_text": "test repeated_driver_swaps_restore_the_whole_role_permutation ... ok",
+        "end_text": "test repeated_driver_swaps_restore_the_whole_role_permutation ... ok",
+        "run_line": 1555,
+        "run_target": "     Running tests/parallel_traffic.rs (target/debug/deps/parallel_traffic-586a5502e3dab553)",
+        "summary_line": 1564,
+        "summary_text": "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/passing_services.rs",
+      "test": "dispatcher_selects_a_siding_before_the_meet_and_releases_only_after_the_other_tail_clears",
+      "line": 67,
+      "criteria": [
+        [
+          335,
+          1
+        ],
+        [
+          335,
+          2
+        ],
+        [
+          335,
+          3
+        ],
+        [
+          339,
+          1
+        ],
+        [
+          339,
+          2
+        ],
+        [
+          339,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "cdc8249d06095c481bf1467b8989ac8e215cb75bd156c172048ae2602536ee24",
+      "private_audit_pointer": "/tests/18",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "dispatcher_selects_a_siding_before_the_meet_and_releases_only_after_the_other_tail_clears",
+        "status": "passed",
+        "line_start": 1569,
+        "line_end": 1569,
+        "start_text": "test dispatcher_selects_a_siding_before_the_meet_and_releases_only_after_the_other_tail_clears ... ok",
+        "end_text": "test dispatcher_selects_a_siding_before_the_meet_and_releases_only_after_the_other_tail_clears ... ok",
+        "run_line": 1566,
+        "run_target": "     Running tests/passing_services.rs (target/debug/deps/passing_services-f4af84c01d782fa5)",
+        "summary_line": 1573,
+        "summary_text": "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/passing_services.rs",
+      "test": "shipped_overtake_and_meet_examples_complete_both_real_services_without_missing_the_local_stop",
+      "line": 175,
+      "criteria": [
+        [
+          335,
+          1
+        ],
+        [
+          335,
+          2
+        ],
+        [
+          335,
+          3
+        ],
+        [
+          339,
+          1
+        ],
+        [
+          339,
+          2
+        ],
+        [
+          339,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "cdc8249d06095c481bf1467b8989ac8e215cb75bd156c172048ae2602536ee24",
+      "private_audit_pointer": "/tests/19",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "shipped_overtake_and_meet_examples_complete_both_real_services_without_missing_the_local_stop",
+        "status": "passed",
+        "line_start": 1570,
+        "line_end": 1570,
+        "start_text": "test shipped_overtake_and_meet_examples_complete_both_real_services_without_missing_the_local_stop ... ok",
+        "end_text": "test shipped_overtake_and_meet_examples_complete_both_real_services_without_missing_the_local_stop ... ok",
+        "run_line": 1566,
+        "run_target": "     Running tests/passing_services.rs (target/debug/deps/passing_services-f4af84c01d782fa5)",
+        "summary_line": 1573,
+        "summary_text": "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/passing_services.rs",
+      "test": "too_short_siding_is_rejected_with_a_diagnostic_and_no_position_change",
+      "line": 155,
+      "criteria": [
+        [
+          335,
+          1
+        ],
+        [
+          335,
+          2
+        ],
+        [
+          335,
+          3
+        ],
+        [
+          339,
+          1
+        ],
+        [
+          339,
+          2
+        ],
+        [
+          339,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "cdc8249d06095c481bf1467b8989ac8e215cb75bd156c172048ae2602536ee24",
+      "private_audit_pointer": "/tests/20",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "too_short_siding_is_rejected_with_a_diagnostic_and_no_position_change",
+        "status": "passed",
+        "line_start": 1571,
+        "line_end": 1571,
+        "start_text": "test too_short_siding_is_rejected_with_a_diagnostic_and_no_position_change ... ok",
+        "end_text": "test too_short_siding_is_rejected_with_a_diagnostic_and_no_position_change ... ok",
+        "run_line": 1566,
+        "run_target": "     Running tests/passing_services.rs (target/debug/deps/passing_services-f4af84c01d782fa5)",
+        "summary_line": 1573,
+        "summary_text": "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/shunt_authority.rs",
+      "test": "another_train_invalid_distance_expiration_and_reversing_reject_or_revoke_authority",
+      "line": 51,
+      "criteria": [
+        [
+          340,
+          1
+        ],
+        [
+          340,
+          2
+        ],
+        [
+          340,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "744a9bb61622affb1dca83cf5b85618bd88e722298719f2e54d6ecd2f176f009",
+      "private_audit_pointer": "/tests/21",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "another_train_invalid_distance_expiration_and_reversing_reject_or_revoke_authority",
+        "status": "passed",
+        "line_start": 1637,
+        "line_end": 1637,
+        "start_text": "test another_train_invalid_distance_expiration_and_reversing_reject_or_revoke_authority ... ok",
+        "end_text": "test another_train_invalid_distance_expiration_and_reversing_reject_or_revoke_authority ... ok",
+        "run_line": 1634,
+        "run_target": "     Running tests/shunt_authority.rs (target/debug/deps/shunt_authority-2fb099666ccecf80)",
+        "summary_line": 1640,
+        "summary_text": "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/shunt_authority.rs",
+      "test": "own_wheels_before_signal_do_not_block_a_bounded_authority_and_restore_preserves_it",
+      "line": 26,
+      "criteria": [
+        [
+          340,
+          1
+        ],
+        [
+          340,
+          2
+        ],
+        [
+          340,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "744a9bb61622affb1dca83cf5b85618bd88e722298719f2e54d6ecd2f176f009",
+      "private_audit_pointer": "/tests/22",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "own_wheels_before_signal_do_not_block_a_bounded_authority_and_restore_preserves_it",
+        "status": "passed",
+        "line_start": 1638,
+        "line_end": 1638,
+        "start_text": "test own_wheels_before_signal_do_not_block_a_bounded_authority_and_restore_preserves_it ... ok",
+        "end_text": "test own_wheels_before_signal_do_not_block_a_bounded_authority_and_restore_preserves_it ... ok",
+        "run_line": 1634,
+        "run_target": "     Running tests/shunt_authority.rs (target/debug/deps/shunt_authority-2fb099666ccecf80)",
+        "summary_line": 1640,
+        "summary_text": "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/vehicle_doors.rs",
+      "test": "closing_finishes_only_the_current_passenger_and_survives_pause_restore",
+      "line": 45,
+      "criteria": [
+        [
+          254,
+          1
+        ],
+        [
+          254,
+          2
+        ],
+        [
+          254,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "549cf8b392f80f07b51c9822fab96775483237a3b8d57b1fc75956c1a82f4e0a",
+      "private_audit_pointer": "/tests/23",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "closing_finishes_only_the_current_passenger_and_survives_pause_restore",
+        "status": "passed",
+        "line_start": 1747,
+        "line_end": 1747,
+        "start_text": "test closing_finishes_only_the_current_passenger_and_survives_pause_restore ... ok",
+        "end_text": "test closing_finishes_only_the_current_passenger_and_survives_pause_restore ... ok",
+        "run_line": 1744,
+        "run_target": "     Running tests/vehicle_doors.rs (target/debug/deps/vehicle_doors-989165d7b0b71090)",
+        "summary_line": 1753,
+        "summary_text": "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/vehicle_doors.rs",
+      "test": "independent_vehicle_and_sides_have_real_interlocks_and_survive_midstroke_save",
+      "line": 107,
+      "criteria": [
+        [
+          254,
+          1
+        ],
+        [
+          254,
+          2
+        ],
+        [
+          254,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "549cf8b392f80f07b51c9822fab96775483237a3b8d57b1fc75956c1a82f4e0a",
+      "private_audit_pointer": "/tests/24",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "independent_vehicle_and_sides_have_real_interlocks_and_survive_midstroke_save",
+        "status": "passed",
+        "line_start": 1748,
+        "line_end": 1748,
+        "start_text": "test independent_vehicle_and_sides_have_real_interlocks_and_survive_midstroke_save ... ok",
+        "end_text": "test independent_vehicle_and_sides_have_real_interlocks_and_survive_midstroke_save ... ok",
+        "run_line": 1744,
+        "run_target": "     Running tests/vehicle_doors.rs (target/debug/deps/vehicle_doors-989165d7b0b71090)",
+        "summary_line": 1753,
+        "summary_text": "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/vehicle_doors.rs",
+      "test": "reopening_cancels_queued_closure_and_waiting_passengers_do_not_delay_it",
+      "line": 86,
+      "criteria": [
+        [
+          254,
+          1
+        ],
+        [
+          254,
+          2
+        ],
+        [
+          254,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "549cf8b392f80f07b51c9822fab96775483237a3b8d57b1fc75956c1a82f4e0a",
+      "private_audit_pointer": "/tests/25",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "reopening_cancels_queued_closure_and_waiting_passengers_do_not_delay_it",
+        "status": "passed",
+        "line_start": 1751,
+        "line_end": 1751,
+        "start_text": "test reopening_cancels_queued_closure_and_waiting_passengers_do_not_delay_it ... ok",
+        "end_text": "test reopening_cancels_queued_closure_and_waiting_passengers_do_not_delay_it ... ok",
+        "run_line": 1744,
+        "run_target": "     Running tests/vehicle_doors.rs (target/debug/deps/vehicle_doors-989165d7b0b71090)",
+        "summary_line": 1753,
+        "summary_text": "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/world_operations.rs",
+      "test": "crossing_observes_approach_full_tail_multiple_services_and_saved_opening",
+      "line": 24,
+      "criteria": [
+        [
+          282,
+          1
+        ],
+        [
+          282,
+          2
+        ],
+        [
+          282,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "9781ee96cad98b6917b1e886b36dfe5725cf516e403578afcf17bba78e8b48e5",
+      "private_audit_pointer": "/tests/26",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "crossing_observes_approach_full_tail_multiple_services_and_saved_opening",
+        "status": "passed",
+        "line_start": 1774,
+        "line_end": 1774,
+        "start_text": "test crossing_observes_approach_full_tail_multiple_services_and_saved_opening ... ok",
+        "end_text": "test crossing_observes_approach_full_tail_multiple_services_and_saved_opening ... ok",
+        "run_line": 1771,
+        "run_target": "     Running tests/world_operations.rs (target/debug/deps/world_operations-3d7d7d1ca9fc0316)",
+        "summary_line": 1779,
+        "summary_text": "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/world_operations.rs",
+      "test": "parked_cut_protects_crossing_after_the_locomotive_leaves",
+      "line": 67,
+      "criteria": [
+        [
+          282,
+          1
+        ],
+        [
+          282,
+          2
+        ],
+        [
+          282,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "9781ee96cad98b6917b1e886b36dfe5725cf516e403578afcf17bba78e8b48e5",
+      "private_audit_pointer": "/tests/27",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "parked_cut_protects_crossing_after_the_locomotive_leaves",
+        "status": "passed",
+        "line_start": 1775,
+        "line_end": 1775,
+        "start_text": "test parked_cut_protects_crossing_after_the_locomotive_leaves ... ok",
+        "end_text": "test parked_cut_protects_crossing_after_the_locomotive_leaves ... ok",
+        "run_line": 1771,
+        "run_target": "     Running tests/world_operations.rs (target/debug/deps/world_operations-3d7d7d1ca9fc0316)",
+        "summary_line": 1779,
+        "summary_text": "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/world_operations.rs",
+      "test": "reversing_approach_uses_the_leading_rear_and_survives_restore",
+      "line": 89,
+      "criteria": [
+        [
+          282,
+          1
+        ],
+        [
+          282,
+          2
+        ],
+        [
+          282,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "9781ee96cad98b6917b1e886b36dfe5725cf516e403578afcf17bba78e8b48e5",
+      "private_audit_pointer": "/tests/28",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "reversing_approach_uses_the_leading_rear_and_survives_restore",
+        "status": "passed",
+        "line_start": 1777,
+        "line_end": 1777,
+        "start_text": "test reversing_approach_uses_the_leading_rear_and_survives_restore ... ok",
+        "end_text": "test reversing_approach_uses_the_leading_rear_and_survives_restore ... ok",
+        "run_line": 1771,
+        "run_target": "     Running tests/world_operations.rs (target/debug/deps/world_operations-3d7d7d1ca9fc0316)",
+        "summary_line": 1779,
+        "summary_text": "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/yard_operations.rs",
+      "test": "coupling_an_unstarted_parked_donor_produces_an_immediately_valid_supply_snapshot",
+      "line": 216,
+      "criteria": [
+        [
+          342,
+          1
+        ],
+        [
+          342,
+          2
+        ],
+        [
+          342,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "d2cdb48084ef1101d6fa56584bc3049957dc2f8256abd231b8ea20dce7f6a14a",
+      "private_audit_pointer": "/tests/29",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "coupling_an_unstarted_parked_donor_produces_an_immediately_valid_supply_snapshot",
+        "status": "passed",
+        "line_start": 1784,
+        "line_end": 1784,
+        "start_text": "test coupling_an_unstarted_parked_donor_produces_an_immediately_valid_supply_snapshot ... ok",
+        "end_text": "test coupling_an_unstarted_parked_donor_produces_an_immediately_valid_supply_snapshot ... ok",
+        "run_line": 1781,
+        "run_target": "     Running tests/yard_operations.rs (target/debug/deps/yard_operations-3a75a541330e8699)",
+        "summary_line": 1790,
+        "summary_text": "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/yard_operations.rs",
+      "test": "delivery_requires_exact_wagons_full_siding_and_secured_detachment_then_pickup_removes_acceptance",
+      "line": 12,
+      "criteria": [
+        [
+          343,
+          1
+        ],
+        [
+          343,
+          2
+        ],
+        [
+          343,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "d2cdb48084ef1101d6fa56584bc3049957dc2f8256abd231b8ea20dce7f6a14a",
+      "private_audit_pointer": "/tests/30",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "delivery_requires_exact_wagons_full_siding_and_secured_detachment_then_pickup_removes_acceptance",
+        "status": "passed",
+        "line_start": 1785,
+        "line_end": 1785,
+        "start_text": "test delivery_requires_exact_wagons_full_siding_and_secured_detachment_then_pickup_removes_acceptance ... ok",
+        "end_text": "test delivery_requires_exact_wagons_full_siding_and_secured_detachment_then_pickup_removes_acceptance ... ok",
+        "run_line": 1781,
+        "run_target": "     Running tests/yard_operations.rs (target/debug/deps/yard_operations-3a75a541330e8699)",
+        "summary_line": 1790,
+        "summary_text": "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/yard_operations.rs",
+      "test": "depot_transfers_finite_oil_and_coolant_without_resetting_fuel_or_temperature",
+      "line": 125,
+      "criteria": [
+        [
+          347,
+          1
+        ],
+        [
+          347,
+          2
+        ],
+        [
+          347,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "d2cdb48084ef1101d6fa56584bc3049957dc2f8256abd231b8ea20dce7f6a14a",
+      "private_audit_pointer": "/tests/31",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "depot_transfers_finite_oil_and_coolant_without_resetting_fuel_or_temperature",
+        "status": "passed",
+        "line_start": 1786,
+        "line_end": 1786,
+        "start_text": "test depot_transfers_finite_oil_and_coolant_without_resetting_fuel_or_temperature ... ok",
+        "end_text": "test depot_transfers_finite_oil_and_coolant_without_resetting_fuel_or_temperature ... ok",
+        "run_line": 1781,
+        "run_target": "     Running tests/yard_operations.rs (target/debug/deps/yard_operations-3a75a541330e8699)",
+        "summary_line": 1790,
+        "summary_text": "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/yard_operations.rs",
+      "test": "independent_contact_moves_vehicles_once_preserves_pressure_fuel_and_can_reconstruct_a_save",
+      "line": 30,
+      "criteria": [
+        [
+          342,
+          1
+        ],
+        [
+          342,
+          2
+        ],
+        [
+          342,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "d2cdb48084ef1101d6fa56584bc3049957dc2f8256abd231b8ea20dce7f6a14a",
+      "private_audit_pointer": "/tests/32",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "independent_contact_moves_vehicles_once_preserves_pressure_fuel_and_can_reconstruct_a_save",
+        "status": "passed",
+        "line_start": 1787,
+        "line_end": 1787,
+        "start_text": "test independent_contact_moves_vehicles_once_preserves_pressure_fuel_and_can_reconstruct_a_save ... ok",
+        "end_text": "test independent_contact_moves_vehicles_once_preserves_pressure_fuel_and_can_reconstruct_a_save ... ok",
+        "run_line": 1781,
+        "run_target": "     Running tests/yard_operations.rs (target/debug/deps/yard_operations-3a75a541330e8699)",
+        "summary_line": 1790,
+        "summary_text": "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/yard_operations.rs",
+      "test": "two_crews_deliver_distinct_wagon_lots_and_foreign_wagons_make_a_siding_invalid",
+      "line": 185,
+      "criteria": [
+        [
+          343,
+          1
+        ],
+        [
+          343,
+          2
+        ],
+        [
+          343,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "d2cdb48084ef1101d6fa56584bc3049957dc2f8256abd231b8ea20dce7f6a14a",
+      "private_audit_pointer": "/tests/33",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "two_crews_deliver_distinct_wagon_lots_and_foreign_wagons_make_a_siding_invalid",
+        "status": "passed",
+        "line_start": 1788,
+        "line_end": 1788,
+        "start_text": "test two_crews_deliver_distinct_wagon_lots_and_foreign_wagons_make_a_siding_invalid ... ok",
+        "end_text": "test two_crews_deliver_distinct_wagon_lots_and_foreign_wagons_make_a_siding_invalid ... ok",
+        "run_line": 1781,
+        "run_target": "     Running tests/yard_operations.rs (target/debug/deps/yard_operations-3a75a541330e8699)",
+        "summary_line": 1790,
+        "summary_text": "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-train/src/consist_audit.rs",
+      "test": "every_missing_texture_and_cab_graphic_has_its_original_destinations",
+      "line": 1249,
+      "criteria": [
+        [
+          412,
+          4
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "2effddf56cf6eee77edf87553427abe3c66efcd1de23e90d7936c7411dce6262",
+      "private_audit_pointer": "/tests/34",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "consist_audit::tests::every_missing_texture_and_cab_graphic_has_its_original_destinations",
+        "status": "passed",
+        "line_start": 1848,
+        "line_end": 1848,
+        "start_text": "test consist_audit::tests::every_missing_texture_and_cab_graphic_has_its_original_destinations ... ok",
+        "end_text": "test consist_audit::tests::every_missing_texture_and_cab_graphic_has_its_original_destinations ... ok",
+        "run_line": 1839,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_train-dab44626c094368d)",
+        "summary_line": 1883,
+        "summary_text": "test result: ok. 39 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.01s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-train/src/consist_audit.rs",
+      "test": "native_3d_cab_pairs_shared_controls_and_keeps_genuine_resource_failures",
+      "line": 1398,
+      "criteria": [
+        [
+          412,
+          1
+        ],
+        [
+          412,
+          9
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "2effddf56cf6eee77edf87553427abe3c66efcd1de23e90d7936c7411dce6262",
+      "private_audit_pointer": "/tests/35",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "consist_audit::tests::native_3d_cab_pairs_shared_controls_and_keeps_genuine_resource_failures",
+        "status": "passed",
+        "line_start": 1851,
+        "line_end": 1851,
+        "start_text": "test consist_audit::tests::native_3d_cab_pairs_shared_controls_and_keeps_genuine_resource_failures ... ok",
+        "end_text": "test consist_audit::tests::native_3d_cab_pairs_shared_controls_and_keeps_genuine_resource_failures ... ok",
+        "run_line": 1839,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_train-dab44626c094368d)",
+        "summary_line": 1883,
+        "summary_text": "test result: ok. 39 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.01s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/camera.rs",
+      "test": "viewer_camera_has_no_mesh_and_is_explicitly_not_a_shadow_caster",
+      "line": 2105,
+      "criteria": [
+        [
+          276,
+          1
+        ],
+        [
+          276,
+          2
+        ],
+        [
+          276,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "52ee791f3a9a824570a46bf2c6a8b2a39695afde02761f26b97ce98fee29bae1",
+      "private_audit_pointer": "/tests/36",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "camera::tests::viewer_camera_has_no_mesh_and_is_explicitly_not_a_shadow_caster",
+        "status": "passed",
+        "line_start": 2333,
+        "line_end": 2333,
+        "start_text": "test camera::tests::viewer_camera_has_no_mesh_and_is_explicitly_not_a_shadow_caster ... ok",
+        "end_text": "test camera::tests::viewer_camera_has_no_mesh_and_is_explicitly_not_a_shadow_caster ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/camera_collision.rs",
+      "test": "consecutive_zoom_and_corner_motion_stay_clear_without_repeated_jumps",
+      "line": 164,
+      "criteria": [
+        [
+          291,
+          1
+        ],
+        [
+          291,
+          2
+        ],
+        [
+          291,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "b0fb75d4bb97c7530e069c0f7e394bd463f105ff9c3d02b66839a4b90f7fcbc2",
+      "private_audit_pointer": "/tests/37",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "camera_collision::tests::consecutive_zoom_and_corner_motion_stay_clear_without_repeated_jumps",
+        "status": "passed",
+        "line_start": 2335,
+        "line_end": 2335,
+        "start_text": "test camera_collision::tests::consecutive_zoom_and_corner_motion_stay_clear_without_repeated_jumps ... ok",
+        "end_text": "test camera_collision::tests::consecutive_zoom_and_corner_motion_stay_clear_without_repeated_jumps ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/camera_collision.rs",
+      "test": "eye_cannot_tunnel_through_a_wall_but_slides_along_it",
+      "line": 154,
+      "criteria": [
+        [
+          291,
+          1
+        ],
+        [
+          291,
+          2
+        ],
+        [
+          291,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "b0fb75d4bb97c7530e069c0f7e394bd463f105ff9c3d02b66839a4b90f7fcbc2",
+      "private_audit_pointer": "/tests/38",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "camera_collision::tests::eye_cannot_tunnel_through_a_wall_but_slides_along_it",
+        "status": "passed",
+        "line_start": 2336,
+        "line_end": 2336,
+        "start_text": "test camera_collision::tests::eye_cannot_tunnel_through_a_wall_but_slides_along_it ... ok",
+        "end_text": "test camera_collision::tests::eye_cannot_tunnel_through_a_wall_but_slides_along_it ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/camera_collision.rs",
+      "test": "initial_stream_overlap_exits_the_volume_and_never_exits_below_the_floor",
+      "line": 198,
+      "criteria": [
+        [
+          291,
+          1
+        ],
+        [
+          291,
+          2
+        ],
+        [
+          291,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "b0fb75d4bb97c7530e069c0f7e394bd463f105ff9c3d02b66839a4b90f7fcbc2",
+      "private_audit_pointer": "/tests/39",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "camera_collision::tests::initial_stream_overlap_exits_the_volume_and_never_exits_below_the_floor",
+        "status": "passed",
+        "line_start": 2337,
+        "line_end": 2337,
+        "start_text": "test camera_collision::tests::initial_stream_overlap_exits_the_volume_and_never_exits_below_the_floor ... ok",
+        "end_text": "test camera_collision::tests::initial_stream_overlap_exits_the_volume_and_never_exits_below_the_floor ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/campaign_play.rs",
+      "test": "campaign_progress_and_real_material_continue_without_cli_and_resume_keeps_context",
+      "line": 536,
+      "criteria": [
+        [
+          350,
+          1
+        ],
+        [
+          350,
+          2
+        ],
+        [
+          350,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "ba5a2e94c4f8f19d3336253c9b0ac7b681a9cd2d3d0797e64545333235b4f3ee",
+      "private_audit_pointer": "/tests/40",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "campaign_play::tests::campaign_progress_and_real_material_continue_without_cli_and_resume_keeps_context",
+        "status": "passed",
+        "line_start": 2339,
+        "line_end": 2339,
+        "start_text": "test campaign_play::tests::campaign_progress_and_real_material_continue_without_cli_and_resume_keeps_context ... ok",
+        "end_text": "test campaign_play::tests::campaign_progress_and_real_material_continue_without_cli_and_resume_keeps_context ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/campaign_play.rs",
+      "test": "two_complete_driven_jornadas_keep_material_and_resume_mid_service",
+      "line": 457,
+      "criteria": [
+        [
+          350,
+          1
+        ],
+        [
+          350,
+          2
+        ],
+        [
+          350,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "ba5a2e94c4f8f19d3336253c9b0ac7b681a9cd2d3d0797e64545333235b4f3ee",
+      "private_audit_pointer": "/tests/41",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "campaign_play::tests::two_complete_driven_jornadas_keep_material_and_resume_mid_service",
+        "status": "passed",
+        "line_start": 2340,
+        "line_end": 2340,
+        "start_text": "test campaign_play::tests::two_complete_driven_jornadas_keep_material_and_resume_mid_service ... ok",
+        "end_text": "test campaign_play::tests::two_complete_driven_jornadas_keep_material_and_resume_mid_service ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/content_validation.rs",
+      "test": "records_name_only_profiles_present_in_the_original_capture",
+      "line": 130,
+      "criteria": [
+        [
+          412,
+          6
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "0b16315809b26a1396d0e05e8223caaf4a96f9c8739daab3ded1ed254d0e349e",
+      "private_audit_pointer": "/tests/42",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "content_validation::tests::records_name_only_profiles_present_in_the_original_capture",
+        "status": "passed",
+        "line_start": 2350,
+        "line_end": 2350,
+        "start_text": "test content_validation::tests::records_name_only_profiles_present_in_the_original_capture ... ok",
+        "end_text": "test content_validation::tests::records_name_only_profiles_present_in_the_original_capture ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/official_content.rs",
+      "test": "discovery_rejects_parent_traversal_in_every_prepared_path",
+      "line": 1481,
+      "criteria": [
+        [
+          412,
+          9
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "0f27fed2200e041191f16eef13bc88538fee374af46ff6fd54566071950dc63d",
+      "private_audit_pointer": "/tests/43",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "official_content::tests::discovery_rejects_parent_traversal_in_every_prepared_path",
+        "status": "passed",
+        "line_start": 2502,
+        "line_end": 2502,
+        "start_text": "test official_content::tests::discovery_rejects_parent_traversal_in_every_prepared_path ... ok",
+        "end_text": "test official_content::tests::discovery_rejects_parent_traversal_in_every_prepared_path ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/official_content.rs",
+      "test": "repository_search_uses_catalogue_origin_and_only_the_missing_basename",
+      "line": 1597,
+      "criteria": [
+        [
+          412,
+          2
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "0f27fed2200e041191f16eef13bc88538fee374af46ff6fd54566071950dc63d",
+      "private_audit_pointer": "/tests/44",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "official_content::tests::repository_search_uses_catalogue_origin_and_only_the_missing_basename",
+        "status": "passed",
+        "line_start": 2507,
+        "line_end": 2507,
+        "start_text": "test official_content::tests::repository_search_uses_catalogue_origin_and_only_the_missing_basename ... ok",
+        "end_text": "test official_content::tests::repository_search_uses_catalogue_origin_and_only_the_missing_basename ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/official_content.rs",
+      "test": "stock_only_author_archive_can_supply_trainset_and_consists_at_its_root",
+      "line": 1392,
+      "criteria": [
+        [
+          413,
+          2
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "0f27fed2200e041191f16eef13bc88538fee374af46ff6fd54566071950dc63d",
+      "private_audit_pointer": "/tests/45",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "official_content::tests::stock_only_author_archive_can_supply_trainset_and_consists_at_its_root",
+        "status": "passed",
+        "line_start": 2509,
+        "line_end": 2509,
+        "start_text": "test official_content::tests::stock_only_author_archive_can_supply_trainset_and_consists_at_its_root ... ok",
+        "end_text": "test official_content::tests::stock_only_author_archive_can_supply_trainset_and_consists_at_its_root ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/official_content.rs",
+      "test": "train_only_package_audits_author_formations_as_well_as_standalone_choices",
+      "line": 1352,
+      "criteria": [
+        [
+          413,
+          2
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "0f27fed2200e041191f16eef13bc88538fee374af46ff6fd54566071950dc63d",
+      "private_audit_pointer": "/tests/46",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "official_content::tests::train_only_package_audits_author_formations_as_well_as_standalone_choices",
+        "status": "passed",
+        "line_start": 2510,
+        "line_end": 2510,
+        "start_text": "test official_content::tests::train_only_package_audits_author_formations_as_well_as_standalone_choices ... ok",
+        "end_text": "test official_content::tests::train_only_package_audits_author_formations_as_well_as_standalone_choices ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/official_content.rs",
+      "test": "unlisted_origins_and_mismatched_packages_offer_no_download",
+      "line": 1637,
+      "criteria": [
+        [
+          412,
+          2
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "0f27fed2200e041191f16eef13bc88538fee374af46ff6fd54566071950dc63d",
+      "private_audit_pointer": "/tests/47",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "official_content::tests::unlisted_origins_and_mismatched_packages_offer_no_download",
+        "status": "passed",
+        "line_start": 2513,
+        "line_end": 2513,
+        "start_text": "test official_content::tests::unlisted_origins_and_mismatched_packages_offer_no_download ... ok",
+        "end_text": "test official_content::tests::unlisted_origins_and_mismatched_packages_offer_no_download ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/platform_people.rs",
+      "test": "doorway_corridor_rejects_a_wall_between_safe_endpoints",
+      "line": 248,
+      "criteria": [
+        [
+          284,
+          1
+        ],
+        [
+          284,
+          2
+        ],
+        [
+          284,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "07616c93d6053a1bd2438cdaa6c1f34c7523e941285760c8ac8e896b3c1f31e3",
+      "private_audit_pointer": "/tests/48",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "platform_people::tests::doorway_corridor_rejects_a_wall_between_safe_endpoints",
+        "status": "passed",
+        "line_start": 2553,
+        "line_end": 2553,
+        "start_text": "test platform_people::tests::doorway_corridor_rejects_a_wall_between_safe_endpoints ... ok",
+        "end_text": "test platform_people::tests::doorway_corridor_rejects_a_wall_between_safe_endpoints ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/platform_people.rs",
+      "test": "mixed_transfer_prefixes_follow_the_boarding_and_alighting_counts",
+      "line": 279,
+      "criteria": [
+        [
+          254,
+          1
+        ],
+        [
+          254,
+          2
+        ],
+        [
+          254,
+          3
+        ],
+        [
+          284,
+          1
+        ],
+        [
+          284,
+          2
+        ],
+        [
+          284,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "07616c93d6053a1bd2438cdaa6c1f34c7523e941285760c8ac8e896b3c1f31e3",
+      "private_audit_pointer": "/tests/49",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "platform_people::mixed_transfer_prefixes_follow_the_boarding_and_alighting_counts",
+        "status": "passed",
+        "line_start": 2552,
+        "line_end": 2552,
+        "start_text": "test platform_people::mixed_transfer_prefixes_follow_the_boarding_and_alighting_counts ... ok",
+        "end_text": "test platform_people::mixed_transfer_prefixes_follow_the_boarding_and_alighting_counts ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/player_ui.rs",
+      "test": "incomplete_or_pending_train_cannot_start_from_any_step",
+      "line": 5117,
+      "criteria": [
+        [
+          412,
+          6
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "79516299357befbf93de4b90ec5c4338fb89b759100fd5c90a84fe4661600055",
+      "private_audit_pointer": "/tests/50",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "player_ui::tests::incomplete_or_pending_train_cannot_start_from_any_step",
+        "status": "passed",
+        "line_start": 2586,
+        "line_end": 2586,
+        "start_text": "test player_ui::tests::incomplete_or_pending_train_cannot_start_from_any_step ... ok",
+        "end_text": "test player_ui::tests::incomplete_or_pending_train_cannot_start_from_any_step ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/prepared_geometry.rs",
+      "test": "cached_geometry_matches_fresh_and_source_descriptor_or_damage_invalidates_it",
+      "line": 737,
+      "criteria": [
+        [
+          383,
+          1
+        ],
+        [
+          383,
+          2
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "4e4eb4193aa01d73c7f3949e9574a9cc8c59b78ee804d74db6f687055323e5f9",
+      "private_audit_pointer": "/tests/51",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "prepared_geometry::tests::cached_geometry_matches_fresh_and_source_descriptor_or_damage_invalidates_it",
+        "status": "passed",
+        "line_start": 2607,
+        "line_end": 2607,
+        "start_text": "test prepared_geometry::tests::cached_geometry_matches_fresh_and_source_descriptor_or_damage_invalidates_it ... ok",
+        "end_text": "test prepared_geometry::tests::cached_geometry_matches_fresh_and_source_descriptor_or_damage_invalidates_it ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/road_cars.rs",
+      "test": "queues_follow_the_rdb_curve_wait_before_closed_crossings_then_clear_without_overlap",
+      "line": 1373,
+      "criteria": [
+        [
+          283,
+          1
+        ],
+        [
+          283,
+          2
+        ],
+        [
+          283,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "18100d313efdf31ffe074f6ce0642bed8b38a2d9ecc59a4e966ddb260216240d",
+      "private_audit_pointer": "/tests/52",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "road_cars::tests::queues_follow_the_rdb_curve_wait_before_closed_crossings_then_clear_without_overlap",
+        "status": "passed",
+        "line_start": 2623,
+        "line_end": 2623,
+        "start_text": "test road_cars::tests::queues_follow_the_rdb_curve_wait_before_closed_crossings_then_clear_without_overlap ... ok",
+        "end_text": "test road_cars::tests::queues_follow_the_rdb_curve_wait_before_closed_crossings_then_clear_without_overlap ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/road_cars.rs",
+      "test": "rdb_spawner_follows_connected_vectors_and_keeps_the_surface_height_datum",
+      "line": 1419,
+      "criteria": [
+        [
+          283,
+          1
+        ],
+        [
+          283,
+          2
+        ],
+        [
+          283,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "18100d313efdf31ffe074f6ce0642bed8b38a2d9ecc59a4e966ddb260216240d",
+      "private_audit_pointer": "/tests/53",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "road_cars::tests::rdb_spawner_follows_connected_vectors_and_keeps_the_surface_height_datum",
+        "status": "passed",
+        "line_start": 2624,
+        "line_end": 2624,
+        "start_text": "test road_cars::tests::rdb_spawner_follows_connected_vectors_and_keeps_the_surface_height_datum ... ok",
+        "end_text": "test road_cars::tests::rdb_spawner_follows_connected_vectors_and_keeps_the_surface_height_datum ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/road_cars.rs",
+      "test": "road_car_motion_keeps_world_position_after_multiple_origin_shifts",
+      "line": 1301,
+      "criteria": [
+        [
+          283,
+          1
+        ],
+        [
+          283,
+          2
+        ],
+        [
+          283,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "18100d313efdf31ffe074f6ce0642bed8b38a2d9ecc59a4e966ddb260216240d",
+      "private_audit_pointer": "/tests/54",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "road_cars::tests::road_car_motion_keeps_world_position_after_multiple_origin_shifts",
+        "status": "passed",
+        "line_start": 2625,
+        "line_end": 2625,
+        "start_text": "test road_cars::tests::road_car_motion_keeps_world_position_after_multiple_origin_shifts ... ok",
+        "end_text": "test road_cars::tests::road_car_motion_keeps_world_position_after_multiple_origin_shifts ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/road_cars.rs",
+      "test": "simultaneous_exit_cars_cannot_claim_the_same_entry",
+      "line": 1406,
+      "criteria": [
+        [
+          283,
+          1
+        ],
+        [
+          283,
+          2
+        ],
+        [
+          283,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "18100d313efdf31ffe074f6ce0642bed8b38a2d9ecc59a4e966ddb260216240d",
+      "private_audit_pointer": "/tests/55",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "road_cars::tests::simultaneous_exit_cars_cannot_claim_the_same_entry",
+        "status": "passed",
+        "line_start": 2627,
+        "line_end": 2627,
+        "start_text": "test road_cars::tests::simultaneous_exit_cars_cannot_claim_the_same_entry ... ok",
+        "end_text": "test road_cars::tests::simultaneous_exit_cars_cannot_claim_the_same_entry ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/saved_game.rs",
+      "test": "different_formation_driver_transfer_and_coupling_are_atomic_and_survive_saved_game",
+      "line": 607,
+      "criteria": [
+        [
+          341,
+          1
+        ],
+        [
+          341,
+          2
+        ],
+        [
+          341,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "212ed80b6ef747e572cbcb3210f53079b4fe64eb57e88420245796391366239e",
+      "private_audit_pointer": "/tests/56",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "saved_game::tests::different_formation_driver_transfer_and_coupling_are_atomic_and_survive_saved_game",
+        "status": "passed",
+        "line_start": 2672,
+        "line_end": 2672,
+        "start_text": "test saved_game::tests::different_formation_driver_transfer_and_coupling_are_atomic_and_survive_saved_game ... ok",
+        "end_text": "test saved_game::tests::different_formation_driver_transfer_and_coupling_are_atomic_and_survive_saved_game ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/scene.rs",
+      "test": "default_shadow_budget_is_200_m_with_three_cascades",
+      "line": 287,
+      "criteria": [
+        [
+          276,
+          1
+        ],
+        [
+          276,
+          2
+        ],
+        [
+          276,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "eee0aa5f9f6790b2426edcfab78ee33225c4fdf36df1cc0cb98178cf05406470",
+      "private_audit_pointer": "/tests/57",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "scene::tests::default_shadow_budget_is_200_m_with_three_cascades",
+        "status": "passed",
+        "line_start": 2675,
+        "line_end": 2675,
+        "start_text": "test scene::tests::default_shadow_budget_is_200_m_with_three_cascades ... ok",
+        "end_text": "test scene::tests::default_shadow_budget_is_200_m_with_three_cascades ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/service_builder.rs",
+      "test": "graphical_itinerary_validates_all_legs_reversal_wait_undo_and_separate_save",
+      "line": 724,
+      "criteria": [
+        [
+          396,
+          1
+        ],
+        [
+          396,
+          2
+        ],
+        [
+          396,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "71d6e3d6b610c32c856dcddfc368c0eaec253d0efedb36a9acff48470d321921",
+      "private_audit_pointer": "/tests/58",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "service_builder::tests::graphical_itinerary_validates_all_legs_reversal_wait_undo_and_separate_save",
+        "status": "passed",
+        "line_start": 2698,
+        "line_end": 2698,
+        "start_text": "test service_builder::tests::graphical_itinerary_validates_all_legs_reversal_wait_undo_and_separate_save ... ok",
+        "end_text": "test service_builder::tests::graphical_itinerary_validates_all_legs_reversal_wait_undo_and_separate_save ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/snow_tracks.rs",
+      "test": "paused_wheels_and_teleport_do_not_clear_new_snow",
+      "line": 163,
+      "criteria": [
+        [
+          297,
+          1
+        ],
+        [
+          297,
+          2
+        ],
+        [
+          297,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "1b9409c8c19da65aade6c5f2637dd0f195369a5acd0187de6ef1764f2fd974e7",
+      "private_audit_pointer": "/tests/59",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "snow_tracks::tests::paused_wheels_and_teleport_do_not_clear_new_snow",
+        "status": "passed",
+        "line_start": 2801,
+        "line_end": 2801,
+        "start_text": "test snow_tracks::tests::paused_wheels_and_teleport_do_not_clear_new_snow ... ok",
+        "end_text": "test snow_tracks::tests::paused_wheels_and_teleport_do_not_clear_new_snow ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/snow_tracks.rs",
+      "test": "stationary_frame_does_not_mark_identical_gpu_segments_as_modified",
+      "line": 152,
+      "criteria": [
+        [
+          297,
+          1
+        ],
+        [
+          297,
+          2
+        ],
+        [
+          297,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "1b9409c8c19da65aade6c5f2637dd0f195369a5acd0187de6ef1764f2fd974e7",
+      "private_audit_pointer": "/tests/60",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "snow_tracks::tests::stationary_frame_does_not_mark_identical_gpu_segments_as_modified",
+        "status": "passed",
+        "line_start": 2802,
+        "line_end": 2802,
+        "start_text": "test snow_tracks::tests::stationary_frame_does_not_mark_identical_gpu_segments_as_modified ... ok",
+        "end_text": "test snow_tracks::tests::stationary_frame_does_not_mark_identical_gpu_segments_as_modified ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/snow_tracks.rs",
+      "test": "tracks_follow_actual_motion_are_bounded_and_rebase_without_moving",
+      "line": 182,
+      "criteria": [
+        [
+          297,
+          1
+        ],
+        [
+          297,
+          2
+        ],
+        [
+          297,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "1b9409c8c19da65aade6c5f2637dd0f195369a5acd0187de6ef1764f2fd974e7",
+      "private_audit_pointer": "/tests/61",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "snow_tracks::tests::tracks_follow_actual_motion_are_bounded_and_rebase_without_moving",
+        "status": "passed",
+        "line_start": 2803,
+        "line_end": 2803,
+        "start_text": "test snow_tracks::tests::tracks_follow_actual_motion_are_bounded_and_rebase_without_moving ... ok",
+        "end_text": "test snow_tracks::tests::tracks_follow_actual_motion_are_bounded_and_rebase_without_moving ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/streaming_forecast.rs",
+      "test": "forecast_residency_is_bounded_even_after_repeated_requests_and_a_distant_camera",
+      "line": 155,
+      "criteria": [
+        [
+          380,
+          1
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "3c23887225372b3ca4c5058be3a8048bf30aeb8c1fd3a71f0c0a2f1f9276fb3a",
+      "private_audit_pointer": "/tests/62",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "streaming_forecast::tests::forecast_residency_is_bounded_even_after_repeated_requests_and_a_distant_camera",
+        "status": "passed",
+        "line_start": 2816,
+        "line_end": 2816,
+        "start_text": "test streaming_forecast::tests::forecast_residency_is_bounded_even_after_repeated_requests_and_a_distant_camera ... ok",
+        "end_text": "test streaming_forecast::tests::forecast_residency_is_bounded_even_after_repeated_requests_and_a_distant_camera ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/streaming_forecast.rs",
+      "test": "pressure_preserves_the_bounded_requested_set_without_reload_churn",
+      "line": 203,
+      "criteria": [
+        [
+          380,
+          1
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "3c23887225372b3ca4c5058be3a8048bf30aeb8c1fd3a71f0c0a2f1f9276fb3a",
+      "private_audit_pointer": "/tests/63",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "streaming_forecast::tests::pressure_preserves_the_bounded_requested_set_without_reload_churn",
+        "status": "passed",
+        "line_start": 2817,
+        "line_end": 2817,
+        "start_text": "test streaming_forecast::tests::pressure_preserves_the_bounded_requested_set_without_reload_churn ... ok",
+        "end_text": "test streaming_forecast::tests::pressure_preserves_the_bounded_requested_set_without_reload_churn ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/streaming_forecast.rs",
+      "test": "shape_priority_uses_world_coordinates_after_a_remote_native_focus",
+      "line": 180,
+      "criteria": [
+        [
+          381,
+          1
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "3c23887225372b3ca4c5058be3a8048bf30aeb8c1fd3a71f0c0a2f1f9276fb3a",
+      "private_audit_pointer": "/tests/64",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "streaming_forecast::tests::shape_priority_uses_world_coordinates_after_a_remote_native_focus",
+        "status": "passed",
+        "line_start": 2818,
+        "line_end": 2818,
+        "start_text": "test streaming_forecast::tests::shape_priority_uses_world_coordinates_after_a_remote_native_focus ... ok",
+        "end_text": "test streaming_forecast::tests::shape_priority_uses_world_coordinates_after_a_remote_native_focus ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/train_connections.rs",
+      "test": "authored_endpoints_follow_curve_slack_and_reversal_without_changing_the_near_end",
+      "line": 429,
+      "criteria": [
+        [
+          243,
+          1
+        ],
+        [
+          243,
+          2
+        ],
+        [
+          243,
+          3
+        ],
+        [
+          244,
+          1
+        ],
+        [
+          244,
+          2
+        ],
+        [
+          244,
+          3
+        ],
+        [
+          245,
+          1
+        ],
+        [
+          245,
+          2
+        ],
+        [
+          245,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "b1994f3e1bccdf11662698b1c2f148f2dc54620dfcf21eef165a938c5eee64eb",
+      "private_audit_pointer": "/tests/65",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "train_connections::tests::authored_endpoints_follow_curve_slack_and_reversal_without_changing_the_near_end",
+        "status": "passed",
+        "line_start": 2944,
+        "line_end": 2944,
+        "start_text": "test train_connections::tests::authored_endpoints_follow_curve_slack_and_reversal_without_changing_the_near_end ... ok",
+        "end_text": "test train_connections::tests::authored_endpoints_follow_curve_slack_and_reversal_without_changing_the_near_end ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/train_connections.rs",
+      "test": "bogie_part_queries_are_disjoint_from_car_and_train_root_transforms",
+      "line": 272,
+      "criteria": [
+        [
+          253,
+          1
+        ],
+        [
+          253,
+          2
+        ],
+        [
+          253,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "b1994f3e1bccdf11662698b1c2f148f2dc54620dfcf21eef165a938c5eee64eb",
+      "private_audit_pointer": "/tests/66",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "train_connections::tests::bogie_part_queries_are_disjoint_from_car_and_train_root_transforms",
+        "status": "passed",
+        "line_start": 2945,
+        "line_end": 2945,
+        "start_text": "test train_connections::tests::bogie_part_queries_are_disjoint_from_car_and_train_root_transforms ... ok",
+        "end_text": "test train_connections::tests::bogie_part_queries_are_disjoint_from_car_and_train_root_transforms ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/train_connections.rs",
+      "test": "lod_rebind_keeps_authored_topology_and_sources_immutable_through_pause_cut_and_restore",
+      "line": 279,
+      "criteria": [
+        [
+          243,
+          1
+        ],
+        [
+          243,
+          2
+        ],
+        [
+          243,
+          3
+        ],
+        [
+          244,
+          1
+        ],
+        [
+          244,
+          2
+        ],
+        [
+          244,
+          3
+        ],
+        [
+          245,
+          1
+        ],
+        [
+          245,
+          2
+        ],
+        [
+          245,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "b1994f3e1bccdf11662698b1c2f148f2dc54620dfcf21eef165a938c5eee64eb",
+      "private_audit_pointer": "/tests/67",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "train_connections::tests::lod_rebind_keeps_authored_topology_and_sources_immutable_through_pause_cut_and_restore",
+        "status": "passed",
+        "line_start": 2946,
+        "line_end": 2946,
+        "start_text": "test train_connections::tests::lod_rebind_keeps_authored_topology_and_sources_immutable_through_pause_cut_and_restore ... ok",
+        "end_text": "test train_connections::tests::lod_rebind_keeps_authored_topology_and_sources_immutable_through_pause_cut_and_restore ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/world.rs",
+      "test": "exhausted_publication_budget_still_finishes_instanced_queue",
+      "line": 6212,
+      "criteria": [
+        [
+          381,
+          2
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "ce47c95abe753b7122772fc433893327198b3677e6c71b215752aa8507f944c5",
+      "private_audit_pointer": "/tests/68",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "world::tests::exhausted_publication_budget_still_finishes_instanced_queue",
+        "status": "passed",
+        "line_start": 3084,
+        "line_end": 3088,
+        "start_text": "test world::tests::exhausted_publication_budget_still_finishes_instanced_queue ... [     0.0ms 16:33:09.942] openrailsrs-viewer3d: openrailsrs-viewer3d: route catalog — 2 shape(s), 3 texture(s)",
+        "end_text": "ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/world_instancing.rs",
+      "test": "instancing_shader_casts_directional_shadows",
+      "line": 1907,
+      "criteria": [
+        [
+          276,
+          1
+        ],
+        [
+          276,
+          2
+        ],
+        [
+          276,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "8a0f9df59c20a1e071554bd66bc760868f8377d25fa4bc38f38c492fc88472b2",
+      "private_audit_pointer": "/tests/69",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "world_instancing::tests::instancing_shader_casts_directional_shadows",
+        "status": "passed",
+        "line_start": 3141,
+        "line_end": 3141,
+        "start_text": "test world_instancing::tests::instancing_shader_casts_directional_shadows ... ok",
+        "end_text": "test world_instancing::tests::instancing_shader_casts_directional_shadows ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/world_instancing.rs",
+      "test": "instancing_shader_receives_directional_shadows",
+      "line": 1893,
+      "criteria": [
+        [
+          276,
+          1
+        ],
+        [
+          276,
+          2
+        ],
+        [
+          276,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "8a0f9df59c20a1e071554bd66bc760868f8377d25fa4bc38f38c492fc88472b2",
+      "private_audit_pointer": "/tests/70",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "world_instancing::tests::instancing_shader_receives_directional_shadows",
+        "status": "passed",
+        "line_start": 3142,
+        "line_end": 3142,
+        "start_text": "test world_instancing::tests::instancing_shader_receives_directional_shadows ... ok",
+        "end_text": "test world_instancing::tests::instancing_shader_receives_directional_shadows ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/world_operations.rs",
+      "test": "pickup_uses_original_animation_frames_and_zero_speed_stays_instantaneous",
+      "line": 158,
+      "criteria": [
+        [
+          285,
+          1
+        ],
+        [
+          285,
+          2
+        ],
+        [
+          285,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "e7a7c46703d5f2606c84b0736a90719b37830e2d434d9d93dea21df7bbdd6aef",
+      "private_audit_pointer": "/tests/71",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "world_operations::tests::pickup_uses_original_animation_frames_and_zero_speed_stays_instantaneous",
+        "status": "passed",
+        "line_start": 3155,
+        "line_end": 3155,
+        "start_text": "test world_operations::tests::pickup_uses_original_animation_frames_and_zero_speed_stays_instantaneous ... ok",
+        "end_text": "test world_operations::tests::pickup_uses_original_animation_frames_and_zero_speed_stays_instantaneous ... ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/world_stream_tests.rs",
+      "test": "streaming_revisits_loaded_tiles_rebases_queued_meshes_and_releases_gpu_tiles",
+      "line": 45,
+      "criteria": [
+        [
+          273,
+          1
+        ],
+        [
+          273,
+          2
+        ],
+        [
+          273,
+          3
+        ]
+      ],
+      "status": "named_pass_check38",
+      "source_sha256": "ab49f7c90d9266b43f1b20f7357ccb1460cef1ff4f5e0c58d9db0ec7013399cf",
+      "private_audit_pointer": "/tests/72",
+      "execution": {
+        "evidence": "check38_stdout",
+        "runtime_name": "world::stream_tests::streaming_revisits_loaded_tiles_rebases_queued_meshes_and_releases_gpu_tiles",
+        "status": "passed",
+        "line_start": 3020,
+        "line_end": 3068,
+        "start_text": "test world::stream_tests::streaming_revisits_loaded_tiles_rebases_queued_meshes_and_releases_gpu_tiles ... [     0.0ms 16:33:08.555] openrailsrs-viewer3d: openrailsrs-viewer3d: route catalog — 1 shape(s), 0 texture(s)",
+        "end_text": "ok",
+        "run_line": 2028,
+        "run_target": "     Running unittests src/lib.rs (target/debug/deps/openrailsrs_viewer3d-eb117fdb196ef903)",
+        "summary_line": 3159,
+        "summary_text": "test result: ok. 804 passed; 0 failed; 45 ignored; 0 measured; 0 filtered out; finished in 14.19s"
+      }
+    },
+    {
+      "source": "scripts/test_content_url.py",
+      "test": "test_cli_inspection_reports_connection_failure_without_traceback",
+      "line": 51,
+      "criteria": [
+        [
+          413,
+          3
+        ]
+      ],
+      "status": "preserved_named_python37_sources_and_dependencies_unchanged_not_rerun38",
+      "source_sha256": "0676dba7716f06e6e27e1cd6110b9c09a9512ef00cdb3751047c63dc0e0b95df",
+      "private_audit_pointer": "/tests/73",
+      "preserved_execution37": {
+        "evidence": "directed_python37_stdout",
+        "qualified": "test_content_url.UrlContent.test_cli_inspection_reports_connection_failure_without_traceback",
+        "line": 1,
+        "receipt_test_pointer": "/tests/0"
+      },
+      "public_historical_pointer": "/tests/73",
+      "dependencies": {
+        "scope": "scripts/test_content_url.py",
+        "observed37_files": [
+          "scripts/test_content_url.py",
+          "scripts/test_official_content.py",
+          "scripts/download_official_content.py",
+          "docs/fixtures/content/official-catalog.json"
+        ],
+        "all_unchanged_since37": true,
+        "changed": []
+      },
+      "scope_limit": "Named execution is37. Check38 supplies aggregate Python counts only. Unchanged audited module/dependency bytes support continuity but are not a new nominal38 execution."
+    },
+    {
+      "source": "scripts/test_content_url.py",
+      "test": "test_credentials_local_addresses_and_landing_pages_are_rejected",
+      "line": 41,
+      "criteria": [
+        [
+          413,
+          3
+        ]
+      ],
+      "status": "preserved_named_python37_sources_and_dependencies_unchanged_not_rerun38",
+      "source_sha256": "0676dba7716f06e6e27e1cd6110b9c09a9512ef00cdb3751047c63dc0e0b95df",
+      "private_audit_pointer": "/tests/74",
+      "preserved_execution37": {
+        "evidence": "directed_python37_stdout",
+        "qualified": "test_content_url.UrlContent.test_credentials_local_addresses_and_landing_pages_are_rejected",
+        "line": 2,
+        "receipt_test_pointer": "/tests/1"
+      },
+      "public_historical_pointer": "/tests/74",
+      "dependencies": {
+        "scope": "scripts/test_content_url.py",
+        "observed37_files": [
+          "scripts/test_content_url.py",
+          "scripts/test_official_content.py",
+          "scripts/download_official_content.py",
+          "docs/fixtures/content/official-catalog.json"
+        ],
+        "all_unchanged_since37": true,
+        "changed": []
+      },
+      "scope_limit": "Named execution is37. Check38 supplies aggregate Python counts only. Unchanged audited module/dependency bytes support continuity but are not a new nominal38 execution."
+    },
+    {
+      "source": "scripts/test_content_url.py",
+      "test": "test_inspection_resolves_revision_without_fetching_the_archive",
+      "line": 84,
+      "criteria": [
+        [
+          413,
+          1
+        ]
+      ],
+      "status": "preserved_named_python37_sources_and_dependencies_unchanged_not_rerun38",
+      "source_sha256": "0676dba7716f06e6e27e1cd6110b9c09a9512ef00cdb3751047c63dc0e0b95df",
+      "private_audit_pointer": "/tests/75",
+      "preserved_execution37": {
+        "evidence": "directed_python37_stdout",
+        "qualified": "test_content_url.UrlContent.test_inspection_resolves_revision_without_fetching_the_archive",
+        "line": 3,
+        "receipt_test_pointer": "/tests/2"
+      },
+      "public_historical_pointer": "/tests/75",
+      "dependencies": {
+        "scope": "scripts/test_content_url.py",
+        "observed37_files": [
+          "scripts/test_content_url.py",
+          "scripts/test_official_content.py",
+          "scripts/download_official_content.py",
+          "docs/fixtures/content/official-catalog.json"
+        ],
+        "all_unchanged_since37": true,
+        "changed": []
+      },
+      "scope_limit": "Named execution is37. Check38 supplies aggregate Python counts only. Unchanged audited module/dependency bytes support continuity but are not a new nominal38 execution."
+    },
+    {
+      "source": "scripts/test_content_url.py",
+      "test": "test_low_space_does_not_start_a_download",
+      "line": 153,
+      "criteria": [
+        [
+          373,
+          2
+        ],
+        [
+          413,
+          5
+        ]
+      ],
+      "status": "preserved_named_python37_sources_and_dependencies_unchanged_not_rerun38",
+      "source_sha256": "0676dba7716f06e6e27e1cd6110b9c09a9512ef00cdb3751047c63dc0e0b95df",
+      "private_audit_pointer": "/tests/76",
+      "preserved_execution37": {
+        "evidence": "directed_python37_stdout",
+        "qualified": "test_content_url.UrlContent.test_low_space_does_not_start_a_download",
+        "line": 4,
+        "receipt_test_pointer": "/tests/3"
+      },
+      "public_historical_pointer": "/tests/76",
+      "dependencies": {
+        "scope": "scripts/test_content_url.py",
+        "observed37_files": [
+          "scripts/test_content_url.py",
+          "scripts/test_official_content.py",
+          "scripts/download_official_content.py",
+          "docs/fixtures/content/official-catalog.json"
+        ],
+        "all_unchanged_since37": true,
+        "changed": []
+      },
+      "scope_limit": "Named execution is37. Check38 supplies aggregate Python counts only. Unchanged audited module/dependency bytes support continuity but are not a new nominal38 execution."
+    },
+    {
+      "source": "scripts/test_content_url.py",
+      "test": "test_mid_download_failure_and_cancel_leave_previous_version_untouched",
+      "line": 114,
+      "criteria": [
+        [
+          412,
+          8
+        ],
+        [
+          413,
+          5
+        ]
+      ],
+      "status": "preserved_named_python37_sources_and_dependencies_unchanged_not_rerun38",
+      "source_sha256": "0676dba7716f06e6e27e1cd6110b9c09a9512ef00cdb3751047c63dc0e0b95df",
+      "private_audit_pointer": "/tests/77",
+      "preserved_execution37": {
+        "evidence": "directed_python37_stdout",
+        "qualified": "test_content_url.UrlContent.test_mid_download_failure_and_cancel_leave_previous_version_untouched",
+        "line": 5,
+        "receipt_test_pointer": "/tests/4"
+      },
+      "public_historical_pointer": "/tests/77",
+      "dependencies": {
+        "scope": "scripts/test_content_url.py",
+        "observed37_files": [
+          "scripts/test_content_url.py",
+          "scripts/test_official_content.py",
+          "scripts/download_official_content.py",
+          "docs/fixtures/content/official-catalog.json"
+        ],
+        "all_unchanged_since37": true,
+        "changed": []
+      },
+      "scope_limit": "Named execution is37. Check38 supplies aggregate Python counts only. Unchanged audited module/dependency bytes support continuity but are not a new nominal38 execution."
+    },
+    {
+      "source": "scripts/test_content_url.py",
+      "test": "test_new_author_requires_explicit_origin_confirmation",
+      "line": 21,
+      "criteria": [
+        [
+          413,
+          3
+        ]
+      ],
+      "status": "preserved_named_python37_sources_and_dependencies_unchanged_not_rerun38",
+      "source_sha256": "0676dba7716f06e6e27e1cd6110b9c09a9512ef00cdb3751047c63dc0e0b95df",
+      "private_audit_pointer": "/tests/78",
+      "preserved_execution37": {
+        "evidence": "directed_python37_stdout",
+        "qualified": "test_content_url.UrlContent.test_new_author_requires_explicit_origin_confirmation",
+        "line": 6,
+        "receipt_test_pointer": "/tests/5"
+      },
+      "public_historical_pointer": "/tests/78",
+      "dependencies": {
+        "scope": "scripts/test_content_url.py",
+        "observed37_files": [
+          "scripts/test_content_url.py",
+          "scripts/test_official_content.py",
+          "scripts/download_official_content.py",
+          "docs/fixtures/content/official-catalog.json"
+        ],
+        "all_unchanged_since37": true,
+        "changed": []
+      },
+      "scope_limit": "Named execution is37. Check38 supplies aggregate Python counts only. Unchanged audited module/dependency bytes support continuity but are not a new nominal38 execution."
+    },
+    {
+      "source": "scripts/test_content_url.py",
+      "test": "test_redirects_cannot_switch_author_or_repository_before_download",
+      "line": 96,
+      "criteria": [
+        [
+          413,
+          4
+        ]
+      ],
+      "status": "preserved_named_python37_sources_and_dependencies_unchanged_not_rerun38",
+      "source_sha256": "0676dba7716f06e6e27e1cd6110b9c09a9512ef00cdb3751047c63dc0e0b95df",
+      "private_audit_pointer": "/tests/79",
+      "preserved_execution37": {
+        "evidence": "directed_python37_stdout",
+        "qualified": "test_content_url.UrlContent.test_redirects_cannot_switch_author_or_repository_before_download",
+        "line": 7,
+        "receipt_test_pointer": "/tests/6"
+      },
+      "public_historical_pointer": "/tests/79",
+      "dependencies": {
+        "scope": "scripts/test_content_url.py",
+        "observed37_files": [
+          "scripts/test_content_url.py",
+          "scripts/test_official_content.py",
+          "scripts/download_official_content.py",
+          "docs/fixtures/content/official-catalog.json"
+        ],
+        "all_unchanged_since37": true,
+        "changed": []
+      },
+      "scope_limit": "Named execution is37. Check38 supplies aggregate Python counts only. Unchanged audited module/dependency bytes support continuity but are not a new nominal38 execution."
+    },
+    {
+      "source": "scripts/test_coupling_reference.py",
+      "test": "test_depot_control_preserves_nondefault_states_and_finite_supply",
+      "line": 61,
+      "criteria": [
+        [
+          347,
+          1
+        ],
+        [
+          347,
+          2
+        ],
+        [
+          347,
+          3
+        ]
+      ],
+      "status": "named_pass_separate_python38",
+      "source_sha256": "8ac46c4a423477a3b2c7f735363f707ca72f677637d7669e1ae78d10f7b76b42",
+      "private_audit_pointer": "/tests/80",
+      "execution": {
+        "evidence": "coupling_provenance38_stdout",
+        "test": "test_depot_control_preserves_nondefault_states_and_finite_supply",
+        "runtime_name": "test_coupling_reference.CouplingReferenceTests.test_depot_control_preserves_nondefault_states_and_finite_supply",
+        "line_start": 2,
+        "line_end": 2,
+        "text": "test_depot_control_preserves_nondefault_states_and_finite_supply (test_coupling_reference.CouplingReferenceTests.test_depot_control_preserves_nondefault_states_and_finite_supply) ... ok",
+        "status": "passed"
+      },
+      "preserved_execution37": {
+        "evidence": "directed_python37_stdout",
+        "qualified": "test_coupling_reference.CouplingReferenceTests.test_depot_control_preserves_nondefault_states_and_finite_supply",
+        "line": 8,
+        "receipt_test_pointer": "/tests/7"
+      },
+      "public_historical_pointer": "/tests/80",
+      "dependencies": {
+        "scope": "scripts/test_coupling_reference.py",
+        "observed37_files": [
+          "scripts/test_coupling_reference.py",
+          "scripts/verify_coupling_reference.py",
+          "oracles/coupling-reference.json",
+          "oracles/coupling-rust32.json",
+          "docs/fixtures/compatibility/fifth40-20261013/depot-state-continuity.json",
+          "tools/openrails-reference/DepotStateCompare.rs"
+        ],
+        "all_unchanged_since37": false,
+        "changed": [
+          "docs/fixtures/compatibility/fifth40-20261013/depot-state-continuity.json"
+        ]
+      },
+      "scope_limit": "Separate nominal Python38 log, not individual stdout from check38. Current dependency hashes are an audit-time snapshot; the standalone log has no per-test before/after input manifest."
+    },
+    {
+      "source": "scripts/test_official_content.py",
+      "test": "test_chiltern_v4_has_a_distinct_original_source_and_preserves_v2",
+      "line": 88,
+      "criteria": [
+        [
+          412,
+          3
+        ]
+      ],
+      "status": "preserved_named_python37_sources_and_dependencies_unchanged_not_rerun38",
+      "source_sha256": "ed6a04410e1a94626a68ad87516b5cd5856f62f7bc12e304b1801780bc70c998",
+      "private_audit_pointer": "/tests/81",
+      "preserved_execution37": {
+        "evidence": "directed_python37_stdout",
+        "qualified": "test_official_content.Installer.test_chiltern_v4_has_a_distinct_original_source_and_preserves_v2",
+        "line": 9,
+        "receipt_test_pointer": "/tests/8"
+      },
+      "public_historical_pointer": "/tests/81",
+      "dependencies": {
+        "scope": "scripts/test_official_content.py",
+        "observed37_files": [
+          "scripts/test_official_content.py",
+          "scripts/download_official_content.py",
+          "docs/fixtures/content/official-catalog.json"
+        ],
+        "all_unchanged_since37": true,
+        "changed": []
+      },
+      "scope_limit": "Named execution is37. Check38 supplies aggregate Python counts only. Unchanged audited module/dependency bytes support continuity but are not a new nominal38 execution."
+    },
+    {
+      "source": "scripts/test_official_content.py",
+      "test": "test_complete_package_is_atomic_and_has_origin_and_digest",
+      "line": 39,
+      "criteria": [
+        [
+          413,
+          7
+        ]
+      ],
+      "status": "preserved_named_python37_sources_and_dependencies_unchanged_not_rerun38",
+      "source_sha256": "ed6a04410e1a94626a68ad87516b5cd5856f62f7bc12e304b1801780bc70c998",
+      "private_audit_pointer": "/tests/82",
+      "preserved_execution37": {
+        "evidence": "directed_python37_stdout",
+        "qualified": "test_official_content.Installer.test_complete_package_is_atomic_and_has_origin_and_digest",
+        "line": 10,
+        "receipt_test_pointer": "/tests/9"
+      },
+      "public_historical_pointer": "/tests/82",
+      "dependencies": {
+        "scope": "scripts/test_official_content.py",
+        "observed37_files": [
+          "scripts/test_official_content.py",
+          "scripts/download_official_content.py",
+          "docs/fixtures/content/official-catalog.json"
+        ],
+        "all_unchanged_since37": true,
+        "changed": []
+      },
+      "scope_limit": "Named execution is37. Check38 supplies aggregate Python counts only. Unchanged audited module/dependency bytes support continuity but are not a new nominal38 execution."
+    },
+    {
+      "source": "scripts/test_official_content.py",
+      "test": "test_corrupt_or_executable_only_package_does_not_publish",
+      "line": 226,
+      "criteria": [
+        [
+          413,
+          4
+        ],
+        [
+          413,
+          5
+        ]
+      ],
+      "status": "preserved_named_python37_sources_and_dependencies_unchanged_not_rerun38",
+      "source_sha256": "ed6a04410e1a94626a68ad87516b5cd5856f62f7bc12e304b1801780bc70c998",
+      "private_audit_pointer": "/tests/83",
+      "preserved_execution37": {
+        "evidence": "directed_python37_stdout",
+        "qualified": "test_official_content.Installer.test_corrupt_or_executable_only_package_does_not_publish",
+        "line": 11,
+        "receipt_test_pointer": "/tests/10"
+      },
+      "public_historical_pointer": "/tests/83",
+      "dependencies": {
+        "scope": "scripts/test_official_content.py",
+        "observed37_files": [
+          "scripts/test_official_content.py",
+          "scripts/download_official_content.py",
+          "docs/fixtures/content/official-catalog.json"
+        ],
+        "all_unchanged_since37": true,
+        "changed": []
+      },
+      "scope_limit": "Named execution is37. Check38 supplies aggregate Python counts only. Unchanged audited module/dependency bytes support continuity but are not a new nominal38 execution."
+    },
+    {
+      "source": "scripts/test_official_content.py",
+      "test": "test_default_storage_is_user_owned_and_snap_revision_independent",
+      "line": 83,
+      "criteria": [
+        [
+          412,
+          3
+        ]
+      ],
+      "status": "preserved_named_python37_sources_and_dependencies_unchanged_not_rerun38",
+      "source_sha256": "ed6a04410e1a94626a68ad87516b5cd5856f62f7bc12e304b1801780bc70c998",
+      "private_audit_pointer": "/tests/84",
+      "preserved_execution37": {
+        "evidence": "directed_python37_stdout",
+        "qualified": "test_official_content.Installer.test_default_storage_is_user_owned_and_snap_revision_independent",
+        "line": 12,
+        "receipt_test_pointer": "/tests/11"
+      },
+      "public_historical_pointer": "/tests/84",
+      "dependencies": {
+        "scope": "scripts/test_official_content.py",
+        "observed37_files": [
+          "scripts/test_official_content.py",
+          "scripts/download_official_content.py",
+          "docs/fixtures/content/official-catalog.json"
+        ],
+        "all_unchanged_since37": true,
+        "changed": []
+      },
+      "scope_limit": "Named execution is37. Check38 supplies aggregate Python counts only. Unchanged audited module/dependency bytes support continuity but are not a new nominal38 execution."
+    },
+    {
+      "source": "scripts/test_official_content.py",
+      "test": "test_redirect_is_rejected_before_contacting_another_host_or_http",
+      "line": 250,
+      "criteria": [
+        [
+          413,
+          4
+        ]
+      ],
+      "status": "preserved_named_python37_sources_and_dependencies_unchanged_not_rerun38",
+      "source_sha256": "ed6a04410e1a94626a68ad87516b5cd5856f62f7bc12e304b1801780bc70c998",
+      "private_audit_pointer": "/tests/85",
+      "preserved_execution37": {
+        "evidence": "directed_python37_stdout",
+        "qualified": "test_official_content.Installer.test_redirect_is_rejected_before_contacting_another_host_or_http",
+        "line": 13,
+        "receipt_test_pointer": "/tests/12"
+      },
+      "public_historical_pointer": "/tests/85",
+      "dependencies": {
+        "scope": "scripts/test_official_content.py",
+        "observed37_files": [
+          "scripts/test_official_content.py",
+          "scripts/download_official_content.py",
+          "docs/fixtures/content/official-catalog.json"
+        ],
+        "all_unchanged_since37": true,
+        "changed": []
+      },
+      "scope_limit": "Named execution is37. Check38 supplies aggregate Python counts only. Unchanged audited module/dependency bytes support continuity but are not a new nominal38 execution."
+    },
+    {
+      "source": "scripts/test_official_content.py",
+      "test": "test_symlinks_and_oversized_install_are_rejected",
+      "line": 178,
+      "criteria": [
+        [
+          413,
+          4
+        ]
+      ],
+      "status": "preserved_named_python37_sources_and_dependencies_unchanged_not_rerun38",
+      "source_sha256": "ed6a04410e1a94626a68ad87516b5cd5856f62f7bc12e304b1801780bc70c998",
+      "private_audit_pointer": "/tests/86",
+      "preserved_execution37": {
+        "evidence": "directed_python37_stdout",
+        "qualified": "test_official_content.Installer.test_symlinks_and_oversized_install_are_rejected",
+        "line": 14,
+        "receipt_test_pointer": "/tests/13"
+      },
+      "public_historical_pointer": "/tests/86",
+      "dependencies": {
+        "scope": "scripts/test_official_content.py",
+        "observed37_files": [
+          "scripts/test_official_content.py",
+          "scripts/download_official_content.py",
+          "docs/fixtures/content/official-catalog.json"
+        ],
+        "all_unchanged_since37": true,
+        "changed": []
+      },
+      "scope_limit": "Named execution is37. Check38 supplies aggregate Python counts only. Unchanged audited module/dependency bytes support continuity but are not a new nominal38 execution."
+    },
+    {
+      "source": "scripts/test_official_content.py",
+      "test": "test_traversal_and_ambiguous_case_are_rejected_before_any_extraction",
+      "line": 170,
+      "criteria": [
+        [
+          413,
+          4
+        ]
+      ],
+      "status": "preserved_named_python37_sources_and_dependencies_unchanged_not_rerun38",
+      "source_sha256": "ed6a04410e1a94626a68ad87516b5cd5856f62f7bc12e304b1801780bc70c998",
+      "private_audit_pointer": "/tests/87",
+      "preserved_execution37": {
+        "evidence": "directed_python37_stdout",
+        "qualified": "test_official_content.Installer.test_traversal_and_ambiguous_case_are_rejected_before_any_extraction",
+        "line": 15,
+        "receipt_test_pointer": "/tests/14"
+      },
+      "public_historical_pointer": "/tests/87",
+      "dependencies": {
+        "scope": "scripts/test_official_content.py",
+        "observed37_files": [
+          "scripts/test_official_content.py",
+          "scripts/download_official_content.py",
+          "docs/fixtures/content/official-catalog.json"
+        ],
+        "all_unchanged_since37": true,
+        "changed": []
+      },
+      "scope_limit": "Named execution is37. Check38 supplies aggregate Python counts only. Unchanged audited module/dependency bytes support continuity but are not a new nominal38 execution."
+    },
+    {
+      "source": "scripts/test_official_content.py",
+      "test": "test_zip_entity_change_preserves_previous_copy_and_same_entity_skips_body",
+      "line": 69,
+      "criteria": [
+        [
+          413,
+          7
+        ]
+      ],
+      "status": "preserved_named_python37_sources_and_dependencies_unchanged_not_rerun38",
+      "source_sha256": "ed6a04410e1a94626a68ad87516b5cd5856f62f7bc12e304b1801780bc70c998",
+      "private_audit_pointer": "/tests/88",
+      "preserved_execution37": {
+        "evidence": "directed_python37_stdout",
+        "qualified": "test_official_content.Installer.test_zip_entity_change_preserves_previous_copy_and_same_entity_skips_body",
+        "line": 16,
+        "receipt_test_pointer": "/tests/15"
+      },
+      "public_historical_pointer": "/tests/88",
+      "dependencies": {
+        "scope": "scripts/test_official_content.py",
+        "observed37_files": [
+          "scripts/test_official_content.py",
+          "scripts/download_official_content.py",
+          "docs/fixtures/content/official-catalog.json"
+        ],
+        "all_unchanged_since37": true,
+        "changed": []
+      },
+      "scope_limit": "Named execution is37. Check38 supplies aggregate Python counts only. Unchanged audited module/dependency bytes support continuity but are not a new nominal38 execution."
+    },
+    {
+      "source": "scripts/test_packaging.py",
+      "test": "test_runtime_resources_exclude_generated_manifests_and_player_data",
+      "line": 22,
+      "criteria": [
+        [
+          412,
+          3
+        ]
+      ],
+      "status": "preserved_named_python37_sources_and_dependencies_unchanged_not_rerun38",
+      "source_sha256": "46ebd688c5326871a067ddeb4b362a36a8806140db64858e3058ffbc8368faeb",
+      "private_audit_pointer": "/tests/89",
+      "preserved_execution37": {
+        "evidence": "directed_python37_stdout",
+        "qualified": "test_packaging.PackagingTests.test_runtime_resources_exclude_generated_manifests_and_player_data",
+        "line": 17,
+        "receipt_test_pointer": "/tests/16"
+      },
+      "public_historical_pointer": "/tests/89",
+      "dependencies": {
+        "scope": "scripts/test_packaging.py",
+        "observed37_files": [
+          "scripts/test_packaging.py",
+          "scripts/package_linux.py",
+          "scripts/package_snap.py",
+          "snap/local/display-launch.py"
+        ],
+        "all_unchanged_since37": true,
+        "changed": []
+      },
+      "scope_limit": "Named execution is37. Check38 supplies aggregate Python counts only. Unchanged audited module/dependency bytes support continuity but are not a new nominal38 execution."
+    }
+  ],
+  "limits": [
+    "No new tests, Cargo, GPU, network, source edits or public documentation writes were performed by this audit.",
+    "73 required Rust tests have new nominal check38 stdout. Its127 Python tests are aggregate evidence, not individual named execution.",
+    "The separate coupling-provenance38 log identifies five current Python tests; one belongs to the required90 and four are supplementary.",
+    "The remaining16 Python names preserve their actual directed37 execution with unchanged audited code/dependency bytes, not newly asserted38 execution.",
+    "The14 dynamic opened-file records from37 were suite-wide. Per-module scopes here are conservative static import/method partitions; no per-test37 file-open traces are invented.",
+    "snap/local/display-launch.py is absent from both old/full check manifests. Its independently captured37 hash still matches current bytes; it is not retroactively inserted into check38.",
+    "depot-state-continuity.json changed after the check38 snapshot. Its required named test is present in the separate current Python log; the changed receipt is not described as byte-identical to37.",
+    "The current Python38 log lacks a pre/post dependency manifest. Current dependency hashes are recorded at audit time and do not manufacture such a historical manifest.",
+    "Source/test passes do not certify graphics, manual/audio QA, performance, Snap,7200 seconds, all40 issues or full Open Rails parity. Gates remain separate.",
+    "Historical37 executions and failed36/earlier verbose evidence remain unchanged. No issue closures or global acceptance-matrix edits were made."
+  ],
+  "issues_closed": false,
+  "closure_matrix_modified": false
+}

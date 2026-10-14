@@ -1,0 +1,1396 @@
+{
+  "schema": 1,
+  "status": "passed_predeclared_four_pair_acceptance_scoped",
+  "reviewed_utc": "2026-10-14T20:15:33.816505+00:00",
+  "candidate_binary_sha256": "5be5da7de14db73321303af2b310da7c8ca635b3dcd9c304fbe631ae0d8fd47d",
+  "baseline_binary_sha256": "531ec4d91cfa3391f1f24a8d62d8abef026603609528462efacbb8ae7a096e08",
+  "plan_sha256": "a5519cec68cc06d04ec9ef41141c590fa4b6043d1062543bfee7c9ab83384464",
+  "runner_sha256": "a17a84b0a13d099fcb4ae5d800a95b8d4de035667ba75b9de58003cf99c0f660",
+  "command_sha256": "ab8afe8b4251b03a452a255261ce384d2d58b8b53cd7f3aa5d672e5343a49778",
+  "quiet_receipt_sha256": "c3a89fdfaecd96288692f5e7da32d3e2b10c46e6ee5d8755fdb70b2fd6f5a501",
+  "raw_result_sha256": "516ea4fb89d06ba62d1b6b7c209207fbcf6db03f0646644773b36f8f8f580973",
+  "raw_runs_sha256": "ebc234fb084b4bb964f43e5b0dcaf3cebe33ab275bff637b3d39ce786cef122a",
+  "raw_spec_sha256": "b9ca89ed32ba438ed134aaa6cf114ab9a7afeba2a241548f5d3e1856f0f49cdb",
+  "supervisor_receipt_sha256": "520267a83ca2aae0ea498ddbc5e58df681bd32cce9905a689b0de8e48138ab46",
+  "process_release_receipt_sha256": "7bc8ebb8716811a9d3d93c6b280bc2baf092567484827359c8cd01fa41bc4991",
+  "started_utc": "2026-10-14T19:57:39.727870+00:00",
+  "completed_utc": "2026-10-14T20:10:43.343920+00:00",
+  "actual_process_elapsed_s": 783.6160685899995,
+  "actual_runs": 8,
+  "all_processes_exit_zero": true,
+  "all_captures_reviewed": true,
+  "all_readiness_passed": true,
+  "all_configured_quality_passed": true,
+  "strict_pairs_passed": 4,
+  "strict_pairs_required": 4,
+  "pairs": [
+    {
+      "baseline": "A1-cold",
+      "candidate": "B1-cold",
+      "strict_primary_acceptance_passed": true,
+      "metrics": {
+        "gameplay_frame_p50_ms": {
+          "baseline": 25,
+          "candidate": 25,
+          "delta": 0
+        },
+        "gameplay_frame_p95_ms": {
+          "baseline": 29,
+          "candidate": 32,
+          "delta": 3
+        },
+        "gameplay_frame_p99_ms": {
+          "baseline": 41,
+          "candidate": 40,
+          "delta": -1
+        },
+        "gameplay_longest_frame_ms": {
+          "baseline": 157.372903,
+          "candidate": 63.255995,
+          "delta": -94.11690800000001
+        },
+        "gameplay_hitches_over_100_ms": {
+          "baseline": 1,
+          "candidate": 0,
+          "delta": -1
+        },
+        "startup_longest_frame_ms": {
+          "baseline": 1605.450086,
+          "candidate": 1550.1641610000001,
+          "delta": -55.28592499999991
+        },
+        "cpu_main_p99_ms": {
+          "baseline": 43.444769,
+          "candidate": 36.70059,
+          "delta": -6.744179000000003
+        },
+        "gpu_span_p99_ms": {
+          "baseline": 1.769,
+          "candidate": 1.8922,
+          "delta": 0.1232000000000002
+        },
+        "peak_rss_mib": {
+          "baseline": 2421.4,
+          "candidate": 2448.5,
+          "delta": 27.09999999999991
+        },
+        "process_elapsed_s": {
+          "baseline": 103.9,
+          "candidate": 92.6,
+          "delta": -11.300000000000011
+        }
+      }
+    },
+    {
+      "baseline": "A1-warm",
+      "candidate": "B1-warm",
+      "strict_primary_acceptance_passed": true,
+      "metrics": {
+        "gameplay_frame_p50_ms": {
+          "baseline": 25,
+          "candidate": 25,
+          "delta": 0
+        },
+        "gameplay_frame_p95_ms": {
+          "baseline": 29,
+          "candidate": 31,
+          "delta": 2
+        },
+        "gameplay_frame_p99_ms": {
+          "baseline": 43,
+          "candidate": 37,
+          "delta": -6
+        },
+        "gameplay_longest_frame_ms": {
+          "baseline": 100.170167,
+          "candidate": 59.012268999999996,
+          "delta": -41.15789800000001
+        },
+        "gameplay_hitches_over_100_ms": {
+          "baseline": 1,
+          "candidate": 0,
+          "delta": -1
+        },
+        "startup_longest_frame_ms": {
+          "baseline": 1553.4125749999998,
+          "candidate": 1636.676315,
+          "delta": 83.2637400000001
+        },
+        "cpu_main_p99_ms": {
+          "baseline": 46.494927,
+          "candidate": 36.244442,
+          "delta": -10.250484999999998
+        },
+        "gpu_span_p99_ms": {
+          "baseline": 1.76928,
+          "candidate": 1.8564,
+          "delta": 0.08712000000000009
+        },
+        "peak_rss_mib": {
+          "baseline": 2314.6,
+          "candidate": 2237.0,
+          "delta": -77.59999999999991
+        },
+        "process_elapsed_s": {
+          "baseline": 102.9,
+          "candidate": 91.8,
+          "delta": -11.100000000000009
+        }
+      }
+    },
+    {
+      "baseline": "A2-cold",
+      "candidate": "B2-cold",
+      "strict_primary_acceptance_passed": true,
+      "metrics": {
+        "gameplay_frame_p50_ms": {
+          "baseline": 25,
+          "candidate": 25,
+          "delta": 0
+        },
+        "gameplay_frame_p95_ms": {
+          "baseline": 29,
+          "candidate": 32,
+          "delta": 3
+        },
+        "gameplay_frame_p99_ms": {
+          "baseline": 41,
+          "candidate": 39,
+          "delta": -2
+        },
+        "gameplay_longest_frame_ms": {
+          "baseline": 79.843546,
+          "candidate": 58.260993,
+          "delta": -21.582553000000004
+        },
+        "gameplay_hitches_over_100_ms": {
+          "baseline": 0,
+          "candidate": 0,
+          "delta": 0
+        },
+        "startup_longest_frame_ms": {
+          "baseline": 1495.05923,
+          "candidate": 1530.345852,
+          "delta": 35.28662199999985
+        },
+        "cpu_main_p99_ms": {
+          "baseline": 43.359131000000005,
+          "candidate": 35.664294999999996,
+          "delta": -7.694836000000009
+        },
+        "gpu_span_p99_ms": {
+          "baseline": 1.73048,
+          "candidate": 1.85976,
+          "delta": 0.12928000000000006
+        },
+        "peak_rss_mib": {
+          "baseline": 2387.4,
+          "candidate": 2398.3,
+          "delta": 10.900000000000091
+        },
+        "process_elapsed_s": {
+          "baseline": 103.7,
+          "candidate": 92.3,
+          "delta": -11.400000000000006
+        }
+      }
+    },
+    {
+      "baseline": "A2-warm",
+      "candidate": "B2-warm",
+      "strict_primary_acceptance_passed": true,
+      "metrics": {
+        "gameplay_frame_p50_ms": {
+          "baseline": 25,
+          "candidate": 25,
+          "delta": 0
+        },
+        "gameplay_frame_p95_ms": {
+          "baseline": 29,
+          "candidate": 31,
+          "delta": 2
+        },
+        "gameplay_frame_p99_ms": {
+          "baseline": 41,
+          "candidate": 40,
+          "delta": -1
+        },
+        "gameplay_longest_frame_ms": {
+          "baseline": 92.207375,
+          "candidate": 48.692618,
+          "delta": -43.514756999999996
+        },
+        "gameplay_hitches_over_100_ms": {
+          "baseline": 0,
+          "candidate": 0,
+          "delta": 0
+        },
+        "startup_longest_frame_ms": {
+          "baseline": 1466.3182299999999,
+          "candidate": 1526.722386,
+          "delta": 60.40415600000006
+        },
+        "cpu_main_p99_ms": {
+          "baseline": 42.813979,
+          "candidate": 35.663402,
+          "delta": -7.1505770000000055
+        },
+        "gpu_span_p99_ms": {
+          "baseline": 1.74048,
+          "candidate": 1.84836,
+          "delta": 0.10787999999999998
+        },
+        "peak_rss_mib": {
+          "baseline": 2373.8,
+          "candidate": 2182.4,
+          "delta": -191.4000000000001
+        },
+        "process_elapsed_s": {
+          "baseline": 102.9,
+          "candidate": 91.8,
+          "delta": -11.100000000000009
+        }
+      }
+    }
+  ],
+  "runs": [
+    {
+      "id": "A1-cold",
+      "binary_sha256": "531ec4d91cfa3391f1f24a8d62d8abef026603609528462efacbb8ae7a096e08",
+      "started_utc": "2026-10-14T19:57:40.434537+00:00",
+      "completed_utc": "2026-10-14T19:59:24.345711+00:00",
+      "metrics": {
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 29,
+        "gameplay_frame_p99_ms": 41,
+        "gameplay_longest_frame_ms": 157.372903,
+        "gameplay_frames": 2486,
+        "gameplay_hitches_over_100_ms": 1,
+        "startup_longest_frame_ms": 1605.450086,
+        "longest_frame_ms": 1605.450086,
+        "elapsed_s": 99.23684274400011,
+        "cpu_main_p99_ms": 43.444769,
+        "gpu_span_p99_ms": 1.769,
+        "peak_rss_mib": 2421.4,
+        "process_elapsed_s": 103.9,
+        "time_to_first_presented_ms": null,
+        "time_to_ready_ms": null,
+        "route_bootstrap_ready_log_ms": 1681
+      },
+      "raw_graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 2704.578125,
+        "peak_process_vram_mib": 2182.625,
+        "process_gtt_mib": 84.20703125,
+        "process_vram_mib": 2182.625,
+        "source": "linux_drm_fdinfo"
+      },
+      "geometry_cache": null,
+      "raw_draw_calls": {
+        "grass": 0,
+        "opaque": 329,
+        "scope": "actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi",
+        "shadow": 243
+      },
+      "cpu_tiles": 30,
+      "gpu_tiles": 8,
+      "odometer_m": 2500.165185885929,
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 42.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [
+          -12465716.0,
+          42.90054702758789,
+          -30570442.0
+        ],
+        "rotation_xyzw": [
+          -0.0940287709236145,
+          0.7486549615859985,
+          0.10342580825090408,
+          0.64805668592453
+        ],
+        "target_world": [
+          -12465718.0,
+          40.01396942138672,
+          -30570442.0
+        ],
+        "yaw_rad": -3.0045292377471924
+      },
+      "particles": {
+        "execution": "gpu",
+        "gpu_capacity": 2048,
+        "gpu_particles": 2048,
+        "quality_level": 0
+      },
+      "artifacts": {
+        ".png": "b817873f7720adc9b08c896811c3b565c2952945fc84e4860615f87db9890e4b",
+        ".stream.json": "b497c80140ef061442cdcf9e0b58ae443f759dd7189a7b67f71fe9aecc482e34",
+        ".log": "a0c928fc6995c5149304a9ed0882782f6f864652cd967cd59d6edd3ac0d91a37",
+        ".xvfb.log": "8aa0cd3bea29b555ebcc8fd3087f95ffeef460ae5d79f2339ea76f5756d7681e"
+      },
+      "png_reviewed": true,
+      "readiness_passed": true,
+      "configured_quality_passed": true,
+      "new_screenshot_saved_marker": false
+    },
+    {
+      "id": "A1-warm",
+      "binary_sha256": "531ec4d91cfa3391f1f24a8d62d8abef026603609528462efacbb8ae7a096e08",
+      "started_utc": "2026-10-14T19:59:24.454409+00:00",
+      "completed_utc": "2026-10-14T20:01:07.363962+00:00",
+      "metrics": {
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 29,
+        "gameplay_frame_p99_ms": 43,
+        "gameplay_longest_frame_ms": 100.170167,
+        "gameplay_frames": 2475,
+        "gameplay_hitches_over_100_ms": 1,
+        "startup_longest_frame_ms": 1553.4125749999998,
+        "longest_frame_ms": 1553.4125749999998,
+        "elapsed_s": 98.31321417000011,
+        "cpu_main_p99_ms": 46.494927,
+        "gpu_span_p99_ms": 1.76928,
+        "peak_rss_mib": 2314.6,
+        "process_elapsed_s": 102.9,
+        "time_to_first_presented_ms": null,
+        "time_to_ready_ms": null,
+        "route_bootstrap_ready_log_ms": 1673
+      },
+      "raw_graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 2733.578125,
+        "peak_process_vram_mib": 2211.625,
+        "process_gtt_mib": 84.2421875,
+        "process_vram_mib": 2211.625,
+        "source": "linux_drm_fdinfo"
+      },
+      "geometry_cache": null,
+      "raw_draw_calls": {
+        "grass": 0,
+        "opaque": 317,
+        "scope": "actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi",
+        "shadow": 230
+      },
+      "cpu_tiles": 30,
+      "gpu_tiles": 8,
+      "odometer_m": 2500.165185885929,
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 42.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [
+          -12465716.0,
+          42.89494323730469,
+          -30570440.0
+        ],
+        "rotation_xyzw": [
+          -0.09407464414834976,
+          0.7484169602394104,
+          0.10341725498437881,
+          0.6483261585235596
+        ],
+        "target_world": [
+          -12465718.0,
+          40.008811950683594,
+          -30570442.0
+        ],
+        "yaw_rad": -3.0046892166137695
+      },
+      "particles": {
+        "execution": "gpu",
+        "gpu_capacity": 2048,
+        "gpu_particles": 2048,
+        "quality_level": 0
+      },
+      "artifacts": {
+        ".png": "3a1d461b42947a37ef24bc76612f93c6568fa7d9cc7057004d8bc88378c6fbbb",
+        ".stream.json": "1139ca7496dad31515bf5bcdb08082693b6da1484e9327cbf94b4c19279de9e0",
+        ".log": "f6672e9131a641a116fc822cca59ce61f4b327f5febbabbe15f8a0270fdde079",
+        ".xvfb.log": "d68da5f00bfc07e6eca1512cda82f79e7e9e5fd277c7ca777ae493c664dc4167"
+      },
+      "png_reviewed": true,
+      "readiness_passed": true,
+      "configured_quality_passed": true,
+      "new_screenshot_saved_marker": false
+    },
+    {
+      "id": "B1-cold",
+      "binary_sha256": "5be5da7de14db73321303af2b310da7c8ca635b3dcd9c304fbe631ae0d8fd47d",
+      "started_utc": "2026-10-14T20:01:07.472204+00:00",
+      "completed_utc": "2026-10-14T20:02:40.069844+00:00",
+      "metrics": {
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 32,
+        "gameplay_frame_p99_ms": 40,
+        "gameplay_longest_frame_ms": 63.255995,
+        "gameplay_frames": 2455,
+        "gameplay_hitches_over_100_ms": 0,
+        "startup_longest_frame_ms": 1550.1641610000001,
+        "longest_frame_ms": 1550.1641610000001,
+        "elapsed_s": 90.2129600549999,
+        "cpu_main_p99_ms": 36.70059,
+        "gpu_span_p99_ms": 1.8922,
+        "peak_rss_mib": 2448.5,
+        "process_elapsed_s": 92.6,
+        "time_to_first_presented_ms": null,
+        "time_to_ready_ms": null,
+        "route_bootstrap_ready_log_ms": 1731
+      },
+      "raw_graphics_memory": {
+        "active_device_pci": "0000:03:00.0",
+        "device_total_mib": 8176.0,
+        "device_used_mib": 2786.83203125,
+        "devices": [
+          {
+            "device_total_mib": 8176.0,
+            "device_used_mib": 2786.83203125,
+            "pci": "0000:03:00.0",
+            "process_gtt_mib": 20.171875,
+            "process_vram_mib": 2284.82421875
+          },
+          {
+            "device_total_mib": 512.0,
+            "device_used_mib": 19.96875,
+            "pci": "0000:0e:00.0",
+            "process_gtt_mib": 4.0,
+            "process_vram_mib": 0.0234375
+          }
+        ],
+        "peak_process_vram_mib": 2284.84765625,
+        "process_gtt_mib": 24.171875,
+        "process_vram_mib": 2284.84765625,
+        "source": "linux_drm_fdinfo"
+      },
+      "geometry_cache": {
+        "admission_skips": 5,
+        "compression": "zstd-1",
+        "disk_bytes": 23729208,
+        "evictions": 0,
+        "format": 2,
+        "gpu_handles_cached": false,
+        "hits": 0,
+        "invalid_entries": 0,
+        "inventory_scans": 1,
+        "json_bytes_written": 317871481,
+        "legacy_hits": 0,
+        "max_disk_mib": 256,
+        "max_entry_mib": 32,
+        "misses": 1298,
+        "schema": 1,
+        "stored_bytes_written": 23729200,
+        "writes": 1293
+      },
+      "raw_draw_calls": {
+        "grass": 0,
+        "opaque": 304,
+        "scope": "actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi",
+        "shadow": 204
+      },
+      "cpu_tiles": 30,
+      "gpu_tiles": 11,
+      "odometer_m": 2500.673563507305,
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 42.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [
+          -12465717.0,
+          42.88481903076172,
+          -30570440.0
+        ],
+        "rotation_xyzw": [
+          -0.09418442845344543,
+          0.7483212351799011,
+          0.10350008308887482,
+          0.6484076380729675
+        ],
+        "target_world": [
+          -12465719.0,
+          40.000614166259766,
+          -30570440.0
+        ],
+        "yaw_rad": -3.004943370819092
+      },
+      "particles": {
+        "execution": "gpu",
+        "gpu_capacity": 2048,
+        "gpu_particles": 2048,
+        "quality_level": 0
+      },
+      "artifacts": {
+        ".png": "6517987a3ec3a0fd12cf9de9aeb75f6cd5a85a1886a79ec92b59830e43532241",
+        ".stream.json": "029dc9871a79aa980f4376b2eeefba08e3cb21d68638811fe07cfe4475fd6c72",
+        ".log": "fb75e539c9a5fe801fda46968bcffc6df1e9d88938aab55c3690123b21cd329c",
+        ".xvfb.log": "6e7e84c36b56e9b020b6d13132b27b484238d12a788710df56791713f8842604"
+      },
+      "png_reviewed": true,
+      "readiness_passed": true,
+      "configured_quality_passed": true,
+      "new_screenshot_saved_marker": true
+    },
+    {
+      "id": "B1-warm",
+      "binary_sha256": "5be5da7de14db73321303af2b310da7c8ca635b3dcd9c304fbe631ae0d8fd47d",
+      "started_utc": "2026-10-14T20:02:40.181294+00:00",
+      "completed_utc": "2026-10-14T20:04:12.031327+00:00",
+      "metrics": {
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 31,
+        "gameplay_frame_p99_ms": 37,
+        "gameplay_longest_frame_ms": 59.012268999999996,
+        "gameplay_frames": 2460,
+        "gameplay_hitches_over_100_ms": 0,
+        "startup_longest_frame_ms": 1636.676315,
+        "longest_frame_ms": 1636.676315,
+        "elapsed_s": 89.64250907099994,
+        "cpu_main_p99_ms": 36.244442,
+        "gpu_span_p99_ms": 1.8564,
+        "peak_rss_mib": 2237.0,
+        "process_elapsed_s": 91.8,
+        "time_to_first_presented_ms": null,
+        "time_to_ready_ms": null,
+        "route_bootstrap_ready_log_ms": 1698
+      },
+      "raw_graphics_memory": {
+        "active_device_pci": "0000:03:00.0",
+        "device_total_mib": 8176.0,
+        "device_used_mib": 2787.23828125,
+        "devices": [
+          {
+            "device_total_mib": 8176.0,
+            "device_used_mib": 2787.23828125,
+            "pci": "0000:03:00.0",
+            "process_gtt_mib": 20.171875,
+            "process_vram_mib": 2285.23046875
+          },
+          {
+            "device_total_mib": 512.0,
+            "device_used_mib": 19.96875,
+            "pci": "0000:0e:00.0",
+            "process_gtt_mib": 4.0,
+            "process_vram_mib": 0.0234375
+          }
+        ],
+        "peak_process_vram_mib": 2285.25390625,
+        "process_gtt_mib": 24.171875,
+        "process_vram_mib": 2285.25390625,
+        "source": "linux_drm_fdinfo"
+      },
+      "geometry_cache": {
+        "admission_skips": 5,
+        "compression": "zstd-1",
+        "disk_bytes": 23797626,
+        "evictions": 0,
+        "format": 2,
+        "gpu_handles_cached": false,
+        "hits": 1292,
+        "invalid_entries": 0,
+        "inventory_scans": 1,
+        "json_bytes_written": 1148335,
+        "legacy_hits": 0,
+        "max_disk_mib": 256,
+        "max_entry_mib": 32,
+        "misses": 8,
+        "schema": 1,
+        "stored_bytes_written": 68418,
+        "writes": 3
+      },
+      "raw_draw_calls": {
+        "grass": 0,
+        "opaque": 313,
+        "scope": "actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi",
+        "shadow": 214
+      },
+      "cpu_tiles": 30,
+      "gpu_tiles": 11,
+      "odometer_m": 2500.165185885929,
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 42.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [
+          -12465717.0,
+          42.8955078125,
+          -30570440.0
+        ],
+        "rotation_xyzw": [
+          -0.09404347836971283,
+          0.7485796809196472,
+          0.103419728577137,
+          0.6481424570083618
+        ],
+        "target_world": [
+          -12465719.0,
+          40.008975982666016,
+          -30570442.0
+        ],
+        "yaw_rad": -3.0046839714050293
+      },
+      "particles": {
+        "execution": "gpu",
+        "gpu_capacity": 2048,
+        "gpu_particles": 2048,
+        "quality_level": 0
+      },
+      "artifacts": {
+        ".png": "e53fd68486baaa98dd003478fb74a0e60518bd27f84634edb0175f62334a0bc6",
+        ".stream.json": "7fad995a1051d65becdffa963654cbb734d092e5bc4f3c5fa1c4dc04245d6d81",
+        ".log": "1d471490b77654e1e91410df64cf43e30f2d34ff155dc9b7360192134dd21a00",
+        ".xvfb.log": "47a1bd5c5a7ad3559f6de48584868a89783d756a3552c9041d0f01d426e9cc4c"
+      },
+      "png_reviewed": true,
+      "readiness_passed": true,
+      "configured_quality_passed": true,
+      "new_screenshot_saved_marker": true
+    },
+    {
+      "id": "B2-cold",
+      "binary_sha256": "5be5da7de14db73321303af2b310da7c8ca635b3dcd9c304fbe631ae0d8fd47d",
+      "started_utc": "2026-10-14T20:04:12.141745+00:00",
+      "completed_utc": "2026-10-14T20:05:44.489377+00:00",
+      "metrics": {
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 32,
+        "gameplay_frame_p99_ms": 39,
+        "gameplay_longest_frame_ms": 58.260993,
+        "gameplay_frames": 2458,
+        "gameplay_hitches_over_100_ms": 0,
+        "startup_longest_frame_ms": 1530.345852,
+        "longest_frame_ms": 1530.345852,
+        "elapsed_s": 90.08810513899971,
+        "cpu_main_p99_ms": 35.664294999999996,
+        "gpu_span_p99_ms": 1.85976,
+        "peak_rss_mib": 2398.3,
+        "process_elapsed_s": 92.3,
+        "time_to_first_presented_ms": null,
+        "time_to_ready_ms": null,
+        "route_bootstrap_ready_log_ms": 1732
+      },
+      "raw_graphics_memory": {
+        "active_device_pci": "0000:03:00.0",
+        "device_total_mib": 8176.0,
+        "device_used_mib": 2785.14453125,
+        "devices": [
+          {
+            "device_total_mib": 8176.0,
+            "device_used_mib": 2785.14453125,
+            "pci": "0000:03:00.0",
+            "process_gtt_mib": 20.171875,
+            "process_vram_mib": 2283.13671875
+          },
+          {
+            "device_total_mib": 512.0,
+            "device_used_mib": 19.96875,
+            "pci": "0000:0e:00.0",
+            "process_gtt_mib": 4.0,
+            "process_vram_mib": 0.0234375
+          }
+        ],
+        "peak_process_vram_mib": 2283.16015625,
+        "process_gtt_mib": 24.171875,
+        "process_vram_mib": 2283.16015625,
+        "source": "linux_drm_fdinfo"
+      },
+      "geometry_cache": {
+        "admission_skips": 5,
+        "compression": "zstd-1",
+        "disk_bytes": 23743621,
+        "evictions": 0,
+        "format": 2,
+        "gpu_handles_cached": false,
+        "hits": 0,
+        "invalid_entries": 0,
+        "inventory_scans": 1,
+        "json_bytes_written": 318020051,
+        "legacy_hits": 0,
+        "max_disk_mib": 256,
+        "max_entry_mib": 32,
+        "misses": 1300,
+        "schema": 1,
+        "stored_bytes_written": 23743613,
+        "writes": 1295
+      },
+      "raw_draw_calls": {
+        "grass": 0,
+        "opaque": 308,
+        "scope": "actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi",
+        "shadow": 221
+      },
+      "cpu_tiles": 30,
+      "gpu_tiles": 11,
+      "odometer_m": 2500.165185885929,
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 42.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [
+          -12465716.0,
+          42.90061950683594,
+          -30570440.0
+        ],
+        "rotation_xyzw": [
+          -0.09403596073389053,
+          0.7486564517021179,
+          0.10341925173997879,
+          0.6480549573898315
+        ],
+        "target_world": [
+          -12465718.0,
+          40.01399612426758,
+          -30570440.0
+        ],
+        "yaw_rad": -3.004528045654297
+      },
+      "particles": {
+        "execution": "gpu",
+        "gpu_capacity": 2048,
+        "gpu_particles": 2048,
+        "quality_level": 0
+      },
+      "artifacts": {
+        ".png": "167b346bbec9d3450a56671d8115e2558ef32984a86728f5354ffdfa6298f6c5",
+        ".stream.json": "b63d295f3ac832fc9bfa58eb03a89cda5c6b1a889e1fdd982e71ab4bb54a36c1",
+        ".log": "1b750a3bacbe128b4d7e8f5674c442e72799abb1f1e004017148d09683f3ef05",
+        ".xvfb.log": "b2d386984a2ba9a3a83f9d3a7bcfc6ebd948194dc16ea8eb10b80128df5f1d97"
+      },
+      "png_reviewed": true,
+      "readiness_passed": true,
+      "configured_quality_passed": true,
+      "new_screenshot_saved_marker": true
+    },
+    {
+      "id": "B2-warm",
+      "binary_sha256": "5be5da7de14db73321303af2b310da7c8ca635b3dcd9c304fbe631ae0d8fd47d",
+      "started_utc": "2026-10-14T20:05:44.602418+00:00",
+      "completed_utc": "2026-10-14T20:07:16.450460+00:00",
+      "metrics": {
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 31,
+        "gameplay_frame_p99_ms": 40,
+        "gameplay_longest_frame_ms": 48.692618,
+        "gameplay_frames": 2466,
+        "gameplay_hitches_over_100_ms": 0,
+        "startup_longest_frame_ms": 1526.722386,
+        "longest_frame_ms": 1526.722386,
+        "elapsed_s": 89.54836128400018,
+        "cpu_main_p99_ms": 35.663402,
+        "gpu_span_p99_ms": 1.84836,
+        "peak_rss_mib": 2182.4,
+        "process_elapsed_s": 91.8,
+        "time_to_first_presented_ms": null,
+        "time_to_ready_ms": null,
+        "route_bootstrap_ready_log_ms": 1751
+      },
+      "raw_graphics_memory": {
+        "active_device_pci": "0000:03:00.0",
+        "device_total_mib": 8176.0,
+        "device_used_mib": 2787.58203125,
+        "devices": [
+          {
+            "device_total_mib": 8176.0,
+            "device_used_mib": 2787.58203125,
+            "pci": "0000:03:00.0",
+            "process_gtt_mib": 20.171875,
+            "process_vram_mib": 2285.57421875
+          },
+          {
+            "device_total_mib": 512.0,
+            "device_used_mib": 19.96875,
+            "pci": "0000:0e:00.0",
+            "process_gtt_mib": 4.0,
+            "process_vram_mib": 0.0234375
+          }
+        ],
+        "peak_process_vram_mib": 2285.59765625,
+        "process_gtt_mib": 24.171875,
+        "process_vram_mib": 2285.59765625,
+        "source": "linux_drm_fdinfo"
+      },
+      "geometry_cache": {
+        "admission_skips": 5,
+        "compression": "zstd-1",
+        "disk_bytes": 23797626,
+        "evictions": 0,
+        "format": 2,
+        "gpu_handles_cached": false,
+        "hits": 1295,
+        "invalid_entries": 0,
+        "inventory_scans": 1,
+        "json_bytes_written": 999765,
+        "legacy_hits": 0,
+        "max_disk_mib": 256,
+        "max_entry_mib": 32,
+        "misses": 6,
+        "schema": 1,
+        "stored_bytes_written": 54005,
+        "writes": 1
+      },
+      "raw_draw_calls": {
+        "grass": 0,
+        "opaque": 311,
+        "scope": "actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi",
+        "shadow": 221
+      },
+      "cpu_tiles": 30,
+      "gpu_tiles": 11,
+      "odometer_m": 2500.165185885929,
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 42.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [
+          -12465716.0,
+          42.89683532714844,
+          -30570440.0
+        ],
+        "rotation_xyzw": [
+          -0.09406085312366486,
+          0.7484351396560669,
+          0.10342465341091156,
+          0.648306131362915
+        ],
+        "target_world": [
+          -12465718.0,
+          40.01066207885742,
+          -30570440.0
+        ],
+        "yaw_rad": -3.004631519317627
+      },
+      "particles": {
+        "execution": "gpu",
+        "gpu_capacity": 2048,
+        "gpu_particles": 2048,
+        "quality_level": 0
+      },
+      "artifacts": {
+        ".png": "c011534eb60a61502001184ceff1063046d4ca49e80ebf83df5bdf5c6910aa54",
+        ".stream.json": "0269b6e51f19b0e2cd869f0af3d101c2bfd48727b62dca52ef320de573cfd1e3",
+        ".log": "c764fadd6cf1872a51376c78e831dcd9ea857cd3743f045352bc92602b8ae40d",
+        ".xvfb.log": "ad6cc94a4cee8276a4c8bf7e7e92e05b7fb47a03073025955aec828a4a1e3732"
+      },
+      "png_reviewed": true,
+      "readiness_passed": true,
+      "configured_quality_passed": true,
+      "new_screenshot_saved_marker": true
+    },
+    {
+      "id": "A2-cold",
+      "binary_sha256": "531ec4d91cfa3391f1f24a8d62d8abef026603609528462efacbb8ae7a096e08",
+      "started_utc": "2026-10-14T20:07:16.560746+00:00",
+      "completed_utc": "2026-10-14T20:09:00.218225+00:00",
+      "metrics": {
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 29,
+        "gameplay_frame_p99_ms": 41,
+        "gameplay_longest_frame_ms": 79.843546,
+        "gameplay_frames": 2486,
+        "gameplay_hitches_over_100_ms": 0,
+        "startup_longest_frame_ms": 1495.05923,
+        "longest_frame_ms": 1495.05923,
+        "elapsed_s": 99.05299627799963,
+        "cpu_main_p99_ms": 43.359131000000005,
+        "gpu_span_p99_ms": 1.73048,
+        "peak_rss_mib": 2387.4,
+        "process_elapsed_s": 103.7,
+        "time_to_first_presented_ms": null,
+        "time_to_ready_ms": null,
+        "route_bootstrap_ready_log_ms": 1657
+      },
+      "raw_graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 2695.0078125,
+        "peak_process_vram_mib": 2173.0546875,
+        "process_gtt_mib": 84.20703125,
+        "process_vram_mib": 2173.0546875,
+        "source": "linux_drm_fdinfo"
+      },
+      "geometry_cache": null,
+      "raw_draw_calls": {
+        "grass": 0,
+        "opaque": 328,
+        "scope": "actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi",
+        "shadow": 211
+      },
+      "cpu_tiles": 30,
+      "gpu_tiles": 8,
+      "odometer_m": 2500.673563507305,
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 42.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [
+          -12465717.0,
+          42.88836669921875,
+          -30570440.0
+        ],
+        "rotation_xyzw": [
+          -0.09418408572673798,
+          0.7483585476875305,
+          0.10350672900676727,
+          0.648363471031189
+        ],
+        "target_world": [
+          -12465718.0,
+          40.00433349609375,
+          -30570440.0
+        ],
+        "yaw_rad": -3.0048277378082275
+      },
+      "particles": {
+        "execution": "gpu",
+        "gpu_capacity": 2048,
+        "gpu_particles": 2048,
+        "quality_level": 0
+      },
+      "artifacts": {
+        ".png": "e2a9d558da66a3860b5b3c57e627419b39a6f43bf94f9651a14e369f347d319c",
+        ".stream.json": "4be17926985e308d454f86cce79b9c8dd41ded8f9b09f6badcd0c8ce529cc27e",
+        ".log": "99af8a4834d7d9461f3b0e4fb386be3fbbbb6b78507e55f7829193200879eda4",
+        ".xvfb.log": "cd4b4c69d8ed907fc634f8c442fb79b91c5e1a6e97825ca10c77dd3b06615eed"
+      },
+      "png_reviewed": true,
+      "readiness_passed": true,
+      "configured_quality_passed": true,
+      "new_screenshot_saved_marker": false
+    },
+    {
+      "id": "A2-warm",
+      "binary_sha256": "531ec4d91cfa3391f1f24a8d62d8abef026603609528462efacbb8ae7a096e08",
+      "started_utc": "2026-10-14T20:09:00.327860+00:00",
+      "completed_utc": "2026-10-14T20:10:43.230957+00:00",
+      "metrics": {
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 29,
+        "gameplay_frame_p99_ms": 41,
+        "gameplay_longest_frame_ms": 92.207375,
+        "gameplay_frames": 2479,
+        "gameplay_hitches_over_100_ms": 0,
+        "startup_longest_frame_ms": 1466.3182299999999,
+        "longest_frame_ms": 1466.3182299999999,
+        "elapsed_s": 98.35824489899994,
+        "cpu_main_p99_ms": 42.813979,
+        "gpu_span_p99_ms": 1.74048,
+        "peak_rss_mib": 2373.8,
+        "process_elapsed_s": 102.9,
+        "time_to_first_presented_ms": null,
+        "time_to_ready_ms": null,
+        "route_bootstrap_ready_log_ms": 1673
+      },
+      "raw_graphics_memory": {
+        "device_total_mib": 8688.0,
+        "device_used_mib": 2747.6953125,
+        "peak_process_vram_mib": 2225.7421875,
+        "process_gtt_mib": 84.2421875,
+        "process_vram_mib": 2225.7421875,
+        "source": "linux_drm_fdinfo"
+      },
+      "geometry_cache": null,
+      "raw_draw_calls": {
+        "grass": 0,
+        "opaque": 298,
+        "scope": "actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi",
+        "shadow": 231
+      },
+      "cpu_tiles": 30,
+      "gpu_tiles": 8,
+      "odometer_m": 2500.165185885929,
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 42.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [
+          -12465717.0,
+          42.8980712890625,
+          -30570440.0
+        ],
+        "rotation_xyzw": [
+          -0.09403479099273682,
+          0.7486187219619751,
+          0.10342103987932205,
+          0.6480984091758728
+        ],
+        "target_world": [
+          -12465719.0,
+          40.011497497558594,
+          -30570440.0
+        ],
+        "yaw_rad": -3.004605531692505
+      },
+      "particles": {
+        "execution": "gpu",
+        "gpu_capacity": 2048,
+        "gpu_particles": 2048,
+        "quality_level": 0
+      },
+      "artifacts": {
+        ".png": "afe69c8550433f688502fd6e9fbdb2939756b4e37cf89146419da657f11fd2c4",
+        ".stream.json": "51bf5c4f8984054d265bca48d6b3c126fe232dee773fd34ba7d7b4a7267e667a",
+        ".log": "27ccc9735e4c10a8ce3fc7e3f09215c3a245669a566b2cbf8bb3f314b56ea7bb",
+        ".xvfb.log": "f28ae4bc5a49579929ce94de1aeaad159633cf2d0205033d4d3d9101777886e8"
+      },
+      "png_reviewed": true,
+      "readiness_passed": true,
+      "configured_quality_passed": true,
+      "new_screenshot_saved_marker": false
+    }
+  ],
+  "secondary_regressions": [
+    {
+      "pair": "A1-cold→B1-cold",
+      "field": "gameplay_frame_p95_ms",
+      "baseline": 29,
+      "candidate": 32,
+      "delta": 3
+    },
+    {
+      "pair": "A1-cold→B1-cold",
+      "field": "gpu_span_p99_ms",
+      "baseline": 1.769,
+      "candidate": 1.8922,
+      "delta": 0.1232000000000002
+    },
+    {
+      "pair": "A1-cold→B1-cold",
+      "field": "peak_rss_mib",
+      "baseline": 2421.4,
+      "candidate": 2448.5,
+      "delta": 27.09999999999991
+    },
+    {
+      "pair": "A1-warm→B1-warm",
+      "field": "gameplay_frame_p95_ms",
+      "baseline": 29,
+      "candidate": 31,
+      "delta": 2
+    },
+    {
+      "pair": "A1-warm→B1-warm",
+      "field": "startup_longest_frame_ms",
+      "baseline": 1553.4125749999998,
+      "candidate": 1636.676315,
+      "delta": 83.2637400000001
+    },
+    {
+      "pair": "A1-warm→B1-warm",
+      "field": "gpu_span_p99_ms",
+      "baseline": 1.76928,
+      "candidate": 1.8564,
+      "delta": 0.08712000000000009
+    },
+    {
+      "pair": "A2-cold→B2-cold",
+      "field": "gameplay_frame_p95_ms",
+      "baseline": 29,
+      "candidate": 32,
+      "delta": 3
+    },
+    {
+      "pair": "A2-cold→B2-cold",
+      "field": "startup_longest_frame_ms",
+      "baseline": 1495.05923,
+      "candidate": 1530.345852,
+      "delta": 35.28662199999985
+    },
+    {
+      "pair": "A2-cold→B2-cold",
+      "field": "gpu_span_p99_ms",
+      "baseline": 1.73048,
+      "candidate": 1.85976,
+      "delta": 0.12928000000000006
+    },
+    {
+      "pair": "A2-cold→B2-cold",
+      "field": "peak_rss_mib",
+      "baseline": 2387.4,
+      "candidate": 2398.3,
+      "delta": 10.900000000000091
+    },
+    {
+      "pair": "A2-warm→B2-warm",
+      "field": "gameplay_frame_p95_ms",
+      "baseline": 29,
+      "candidate": 31,
+      "delta": 2
+    },
+    {
+      "pair": "A2-warm→B2-warm",
+      "field": "startup_longest_frame_ms",
+      "baseline": 1466.3182299999999,
+      "candidate": 1526.722386,
+      "delta": 60.40415600000006
+    },
+    {
+      "pair": "A2-warm→B2-warm",
+      "field": "gpu_span_p99_ms",
+      "baseline": 1.74048,
+      "candidate": 1.84836,
+      "delta": 0.10787999999999998
+    }
+  ],
+  "limits": [
+    "Only this six-station2500m/default2000m/downpour/Pullman8/driver55deg RX/Vulkan/privateWayland/AutoVsync contract. No generalFPS or ORpixel/physicsparity claim.",
+    "Fresh private application/Mesa caches per block; warm is secondprocess in sameblock. OS pagecache notflushed. All8 preserved; no replacement.",
+    "Diagnostics OFF in acceptance. Journey Time<Real> render-world intervals differ from DevMetrics Last-to-Last after60readyframes; CPU/GPU metrics never replace primaryP99.",
+    "P95 worsens all4pairs by2or3ms; GPUspanP99 higher all4pairs; startupmaximum worsens3of4pairs. Exact values retained, no blanket fasterstartup/GPUclaim.",
+    "Same configured quality/budgets and0adaptivechanges, but actual GPUterrain residency8baseline vs11candidate and WORLD drawcounts differ. PNG compositions congruent; not identical workset/pixelparity.",
+    "D9 graphics capacity8688MiB aggregatesdevices;38 activeRX8176MiB/per-device. Rawmemoryvalues retained; GPUmemory comparisons not homogeneous, no savingsclaim.",
+    "Firstphysicallypresented and sceneready times notexported: null preserved. route_bootstrap_ready_log_ms is only explicit bootstrapmarker, never relabeled.",
+    "HistoricalD9 lacks the new screenshot-saved observermarker; its4baseline captures have freshvalidPNGs,request/done/exit0. Candidate4 additionally emit actual newsavedmarker.",
+    "Untouched userdesktop/services and light orchestration ambient. ControlledQA/builds/FranceLXDpaused by exactRootquiet; frozencontainers retained residentmemory.",
+    "New38 shortgates separate and passed; no37 relabel/aggregation.7200endurance notyetexecuted,391/403notclosedbythiscomparison."
+  ],
+  "capture_review": "All8 PNG personally inspected: nativePullman drivercab, rain/HUD, same countryside/rightcurvingtrack around2500m. Odometer fractionalovershoot recorded, no missing scene obvious in theseviews.",
+  "timing_scope": "Null firstpresented/ready denotes unavailable, not0. Startupmax and totalprocess elapsed are recorded separately.",
+  "issue240_scope": "Predeclaredprimarycriteria4/4pass. Parentassessesfullissueacceptance/publisheslimits; no issueclosedbythisreceipt.",
+  "publication": {
+    "created_utc": "2026-10-14T20:21:17.151697+00:00",
+    "runtime_commit": "656ae35f05000e1b1e13e93d35a4c45615e4ed96",
+    "private_reviewed_receipt": {
+      "file": "<private-qa>/abba38-reviewed.json",
+      "sha256": "9eebdfe51a35098a04ed5c7b148f95f526fe403e1a6e170fd73564ca8ab2b24c",
+      "bytes": 38494
+    },
+    "root_visual_review": {
+      "file": "<private-qa>/root-abba38-visual-review.json",
+      "sha256": "0dfd7db183410971ec89da275b4c012c43f651e8f4b65b8cf158d18dd46de0a1"
+    },
+    "public_build_and_check": "docs/validation/FIFTH40_PHASE38_BUILD_AND_CHECK.json",
+    "previous_rejected_comparison": "docs/validation/FIFTH40_PHASE37_ABBA_REJECTED.json",
+    "issues_closed": false,
+    "endurance_acceptance": "Pending independent whole7200 and settled-memory audit; this comparison does not complete391/403."
+  },
+  "predeclared_plan_normalized_for_publication": {
+    "schema": 1,
+    "status": "frozen_waiting_new_exclusive_root_gate",
+    "declared_utc": "2026-10-14T19:56:30.090407+00:00",
+    "reference_commit": "d9dba7af1f531183de594af3201373d3b1b20590",
+    "reference_source_manifest": "<private-qa>/baseline-d9-source-manifest.json",
+    "candidate": "<private-qa>/phase38-build2/phase38-viewer",
+    "order": [
+      "A1-cold",
+      "A1-warm",
+      "B1-cold",
+      "B1-warm",
+      "B2-cold",
+      "B2-warm",
+      "A2-cold",
+      "A2-warm"
+    ],
+    "baseline": "A",
+    "candidate_label": "B",
+    "build_contract": {
+      "compiler": "rustc1.97.1 (8bab26f4f2026-07-14), verified identical in both protected ELF .comment sections; record raw compiler/linker comments",
+      "command": "cargo build --offline --locked --workspace --all-features --jobs 2",
+      "profile": {
+        "CARGO_PROFILE_DEV_OPT_LEVEL": "1",
+        "CARGO_PROFILE_DEV_DEBUG": "0",
+        "CARGO_PROFILE_DEV_STRIP": "symbols",
+        "CARGO_PROFILE_DEV_INCREMENTAL": "false",
+        "CARGO_INCREMENTAL": "0",
+        "CARGO_BUILD_JOBS": "2"
+      },
+      "source_policy": "D9 build from exact archived source/Cargo.lock without cherry-picks; protected candidate binary and matching own runtime assets",
+      "target_directory": "Different private target directories are required isolation and excluded from optimisation profile equality; all CARGO_PROFILE_*/CARGO_INCREMENTAL/CARGO_BUILD_JOBS must match."
+    },
+    "prerequisites": [
+      "Exact archived D9 baseline531ec4d91cfa3391f1f24a8d62d8abef026603609528462efacbb8ae7a096e08; unchanged ownshaderresources/buildprofile/ELFcompiler.",
+      "New protected38 SHA/buildreceipt and criticalregressions; new originalnative420 AND extendedfixture180 on this exact38 SHA. Do not relabel or aggregate37 gates.",
+      "New exclusiveRoot quiet receipt: status approved_exclusive_quiet, scope abba38, exact frozenplan_sha256, no_other_controlled_workloads=true; actualFrancepauses and explicitRoot release.",
+      "No runtime or quality/budget/threshold changes during comparison; eight new launches, no selected replacement."
+    ],
+    "configuration": {
+      "scenario": "<repo>/examples/chiltern_extended/scenario.toml",
+      "scenario_sha256_policy": "hash at freeze, same scenario and original rollingstock/route per launch",
+      "resolution": [
+        1280,
+        720
+      ],
+      "target_m": 2500,
+      "ready_frames": 600,
+      "minimum_gameplay_frames": 300,
+      "view_radius_m": 2000,
+      "follow": "driver",
+      "cab_fov_deg": 55,
+      "weather": "rain",
+      "weather_profile": "downpour",
+      "seed": 42,
+      "particle_budget": 2048,
+      "autodrive": 0.75,
+      "speed_multiplier": 4,
+      "shadows": true,
+      "contact_shadow_quality": 1,
+      "auto_quality_limits": false,
+      "framepace": "off",
+      "gpu": "VulkanRX1002:7480 /PCI0000:03:00.0 and same WestonGL",
+      "audio": "disabled equally",
+      "present_mode": "auto_vsync",
+      "timeout_s_per_run": 420,
+      "frame_spans": false,
+      "profile_systems": false
+    },
+    "cache_policy": {
+      "cold": "Fresh private player-data + XDG/Mesa caches for each A1/B1/B2/A2 block; no application/driver cache reuse across blocks",
+      "warm": "Second process in the same block with its existing player/driver caches and unchanged settings/resources",
+      "os_page_cache": "Not globally flushed; explicitly not disk-cold. Do not call it OS/disk cold.",
+      "original_content": "Read only; no clearing user caches or install content"
+    },
+    "reporting": {
+      "all_repetitions": "Retain all8 launches, artifacts, failures, maxima and P99. Report each cold/warm separately and both A and B repetitions; never select best run.",
+      "startup": "Report time_to_first_presented_ms, time_to_ready_ms, startup_longest_frame_ms and total launch separately",
+      "gameplay": "Record frames, P50/P95/P99, gameplay_longest_frame_ms, hitches>100ms",
+      "memory": "Actual RSS peak and reported process VRAM/GTT/reservation separately; absent remains null",
+      "comparison": "Keep raw paired deltas A1→B1 and A2→B2 by cache state; aggregate means only supplemental. No #240 improvement claim without consistent measured evidence.",
+      "fps_scope": "Private compositor presentation may cap throughput. No general FPS promises."
+    },
+    "rejection_policy": "Abort controlled measurement on concurrent workload, incomplete captures/shaders/queues or changed source/formation/camera/weather/quality. Preserve failed launch; do not replace with an unannounced favorable repeat.",
+    "compiler_confirmed_before_benchmark_utc": "2026-10-14T17:49:17.214028+00:00",
+    "sequence_authorized_before_benchmark_utc": "2026-10-14T18:11:17.136016+00:00 (historical37 ordering decision only; current38 launch requires new exact-plan approval)",
+    "sequence": "Root approved ABBA after extended fixture gate and before rerunning7200 to expose performance regressions earlier. Final7200 remains unfulfilled and mandatory for391/403.",
+    "ambient_scope": "Lightweight GitHub annotations/monitoring/conversation and untouched user desktop/services are ambient, not stopped or asserted absent. Record them; do not touch user processes.",
+    "shared_fixture_pre_run": {
+      "status": "common_fixture_without_pre_run_confirmed",
+      "recorded_utc": "2026-10-14T18:13:39.967086+00:00",
+      "scenario": "<repo>/examples/chiltern_extended/scenario.toml",
+      "scenario_name": "Chiltern extendido: Northolt Park → Gerrards Cross",
+      "start": "n93",
+      "destination": "n3670",
+      "start_offset_m": 1385.9003278212956,
+      "waypoints": [
+        "n93",
+        "n95",
+        "n97",
+        "n99",
+        "n101",
+        "n103",
+        "n105",
+        "n3662",
+        "n3663",
+        "n3665",
+        "n3667",
+        "n3668",
+        "n3669",
+        "n3670"
+      ],
+      "player_consist": "<repo>/examples/chiltern_extended/consists/birmingham_pullman.con",
+      "extra_services": [
+        {
+          "id": "Pullman adelantado",
+          "departure_s": 0.0,
+          "pre_roll_s": 0
+        },
+        {
+          "id": "Pullman contrario",
+          "departure_s": 700.0,
+          "pre_roll_s": 0
+        }
+      ],
+      "n5667_in_graph": false,
+      "shared_source_hashes": {
+        "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/examples/chiltern_extended/scenario.toml": "faac5f908bfafd4a73ecf5be3e1c9601970c110b8926b7c80ac3221387baf5bf",
+        "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/examples/chiltern_extended/track.toml": "97aad2e510b01017370c7d7735604c574745b4bf9a58ff8c362ab9a0fdefd94e",
+        "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/examples/chiltern_extended/consists/birmingham_pullman.con": "b267ebba70000bdb53eb90f78b3e48fdd40bfb303013fa50aa3d745eed91e9f6"
+      },
+      "scope": "Benchmark uses the six-station Northolt→GerrardsCross example, not FootballSpecial ACT/pre-run. Both binaries receive these same absolute files; no version-specific fixes or route edits."
+    },
+    "kind": "full_abba_default2000_candidate38_acceptance",
+    "pilot_result_sha256": "a6469d1673e9ce154134dcb2e68dd4ace4664c8730fa63db8203a3e506c5423d",
+    "original_abba500_result_sha256": "5f5ed075ccabdac2decc9dfcf63ce3f09c588b7b608478aebc06e9cd342467f5",
+    "original_abba500_plan_sha256": "0b0c246cbd3145f6c95f510dbf7ffdba103c1fdad4793c8f2b3dd34650f9b537",
+    "frame_count_scope": "JourneyPerformance counts Time<Real> render-world intervals once perPlayingUpdate; DevMetrics samples Last-to-Last after60ready frames, CPU First-to-Last. No claim of physical presented frames.",
+    "acceptance240": {
+      "primary_fields": [
+        "performance.gameplay_frame_p99_ms",
+        "performance.gameplay_longest_frame_ms"
+      ],
+      "pairs": [
+        "A1-cold→B1-cold",
+        "A1-warm→B1-warm",
+        "A2-cold→B2-cold",
+        "A2-warm→B2-warm"
+      ],
+      "condition": "Every declared pair must improve both primary fields strictly. A tie or regression remains unproven; no replacing JourneyP99 with DevMetrics, averaging away a failed pair, changing view/quality/criteria after launch, or selecting repetitions.",
+      "other_outcomes": "Retain startup,P50,P95,all maxima,hitches,memory,CPU/GPU and every screenshot/failedlaunch. Report secondary regressions honestly. No generalFPS claim.",
+      "scope": "Measured this six-station route over2500m/default2000m/downpour/driver55deg on RX with identicalprivateWayland/AutoVsync. Not all scenarios/hardware; no OpenRails physics/pixel parity conclusion."
+    },
+    "predecessor37_acceptance_result_sha256": "4e6af16a4c7e1893b59e01a9be7c3b1206d96fce32e2726edb117f222801d851",
+    "expected_new_gate_receipts": {
+      "native": {
+        "path": "<private-qa>/lifetime-short38-extended-rx/result.json",
+        "sha256": "d673816aece17509146b0c8ebe37ac01ff38b46bc55b0312d23ebd9ea6aa4b55"
+      },
+      "fixture": {
+        "path": "<private-qa>/lab-extended38-clock180-ig/result.json",
+        "sha256": "a5ed7c93f20c34e936f488d24b442067e2bd6612d2d64a390f7c1ed6331b4f05"
+      }
+    },
+    "bound_utc": "2026-10-14T19:56:30.090411+00:00",
+    "candidate_binary_sha256": "5be5da7de14db73321303af2b310da7c8ca635b3dcd9c304fbe631ae0d8fd47d",
+    "candidate_build_receipt_sha256": "f3c09d85c59748e06ffc8d112272ce05738b20eb9288e608930657f594053b03",
+    "candidate_build_receipt": "<private-qa>/phase38-build2/phase38-build-receipt.json",
+    "candidate_checks": "<private-qa>/check38-attempt3/check38-receipt.json",
+    "frozen_utc": "2026-10-14T19:56:30.090412+00:00",
+    "candidate_check_receipt_sha256": "eb1bc36202222252264a5d1fddd8b04bc207f8dd811418969a4bf16621fead36",
+    "candidate_readiness_receipt": {
+      "path": "<private-qa>/phase38-ready-for-short-gates.json",
+      "sha256": "564221e2f9c1971991fbbfd9308d8009fd02f4e333eb3678b4d4aa15aa93dc2b"
+    },
+    "diagnostic38": {
+      "path": "<private-qa>/profile38-reviewed.json",
+      "sha256": "690fd2ef8ef37f5427ffe21c404d363551d6631d47af8bdde9dbda16bde512bd",
+      "scope": "Separate candidate-only correlation with flagsON and SnapCPU concurrency. Excluded from all8acceptance runs and primary paired deltas."
+    },
+    "harness_source_hashes": {
+      "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/fifth40-continued-20261014/run-abba38.py": "a17a84b0a13d099fcb4ae5d800a95b8d4de035667ba75b9de58003cf99c0f660",
+      "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/scripts/check_viewer_streaming.py": "880bd100e7253fce1f4caab11da6c6802ac3a4c35e8761a9d6b9415a2a860683",
+      "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/scripts/check_player_expansion.py": "9356727b9d1272d50bc0a45e9f9345e843f68dceb6172821414f47ad52206101",
+      "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/scripts/capture_route_views.py": "e8de76e0a743ab06bbb010e8008c6c3794bf6db87d54936387ca2911f7827a22"
+    },
+    "baseline_binary_sha256": "531ec4d91cfa3391f1f24a8d62d8abef026603609528462efacbb8ae7a096e08",
+    "baseline_build_receipt": {
+      "path": "<private-qa>/baseline-d9-build-receipt.json",
+      "sha256": "f2dabfab2a103f43988b3134a860f7d4de2f8fdefe8ff0b001e6132b194b74ce"
+    },
+    "fresh_gpu_gate_review": {
+      "native_process_s": 423.1281525279992,
+      "native_schema3_wall_s": 420.017492768,
+      "native_json_restores": 7,
+      "native_real_disk_restores": 7,
+      "native_route_changes": 2,
+      "fixture_process_s": 192.06161040199913,
+      "fixture_schema3_wall_s": 180.02147978,
+      "fixture_json_restores": 3,
+      "fixture_real_disk_restores": 3,
+      "fixture_loading_age_at150_s": 149.458751985,
+      "fixture_weather_timeline_at150_s": 119.89999999993148,
+      "failure_count": 0,
+      "capture_scope": "BothnewPNG reviewed. ExtendedLabshowsownroof/snow/HUD, notoriginalcabnor30km continuousscenery. Native420scopeisactualsimulation/SavedGame andoriginal20AI, notpixelparity."
+    },
+    "quiet_gate_contract": {
+      "status": "approved_exclusive_quiet",
+      "scope": "abba38",
+      "plan_sha256": "Must equal SHA256 of this frozen file; supplied in a separate newRootreceipt before launch",
+      "extended_fixture_gate_passed": true,
+      "original_native420_gate_passed": true,
+      "no_other_controlled_workloads": true,
+      "ambient": "Only light orchestration/conversation/reads and untouched userdesktop/services; Francecontrolledcontainers frozen, allothercontrolledQA/builds stoppedorpaused. Record residentmemory without claiming absent."
+    }
+  },
+  "raw_plan_hash_scope": "plan_sha256 identifies the original private bytes. The embedded plan changes only private path strings for publication; it is not claimed byte-identical to that raw file."
+}
