@@ -335,6 +335,47 @@ debe recuperar la lista completa. Esta elección no limita los trenes que se
 pueden elegir después. Las capturas de tamaños validan la composición; los clics
 y la selección se verifican por separado.
 
+La revisión Snap `x15` de `0.1.0-alpha.6` se comprobó bajo confinamiento estricto,
+con tres capturas Wayland en RX 7600: menú, cabina y exterior. Las dos vistas de
+Blue Pullman mostraron ocho vehículos, cuatro sectores GPU, nueve cuadros de
+partida y ninguna carga o compilación de shader pendiente. Los PNG nuevos y el
+mensaje del observador `ScreenshotCaptured` quedaron registrados. El
+[recibo intermedio x15](validation/FIFTH40_SNAP_ALPHA6_X15_BLUE_PULLMAN.json)
+conserva versión, revisión, fuente y hashes; también registra el desborde real
+del texto largo del servicio en el menú, que requiere una captura posterior.
+
+Las vistas x15 usan un lanzamiento directo de QA: metadatos y formación del Snap,
+más enlaces de sólo lectura al escenario original instalado. No se pasó
+`--route-root` ni se usó el checkout como contenido. Esta prueba confirma el
+renderizado confinado, pero no sustituye los clics de selección ni demuestra por
+sí sola el primer paso de país o toda la biblioteca. La versión que se publique
+debe conservar una aceptación propia del paquete final después de la corrección
+de composición; x15 permanece como evidencia intermedia.
+
+La corrección de composición se aceptó en fase 31 con cuatro PNG nuevos de País
+y Ruta a 800×600 y 640×480. El servicio largo se ve completo dentro de su botón
+y del viewport; a 640×480 ocupa dos líneas. Ruta, servicio y búsqueda aparecen
+antes de campañas, editor y modo. Los ocho países, las pestañas, «Volver» y el
+pie fijo conservan etiquetas legibles. El
+[recibo de fase 31](validation/FIFTH40_MENU_PHASE31.json) comprueba dimensiones
+de texto positivas, límites con tolerancia máxima de un píxel y tinta real
+dentro de los botones, excluyendo sus bordes, además de la inspección de los PNG.
+
+Las fases 29 y 30 se rechazaron: la primera dejó todos los botones sin texto;
+la segunda restauró los ordinarios, pero todavía produjo selectores con ancho
+de etiqueta cero. Sus imágenes y reportes siguen preservados. Contar comandos
+y cadenas de texto, o comprobar sólo máximos de tamaño, no basta para aceptar
+una UI que el jugador pueda leer. La fase 31 es una aceptación del visor host;
+el Snap reconstruido requiere su propio recibo.
+
+Para repetir la prueba, iniciar «Nueva partida», elegir «Todos los países» y
+«Chiltern extendido: Northolt Park → Gerrards Cross». A ambos tamaños deben verse
+ruta, nombre completo del servicio y búsqueda sin desplazar el primer bloque.
+El nombre debe envolver dentro del botón a 640×480. Después revisar «Volver»,
+las pestañas y «Jugar»: ninguna debe aparecer como un rectángulo vacío ni quedar
+tapada por el contenido. Las listas y herramientas posteriores pueden desplazarse
+mientras el pie permanece fijo.
+
 Una prueba pesada de nieve y cámara ABA en la GPU integrada recibió `DeviceLost`
 de RADV y falló; no se cuenta como aceptación. Las capturas livianas de pasajeros,
 pared y nieve en curva pasaron en esa GPU, y el WORLD nevado se comprobó aparte en

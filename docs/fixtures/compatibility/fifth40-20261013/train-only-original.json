@@ -29,8 +29,8 @@
       }
     ]
   },
-  "status": "host_resource_audit_and_original_loading_visual_pass; final_clean_snap_acceptance_pending",
-  "scope": "Installation, resource audit and host loading/cab/exterior of one original train-only base pack on a synthetic 25 kV lab. Does not certify C# systems, sound, full physics parity or every route.",
+  "status": "strict_snap_x15_original_train_only_acceptance_pass; final_UI29_snap_acceptance_pending",
+  "scope": "Original train-only pack installation, resource audit and normal cab/exterior loading verified on host26 and strict Snap alpha.6 x15 using a synthetic 25 kV lab. Final UI29 Snap repetition remains pending; does not certify full OR physics, C# or sound parity.",
   "original": {
     "package": "Jeanprisca/SNCF-TGV-Atlantique",
     "author": {
@@ -337,9 +337,7 @@
     "source_changes_after_cli_build": "Only the test fixture corrected STF escaping, native loader root and restoration of the 3D-only placeholder."
   },
   "pending": [
-    "Repeat resource preparation and re-audit with the final clean core24 Snap.",
-    "Show the original TGV325 formation in the final Snap train selector.",
-    "Repeat the normal live synthetic 25 kV cab and exterior captures inside the final strict Snap."
+    "Repeat the same original-stock selector/cab/exterior acceptance after the final UI29-only Snap rebuild; preserve x15 as an intermediate candidate."
   ],
   "host_runtime_candidate25": {
     "viewer_sha256": "b18442e7a3d21b9895c74ade1bd65a71ec503eb264b6e94acacabb26bf2fbaa7",
@@ -485,5 +483,258 @@
     "unnamed_slots": 11,
     "primitive_reference_slot": 133,
     "regression_results": "Recorded by the separate check.json; visual and parse acceptance do not substitute for that check."
+  },
+  "strict_snap_candidate_x15": {
+    "status": "pass",
+    "source_commit": "2afdb8c13a2b6f4c444b5f1449ce878e6e73c963",
+    "source_dirty": false,
+    "version": "0.1.0-alpha.6",
+    "revision": "x15",
+    "confinement": "strict",
+    "base": "core24",
+    "archive_sha256": "fe8c86f04e74144d29f638ec5760dc96c058a41ebea25484965277c673514aec",
+    "binary_sha256": {
+      "openrailsrs": "52fc1a4aaaece70993a24f072a1c0fbd0d22dd34fe9e8defddc736ca49257ab4",
+      "openrailsrs-viewer3d": "052cf8dedd59f19c5e119a75fc4e4ba0c4ec2f0800e49991ba67297ad54c136e",
+      "openrailsrs-prepare-content": "1c94f56c0d0ffbf68426bec5b12a9b51079f266acd3a60d226e0fd3f8b820974"
+    },
+    "build_glibc": "2.39",
+    "required_glibc": "2.39",
+    "author_installers_executed": false,
+    "content_in_snap": false,
+    "author_resources_modified": false,
+    "synthetic_route": "examples/electric_supply/route",
+    "overhead_voltage_v": 25000,
+    "resource_preparation": {
+      "process_exit": 0,
+      "stdout_sha256": "a1acad0d2778a6d349cf1b1cf0e5b9b7ad52c03ccaa62d53b0ce601f0a2212e7",
+      "global_summary": "Contenido instalado por separado · 15/252 formaciones con recursos completos y tracción · 0 actividades disponibles. Revisá las advertencias de compatibilidad al elegir la formación."
+    },
+    "audit": {
+      "process_exit": 0,
+      "sha256": "b79eeca4c8d658ed1f7c08a76292b370eb9dc8d4e806c8cb416784d293cc3137",
+      "formations": 20,
+      "content_valid": 2,
+      "player_ready": 2,
+      "ready": [
+        {
+          "formation": "SNCF_TGV-325-FR.con",
+          "vehicles": 12,
+          "powered_vehicles": 3,
+          "cab_3d": true,
+          "warnings": 62
+        },
+        {
+          "formation": "SNCF_TGV-325-FR_Sharpe.con",
+          "vehicles": 12,
+          "powered_vehicles": 2,
+          "cab_3d": true,
+          "warnings": 61
+        }
+      ],
+      "incomplete": 18
+    },
+    "scope": "Unmodified original train-only base pack, strict Snap resource preparation/audit and global selector; original TGV325 Sharpe loads in Playing, with native cab/exterior inspected on a synthetic 25 kV fixture. No movement, full OR physics parity, sound or C# compatibility certification.",
+    "performance_claim": null,
+    "role": "complete_intermediate_candidate; final_UI29_snap_repeat_pending",
+    "session": {
+      "snap_revision": "x15",
+      "snap_version": "0.1.0-alpha.6",
+      "viewer_sha256": "052cf8dedd59f19c5e119a75fc4e4ba0c4ec2f0800e49991ba67297ad54c136e",
+      "cli_sha256": "52fc1a4aaaece70993a24f072a1c0fbd0d22dd34fe9e8defddc736ca49257ab4",
+      "harness_sha256": "7e171a970b63e093b0ef3a4a3fbd490a48dca974f414042891dee97e2ad07930",
+      "wrapper_sha256": "c023d25c9ca47c66dcfe27dcb3dd42af248187dde84531c4939b6b755fcf81e1",
+      "no_fps_claim": true,
+      "normal_renderer": true,
+      "source_commit": "2afdb8c13a2b6f4c444b5f1449ce878e6e73c963",
+      "started_at": 1791945209.5255575,
+      "scope": "Unmodified original TGV stock discovered by global library on a synthetic 25 kV QA route; capture menu_page=train bypasses country flow only for visual inspection.",
+      "finished_at": 1791945289.5101092,
+      "all_cases_pass": true,
+      "private_wayland_socket": "wayland-41"
+    },
+    "captures": [
+      {
+        "mode": "selector",
+        "started_at": 1791945209.6663783,
+        "finished_at": 1791945230.1368434,
+        "screenshot_sha256": "d551ed649dc7ef13ba1b5a9ff9dcf6d56c838c77384238cf21f8848e93bc5222",
+        "report_sha256": "44d48e86c12b186b0dad2604018634370da5c78c9c0fb410b0b6df89a69d9f61",
+        "scenario_sha256": "c7b6def873a364c5e63184f4c3d11f8a1806f6f30bed8d421b87718530808ce0",
+        "screenshot_captured_callback": true,
+        "normal_renderer": true,
+        "capture_environment": {},
+        "log_sha256": "03093dc9b6cfc6346f80a6b3a75441ba12b059c72bdb23cf5a18f6aad5780318",
+        "process_exit": 0,
+        "visual_inspected": true,
+        "renderer": {
+          "backend": "Vulkan",
+          "device_type": "DiscreteGpu",
+          "hardware": true,
+          "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+        },
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "performance_claim": null,
+        "entry": "Explicit QA menu_page=train with global library discovery; not a manual country/route click test.",
+        "visual_result": "Original base formation selected, author revision 10967835 visible, twelve-vehicle model preview and Jugar shown. Electrical incompatibility with the currently selected unpowered Chiltern route is correctly an advisory."
+      },
+      {
+        "mode": "driver",
+        "started_at": 1791945230.1869185,
+        "finished_at": 1791945260.029618,
+        "screenshot_sha256": "539ac79d7c444bebe24a64677240ba43728e15d7dba86cd17866803a2c96ecae",
+        "report_sha256": "d14fe7c80ddb3ae7852004fdadfa5e930260d675d9d49551c54ff775c40ce83a",
+        "scenario_sha256": "c7b6def873a364c5e63184f4c3d11f8a1806f6f30bed8d421b87718530808ce0",
+        "screenshot_captured_callback": true,
+        "normal_renderer": true,
+        "capture_environment": {
+          "OPENRAILSRS_FOLLOW": "driver",
+          "OPENRAILSRS_CAM_DIST": "220",
+          "OPENRAILSRS_CAM_PITCH": "0.25",
+          "OPENRAILSRS_CAM_YAW": "1.6",
+          "OPENRAILSRS_SCREENSHOT_AFTER_READY": "1",
+          "OPENRAILSRS_SCREENSHOT_READY_FRAMES": "180"
+        },
+        "log_sha256": "5ae7f65598d2cfc7820f002e60ddac449abd8e6af287844d5ef65cbfc0f880e2",
+        "process_exit": 0,
+        "visual_inspected": true,
+        "renderer": {
+          "backend": "Vulkan",
+          "device_type": "DiscreteGpu",
+          "hardware": true,
+          "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+        },
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "performance_claim": null,
+        "gameplay_frames": 177,
+        "train_cars": 12,
+        "camera": {
+          "aspect_ratio": 1.4285714626312256,
+          "distance_m": 220.0,
+          "fov_y_rad": 1.0471975803375244,
+          "indirect_drawing": false,
+          "pitch_rad": 0.25,
+          "position_world": [
+            296.364990234375,
+            3.0899999141693115,
+            -0.4900016784667969
+          ],
+          "rotation_xyzw": [
+            -0.07391279190778732,
+            -0.7032330632209778,
+            -0.07391276955604553,
+            0.7032332420349121
+          ],
+          "target_world": [
+            300.0,
+            0.30000001192092896,
+            0.0
+          ],
+          "yaw_rad": 0.0
+        },
+        "cab_view": {
+          "camera_eye": [
+            133.364990234375,
+            3.0899999141693115,
+            42.0099983215332
+          ],
+          "camera_inside_geometry": true,
+          "expected_eye": [
+            133.364990234375,
+            3.0899999141693115,
+            42.0099983215332
+          ],
+          "eye_error_m": 0.0,
+          "mesh_parts": 364,
+          "visible_mesh_parts": 364
+        },
+        "parsed_exterior_parts": 1886,
+        "visual_result": "Original cab assembled, all 364 cab parts visible and eye error 0 m."
+      },
+      {
+        "mode": "exterior",
+        "started_at": 1791945260.1474812,
+        "finished_at": 1791945289.4749048,
+        "screenshot_sha256": "bdc05985bd1bab5519b373e8d1944afdbf1d96b1b40cafcc0cef87d26d9fda26",
+        "report_sha256": "213a56179801adadeee498ca4327232e7ef5116c8dba9f29ddecffc0c8e4f6ef",
+        "scenario_sha256": "c7b6def873a364c5e63184f4c3d11f8a1806f6f30bed8d421b87718530808ce0",
+        "screenshot_captured_callback": true,
+        "normal_renderer": true,
+        "capture_environment": {
+          "OPENRAILSRS_FOLLOW": "orbit",
+          "OPENRAILSRS_CAM_DIST": "95",
+          "OPENRAILSRS_CAM_PITCH": "0.18",
+          "OPENRAILSRS_CAM_YAW": "0.4",
+          "OPENRAILSRS_CAPTURE_OR_FOCUS": "1",
+          "OPENRAILSRS_SCREENSHOT_AFTER_READY": "1",
+          "OPENRAILSRS_SCREENSHOT_READY_FRAMES": "180"
+        },
+        "log_sha256": "2d32eceb35d4b15383e6574305bc1dc226613c013fcf4c8fa021c7aec31086b0",
+        "process_exit": 0,
+        "visual_inspected": true,
+        "renderer": {
+          "backend": "Vulkan",
+          "device_type": "DiscreteGpu",
+          "hardware": true,
+          "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+        },
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "performance_claim": null,
+        "gameplay_frames": 177,
+        "train_cars": 12,
+        "camera": {
+          "aspect_ratio": 1.4285714626312256,
+          "distance_m": 95.0,
+          "fov_y_rad": 0.7853981852531433,
+          "indirect_drawing": false,
+          "pitch_rad": 0.18000000715255737,
+          "position_world": [
+            325.41204833984375,
+            17.307809829711914,
+            86.08709716796875
+          ],
+          "rotation_xyzw": [
+            -0.08808697760105133,
+            0.1978653222322464,
+            0.017856119200587273,
+            0.9761000275611877
+          ],
+          "target_world": [
+            289.0150146484375,
+            0.30000001192092896,
+            0.0
+          ],
+          "yaw_rad": 0.4000000059604645
+        },
+        "cab_view": null,
+        "parsed_exterior_parts": 1886,
+        "visual_result": "Original nose, body and roof assembled; no candidate 25 panel fragmentation. Pink/purple ground is synthetic lab geometry."
+      }
+    ],
+    "qa_display_setup_retries": [
+      {
+        "socket": "tgv-final-x15",
+        "log_sha256": "5f1a5f47ce2be878c23323148764e91af0accf43c97932513726ec630753fa3c",
+        "harness_exit": 1,
+        "viewer_render_started": false
+      },
+      {
+        "socket": "wayland-tgv-final-x15",
+        "log_sha256": "5f1a5f47ce2be878c23323148764e91af0accf43c97932513726ec630753fa3c",
+        "harness_exit": 1,
+        "viewer_render_started": false
+      }
+    ],
+    "qa_display_setup_resolution": "Reuse the numeric Wayland socket pattern accepted by the unchanged strict Snap. Production code and interfaces were not modified; the two rejected harness runs are not accepted screenshots.",
+    "synthetic_route_assume_signals_clear": true
   }
 }

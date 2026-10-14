@@ -191,8 +191,10 @@ shaders y ejemplos necesarios para ejecutar desde otra carpeta. El contenido
 original se instala por separado y queda en los datos del usuario; no se
 incorpora al paquete ni al repositorio. El paquete agrega `Jugar.sh --check`,
 `Jugar.sh`, `LEEME.txt` y metadatos/hashes de compilación. No requiere Rust ni
-Cargo para jugar. El paquete portátil de QA requiere **glibc 2.43**; el Snap
-publicado se compila en **core24**, que aporta su propia base con glibc 2.39.
+Cargo para jugar. El portátil probado en esta tanda usa binarios construidos en
+**core24** y requiere **glibc 2.39**. Las pruebas portátiles anteriores, compiladas
+en el host, requieren 2.43; consultá `required_glibc` en el `BUILD.json` de cada
+paquete. El Snap aporta su propia base core24 y sus bibliotecas gráficas.
 
 ```bash
 cargo install --path crates/openrailsrs-cli   # binario `openrailsrs`

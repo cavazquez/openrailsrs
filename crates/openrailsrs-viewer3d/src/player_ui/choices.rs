@@ -111,7 +111,7 @@ pub(super) fn selected(
     kind: ChoiceKind,
     active: ChoiceKind,
 ) {
-    let id = button(
+    let id = wrapped_button(
         p,
         format!("{label_text}: {value} · Elegir"),
         UiCommand::ShowChoices(kind),

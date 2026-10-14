@@ -30,10 +30,20 @@ la ruta absoluta de `bin/openrailsrs content --list`. Python 3 y las bibliotecas
 sistema siguen siendo dependencias del paquete portátil. Un binario compilado
 en una distribución reciente puede requerir su versión de glibc; para publicar
 una descarga general, compilá en la distribución mínima soportada. La
-construcción de QA de esta revisión necesita **glibc 2.43 o superior**: se
-comprobó la dependencia ELF y no se presenta como compatible con Ubuntu 24.04
-u otras distribuciones con versiones anteriores. El Snap se compila dentro de
-core24 y tiene una construcción independiente.
+construcción portátil del quinto lote usa los mismos binarios de core24 que
+el Snap y requiere **glibc 2.39 o superior**, comprobado en ELF y en Ubuntu
+24.04 de QA. Las construcciones históricas hechas en el host necesitan 2.43;
+sus recibos conservan ese límite. El Snap incluye su base y bibliotecas.
+
+En Ubuntu 24.04, el portátil necesita las bibliotecas de pantalla y Vulkan
+del sistema. Esta prueba requirió instalar `libxi6`, `libxkbcommon-x11-0` y
+`mesa-vulkan-drivers` en el entorno limpio. El resto ya estaba instalado:
+`libx11-6`, `libxcursor1`, `libxrandr2`, `libwayland-client0`,
+`libwayland-cursor0`, `libxkbcommon0`, `libvulkan1` y ALSA. El modo `--cpu`
+también utiliza Vulkan/Mesa, mediante lavapipe. `Jugar.sh --check` comprueba
+dependencias ELF y recursos; las bibliotecas que se abren dinámicamente y
+el controlador se verifican al abrir la ventana. Los intentos fallidos del
+sistema sin esas dependencias se conservan por separado de la prueba aprobada.
 
 El visor resuelve los recursos junto al ejecutable. `OPENRAILSRS_RESOURCES`
 permite indicar otra carpeta absoluta que contenga `assets/` y `examples/`.

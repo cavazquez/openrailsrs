@@ -1,0 +1,246 @@
+{
+  "schema": 1,
+  "status": "INTERMEDIATE_RENDER_PASS_WITH_MENU_LAYOUT_FINDING",
+  "final_release_certified": false,
+  "scope": "Installed strict Snap alpha.6 x15, three fresh Wayland/RX captures before the subsequent service-label wrapping fix. No final-release or menu-click acceptance is inferred.",
+  "package": {
+    "name": "openrailsrs",
+    "version": "0.1.0-alpha.6",
+    "base": "core24",
+    "confinement": "strict",
+    "revision": "x15",
+    "metadata_sha256": "9f0f0667e196446968f3298e473f43982e0845ae8507d7e49ce8a19210ed20bd",
+    "snap_sha256": "fe8c86f04e74144d29f638ec5760dc96c058a41ebea25484965277c673514aec",
+    "snap_bytes": 165519360,
+    "snapd_state": {
+      "active": true,
+      "current": "x15"
+    }
+  },
+  "source_build_identity": {
+    "version": "0.1.0-alpha.6",
+    "source_commit": "2afdb8c13a2b6f4c444b5f1449ce878e6e73c963",
+    "source_dirty": false,
+    "source_archive_sha256": "4a1e7e47a4aa2eff809c4eea34b85cdee62b74561e5ad2960c7d4e679aed25a8",
+    "snap_sha256": "fe8c86f04e74144d29f638ec5760dc96c058a41ebea25484965277c673514aec",
+    "snap_bytes": 165519360,
+    "build": {
+      "source_commit": "2afdb8c13a2b6f4c444b5f1449ce878e6e73c963",
+      "source_dirty": false,
+      "source_snapshot_sha256": "89127276e4993df0b24ef2a253c872c9b3fd996cab774a1654a89b266c782463",
+      "architecture": "x86_64",
+      "build_libc": [
+        "glibc",
+        "2.39"
+      ],
+      "required_glibc": "2.39",
+      "downloaded_content_included": false,
+      "binary_sha256": {
+        "openrailsrs": "52fc1a4aaaece70993a24f072a1c0fbd0d22dd34fe9e8defddc736ca49257ab4",
+        "openrailsrs-viewer3d": "052cf8dedd59f19c5e119a75fc4e4ba0c4ec2f0800e49991ba67297ad54c136e",
+        "openrailsrs-prepare-content": "1c94f56c0d0ffbf68426bec5b12a9b51079f266acd3a60d226e0fd3f8b820974"
+      }
+    },
+    "root_build_receipt_sha256_at_capture": "6e5d26e5aef84312eceb705674d58f7370ef4b210f48133f9d84cb52ddd238e7"
+  },
+  "source_build_identity_receipt_sha256": "fca30725ac6f47db7aac5b41e6e92e200564a87963a27294e7ff37f1b9f729b5",
+  "preparation": {
+    "snap_revision": "x15",
+    "source_launch_sha256": "ef052f53436d8cd2616f10aa08db586cf8eb2545127eb5df7a240443ec92d9a0",
+    "direct_launch_sha256": "31f9569ae32222672d91974dbdd534c39dbb4b23e6640486a4f2ec24c6d9270d",
+    "graph_sha256": {
+      "track.toml": "97aad2e510b01017370c7d7735604c574745b4bf9a58ff8c362ab9a0fdefd94e",
+      "provenance.json": "83e5f3c45dce7a42443b7be3e5fc56427b696f01eec3bff1b0c70ebd763118ff"
+    },
+    "viewer_sha256": "052cf8dedd59f19c5e119a75fc4e4ba0c4ec2f0800e49991ba67297ad54c136e",
+    "author_revision": "8236df20ed9f596b8cf15720c43bfbdd0c43125d",
+    "overlay_uses_read_only_author_links": true,
+    "route_stops": 6,
+    "scope": "Current Snap metadata/CON plus an explicit QA WORLD overlay; original menu resolver and click require separate acceptance."
+  },
+  "preparation_receipt_sha256": "4bae2eca90547d1cd197ff47a49102762290ea89723da4cd145338882e889e45",
+  "harness": "content-qa-wayland-alpha6-x15.py",
+  "harness_sha256": "5cb72c66bbbae941957e24af387ee578899e4540050f58a7332a5b946fb09cc0",
+  "runtime": "Private Weston Wayland on RX7600 PCI0000:03:00.0; sequential Snap launches; private PTY captures diagnostic events",
+  "cache_policy": {
+    "source": "off",
+    "geometry": "off",
+    "texture": "off",
+    "mesa_disk_shader_cache": "disabled"
+  },
+  "acceptance": {
+    "render_cases_passed": 3,
+    "png_inspected": 3,
+    "failed_shader_pipelines": 0,
+    "native_views_playing_complete": 2,
+    "menu_layout_certified": false,
+    "menu_country_flow_certified": false,
+    "long_run_stability_certified": false,
+    "store_publication_certified": false
+  },
+  "cases": [
+    {
+      "case": "menu",
+      "status": "PASS_RENDER_AND_RESOURCES",
+      "frame": "current-snap-menu.png",
+      "frame_sha256": "495820f554826a3a91825c1b17607cf051b6d4b43804fd508a0f0f424c5e2c01",
+      "frame_size_px": [
+        1000,
+        700
+      ],
+      "checkpoint_sha256": "f4df40127dc4643ef22dee62fb26750b8c09f66231075412c6df33af01975754",
+      "log_sha256": "7fbd91c383453b53929417c6c99bc17642351439b0d722f1517e15e9930d7787",
+      "screenshot_captured_observer": true,
+      "normal_exit_after_capture": true,
+      "fresh_png_assertion": true,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "gameplay_frames": 0,
+      "gpu_tiles": 0,
+      "gpu_entities": 0,
+      "vehicle_count": 0,
+      "clock_time_s": null,
+      "inspected": true,
+      "launch_resources_label": "Recursos necesarios completos",
+      "play_button_present": true,
+      "route_preview_visible": true,
+      "scope": "Normal Snap menu builder, capture route page and selected packaged CON. No click or first-country-step behavior is inferred.",
+      "layout_status": "FAIL_LONG_SERVICE_TEXT_OVERFLOW",
+      "visual_inspection": "The route preview, ready-resource status and Play button are visible. The long service label extends horizontally outside its button/column toward the left. This is a real layout finding and is not accepted as a perfect menu."
+    },
+    {
+      "case": "driver",
+      "status": "PASS_RENDER_AND_RESOURCES",
+      "frame": "current-snap-driver.png",
+      "frame_sha256": "31709745c3fa1e0168d4b0a08bdae73b7562b64bc7221645cf634f55a010c997",
+      "frame_size_px": [
+        1000,
+        700
+      ],
+      "checkpoint_sha256": "f7286c85cf3d1d38a2e6a2d894d63ef2e595c8b2cec4febbe5da3a6e319e5267",
+      "log_sha256": "767a92047c43fde291a850f07df199c4778475abcc3dec40beec426edf018997",
+      "screenshot_captured_observer": true,
+      "normal_exit_after_capture": true,
+      "fresh_png_assertion": true,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "gameplay_frames": 9,
+      "gpu_tiles": 4,
+      "gpu_entities": 1885,
+      "vehicle_count": 8,
+      "clock_time_s": 35700.2,
+      "inspected": true,
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "published_shape_calls": 247,
+      "cab_view": {
+        "camera_eye": [
+          1.9919323921203613,
+          13.182847023010254,
+          -0.06452369689941406
+        ],
+        "camera_inside_geometry": true,
+        "expected_eye": [
+          1.991933822631836,
+          13.182847023010254,
+          -0.06452226638793945
+        ],
+        "eye_error_m": 2.0230486370564904e-06,
+        "mesh_parts": 69,
+        "visible_mesh_parts": 69
+      },
+      "scope": "Direct live launch of the explicit QA overlay; installed Snap track/CON and read-only original WORLD hierarchy. No --route-root or checkout is supplied.",
+      "visual_inspection": "Original opaque cab, gauges and controls remain complete; the railway and scenery are visible through the window."
+    },
+    {
+      "case": "exterior",
+      "status": "PASS_RENDER_AND_RESOURCES",
+      "frame": "current-snap-exterior.png",
+      "frame_sha256": "9163ea46a481e915c472fde518504d91c547afacb4ee53ab26f815407c1c4250",
+      "frame_size_px": [
+        1000,
+        700
+      ],
+      "checkpoint_sha256": "a9d60370c41a709bd750e11ce384c9c3389f8e1f349798bac3ee33346e964188",
+      "log_sha256": "6a164e210bc8c92af9963f54f43265ff6a025c4d545f57c1848d7bb1f96b36fd",
+      "screenshot_captured_observer": true,
+      "normal_exit_after_capture": true,
+      "fresh_png_assertion": true,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "gameplay_frames": 9,
+      "gpu_tiles": 4,
+      "gpu_entities": 1885,
+      "vehicle_count": 8,
+      "clock_time_s": 35700.2,
+      "inspected": true,
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "published_shape_calls": 247,
+      "cab_view": null,
+      "scope": "Direct live launch of the explicit QA overlay; installed Snap track/CON and read-only original WORLD hierarchy. No --route-root or checkout is supplied.",
+      "visual_inspection": "Original Blue Pullman, platform, buildings and terrain are coherent. The cyan station stopping marker is visible above the train."
+    }
+  ],
+  "excluded_attempt": {
+    "receipt_sha256": "605e842fb45aa21c96548e4502484406d9d138423834bdfa45d5e4db30e60d50",
+    "reason": "Fresh menu PNG and checkpoint exist, but inherited file stderr is empty; observer-message assertion not met",
+    "counted_as_pass": false,
+    "files": {
+      "current-snap-menu.png": {
+        "sha256": "495820f554826a3a91825c1b17607cf051b6d4b43804fd508a0f0f424c5e2c01",
+        "bytes": 193356
+      },
+      "current-snap-menu.stream.json": {
+        "sha256": "f4df40127dc4643ef22dee62fb26750b8c09f66231075412c6df33af01975754",
+        "bytes": 19593
+      },
+      "current-snap-menu.log": {
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      "weston-wayland.log": {
+        "sha256": "ecaed72d57c32e705c78f6fc078e8a6a745295bf249f4a382d6e9ddc363a0d1d",
+        "bytes": 3190
+      },
+      "preparation.json": {
+        "sha256": "4bae2eca90547d1cd197ff47a49102762290ea89723da4cd145338882e889e45",
+        "bytes": 774
+      }
+    },
+    "scope": "Initial file-stderr QA assertion lacked the observer message; fresh pixels/checkpoint were produced but this attempt is preserved and excluded. Retry via private PTY proves both capture and normal exit."
+  },
+  "limits": [
+    "Cab/exterior use an explicitly recorded QA WORLD overlay. The menu resolver and actual click path require their separate acceptance; these views do not silently substitute for that test.",
+    "The captured route-page menu shows ready resources but a long service text overflow. A new source/build/layout requires new frames rather than relabeling x15.",
+    "The x15 menu capture jumps to the route page through a QA hook. It does not certify the initial country selection flow or every library interaction.",
+    "The strict installation, version, binary and package identities are verified; Store publication and prolonged memory stability remain separate.",
+    "No downloaded author resources or cache contents were copied into the repository. Public receipt contains hashes, not PNG or private path payloads."
+  ]
+}

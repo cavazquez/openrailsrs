@@ -217,25 +217,7 @@ pub(super) fn build_new_game(
                 button(p, "Abrir biblioteca", UiCommand::Open(PlayerPanel::Content));
                 return;
             }
-            button(
-                p,
-                "Campañas y jornadas",
-                UiCommand::Open(PlayerPanel::Campaigns),
-            );
-            button(
-                p,
-                "Crear o editar un servicio propio",
-                UiCommand::ServiceEditorStart,
-            );
             label(p, "¿Dónde querés conducir?", 21.0, TEXT);
-            button(
-                p,
-                format!(
-                    "Modo: {} · cambiar o preparar ejercicio",
-                    settings.journey_setup.mode.label()
-                ),
-                UiCommand::Open(PlayerPanel::Practice),
-            );
             choice_columns(
                 p,
                 |p| {
@@ -339,6 +321,26 @@ pub(super) fn build_new_game(
                         selector(p, "Recorrido", menu.path_label(), MenuField::Path);
                     }
                 },
+            );
+            row(p, |p| {
+                button(
+                    p,
+                    "Campañas y jornadas",
+                    UiCommand::Open(PlayerPanel::Campaigns),
+                );
+                button(
+                    p,
+                    "Crear o editar un servicio propio",
+                    UiCommand::ServiceEditorStart,
+                );
+            });
+            button(
+                p,
+                format!(
+                    "Modo: {} · cambiar o preparar ejercicio",
+                    settings.journey_setup.mode.label()
+                ),
+                UiCommand::Open(PlayerPanel::Practice),
             );
         }
         NewGameStep::Train => {

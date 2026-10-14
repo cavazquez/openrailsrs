@@ -1,0 +1,1175 @@
+{
+  "schema": 1,
+  "status": "PASS_HOST_MENU_LAYOUT",
+  "candidate": "phase31",
+  "scope": "Four real hardware captures of the normal Country/Route builders at800x600 and640x480 after choices-only sizing and primary-selector ordering fixes. This is host layout acceptance, not a certificate of the rebuilt Snap.",
+  "binary_sha256": "9c7a1418630d7f828639aa736ab3151e87ee8f3c1e253165dbfc594bfab457e9",
+  "source_snapshot": "phase31-source.json",
+  "source_snapshot_sha256": "53a350d31ccf4b9432fecb70a37f1f74a1439a962c046b63be5df171e0178dd3",
+  "harness": "capture-menu-visible-wrap.py",
+  "harness_sha256": "01fdd5fc933661b23eecc5859e524835452b19101b0ced1b4970b7500cd39116",
+  "preserved_executed_harness_sha256": "01fdd5fc933661b23eecc5859e524835452b19101b0ced1b4970b7500cd39116",
+  "raw_report_sha256": "e808743b2816af486ff404fe059311379dc2b014770e38aa7f86fc06b737a3c1",
+  "renderer_scope": "Private Weston/RX7600 PCI0000:03:00.0; sequential viewers and no concurrent load on this GPU",
+  "acceptance": {
+    "cases_passed": 4,
+    "png_inspected": 4,
+    "country_choices_fully_visible_each": 8,
+    "both_long_service_labels_fully_inside_viewport": true,
+    "maximum_text_inner_bounds_tolerance_px": 1,
+    "positive_text_dimensions_required": true,
+    "visible_ink_required": true,
+    "border_pixels_excluded": 6,
+    "minimum_ink_pixels_per_checked_button": 20,
+    "minimum_ink_extent_px": [
+      2,
+      2
+    ],
+    "failed_shader_pipelines": 0,
+    "snap_certified": false,
+    "long_run_stability_certified": false,
+    "click_flow_certified": false
+  },
+  "cases": [
+    {
+      "status": "PASS",
+      "binary_sha256": "9c7a1418630d7f828639aa736ab3151e87ee8f3c1e253165dbfc594bfab457e9",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "frame": "country-800x600.png",
+      "frame_sha256": "f4d17dad3328f82b07f1137167c15af67dc56256daf19f2587d56dc5e0a72204",
+      "raw_checkpoint_sha256": "37c71a393ab8123cbe49df75ef639da05a2e69244753e08fe0094fd2e44dd63e",
+      "log_sha256": "01842700d2ec47e9d41444b024856d8fddef260d46365359dc1cd15768414900",
+      "frame_size_px": [
+        800,
+        600
+      ],
+      "country_chosen_input": false,
+      "hook": "MENU_PAGE uses the normal builder",
+      "layout": {
+        "country_choices_fully_visible": 8,
+        "commands": [
+          {
+            "max": [
+              396.0,
+              233.0
+            ],
+            "min": [
+              66.0,
+              201.0
+            ],
+            "name": "ui-SelectCountry(0)"
+          },
+          {
+            "max": [
+              734.0,
+              233.0
+            ],
+            "min": [
+              404.0,
+              201.0
+            ],
+            "name": "ui-SelectCountry(1)"
+          },
+          {
+            "max": [
+              396.0,
+              277.0
+            ],
+            "min": [
+              66.0,
+              245.0
+            ],
+            "name": "ui-SelectCountry(2)"
+          },
+          {
+            "max": [
+              734.0,
+              277.0
+            ],
+            "min": [
+              404.0,
+              245.0
+            ],
+            "name": "ui-SelectCountry(3)"
+          },
+          {
+            "max": [
+              396.0,
+              321.0
+            ],
+            "min": [
+              66.0,
+              289.0
+            ],
+            "name": "ui-SelectCountry(4)"
+          },
+          {
+            "max": [
+              734.0,
+              321.0
+            ],
+            "min": [
+              404.0,
+              289.0
+            ],
+            "name": "ui-SelectCountry(5)"
+          },
+          {
+            "max": [
+              396.0,
+              365.0
+            ],
+            "min": [
+              66.0,
+              333.0
+            ],
+            "name": "ui-SelectCountry(6)"
+          },
+          {
+            "max": [
+              734.0,
+              365.0
+            ],
+            "min": [
+              404.0,
+              333.0
+            ],
+            "name": "ui-SelectCountry(7)"
+          }
+        ],
+        "labels": [
+          "Todos los países",
+          "Argentina",
+          "Australia",
+          "Estados Unidos",
+          "Portugal",
+          "Reino Unido",
+          "Sin dato de país",
+          "Francia"
+        ],
+        "button_ink": [
+          {
+            "command": "ui-SelectCountry(0)",
+            "inner_rect_px": [
+              72,
+              207,
+              390,
+              227
+            ],
+            "visible_white_ink_pixels": 228,
+            "ink_bbox_within_inner_rect": [
+              57,
+              3,
+              259,
+              14
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-SelectCountry(1)",
+            "inner_rect_px": [
+              410,
+              207,
+              728,
+              227
+            ],
+            "visible_white_ink_pixels": 167,
+            "ink_bbox_within_inner_rect": [
+              90,
+              5,
+              229,
+              17
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-SelectCountry(2)",
+            "inner_rect_px": [
+              72,
+              251,
+              390,
+              271
+            ],
+            "visible_white_ink_pixels": 177,
+            "ink_bbox_within_inner_rect": [
+              86,
+              3,
+              232,
+              14
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-SelectCountry(3)",
+            "inner_rect_px": [
+              410,
+              251,
+              728,
+              271
+            ],
+            "visible_white_ink_pixels": 231,
+            "ink_bbox_within_inner_rect": [
+              66,
+              5,
+              251,
+              14
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-SelectCountry(4)",
+            "inner_rect_px": [
+              72,
+              295,
+              390,
+              315
+            ],
+            "visible_white_ink_pixels": 165,
+            "ink_bbox_within_inner_rect": [
+              90,
+              3,
+              228,
+              17
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-SelectCountry(5)",
+            "inner_rect_px": [
+              410,
+              295,
+              728,
+              315
+            ],
+            "visible_white_ink_pixels": 172,
+            "ink_bbox_within_inner_rect": [
+              82,
+              5,
+              236,
+              14
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-SelectCountry(6)",
+            "inner_rect_px": [
+              72,
+              339,
+              390,
+              359
+            ],
+            "visible_white_ink_pixels": 226,
+            "ink_bbox_within_inner_rect": [
+              58,
+              5,
+              259,
+              17
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-SelectCountry(7)",
+            "inner_rect_px": [
+              410,
+              339,
+              728,
+              359
+            ],
+            "visible_white_ink_pixels": 133,
+            "ink_bbox_within_inner_rect": [
+              94,
+              5,
+              223,
+              14
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-NewGameStep(Country)",
+            "inner_rect_px": [
+              72,
+              100,
+              147,
+              120
+            ],
+            "visible_white_ink_pixels": 64,
+            "ink_bbox_within_inner_rect": [
+              8,
+              4,
+              67,
+              13
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-Close",
+            "inner_rect_px": [
+              253,
+              60,
+              359,
+              80
+            ],
+            "visible_white_ink_pixels": 100,
+            "ink_bbox_within_inner_rect": [
+              7,
+              3,
+              98,
+              14
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          }
+        ]
+      },
+      "viewport": {
+        "max": [
+          734.0,
+          505.0
+        ],
+        "min": [
+          66.0,
+          134.0
+        ],
+        "name": "player-scroll"
+      },
+      "footer": {
+        "max": [
+          734.0,
+          538.0
+        ],
+        "min": [
+          66.0,
+          513.0
+        ],
+        "name": "launch-footer"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "effective_cache_policy": {
+        "source": "off",
+        "geometry": "off",
+        "texture": "off"
+      },
+      "visual_inspection_pending": false,
+      "case": "country-800x600",
+      "visual_inspection": "All eight country choices and their readable labels are completely visible in two columns/four rows. Ordinary Back/tab labels and fixed footer are restored and visible.",
+      "screenshot_captured_observer": true,
+      "normal_exit_after_capture": true
+    },
+    {
+      "status": "PASS",
+      "binary_sha256": "9c7a1418630d7f828639aa736ab3151e87ee8f3c1e253165dbfc594bfab457e9",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "frame": "route-800x600.png",
+      "frame_sha256": "29de6bdb9d3f40963849a39e8de748a07f43a96bc60d8cf130e8993d7be073a5",
+      "raw_checkpoint_sha256": "9cfdeb61da8f50283c375660194577f9fc831d9675238d70da25d50809ce9225",
+      "log_sha256": "76cbc0662913faf1bd58c7a4f7d4ff2d7971e63e604712564894501e75b424a7",
+      "frame_size_px": [
+        800,
+        600
+      ],
+      "country_chosen_input": true,
+      "hook": "MENU_PAGE uses the normal builder",
+      "layout": {
+        "service_button": {
+          "max": [
+            734.0,
+            288.0
+          ],
+          "min": [
+            66.0,
+            256.0
+          ],
+          "name": "ui-ShowChoices(Service)"
+        },
+        "service_label": {
+          "size": [
+            644.0,
+            16.0
+          ],
+          "text": "Servicio: Chiltern extendido: Northolt Park → Gerrards Cross · Elegir",
+          "visible": true
+        },
+        "service_inner_size_px": [
+          644.0,
+          18.0
+        ],
+        "maximum_tolerance_px": 1,
+        "service_fully_inside_initial_viewport": true,
+        "service_wrap_checked": true,
+        "button_ink": [
+          {
+            "command": "ui-NewGameStep(Country)",
+            "inner_rect_px": [
+              72,
+              140,
+              728,
+              160
+            ],
+            "visible_white_ink_pixels": 288,
+            "ink_bbox_within_inner_rect": [
+              204,
+              3,
+              453,
+              14
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-NewGameStep(Train)",
+            "inner_rect_px": [
+              72,
+              512,
+              218,
+              532
+            ],
+            "visible_white_ink_pixels": 163,
+            "ink_bbox_within_inner_rect": [
+              7,
+              5,
+              138,
+              17
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-NewGameStep(Environment)",
+            "inner_rect_px": [
+              443,
+              100,
+              581,
+              120
+            ],
+            "visible_white_ink_pixels": 131,
+            "ink_bbox_within_inner_rect": [
+              7,
+              3,
+              130,
+              17
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-NewGameStep(Train)",
+            "inner_rect_px": [
+              348,
+              100,
+              423,
+              120
+            ],
+            "visible_white_ink_pixels": 54,
+            "ink_bbox_within_inner_rect": [
+              8,
+              5,
+              67,
+              14
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-NewGameStep(Route)",
+            "inner_rect_px": [
+              167,
+              100,
+              328,
+              120
+            ],
+            "visible_white_ink_pixels": 148,
+            "ink_bbox_within_inner_rect": [
+              7,
+              4,
+              154,
+              16
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-NewGameStep(Country)",
+            "inner_rect_px": [
+              72,
+              100,
+              147,
+              120
+            ],
+            "visible_white_ink_pixels": 64,
+            "ink_bbox_within_inner_rect": [
+              8,
+              5,
+              67,
+              14
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-Close",
+            "inner_rect_px": [
+              253,
+              60,
+              359,
+              80
+            ],
+            "visible_white_ink_pixels": 100,
+            "ink_bbox_within_inner_rect": [
+              7,
+              3,
+              98,
+              14
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-ShowChoices(Service)",
+            "inner_rect_px": [
+              72,
+              262,
+              728,
+              282
+            ],
+            "visible_white_ink_pixels": 625,
+            "ink_bbox_within_inner_rect": [
+              7,
+              3,
+              545,
+              17
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          }
+        ]
+      },
+      "viewport": {
+        "max": [
+          734.0,
+          454.0
+        ],
+        "min": [
+          66.0,
+          134.0
+        ],
+        "name": "player-scroll"
+      },
+      "footer": {
+        "max": [
+          734.0,
+          538.0
+        ],
+        "min": [
+          66.0,
+          462.0
+        ],
+        "name": "launch-footer"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "effective_cache_policy": {
+        "source": "off",
+        "geometry": "off",
+        "texture": "off"
+      },
+      "visual_inspection_pending": false,
+      "case": "route-800x600",
+      "visual_inspection": "Primary route/service selectors and search appear before secondary tools. The whole long Blue Pullman service name remains inside its button and visible viewport, with Back/navigation and fixed footer intact.",
+      "screenshot_captured_observer": true,
+      "normal_exit_after_capture": true
+    },
+    {
+      "status": "PASS",
+      "binary_sha256": "9c7a1418630d7f828639aa736ab3151e87ee8f3c1e253165dbfc594bfab457e9",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "frame": "country-640x480.png",
+      "frame_sha256": "5c84d524082c3704443ecd5d8bc817440cb965d3abfa6048cd9cca6c6e445d53",
+      "raw_checkpoint_sha256": "e46988812a5a10f29727db28216b85c52169ded31d2ccfcdb337629a10e18fdf",
+      "log_sha256": "78e7062d23b1b8613b1524e90714e7f7bddf96a600d3424af3e0d2701289534b",
+      "frame_size_px": [
+        640,
+        480
+      ],
+      "country_chosen_input": false,
+      "hook": "MENU_PAGE uses the normal builder",
+      "layout": {
+        "country_choices_fully_visible": 8,
+        "commands": [
+          {
+            "max": [
+              316.0,
+              226.0
+            ],
+            "min": [
+              56.0,
+              194.0
+            ],
+            "name": "ui-SelectCountry(0)"
+          },
+          {
+            "max": [
+              584.0,
+              226.0
+            ],
+            "min": [
+              324.0,
+              194.0
+            ],
+            "name": "ui-SelectCountry(1)"
+          },
+          {
+            "max": [
+              316.0,
+              270.0
+            ],
+            "min": [
+              56.0,
+              238.0
+            ],
+            "name": "ui-SelectCountry(2)"
+          },
+          {
+            "max": [
+              584.0,
+              270.0
+            ],
+            "min": [
+              324.0,
+              238.0
+            ],
+            "name": "ui-SelectCountry(3)"
+          },
+          {
+            "max": [
+              316.0,
+              314.0
+            ],
+            "min": [
+              56.0,
+              282.0
+            ],
+            "name": "ui-SelectCountry(4)"
+          },
+          {
+            "max": [
+              584.0,
+              314.0
+            ],
+            "min": [
+              324.0,
+              282.0
+            ],
+            "name": "ui-SelectCountry(5)"
+          },
+          {
+            "max": [
+              316.0,
+              358.0
+            ],
+            "min": [
+              56.0,
+              326.0
+            ],
+            "name": "ui-SelectCountry(6)"
+          },
+          {
+            "max": [
+              584.0,
+              358.0
+            ],
+            "min": [
+              324.0,
+              326.0
+            ],
+            "name": "ui-SelectCountry(7)"
+          }
+        ],
+        "labels": [
+          "Todos los países",
+          "Argentina",
+          "Australia",
+          "Estados Unidos",
+          "Portugal",
+          "Reino Unido",
+          "Sin dato de país",
+          "Francia"
+        ],
+        "button_ink": [
+          {
+            "command": "ui-SelectCountry(0)",
+            "inner_rect_px": [
+              62,
+              200,
+              310,
+              220
+            ],
+            "visible_white_ink_pixels": 228,
+            "ink_bbox_within_inner_rect": [
+              22,
+              3,
+              224,
+              14
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-SelectCountry(1)",
+            "inner_rect_px": [
+              330,
+              200,
+              578,
+              220
+            ],
+            "visible_white_ink_pixels": 167,
+            "ink_bbox_within_inner_rect": [
+              54,
+              5,
+              193,
+              17
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-SelectCountry(2)",
+            "inner_rect_px": [
+              62,
+              244,
+              310,
+              264
+            ],
+            "visible_white_ink_pixels": 177,
+            "ink_bbox_within_inner_rect": [
+              50,
+              3,
+              196,
+              14
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-SelectCountry(3)",
+            "inner_rect_px": [
+              330,
+              244,
+              578,
+              264
+            ],
+            "visible_white_ink_pixels": 231,
+            "ink_bbox_within_inner_rect": [
+              31,
+              5,
+              216,
+              14
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-SelectCountry(4)",
+            "inner_rect_px": [
+              62,
+              288,
+              310,
+              308
+            ],
+            "visible_white_ink_pixels": 165,
+            "ink_bbox_within_inner_rect": [
+              54,
+              3,
+              192,
+              17
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-SelectCountry(5)",
+            "inner_rect_px": [
+              330,
+              288,
+              578,
+              308
+            ],
+            "visible_white_ink_pixels": 172,
+            "ink_bbox_within_inner_rect": [
+              46,
+              5,
+              200,
+              14
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-SelectCountry(6)",
+            "inner_rect_px": [
+              62,
+              332,
+              310,
+              352
+            ],
+            "visible_white_ink_pixels": 226,
+            "ink_bbox_within_inner_rect": [
+              23,
+              5,
+              224,
+              17
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-SelectCountry(7)",
+            "inner_rect_px": [
+              330,
+              332,
+              578,
+              352
+            ],
+            "visible_white_ink_pixels": 133,
+            "ink_bbox_within_inner_rect": [
+              59,
+              5,
+              188,
+              14
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-NewGameStep(Country)",
+            "inner_rect_px": [
+              62,
+              93,
+              137,
+              113
+            ],
+            "visible_white_ink_pixels": 64,
+            "ink_bbox_within_inner_rect": [
+              8,
+              4,
+              67,
+              13
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-Close",
+            "inner_rect_px": [
+              243,
+              53,
+              349,
+              73
+            ],
+            "visible_white_ink_pixels": 100,
+            "ink_bbox_within_inner_rect": [
+              7,
+              3,
+              98,
+              14
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          }
+        ]
+      },
+      "viewport": {
+        "max": [
+          584.0,
+          392.0
+        ],
+        "min": [
+          56.0,
+          127.0
+        ],
+        "name": "player-scroll"
+      },
+      "footer": {
+        "max": [
+          584.0,
+          425.0
+        ],
+        "min": [
+          56.0,
+          400.0
+        ],
+        "name": "launch-footer"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "effective_cache_policy": {
+        "source": "off",
+        "geometry": "off",
+        "texture": "off"
+      },
+      "visual_inspection_pending": false,
+      "case": "country-640x480",
+      "visual_inspection": "All eight country choices and their readable labels are completely visible in two columns/four rows. Ordinary Back/tab labels and fixed footer are restored and visible. The optional explanation below the choices is partly clipped; the eight choices and footer remain complete.",
+      "screenshot_captured_observer": true,
+      "normal_exit_after_capture": true
+    },
+    {
+      "status": "PASS",
+      "binary_sha256": "9c7a1418630d7f828639aa736ab3151e87ee8f3c1e253165dbfc594bfab457e9",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "frame": "route-640x480.png",
+      "frame_sha256": "bc1be4c48dfb0357c6dbf82376108132e02d84dc2150c52eab96b4676305cf94",
+      "raw_checkpoint_sha256": "3857c4554ad7ece00d7a49ec0c791d67aa224567e3c2b77a5d0efebb9ad8b328",
+      "log_sha256": "aa719c9bda9a798fbaebdfd9796897372aee15ddef88a4d79243f0376dc6b134",
+      "frame_size_px": [
+        640,
+        480
+      ],
+      "country_chosen_input": true,
+      "hook": "MENU_PAGE uses the normal builder",
+      "layout": {
+        "service_button": {
+          "max": [
+            584.0,
+            295.0
+          ],
+          "min": [
+            56.0,
+            249.0
+          ],
+          "name": "ui-ShowChoices(Service)"
+        },
+        "service_label": {
+          "size": [
+            504.0,
+            32.0
+          ],
+          "text": "Servicio: Chiltern extendido: Northolt Park → Gerrards Cross · Elegir",
+          "visible": true
+        },
+        "service_inner_size_px": [
+          504.0,
+          32.0
+        ],
+        "maximum_tolerance_px": 1,
+        "service_fully_inside_initial_viewport": true,
+        "service_wrap_checked": true,
+        "button_ink": [
+          {
+            "command": "ui-NewGameStep(Country)",
+            "inner_rect_px": [
+              62,
+              133,
+              578,
+              153
+            ],
+            "visible_white_ink_pixels": 287,
+            "ink_bbox_within_inner_rect": [
+              133,
+              3,
+              382,
+              14
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-NewGameStep(Train)",
+            "inner_rect_px": [
+              62,
+              399,
+              208,
+              419
+            ],
+            "visible_white_ink_pixels": 163,
+            "ink_bbox_within_inner_rect": [
+              7,
+              5,
+              138,
+              17
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-NewGameStep(Environment)",
+            "inner_rect_px": [
+              433,
+              93,
+              571,
+              113
+            ],
+            "visible_white_ink_pixels": 131,
+            "ink_bbox_within_inner_rect": [
+              7,
+              3,
+              130,
+              17
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-NewGameStep(Train)",
+            "inner_rect_px": [
+              338,
+              93,
+              413,
+              113
+            ],
+            "visible_white_ink_pixels": 54,
+            "ink_bbox_within_inner_rect": [
+              8,
+              5,
+              67,
+              14
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-NewGameStep(Route)",
+            "inner_rect_px": [
+              157,
+              93,
+              318,
+              113
+            ],
+            "visible_white_ink_pixels": 148,
+            "ink_bbox_within_inner_rect": [
+              7,
+              4,
+              154,
+              16
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-NewGameStep(Country)",
+            "inner_rect_px": [
+              62,
+              93,
+              137,
+              113
+            ],
+            "visible_white_ink_pixels": 64,
+            "ink_bbox_within_inner_rect": [
+              8,
+              5,
+              67,
+              14
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-Close",
+            "inner_rect_px": [
+              243,
+              53,
+              349,
+              73
+            ],
+            "visible_white_ink_pixels": 100,
+            "ink_bbox_within_inner_rect": [
+              7,
+              3,
+              98,
+              14
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          },
+          {
+            "command": "ui-ShowChoices(Service)",
+            "inner_rect_px": [
+              62,
+              255,
+              578,
+              289
+            ],
+            "visible_white_ink_pixels": 636,
+            "ink_bbox_within_inner_rect": [
+              7,
+              2,
+              488,
+              32
+            ],
+            "threshold": "minimumRGB170,maximumRGB>210; at least20px and2x2extent; border excluded"
+          }
+        ]
+      },
+      "viewport": {
+        "max": [
+          584.0,
+          341.0
+        ],
+        "min": [
+          56.0,
+          127.0
+        ],
+        "name": "player-scroll"
+      },
+      "footer": {
+        "max": [
+          584.0,
+          425.0
+        ],
+        "min": [
+          56.0,
+          349.0
+        ],
+        "name": "launch-footer"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "effective_cache_policy": {
+        "source": "off",
+        "geometry": "off",
+        "texture": "off"
+      },
+      "visual_inspection_pending": false,
+      "case": "route-640x480",
+      "visual_inspection": "Primary route/service selectors and search appear before secondary tools. The whole long Blue Pullman service name remains inside its button and visible viewport, with Back/navigation and fixed footer intact. The long service wraps to two readable lines; no text extends outside the button.",
+      "screenshot_captured_observer": true,
+      "normal_exit_after_capture": true
+    }
+  ],
+  "previous_findings": [
+    {
+      "receipt": "docs/validation/FIFTH40_MENU_PHASE29_REJECTED.json",
+      "sha256": "1ffd71d853fc427ee0ab6259b2c9ba1705b2d23d7a67409965ba836bac12613d",
+      "evidence_preserved": true,
+      "frames_relabelled": false
+    },
+    {
+      "receipt": "docs/validation/FIFTH40_MENU_PHASE30_REJECTED.json",
+      "sha256": "1fc1cc76ac7cd88eefaf6f62fddaf7f633b1e39547ebeb92e242dde333b0e767",
+      "evidence_preserved": true,
+      "frames_relabelled": false
+    },
+    {
+      "receipt": "docs/validation/FIFTH40_SNAP_ALPHA6_X15_BLUE_PULLMAN.json",
+      "sha256": "091f3d4a19753222a460f367a8f017b463d81872dca1b11ebd4ec8a4ccfc2fe1",
+      "evidence_preserved": true,
+      "frames_relabelled": false
+    }
+  ],
+  "manual_test": [
+    "Open Nueva partida at800x600 and640x480. The first Country step must show all eight readable choices without scrolling; Back and the fixed footer must remain visible.",
+    "Choose Todos los países and inspect Ruta y servicio. The route, whole long service name and search must be visible before campaigns/editor/mode controls.",
+    "Select Chiltern extendido: Northolt Park→Gerrards Cross. At640x480 the service wraps to two lines inside its button. It must not disappear, extend left outside the column or be hidden below the initial viewport.",
+    "Inspect the navigation and footer: Back, Siguiente: tren and Jugar must have readable labels. Additional lists/tools can scroll while the footer stays in view."
+  ],
+  "limits": [
+    "Frames are checked using captured UI commands/labels, positive dimensions,1px bounds, actual contrasting ink inside button interiors and literal PNG inspection. Strings or node counts alone do not prove rendered text.",
+    "The optional explanatory note below the countries is partially clipped at640x480; the eight options, header and footer are fully visible.",
+    "Capture hooks use the same normal builders but these images do not synthesize clicks or certify the whole country/library flow.",
+    "Rejected29, partial30 and intermediate x15 snapshots keep their original source/binary identities and findings.",
+    "The final strict Snap must be rebuilt from clean source and receive its own fresh package acceptance.",
+    "No Rust, renderer, dependency, downloaded-content or package-source edit was made by this QA task."
+  ]
+}

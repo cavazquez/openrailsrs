@@ -1,0 +1,751 @@
+{
+  "schema": 1,
+  "candidate": "phase29",
+  "status": "REJECTED_ZERO_BUTTON_TEXT",
+  "binary_sha256": "44b2237aee30b6a2cb641d900af423277f760cbe920ba54d2ab839d9b1406a3f",
+  "source_snapshot": "phase29-source.json",
+  "source_snapshot_sha256": "591b23d1d8f099261e8be461eea481941f77d6915f2c7528ed8cc51351722ea0",
+  "executed_harness_sha256": "107f67fcac71b234535c70f3291dc24bad0ed03766c529f178e4a4e22f1742b1",
+  "preserved_executed_harness_sha256": "107f67fcac71b234535c70f3291dc24bad0ed03766c529f178e4a4e22f1742b1",
+  "raw_report_sha256": "813e7f505323fe3fe8c67a696f86aaa910d0f0ff61dde22ab5e8ba421434d78e",
+  "acceptance": {
+    "cases_rejected": 4,
+    "png_inspected": 4,
+    "menu_layout_certified": false,
+    "final_snap_certified": false
+  },
+  "cases": [
+    {
+      "case": "country-800x600",
+      "status": "FAIL_ZERO_BUTTON_TEXT",
+      "frame": "country-800x600.png",
+      "frame_sha256": "d544474abd7228d18b23b94889f2adc1449f8c013dc3acfa1257c85bd2ef673e",
+      "checkpoint_sha256": "00e3b7b37744d428a4354983801c0248331cc63433a078033b27d039a06489ec",
+      "log_sha256": "e6863bf2ec60229b3a9d9590b23e2eb486e30727fa7fb3af44efe6793bf2522c",
+      "frame_size_px": [
+        800,
+        600
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "ui_strings_with_zero_width": [
+        {
+          "size": [
+            0.0,
+            16.0
+          ],
+          "text": "Todos los países · 9 rutas",
+          "visible": true
+        },
+        {
+          "size": [
+            0.0,
+            16.0
+          ],
+          "text": "Argentina · 1 ruta",
+          "visible": true
+        },
+        {
+          "size": [
+            0.0,
+            16.0
+          ],
+          "text": "Australia · 0 rutas",
+          "visible": true
+        },
+        {
+          "size": [
+            0.0,
+            16.0
+          ],
+          "text": "Estados Unidos · 0 rutas",
+          "visible": true
+        },
+        {
+          "size": [
+            0.0,
+            16.0
+          ],
+          "text": "Portugal · 0 rutas",
+          "visible": true
+        },
+        {
+          "size": [
+            0.0,
+            16.0
+          ],
+          "text": "Reino Unido · 1 ruta",
+          "visible": true
+        },
+        {
+          "size": [
+            0.0,
+            16.0
+          ],
+          "text": "Sin dato de país · 7 rutas",
+          "visible": true
+        },
+        {
+          "size": [
+            0.0,
+            16.0
+          ],
+          "text": "Francia · 0 rutas",
+          "visible": true
+        }
+      ],
+      "country_button_ink": [
+        {
+          "command": "ui-SelectCountry(7)",
+          "inner_rect_px": [
+            410,
+            339,
+            728,
+            359
+          ],
+          "visible_white_ink_pixels": 0
+        },
+        {
+          "command": "ui-SelectCountry(6)",
+          "inner_rect_px": [
+            72,
+            339,
+            390,
+            359
+          ],
+          "visible_white_ink_pixels": 0
+        },
+        {
+          "command": "ui-SelectCountry(5)",
+          "inner_rect_px": [
+            410,
+            295,
+            728,
+            315
+          ],
+          "visible_white_ink_pixels": 0
+        },
+        {
+          "command": "ui-SelectCountry(4)",
+          "inner_rect_px": [
+            72,
+            295,
+            390,
+            315
+          ],
+          "visible_white_ink_pixels": 0
+        },
+        {
+          "command": "ui-SelectCountry(3)",
+          "inner_rect_px": [
+            410,
+            251,
+            728,
+            271
+          ],
+          "visible_white_ink_pixels": 0
+        },
+        {
+          "command": "ui-SelectCountry(2)",
+          "inner_rect_px": [
+            72,
+            251,
+            390,
+            271
+          ],
+          "visible_white_ink_pixels": 0
+        },
+        {
+          "command": "ui-SelectCountry(1)",
+          "inner_rect_px": [
+            410,
+            207,
+            728,
+            227
+          ],
+          "visible_white_ink_pixels": 0
+        },
+        {
+          "command": "ui-SelectCountry(0)",
+          "inner_rect_px": [
+            72,
+            207,
+            390,
+            227
+          ],
+          "visible_white_ink_pixels": 0
+        }
+      ],
+      "layout_metrics": {
+        "country_choices_fully_visible": 8,
+        "commands": [
+          {
+            "max": [
+              396.0,
+              233.0
+            ],
+            "min": [
+              66.0,
+              201.0
+            ],
+            "name": "ui-SelectCountry(0)"
+          },
+          {
+            "max": [
+              734.0,
+              233.0
+            ],
+            "min": [
+              404.0,
+              201.0
+            ],
+            "name": "ui-SelectCountry(1)"
+          },
+          {
+            "max": [
+              396.0,
+              277.0
+            ],
+            "min": [
+              66.0,
+              245.0
+            ],
+            "name": "ui-SelectCountry(2)"
+          },
+          {
+            "max": [
+              734.0,
+              277.0
+            ],
+            "min": [
+              404.0,
+              245.0
+            ],
+            "name": "ui-SelectCountry(3)"
+          },
+          {
+            "max": [
+              396.0,
+              321.0
+            ],
+            "min": [
+              66.0,
+              289.0
+            ],
+            "name": "ui-SelectCountry(4)"
+          },
+          {
+            "max": [
+              734.0,
+              321.0
+            ],
+            "min": [
+              404.0,
+              289.0
+            ],
+            "name": "ui-SelectCountry(5)"
+          },
+          {
+            "max": [
+              396.0,
+              365.0
+            ],
+            "min": [
+              66.0,
+              333.0
+            ],
+            "name": "ui-SelectCountry(6)"
+          },
+          {
+            "max": [
+              734.0,
+              365.0
+            ],
+            "min": [
+              404.0,
+              333.0
+            ],
+            "name": "ui-SelectCountry(7)"
+          }
+        ],
+        "labels": [
+          "Todos los países",
+          "Argentina",
+          "Australia",
+          "Estados Unidos",
+          "Portugal",
+          "Reino Unido",
+          "Sin dato de país",
+          "Francia"
+        ]
+      },
+      "footer": {
+        "max": [
+          734.0,
+          538.0
+        ],
+        "min": [
+          66.0,
+          513.0
+        ],
+        "name": "launch-footer"
+      },
+      "initial_weak_bounds_assertions_passed": true,
+      "inspected": true,
+      "visual_inspection": "Buttons, tabs, Back and Play render as empty boxes. Country/source strings exist in ECS but have width0; therefore command/string counts and maximum bounds alone are not accepted."
+    },
+    {
+      "case": "route-800x600",
+      "status": "FAIL_ZERO_BUTTON_TEXT",
+      "frame": "route-800x600.png",
+      "frame_sha256": "25c2a90bbaa04dc8e473e8eae6d61211ee355bfc3024f99ef65fbaa333b70f28",
+      "checkpoint_sha256": "5d41d8b4362810fd80ff1e8b793342effdc5448df79fa210241191bcccd31e3e",
+      "log_sha256": "da4eee6d38c396fc5532ca5e3c87324a1e2ca4869178a83fbb53f6e04d68249e",
+      "frame_size_px": [
+        800,
+        600
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "ui_strings_with_zero_width": [
+        {
+          "size": [
+            0.0,
+            16.0
+          ],
+          "text": "Servicio: Chiltern extendido: Northolt Park → Gerrards Cross · Elegir",
+          "visible": true
+        }
+      ],
+      "country_button_ink": [],
+      "layout_metrics": {
+        "service_button": {
+          "max": [
+            734.0,
+            420.0
+          ],
+          "min": [
+            66.0,
+            388.0
+          ],
+          "name": "ui-ShowChoices(Service)"
+        },
+        "service_label": {
+          "size": [
+            0.0,
+            16.0
+          ],
+          "text": "Servicio: Chiltern extendido: Northolt Park → Gerrards Cross · Elegir",
+          "visible": true
+        },
+        "service_inner_size_px": [
+          644.0,
+          18.0
+        ],
+        "maximum_tolerance_px": 1,
+        "service_fully_inside_initial_viewport": true,
+        "service_wrap_checked": true
+      },
+      "footer": {
+        "max": [
+          734.0,
+          538.0
+        ],
+        "min": [
+          66.0,
+          462.0
+        ],
+        "name": "launch-footer"
+      },
+      "initial_weak_bounds_assertions_passed": true,
+      "inspected": true,
+      "visual_inspection": "Buttons, tabs, Back and Play render as empty boxes. Country/source strings exist in ECS but have width0; therefore command/string counts and maximum bounds alone are not accepted."
+    },
+    {
+      "case": "country-640x480",
+      "status": "FAIL_ZERO_BUTTON_TEXT",
+      "frame": "country-640x480.png",
+      "frame_sha256": "2a7ecab89137de0325787ba2e4532bf242f0db8f6946f587943e58f7f01efbb1",
+      "checkpoint_sha256": "7f348a4d95cbca795302a882d55f4d59607e789220d959d06d34f8407161d447",
+      "log_sha256": "1eb726ac9dac5553ca6eb52c6a350eafa4cd96f87f54f34f723e16502da66f5b",
+      "frame_size_px": [
+        640,
+        480
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "ui_strings_with_zero_width": [
+        {
+          "size": [
+            0.0,
+            16.0
+          ],
+          "text": "Todos los países · 9 rutas",
+          "visible": true
+        },
+        {
+          "size": [
+            0.0,
+            16.0
+          ],
+          "text": "Argentina · 1 ruta",
+          "visible": true
+        },
+        {
+          "size": [
+            0.0,
+            16.0
+          ],
+          "text": "Australia · 0 rutas",
+          "visible": true
+        },
+        {
+          "size": [
+            0.0,
+            16.0
+          ],
+          "text": "Estados Unidos · 0 rutas",
+          "visible": true
+        },
+        {
+          "size": [
+            0.0,
+            16.0
+          ],
+          "text": "Portugal · 0 rutas",
+          "visible": true
+        },
+        {
+          "size": [
+            0.0,
+            16.0
+          ],
+          "text": "Reino Unido · 1 ruta",
+          "visible": true
+        },
+        {
+          "size": [
+            0.0,
+            16.0
+          ],
+          "text": "Sin dato de país · 7 rutas",
+          "visible": true
+        },
+        {
+          "size": [
+            0.0,
+            16.0
+          ],
+          "text": "Francia · 0 rutas",
+          "visible": true
+        }
+      ],
+      "country_button_ink": [
+        {
+          "command": "ui-SelectCountry(7)",
+          "inner_rect_px": [
+            330,
+            332,
+            578,
+            352
+          ],
+          "visible_white_ink_pixels": 0
+        },
+        {
+          "command": "ui-SelectCountry(6)",
+          "inner_rect_px": [
+            62,
+            332,
+            310,
+            352
+          ],
+          "visible_white_ink_pixels": 0
+        },
+        {
+          "command": "ui-SelectCountry(5)",
+          "inner_rect_px": [
+            330,
+            288,
+            578,
+            308
+          ],
+          "visible_white_ink_pixels": 0
+        },
+        {
+          "command": "ui-SelectCountry(4)",
+          "inner_rect_px": [
+            62,
+            288,
+            310,
+            308
+          ],
+          "visible_white_ink_pixels": 0
+        },
+        {
+          "command": "ui-SelectCountry(3)",
+          "inner_rect_px": [
+            330,
+            244,
+            578,
+            264
+          ],
+          "visible_white_ink_pixels": 0
+        },
+        {
+          "command": "ui-SelectCountry(2)",
+          "inner_rect_px": [
+            62,
+            244,
+            310,
+            264
+          ],
+          "visible_white_ink_pixels": 0
+        },
+        {
+          "command": "ui-SelectCountry(1)",
+          "inner_rect_px": [
+            330,
+            200,
+            578,
+            220
+          ],
+          "visible_white_ink_pixels": 0
+        },
+        {
+          "command": "ui-SelectCountry(0)",
+          "inner_rect_px": [
+            62,
+            200,
+            310,
+            220
+          ],
+          "visible_white_ink_pixels": 0
+        }
+      ],
+      "layout_metrics": {
+        "country_choices_fully_visible": 8,
+        "commands": [
+          {
+            "max": [
+              316.0,
+              226.0
+            ],
+            "min": [
+              56.0,
+              194.0
+            ],
+            "name": "ui-SelectCountry(0)"
+          },
+          {
+            "max": [
+              584.0,
+              226.0
+            ],
+            "min": [
+              324.0,
+              194.0
+            ],
+            "name": "ui-SelectCountry(1)"
+          },
+          {
+            "max": [
+              316.0,
+              270.0
+            ],
+            "min": [
+              56.0,
+              238.0
+            ],
+            "name": "ui-SelectCountry(2)"
+          },
+          {
+            "max": [
+              584.0,
+              270.0
+            ],
+            "min": [
+              324.0,
+              238.0
+            ],
+            "name": "ui-SelectCountry(3)"
+          },
+          {
+            "max": [
+              316.0,
+              314.0
+            ],
+            "min": [
+              56.0,
+              282.0
+            ],
+            "name": "ui-SelectCountry(4)"
+          },
+          {
+            "max": [
+              584.0,
+              314.0
+            ],
+            "min": [
+              324.0,
+              282.0
+            ],
+            "name": "ui-SelectCountry(5)"
+          },
+          {
+            "max": [
+              316.0,
+              358.0
+            ],
+            "min": [
+              56.0,
+              326.0
+            ],
+            "name": "ui-SelectCountry(6)"
+          },
+          {
+            "max": [
+              584.0,
+              358.0
+            ],
+            "min": [
+              324.0,
+              326.0
+            ],
+            "name": "ui-SelectCountry(7)"
+          }
+        ],
+        "labels": [
+          "Todos los países",
+          "Argentina",
+          "Australia",
+          "Estados Unidos",
+          "Portugal",
+          "Reino Unido",
+          "Sin dato de país",
+          "Francia"
+        ]
+      },
+      "footer": {
+        "max": [
+          584.0,
+          425.0
+        ],
+        "min": [
+          56.0,
+          400.0
+        ],
+        "name": "launch-footer"
+      },
+      "initial_weak_bounds_assertions_passed": true,
+      "inspected": true,
+      "visual_inspection": "Buttons, tabs, Back and Play render as empty boxes. Country/source strings exist in ECS but have width0; therefore command/string counts and maximum bounds alone are not accepted."
+    },
+    {
+      "case": "route-640x480",
+      "status": "FAIL_ZERO_BUTTON_TEXT",
+      "frame": "route-640x480.png",
+      "frame_sha256": "646fdb60a7e471990081e30ba173611e4d08190a3ed9152b65658aefa4637c6f",
+      "checkpoint_sha256": "2c8f317536e0a7b53b0c26908a5315bf22dd62c3fa0dce2c1847a3c7e770d8fa",
+      "log_sha256": "be4f6aef6a37855c1461b1495f9220a3571923cd6bca2e171f3b4e73418f0150",
+      "frame_size_px": [
+        640,
+        480
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "ui_strings_with_zero_width": [
+        {
+          "size": [
+            0.0,
+            16.0
+          ],
+          "text": "Servicio: Chiltern extendido: Northolt Park → Gerrards Cross · Elegir",
+          "visible": true
+        }
+      ],
+      "country_button_ink": [],
+      "layout_metrics": {
+        "service_button": {
+          "max": [
+            584.0,
+            413.0
+          ],
+          "min": [
+            56.0,
+            381.0
+          ],
+          "name": "ui-ShowChoices(Service)"
+        },
+        "service_label": {
+          "size": [
+            0.0,
+            16.0
+          ],
+          "text": "Servicio: Chiltern extendido: Northolt Park → Gerrards Cross · Elegir",
+          "visible": true
+        },
+        "service_inner_size_px": [
+          504.0,
+          18.0
+        ],
+        "maximum_tolerance_px": 1,
+        "service_fully_inside_initial_viewport": false,
+        "service_wrap_checked": true
+      },
+      "footer": {
+        "max": [
+          584.0,
+          425.0
+        ],
+        "min": [
+          56.0,
+          349.0
+        ],
+        "name": "launch-footer"
+      },
+      "initial_weak_bounds_assertions_passed": true,
+      "inspected": true,
+      "visual_inspection": "Buttons, tabs, Back and Play render as empty boxes. Country/source strings exist in ECS but have width0; therefore command/string counts and maximum bounds alone are not accepted."
+    }
+  ],
+  "cause_scope": "The global button-child sizing change produces zero-width text. Parent reverted the global change and prepared a narrower choices-only fix; that subsequent source is not covered by these images.",
+  "qa_followup": "Future acceptance must require positive text dimensions, contrast/ink pixels inside the button excluding borders, retained footer and actual PNG inspection. Offscreen service nodes do not certify service visibility.",
+  "limits": [
+    "The original automatic report and executed harness are preserved rather than rewritten as passing acceptance.",
+    "Every PNG remains attributed to phase29; a later layout/source needs fresh images.",
+    "No production, renderer or dependency edits were made by this QA task.",
+    "No private home paths, original downloaded content or image payloads are included in the public receipt."
+  ]
+}

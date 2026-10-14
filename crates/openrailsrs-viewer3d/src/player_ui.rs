@@ -640,9 +640,29 @@ fn button(
     value: impl Into<String>,
     command: UiCommand,
 ) -> Entity {
+    button_node(p, value, command, false)
+}
+fn wrapped_button(
+    p: &mut ChildSpawnerCommands<'_>,
+    value: impl Into<String>,
+    command: UiCommand,
+) -> Entity {
+    button_node(p, value, command, true)
+}
+fn button_node(
+    p: &mut ChildSpawnerCommands<'_>,
+    value: impl Into<String>,
+    command: UiCommand,
+    wrapped: bool,
+) -> Entity {
     p.spawn((
         Button,
         Node {
+            width: if wrapped {
+                Val::Percent(100.0)
+            } else {
+                Val::Auto
+            },
             min_width: Val::Px(0.0),
             padding: UiRect::axes(Val::Px(12.0), Val::Px(7.0)),
             min_height: Val::Px(32.0),
@@ -657,7 +677,19 @@ fn button(
         command,
     ))
     .with_children(|p| {
-        label(p, value, 13.0, TEXT);
+        let text = label(p, value, 13.0, TEXT);
+        if wrapped {
+            p.commands()
+                .entity(text)
+                .entry::<Node>()
+                .and_modify(|mut node| {
+                    // The selector button has a finite width; give its text the
+                    // content width instead of an auto flex basis of zero.
+                    node.width = Val::Percent(100.0);
+                    node.min_width = Val::Px(0.0);
+                    node.flex_shrink = 1.0;
+                });
+        }
     })
     .id()
 }

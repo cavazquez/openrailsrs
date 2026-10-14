@@ -2,7 +2,7 @@
   "schema": 1,
   "completed": true,
   "command": "CARGO_BUILD_JOBS=2 bash ./check.sh",
-  "log_sha256": "9ceaa3aab4aef7ab9861771090bc722e1681b6f6164c5208e76a0b851c73335b",
+  "log_sha256": "3fd6b760438d8090d10042a7a218784720cbeeab9bf94f19531d2cc8d70f5b59",
   "rust_suites": 152,
   "rust": {
     "passed": 2052,
@@ -22,7 +22,7 @@
     "OK: check.sh complet\u00f3 sin errores."
   ],
   "player_traces_preserved": true,
-  "scope": "Full final source28 check and fixed OR1.6.1 oracles, original TGV resource/runtime/parser regressions, render lifetime/material/heap regressions and country-first launch flow. The two-column UI has separate real viewport capture acceptance; endurance27 is explicitly attributed to its own binary and unchanged core/renderer sources.",
+  "scope": "Full checks for frozen source31, with country-first and finite-width selector labels separately accepted by real pixel/label/viewport captures. Exact endurance27 and rebuilt strict Snap have separate receipts.",
   "capture_regression": {
     "delayed_readback_test": "capture::completion_tests::delayed_readback_replaces_stale_image_and_write_failure_never_completes",
     "success_requires": "ScreenshotCaptured delivered and fresh image write succeeded",
@@ -36,8 +36,8 @@
     "transient_images_retired": true,
     "shelter_bytes_refreshed": true
   },
-  "source_variant": "phase28",
-  "viewer_sha256": "7423b7e89154ab104cd58f6605aeee81aeb38ebb769d85d97b96b4de4579daa7",
+  "source_variant": "phase31",
+  "viewer_sha256": "9c7a1418630d7f828639aa736ab3151e87ee8f3c1e253165dbfc594bfab457e9",
   "render_retirement_regression": {
     "tests": [
       "render_retirement::tests::retiring_views_releases_buffer_owners_and_preserves_live_phases_and_subviews",
@@ -67,25 +67,38 @@
     "hierarchy_and_vertex_references_preserved": true,
     "ascii_and_binary": true
   },
-  "material_owner_telemetry_regression": {
-    "actual_bindings_and_prepared_maps": true,
-    "unavailable_not_zero_filled": true,
-    "empty_and_retired_types": true,
-    "unexpected_material_types_separate": true,
-    "heap_snapshot_optional_gnu": true
-  },
-  "country_first_regression": {
-    "tests": [
-      "player_ui::menu_country::tests::only_identified_package_origins_receive_a_country",
-      "player_ui::tests::new_game_starts_with_direct_countries_before_routes_or_trains",
-      "player_ui::tests::all_unknown_and_empty_countries_keep_selection_and_launch_consistent",
-      "player_ui::tests::country_survives_filter_reset_and_rejects_invalid_selection_without_mutation"
+  "process_returncode": 0,
+  "isolated_process_group": true,
+  "source_before_after_equal": true,
+  "source_snapshot_sha256": "53a350d31ccf4b9432fecb70a37f1f74a1439a962c046b63be5df171e0178dd3",
+  "ui_acceptance": "docs/validation/FIFTH40_MENU_PHASE31.json",
+  "source_equivalence_for_endurance": {
+    "baseline_candidate": "phase27",
+    "final_candidate": "phase31",
+    "files_compared": 662,
+    "same_files": 658,
+    "different_files": [
+      {
+        "path": "crates/openrailsrs-viewer3d/src/player_ui.rs",
+        "before_sha256": "d613d81846bf7f7ff17e48cd7a2e6e70b4abfd849060d880e851b7e5a3a7bccc",
+        "after_sha256": "79516299357befbf93de4b90ec5c4338fb89b759100fd5c90a84fe4661600055"
+      },
+      {
+        "path": "crates/openrailsrs-viewer3d/src/player_ui/choices.rs",
+        "before_sha256": "cf196aa42ad92803eb3baab00be5af45242f403a7c975b7f7163ee234cb04201",
+        "after_sha256": "410ab2b5faca68648eedc70085bedafcfdd2207554368fa53080c205afb756a8"
+      },
+      {
+        "path": "crates/openrailsrs-viewer3d/src/player_ui/launcher.rs",
+        "before_sha256": "8be04bd814c2e5378735fa0426e80f737bccc6b5e48494047ecbb15fb58a5556",
+        "after_sha256": "a72d212e74c562da2d3eb1439f766c3bf3d3556dab4a99aaa585e27a9293b8e3"
+      },
+      {
+        "path": "crates/openrailsrs-viewer3d/src/player_ui/menu_country.rs",
+        "before_sha256": "233ec4081a500835dcc18221eec7a891823642887c7e5b4a7e25cda5dad1d11c",
+        "after_sha256": "225dcbdd59c46e130718f9a8706fef108be93781153b46d3e6e5172cc5aec89a"
+      }
     ],
-    "direct_country_before_routes_services": true,
-    "all_unknown_empty_country": true,
-    "invalid_selection_atomic": true,
-    "normal_async_route_selection": true,
-    "foreign_stock_still_global": true,
-    "train_capture_hook_preserved": true
+    "scope": "UI-only differences; the endurance executable is27, not31. No renderer, core, shaders or dependency sources differ."
   }
 }
