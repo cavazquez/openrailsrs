@@ -1,0 +1,426 @@
+{
+  "schema": 1,
+  "created_utc": "2026-10-14T23:10:26.605946+00:00",
+  "scope": "First five independent issues after the user requested smaller batches. No issue criterion was removed; release, memory and performance issues remain separate.",
+  "runtime_commit": "a1b59e14bea6db433c0746dd0f1f2644dc5bc4dd",
+  "issues": [
+    {
+      "number": 243,
+      "title": "Plan 033: Animar fuelles acompañando curvas y uniones entre coches",
+      "criteria": [
+        {
+          "text": "Mantener extremos del fuelle unidos a los coches en curvas e inversiones.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Cuatro piezas declaradas acompañan la curva; el caso avanzó 37,18 m sin error de extremo.",
+          "evidence": [
+            "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/flexible_connections",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/connections",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/connections-curve",
+            "test:authored_endpoints_follow_curve_slack_and_reversal_without_changing_the_near_end",
+            "test:lod_rebind_keeps_authored_topology_and_sources_immutable_through_pause_cut_and_restore"
+          ]
+        },
+        {
+          "text": "Conservar geometría original y evitar estiramientos fuera de rango o cambios por LOD.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "LOD conserva topología y mallas de origen; un alcance inválido no produce estiramiento ilimitado.",
+          "evidence": [
+            "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/flexible_connections",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/connections",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/connections-curve",
+            "test:authored_endpoints_follow_curve_slack_and_reversal_without_changing_the_near_end",
+            "test:lod_rebind_keeps_authored_topology_and_sources_immutable_through_pause_cut_and_restore"
+          ]
+        },
+        {
+          "text": "Capturar cabina/exterior o vistas relevantes con condiciones reproducibles; comprobar pausa, cambios de cámara, origen flotante y coste del efecto.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Se conservan capturas, acciones de corte/restauración/pausa y medición de coste; no son capturas nuevas de la fuente 36.",
+          "evidence": [
+            "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/flexible_connections",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/connections",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/connections-curve",
+            "test:authored_endpoints_follow_curve_slack_and_reversal_without_changing_the_near_end",
+            "test:lod_rebind_keeps_authored_topology_and_sources_immutable_through_pause_cut_and_restore"
+          ]
+        }
+      ],
+      "scope": "Requiere geometría y extremos de fuelle declarados; no inventa conexiones ausentes en el modelo."
+    },
+    {
+      "number": 244,
+      "title": "Plan 034: Animar mangueras y cables flexibles entre vehículos",
+      "criteria": [
+        {
+          "text": "Anclar extremos a conectores reales y acompañar curvas y holgura.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Mangueras y cables usan conectores declarados; el ensayo en curva conserva cuatro piezas vinculadas.",
+          "evidence": [
+            "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/flexible_connections",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/connections-curve",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/connections-cut",
+            "test:authored_endpoints_follow_curve_slack_and_reversal_without_changing_the_near_end",
+            "test:lod_rebind_keeps_authored_topology_and_sources_immutable_through_pause_cut_and_restore"
+          ]
+        },
+        {
+          "text": "Desconectar visualmente al separar coches y conservar estado al guardar.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "El caso de corte registra desconexión y restauración; la malla no une vehículos sólo por proximidad.",
+          "evidence": [
+            "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/flexible_connections",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/connections-curve",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/connections-cut",
+            "test:authored_endpoints_follow_curve_slack_and_reversal_without_changing_the_near_end",
+            "test:lod_rebind_keeps_authored_topology_and_sources_immutable_through_pause_cut_and_restore"
+          ]
+        },
+        {
+          "text": "Capturar cabina/exterior o vistas relevantes con condiciones reproducibles; comprobar pausa, cambios de cámara, origen flotante y coste del efecto.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "El recibo conserva la captura de corte con pausa/restauración y el coste del sistema.",
+          "evidence": [
+            "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/flexible_connections",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/connections-curve",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/connections-cut",
+            "test:authored_endpoints_follow_curve_slack_and_reversal_without_changing_the_near_end",
+            "test:lod_rebind_keeps_authored_topology_and_sources_immutable_through_pause_cut_and_restore"
+          ]
+        }
+      ],
+      "scope": "La proximidad no conecta mangueras ni bus eléctrico; deben existir conectores y un estado de conexión compatibles."
+    },
+    {
+      "number": 253,
+      "title": "Plan 043: Mejorar trenes articulados con bogies compartidos",
+      "criteria": [
+        {
+          "text": "Representar conexiones articuladas y bogies Jacobs declarados.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "El caso Jacobs declara un apoyo compartido y una pose BOGIE2 real.",
+          "evidence": [
+            "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/jacobs_bogie",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/jacobs-curve",
+            "test:bogie_part_queries_are_disjoint_from_car_and_train_root_transforms",
+            "test:shared_bogie_constraints_conserve_articulated_train_during_drive_braking_restore_and_reverse"
+          ]
+        },
+        {
+          "text": "Validar pose de cuerpos y apoyos en curvas cerradas y cambios sin tratar cada cuerpo como coche independiente.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La restricción longitudinal conserva el grupo durante curva, frenado, guardado y retroceso.",
+          "evidence": [
+            "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/jacobs_bogie",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/jacobs-curve",
+            "test:bogie_part_queries_are_disjoint_from_car_and_train_root_transforms",
+            "test:shared_bogie_constraints_conserve_articulated_train_during_drive_braking_restore_and_reverse"
+          ]
+        },
+        {
+          "text": "Añadir ensayos representativos de fuerzas/estados y una prueba de conducción; usar oráculos OR 1.6.1 para lo equivalente y pruebas propias para extensiones.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "El ensayo propio conduce el grupo y comprueba momento y restricciones; el recibo de acople OR es separado y no certifica Jacobs lateral.",
+          "evidence": [
+            "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/jacobs_bogie",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/jacobs-curve",
+            "test:bogie_part_queries_are_disjoint_from_car_and_train_root_transforms",
+            "test:shared_bogie_constraints_conserve_articulated_train_during_drive_braking_restore_and_reverse"
+          ]
+        }
+      ],
+      "scope": "Articulación longitudinal ideal con material propio. No acredita fuerzas laterales, contacto de pestaña ni todas las formaciones articuladas de la comunidad."
+    },
+    {
+      "number": 254,
+      "title": "Plan 044: Representar pasajeros entrando y saliendo por puertas habilitadas",
+      "criteria": [
+        {
+          "text": "Sincronizar movimientos con puertas, andén y cantidades embarcadas.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "El recibo registra bajada/subida asociada al progreso del servicio y sólo al acceso declarado.",
+          "evidence": [
+            "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/platform_people",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/alighting",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/boarding-close",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/boarding-rebase",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/boarding-restore",
+            "test:closing_finishes_only_the_current_passenger_and_survives_pause_restore",
+            "test:independent_vehicle_and_sides_have_real_interlocks_and_survive_midstroke_save",
+            "test:mixed_transfer_prefixes_follow_the_boarding_and_alighting_counts",
+            "test:reopening_cancels_queued_closure_and_waiting_passengers_do_not_delay_it"
+          ]
+        },
+        {
+          "text": "Evitar acceso por lado incorrecto y completar animación antes del cierre.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Puertas por vehículo/lado y cierre pendiente no permiten embarque del lado incorrecto; termina sólo la transferencia activa.",
+          "evidence": [
+            "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/platform_people",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/alighting",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/boarding-close",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/boarding-rebase",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/boarding-restore",
+            "test:closing_finishes_only_the_current_passenger_and_survives_pause_restore",
+            "test:independent_vehicle_and_sides_have_real_interlocks_and_survive_midstroke_save",
+            "test:mixed_transfer_prefixes_follow_the_boarding_and_alighting_counts",
+            "test:reopening_cancels_queued_closure_and_waiting_passengers_do_not_delay_it"
+          ]
+        },
+        {
+          "text": "Capturar cabina/exterior o vistas relevantes con condiciones reproducibles; comprobar pausa, cambios de cámara, origen flotante y coste del efecto.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Los casos de cierre, pausa, restauración y cambio de origen conservan acciones y contadores de personas.",
+          "evidence": [
+            "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/platform_people",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/alighting",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/boarding-close",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/boarding-rebase",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/boarding-restore",
+            "test:closing_finishes_only_the_current_passenger_and_survives_pause_restore",
+            "test:independent_vehicle_and_sides_have_real_interlocks_and_survive_midstroke_save",
+            "test:mixed_transfer_prefixes_follow_the_boarding_and_alighting_counts",
+            "test:reopening_cancels_queued_closure_and_waiting_passengers_do_not_delay_it"
+          ]
+        }
+      ],
+      "scope": "Hasta 64 figuras representan grupos; las cantidades del servicio gobiernan el intercambio. La bajada requiere pasajeros previamente a bordo."
+    },
+    {
+      "number": 265,
+      "title": "Plan 055: Agregar espejos funcionales para formación y andén",
+      "criteria": [
+        {
+          "text": "Renderizar vista posterior correcta por espejo y cabina.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Dos espejos de cabina generan vistas traseras propias; el recibo registra imágenes actualizadas.",
+          "evidence": [
+            "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/mirrors",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/mirrors",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/mirrors-rain"
+          ]
+        },
+        {
+          "text": "Excluir HUD de la reflexión y limitar resolución, frecuencia y coste.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Resolución 256×160, máximo 10 Hz y vistas sin HUD; se desactivan bajo presión.",
+          "evidence": [
+            "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/mirrors",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/mirrors",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/mirrors-rain"
+          ]
+        },
+        {
+          "text": "Capturar cabina/exterior o vistas relevantes con condiciones reproducibles; comprobar pausa, cambios de cámara, origen flotante y coste del efecto.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La secuencia acotada de fase36 registra nueve acciones correctas, pausa/restauración en 1,8 s, cambio de origen de 500 m, dos espejos y coste del sistema.",
+          "evidence": [
+            "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/mirrors",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/mirrors",
+            "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/mirrors-rain",
+            "docs/validation/FIFTH40_PHASE36_SUBCRITERIA.json#/cases/mirrors"
+          ]
+        }
+      ],
+      "scope": "Espejos declarados, 256 × 160, hasta 10 Hz; se pueden desactivar bajo presión gráfica."
+    }
+  ],
+  "current_regression_execution": {
+    "check_command": [
+      "bash",
+      "check.sh"
+    ],
+    "start_utc": "2026-10-14T22:13:00.427315+00:00",
+    "end_utc": "2026-10-14T22:24:39.683222+00:00",
+    "check_receipt_sha256": "f32f167e1e6ac0d9876c60e1b33b27ac6324209f649aadba4da766da891fdc78",
+    "stdout_sha256": "00c0184998e1ccdf90fabbbd69691ae8883e0ef73b52626e9f8c0ca940f2393c",
+    "rust": {
+      "passed": 2083,
+      "failed": 0,
+      "ignored": 49,
+      "summaries": 152
+    },
+    "python": {
+      "tests": 127,
+      "summaries": 25
+    },
+    "inputs_unchanged": true,
+    "user_traces_unchanged": true,
+    "historical_git_head_at_check_start": "e865c8a56fef252c0b7f60775ac5e773844380f1",
+    "binding": "Compiled inputs match the protected phase39 build manifest 8dfa16a31a08b48a33776a9041b4f90ef24d6d3b70f6385303d4de8b0589b6a3; the check started before the runtime commit. Its historical head is preserved.",
+    "ci": {
+      "commit": "a1b59e14bea6db433c0746dd0f1f2644dc5bc4dd",
+      "url": "https://github.com/cavazquez/openrailsrs/actions/runs/38647767494",
+      "conclusion": "success",
+      "jobs": [
+        "Optional C# TCS host (Linux)",
+        "check.sh",
+        "Visual smoke (#43)",
+        "Cobertura de tests"
+      ]
+    },
+    "named_tests": {
+      "authored_endpoints_follow_curve_slack_and_reversal_without_changing_the_near_end": {
+        "source": "crates/openrailsrs-viewer3d/src/train_connections.rs",
+        "source_sha256": "b1994f3e1bccdf11662698b1c2f148f2dc54620dfcf21eef165a938c5eee64eb",
+        "result": "passed",
+        "check39_log_line": 3035,
+        "check39_stdout": "test train_connections::tests::authored_endpoints_follow_curve_slack_and_reversal_without_changing_the_near_end ... ok"
+      },
+      "lod_rebind_keeps_authored_topology_and_sources_immutable_through_pause_cut_and_restore": {
+        "source": "crates/openrailsrs-viewer3d/src/train_connections.rs",
+        "source_sha256": "b1994f3e1bccdf11662698b1c2f148f2dc54620dfcf21eef165a938c5eee64eb",
+        "result": "passed",
+        "check39_log_line": 3037,
+        "check39_stdout": "test train_connections::tests::lod_rebind_keeps_authored_topology_and_sources_immutable_through_pause_cut_and_restore ... ok"
+      },
+      "shared_bogie_constraints_conserve_articulated_train_during_drive_braking_restore_and_reverse": {
+        "source": "crates/openrailsrs-sim/tests/articulated_train.rs",
+        "source_sha256": "392036182985ffc1194670e1159c4a27cb380c0072b9dda18b95996211ee0ac4",
+        "result": "passed",
+        "check39_log_line": 1420,
+        "check39_stdout": "test shared_bogie_constraints_conserve_articulated_train_during_drive_braking_restore_and_reverse ... ok"
+      },
+      "bogie_part_queries_are_disjoint_from_car_and_train_root_transforms": {
+        "source": "crates/openrailsrs-viewer3d/src/train_connections.rs",
+        "source_sha256": "b1994f3e1bccdf11662698b1c2f148f2dc54620dfcf21eef165a938c5eee64eb",
+        "result": "passed",
+        "check39_log_line": 3036,
+        "check39_stdout": "test train_connections::tests::bogie_part_queries_are_disjoint_from_car_and_train_root_transforms ... ok"
+      },
+      "independent_vehicle_and_sides_have_real_interlocks_and_survive_midstroke_save": {
+        "source": "crates/openrailsrs-sim/tests/vehicle_doors.rs",
+        "source_sha256": "549cf8b392f80f07b51c9822fab96775483237a3b8d57b1fc75956c1a82f4e0a",
+        "result": "passed",
+        "check39_log_line": 1839,
+        "check39_stdout": "test independent_vehicle_and_sides_have_real_interlocks_and_survive_midstroke_save ... ok"
+      },
+      "closing_finishes_only_the_current_passenger_and_survives_pause_restore": {
+        "source": "crates/openrailsrs-sim/tests/vehicle_doors.rs",
+        "source_sha256": "549cf8b392f80f07b51c9822fab96775483237a3b8d57b1fc75956c1a82f4e0a",
+        "result": "passed",
+        "check39_log_line": 1838,
+        "check39_stdout": "test closing_finishes_only_the_current_passenger_and_survives_pause_restore ... ok"
+      },
+      "reopening_cancels_queued_closure_and_waiting_passengers_do_not_delay_it": {
+        "source": "crates/openrailsrs-sim/tests/vehicle_doors.rs",
+        "source_sha256": "549cf8b392f80f07b51c9822fab96775483237a3b8d57b1fc75956c1a82f4e0a",
+        "result": "passed",
+        "check39_log_line": 1842,
+        "check39_stdout": "test reopening_cancels_queued_closure_and_waiting_passengers_do_not_delay_it ... ok"
+      },
+      "mixed_transfer_prefixes_follow_the_boarding_and_alighting_counts": {
+        "source": "crates/openrailsrs-viewer3d/src/platform_people.rs",
+        "source_sha256": "07616c93d6053a1bd2438cdaa6c1f34c7523e941285760c8ac8e896b3c1f31e3",
+        "result": "passed",
+        "check39_log_line": 2643,
+        "check39_stdout": "test platform_people::mixed_transfer_prefixes_follow_the_boarding_and_alighting_counts ... ok"
+      }
+    }
+  },
+  "current_sources_matching_preserved_scope": {
+    "crates/openrailsrs-viewer3d/src/train_connections.rs": "b1994f3e1bccdf11662698b1c2f148f2dc54620dfcf21eef165a938c5eee64eb",
+    "crates/openrailsrs-sim/tests/articulated_train.rs": "392036182985ffc1194670e1159c4a27cb380c0072b9dda18b95996211ee0ac4",
+    "crates/openrailsrs-sim/tests/vehicle_doors.rs": "549cf8b392f80f07b51c9822fab96775483237a3b8d57b1fc75956c1a82f4e0a",
+    "crates/openrailsrs-viewer3d/src/platform_people.rs": "07616c93d6053a1bd2438cdaa6c1f34c7523e941285760c8ac8e896b3c1f31e3",
+    "crates/openrailsrs-viewer3d/src/mirrors.rs": "43c746521eabed4b21fe7dc35047ce5fd743a312a0a8300d816ac132f3485cea"
+  },
+  "preserved_evidence": [
+    {
+      "path": "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json",
+      "sha256": "24dce75393004319388c28a2912fd8d62dad4cfc470f63b3864b664f5b6985a6",
+      "json_pointer": "/cases/connections",
+      "execution": "preserved historical execution; not rerun or relabelled as phase39"
+    },
+    {
+      "path": "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json",
+      "sha256": "24dce75393004319388c28a2912fd8d62dad4cfc470f63b3864b664f5b6985a6",
+      "json_pointer": "/cases/connections-curve",
+      "execution": "preserved historical execution; not rerun or relabelled as phase39"
+    },
+    {
+      "path": "docs/fixtures/compatibility/fifth40-20261013/performance.json",
+      "sha256": "1f0dbaf0b2f85421818053862f0739ed43e1f27e730708892ee3fd368f4c3bc0",
+      "json_pointer": "/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/flexible_connections",
+      "execution": "preserved historical execution; not rerun or relabelled as phase39"
+    },
+    {
+      "path": "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json",
+      "sha256": "24dce75393004319388c28a2912fd8d62dad4cfc470f63b3864b664f5b6985a6",
+      "json_pointer": "/cases/connections-cut",
+      "execution": "preserved historical execution; not rerun or relabelled as phase39"
+    },
+    {
+      "path": "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json",
+      "sha256": "24dce75393004319388c28a2912fd8d62dad4cfc470f63b3864b664f5b6985a6",
+      "json_pointer": "/cases/jacobs-curve",
+      "execution": "preserved historical execution; not rerun or relabelled as phase39"
+    },
+    {
+      "path": "docs/fixtures/compatibility/fifth40-20261013/performance.json",
+      "sha256": "1f0dbaf0b2f85421818053862f0739ed43e1f27e730708892ee3fd368f4c3bc0",
+      "json_pointer": "/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/jacobs_bogie",
+      "execution": "preserved historical execution; not rerun or relabelled as phase39"
+    },
+    {
+      "path": "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json",
+      "sha256": "24dce75393004319388c28a2912fd8d62dad4cfc470f63b3864b664f5b6985a6",
+      "json_pointer": "/cases/boarding-close",
+      "execution": "preserved historical execution; not rerun or relabelled as phase39"
+    },
+    {
+      "path": "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json",
+      "sha256": "24dce75393004319388c28a2912fd8d62dad4cfc470f63b3864b664f5b6985a6",
+      "json_pointer": "/cases/boarding-restore",
+      "execution": "preserved historical execution; not rerun or relabelled as phase39"
+    },
+    {
+      "path": "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json",
+      "sha256": "24dce75393004319388c28a2912fd8d62dad4cfc470f63b3864b664f5b6985a6",
+      "json_pointer": "/cases/boarding-rebase",
+      "execution": "preserved historical execution; not rerun or relabelled as phase39"
+    },
+    {
+      "path": "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json",
+      "sha256": "24dce75393004319388c28a2912fd8d62dad4cfc470f63b3864b664f5b6985a6",
+      "json_pointer": "/cases/alighting",
+      "execution": "preserved historical execution; not rerun or relabelled as phase39"
+    },
+    {
+      "path": "docs/fixtures/compatibility/fifth40-20261013/performance.json",
+      "sha256": "1f0dbaf0b2f85421818053862f0739ed43e1f27e730708892ee3fd368f4c3bc0",
+      "json_pointer": "/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/platform_people",
+      "execution": "preserved historical execution; not rerun or relabelled as phase39"
+    },
+    {
+      "path": "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json",
+      "sha256": "24dce75393004319388c28a2912fd8d62dad4cfc470f63b3864b664f5b6985a6",
+      "json_pointer": "/cases/mirrors",
+      "execution": "preserved historical execution; not rerun or relabelled as phase39"
+    },
+    {
+      "path": "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json",
+      "sha256": "24dce75393004319388c28a2912fd8d62dad4cfc470f63b3864b664f5b6985a6",
+      "json_pointer": "/cases/mirrors-rain",
+      "execution": "preserved historical execution; not rerun or relabelled as phase39"
+    },
+    {
+      "path": "docs/fixtures/compatibility/fifth40-20261013/performance.json",
+      "sha256": "1f0dbaf0b2f85421818053862f0739ed43e1f27e730708892ee3fd368f4c3bc0",
+      "json_pointer": "/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/mirrors",
+      "execution": "preserved historical execution; not rerun or relabelled as phase39"
+    },
+    {
+      "path": "docs/validation/FIFTH40_PHASE36_SUBCRITERIA.json",
+      "sha256": "a571f8de069ca0596554a9f35ffae69302270e079f914f6ba761e12e25ca138b",
+      "json_pointer": "/cases/mirrors",
+      "execution": "preserved phase36 bounded pause/restore/origin/camera and cost sequence"
+    }
+  ],
+  "manual": "docs/MANUAL_FIFTH40.md",
+  "limits": [
+    "Existing visual captures and timing samples retain their original binary, assets, phase and scope. This review creates no new captures or performance measurements.",
+    "Eight named regression tests are present with PASS in check39; the full current runtime CI also passed. No redundant full check was run for this documentation.",
+    "This receipt does not certify memory stability, better frame times, a final Snap39 or Store publication. Issues #391, #403 and distribution work stay open.",
+    "No content downloaded from authors is added to Git or the package."
+  ]
+}
