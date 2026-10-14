@@ -1,0 +1,5835 @@
+{
+  "schema": 1,
+  "candidate": "phase36",
+  "status": "bounded_subcriteria_pass_with_quality_replica_pending",
+  "identity": {
+    "viewer_sha256": "06ae19253b4ca0d040e13152be8527dda91d86a71334d8a8314f28501d540a56",
+    "viewer_bytes": 172775584,
+    "shaders": {
+      "crates/openrailsrs-bevy-scenery/assets/shaders/or_moment_pack.wgsl": "218475b9e91288988ccb086749da4093398c0e3d29a4d7739c4c5df20169ba5f",
+      "crates/openrailsrs-bevy-scenery/assets/shaders/terrain.wgsl": "e981280e8a0f4646db2d372bc54c781bff143eb2f0c8885ce9e69848a27deb76",
+      "crates/openrailsrs-bevy-scenery/assets/shaders/snow_vertex.wgsl": "fbb424e07ce9105008ab225e68795b520466c81f41d3ee41e62d54ba8a8c03eb",
+      "crates/openrailsrs-bevy-scenery/assets/shaders/or_moment_blur.wgsl": "f0bf898137eb8cba44df2840428c7e6b3dca26c59d2d3706d94a247c3cc8acbe",
+      "crates/openrailsrs-bevy-scenery/assets/shaders/terrain_snow_vertex.wgsl": "b7f9c2bd2dec5a5131d2ea0418d0f9a1778f9e917036eab01bf123e39f42809d",
+      "crates/openrailsrs-bevy-scenery/assets/shaders/or_terrain.wgsl": "b18b56fc186a0c104ac57f8e94eccb23f37d7e718c1ed6f28f060376b15b1dfd",
+      "crates/openrailsrs-bevy-scenery/assets/shaders/or_cab.wgsl": "fad7a2b58f33fdea467c5076b4070ad2ee5a5e8182b38a07ed4631b24af8014a",
+      "crates/openrailsrs-bevy-scenery/assets/shaders/railway_lighting.wgsl": "ee12f381923662cc568bb14c034ba01aea366ccbe7de74988dfdf886bdd68ef4",
+      "crates/openrailsrs-bevy-scenery/assets/shaders/cloud_field.wgsl": "972c5c29591626656d35a76d53dcdad31539721aad441136aea1b24811bdd64e",
+      "crates/openrailsrs-bevy-scenery/assets/shaders/surface_weather.wgsl": "830c03d3810afc1bd0d21d812cb7997ec513175982a609c698741f4a3ed6ce6a",
+      "crates/openrailsrs-bevy-scenery/assets/shaders/or_scenery.wgsl": "f6dcccb448116fd62d749dd214fb295a43c48a127738031b77a700fa8b03f692",
+      "crates/openrailsrs-bevy-scenery/assets/shaders/or_shadow.wgsl": "ca9fe546c16fa82c0f758deb94d939e34e8fba2a76a60a18342db8af72ad010e",
+      "crates/openrailsrs-bevy-scenery/assets/shaders/or_forest.wgsl": "2661056bfcebb195f663bef425def3f49653621b2f9bde7e0918786bf80cc57a",
+      "crates/openrailsrs-bevy-scenery/assets/shaders/railway_sky.wgsl": "9a0344db7d04774e469e17c1bcaa01d9af9e53d7c5b30d32e2edf793b5f3942f",
+      "crates/openrailsrs-bevy-scenery/assets/shaders/snow_surface.wgsl": "93bf0fe7e155a3b91ca2cf6e1ed9be37e49c57743931dba9d77edc06f4b0276f",
+      "crates/openrailsrs-bevy-scenery/assets/shaders/hanabi_weather_fragment.wgsl": "ec6e7efa2f69d0bec81e2232c800e12024f2763a40b940e518661013c2138960",
+      "crates/openrailsrs-bevy-scenery/assets/shaders/or_scenery_bindings.wgsl": "308a0dd8959b54dee842751693afb47a6f85ab62280a01c456608a6b1c9fdcfc",
+      "crates/openrailsrs-bevy-scenery/assets/shaders/or_moment_preview.wgsl": "b8359b6fb54ba7409cc7315ca4e1cd0e41ffabdc66f64ac2e0f69e82193f38ce",
+      "crates/openrailsrs-bevy-scenery/assets/shaders/or_scenery_prepass.wgsl": "b266628bf7024be63f3181bd9d514aa2498137d700f2cd0ec254cac0b3540bf1",
+      "crates/openrailsrs-bevy-scenery/assets/shaders/weather_particles.wgsl": "25077efabf986cec285c542ec0fbbd0b8dc4634442a3cbe3f14227404989e1d6",
+      "crates/openrailsrs-bevy-scenery/assets/shaders/terrain_common.wgsl": "fb5b9cdbcc5542cdb356b904cf3ceabcaf710a7d82e81c159036fa31e07c3874",
+      "crates/openrailsrs-bevy-scenery/assets/shaders/moon.wgsl": "7da04d322f77d9c21ba283762920959e4ca496483e4e547209d0eb95e3487931",
+      "crates/openrailsrs-bevy-scenery/assets/shaders/windshield.wgsl": "da54244b4b1f0efbac2873c87aaf3f9d2ff223a7dd0950f11f3daa836754134b"
+    },
+    "fixtures": {
+      "examples/player_lab/README.md": "d1fb0314ef1d5a3e3bd23957a1a91b6398f1794f16d5a8ea1e5f431c750222b6",
+      "examples/player_lab/scenario_jacobs.toml": "60e54f7c9029a4ba8fcb00db6b482d19d74172d64dccf4d79e56d3c49125e42a",
+      "examples/player_lab/weather-sectors.json": "2ee49e0e758b25a59e7b389d0d4f9109ebb32fc48e85e5024a631fafdebe4595",
+      "examples/player_lab/scenario_refill.toml": "b24da22bf4f914b96d8d9ab2ae9c1a63e9826c558a8986d1f41f29354fd24000",
+      "examples/player_lab/scenario.toml": "f9adc155f5354cb9a90f9a942aaf48f7889bde09a63105fc4833cdcd2ac67d8b",
+      "examples/player_lab/scenario_connections_curve.toml": "3292eebc073afcf5e4f24166d39e45722a269cd1da9999f079488b4283e77def",
+      "examples/player_lab/scenario_jacobs_curve.toml": "1a76b1a3633865473abfe3a4d89b9dcc9decf59943c0fd116203193d25b574a8",
+      "examples/player_lab/scenario_connections.toml": "38bee6a3f9f243d3090d2285b3f882aaecf7ce68e329c1292a942077b4c7eb2a",
+      "examples/player_lab/route/loading-gauge.toml": "1d400feb14b058ebdcc39fca413b7d53079e082e43f9febe5ed04175a91a0ddc",
+      "examples/player_lab/route/route-location.json": "59a8cf013f620735f0b378fa6c7261dc2ee3a6350a5e3a3a305031dd493e02ac",
+      "examples/player_lab/route/track.toml": "eb4e1c47a7e592482037df932d921492a7c6b2d1c1cd250dea3a74b906aadfbc",
+      "examples/player_lab/vehicles/connections.s": "a3b836adf18594317f99dc8452b4b081528539e92108c40a4dafdd2f29363441",
+      "examples/player_lab/vehicles/coach.s": "cd1df792a6354ee51aad2b84f96c0ce4e6e763364b3f3a7c20798d6c63323eb3",
+      "examples/player_lab/vehicles/lab.s": "0adf2a28552f40782dea14188f94e4125bcc7265a723aaa3e0b07e6247b6611f",
+      "examples/player_lab/vehicles/connections.eng": "c6d51487833aa451b58f9a4bb7e85b09955ea77661669fb0163e08aced824dd7",
+      "examples/player_lab/vehicles/lab.wag": "0c48c1fab66ba3a8921a2f95709b33b7af327119c0ee74685184f8a40f18eaa7",
+      "examples/player_lab/vehicles/lab.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+      "examples/player_lab/vehicles/refill.eng": "df0945b2ec9136366e1791f2beae245f205700dc471d3ad810b08b93b6144197",
+      "examples/player_lab/vehicles/lab.eng": "17861c351cc8abab98740ea36bd04645339bf14cc957ff899ae37ed7a89a6ea2",
+      "examples/player_lab/consists/lab.con": "56141328bc73a735ff43f95cb1ef61679d42c01ac01e4afe6b344cd9d8fceea2",
+      "examples/player_lab/consists/connections.con": "3ec7560d3026991218e09299a801970cafcdcb57d602927b6a78498622e7c701",
+      "examples/player_lab/consists/refill.con": "f088335f1fb7c610916095babcba2052aa274c9e95f0570e1022d42eb4cdd5fe",
+      "examples/player_lab/curve_route/track.toml": "9cae21fba370dc4676a9c9f3e4c8da1d019a913ba5e6be2f1d866e69c2aad0d8",
+      "examples/player_lab/curve_route/WORLD/w-000000-000000.w": "3e33f6517b2b3fdac5c07f0cebee08954ca01145c90d5e59546e300dea503b7d",
+      "examples/player_lab/curve_route/TERRTEX/grass.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+      "examples/player_lab/curve_route/TERRTEX/microtex.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+      "examples/player_lab/curve_route/TERRAIN/+000000+000000_f.raw": "02ee3625bf1d12766c46309735ac27a9b626462b5227505856e8fbec5e24276c",
+      "examples/player_lab/curve_route/TERRAIN/+000000+000000_y.raw": "1da25536b7b923edf8d655ca9bb0e3b07372a97b5fd7aa2e4c7532e32079d81f",
+      "examples/player_lab/curve_route/TERRAIN/+000000+000000.y": "eba68eb52d8138e589a90ff0ac6140dfee786bdd2b715a2e1769e4871c265e63",
+      "examples/player_lab/curve_route/SHAPES/camera_wall.s": "dfd126c6909cc1b98a01b44dd98cbfd7139c2976ce3639f6100d216fa4054d91",
+      "examples/player_lab/curve_route/SHAPES/platform_lamp.s": "15f6b568b0df71c5583ac5d88c11414db582fc9303765eff0db52539d5b2aefd",
+      "examples/player_lab/curve_route/SHAPES/yard_shed.s": "cac4306668e7e42bd96d81f298250a54113270fbf72963dc9bf4a611cd1ed363",
+      "examples/player_lab/curve_route/SHAPES/fuel_tower.s": "edf4d03c223ab263e3d1784ae2de1555390419af536f2ea0a1b4339a7f13dd14",
+      "examples/player_lab/curve_route/SHAPES/station_windows.s": "1d31342bb1afa2329db128e312c39bf7fc91b89bdeb034e0fc21c6c8ae51ea80",
+      "examples/player_lab/curve_route/SHAPES/house_windows.s": "1d31342bb1afa2329db128e312c39bf7fc91b89bdeb034e0fc21c6c8ae51ea80",
+      "examples/player_lab/curve_route/TEXTURES/yard.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+      "examples/player_lab/route/WORLD/w-000000-000000.w": "36a287ccdd024d4213aab61a680d85b549d9cc700ac4b65104e4ce99b4b8710b",
+      "examples/player_lab/route/TERRTEX/grass.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+      "examples/player_lab/route/TERRTEX/microtex.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e",
+      "examples/player_lab/route/TERRAIN/+000000+000000_f.raw": "02ee3625bf1d12766c46309735ac27a9b626462b5227505856e8fbec5e24276c",
+      "examples/player_lab/route/TERRAIN/+000000+000000_y.raw": "1da25536b7b923edf8d655ca9bb0e3b07372a97b5fd7aa2e4c7532e32079d81f",
+      "examples/player_lab/route/TERRAIN/+000000+000000.y": "eba68eb52d8138e589a90ff0ac6140dfee786bdd2b715a2e1769e4871c265e63",
+      "examples/player_lab/route/SHAPES/camera_wall.s": "dfd126c6909cc1b98a01b44dd98cbfd7139c2976ce3639f6100d216fa4054d91",
+      "examples/player_lab/route/SHAPES/platform_lamp.s": "15f6b568b0df71c5583ac5d88c11414db582fc9303765eff0db52539d5b2aefd",
+      "examples/player_lab/route/SHAPES/yard_shed.s": "cac4306668e7e42bd96d81f298250a54113270fbf72963dc9bf4a611cd1ed363",
+      "examples/player_lab/route/SHAPES/fuel_tower.s": "edf4d03c223ab263e3d1784ae2de1555390419af536f2ea0a1b4339a7f13dd14",
+      "examples/player_lab/route/SHAPES/station_windows.s": "1d31342bb1afa2329db128e312c39bf7fc91b89bdeb034e0fc21c6c8ae51ea80",
+      "examples/player_lab/route/SHAPES/house_windows.s": "1d31342bb1afa2329db128e312c39bf7fc91b89bdeb034e0fc21c6c8ae51ea80",
+      "examples/player_lab/route/TEXTURES/yard.ace": "28d90e9a18b12703b55e4eab862c7c160ca5d58cf0033f17fbcb66f4d725be6e"
+    },
+    "scope": "Owned fixtures; actual pause/restore, camera changes and observed origin shift. No OR pixel parity or exclusive FPS claim."
+  },
+  "cases": {
+    "mirrors": {
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 43.82533656539739,
+        "gpu_busy_percent_mean": 16.958677685950413,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 0.0,
+          "0000:03:00.0": 16.958677685950413
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
+        "private_compositor": {
+          "gl_renderer": "AMD Radeon RX 7600 (radeonsi, navi33, ACO, DRM 3.64, 7.0.0-38-generic)",
+          "egl_device": "/dev/dri/renderD129",
+          "DRI_PRIME": "pci-0000_03_00_0",
+          "scope": "GL renderer identifies effective offload device; EGL device may retain enumeration node"
+        }
+      },
+      "subcriteria": {
+        "paused_time_s": 1.800000000000001,
+        "restored_time_s": 1.800000000000001,
+        "maximum_observed_origin_m": 500.0,
+        "successful_actions": 9
+      },
+      "mirrors": {
+        "frames": 358,
+        "resolution": [
+          256,
+          160
+        ],
+        "views": 2
+      },
+      "camera_collision": {
+        "corrections": 0
+      },
+      "obstacles": {
+        "origin_m": [
+          -80.0,
+          0.0,
+          39.45000076293945
+        ],
+        "solid_count": 15,
+        "solids": [
+          {
+            "max": [
+              80.0250015258789,
+              1.024999976158142,
+              9.225000381469727
+            ],
+            "min": [
+              -0.02500000037252903,
+              0.9750000238418579,
+              -40.82500076293945
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              -9.77500057220459,
+              4.125,
+              2.1250016689300537
+            ],
+            "min": [
+              -10.22499942779541,
+              -0.02500000037252903,
+              1.6750015020370483
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              4.175000190734863,
+              4.224999904632568,
+              -5.774999141693115
+            ],
+            "min": [
+              3.8249998092651367,
+              3.7750000953674316,
+              -5.8249993324279785
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              -0.9750000238418579,
+              5.025000095367432,
+              -18.774999618530273
+            ],
+            "min": [
+              -7.025000095367432,
+              1.975000023841858,
+              -18.82499885559082
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              11.024999618530273,
+              3.4250001907348633,
+              -18.274999618530273
+            ],
+            "min": [
+              4.974999904632568,
+              0.4749999940395355,
+              -19.32499885559082
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              11.024999618530273,
+              5.025000095367432,
+              -18.774999618530273
+            ],
+            "min": [
+              4.974999904632568,
+              1.975000023841858,
+              -18.82499885559082
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              0.03949775546789169,
+              3.69230055809021,
+              1.5249208211898804
+            ],
+            "min": [
+              -20.039499282836914,
+              0.7423003911972046,
+              -1.7249177694320679
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -14.759561538696289,
+              2.892300605773926,
+              -1.642919659614563
+            ],
+            "min": [
+              -16.00950050354004,
+              0.7923004627227783,
+              -1.7049189805984497
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -16.989849090576172,
+              3.0923004150390625,
+              1.3749293088912964
+            ],
+            "min": [
+              -19.039749145507812,
+              2.042300224304199,
+              1.304930567741394
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -16.95945167541504,
+              3.0923004150390625,
+              -1.6649185419082642
+            ],
+            "min": [
+              -19.00935173034668,
+              2.042300224304199,
+              -1.7349172830581665
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -19.960500717163086,
+              3.6841251850128174,
+              1.3249200582504272
+            ],
+            "min": [
+              -40.03949737548828,
+              0.734125018119812,
+              -1.924918532371521
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -19.992000579833984,
+              3.5423004627227783,
+              1.0746445655822754
+            ],
+            "min": [
+              -20.066997528076172,
+              3.0923001766204834,
+              -1.4752302169799805
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -20.261486053466797,
+              1.1923003196716309,
+              -0.9779525995254517
+            ],
+            "min": [
+              -20.316486358642578,
+              0.8423004150390625,
+              -1.5279275178909302
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -35.98989486694336,
+              3.1841251850128174,
+              1.1849279403686523
+            ],
+            "min": [
+              -38.039798736572266,
+              0.734125018119812,
+              1.11492919921875
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -35.959495544433594,
+              3.1841251850128174,
+              -1.8549199104309082
+            ],
+            "min": [
+              -38.0093994140625,
+              0.734125018119812,
+              -1.9249186515808105
+            ],
+            "train": true
+          }
+        ]
+      },
+      "floating_origin_shift": [
+        -80.0,
+        0.0,
+        39.45000076293945
+      ],
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 38.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.25,
+        "position_world": [
+          77.00015258789062,
+          3.0999999046325684,
+          0.7700007557868958
+        ],
+        "rotation_xyzw": [
+          -0.014070311561226845,
+          -0.7104912400245667,
+          -0.014211717993021011,
+          0.7034218907356262
+        ],
+        "target_world": [
+          80.0,
+          0.30000001192092896,
+          0.7999992370605469
+        ],
+        "yaw_rad": -0.00999966636300087
+      },
+      "wetness": 0.6200000047683716,
+      "snow_cover": 0.0,
+      "snow_tracks": {
+        "gpu_changes": 0,
+        "gpu_segments": 0.0,
+        "material_uploads": 0,
+        "maximum_depth_m": 0.08,
+        "sectors": 0,
+        "segments": 0
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 2,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 2048,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 1269,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 4096,
+        "shelter_image_ids": [
+          "AssetId<bevy_image::image::Image>{uuid: 657c23a8-ea46-4ae2-8ab6-4c5197fc8798}",
+          "AssetId<bevy_image::image::Image>{uuid: f6f315f9-73b9-4aa2-8e35-de2770929985}"
+        ],
+        "shelter_refreshes": 62,
+        "snow_fraction": 0.0
+      },
+      "weather_shelter": {
+        "refreshes": 62,
+        "roof_triangles": 16,
+        "shared_cpu_gpu": true
+      },
+      "render_budget": {
+        "memory_pressure": false,
+        "particles": 8192,
+        "passenger_lights": 8,
+        "station_lights": 24,
+        "train_lights": 8,
+        "upload_mib": 8,
+        "vegetation_divisor": 1
+      },
+      "render_resources": {
+        "allocator": null,
+        "bin_unpacking_lifetime": {
+          "cached_keys": 2,
+          "retired_keys": 0,
+          "source_keys": 2,
+          "stale_keys_after": 0,
+          "stale_keys_before": 0
+        },
+        "bindless_material_allocations": 24,
+        "bindless_material_allocations_scope": "Raw upstream allocated_resource_count may overcount repeated bindings within a material; use material_owners for actual map ownership.",
+        "image_ownership": null,
+        "images": 34,
+        "indexed_mesh_allocations": 15,
+        "material_owners": {
+          "bindings": {
+            "available": true,
+            "by_type": {
+              "MoonMaterial": 1,
+              "ParticleMaterial": 1,
+              "RailwaySkyMaterial": 1,
+              "StandardMaterial": 37,
+              "TerrainMaterial": 1
+            },
+            "total": 41
+          },
+          "prepared": {
+            "available": true,
+            "by_type": {
+              "MoonMaterial": 1,
+              "ParticleMaterial": 1,
+              "RailwaySkyMaterial": 1,
+              "StandardMaterial": 37,
+              "TerrainMaterial": 1
+            },
+            "total": 41
+          }
+        },
+        "material_slab_bytes": 7104,
+        "material_slabs": 1,
+        "mesh_slab_bytes": 7995448,
+        "mesh_slabs": 4,
+        "meshes": 30,
+        "oit_head_capacity": 921600,
+        "oit_node_capacity": 3686400,
+        "pipelines": 104,
+        "views": 32
+      },
+      "system_stages": {
+        "camera_collision": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 31,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 1054
+        },
+        "effect_obstacles": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 64,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 12638
+        },
+        "flexible_connections": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 30,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 1938
+        },
+        "horizon": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 40,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 2515
+        },
+        "jacobs_bogie": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 9,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 34
+        },
+        "level_crossing_register": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 3,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 3
+        },
+        "live_drive": {
+          "calls": 1779,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 74,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 21243
+        },
+        "mirrors": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 17,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4354
+        },
+        "platform_people": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 40,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4150
+        },
+        "road_cars": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 3,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 934
+        },
+        "snow_materials": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 30,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 2219
+        },
+        "snow_roof_markers": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 0,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 0
+        },
+        "snow_tracks": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 2,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 18
+        },
+        "streaming_forecast.update": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 39,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 777
+        },
+        "terrain_spawn.terrain_tile_bundle_materialize_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 5,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 18
+        },
+        "terrain_spawn.terrain_tile_spawn_stream_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 26,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 58
+        },
+        "terrain_spawn.terrain_tile_stream_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 409,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 27040
+        },
+        "terrain_spawn.terrain_tile_unload_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 87,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 5128
+        },
+        "wet_surfaces": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 308,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 3892
+        },
+        "world.progressive_world_spawn_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 409,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 932
+        },
+        "world.update_world_scenery_lod": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 105,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 8021
+        },
+        "world.world_stream_scenery_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 263,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 294
+        },
+        "world.world_tile_bundle_materialize_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 6,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 10
+        },
+        "world.world_tile_stream_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 1465,
+          "p50_ms": 0.6,
+          "p99_ms": 0.9,
+          "total_us": 505608
+        },
+        "world.world_tile_unload_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 363,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4899
+        }
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "elapsed_s": 31.0,
+      "peak_rss_mib": 464.8,
+      "capture_sha256": "6f8df579fbf8dd6748b19ebff276bbcdde6179a81545799051fd9221cb351c19"
+    },
+    "glass-driver": {
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 45.96495264871027,
+        "gpu_busy_percent_mean": 16.10655737704918,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 0.0,
+          "0000:03:00.0": 16.10655737704918
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
+        "private_compositor": {
+          "gl_renderer": "AMD Radeon RX 7600 (radeonsi, navi33, ACO, DRM 3.64, 7.0.0-38-generic)",
+          "egl_device": "/dev/dri/renderD129",
+          "DRI_PRIME": "pci-0000_03_00_0",
+          "scope": "GL renderer identifies effective offload device; EGL device may retain enumeration node"
+        }
+      },
+      "subcriteria": {
+        "paused_time_s": 1.900000000000001,
+        "restored_time_s": 1.900000000000001,
+        "maximum_observed_origin_m": 500.0,
+        "successful_actions": 9
+      },
+      "mirrors": {
+        "frames": 364,
+        "resolution": [
+          256,
+          160
+        ],
+        "views": 2
+      },
+      "camera_collision": {
+        "corrections": 0
+      },
+      "obstacles": {
+        "origin_m": [
+          -80.0,
+          0.0,
+          39.45000076293945
+        ],
+        "solid_count": 15,
+        "solids": [
+          {
+            "max": [
+              80.0250015258789,
+              1.024999976158142,
+              9.225000381469727
+            ],
+            "min": [
+              -0.02500000037252903,
+              0.9750000238418579,
+              -40.82500076293945
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              -9.77500057220459,
+              4.125,
+              2.1250016689300537
+            ],
+            "min": [
+              -10.22499942779541,
+              -0.02500000037252903,
+              1.6750015020370483
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              4.175000190734863,
+              4.224999904632568,
+              -5.774999141693115
+            ],
+            "min": [
+              3.8249998092651367,
+              3.7750000953674316,
+              -5.8249993324279785
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              -0.9750000238418579,
+              5.025000095367432,
+              -18.774999618530273
+            ],
+            "min": [
+              -7.025000095367432,
+              1.975000023841858,
+              -18.82499885559082
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              11.024999618530273,
+              3.4250001907348633,
+              -18.274999618530273
+            ],
+            "min": [
+              4.974999904632568,
+              0.4749999940395355,
+              -19.32499885559082
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              11.024999618530273,
+              5.025000095367432,
+              -18.774999618530273
+            ],
+            "min": [
+              4.974999904632568,
+              1.975000023841858,
+              -18.82499885559082
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              0.03949775546789169,
+              3.69230055809021,
+              1.5249208211898804
+            ],
+            "min": [
+              -20.039499282836914,
+              0.7423003911972046,
+              -1.7249177694320679
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -14.759561538696289,
+              2.892300605773926,
+              -1.642919659614563
+            ],
+            "min": [
+              -16.00950050354004,
+              0.7923004627227783,
+              -1.7049189805984497
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -16.989849090576172,
+              3.0923004150390625,
+              1.3749293088912964
+            ],
+            "min": [
+              -19.039749145507812,
+              2.042300224304199,
+              1.304930567741394
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -16.95945167541504,
+              3.0923004150390625,
+              -1.6649185419082642
+            ],
+            "min": [
+              -19.00935173034668,
+              2.042300224304199,
+              -1.7349172830581665
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -19.960500717163086,
+              3.6841251850128174,
+              1.3249200582504272
+            ],
+            "min": [
+              -40.03949737548828,
+              0.734125018119812,
+              -1.924918532371521
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -19.992000579833984,
+              3.5423004627227783,
+              1.0746445655822754
+            ],
+            "min": [
+              -20.066997528076172,
+              3.0923001766204834,
+              -1.4752302169799805
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -20.261486053466797,
+              1.1923003196716309,
+              -0.9779525995254517
+            ],
+            "min": [
+              -20.316486358642578,
+              0.8423004150390625,
+              -1.5279275178909302
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -35.98989486694336,
+              3.1841251850128174,
+              1.1849279403686523
+            ],
+            "min": [
+              -38.039798736572266,
+              0.734125018119812,
+              1.11492919921875
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -35.959495544433594,
+              3.1841251850128174,
+              -1.8549199104309082
+            ],
+            "min": [
+              -38.0093994140625,
+              0.734125018119812,
+              -1.9249186515808105
+            ],
+            "train": true
+          }
+        ]
+      },
+      "floating_origin_shift": [
+        -80.0,
+        0.0,
+        39.45000076293945
+      ],
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 38.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.25,
+        "position_world": [
+          77.00015258789062,
+          3.0999999046325684,
+          0.7700007557868958
+        ],
+        "rotation_xyzw": [
+          -0.014070311561226845,
+          -0.7104912400245667,
+          -0.014211717993021011,
+          0.7034218907356262
+        ],
+        "target_world": [
+          80.0,
+          0.30000001192092896,
+          0.7999992370605469
+        ],
+        "yaw_rad": -0.00999966636300087
+      },
+      "wetness": 0.0,
+      "snow_cover": 0.0,
+      "snow_tracks": {
+        "gpu_changes": 0,
+        "gpu_segments": 0.0,
+        "material_uploads": 0,
+        "maximum_depth_m": 0.08,
+        "sectors": 0,
+        "segments": 0
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": null,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 2048,
+        "shelter_image_ids": [
+          "AssetId<bevy_image::image::Image>{uuid: 97128bb1-2588-480b-bdc6-87b4adbec477}",
+          "AssetId<bevy_image::image::Image>{uuid: 97128bb1-2588-480b-bdc6-87b4adbec477}"
+        ],
+        "shelter_refreshes": 0,
+        "snow_fraction": 0.0
+      },
+      "weather_shelter": {
+        "refreshes": 62,
+        "roof_triangles": 16,
+        "shared_cpu_gpu": true
+      },
+      "render_budget": {
+        "memory_pressure": false,
+        "particles": 8192,
+        "passenger_lights": 8,
+        "station_lights": 24,
+        "train_lights": 8,
+        "upload_mib": 8,
+        "vegetation_divisor": 1
+      },
+      "render_resources": {
+        "allocator": null,
+        "bin_unpacking_lifetime": {
+          "cached_keys": 2,
+          "retired_keys": 0,
+          "source_keys": 2,
+          "stale_keys_after": 0,
+          "stale_keys_before": 0
+        },
+        "bindless_material_allocations": 24,
+        "bindless_material_allocations_scope": "Raw upstream allocated_resource_count may overcount repeated bindings within a material; use material_owners for actual map ownership.",
+        "image_ownership": null,
+        "images": 32,
+        "indexed_mesh_allocations": 14,
+        "material_owners": {
+          "bindings": {
+            "available": true,
+            "by_type": {
+              "MoonMaterial": 1,
+              "RailwaySkyMaterial": 1,
+              "StandardMaterial": 37,
+              "TerrainMaterial": 1
+            },
+            "total": 40
+          },
+          "prepared": {
+            "available": true,
+            "by_type": {
+              "MoonMaterial": 1,
+              "RailwaySkyMaterial": 1,
+              "StandardMaterial": 37,
+              "TerrainMaterial": 1
+            },
+            "total": 40
+          }
+        },
+        "material_slab_bytes": 7104,
+        "material_slabs": 1,
+        "mesh_slab_bytes": 6946848,
+        "mesh_slabs": 3,
+        "meshes": 29,
+        "oit_head_capacity": 921600,
+        "oit_node_capacity": 3686400,
+        "pipelines": 90,
+        "views": 14
+      },
+      "system_stages": {
+        "camera_collision": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 14,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 1178
+        },
+        "effect_obstacles": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 149,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 14728
+        },
+        "flexible_connections": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 35,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 2320
+        },
+        "horizon": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 70,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 2833
+        },
+        "jacobs_bogie": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 17,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 60
+        },
+        "level_crossing_register": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 2,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 3
+        },
+        "live_drive": {
+          "calls": 1780,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 100,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 23558
+        },
+        "mirrors": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 37,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 5244
+        },
+        "platform_people": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 322,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 5081
+        },
+        "road_cars": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 4,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 960
+        },
+        "snow_materials": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 29,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 2742
+        },
+        "snow_roof_markers": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 0,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 0
+        },
+        "snow_tracks": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 1,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 40
+        },
+        "streaming_forecast.update": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 56,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 939
+        },
+        "terrain_spawn.terrain_tile_bundle_materialize_system": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 3,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 12
+        },
+        "terrain_spawn.terrain_tile_spawn_stream_system": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 6,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 36
+        },
+        "terrain_spawn.terrain_tile_stream_system": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 244,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 29589
+        },
+        "terrain_spawn.terrain_tile_unload_system": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 55,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 5550
+        },
+        "wet_surfaces": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 47,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4212
+        },
+        "world.progressive_world_spawn_system": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 392,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 863
+        },
+        "world.update_world_scenery_lod": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 848,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 11016
+        },
+        "world.world_stream_scenery_system": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 254,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 278
+        },
+        "world.world_tile_bundle_materialize_system": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 4,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 13
+        },
+        "world.world_tile_stream_system": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 2498,
+          "p50_ms": 0.6,
+          "p99_ms": 1.1,
+          "total_us": 539786
+        },
+        "world.world_tile_unload_system": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 53,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 5893
+        }
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "elapsed_s": 31.0,
+      "peak_rss_mib": 460.2,
+      "capture_sha256": "b5edaf2297593fe00064050a5baac31259864677e79ff91b4b44ed28163b861e"
+    },
+    "glass-exterior": {
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 39.79067876755687,
+        "gpu_busy_percent_mean": 15.844262295081966,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 0.0,
+          "0000:03:00.0": 15.844262295081966
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
+        "private_compositor": {
+          "gl_renderer": "AMD Radeon RX 7600 (radeonsi, navi33, ACO, DRM 3.64, 7.0.0-38-generic)",
+          "egl_device": "/dev/dri/renderD129",
+          "DRI_PRIME": "pci-0000_03_00_0",
+          "scope": "GL renderer identifies effective offload device; EGL device may retain enumeration node"
+        }
+      },
+      "subcriteria": {
+        "paused_time_s": 1.950000000000001,
+        "restored_time_s": 1.950000000000001,
+        "maximum_observed_origin_m": 500.0,
+        "successful_actions": 9
+      },
+      "mirrors": {
+        "frames": 50,
+        "resolution": [
+          256,
+          160
+        ],
+        "views": 2
+      },
+      "camera_collision": {
+        "corrections": 0
+      },
+      "obstacles": {
+        "origin_m": [
+          -80.0,
+          0.0,
+          39.45000076293945
+        ],
+        "solid_count": 15,
+        "solids": [
+          {
+            "max": [
+              80.0250015258789,
+              1.024999976158142,
+              9.225000381469727
+            ],
+            "min": [
+              -0.02500000037252903,
+              0.9750000238418579,
+              -40.82500076293945
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              -9.77500057220459,
+              4.125,
+              2.1250016689300537
+            ],
+            "min": [
+              -10.22499942779541,
+              -0.02500000037252903,
+              1.6750015020370483
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              4.175000190734863,
+              4.224999904632568,
+              -5.774999141693115
+            ],
+            "min": [
+              3.8249998092651367,
+              3.7750000953674316,
+              -5.8249993324279785
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              -0.9750000238418579,
+              5.025000095367432,
+              -18.774999618530273
+            ],
+            "min": [
+              -7.025000095367432,
+              1.975000023841858,
+              -18.82499885559082
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              11.024999618530273,
+              3.4250001907348633,
+              -18.274999618530273
+            ],
+            "min": [
+              4.974999904632568,
+              0.4749999940395355,
+              -19.32499885559082
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              11.024999618530273,
+              5.025000095367432,
+              -18.774999618530273
+            ],
+            "min": [
+              4.974999904632568,
+              1.975000023841858,
+              -18.82499885559082
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              0.03949775546789169,
+              3.69230055809021,
+              1.5249208211898804
+            ],
+            "min": [
+              -20.039499282836914,
+              0.7423003911972046,
+              -1.7249177694320679
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -16.989849090576172,
+              3.0923004150390625,
+              1.3749293088912964
+            ],
+            "min": [
+              -19.039749145507812,
+              2.042300224304199,
+              1.304930567741394
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -19.960500717163086,
+              3.6841251850128174,
+              1.3249200582504272
+            ],
+            "min": [
+              -40.03949737548828,
+              0.734125018119812,
+              -1.924918532371521
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -19.992000579833984,
+              3.5423004627227783,
+              1.0746445655822754
+            ],
+            "min": [
+              -20.066997528076172,
+              3.0923001766204834,
+              -1.4752302169799805
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -14.759561538696289,
+              2.892300605773926,
+              -1.642919659614563
+            ],
+            "min": [
+              -16.00950050354004,
+              0.7923004627227783,
+              -1.7049189805984497
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -16.95945167541504,
+              3.0923004150390625,
+              -1.6649185419082642
+            ],
+            "min": [
+              -19.00935173034668,
+              2.042300224304199,
+              -1.7349172830581665
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -20.261486053466797,
+              1.1923003196716309,
+              -0.9779525995254517
+            ],
+            "min": [
+              -20.316486358642578,
+              0.8423004150390625,
+              -1.5279275178909302
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -35.98989486694336,
+              3.1841251850128174,
+              1.1849279403686523
+            ],
+            "min": [
+              -38.039798736572266,
+              0.734125018119812,
+              1.11492919921875
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -35.959495544433594,
+              3.1841251850128174,
+              -1.8549199104309082
+            ],
+            "min": [
+              -38.0093994140625,
+              0.734125018119812,
+              -1.9249186515808105
+            ],
+            "train": true
+          }
+        ]
+      },
+      "floating_origin_shift": [
+        -80.0,
+        0.0,
+        39.45000076293945
+      ],
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 38.0,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.25,
+        "position_world": [
+          69.63182830810547,
+          9.668651580810547,
+          37.51683044433594
+        ],
+        "rotation_xyzw": [
+          -0.12467319518327713,
+          -0.00496079633012414,
+          -0.0006233495660126209,
+          0.9921852946281433
+        ],
+        "target_world": [
+          70.0,
+          0.26730042695999146,
+          0.7000007629394531
+        ],
+        "yaw_rad": -0.00999966636300087
+      },
+      "wetness": 0.0,
+      "snow_cover": 0.0,
+      "snow_tracks": {
+        "gpu_changes": 0,
+        "gpu_segments": 0.0,
+        "material_uploads": 0,
+        "maximum_depth_m": 0.08,
+        "sectors": 0,
+        "segments": 0
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": null,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 2048,
+        "shelter_image_ids": [
+          "AssetId<bevy_image::image::Image>{uuid: 97128bb1-2588-480b-bdc6-87b4adbec477}",
+          "AssetId<bevy_image::image::Image>{uuid: 97128bb1-2588-480b-bdc6-87b4adbec477}"
+        ],
+        "shelter_refreshes": 0,
+        "snow_fraction": 0.0
+      },
+      "weather_shelter": {
+        "refreshes": 62,
+        "roof_triangles": 16,
+        "shared_cpu_gpu": true
+      },
+      "render_budget": {
+        "memory_pressure": false,
+        "particles": 8192,
+        "passenger_lights": 8,
+        "station_lights": 24,
+        "train_lights": 8,
+        "upload_mib": 8,
+        "vegetation_divisor": 1
+      },
+      "render_resources": {
+        "allocator": null,
+        "bin_unpacking_lifetime": {
+          "cached_keys": 2,
+          "retired_keys": 0,
+          "source_keys": 2,
+          "stale_keys_after": 0,
+          "stale_keys_before": 0
+        },
+        "bindless_material_allocations": 24,
+        "bindless_material_allocations_scope": "Raw upstream allocated_resource_count may overcount repeated bindings within a material; use material_owners for actual map ownership.",
+        "image_ownership": null,
+        "images": 32,
+        "indexed_mesh_allocations": 14,
+        "material_owners": {
+          "bindings": {
+            "available": true,
+            "by_type": {
+              "MoonMaterial": 1,
+              "RailwaySkyMaterial": 1,
+              "StandardMaterial": 37,
+              "TerrainMaterial": 1
+            },
+            "total": 40
+          },
+          "prepared": {
+            "available": true,
+            "by_type": {
+              "MoonMaterial": 1,
+              "RailwaySkyMaterial": 1,
+              "StandardMaterial": 37,
+              "TerrainMaterial": 1
+            },
+            "total": 40
+          }
+        },
+        "material_slab_bytes": 7104,
+        "material_slabs": 1,
+        "mesh_slab_bytes": 6946848,
+        "mesh_slabs": 3,
+        "meshes": 29,
+        "oit_head_capacity": 921600,
+        "oit_node_capacity": 3686400,
+        "pipelines": 88,
+        "views": 14
+      },
+      "system_stages": {
+        "camera_collision": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 17,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 1567
+        },
+        "effect_obstacles": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 35,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 11915
+        },
+        "flexible_connections": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 19,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 1854
+        },
+        "horizon": {
+          "calls": 900,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 364,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 2867
+        },
+        "jacobs_bogie": {
+          "calls": 900,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 8,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 36
+        },
+        "level_crossing_register": {
+          "calls": 900,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 1,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 3
+        },
+        "live_drive": {
+          "calls": 1782,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 102,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 20481
+        },
+        "mirrors": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 13,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4044
+        },
+        "platform_people": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 37,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4003
+        },
+        "road_cars": {
+          "calls": 900,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 6,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 876
+        },
+        "snow_materials": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 11,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 2045
+        },
+        "snow_roof_markers": {
+          "calls": 900,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 0,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 0
+        },
+        "snow_tracks": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 5,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 17
+        },
+        "streaming_forecast.update": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 39,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 580
+        },
+        "terrain_spawn.terrain_tile_bundle_materialize_system": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 6,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 21
+        },
+        "terrain_spawn.terrain_tile_spawn_stream_system": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 24,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 78
+        },
+        "terrain_spawn.terrain_tile_stream_system": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 126,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 24909
+        },
+        "terrain_spawn.terrain_tile_unload_system": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 51,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4916
+        },
+        "wet_surfaces": {
+          "calls": 900,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 52,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 3510
+        },
+        "world.progressive_world_spawn_system": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 351,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 934
+        },
+        "world.update_world_scenery_lod": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 45,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 7578
+        },
+        "world.world_stream_scenery_system": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 267,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 275
+        },
+        "world.world_tile_bundle_materialize_system": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 1,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 1
+        },
+        "world.world_tile_stream_system": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 890,
+          "p50_ms": 0.6,
+          "p99_ms": 0.8,
+          "total_us": 516221
+        },
+        "world.world_tile_unload_system": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 29,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4280
+        }
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "elapsed_s": 31.0,
+      "peak_rss_mib": 450.8,
+      "capture_sha256": "d2ff1fc161b5e391e0ca899d33003cd564b866b7e163f4cc11d9fec6fd1b58ab"
+    },
+    "wet-driver": {
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 41.93704172790206,
+        "gpu_busy_percent_mean": 17.131147540983605,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 0.0,
+          "0000:03:00.0": 17.131147540983605
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
+        "private_compositor": {
+          "gl_renderer": "AMD Radeon RX 7600 (radeonsi, navi33, ACO, DRM 3.64, 7.0.0-38-generic)",
+          "egl_device": "/dev/dri/renderD129",
+          "DRI_PRIME": "pci-0000_03_00_0",
+          "scope": "GL renderer identifies effective offload device; EGL device may retain enumeration node"
+        }
+      },
+      "subcriteria": {
+        "paused_time_s": 1.950000000000001,
+        "restored_time_s": 1.950000000000001,
+        "maximum_observed_origin_m": 500.0,
+        "successful_actions": 9
+      },
+      "mirrors": {
+        "frames": 350,
+        "resolution": [
+          256,
+          160
+        ],
+        "views": 2
+      },
+      "camera_collision": {
+        "corrections": 0
+      },
+      "obstacles": {
+        "origin_m": [
+          -80.0,
+          0.0,
+          39.45000076293945
+        ],
+        "solid_count": 15,
+        "solids": [
+          {
+            "max": [
+              80.0250015258789,
+              1.024999976158142,
+              9.225000381469727
+            ],
+            "min": [
+              -0.02500000037252903,
+              0.9750000238418579,
+              -40.82500076293945
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              -9.77500057220459,
+              4.125,
+              2.1250016689300537
+            ],
+            "min": [
+              -10.22499942779541,
+              -0.02500000037252903,
+              1.6750015020370483
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              4.175000190734863,
+              4.224999904632568,
+              -5.774999141693115
+            ],
+            "min": [
+              3.8249998092651367,
+              3.7750000953674316,
+              -5.8249993324279785
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              -0.9750000238418579,
+              5.025000095367432,
+              -18.774999618530273
+            ],
+            "min": [
+              -7.025000095367432,
+              1.975000023841858,
+              -18.82499885559082
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              11.024999618530273,
+              3.4250001907348633,
+              -18.274999618530273
+            ],
+            "min": [
+              4.974999904632568,
+              0.4749999940395355,
+              -19.32499885559082
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              11.024999618530273,
+              5.025000095367432,
+              -18.774999618530273
+            ],
+            "min": [
+              4.974999904632568,
+              1.975000023841858,
+              -18.82499885559082
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              0.03949775546789169,
+              3.69230055809021,
+              1.5249208211898804
+            ],
+            "min": [
+              -20.039499282836914,
+              0.7423003911972046,
+              -1.7249177694320679
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -14.759561538696289,
+              2.892300605773926,
+              -1.642919659614563
+            ],
+            "min": [
+              -16.00950050354004,
+              0.7923004627227783,
+              -1.7049189805984497
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -16.989849090576172,
+              3.0923004150390625,
+              1.3749293088912964
+            ],
+            "min": [
+              -19.039749145507812,
+              2.042300224304199,
+              1.304930567741394
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -16.95945167541504,
+              3.0923004150390625,
+              -1.6649185419082642
+            ],
+            "min": [
+              -19.00935173034668,
+              2.042300224304199,
+              -1.7349172830581665
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -19.960500717163086,
+              3.6841251850128174,
+              1.3249200582504272
+            ],
+            "min": [
+              -40.03949737548828,
+              0.734125018119812,
+              -1.924918532371521
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -19.992000579833984,
+              3.5423004627227783,
+              1.0746445655822754
+            ],
+            "min": [
+              -20.066997528076172,
+              3.0923001766204834,
+              -1.4752302169799805
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -20.261486053466797,
+              1.1923003196716309,
+              -0.9779525995254517
+            ],
+            "min": [
+              -20.316486358642578,
+              0.8423004150390625,
+              -1.5279275178909302
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -35.98989486694336,
+              3.1841251850128174,
+              1.1849279403686523
+            ],
+            "min": [
+              -38.039798736572266,
+              0.734125018119812,
+              1.11492919921875
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -35.959495544433594,
+              3.1841251850128174,
+              -1.8549199104309082
+            ],
+            "min": [
+              -38.0093994140625,
+              0.734125018119812,
+              -1.9249186515808105
+            ],
+            "train": true
+          }
+        ]
+      },
+      "floating_origin_shift": [
+        -80.0,
+        0.0,
+        39.45000076293945
+      ],
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 38.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.25,
+        "position_world": [
+          77.00015258789062,
+          3.0999999046325684,
+          0.7700007557868958
+        ],
+        "rotation_xyzw": [
+          -0.014070311561226845,
+          -0.7104912400245667,
+          -0.014211717993021011,
+          0.7034218907356262
+        ],
+        "target_world": [
+          80.0,
+          0.30000001192092896,
+          0.7999992370605469
+        ],
+        "yaw_rad": -0.00999966636300087
+      },
+      "wetness": 0.6200000047683716,
+      "snow_cover": 0.0,
+      "snow_tracks": {
+        "gpu_changes": 0,
+        "gpu_segments": 0.0,
+        "material_uploads": 0,
+        "maximum_depth_m": 0.08,
+        "sectors": 0,
+        "segments": 0
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 2,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 2048,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 1269,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 4096,
+        "shelter_image_ids": [
+          "AssetId<bevy_image::image::Image>{uuid: 657c23a8-ea46-4ae2-8ab6-4c5197fc8798}",
+          "AssetId<bevy_image::image::Image>{uuid: f6f315f9-73b9-4aa2-8e35-de2770929985}"
+        ],
+        "shelter_refreshes": 62,
+        "snow_fraction": 0.0
+      },
+      "weather_shelter": {
+        "refreshes": 62,
+        "roof_triangles": 16,
+        "shared_cpu_gpu": true
+      },
+      "render_budget": {
+        "memory_pressure": false,
+        "particles": 8192,
+        "passenger_lights": 8,
+        "station_lights": 24,
+        "train_lights": 8,
+        "upload_mib": 8,
+        "vegetation_divisor": 1
+      },
+      "render_resources": {
+        "allocator": null,
+        "bin_unpacking_lifetime": {
+          "cached_keys": 2,
+          "retired_keys": 0,
+          "source_keys": 2,
+          "stale_keys_after": 0,
+          "stale_keys_before": 0
+        },
+        "bindless_material_allocations": 24,
+        "bindless_material_allocations_scope": "Raw upstream allocated_resource_count may overcount repeated bindings within a material; use material_owners for actual map ownership.",
+        "image_ownership": null,
+        "images": 34,
+        "indexed_mesh_allocations": 15,
+        "material_owners": {
+          "bindings": {
+            "available": true,
+            "by_type": {
+              "MoonMaterial": 1,
+              "ParticleMaterial": 1,
+              "RailwaySkyMaterial": 1,
+              "StandardMaterial": 37,
+              "TerrainMaterial": 1
+            },
+            "total": 41
+          },
+          "prepared": {
+            "available": true,
+            "by_type": {
+              "MoonMaterial": 1,
+              "ParticleMaterial": 1,
+              "RailwaySkyMaterial": 1,
+              "StandardMaterial": 37,
+              "TerrainMaterial": 1
+            },
+            "total": 41
+          }
+        },
+        "material_slab_bytes": 7104,
+        "material_slabs": 1,
+        "mesh_slab_bytes": 7995448,
+        "mesh_slabs": 4,
+        "meshes": 30,
+        "oit_head_capacity": 921600,
+        "oit_node_capacity": 3686400,
+        "pipelines": 104,
+        "views": 14
+      },
+      "system_stages": {
+        "camera_collision": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 14,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 1012
+        },
+        "effect_obstacles": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 34,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 11282
+        },
+        "flexible_connections": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 11,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 1717
+        },
+        "horizon": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 56,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 2186
+        },
+        "jacobs_bogie": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 5,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 11
+        },
+        "level_crossing_register": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 0,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 0
+        },
+        "live_drive": {
+          "calls": 1778,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 292,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 21730
+        },
+        "mirrors": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 11,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 3932
+        },
+        "platform_people": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 11,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 3628
+        },
+        "road_cars": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 3,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 819
+        },
+        "snow_materials": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 287,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 2366
+        },
+        "snow_roof_markers": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 0,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 0
+        },
+        "snow_tracks": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 2,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 28
+        },
+        "streaming_forecast.update": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 168,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 672
+        },
+        "terrain_spawn.terrain_tile_bundle_materialize_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 9,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 13
+        },
+        "terrain_spawn.terrain_tile_spawn_stream_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 3,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 34
+        },
+        "terrain_spawn.terrain_tile_stream_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 183,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 24004
+        },
+        "terrain_spawn.terrain_tile_unload_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 306,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 5023
+        },
+        "wet_surfaces": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 39,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 3368
+        },
+        "world.progressive_world_spawn_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 318,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 767
+        },
+        "world.update_world_scenery_lod": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 66,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 7526
+        },
+        "world.world_stream_scenery_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 259,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 276
+        },
+        "world.world_tile_bundle_materialize_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 5,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 31
+        },
+        "world.world_tile_stream_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 1719,
+          "p50_ms": 0.6,
+          "p99_ms": 0.9,
+          "total_us": 499253
+        },
+        "world.world_tile_unload_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 42,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4340
+        }
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "elapsed_s": 31.0,
+      "peak_rss_mib": 470.5,
+      "capture_sha256": "078b209ce0018a93eb0e91aaf17fdec923ad016038f2d0aee85479400ddd8c78"
+    },
+    "wet-exterior": {
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 39.3247840470627,
+        "gpu_busy_percent_mean": 15.959016393442623,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 0.0,
+          "0000:03:00.0": 15.959016393442623
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
+        "private_compositor": {
+          "gl_renderer": "AMD Radeon RX 7600 (radeonsi, navi33, ACO, DRM 3.64, 7.0.0-38-generic)",
+          "egl_device": "/dev/dri/renderD129",
+          "DRI_PRIME": "pci-0000_03_00_0",
+          "scope": "GL renderer identifies effective offload device; EGL device may retain enumeration node"
+        }
+      },
+      "subcriteria": {
+        "paused_time_s": 1.950000000000001,
+        "restored_time_s": 1.950000000000001,
+        "maximum_observed_origin_m": 500.0,
+        "successful_actions": 9
+      },
+      "mirrors": {
+        "frames": 50,
+        "resolution": [
+          256,
+          160
+        ],
+        "views": 2
+      },
+      "camera_collision": {
+        "corrections": 0
+      },
+      "obstacles": {
+        "origin_m": [
+          -80.0,
+          0.0,
+          39.45000076293945
+        ],
+        "solid_count": 15,
+        "solids": [
+          {
+            "max": [
+              80.0250015258789,
+              1.024999976158142,
+              9.225000381469727
+            ],
+            "min": [
+              -0.02500000037252903,
+              0.9750000238418579,
+              -40.82500076293945
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              -9.77500057220459,
+              4.125,
+              2.1250016689300537
+            ],
+            "min": [
+              -10.22499942779541,
+              -0.02500000037252903,
+              1.6750015020370483
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              4.175000190734863,
+              4.224999904632568,
+              -5.774999141693115
+            ],
+            "min": [
+              3.8249998092651367,
+              3.7750000953674316,
+              -5.8249993324279785
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              -0.9750000238418579,
+              5.025000095367432,
+              -18.774999618530273
+            ],
+            "min": [
+              -7.025000095367432,
+              1.975000023841858,
+              -18.82499885559082
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              11.024999618530273,
+              3.4250001907348633,
+              -18.274999618530273
+            ],
+            "min": [
+              4.974999904632568,
+              0.4749999940395355,
+              -19.32499885559082
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              11.024999618530273,
+              5.025000095367432,
+              -18.774999618530273
+            ],
+            "min": [
+              4.974999904632568,
+              1.975000023841858,
+              -18.82499885559082
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              0.03949775546789169,
+              3.69230055809021,
+              1.5249208211898804
+            ],
+            "min": [
+              -20.039499282836914,
+              0.7423003911972046,
+              -1.7249177694320679
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -16.989849090576172,
+              3.0923004150390625,
+              1.3749293088912964
+            ],
+            "min": [
+              -19.039749145507812,
+              2.042300224304199,
+              1.304930567741394
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -19.960500717163086,
+              3.6841251850128174,
+              1.3249200582504272
+            ],
+            "min": [
+              -40.03949737548828,
+              0.734125018119812,
+              -1.924918532371521
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -19.992000579833984,
+              3.5423004627227783,
+              1.0746445655822754
+            ],
+            "min": [
+              -20.066997528076172,
+              3.0923001766204834,
+              -1.4752302169799805
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -14.759561538696289,
+              2.892300605773926,
+              -1.642919659614563
+            ],
+            "min": [
+              -16.00950050354004,
+              0.7923004627227783,
+              -1.7049189805984497
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -16.95945167541504,
+              3.0923004150390625,
+              -1.6649185419082642
+            ],
+            "min": [
+              -19.00935173034668,
+              2.042300224304199,
+              -1.7349172830581665
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -20.261486053466797,
+              1.1923003196716309,
+              -0.9779525995254517
+            ],
+            "min": [
+              -20.316486358642578,
+              0.8423004150390625,
+              -1.5279275178909302
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -35.98989486694336,
+              3.1841251850128174,
+              1.1849279403686523
+            ],
+            "min": [
+              -38.039798736572266,
+              0.734125018119812,
+              1.11492919921875
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -35.959495544433594,
+              3.1841251850128174,
+              -1.8549199104309082
+            ],
+            "min": [
+              -38.0093994140625,
+              0.734125018119812,
+              -1.9249186515808105
+            ],
+            "train": true
+          }
+        ]
+      },
+      "floating_origin_shift": [
+        -80.0,
+        0.0,
+        39.45000076293945
+      ],
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 38.0,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.25,
+        "position_world": [
+          69.63182830810547,
+          9.668651580810547,
+          37.51683044433594
+        ],
+        "rotation_xyzw": [
+          -0.12467319518327713,
+          -0.00496079633012414,
+          -0.0006233495660126209,
+          0.9921852946281433
+        ],
+        "target_world": [
+          70.0,
+          0.26730042695999146,
+          0.7000007629394531
+        ],
+        "yaw_rad": -0.00999966636300087
+      },
+      "wetness": 0.6200000047683716,
+      "snow_cover": 0.0,
+      "snow_tracks": {
+        "gpu_changes": 0,
+        "gpu_segments": 0.0,
+        "material_uploads": 0,
+        "maximum_depth_m": 0.08,
+        "sectors": 0,
+        "segments": 0
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 2,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 2048,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 1269,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 4096,
+        "shelter_image_ids": [
+          "AssetId<bevy_image::image::Image>{uuid: 657c23a8-ea46-4ae2-8ab6-4c5197fc8798}",
+          "AssetId<bevy_image::image::Image>{uuid: f6f315f9-73b9-4aa2-8e35-de2770929985}"
+        ],
+        "shelter_refreshes": 62,
+        "snow_fraction": 0.0
+      },
+      "weather_shelter": {
+        "refreshes": 62,
+        "roof_triangles": 16,
+        "shared_cpu_gpu": true
+      },
+      "render_budget": {
+        "memory_pressure": false,
+        "particles": 8192,
+        "passenger_lights": 8,
+        "station_lights": 24,
+        "train_lights": 8,
+        "upload_mib": 8,
+        "vegetation_divisor": 1
+      },
+      "render_resources": {
+        "allocator": null,
+        "bin_unpacking_lifetime": {
+          "cached_keys": 2,
+          "retired_keys": 0,
+          "source_keys": 2,
+          "stale_keys_after": 0,
+          "stale_keys_before": 0
+        },
+        "bindless_material_allocations": 24,
+        "bindless_material_allocations_scope": "Raw upstream allocated_resource_count may overcount repeated bindings within a material; use material_owners for actual map ownership.",
+        "image_ownership": null,
+        "images": 34,
+        "indexed_mesh_allocations": 15,
+        "material_owners": {
+          "bindings": {
+            "available": true,
+            "by_type": {
+              "MoonMaterial": 1,
+              "ParticleMaterial": 1,
+              "RailwaySkyMaterial": 1,
+              "StandardMaterial": 37,
+              "TerrainMaterial": 1
+            },
+            "total": 41
+          },
+          "prepared": {
+            "available": true,
+            "by_type": {
+              "MoonMaterial": 1,
+              "ParticleMaterial": 1,
+              "RailwaySkyMaterial": 1,
+              "StandardMaterial": 37,
+              "TerrainMaterial": 1
+            },
+            "total": 41
+          }
+        },
+        "material_slab_bytes": 7104,
+        "material_slabs": 1,
+        "mesh_slab_bytes": 7995448,
+        "mesh_slabs": 4,
+        "meshes": 30,
+        "oit_head_capacity": 921600,
+        "oit_node_capacity": 3686400,
+        "pipelines": 101,
+        "views": 14
+      },
+      "system_stages": {
+        "camera_collision": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 40,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 1355
+        },
+        "effect_obstacles": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 30,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 9974
+        },
+        "flexible_connections": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 8,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 1719
+        },
+        "horizon": {
+          "calls": 900,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 61,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 1823
+        },
+        "jacobs_bogie": {
+          "calls": 900,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 6,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 14
+        },
+        "level_crossing_register": {
+          "calls": 900,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 0,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 0
+        },
+        "live_drive": {
+          "calls": 1784,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 80,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 18420
+        },
+        "mirrors": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 32,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 3701
+        },
+        "platform_people": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 11,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 3490
+        },
+        "road_cars": {
+          "calls": 900,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 6,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 675
+        },
+        "snow_materials": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 19,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 1759
+        },
+        "snow_roof_markers": {
+          "calls": 900,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 0,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 0
+        },
+        "snow_tracks": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 1,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 1
+        },
+        "streaming_forecast.update": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 32,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 570
+        },
+        "terrain_spawn.terrain_tile_bundle_materialize_system": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 8,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 27
+        },
+        "terrain_spawn.terrain_tile_spawn_stream_system": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 21,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 84
+        },
+        "terrain_spawn.terrain_tile_stream_system": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 296,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 21060
+        },
+        "terrain_spawn.terrain_tile_unload_system": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 57,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 5236
+        },
+        "wet_surfaces": {
+          "calls": 900,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 42,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 3243
+        },
+        "world.progressive_world_spawn_system": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 359,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 728
+        },
+        "world.update_world_scenery_lod": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 41,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 7787
+        },
+        "world.world_stream_scenery_system": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 192,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 198
+        },
+        "world.world_tile_bundle_materialize_system": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 2,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 2
+        },
+        "world.world_tile_stream_system": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 1168,
+          "p50_ms": 0.7,
+          "p99_ms": 1.0,
+          "total_us": 578172
+        },
+        "world.world_tile_unload_system": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 12,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4215
+        }
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "elapsed_s": 31.0,
+      "peak_rss_mib": 482.5,
+      "capture_sha256": "1972f20db9e87437be86ab01d42635c644d1374e8bd5e3b4aef1b6db473659d2"
+    },
+    "collision": {
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 36.94796676656962,
+        "gpu_busy_percent_mean": 14.926229508196721,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 0.0,
+          "0000:03:00.0": 14.926229508196721
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
+        "private_compositor": {
+          "gl_renderer": "AMD Radeon RX 7600 (radeonsi, navi33, ACO, DRM 3.64, 7.0.0-38-generic)",
+          "egl_device": "/dev/dri/renderD129",
+          "DRI_PRIME": "pci-0000_03_00_0",
+          "scope": "GL renderer identifies effective offload device; EGL device may retain enumeration node"
+        }
+      },
+      "subcriteria": {
+        "paused_time_s": 3.949999999999994,
+        "restored_time_s": 3.949999999999994,
+        "maximum_observed_origin_m": 500.0,
+        "successful_actions": 8
+      },
+      "mirrors": {
+        "frames": 0,
+        "resolution": [
+          256,
+          160
+        ],
+        "views": 2
+      },
+      "camera_collision": {
+        "corrections": 4
+      },
+      "obstacles": {
+        "origin_m": [
+          -72.0,
+          0.0,
+          20.0
+        ],
+        "solid_count": 15,
+        "solids": [
+          {
+            "max": [
+              3.0250000953674316,
+              3.4250001907348633,
+              1.1750015020370483
+            ],
+            "min": [
+              -3.0250000953674316,
+              0.4749999940395355,
+              0.12500151991844177
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              3.0250000953674316,
+              5.025000095367432,
+              0.6750015020370483
+            ],
+            "min": [
+              -3.0250000953674316,
+              1.975000023841858,
+              0.6250015497207642
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              72.0250015258789,
+              1.024999976158142,
+              28.67500114440918
+            ],
+            "min": [
+              -8.024999618530273,
+              0.9750000238418579,
+              -21.374998092651367
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              -8.975000381469727,
+              5.025000095367432,
+              0.6750015020370483
+            ],
+            "min": [
+              -15.024999618530273,
+              1.975000023841858,
+              0.6250015497207642
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              -3.8249998092651367,
+              4.224999904632568,
+              13.67500114440918
+            ],
+            "min": [
+              -4.175000190734863,
+              3.7750000953674316,
+              13.625001907348633
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              -17.774999618530273,
+              4.125,
+              21.575002670288086
+            ],
+            "min": [
+              -18.225000381469727,
+              -0.02500000037252903,
+              21.125001907348633
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              -7.960501194000244,
+              3.692300319671631,
+              20.97492027282715
+            ],
+            "min": [
+              -28.039499282836914,
+              0.7423001527786255,
+              17.72508430480957
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -22.75956153869629,
+              2.8923001289367676,
+              17.80708122253418
+            ],
+            "min": [
+              -24.00950050354004,
+              0.7922999858856201,
+              17.745080947875977
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -24.959449768066406,
+              3.0923001766204834,
+              17.78508186340332
+            ],
+            "min": [
+              -27.009349822998047,
+              2.04229998588562,
+              17.7150821685791
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -24.98984718322754,
+              3.0923001766204834,
+              20.82493019104004
+            ],
+            "min": [
+              -27.03974723815918,
+              2.04229998588562,
+              20.75493049621582
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -27.960500717163086,
+              3.6841251850128174,
+              20.774919509887695
+            ],
+            "min": [
+              -48.03950119018555,
+              0.734125018119812,
+              17.525083541870117
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -27.99199867248535,
+              3.542300224304199,
+              20.52464485168457
+            ],
+            "min": [
+              -28.06699562072754,
+              3.0922999382019043,
+              17.97477149963379
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -28.261486053466797,
+              1.1923000812530518,
+              18.472047805786133
+            ],
+            "min": [
+              -28.316486358642578,
+              0.8423001766204834,
+              17.922075271606445
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -43.95949935913086,
+              3.1841251850128174,
+              17.595081329345703
+            ],
+            "min": [
+              -46.009403228759766,
+              0.734125018119812,
+              17.525081634521484
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -43.98989486694336,
+              3.1841251850128174,
+              20.634929656982422
+            ],
+            "min": [
+              -46.039798736572266,
+              0.734125018119812,
+              20.564929962158203
+            ],
+            "train": true
+          }
+        ]
+      },
+      "floating_origin_shift": [
+        -72.0,
+        0.0,
+        20.0
+      ],
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 42.0,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [
+          88.0,
+          2.5,
+          -18.7760009765625
+        ],
+        "rotation_xyzw": [
+          0.0,
+          -1.0,
+          -0.0,
+          -4.371138828673793e-08
+        ],
+        "target_world": [
+          88.0,
+          2.5,
+          -3.6500015258789062
+        ],
+        "yaw_rad": 1.600000023841858
+      },
+      "wetness": 0.0,
+      "snow_cover": 0.0,
+      "snow_tracks": {
+        "gpu_changes": 0,
+        "gpu_segments": 0.0,
+        "material_uploads": 0,
+        "maximum_depth_m": 0.08,
+        "sectors": 0,
+        "segments": 0
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 0,
+        "cpu_particles": 0,
+        "execution": "auto",
+        "gpu_backend": null,
+        "gpu_capacity": 0,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 0,
+        "gpu_seed_initializations": 0,
+        "gpu_simulation_delta_s": null,
+        "quality_level": 0,
+        "requested": "auto",
+        "seed_upload_capacity": 2048,
+        "shelter_image_ids": [
+          "AssetId<bevy_image::image::Image>{uuid: 97128bb1-2588-480b-bdc6-87b4adbec477}",
+          "AssetId<bevy_image::image::Image>{uuid: 97128bb1-2588-480b-bdc6-87b4adbec477}"
+        ],
+        "shelter_refreshes": 0,
+        "snow_fraction": 0.0
+      },
+      "weather_shelter": {
+        "refreshes": 62,
+        "roof_triangles": 16,
+        "shared_cpu_gpu": true
+      },
+      "render_budget": {
+        "memory_pressure": false,
+        "particles": 8192,
+        "passenger_lights": 8,
+        "station_lights": 24,
+        "train_lights": 8,
+        "upload_mib": 8,
+        "vegetation_divisor": 1
+      },
+      "render_resources": {
+        "allocator": null,
+        "bin_unpacking_lifetime": {
+          "cached_keys": 2,
+          "retired_keys": 0,
+          "source_keys": 2,
+          "stale_keys_after": 0,
+          "stale_keys_before": 0
+        },
+        "bindless_material_allocations": 24,
+        "bindless_material_allocations_scope": "Raw upstream allocated_resource_count may overcount repeated bindings within a material; use material_owners for actual map ownership.",
+        "image_ownership": null,
+        "images": 32,
+        "indexed_mesh_allocations": 14,
+        "material_owners": {
+          "bindings": {
+            "available": true,
+            "by_type": {
+              "MoonMaterial": 1,
+              "RailwaySkyMaterial": 1,
+              "StandardMaterial": 37,
+              "TerrainMaterial": 1
+            },
+            "total": 40
+          },
+          "prepared": {
+            "available": true,
+            "by_type": {
+              "MoonMaterial": 1,
+              "RailwaySkyMaterial": 1,
+              "StandardMaterial": 37,
+              "TerrainMaterial": 1
+            },
+            "total": 40
+          }
+        },
+        "material_slab_bytes": 7104,
+        "material_slabs": 1,
+        "mesh_slab_bytes": 6946848,
+        "mesh_slabs": 3,
+        "meshes": 29,
+        "oit_head_capacity": 921600,
+        "oit_node_capacity": 3686400,
+        "pipelines": 71,
+        "views": 14
+      },
+      "system_stages": {
+        "camera_collision": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 39,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 1446
+        },
+        "effect_obstacles": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 27,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 9622
+        },
+        "flexible_connections": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 11,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 1645
+        },
+        "horizon": {
+          "calls": 900,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 59,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 1876
+        },
+        "jacobs_bogie": {
+          "calls": 900,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 13,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 48
+        },
+        "level_crossing_register": {
+          "calls": 900,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 0,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 0
+        },
+        "live_drive": {
+          "calls": 1782,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 60,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 3996
+        },
+        "mirrors": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 9,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 3577
+        },
+        "platform_people": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 25,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 3401
+        },
+        "road_cars": {
+          "calls": 900,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 5,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 686
+        },
+        "snow_materials": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 18,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 1727
+        },
+        "snow_roof_markers": {
+          "calls": 900,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 4,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4
+        },
+        "snow_tracks": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 1,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 5
+        },
+        "streaming_forecast.update": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 41,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 592
+        },
+        "terrain_spawn.terrain_tile_bundle_materialize_system": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 7,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 30
+        },
+        "terrain_spawn.terrain_tile_spawn_stream_system": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 5,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 53
+        },
+        "terrain_spawn.terrain_tile_stream_system": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 285,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 20943
+        },
+        "terrain_spawn.terrain_tile_unload_system": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 66,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 5458
+        },
+        "wet_surfaces": {
+          "calls": 900,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 44,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 3125
+        },
+        "world.progressive_world_spawn_system": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 459,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 912
+        },
+        "world.update_world_scenery_lod": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 41,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 7747
+        },
+        "world.world_stream_scenery_system": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 192,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 199
+        },
+        "world.world_tile_bundle_materialize_system": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 0,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 0
+        },
+        "world.world_tile_stream_system": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 917,
+          "p50_ms": 0.7,
+          "p99_ms": 0.9,
+          "total_us": 583078
+        },
+        "world.world_tile_unload_system": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 20,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4284
+        }
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "elapsed_s": 31.0,
+      "peak_rss_mib": 419.8,
+      "capture_sha256": "f0c30c76ab146e301363d949abdd34d08c548be55b9fecb8003f078a99cc30d0"
+    },
+    "snow-driver": {
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 42.270605206561754,
+        "gpu_busy_percent_mean": 16.74590163934426,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 0.0,
+          "0000:03:00.0": 16.74590163934426
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
+        "private_compositor": {
+          "gl_renderer": "AMD Radeon RX 7600 (radeonsi, navi33, ACO, DRM 3.64, 7.0.0-38-generic)",
+          "egl_device": "/dev/dri/renderD129",
+          "DRI_PRIME": "pci-0000_03_00_0",
+          "scope": "GL renderer identifies effective offload device; EGL device may retain enumeration node"
+        }
+      },
+      "subcriteria": {
+        "paused_time_s": 1.950000000000001,
+        "restored_time_s": 1.950000000000001,
+        "maximum_observed_origin_m": 500.0,
+        "successful_actions": 9
+      },
+      "mirrors": {
+        "frames": 356,
+        "resolution": [
+          256,
+          160
+        ],
+        "views": 2
+      },
+      "camera_collision": {
+        "corrections": 0
+      },
+      "obstacles": {
+        "origin_m": [
+          -25.2344970703125,
+          0.0,
+          42.162498474121094
+        ],
+        "solid_count": 14,
+        "solids": [
+          {
+            "max": [
+              25.259496688842773,
+              1.024999976158142,
+              6.512503147125244
+            ],
+            "min": [
+              -54.790504455566406,
+              0.9750000238418579,
+              -43.537498474121094
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              -43.740501403808594,
+              3.4250001907348633,
+              -20.987497329711914
+            ],
+            "min": [
+              -49.790504455566406,
+              0.4749999940395355,
+              -22.03749656677246
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              -43.740501403808594,
+              5.025000095367432,
+              -21.487497329711914
+            ],
+            "min": [
+              -49.790504455566406,
+              1.975000023841858,
+              -21.53749656677246
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              -50.59049987792969,
+              4.224999904632568,
+              -8.487497329711914
+            ],
+            "min": [
+              -50.94050598144531,
+              3.7750000953674316,
+              -8.537496566772461
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              -55.740501403808594,
+              5.025000095367432,
+              -21.487497329711914
+            ],
+            "min": [
+              -61.790504455566406,
+              1.975000023841858,
+              -21.53749656677246
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              -64.5405044555664,
+              4.125,
+              -0.5874962210655212
+            ],
+            "min": [
+              -64.9905014038086,
+              -0.02500000037252903,
+              -1.0374962091445923
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              0.2680915892124176,
+              3.69230055809021,
+              1.253195881843567
+            ],
+            "min": [
+              -20.002180099487305,
+              0.7423003911972046,
+              -4.3708062171936035
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -2.7909436225891113,
+              1.0749999284744263,
+              0.21879205107688904
+            ],
+            "min": [
+              -3.061896800994873,
+              0.42499998211860657,
+              -1.516788125038147
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -16.672191619873047,
+              1.0749999284744263,
+              -1.600821852684021
+            ],
+            "min": [
+              -16.943145751953125,
+              0.42499998211860657,
+              -3.336402177810669
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -18.607845306396484,
+              1.024999976158142,
+              -1.6862739324569702
+            ],
+            "min": [
+              -20.95171356201172,
+              0.4749999940395355,
+              -4.0301432609558105
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -19.474437713623047,
+              2.992300510406494,
+              -2.144937753677368
+            ],
+            "min": [
+              -20.088272094726562,
+              1.5341253280639648,
+              -3.553471803665161
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -19.696203231811523,
+              3.6841251850128174,
+              -1.334288239479065
+            ],
+            "min": [
+              -39.84685516357422,
+              0.734125018119812,
+              -5.151891231536865
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -35.80058670043945,
+              3.1841251850128174,
+              -1.9301639795303345
+            ],
+            "min": [
+              -37.8491096496582,
+              0.734125018119812,
+              -2.0571465492248535
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -35.683570861816406,
+              3.1841251850128174,
+              -4.967911243438721
+            ],
+            "min": [
+              -37.732093811035156,
+              0.734125018119812,
+              -5.094893932342529
+            ],
+            "train": true
+          }
+        ]
+      },
+      "floating_origin_shift": [
+        -25.2344970703125,
+        0.0,
+        42.162498474121094
+      ],
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 38.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.25,
+        "position_world": [
+          131.8366241455078,
+          3.0999999046325684,
+          2.863178014755249
+        ],
+        "rotation_xyzw": [
+          -0.012517633847892284,
+          -0.7797285318374634,
+          -0.01559664960950613,
+          0.6257983446121216
+        ],
+        "target_world": [
+          134.76551818847656,
+          0.30000001192092896,
+          3.5124969482421875
+        ],
+        "yaw_rad": -0.21816617250442505
+      },
+      "wetness": 0.0,
+      "snow_cover": 1.0,
+      "snow_tracks": {
+        "gpu_changes": 2,
+        "gpu_segments": 0.0,
+        "material_uploads": 2,
+        "maximum_depth_m": 0.08,
+        "sectors": 0,
+        "segments": 0
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 2,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 2048,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 2048,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 4096,
+        "shelter_image_ids": [
+          "AssetId<bevy_image::image::Image>{uuid: 657c23a8-ea46-4ae2-8ab6-4c5197fc8798}",
+          "AssetId<bevy_image::image::Image>{uuid: f6f315f9-73b9-4aa2-8e35-de2770929985}"
+        ],
+        "shelter_refreshes": 62,
+        "snow_fraction": 1.0
+      },
+      "weather_shelter": {
+        "refreshes": 62,
+        "roof_triangles": 20,
+        "shared_cpu_gpu": true
+      },
+      "render_budget": {
+        "memory_pressure": false,
+        "particles": 8192,
+        "passenger_lights": 8,
+        "station_lights": 24,
+        "train_lights": 8,
+        "upload_mib": 8,
+        "vegetation_divisor": 1
+      },
+      "render_resources": {
+        "allocator": null,
+        "bin_unpacking_lifetime": {
+          "cached_keys": 2,
+          "retired_keys": 0,
+          "source_keys": 2,
+          "stale_keys_after": 0,
+          "stale_keys_before": 0
+        },
+        "bindless_material_allocations": 22,
+        "bindless_material_allocations_scope": "Raw upstream allocated_resource_count may overcount repeated bindings within a material; use material_owners for actual map ownership.",
+        "image_ownership": null,
+        "images": 33,
+        "indexed_mesh_allocations": 15,
+        "material_owners": {
+          "bindings": {
+            "available": true,
+            "by_type": {
+              "MoonMaterial": 1,
+              "ParticleMaterial": 1,
+              "RailwaySkyMaterial": 1,
+              "SnowMaterial": 16,
+              "StandardMaterial": 38,
+              "TerrainMaterial": 1
+            },
+            "total": 58
+          },
+          "prepared": {
+            "available": true,
+            "by_type": {
+              "MoonMaterial": 1,
+              "ParticleMaterial": 1,
+              "RailwaySkyMaterial": 1,
+              "SnowMaterial": 16,
+              "StandardMaterial": 38,
+              "TerrainMaterial": 1
+            },
+            "total": 58
+          }
+        },
+        "material_slab_bytes": 7296,
+        "material_slabs": 1,
+        "mesh_slab_bytes": 7995448,
+        "mesh_slabs": 4,
+        "meshes": 35,
+        "oit_head_capacity": 921600,
+        "oit_node_capacity": 3686400,
+        "pipelines": 105,
+        "views": 32
+      },
+      "system_stages": {
+        "camera_collision": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 21,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 1059
+        },
+        "effect_obstacles": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 34,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 12138
+        },
+        "flexible_connections": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 55,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 3412
+        },
+        "horizon": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 59,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 2144
+        },
+        "jacobs_bogie": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 36,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 2372
+        },
+        "level_crossing_register": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 1,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 1
+        },
+        "live_drive": {
+          "calls": 1780,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 80,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 18802
+        },
+        "mirrors": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 29,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4173
+        },
+        "platform_people": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 18,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 3649
+        },
+        "road_cars": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 4,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 734
+        },
+        "snow_materials": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 31,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 3634
+        },
+        "snow_roof_markers": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 3,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 5
+        },
+        "snow_tracks": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 19,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4098
+        },
+        "streaming_forecast.update": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 44,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 699
+        },
+        "terrain_spawn.terrain_tile_bundle_materialize_system": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 3,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 14
+        },
+        "terrain_spawn.terrain_tile_spawn_stream_system": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 7,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 27
+        },
+        "terrain_spawn.terrain_tile_stream_system": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 102,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 22673
+        },
+        "terrain_spawn.terrain_tile_unload_system": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 41,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4888
+        },
+        "wet_surfaces": {
+          "calls": 899,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 37,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 3583
+        },
+        "world.progressive_world_spawn_system": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 385,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 815
+        },
+        "world.update_world_scenery_lod": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 50,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 8312
+        },
+        "world.world_stream_scenery_system": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 176,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 191
+        },
+        "world.world_tile_bundle_materialize_system": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 20,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 54
+        },
+        "world.world_tile_stream_system": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 1038,
+          "p50_ms": 0.7,
+          "p99_ms": 1.0,
+          "total_us": 548717
+        },
+        "world.world_tile_unload_system": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 45,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4645
+        }
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "elapsed_s": 31.0,
+      "peak_rss_mib": 490.5,
+      "capture_sha256": "677536f0597d97832e0b875730132f23275855a414850245a638d86c052c607c"
+    },
+    "snow-exterior": {
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 42.93813639096435,
+        "gpu_busy_percent_mean": 16.614754098360656,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 0.0,
+          "0000:03:00.0": 16.614754098360656
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
+        "private_compositor": {
+          "gl_renderer": "AMD Radeon RX 7600 (radeonsi, navi33, ACO, DRM 3.64, 7.0.0-38-generic)",
+          "egl_device": "/dev/dri/renderD129",
+          "DRI_PRIME": "pci-0000_03_00_0",
+          "scope": "GL renderer identifies effective offload device; EGL device may retain enumeration node"
+        }
+      },
+      "subcriteria": {
+        "paused_time_s": 1.950000000000001,
+        "restored_time_s": 1.950000000000001,
+        "maximum_observed_origin_m": 500.0,
+        "successful_actions": 9
+      },
+      "mirrors": {
+        "frames": 52,
+        "resolution": [
+          256,
+          160
+        ],
+        "views": 2
+      },
+      "camera_collision": {
+        "corrections": 0
+      },
+      "obstacles": {
+        "origin_m": [
+          -25.2344970703125,
+          0.0,
+          42.162498474121094
+        ],
+        "solid_count": 14,
+        "solids": [
+          {
+            "max": [
+              25.259496688842773,
+              1.024999976158142,
+              6.512503147125244
+            ],
+            "min": [
+              -54.790504455566406,
+              0.9750000238418579,
+              -43.537498474121094
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              -50.59049987792969,
+              4.224999904632568,
+              -8.487497329711914
+            ],
+            "min": [
+              -50.94050598144531,
+              3.7750000953674316,
+              -8.537496566772461
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              -64.5405044555664,
+              4.125,
+              -0.5874962210655212
+            ],
+            "min": [
+              -64.9905014038086,
+              -0.02500000037252903,
+              -1.0374962091445923
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              -43.740501403808594,
+              3.4250001907348633,
+              -20.987497329711914
+            ],
+            "min": [
+              -49.790504455566406,
+              0.4749999940395355,
+              -22.03749656677246
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              -43.740501403808594,
+              5.025000095367432,
+              -21.487497329711914
+            ],
+            "min": [
+              -49.790504455566406,
+              1.975000023841858,
+              -21.53749656677246
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              -55.740501403808594,
+              5.025000095367432,
+              -21.487497329711914
+            ],
+            "min": [
+              -61.790504455566406,
+              1.975000023841858,
+              -21.53749656677246
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              0.2680915892124176,
+              3.69230055809021,
+              1.253195881843567
+            ],
+            "min": [
+              -20.002180099487305,
+              0.7423003911972046,
+              -4.3708062171936035
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -19.696203231811523,
+              3.6841251850128174,
+              -1.334288239479065
+            ],
+            "min": [
+              -39.84685516357422,
+              0.734125018119812,
+              -5.151891231536865
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -16.672191619873047,
+              1.0749999284744263,
+              -1.600821852684021
+            ],
+            "min": [
+              -16.943145751953125,
+              0.42499998211860657,
+              -3.336402177810669
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -18.607845306396484,
+              1.024999976158142,
+              -1.6862739324569702
+            ],
+            "min": [
+              -20.95171356201172,
+              0.4749999940395355,
+              -4.0301432609558105
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -19.474437713623047,
+              2.992300510406494,
+              -2.144937753677368
+            ],
+            "min": [
+              -20.088272094726562,
+              1.5341253280639648,
+              -3.553471803665161
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -2.7909436225891113,
+              1.0749999284744263,
+              0.21879205107688904
+            ],
+            "min": [
+              -3.061896800994873,
+              0.42499998211860657,
+              -1.516788125038147
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -35.80058670043945,
+              3.1841251850128174,
+              -1.9301639795303345
+            ],
+            "min": [
+              -37.8491096496582,
+              0.734125018119812,
+              -2.0571465492248535
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -35.683570861816406,
+              3.1841251850128174,
+              -4.967911243438721
+            ],
+            "min": [
+              -37.732093811035156,
+              0.734125018119812,
+              -5.094893932342529
+            ],
+            "train": true
+          }
+        ]
+      },
+      "floating_origin_shift": [
+        -25.2344970703125,
+        0.0,
+        42.162498474121094
+      ],
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 38.0,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.25,
+        "position_world": [
+          116.929443359375,
+          9.668651580810547,
+          37.89961624145508
+        ],
+        "rotation_xyzw": [
+          -0.12393372505903244,
+          -0.1080174595117569,
+          -0.013572949916124344,
+          0.9863004088401794
+        ],
+        "target_world": [
+          124.8984603881836,
+          0.26730045676231384,
+          1.953691840171814
+        ],
+        "yaw_rad": -0.21816617250442505
+      },
+      "wetness": 0.0,
+      "snow_cover": 1.0,
+      "snow_tracks": {
+        "gpu_changes": 2,
+        "gpu_segments": 0.0,
+        "material_uploads": 2,
+        "maximum_depth_m": 0.08,
+        "sectors": 0,
+        "segments": 0
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 2,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 2048,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 2048,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 4096,
+        "shelter_image_ids": [
+          "AssetId<bevy_image::image::Image>{uuid: 657c23a8-ea46-4ae2-8ab6-4c5197fc8798}",
+          "AssetId<bevy_image::image::Image>{uuid: f6f315f9-73b9-4aa2-8e35-de2770929985}"
+        ],
+        "shelter_refreshes": 62,
+        "snow_fraction": 1.0
+      },
+      "weather_shelter": {
+        "refreshes": 62,
+        "roof_triangles": 20,
+        "shared_cpu_gpu": true
+      },
+      "render_budget": {
+        "memory_pressure": false,
+        "particles": 8192,
+        "passenger_lights": 8,
+        "station_lights": 24,
+        "train_lights": 8,
+        "upload_mib": 8,
+        "vegetation_divisor": 1
+      },
+      "render_resources": {
+        "allocator": null,
+        "bin_unpacking_lifetime": {
+          "cached_keys": 2,
+          "retired_keys": 0,
+          "source_keys": 2,
+          "stale_keys_after": 0,
+          "stale_keys_before": 0
+        },
+        "bindless_material_allocations": 22,
+        "bindless_material_allocations_scope": "Raw upstream allocated_resource_count may overcount repeated bindings within a material; use material_owners for actual map ownership.",
+        "image_ownership": null,
+        "images": 33,
+        "indexed_mesh_allocations": 15,
+        "material_owners": {
+          "bindings": {
+            "available": true,
+            "by_type": {
+              "MoonMaterial": 1,
+              "ParticleMaterial": 1,
+              "RailwaySkyMaterial": 1,
+              "SnowMaterial": 16,
+              "StandardMaterial": 38,
+              "TerrainMaterial": 1
+            },
+            "total": 58
+          },
+          "prepared": {
+            "available": true,
+            "by_type": {
+              "MoonMaterial": 1,
+              "ParticleMaterial": 1,
+              "RailwaySkyMaterial": 1,
+              "SnowMaterial": 16,
+              "StandardMaterial": 38,
+              "TerrainMaterial": 1
+            },
+            "total": 58
+          }
+        },
+        "material_slab_bytes": 7296,
+        "material_slabs": 1,
+        "mesh_slab_bytes": 7995448,
+        "mesh_slabs": 4,
+        "meshes": 35,
+        "oit_head_capacity": 921600,
+        "oit_node_capacity": 3686400,
+        "pipelines": 101,
+        "views": 14
+      },
+      "system_stages": {
+        "camera_collision": {
+          "calls": 894,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 47,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 1715
+        },
+        "effect_obstacles": {
+          "calls": 894,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 58,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 15510
+        },
+        "flexible_connections": {
+          "calls": 894,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 32,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4018
+        },
+        "horizon": {
+          "calls": 895,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 46,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 2706
+        },
+        "jacobs_bogie": {
+          "calls": 895,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 31,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 2306
+        },
+        "level_crossing_register": {
+          "calls": 895,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 0,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 0
+        },
+        "live_drive": {
+          "calls": 1777,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 196,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 23081
+        },
+        "mirrors": {
+          "calls": 894,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 82,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4665
+        },
+        "platform_people": {
+          "calls": 894,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 42,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4525
+        },
+        "road_cars": {
+          "calls": 895,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 4,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 973
+        },
+        "snow_materials": {
+          "calls": 894,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 35,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4503
+        },
+        "snow_roof_markers": {
+          "calls": 895,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 1,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 1
+        },
+        "snow_tracks": {
+          "calls": 894,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 26,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 5239
+        },
+        "streaming_forecast.update": {
+          "calls": 894,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 23,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 672
+        },
+        "terrain_spawn.terrain_tile_bundle_materialize_system": {
+          "calls": 894,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 8,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 13
+        },
+        "terrain_spawn.terrain_tile_spawn_stream_system": {
+          "calls": 894,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 6,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 44
+        },
+        "terrain_spawn.terrain_tile_stream_system": {
+          "calls": 894,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 353,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 27822
+        },
+        "terrain_spawn.terrain_tile_unload_system": {
+          "calls": 894,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 24,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 5284
+        },
+        "wet_surfaces": {
+          "calls": 895,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 46,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4304
+        },
+        "world.progressive_world_spawn_system": {
+          "calls": 894,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 417,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 898
+        },
+        "world.update_world_scenery_lod": {
+          "calls": 894,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 48,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 8816
+        },
+        "world.world_stream_scenery_system": {
+          "calls": 894,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 272,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 289
+        },
+        "world.world_tile_bundle_materialize_system": {
+          "calls": 894,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 15,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 22
+        },
+        "world.world_tile_stream_system": {
+          "calls": 894,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 1384,
+          "p50_ms": 0.7,
+          "p99_ms": 1.0,
+          "total_us": 537043
+        },
+        "world.world_tile_unload_system": {
+          "calls": 894,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 33,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 5077
+        }
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "elapsed_s": 31.0,
+      "peak_rss_mib": 460.2,
+      "capture_sha256": "06ab17c1083671d41b68c512da6ebd577b0ddb2adc382bdd35a11f3d6d22a004"
+    },
+    "snow-low-quality": {
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 43.42230725865086,
+        "gpu_busy_percent_mean": 15.852459016393443,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 0.0,
+          "0000:03:00.0": 15.852459016393443
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
+        "private_compositor": {
+          "gl_renderer": "AMD Radeon RX 7600 (radeonsi, navi33, ACO, DRM 3.64, 7.0.0-38-generic)",
+          "egl_device": "/dev/dri/renderD129",
+          "DRI_PRIME": "pci-0000_03_00_0",
+          "scope": "GL renderer identifies effective offload device; EGL device may retain enumeration node"
+        }
+      },
+      "subcriteria": {
+        "paused_time_s": 1.900000000000001,
+        "restored_time_s": 1.900000000000001,
+        "maximum_observed_origin_m": 500.0,
+        "successful_actions": 9
+      },
+      "mirrors": {
+        "frames": 50,
+        "resolution": [
+          256,
+          160
+        ],
+        "views": 2
+      },
+      "camera_collision": {
+        "corrections": 0
+      },
+      "obstacles": {
+        "origin_m": [
+          -25.2344970703125,
+          0.0,
+          42.162498474121094
+        ],
+        "solid_count": 14,
+        "solids": [
+          {
+            "max": [
+              25.259496688842773,
+              1.024999976158142,
+              6.512503147125244
+            ],
+            "min": [
+              -54.790504455566406,
+              0.9750000238418579,
+              -43.537498474121094
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              -50.59049987792969,
+              4.224999904632568,
+              -8.487497329711914
+            ],
+            "min": [
+              -50.94050598144531,
+              3.7750000953674316,
+              -8.537496566772461
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              -64.5405044555664,
+              4.125,
+              -0.5874962210655212
+            ],
+            "min": [
+              -64.9905014038086,
+              -0.02500000037252903,
+              -1.0374962091445923
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              -43.740501403808594,
+              3.4250001907348633,
+              -20.987497329711914
+            ],
+            "min": [
+              -49.790504455566406,
+              0.4749999940395355,
+              -22.03749656677246
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              -43.740501403808594,
+              5.025000095367432,
+              -21.487497329711914
+            ],
+            "min": [
+              -49.790504455566406,
+              1.975000023841858,
+              -21.53749656677246
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              -55.740501403808594,
+              5.025000095367432,
+              -21.487497329711914
+            ],
+            "min": [
+              -61.790504455566406,
+              1.975000023841858,
+              -21.53749656677246
+            ],
+            "train": false
+          },
+          {
+            "max": [
+              0.2680915892124176,
+              3.69230055809021,
+              1.253195881843567
+            ],
+            "min": [
+              -20.002180099487305,
+              0.7423003911972046,
+              -4.3708062171936035
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -19.696203231811523,
+              3.6841251850128174,
+              -1.334288239479065
+            ],
+            "min": [
+              -39.84685516357422,
+              0.734125018119812,
+              -5.151891231536865
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -16.672191619873047,
+              1.0749999284744263,
+              -1.600821852684021
+            ],
+            "min": [
+              -16.943145751953125,
+              0.42499998211860657,
+              -3.336402177810669
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -18.607845306396484,
+              1.024999976158142,
+              -1.6862739324569702
+            ],
+            "min": [
+              -20.95171356201172,
+              0.4749999940395355,
+              -4.0301432609558105
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -19.474437713623047,
+              2.992300510406494,
+              -2.144937753677368
+            ],
+            "min": [
+              -20.088272094726562,
+              1.5341253280639648,
+              -3.553471803665161
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -2.7909436225891113,
+              1.0749999284744263,
+              0.21879205107688904
+            ],
+            "min": [
+              -3.061896800994873,
+              0.42499998211860657,
+              -1.516788125038147
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -35.80058670043945,
+              3.1841251850128174,
+              -1.9301639795303345
+            ],
+            "min": [
+              -37.8491096496582,
+              0.734125018119812,
+              -2.0571465492248535
+            ],
+            "train": true
+          },
+          {
+            "max": [
+              -35.683570861816406,
+              3.1841251850128174,
+              -4.967911243438721
+            ],
+            "min": [
+              -37.732093811035156,
+              0.734125018119812,
+              -5.094893932342529
+            ],
+            "train": true
+          }
+        ]
+      },
+      "floating_origin_shift": [
+        -25.2344970703125,
+        0.0,
+        42.162498474121094
+      ],
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 38.0,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.25,
+        "position_world": [
+          116.929443359375,
+          9.668651580810547,
+          37.89961624145508
+        ],
+        "rotation_xyzw": [
+          -0.12393372505903244,
+          -0.1080174595117569,
+          -0.013572949916124344,
+          0.9863004088401794
+        ],
+        "target_world": [
+          124.8984603881836,
+          0.26730045676231384,
+          1.9536919593811035
+        ],
+        "yaw_rad": -0.21816617250442505
+      },
+      "wetness": 0.0,
+      "snow_cover": 1.0,
+      "snow_tracks": {
+        "gpu_changes": 2,
+        "gpu_segments": 0.0,
+        "material_uploads": 2,
+        "maximum_depth_m": 0.08,
+        "sectors": 0,
+        "segments": 0
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 2,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 2048,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 2048,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 4096,
+        "shelter_image_ids": [
+          "AssetId<bevy_image::image::Image>{uuid: 657c23a8-ea46-4ae2-8ab6-4c5197fc8798}",
+          "AssetId<bevy_image::image::Image>{uuid: f6f315f9-73b9-4aa2-8e35-de2770929985}"
+        ],
+        "shelter_refreshes": 62,
+        "snow_fraction": 1.0
+      },
+      "weather_shelter": {
+        "refreshes": 62,
+        "roof_triangles": 20,
+        "shared_cpu_gpu": true
+      },
+      "render_budget": {
+        "memory_pressure": false,
+        "particles": 8192,
+        "passenger_lights": 8,
+        "station_lights": 24,
+        "train_lights": 8,
+        "upload_mib": 8,
+        "vegetation_divisor": 1
+      },
+      "render_resources": {
+        "allocator": null,
+        "bin_unpacking_lifetime": {
+          "cached_keys": 2,
+          "retired_keys": 0,
+          "source_keys": 2,
+          "stale_keys_after": 0,
+          "stale_keys_before": 0
+        },
+        "bindless_material_allocations": 22,
+        "bindless_material_allocations_scope": "Raw upstream allocated_resource_count may overcount repeated bindings within a material; use material_owners for actual map ownership.",
+        "image_ownership": null,
+        "images": 33,
+        "indexed_mesh_allocations": 15,
+        "material_owners": {
+          "bindings": {
+            "available": true,
+            "by_type": {
+              "MoonMaterial": 1,
+              "ParticleMaterial": 1,
+              "RailwaySkyMaterial": 1,
+              "SnowMaterial": 16,
+              "StandardMaterial": 38,
+              "TerrainMaterial": 1
+            },
+            "total": 58
+          },
+          "prepared": {
+            "available": true,
+            "by_type": {
+              "MoonMaterial": 1,
+              "ParticleMaterial": 1,
+              "RailwaySkyMaterial": 1,
+              "SnowMaterial": 16,
+              "StandardMaterial": 38,
+              "TerrainMaterial": 1
+            },
+            "total": 58
+          }
+        },
+        "material_slab_bytes": 7296,
+        "material_slabs": 1,
+        "mesh_slab_bytes": 7995448,
+        "mesh_slabs": 4,
+        "meshes": 35,
+        "oit_head_capacity": 921600,
+        "oit_node_capacity": 3686400,
+        "pipelines": 101,
+        "views": 14
+      },
+      "system_stages": {
+        "camera_collision": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 32,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 1604
+        },
+        "effect_obstacles": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 37,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 15258
+        },
+        "flexible_connections": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 36,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4000
+        },
+        "horizon": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 67,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 2690
+        },
+        "jacobs_bogie": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 17,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 2278
+        },
+        "level_crossing_register": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 0,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 0
+        },
+        "live_drive": {
+          "calls": 1780,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 270,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 23091
+        },
+        "mirrors": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 13,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4400
+        },
+        "platform_people": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 11,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4546
+        },
+        "road_cars": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 12,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 995
+        },
+        "snow_materials": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 37,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4563
+        },
+        "snow_roof_markers": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 2,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 2
+        },
+        "snow_tracks": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 49,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 5221
+        },
+        "streaming_forecast.update": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 39,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 635
+        },
+        "terrain_spawn.terrain_tile_bundle_materialize_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 9,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 26
+        },
+        "terrain_spawn.terrain_tile_spawn_stream_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 6,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 38
+        },
+        "terrain_spawn.terrain_tile_stream_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 306,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 27707
+        },
+        "terrain_spawn.terrain_tile_unload_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 34,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 5399
+        },
+        "wet_surfaces": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 51,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4366
+        },
+        "world.progressive_world_spawn_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 416,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 971
+        },
+        "world.update_world_scenery_lod": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 58,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 8855
+        },
+        "world.world_stream_scenery_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 219,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 227
+        },
+        "world.world_tile_bundle_materialize_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 1,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4
+        },
+        "world.world_tile_stream_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 1489,
+          "p50_ms": 0.6,
+          "p99_ms": 0.9,
+          "total_us": 534077
+        },
+        "world.world_tile_unload_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 356,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 5844
+        }
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "elapsed_s": 31.0,
+      "peak_rss_mib": 477.4,
+      "capture_sha256": "6aecb79f991eae23ec8b8fbaef873c6edefb12ec65477f4fc49e1db52d7abac7"
+    }
+  },
+  "editor": {
+    "status": "pass",
+    "viewer_sha256": "06ae19253b4ca0d040e13152be8527dda91d86a71334d8a8314f28501d540a56",
+    "window": [
+      800,
+      600
+    ],
+    "source_fixture_sha256_before_and_after": "f9adc155f5354cb9a90f9a942aaf48f7889bde09a63105fc4833cdcd2ac67d8b",
+    "tracked_original_graph_sha256_before_and_after": "eb4e1c47a7e592482037df932d921492a7c6b2d1c1cd250dea3a74b906aadfbc",
+    "owned_private_bidirectional_graph_sha256": "ce1a803787c1212bf37dc4ee2349b98d9e291dc6d05c9f9a60e968f03330600c",
+    "fixture_change": "Copied owned example; explicitly added directed reverse edges for successful inversion testing",
+    "saved_scenario_sha256": "a9733525b4f6a77da1ddcf1514ffaa2394d31d4bfa809a540171ed339444bcc5",
+    "saved_itinerary": [
+      {
+        "destination": "mid",
+        "edges": [
+          "e1"
+        ],
+        "end_chainage_m": 5000.0,
+        "reversed": false,
+        "start": "yard_a",
+        "start_offset_m": 80.0,
+        "stops": [],
+        "switches": [],
+        "wait_s": 30.0
+      }
+    ],
+    "stages": 8,
+    "actual_mouse_input": true,
+    "scope": "Eight actual XTEST stages with software Vulkan. Owned copy explicitly adds reverse directed edges; tracked original graph unchanged. The earlier one-way rejection is retained separately. No exclusive FPS claim.",
+    "stage_screenshots": [
+      {
+        "name": "00-map",
+        "exit_code": 0,
+        "elapsed_s": 6.4079948840008,
+        "capture_sha256": "45fff2a840e56457c79de9ecc18286a69fec4c3439a72051c2427edaa5a20bee",
+        "renderer": {
+          "backend": "Vulkan",
+          "device_type": "Cpu",
+          "hardware": false,
+          "name": "llvmpipe (LLVM 21.1.8, 256 bits)"
+        },
+        "input_prefix": []
+      },
+      {
+        "name": "01-point",
+        "exit_code": 0,
+        "elapsed_s": 7.237192515000061,
+        "capture_sha256": "e7bfb73ea85ce66d599c89134cc7b50de0faa196faf20c7231460f0552daba2c",
+        "renderer": {
+          "backend": "Vulkan",
+          "device_type": "Cpu",
+          "hardware": false,
+          "name": "llvmpipe (LLVM 21.1.8, 256 bits)"
+        },
+        "input_prefix": [
+          {
+            "kind": "click",
+            "name": "itinerary-node:mid",
+            "center": [
+              368.0,
+              365.0
+            ]
+          }
+        ]
+      },
+      {
+        "name": "02-wait",
+        "exit_code": 0,
+        "elapsed_s": 8.170539787999587,
+        "capture_sha256": "a805d3047af63292903142d951949c607f0df47e3347578da02647ea9854f3a8",
+        "renderer": {
+          "backend": "Vulkan",
+          "device_type": "Cpu",
+          "hardware": false,
+          "name": "llvmpipe (LLVM 21.1.8, 256 bits)"
+        },
+        "input_prefix": [
+          {
+            "kind": "click",
+            "name": "itinerary-node:mid",
+            "center": [
+              368.0,
+              365.0
+            ]
+          },
+          {
+            "kind": "click",
+            "name": "ui-ItineraryWait(30.0)",
+            "center": [
+              432.0,
+              403.0
+            ]
+          }
+        ]
+      },
+      {
+        "name": "03-reverse",
+        "exit_code": 0,
+        "elapsed_s": 9.09960317400055,
+        "capture_sha256": "51a04ed942dafc39b6312bc74522b980bcb6859394149ba2c74a9d6556a34347",
+        "renderer": {
+          "backend": "Vulkan",
+          "device_type": "Cpu",
+          "hardware": false,
+          "name": "llvmpipe (LLVM 21.1.8, 256 bits)"
+        },
+        "input_prefix": [
+          {
+            "kind": "click",
+            "name": "itinerary-node:mid",
+            "center": [
+              368.0,
+              365.0
+            ]
+          },
+          {
+            "kind": "click",
+            "name": "ui-ItineraryWait(30.0)",
+            "center": [
+              432.0,
+              403.0
+            ]
+          },
+          {
+            "kind": "click",
+            "name": "ui-ItineraryReverse",
+            "center": [
+              152.5,
+              403.0
+            ]
+          }
+        ]
+      },
+      {
+        "name": "04-scroll",
+        "exit_code": 0,
+        "elapsed_s": 10.012009586999739,
+        "capture_sha256": "4b7a0861ae154d7c2525a032bdff7f9340cdfaf025155d342dec0625e926bb94",
+        "renderer": {
+          "backend": "Vulkan",
+          "device_type": "Cpu",
+          "hardware": false,
+          "name": "llvmpipe (LLVM 21.1.8, 256 bits)"
+        },
+        "input_prefix": [
+          {
+            "kind": "click",
+            "name": "itinerary-node:mid",
+            "center": [
+              368.0,
+              365.0
+            ]
+          },
+          {
+            "kind": "click",
+            "name": "ui-ItineraryWait(30.0)",
+            "center": [
+              432.0,
+              403.0
+            ]
+          },
+          {
+            "kind": "click",
+            "name": "ui-ItineraryReverse",
+            "center": [
+              152.5,
+              403.0
+            ]
+          },
+          {
+            "kind": "scroll_down",
+            "notches": 7
+          }
+        ]
+      },
+      {
+        "name": "05-undo",
+        "exit_code": 0,
+        "elapsed_s": 10.843938471000001,
+        "capture_sha256": "db98b50d31f0783722518eaf96f9214675ed390a97f4665c83992d5bc712cd60",
+        "renderer": {
+          "backend": "Vulkan",
+          "device_type": "Cpu",
+          "hardware": false,
+          "name": "llvmpipe (LLVM 21.1.8, 256 bits)"
+        },
+        "input_prefix": [
+          {
+            "kind": "click",
+            "name": "itinerary-node:mid",
+            "center": [
+              368.0,
+              365.0
+            ]
+          },
+          {
+            "kind": "click",
+            "name": "ui-ItineraryWait(30.0)",
+            "center": [
+              432.0,
+              403.0
+            ]
+          },
+          {
+            "kind": "click",
+            "name": "ui-ItineraryReverse",
+            "center": [
+              152.5,
+              403.0
+            ]
+          },
+          {
+            "kind": "scroll_down",
+            "notches": 7
+          },
+          {
+            "kind": "click",
+            "name": "ui-ServiceUndo",
+            "center": [
+              361.5,
+              400.0
+            ]
+          }
+        ]
+      },
+      {
+        "name": "06-scroll-after-undo",
+        "exit_code": 0,
+        "elapsed_s": 11.753861967000375,
+        "capture_sha256": "c09d3db2833cfe3b60d4d6e91dd263619c6f5d8539571b133a2c9dcf75998ef8",
+        "renderer": {
+          "backend": "Vulkan",
+          "device_type": "Cpu",
+          "hardware": false,
+          "name": "llvmpipe (LLVM 21.1.8, 256 bits)"
+        },
+        "input_prefix": [
+          {
+            "kind": "click",
+            "name": "itinerary-node:mid",
+            "center": [
+              368.0,
+              365.0
+            ]
+          },
+          {
+            "kind": "click",
+            "name": "ui-ItineraryWait(30.0)",
+            "center": [
+              432.0,
+              403.0
+            ]
+          },
+          {
+            "kind": "click",
+            "name": "ui-ItineraryReverse",
+            "center": [
+              152.5,
+              403.0
+            ]
+          },
+          {
+            "kind": "scroll_down",
+            "notches": 7
+          },
+          {
+            "kind": "click",
+            "name": "ui-ServiceUndo",
+            "center": [
+              361.5,
+              400.0
+            ]
+          },
+          {
+            "kind": "scroll_down",
+            "notches": 7
+          }
+        ]
+      },
+      {
+        "name": "07-save",
+        "exit_code": 0,
+        "elapsed_s": 12.685370869000508,
+        "capture_sha256": "f5c8b25041c891074c10b51541a97fa63d34d45f8e511de2e3480aa864853712",
+        "renderer": {
+          "backend": "Vulkan",
+          "device_type": "Cpu",
+          "hardware": false,
+          "name": "llvmpipe (LLVM 21.1.8, 256 bits)"
+        },
+        "input_prefix": [
+          {
+            "kind": "click",
+            "name": "itinerary-node:mid",
+            "center": [
+              368.0,
+              365.0
+            ]
+          },
+          {
+            "kind": "click",
+            "name": "ui-ItineraryWait(30.0)",
+            "center": [
+              432.0,
+              403.0
+            ]
+          },
+          {
+            "kind": "click",
+            "name": "ui-ItineraryReverse",
+            "center": [
+              152.5,
+              403.0
+            ]
+          },
+          {
+            "kind": "scroll_down",
+            "notches": 7
+          },
+          {
+            "kind": "click",
+            "name": "ui-ServiceUndo",
+            "center": [
+              361.5,
+              400.0
+            ]
+          },
+          {
+            "kind": "scroll_down",
+            "notches": 7
+          },
+          {
+            "kind": "click",
+            "name": "ui-ServiceSave",
+            "center": [
+              515.5,
+              400.0
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "limits": [
+    "Synthetic coloured UV fixtures are intentional; these frames check pause/camera/rebase/ownership and are not OR scenery parity.",
+    "The numeric quality overrides used by this first run were ignored by the enum parser: all measured precipitation quality levels were0. These rows do not prove two distinct quality settings. A new high/low run is required and will have separate identities.",
+    "CPU checks and private UI testing ran concurrently. System-stage timings are observations, not an exclusive before/after FPS claim.",
+    "No screenshot from a previous phase is reconstructed or relabelled."
+  ]
+}

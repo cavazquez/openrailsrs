@@ -4,7 +4,10 @@ use openrailsrs_track::{
     SignalAspect, TrackGraph,
     sigscript::{SignalContext, SignalProgram, activity_call_on, aggregate_signal_aspects},
 };
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct TrackOccupancy {
@@ -13,6 +16,18 @@ pub struct TrackOccupancy {
     pub end_m: f64,
     pub owner: String,
 }
+/// Optional version-one save extension. Entries are sorted when captured;
+/// explicit vectors let validation reject duplicate IDs instead of silently
+/// accepting the last duplicate JSON object key.
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct NativeSignalSnapshot {
+    pub version: u32,
+    pub needs_refresh: bool,
+    pub aspects: Vec<(String, u8)>,
+    #[serde(default)]
+    pub errors: Vec<(String, String)>,
+}
+
 #[derive(Default)]
 pub struct NativeSignalRuntime {
     programs: HashMap<String, Arc<SignalProgram>>,
@@ -73,6 +88,133 @@ impl NativeSignalRuntime {
     }
     pub fn count(&self) -> usize {
         self.programs.len()
+    }
+
+    pub fn snapshot(&self) -> NativeSignalSnapshot {
+        // The pending-refresh flag also schedules generic aspects on routes
+        // without native programs, so an empty aspect list still has state.
+        let mut aspects: Vec<_> = self
+            .aspects
+            .iter()
+            .map(|(id, aspect)| (id.clone(), *aspect))
+            .collect();
+        aspects.sort_unstable_by(|a, b| a.0.cmp(&b.0));
+        let mut errors: Vec<_> = self
+            .errors
+            .iter()
+            .map(|(id, error)| (id.clone(), error.clone()))
+            .collect();
+        errors.sort_unstable_by(|a, b| a.0.cmp(&b.0));
+        NativeSignalSnapshot {
+            version: 1,
+            needs_refresh: self.needs_refresh,
+            aspects,
+            errors,
+        }
+    }
+
+    pub(crate) fn validate_snapshot(
+        &self,
+        saved: &NativeSignalSnapshot,
+        graph: &TrackGraph,
+        path_edges: &[String],
+        signal_runtime: &HashMap<String, SignalAspect>,
+        overrides: &HashMap<String, SignalAspect>,
+    ) -> Result<(), String> {
+        if saved.version != 1
+            || saved.aspects.len() > self.programs.len()
+            || saved.errors.len() > saved.aspects.len()
+        {
+            return Err("Versión o tamaño de caché SIGSCR guardada inválidos".into());
+        }
+        let expected: HashSet<_> = path_edges
+            .iter()
+            .flat_map(|edge| graph.signals_on_edge(edge))
+            .filter(|signal| self.programs.contains_key(&signal.id))
+            .map(|signal| signal.id.as_str())
+            .collect();
+        let mut seen = HashSet::new();
+        for (id, aspect) in &saved.aspects {
+            if !expected.contains(id.as_str()) || !seen.insert(id.as_str()) || *aspect > 7 {
+                return Err("Señal, duplicado o aspecto de caché SIGSCR guardada inválidos".into());
+            }
+            if !saved.needs_refresh {
+                let native = graph
+                    .signal(id)
+                    .and_then(|signal| signal.script.as_ref())
+                    .and_then(|script| script.native.as_ref())
+                    .ok_or("Programa SIGSCR guardado no disponible")?;
+                if native.forced_stop && *aspect != 0 {
+                    return Err("Caché SIGSCR intenta liberar una parada forzada".into());
+                }
+                let info = matches!(
+                    native.function.to_ascii_uppercase().as_str(),
+                    "INFO" | "REPEATER" | "SHUNTING" | "UNKNOWN"
+                );
+                let normal = native.function.eq_ignore_ascii_case("NORMAL");
+                let mut safety = match aspect {
+                    0..=1 => SignalAspect::Stop,
+                    2..=5 => SignalAspect::Caution,
+                    _ => SignalAspect::Clear,
+                };
+                if overrides.get(id) == Some(&SignalAspect::Stop) && *aspect != 0
+                    || overrides.get(id) == Some(&SignalAspect::Caution) && *aspect > 5
+                {
+                    return Err("Caché SIGSCR contradice una restricción guardada".into());
+                }
+                if overrides.get(id) == Some(&SignalAspect::Stop) {
+                    safety = SignalAspect::Stop;
+                }
+                if overrides.get(id) == Some(&SignalAspect::Caution)
+                    && safety == SignalAspect::Clear
+                {
+                    safety = SignalAspect::Caution;
+                }
+                if info {
+                    safety = SignalAspect::Clear;
+                } else if !normal && safety == SignalAspect::Stop {
+                    safety = SignalAspect::Caution;
+                }
+                let actual = signal_runtime
+                    .get(id)
+                    .copied()
+                    .ok_or("Aspecto de seguridad SIGSCR guardado ausente")?;
+                // STOP_AND_PROCEED can be Caution for an enabled activity call-on.
+                if actual != safety
+                    && !(*aspect == 1
+                        && normal
+                        && overrides.get(id) != Some(&SignalAspect::Stop)
+                        && actual == SignalAspect::Caution)
+                {
+                    return Err("Aspectos nativo y de seguridad guardados incompatibles".into());
+                }
+            }
+        }
+        if seen != expected {
+            return Err("Faltan aspectos del itinerario en la caché SIGSCR guardada".into());
+        }
+        let mut errors_seen = HashSet::new();
+        for (id, error) in &saved.errors {
+            if !seen.contains(id.as_str())
+                || !errors_seen.insert(id.as_str())
+                || error.is_empty()
+                || error.len() > 4096
+                || saved
+                    .aspects
+                    .iter()
+                    .find(|(signal, _)| signal == id)
+                    .is_none_or(|(_, aspect)| *aspect != 0)
+            {
+                return Err("Error de caché SIGSCR guardada inválido".into());
+            }
+        }
+        Ok(())
+    }
+
+    pub(crate) fn restore_validated_snapshot(&mut self, saved: NativeSignalSnapshot) {
+        self.aspects = saved.aspects.into_iter().collect();
+        self.errors = saved.errors.into_iter().collect();
+        self.needs_refresh = saved.needs_refresh;
     }
 }
 impl LiveDriveSession {
@@ -528,6 +670,14 @@ impl LiveDriveSession {
         self.native_signals.aspects = states;
         self.native_signals.errors = errors;
     }
+    /// Older version-one saves did not record the native cache or its pending
+    /// refresh. Rebuild against all restored footprints, preserve the signal
+    /// cadence and conservatively request refresh at the next traffic update.
+    pub fn rebuild_legacy_native_signal_cache(&mut self) {
+        self.evaluate_native_signals();
+        self.native_signals.needs_refresh = true;
+    }
+
     pub fn native_signal_aspect(&self, id: &str) -> Option<u8> {
         let id = if self.native_signals.aspects.contains_key(id) {
             id.to_owned()

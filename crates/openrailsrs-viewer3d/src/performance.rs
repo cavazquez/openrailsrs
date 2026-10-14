@@ -136,6 +136,8 @@ pub struct RenderResourceReport {
     pub views: usize,
     pub meshes: usize,
     pub images: usize,
+    /// Opt-in image ownership snapshot. None means not measured, never no images.
+    pub image_ownership: Option<GpuImageOwnershipReport>,
     pub mesh_slabs: usize,
     pub mesh_slab_bytes: u64,
     pub indexed_mesh_allocations: usize,
@@ -152,6 +154,60 @@ pub struct RenderResourceReport {
     /// Backend-dependent, opt-in. None means unsupported or disabled, never zero usage.
     pub allocator: Option<GpuAllocatorReport>,
     pub bin_unpacking_lifetime: Option<BinGroupCleanupStats>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct GpuImageOwner {
+    pub asset_id: String,
+    pub extent: [u32; 3],
+    pub format: String,
+    pub dimension: String,
+    pub mip_levels: u32,
+    pub sample_count: u32,
+    pub label: Option<String>,
+    pub present_in_main_assets: bool,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct GpuImageOwnershipReport {
+    pub available: bool,
+    pub sample_age_s: f64,
+    pub main_render_images: usize,
+    pub render_images: usize,
+    pub absent_from_main_assets: usize,
+    pub omitted_entries: usize,
+    pub entries: Vec<GpuImageOwner>,
+    pub scope: &'static str,
+}
+
+fn bounded_image_ownership(
+    owners: impl IntoIterator<Item = GpuImageOwner>,
+    main_render_images: usize,
+    limit: usize,
+) -> GpuImageOwnershipReport {
+    let mut entries: Vec<_> = owners.into_iter().collect();
+    let render_images = entries.len();
+    let absent_from_main_assets = entries
+        .iter()
+        .filter(|image| !image.present_in_main_assets)
+        .count();
+    // Keep orphan candidates first when a large original route exceeds the
+    // diagnostic cap. IDs include their generation; never merge recycled slots.
+    entries.sort_unstable_by(|a, b| {
+        (a.present_in_main_assets, &a.asset_id).cmp(&(b.present_in_main_assets, &b.asset_id))
+    });
+    let omitted_entries = entries.len().saturating_sub(limit);
+    entries.truncate(limit);
+    GpuImageOwnershipReport {
+        available: true,
+        sample_age_s: 0.,
+        main_render_images,
+        render_images,
+        absent_from_main_assets,
+        omitted_entries,
+        entries,
+        scope: "Opt-in 30-second RenderAssets<GpuImage> inventory. Absence from Main Assets<Image> is an ownership diagnostic, not proof of a leak or permission to remove an active GPU image. Descriptor extents are not allocator byte measurements.",
+    }
 }
 
 #[derive(Clone, Debug, Default, Serialize)]
@@ -465,7 +521,11 @@ pub fn update_pipeline_status(
     oit: Option<Res<bevy::core_pipeline::oit::OitBuffers>>,
     render_device: Res<bevy::render::renderer::RenderDevice>,
     mut last_resources: Local<Option<std::time::Instant>>,
-    mut allocator_report: Local<(Option<std::time::Instant>, Option<GpuAllocatorReport>)>,
+    mut allocator_report: Local<(
+        Option<std::time::Instant>,
+        Option<GpuAllocatorReport>,
+        Option<GpuImageOwnershipReport>,
+    )>,
 ) {
     use bevy::render::render_resource::CachedPipelineState;
     if status.device.lock().unwrap().is_none() {
@@ -517,6 +577,28 @@ pub fn update_pipeline_status(
                 .is_none_or(|last| now.duration_since(last).as_secs_f32() >= 30.)
         {
             allocator_report.0 = Some(now);
+            let main_ids: std::collections::HashSet<_> = required.images.iter().copied().collect();
+            allocator_report.2 = Some(bounded_image_ownership(
+                images.iter().map(|(id, image)| {
+                    let descriptor = &image.texture_descriptor;
+                    GpuImageOwner {
+                        asset_id: format!("{id:?}"),
+                        extent: [
+                            descriptor.size.width,
+                            descriptor.size.height,
+                            descriptor.size.depth_or_array_layers,
+                        ],
+                        format: format!("{:?}", descriptor.format),
+                        dimension: format!("{:?}", descriptor.dimension),
+                        mip_levels: descriptor.mip_level_count,
+                        sample_count: descriptor.sample_count,
+                        label: descriptor.label.map(str::to_owned),
+                        present_in_main_assets: main_ids.contains(&id),
+                    }
+                }),
+                main_ids.len(),
+                4096,
+            ));
             allocator_report.1 =
                 render_device
                     .wgpu_device()
@@ -562,6 +644,14 @@ pub fn update_pipeline_status(
             views: views.iter().count(),
             meshes: meshes.iter().count(),
             images: images.iter().count(),
+            image_ownership: allocator_report.2.as_ref().map(|inventory| {
+                let mut inventory = inventory.clone();
+                inventory.sample_age_s = allocator_report
+                    .0
+                    .map(|sample| now.duration_since(sample).as_secs_f64())
+                    .unwrap_or_default();
+                inventory
+            }),
             mesh_slabs: allocator.slab_count(),
             mesh_slab_bytes: allocator.slabs_size(),
             indexed_mesh_allocations: allocator.index_allocation_count(),
@@ -839,6 +929,39 @@ pub fn measure_journey(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn image_inventory_preserves_orphan_candidates_and_reports_truncation() {
+        let owners = [
+            ("index:7/generation:2", true),
+            ("index:7/generation:1", false),
+            ("index:9/generation:1", false),
+        ]
+        .map(|(id, present)| GpuImageOwner {
+            asset_id: id.into(),
+            extent: [256, 256, 1],
+            format: "Rgba8UnormSrgb".into(),
+            dimension: "D2".into(),
+            mip_levels: 1,
+            sample_count: 1,
+            label: None,
+            present_in_main_assets: present,
+        });
+        let report = bounded_image_ownership(owners.clone(), 1, 2);
+        assert!(report.available);
+        assert_eq!(report.render_images, 3);
+        assert_eq!(report.main_render_images, 1);
+        assert_eq!(report.absent_from_main_assets, 2);
+        assert_eq!(report.omitted_entries, 1);
+        assert_eq!(report.entries.len(), 2);
+        assert!(report.entries.iter().all(|e| !e.present_in_main_assets));
+        assert_eq!(report.entries[0].asset_id, "index:7/generation:1");
+        let omitted = bounded_image_ownership(owners, 1, 0);
+        assert!(omitted.entries.is_empty());
+        assert_eq!(omitted.render_images, 3);
+        assert_eq!(omitted.absent_from_main_assets, 2);
+        assert_eq!(omitted.omitted_entries, 3);
+    }
     #[test]
     fn shared_fog_allocation_is_counted_even_below_the_largest_label_cutoff() {
         let mut source = vec![("larger texture", 1_048_576); 20];

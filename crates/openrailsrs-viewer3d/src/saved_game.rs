@@ -383,33 +383,18 @@ impl SavedGame {
         }
         live.traffic
             .reconstruct_couplings(&mut live.session, &self.independent_couplings)?;
-        let preparation = (|| {
-            live.session.validate_snapshot(&self.session)?;
-            live.traffic.validate_snapshot(&self.traffic)?;
-            openrailsrs_sim::SessionSnapshot::validate_shared_dispatcher(
-                std::iter::once(&self.session).chain(self.traffic.iter().map(|s| &s.session)),
-            )?;
-            let player_host = live.session.prepare_script_restore(&self.session)?;
-            let traffic_hosts = live.traffic.prepare_script_restore(&self.traffic)?;
-            Ok::<_, String>((player_host, traffic_hosts))
-        })();
-        let (player_host, traffic_hosts) = match preparation {
-            Ok(prepared) => prepared,
-            Err(error) => {
-                for (index, departed, parked) in swapped.into_iter().rev() {
-                    live.traffic.restore_control(&mut live.session, index)?;
-                    live.traffic.services[index].departed = departed;
-                    live.traffic.services[index].parked = parked;
-                }
-                return Err(error);
+        if let Err(error) =
+            live.traffic
+                .restore_shared_snapshots(&mut live.session, self.session, self.traffic)
+        {
+            for (index, departed, parked) in swapped.into_iter().rev() {
+                live.traffic.restore_control(&mut live.session, index)?;
+                live.traffic.services[index].departed = departed;
+                live.traffic.services[index].parked = parked;
             }
-        };
-        live.session
-            .restore_prepared_snapshot(self.session, player_host)?;
-        live.traffic
-            .restore_prepared_snapshot(self.traffic, traffic_hosts)?;
+            return Err(error);
+        }
         live.traffic.control_history = history;
-        live.traffic.synchronize_occupancy(&mut live.session);
         live.start_clock_s = self.start_clock_s;
         live.season = self.season;
         live.paused = true;

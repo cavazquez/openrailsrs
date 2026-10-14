@@ -1,0 +1,200 @@
+{
+  "schema": 1,
+  "issue": 373,
+  "status": "PORTABLE_ARTIFACT_FOLDER_MENU_VERIFIED_SNAP_FOLDER_CASES_SEPARATE",
+  "combined_issue373_complete": false,
+  "scope": "Four real CPU/software-menu cases on the moved portable final32 bundle. No additional runtime was executed during evidence inspection. Snap folder access and low-space runtime acceptance have separate proofs.",
+  "package": {
+    "release_family": "0.1.0-alpha.6",
+    "release_family_source": "Final32 packaging receipt; portable BUILD and manifest identify this moved bundle independently.",
+    "portable_identifier": "alpha6-phase32",
+    "moved_bundle_manifest_sha256": "a0f25821da402c442afaf972d72468ddda3ca858c27c9437f6f8ec3cf1bb0a51",
+    "files": 349,
+    "bytes": 241731736,
+    "transfer_receipt_sha256": "5769920c2f3e8176f30ad37adcf4b93b83f2d10989e1c46fa7601e900522d0da",
+    "BUILD_sha256": "59fcff9cb91a29d2b32ce95116693e7ca0883eca99cc3720ade99ada14ca357d",
+    "launcher_sha256": "27f3bab4ea5d45a5dc02270841098233adf608cfdd0b24ec5fdbf7f76d29c6b2",
+    "build": {
+      "source_commit": "bd0b5e437ff71135cfd31aa19c588c0c5a07d66c",
+      "source_dirty": false,
+      "source_snapshot_sha256": "545f587ccd08b8b0e71d1d2f675a85e3e408f18f9f5d480266391abf4e0ca2c2",
+      "architecture": "x86_64",
+      "build_libc": [
+        "glibc",
+        "2.39"
+      ],
+      "required_glibc": "2.39",
+      "downloaded_content_included": false,
+      "binary_sha256": {
+        "openrailsrs": "52fc1a4aaaece70993a24f072a1c0fbd0d22dd34fe9e8defddc736ca49257ab4",
+        "openrailsrs-viewer3d": "80dac555da2468e0e24652485d3157af7eb190959d1612b14ba2ab9e8a3d55c1",
+        "openrailsrs-prepare-content": "7187a90afa85c16d60e93cba220ec63aa1f847798943430b26d23f93c55960bf"
+      }
+    },
+    "moved_outside_checkout": true,
+    "cargo_required": false,
+    "launcher_check": "passed",
+    "launcher_check_log_sha256": "85a2424ed05235aaee8800d39b4298e9adf3dfc0b81ad94a8996802b0f64811b"
+  },
+  "execution": {
+    "method": "actual private Xvfb mouse clicks",
+    "menu_page_hooks": "Library-tools/Country initial page only; folder controls used actual private Xvfb input events.",
+    "renderer": "Software Vulkan/llvmpipe; not GPU gameplay/performance evidence",
+    "runtime_source": "Exact moved bundle and BUILD; no checkout success extrapolated",
+    "QA_harness": "portable-folder-parameterized.py",
+    "QA_harness_sha256": "cb3de29322bd0389207e209f58f1be875518a4116c18e7a0fdf9ec72578f8b72",
+    "raw_QA_receipt_sha256": "c7adba78d5f1aa8c8366348845e6d038fd6f025aa030da1c9211c51699b94e66"
+  },
+  "cases": [
+    {
+      "case": "select",
+      "status": "PASS_PORTABLE_MENU_SCOPE",
+      "frame": "select.png",
+      "frame_sha256": "10dcdfd59e304fe17087072c72bab63dbf4d0e073d62cb7fa56172d26b64c49c",
+      "frame_bytes": 160715,
+      "checkpoint_sha256": "e54b3c4f4f41b343b5658b31b36999fcdba8197f85b818f322a66b0e005a58b6",
+      "log_sha256": "cf12202beb23bba4efd57f660d83879f5cf1dd05c371960f28a19d84ffd0858c",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "Cpu",
+        "hardware": false,
+        "name": "llvmpipe (LLVM 20.1.2, 256 bits)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "gameplay_frames": 0,
+      "observer_save_verified": true,
+      "normal_exit_marker_verified": true,
+      "visual_inspection_complete": true,
+      "visual_observation": "Clipboard paste/explore/select succeeded; the selected writeable download root and confirmation text are visible. Previous-installation preservation is checked by the QA marker,not an actual formation.",
+      "preference_preserved_qa_assertion": true,
+      "previous_marker_preserved_qa_assertion": true
+    },
+    {
+      "case": "readonly",
+      "status": "PASS_PORTABLE_MENU_SCOPE",
+      "frame": "readonly.png",
+      "frame_sha256": "cee5d13b879910d2d2585ece4150a7577b256bcfeb065b9f05374d308cb44558",
+      "frame_bytes": 86243,
+      "checkpoint_sha256": "a5bcf8f06ceda1fda4ad65123a70b56d65a958df1e49cba7ab61c65ab11d0efc",
+      "log_sha256": "9db89846767cd197f10a90ad652ebc3aaaf48376393f623e57caa5709e445a74",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "Cpu",
+        "hardware": false,
+        "name": "llvmpipe (LLVM 20.1.2, 256 bits)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "gameplay_frames": 0,
+      "observer_save_verified": true,
+      "normal_exit_marker_verified": true,
+      "visual_inspection_complete": true,
+      "visual_observation": "Browser shows the attempted /snap directory while the effective download root remains the valid prior folder. Explicit rejection text exists in ui_text,but lies below the initial viewport; scroll is required to read it.",
+      "preference_preserved_qa_assertion": true,
+      "previous_marker_preserved_qa_assertion": true,
+      "explicit_rejection_diagnostic": {
+        "text": "Elegí una carpeta absoluta escribible fuera de /snap",
+        "computed_size_px": [
+          844.0,
+          17.0
+        ],
+        "inherited_visible_flag": true,
+        "inside_initial_png_viewport": false,
+        "scroll_required": true,
+        "scope": "Positive ui_text diagnostic plus unchanged valid preference; inherited visible alone is not actual on-screen visibility."
+      }
+    },
+    {
+      "case": "restart",
+      "status": "PASS_PORTABLE_MENU_SCOPE",
+      "frame": "restart.png",
+      "frame_sha256": "6900a45ec059237e064b7dc07ab2fb31c78a95f33e05ce1087c144d0bdb9c56d",
+      "frame_bytes": 144038,
+      "checkpoint_sha256": "0539dfb274ee87eb76a525d7db087540aa9ab9a1c707d1e2c90acefbe52169e7",
+      "log_sha256": "d90d9c4490523fa9c8608bb13c9290d1a5ff2d7fefddcf823ce5774bfc291de5",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "Cpu",
+        "hardware": false,
+        "name": "llvmpipe (LLVM 20.1.2, 256 bits)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "gameplay_frames": 0,
+      "observer_save_verified": true,
+      "normal_exit_marker_verified": true,
+      "visual_inspection_complete": true,
+      "visual_observation": "The download-root preference remains displayed after a fresh process start; prior installation marker remains intact.",
+      "preference_preserved_qa_assertion": true,
+      "previous_marker_preserved_qa_assertion": true
+    },
+    {
+      "case": "country",
+      "status": "PASS_PORTABLE_MENU_SCOPE",
+      "frame": "country.png",
+      "frame_sha256": "49ee314cb411a9f7d884ce7c4a979e06dafea9d7f0bf936dff8bce431d2bcb40",
+      "frame_bytes": 75240,
+      "checkpoint_sha256": "90bb68c07f796e2b7d4d10cc770b533db4fd8028e54bb95fd59a8a01a8453577",
+      "log_sha256": "15a99d36e301b8d67f7937e22d6ec969ed5682fe3e3f996f7192077f15c6d3d5",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "Cpu",
+        "hardware": false,
+        "name": "llvmpipe (LLVM 20.1.2, 256 bits)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "gameplay_frames": 0,
+      "observer_save_verified": true,
+      "normal_exit_marker_verified": true,
+      "visual_inspection_complete": true,
+      "visual_observation": "Normal Country builder presents all eight options with readable labels and a fixed footer; no actual country-selection click is inferred.",
+      "preference_preserved_qa_assertion": true,
+      "previous_marker_preserved_qa_assertion": true
+    }
+  ],
+  "acceptance": {
+    "cpu_menu_cases": 4,
+    "png_inspected": 4,
+    "explicit_readonly_diagnostic_recorded": true,
+    "readonly_error_visible_in_initial_png": false,
+    "readonly_rejection_requires_scroll_to_read": true,
+    "rejected_folder_preserves_previous_preference": true,
+    "restart_preserves_folder": true,
+    "previous_installation_marker_preserved": true,
+    "actual_previous_train_installation_certified": false,
+    "low_disk_space_exercised_by_these_four_cases": false,
+    "snap_folder_cases_certified_here": false,
+    "hardware_gameplay_certified_here": false
+  },
+  "issue_criteria": [
+    {
+      "exact_checkbox": "- [ ] Seleccionar almacenamiento permitido y persistir preferencia.",
+      "portable_scope": "Actual folder selection and persisted preference verified."
+    },
+    {
+      "exact_checkbox": "- [ ] Validar permisos y espacio en binario y Snap conservando instalaciones existentes.",
+      "portable_scope": "Writeable selection and explicit /snap rejection with preference/marker preserved. Space and strict-Snap folders require their separate proofs."
+    },
+    {
+      "exact_checkbox": "- [ ] Probar el artefacto construido en un entorno limpio y conservar su hash, versión y resultados; no extrapolar éxito del checkout al paquete.",
+      "portable_scope": "Moved bundle launched/checkpassed without Cargo; exact BUILD,manifest,release family and four screenshot outcomes preserved. Software menus only."
+    }
+  ],
+  "limits": [
+    "The preserved previous-installation marker is a QA file,not a real train,route or parity capture.",
+    "Readonly rejection text is below the initial scroll viewport; no visible error-banner claim is made for that PNG.",
+    "Four menu cases do not exercise low disk space; installer space checks and runtime/no-replacement tests belong to separate evidence.",
+    "This receipt does not certify strict Snap folder permissions,hardware gameplay,whole-route physics or performance.",
+    "The bundle requires glibc2.39 according to BUILD. No compatibility with older glibc is inferred."
+  ]
+}

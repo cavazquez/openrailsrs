@@ -160,6 +160,10 @@ impl LiveDriveSession {
                     end.map_or(self.state.path_edges.len() - 1, |h| h.1),
                 )
             } else if self.native_signals.count() == 0 {
+                // Beyond the last non-native head this is a moving lookahead,
+                // not a fixed signal block. Retaining each previous interval
+                // underneath the tail would accumulate a new grant per tick.
+                request.fixed_blocks = false;
                 // Graph examples without native heads still interlock junctions.
                 let mut end_index = self.state.edge_index;
                 let mut end = head - self.state.pos_on_edge_m;
@@ -557,15 +561,23 @@ pub(crate) fn coordinate(
             .filter(|r| r.owner != session.service_id)
             .cloned()
             .collect();
+        // Restoring shared occupancy gathers grants in service order; the
+        // dispatcher emits them in priority order. Only changed authorities,
+        // not a permutation of the same intervals, require a signal refresh.
+        let external_changed = external != session.external_track_reservations
+            && (external.len() != session.external_track_reservations.len()
+                || external
+                    .iter()
+                    .any(|grant| !session.external_track_reservations.contains(grant)));
         if own != session.own_track_reservations
-            || external != session.external_track_reservations
+            || external_changed
             || was_waiting
             || !session.dispatcher.waiting_for.is_empty()
         {
-            session.own_track_reservations = own;
-            session.external_track_reservations = external;
             session.native_signals.needs_refresh = true;
         }
+        session.own_track_reservations = own;
+        session.external_track_reservations = external;
         if session
             .dispatcher
             .wait_since_s
@@ -639,6 +651,29 @@ mod tests {
         };
         (player, traffic, directory)
     }
+    #[test]
+    fn moving_non_native_lookahead_does_not_accumulate_grants_after_last_signal() {
+        let project = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let scenario_path = project.join("examples/traffic_passing/scenario_control.toml");
+        let scenario = openrailsrs_scenarios::load_scenario(&scenario_path).unwrap();
+        let directory = scenario_path.parent().unwrap();
+        let mut player = LiveDriveSession::from_scenario(directory, &scenario).unwrap();
+        let mut traffic = crate::LiveTraffic::from_scenario(directory, &scenario).unwrap();
+        assert_eq!(player.native_signals.count(), 0);
+        assert!(player.graph.signals().count() > 0);
+        assert!(player.head_chainage_m() > 0.);
+        player.driver_direction = 1.;
+        player.driver_throttle = 0.7;
+        let start = player.head_chainage_m();
+        for _ in 0..120 {
+            traffic.advance(&mut player, 0.05, None, |_| {});
+            assert!(player.own_track_reservations.len() <= player.state.path_edges.len());
+            player.validate_snapshot(&player.snapshot()).unwrap();
+        }
+        assert!(player.head_chainage_m() > start + 0.1);
+        assert!(!player.own_track_reservations.is_empty());
+    }
+
     #[test]
     fn opposite_trains_cannot_reserve_the_same_clear_block_and_grant_survives_restore() {
         let (mut player, mut traffic, _directory) = single_track();

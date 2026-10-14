@@ -173,9 +173,11 @@ impl LiveDrive {
         }
         // Native SMS/WAV playback is owned by the viewer's separate audio worker.
         let audio = None;
+        let mut traffic = openrailsrs_sim::LiveTraffic::from_scenario(scenario_dir, scenario)?;
+        traffic.initialize_pre_run_player(&mut session)?;
         Ok(Self {
             session,
-            traffic: openrailsrs_sim::LiveTraffic::from_scenario(scenario_dir, scenario)?,
+            traffic,
             audio,
             paused: false,
             start_clock_s: scenario
@@ -207,6 +209,7 @@ impl LiveDrive {
         if let Some(network) = &self.dispatch_network {
             self.session.expand_dispatch_network(network, &scenario)?;
         }
+        self.traffic.initialize_pre_run_player(&mut self.session)?;
         self.paused = false;
         self.start_clock_s = scenario
             .scenario

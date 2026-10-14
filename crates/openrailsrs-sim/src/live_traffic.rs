@@ -74,6 +74,9 @@ pub struct LiveTraffic {
     pub services: Vec<TrafficService>,
     pub(crate) workers: usize,
     pub(crate) pool: Option<rayon::ThreadPool>,
+    /// Final shared point positions from the disposable stationary pre-run
+    /// anchor. Applied once to the actual player before its first presentation.
+    pub(crate) pre_run_switches: Option<HashMap<String, openrailsrs_track::SwitchPosition>>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -202,6 +205,18 @@ impl LiveTraffic {
                 traffic.advance(&mut anchor, step, None, |_| {});
                 remaining -= step;
             }
+            traffic.pre_run_switches = Some(
+                anchor
+                    .graph
+                    .nodes_iter()
+                    .filter_map(|(id, _)| {
+                        anchor
+                            .graph
+                            .switch_position(id)
+                            .map(|position| (id.to_owned(), position))
+                    })
+                    .collect(),
+            );
             for (service, entry) in traffic.services.iter_mut().zip(&scenario.extra_trains) {
                 service.departure_s = entry.start_time_s;
                 service
@@ -213,6 +228,51 @@ impl LiveTraffic {
             }
         }
         Ok(traffic)
+    }
+
+    /// Complete a scene's shared pre-run world before any camera or save can
+    /// observe it. The pre-run used the same stationary player's footprint;
+    /// its final point positions must replace the fresh player's source defaults.
+    /// Initial dispatch is resolved without advancing any simulation clock.
+    pub fn initialize_pre_run_player(
+        &mut self,
+        player: &mut LiveDriveSession,
+    ) -> Result<(), String> {
+        let Some(switches) = self.pre_run_switches.as_ref() else {
+            return Ok(());
+        };
+        // Validate the complete broadcast before changing any point.
+        for id in switches.keys() {
+            if player.graph.switch_position(id).is_none()
+                || self
+                    .services
+                    .iter()
+                    .any(|service| service.session.graph.switch_position(id).is_none())
+            {
+                return Err(format!("Cambio del tráfico preparado no disponible: {id}"));
+            }
+        }
+        for (id, position) in switches {
+            player
+                .graph
+                .set_switch(id, *position)
+                .map_err(|error| error.to_string())?;
+            for service in &mut self.services {
+                service
+                    .session
+                    .graph
+                    .set_switch(id, *position)
+                    .map_err(|error| error.to_string())?;
+            }
+        }
+        self.pre_run_switches = None;
+        player.native_signals.needs_refresh = true;
+        self.synchronize_occupancy(player);
+        crate::SessionSnapshot::validate_shared_dispatcher(
+            std::iter::once(&player.snapshot())
+                .chain(self.snapshot().iter().map(|service| &service.session)),
+        )?;
+        Ok(())
     }
 
     pub fn set_worker_count(&mut self, workers: usize) -> Result<(), String> {
@@ -367,6 +427,77 @@ impl LiveTraffic {
         Ok(())
     }
 
+    /// Restore the complete validated player/traffic aggregate. Standalone
+    /// SessionSnapshot restoration cannot know foreign authorities; this API
+    /// reconnects them without rerunning dispatch or consuming a physics tick.
+    pub fn restore_shared_snapshots(
+        &mut self,
+        player: &mut LiveDriveSession,
+        player_saved: SessionSnapshot,
+        traffic_saved: Vec<TrafficSnapshot>,
+    ) -> Result<(), String> {
+        player.validate_snapshot(&player_saved)?;
+        self.validate_snapshot(&traffic_saved)?;
+        SessionSnapshot::validate_shared_dispatcher(
+            std::iter::once(&player_saved)
+                .chain(traffic_saved.iter().map(|service| &service.session)),
+        )?;
+        let owned_locks: Vec<_> = std::iter::once(&player_saved)
+            .chain(traffic_saved.iter().map(|service| &service.session))
+            .flat_map(|session| session.dispatcher.own_locks.iter())
+            .collect();
+        for (id, saved) in std::iter::once((&player.service_id, &player_saved)).chain(
+            self.services
+                .iter()
+                .zip(&traffic_saved)
+                .map(|(service, saved)| (&service.session.service_id, &saved.session)),
+        ) {
+            let mut remaining: Vec<_> = owned_locks
+                .iter()
+                .copied()
+                .filter(|lock| &lock.owner != id)
+                .collect();
+            for foreign in &saved.dispatcher.other_locks {
+                let Some(index) = remaining.iter().position(|lock| *lock == foreign) else {
+                    return Err("Enclavamiento ajeno guardado inválido".into());
+                };
+                remaining.swap_remove(index);
+            }
+            if !remaining.is_empty() {
+                return Err("Faltan enclavamientos ajenos en la partida guardada".into());
+            }
+        }
+        let player_host = player.prepare_script_restore(&player_saved)?;
+        let traffic_hosts = self.prepare_script_restore(&traffic_saved)?;
+        let player_has_cache = player_saved.native_signal_cache.is_some();
+        let player_foreign_locks = player_saved.dispatcher.other_locks.clone();
+        let traffic_metadata: Vec<_> = traffic_saved
+            .iter()
+            .map(|service| {
+                (
+                    service.session.native_signal_cache.is_some(),
+                    service.session.dispatcher.other_locks.clone(),
+                )
+            })
+            .collect();
+        player.restore_prepared_snapshot(player_saved, player_host)?;
+        self.restore_prepared_snapshot(traffic_saved, traffic_hosts)?;
+        self.reconnect_restored_occupancy(player);
+        if !player_has_cache {
+            player.rebuild_legacy_native_signal_cache();
+        }
+        player.dispatcher.other_locks = player_foreign_locks;
+        for (service, (has_cache, foreign_locks)) in self.services.iter_mut().zip(traffic_metadata)
+        {
+            if !has_cache {
+                service.session.rebuild_legacy_native_signal_cache();
+            }
+            service.session.dispatcher.other_locks = foreign_locks;
+        }
+        self.pre_run_switches = None;
+        Ok(())
+    }
+
     pub fn restore_snapshot(&mut self, saved: Vec<TrafficSnapshot>) -> Result<(), String> {
         let hosts = self.prepare_script_restore(&saved)?;
         self.restore_prepared_snapshot(saved, hosts)
@@ -415,7 +546,13 @@ impl LiveTraffic {
         Ok(())
     }
 
-    pub fn synchronize_occupancy(&mut self, player: &mut LiveDriveSession) {
+    fn shared_occupancy(
+        &self,
+        player: &mut LiveDriveSession,
+    ) -> (
+        HashMap<String, String>,
+        Vec<crate::native_signals::TrackOccupancy>,
+    ) {
         let mut footprints = player.own_track_occupancy();
         let mut blocks = player.own_occupied_edges();
         for service in &self.services {
@@ -427,6 +564,62 @@ impl LiveTraffic {
         let works = player.closed_work_occupancy(&footprints);
         blocks.extend(works.iter().map(|w| (w.edge.clone(), w.owner.clone())));
         footprints.extend(works);
+        (blocks, footprints)
+    }
+
+    /// Reconnect a validated saved world without running the dispatcher or
+    /// changing the saved signal cadence. Foreign authorities come exclusively
+    /// from each train's validated own grants and locks, never foreign entries
+    /// supplied by a save file. The next ordinary physics tick makes new
+    /// dispatch decisions at the same time as an uninterrupted session.
+    pub fn reconnect_restored_occupancy(&mut self, player: &mut LiveDriveSession) {
+        // The ordinary collector updates remembered work windows. Rebinding
+        // their cached footprints is not a simulation tick: retain the exact
+        // validated window memory until the next ordinary traffic advance.
+        let closed_works = player.state.rail_operations.closed_works.clone();
+        let (blocks, footprints) = self.shared_occupancy(player);
+        player.state.rail_operations.closed_works = closed_works;
+        let grants: Vec<_> = std::iter::once(&*player)
+            .chain(self.services.iter().map(|service| &service.session))
+            .flat_map(|session| session.own_track_reservations.iter().cloned())
+            .collect();
+        let locks: Vec<_> = std::iter::once(&*player)
+            .chain(self.services.iter().map(|service| &service.session))
+            .flat_map(|session| session.dispatcher.own_locks.iter().cloned())
+            .collect();
+        let reconnect = |session: &mut LiveDriveSession| {
+            session.external_occupancy = blocks
+                .iter()
+                .filter(|(_, owner)| {
+                    owner.as_str() != session.service_id
+                        && !owner.starts_with(&format!("{} ·", session.service_id))
+                })
+                .map(|(edge, owner)| (edge.clone(), owner.clone()))
+                .collect();
+            session.external_track_occupancy = footprints
+                .iter()
+                .filter(|footprint| footprint.owner != session.service_id)
+                .cloned()
+                .collect();
+            session.external_track_reservations = grants
+                .iter()
+                .filter(|grant| grant.owner != session.service_id)
+                .cloned()
+                .collect();
+            session.dispatcher.other_locks = locks
+                .iter()
+                .filter(|lock| lock.owner != session.service_id)
+                .cloned()
+                .collect();
+        };
+        reconnect(player);
+        for service in &mut self.services {
+            reconnect(&mut service.session);
+        }
+    }
+
+    pub fn synchronize_occupancy(&mut self, player: &mut LiveDriveSession) {
+        let (blocks, footprints) = self.shared_occupancy(player);
         let other_blocks = |id: &str| -> HashMap<_, _> {
             blocks
                 .iter()

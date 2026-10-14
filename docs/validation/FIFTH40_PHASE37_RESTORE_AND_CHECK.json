@@ -1,0 +1,226 @@
+{
+  "schema": 1,
+  "candidate": "phase37",
+  "status": "automated_and_original_restore_pass_pending_gpu_endurance_and_package",
+  "build": {
+    "status": "passed",
+    "returncode": 0,
+    "elapsed_s": 94.01973444899977,
+    "start_utc": "2026-10-14T17:21:19.129511+00:00",
+    "end_utc": "2026-10-14T17:22:53.164400+00:00",
+    "command": [
+      "cargo",
+      "build",
+      "--offline",
+      "--locked",
+      "--workspace",
+      "--all-features",
+      "--jobs",
+      "2"
+    ],
+    "git_head": "baa8a4cb482bc7a6d6b2c5a14dbcc09ffb2b3c79",
+    "inputs_count": 751,
+    "inputs_unchanged": true,
+    "user_traces_unchanged": true,
+    "profile": {
+      "CARGO_PROFILE_DEV_OPT_LEVEL": "1",
+      "CARGO_PROFILE_DEV_DEBUG": "0",
+      "CARGO_PROFILE_DEV_STRIP": "symbols",
+      "CARGO_PROFILE_DEV_INCREMENTAL": "false",
+      "CARGO_PROFILE_TEST_OPT_LEVEL": "1",
+      "CARGO_PROFILE_TEST_DEBUG": "0",
+      "CARGO_PROFILE_TEST_STRIP": "symbols",
+      "CARGO_PROFILE_TEST_INCREMENTAL": "false",
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "2"
+    },
+    "log_sha256": "b4a161ee2051502fca4031354e348630d2bdff85610e6b7e1c6556454e6919f5",
+    "binaries": {
+      "phase37-viewer": {
+        "path": "<private-qa>/phase37-viewer",
+        "bytes": 172796960,
+        "sha256": "35f4e5ce719e5d7e67c040cab96aabf2acc909dd7cdcb99df4a0f9bcc5472639"
+      },
+      "phase37-cli": {
+        "path": "<private-qa>/phase37-cli",
+        "bytes": 68052912,
+        "sha256": "be8069abe7938cd59f5d654dba38e25b5fa61612a52db0d513dfc5e37e4e5bd8"
+      },
+      "phase37-prepare": {
+        "path": "<private-qa>/phase37-prepare",
+        "bytes": 60584360,
+        "sha256": "910d63a82bee2566287e5fa1335ff9ac2535794832e52cbed3ca0a41051b9ea3"
+      }
+    }
+  },
+  "complete_check": {
+    "status": "passed",
+    "returncode": 0,
+    "elapsed_s": 195.77554969599987,
+    "start_utc": "2026-10-14T17:26:09.256428+00:00",
+    "end_utc": "2026-10-14T17:29:33.971142+00:00",
+    "command": [
+      "bash",
+      "check.sh"
+    ],
+    "git_head": "baa8a4cb482bc7a6d6b2c5a14dbcc09ffb2b3c79",
+    "inputs_count": 31870,
+    "inputs_unchanged": true,
+    "user_traces_unchanged": true,
+    "profile": {
+      "CARGO_PROFILE_DEV_OPT_LEVEL": "1",
+      "CARGO_PROFILE_DEV_DEBUG": "0",
+      "CARGO_PROFILE_DEV_STRIP": "symbols",
+      "CARGO_PROFILE_DEV_INCREMENTAL": "false",
+      "CARGO_PROFILE_TEST_OPT_LEVEL": "1",
+      "CARGO_PROFILE_TEST_DEBUG": "0",
+      "CARGO_PROFILE_TEST_STRIP": "symbols",
+      "CARGO_PROFILE_TEST_INCREMENTAL": "false",
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "2"
+    },
+    "log_sha256": "c72299ec3c2c72381ef0ada5f471147fa94c3cc0b3bdbcf0d9df341e6c325be7",
+    "rust": {
+      "passed": 2070,
+      "failed": 0,
+      "ignored": 49,
+      "summaries": 152
+    },
+    "python": {
+      "tests": 127,
+      "summaries": 25
+    },
+    "changed_inputs": []
+  },
+  "regression_filters": {
+    "status": "passed",
+    "start_utc": "2026-10-14T17:23:25.442376+00:00",
+    "end_utc": "2026-10-14T17:24:56.285209+00:00",
+    "elapsed_s": 90.84283139000036,
+    "git_head": "baa8a4cb482bc7a6d6b2c5a14dbcc09ffb2b3c79",
+    "inputs_count": 751,
+    "inputs_unchanged": true,
+    "protected_build_inputs_match": true,
+    "user_traces_unchanged": true,
+    "trace_restore_required": false,
+    "filters": [
+      "soak::tests",
+      "saved_game::tests",
+      "track_reservations::tests",
+      "dev_inspector::tests",
+      "destination_boards::tests",
+      "scene_cleanup::tests",
+      "native_signals::tests"
+    ],
+    "results": [
+      {
+        "filter": "soak::tests",
+        "returncode": 0,
+        "elapsed_s": 82.83797927100022,
+        "log": "<private-qa>/test-phase37-soak-tests.log",
+        "log_sha256": "c0c7e17fd6453ec8c4bee90b393cc10178e05a5ab278eed63618ffbb5a5ec0e9"
+      },
+      {
+        "filter": "saved_game::tests",
+        "returncode": 0,
+        "elapsed_s": 0.2945149199995285,
+        "log": "<private-qa>/test-phase37-saved_game-tests.log",
+        "log_sha256": "f355a87eee03f2d7b508c0846c00c868f16fadeecea231463f91593a69580fd9"
+      },
+      {
+        "filter": "track_reservations::tests",
+        "returncode": 0,
+        "elapsed_s": 0.3099357129995042,
+        "log": "<private-qa>/test-phase37-track_reservations-tests.log",
+        "log_sha256": "e8fe19601d02e3385ccd14fdef1f37246c662f84a4b1f4eb117a62b2ad51c784"
+      },
+      {
+        "filter": "dev_inspector::tests",
+        "returncode": 0,
+        "elapsed_s": 0.2715726319993337,
+        "log": "<private-qa>/test-phase37-dev_inspector-tests.log",
+        "log_sha256": "9bb471e96527b2fd29a83a6229566b11e64e456cbed488536e988e70f5eca440"
+      },
+      {
+        "filter": "destination_boards::tests",
+        "returncode": 0,
+        "elapsed_s": 0.26169242700052564,
+        "log": "<private-qa>/test-phase37-destination_boards-tests.log",
+        "log_sha256": "f307c9b3b7417f8a659fb04655792f729607cebce5c3c0a22dce5deedbc98096"
+      },
+      {
+        "filter": "scene_cleanup::tests",
+        "returncode": 0,
+        "elapsed_s": 0.27280130599956465,
+        "log": "<private-qa>/test-phase37-scene_cleanup-tests.log",
+        "log_sha256": "e93031fb29772d481dc583aae574f98979547540e000691f2b0c57ee0d67b711"
+      },
+      {
+        "filter": "native_signals::tests",
+        "returncode": 0,
+        "elapsed_s": 6.574783250999644,
+        "log": "<private-qa>/test-phase37-native_signals-tests.log",
+        "log_sha256": "7a8462c9f92fee8fb0bf9d356c6df0eaeda8fe5fceee56113d737f9e8ef5339e"
+      }
+    ]
+  },
+  "original_football_special_before_first_tick": {
+    "status": "passed",
+    "start_utc": "2026-10-14T17:23:06.962954+00:00",
+    "compile_returncode": 0,
+    "command": [
+      "<private-qa>/original-roundtrip37/probe",
+      "<private-qa>/native-chiltern-soak-input36/scenario.toml",
+      "<private-qa>/original-roundtrip37"
+    ],
+    "probe_sha256": "3093225750428ebdf48d23442e377e74de7e92b155eab460624aeba76d530aa1",
+    "source_sha256": "9b6de14b56b9173c45f62d92d82b9c2f6e37aa59e39ed41c916a5f3e31073d4a",
+    "run_returncode": 0,
+    "result": {
+      "car_count": 8,
+      "complete_state_exact": true,
+      "disk_bytes": 8332390,
+      "disk_round_trips": 1,
+      "elapsed_s": 142.903453985,
+      "final_time_s": 5.1999999999999895,
+      "initial_n5667": "diverging",
+      "initial_time_s": 0.0,
+      "memory_round_trips": 1,
+      "next_steps_s": [
+        0.17,
+        1.13
+      ],
+      "services": 20,
+      "status": "passed"
+    },
+    "inputs_unchanged": true,
+    "original_content_unchanged": true,
+    "user_traces_unchanged": true,
+    "elapsed_s": 144.71887136500027,
+    "end_utc": "2026-10-14T17:25:31.681850+00:00",
+    "libraries": {
+      "openrailsrs_viewer3d": {
+        "path": "<repo>/target/debug/deps/libopenrailsrs_viewer3d-b3fa8bb208cf946b.rlib",
+        "sha256": "bc2d6363031f66c3baaa8d3a91d0a23c926f4992e932b0c162fc911dfb497d83",
+        "bytes": 133357380
+      },
+      "serde_json": {
+        "path": "<repo>/target/debug/deps/libserde_json-87a8e1f99d134334.rlib",
+        "sha256": "688f8881d192157e337b7e1b75f77edc09de0e93cbfed0cc21457bf92d2905ef",
+        "bytes": 2468046
+      }
+    },
+    "logs": {
+      "run.log": "0afada724faa9181d6f91ec59c78d51224715695f9d5ad979b4a620a2543e3ed",
+      "compile.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "runtime_source_snapshot_sha256": "9397e55550becf116c503a13ac1bda32dc4a428d8138f861d3cc1562b6d036ee",
+  "full_check_input_snapshot_sha256": "371cb46b3f281e400843ad390468c2916dd34465fc9eb409760f89bc55a9b7e5",
+  "issues_closed": false,
+  "limits": [
+    "The original probe validates complete state restoration and subsequent steps, not full OR physical/visual parity.",
+    "GPU endurance, exclusive frame-time comparison and final Snap acceptance remain separate gates.",
+    "The phase36 native SavedGame rejection remains recorded separately; passing check36 did not establish original-route acceptance."
+  ]
+}

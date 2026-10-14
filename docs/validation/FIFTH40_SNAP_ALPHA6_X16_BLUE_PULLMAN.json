@@ -1,0 +1,1262 @@
+{
+  "schema": 1,
+  "status": "INTERMEDIATE_RENDER_AND_MENU_LAYOUT_PASS",
+  "final_release_certified": false,
+  "scope": "Installed strict Snap x16 built from e0b55efd; three confined Blue Pullman render captures and four Country/Route layout captures. This exact package predates the subsequent pooled-fog-texture correction and its required two-hour acceptance.",
+  "package": {
+    "name": "openrailsrs",
+    "version": "0.1.0-alpha.6",
+    "base": "core24",
+    "confinement": "strict",
+    "revision": "x16",
+    "snap_sha256": "11c0c042e1e8c9dac2f3f52345a33f29803d271fde24de14875deb2dd1eb72b7",
+    "snap_bytes": 165457920,
+    "snapd_state": {
+      "active": true,
+      "current": "x16"
+    }
+  },
+  "source_build_identity": {
+    "root_build_receipt": "snap-final31/receipt.json",
+    "root_build_receipt_sha256": "3ace4db15e9cd5761f96f6ca9c6786c71d3a67613b0abcc0db2cc0c92c2ca254",
+    "source_commit": "e0b55efd782df52dc09581bc5cff478b802d2793",
+    "source_dirty": false,
+    "snap_sha256": "11c0c042e1e8c9dac2f3f52345a33f29803d271fde24de14875deb2dd1eb72b7",
+    "snap_bytes": 165457920,
+    "version": "0.1.0-alpha.6",
+    "source_archive_sha256": "279d5900a14f7667d9c12b1d681da6aca7fad159eb6955910f1d0698acf3f12d",
+    "source_snapshot_sha256": "e435dcc2b73043c60d5a44e82387df4ce93d9654e45e4344ed3bd9eb4c916913",
+    "binary_sha256": {
+      "openrailsrs": "52fc1a4aaaece70993a24f072a1c0fbd0d22dd34fe9e8defddc736ca49257ab4",
+      "openrailsrs-viewer3d": "5f61368d6da3ed996034db83f72557ade3b8784e6d3b4232802e2c6fd5261470",
+      "openrailsrs-prepare-content": "44c95f1b8b75104fd2d975b2253cbc89e2dc09826305162103daf5bee53b4f74"
+    },
+    "build_record_installed_at_creation": false,
+    "build_record_published_at_creation": false
+  },
+  "source_build_identity_receipt_sha256": "5469d5580ba3e8a3affbc7cda87b1f27d78334f33f1cf343d9fe3404f4686de3",
+  "installation_receipt_sha256": "61dc9d884c996e0c99a49175bfefbaeceb5f2bd940886aaed3197e04658f3364",
+  "preparation": {
+    "snap_revision": "x16",
+    "source_launch_sha256": "ef052f53436d8cd2616f10aa08db586cf8eb2545127eb5df7a240443ec92d9a0",
+    "direct_launch_sha256": "53235ac18ce6d71678f4147ccdbc55cd2bb4008230213fb7d9c0249621919201",
+    "graph_sha256": {
+      "track.toml": "97aad2e510b01017370c7d7735604c574745b4bf9a58ff8c362ab9a0fdefd94e",
+      "provenance.json": "83e5f3c45dce7a42443b7be3e5fc56427b696f01eec3bff1b0c70ebd763118ff"
+    },
+    "viewer_sha256": "5f61368d6da3ed996034db83f72557ade3b8784e6d3b4232802e2c6fd5261470",
+    "author_revision": "8236df20ed9f596b8cf15720c43bfbdd0c43125d",
+    "overlay_uses_read_only_author_links": true,
+    "route_stops": 6,
+    "scope": "Current Snap metadata/CON plus an explicit QA WORLD overlay; original menu resolver and click require separate acceptance."
+  },
+  "preparation_receipt_sha256": "28b9633904403b9d25c02d4b90f714dc7395346d6225d0d97ba83de109a3b2d5",
+  "harness": "content-qa-wayland-final.py",
+  "harness_sha256": "21cf5d5910b82274d8c3b1b4220055d492f17b032def5983eab46549b699d2a5",
+  "preserved_executed_harness_sha256": "21cf5d5910b82274d8c3b1b4220055d492f17b032def5983eab46549b699d2a5",
+  "menu_validation_harness": "validate-snap-menu-x16.py",
+  "menu_validation_harness_sha256": "584d08ea9342bf828336c1de95cabf1d507b6e4b07cd5ed136a6fe4fdb7da2e4",
+  "menu_raw_validation_report_sha256": "0cad2ab5777316d7681e75d18275e70dc5d3ec082eebc059be3896e0d2bf4f2e",
+  "runtime": {
+    "surface": "Private LXD QA user and Weston Wayland socket",
+    "gpu": "AMD Radeon RX7600 PCI0000:03:00.0",
+    "execution": "Sequential; no other RX load during these seven captures",
+    "source_cache": "off",
+    "geometry_cache": "off",
+    "texture_cache": "off",
+    "mesa_shader_disk_cache": "disabled",
+    "original_assets_copied": false,
+    "extra_interfaces_granted": false,
+    "checkout_used_as_content": false,
+    "route_root_option_used": false
+  },
+  "acceptance": {
+    "cases_passed": 7,
+    "png_inspected": 7,
+    "country_choices_fully_visible_each": 8,
+    "positive_label_dimensions_required": true,
+    "real_button_ink_required": true,
+    "ink_border_inset_px": 6,
+    "minimum_ink_pixels": 20,
+    "minimum_ink_extent_px": [
+      2,
+      2
+    ],
+    "maximum_text_inner_bounds_tolerance_px": 1,
+    "service_fully_inside_initial_viewport_each": true,
+    "shader_pending_or_failed": 0,
+    "original_render_confined": true,
+    "menu_hook_layout_verified": true,
+    "actual_click_flow_certified": false,
+    "complete_library_resolver_certified": false,
+    "long_run_stability_certified": false,
+    "subsequent_fog_pool_certified": false,
+    "store_publication_certified": false
+  },
+  "render_cases": [
+    {
+      "name": "menu",
+      "status": "PASS",
+      "frame": "current-snap-menu.png",
+      "frame_sha256": "2fdf251cc0bd84e6db8bfb3ca146ce475bac42a4338a9197cec3f285ae7f1df1",
+      "raw_checkpoint_sha256": "c7e35a6d481240ce2b1e6b8f90e0dd6bcf288e780377e4dc866e06863211b278",
+      "log_sha256": "b437614fd7977197068c75c46cf45c2a318a59205b3aafadbef2eb3a72bac479",
+      "frame_size_px": [
+        1000,
+        700
+      ],
+      "elapsed_wall_s": 6.977802256995346,
+      "fresh_frame_verified": true,
+      "screenshot_observer_save_verified": true,
+      "normal_exit_verified": true,
+      "visual_inspection_complete": true,
+      "visual_observation": "Normal route builder: original route preview, complete wrapped service label, readable navigation/footer, ready resource status and Play control. This capture uses a menu-page hook; it does not simulate a selection click.",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      }
+    },
+    {
+      "name": "driver",
+      "status": "PASS",
+      "frame": "current-snap-driver.png",
+      "frame_sha256": "2083a24392f17c931b5af8d34e679e0306289fa73b72139b34d586729776b7f4",
+      "raw_checkpoint_sha256": "4dfcb2581b7a01ba5da2638853132d59000a074983fb6fe7c3354084d618ec03",
+      "log_sha256": "d149e91775ac524f2611aa62f2e7afd93c46368873d4e6f9d3a9f0ff7402a5a1",
+      "frame_size_px": [
+        1000,
+        700
+      ],
+      "elapsed_wall_s": 18.52752259499539,
+      "fresh_frame_verified": true,
+      "screenshot_observer_save_verified": true,
+      "normal_exit_verified": true,
+      "visual_inspection_complete": true,
+      "visual_observation": "Original Blue Pullman cab and gauges visible with coherent track, buildings and trees through the windshield; no placeholder or opaque windshield was observed.",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "train_cars": 8,
+      "gameplay_frames": 9,
+      "gpu_tiles": 4,
+      "gpu_entities": 1885,
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "cab_view": {
+        "camera_eye": [
+          1.9919323921203613,
+          13.182847023010254,
+          -0.06452369689941406
+        ],
+        "camera_inside_geometry": true,
+        "expected_eye": [
+          1.991933822631836,
+          13.182847023010254,
+          -0.06452226638793945
+        ],
+        "eye_error_m": 2.0230486370564904e-06,
+        "mesh_parts": 69,
+        "visible_mesh_parts": 69
+      },
+      "readiness_scope": "AFTER_READY with eight required gameplay frames; this report does not carry a separate state-name field."
+    },
+    {
+      "name": "exterior",
+      "status": "PASS",
+      "frame": "current-snap-exterior.png",
+      "frame_sha256": "08c6749d7e1fb84fbf0cbebf66f4c1fb33966d522f9f0737ab70e4359d4c475c",
+      "raw_checkpoint_sha256": "ad58d799bafa2918eb847079e19f9f12eee52f71cab28ebcefcb15bacb58d291",
+      "log_sha256": "b1b38a5df685e0001a917a4dec208405c0978cd4112b2a341e9a2e7e9b952f30",
+      "frame_size_px": [
+        1000,
+        700
+      ],
+      "elapsed_wall_s": 14.783486727006675,
+      "fresh_frame_verified": true,
+      "screenshot_observer_save_verified": true,
+      "normal_exit_verified": true,
+      "visual_inspection_complete": true,
+      "visual_observation": "Original Blue Pullman exterior, platform, track and nearby buildings/terrain are coherent. The cyan station stopping marker is an intentional gameplay cue. This static view does not certify movement or coupler forces.",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "train_cars": 8,
+      "gameplay_frames": 9,
+      "gpu_tiles": 4,
+      "gpu_entities": 1885,
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "cab_view": null,
+      "readiness_scope": "AFTER_READY with eight required gameplay frames; this report does not carry a separate state-name field."
+    }
+  ],
+  "menu_cases": [
+    {
+      "status": "PASS",
+      "frame": "country-800x600/current-snap-menu.png",
+      "frame_sha256": "510a60d66a21be571f13f64451ac306e8ad593775c886c46b8d92b2ade70c63c",
+      "raw_checkpoint_sha256": "b02fd52c9d6bcd6fafa2f131dd75c4a6ece24ee462b23e5684bc68bc667093e6",
+      "log_sha256": "33dceed3a0efd4059e7e508f55faf412d8c811bd5393888bd0485daf9c0edb7d",
+      "frame_size_px": [
+        800,
+        600
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "viewport": {
+        "max": [
+          734.0,
+          505.0
+        ],
+        "min": [
+          66.0,
+          134.0
+        ],
+        "name": "player-scroll"
+      },
+      "footer": {
+        "max": [
+          734.0,
+          538.0
+        ],
+        "min": [
+          66.0,
+          513.0
+        ],
+        "name": "launch-footer"
+      },
+      "layout": {
+        "country_choices_fully_visible": 8,
+        "commands": [
+          {
+            "max": [
+              396.0,
+              233.0
+            ],
+            "min": [
+              66.0,
+              201.0
+            ],
+            "name": "ui-SelectCountry(0)"
+          },
+          {
+            "max": [
+              734.0,
+              233.0
+            ],
+            "min": [
+              404.0,
+              201.0
+            ],
+            "name": "ui-SelectCountry(1)"
+          },
+          {
+            "max": [
+              396.0,
+              277.0
+            ],
+            "min": [
+              66.0,
+              245.0
+            ],
+            "name": "ui-SelectCountry(2)"
+          },
+          {
+            "max": [
+              734.0,
+              277.0
+            ],
+            "min": [
+              404.0,
+              245.0
+            ],
+            "name": "ui-SelectCountry(3)"
+          },
+          {
+            "max": [
+              396.0,
+              321.0
+            ],
+            "min": [
+              66.0,
+              289.0
+            ],
+            "name": "ui-SelectCountry(4)"
+          },
+          {
+            "max": [
+              734.0,
+              321.0
+            ],
+            "min": [
+              404.0,
+              289.0
+            ],
+            "name": "ui-SelectCountry(5)"
+          },
+          {
+            "max": [
+              396.0,
+              365.0
+            ],
+            "min": [
+              66.0,
+              333.0
+            ],
+            "name": "ui-SelectCountry(6)"
+          },
+          {
+            "max": [
+              734.0,
+              365.0
+            ],
+            "min": [
+              404.0,
+              333.0
+            ],
+            "name": "ui-SelectCountry(7)"
+          }
+        ],
+        "labels": [
+          "Todos los países",
+          "Argentina",
+          "Australia",
+          "Estados Unidos",
+          "Portugal",
+          "Reino Unido",
+          "Sin dato de país",
+          "Francia"
+        ],
+        "button_ink": [
+          {
+            "command": "ui-SelectCountry(0)",
+            "inner_rect_px": [
+              72,
+              207,
+              390,
+              227
+            ],
+            "visible_white_ink_pixels": 247,
+            "ink_bbox_within_inner_rect": [
+              53,
+              3,
+              262,
+              14
+            ]
+          },
+          {
+            "command": "ui-SelectCountry(1)",
+            "inner_rect_px": [
+              410,
+              207,
+              728,
+              227
+            ],
+            "visible_white_ink_pixels": 167,
+            "ink_bbox_within_inner_rect": [
+              90,
+              5,
+              229,
+              17
+            ]
+          },
+          {
+            "command": "ui-SelectCountry(2)",
+            "inner_rect_px": [
+              72,
+              251,
+              390,
+              271
+            ],
+            "visible_white_ink_pixels": 177,
+            "ink_bbox_within_inner_rect": [
+              86,
+              3,
+              232,
+              14
+            ]
+          },
+          {
+            "command": "ui-SelectCountry(3)",
+            "inner_rect_px": [
+              410,
+              251,
+              728,
+              271
+            ],
+            "visible_white_ink_pixels": 231,
+            "ink_bbox_within_inner_rect": [
+              66,
+              5,
+              251,
+              14
+            ]
+          },
+          {
+            "command": "ui-SelectCountry(4)",
+            "inner_rect_px": [
+              72,
+              295,
+              390,
+              315
+            ],
+            "visible_white_ink_pixels": 165,
+            "ink_bbox_within_inner_rect": [
+              90,
+              3,
+              228,
+              17
+            ]
+          },
+          {
+            "command": "ui-SelectCountry(5)",
+            "inner_rect_px": [
+              410,
+              295,
+              728,
+              315
+            ],
+            "visible_white_ink_pixels": 185,
+            "ink_bbox_within_inner_rect": [
+              78,
+              5,
+              239,
+              14
+            ]
+          },
+          {
+            "command": "ui-SelectCountry(6)",
+            "inner_rect_px": [
+              72,
+              339,
+              390,
+              359
+            ],
+            "visible_white_ink_pixels": 226,
+            "ink_bbox_within_inner_rect": [
+              58,
+              5,
+              259,
+              17
+            ]
+          },
+          {
+            "command": "ui-SelectCountry(7)",
+            "inner_rect_px": [
+              410,
+              339,
+              728,
+              359
+            ],
+            "visible_white_ink_pixels": 133,
+            "ink_bbox_within_inner_rect": [
+              94,
+              5,
+              223,
+              14
+            ]
+          },
+          {
+            "command": "ui-NewGameStep(Country)",
+            "inner_rect_px": [
+              72,
+              100,
+              147,
+              120
+            ],
+            "visible_white_ink_pixels": 64,
+            "ink_bbox_within_inner_rect": [
+              8,
+              4,
+              67,
+              13
+            ]
+          },
+          {
+            "command": "ui-Close",
+            "inner_rect_px": [
+              253,
+              60,
+              359,
+              80
+            ],
+            "visible_white_ink_pixels": 100,
+            "ink_bbox_within_inner_rect": [
+              7,
+              3,
+              98,
+              14
+            ]
+          }
+        ]
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "visual_inspection_pending": false,
+      "visual_inspection_complete": true,
+      "visual_observation": "Eight country choices, navigation and footer fully visible.",
+      "limitation": null
+    },
+    {
+      "status": "PASS",
+      "frame": "route-800x600/current-snap-menu.png",
+      "frame_sha256": "d16cdac71bc88c1557d83b14d6759c3e95b082517537ebcb0b699218fdd1f22f",
+      "raw_checkpoint_sha256": "00ae44318e49a2374b0617167a94b10dc9e4b64a55182008db5313abe3ea848c",
+      "log_sha256": "d9848497254d9fe1ba463465efd03b0709c7093245b57e11b42e59b67633e5e9",
+      "frame_size_px": [
+        800,
+        600
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "viewport": {
+        "max": [
+          734.0,
+          454.0
+        ],
+        "min": [
+          66.0,
+          134.0
+        ],
+        "name": "player-scroll"
+      },
+      "footer": {
+        "max": [
+          734.0,
+          538.0
+        ],
+        "min": [
+          66.0,
+          462.0
+        ],
+        "name": "launch-footer"
+      },
+      "layout": {
+        "service_button": {
+          "max": [
+            734.0,
+            288.0
+          ],
+          "min": [
+            66.0,
+            256.0
+          ],
+          "name": "ui-ShowChoices(Service)"
+        },
+        "service_label": {
+          "size": [
+            644.0,
+            16.0
+          ],
+          "text": "Servicio: Chiltern extendido: Northolt Park → Gerrards Cross · Elegir",
+          "visible": true
+        },
+        "service_inner_size_px": [
+          644.0,
+          18.0
+        ],
+        "maximum_tolerance_px": 1,
+        "service_fully_inside_initial_viewport": true,
+        "button_ink": [
+          {
+            "command": "ui-NewGameStep(Country)",
+            "inner_rect_px": [
+              72,
+              140,
+              728,
+              160
+            ],
+            "visible_white_ink_pixels": 288,
+            "ink_bbox_within_inner_rect": [
+              204,
+              3,
+              453,
+              14
+            ]
+          },
+          {
+            "command": "ui-NewGameStep(Train)",
+            "inner_rect_px": [
+              72,
+              512,
+              218,
+              532
+            ],
+            "visible_white_ink_pixels": 163,
+            "ink_bbox_within_inner_rect": [
+              7,
+              5,
+              138,
+              17
+            ]
+          },
+          {
+            "command": "ui-NewGameStep(Environment)",
+            "inner_rect_px": [
+              443,
+              100,
+              581,
+              120
+            ],
+            "visible_white_ink_pixels": 131,
+            "ink_bbox_within_inner_rect": [
+              7,
+              3,
+              130,
+              17
+            ]
+          },
+          {
+            "command": "ui-NewGameStep(Train)",
+            "inner_rect_px": [
+              348,
+              100,
+              423,
+              120
+            ],
+            "visible_white_ink_pixels": 54,
+            "ink_bbox_within_inner_rect": [
+              8,
+              5,
+              67,
+              14
+            ]
+          },
+          {
+            "command": "ui-NewGameStep(Route)",
+            "inner_rect_px": [
+              167,
+              100,
+              328,
+              120
+            ],
+            "visible_white_ink_pixels": 148,
+            "ink_bbox_within_inner_rect": [
+              7,
+              4,
+              154,
+              16
+            ]
+          },
+          {
+            "command": "ui-NewGameStep(Country)",
+            "inner_rect_px": [
+              72,
+              100,
+              147,
+              120
+            ],
+            "visible_white_ink_pixels": 64,
+            "ink_bbox_within_inner_rect": [
+              8,
+              5,
+              67,
+              14
+            ]
+          },
+          {
+            "command": "ui-Close",
+            "inner_rect_px": [
+              253,
+              60,
+              359,
+              80
+            ],
+            "visible_white_ink_pixels": 100,
+            "ink_bbox_within_inner_rect": [
+              7,
+              3,
+              98,
+              14
+            ]
+          },
+          {
+            "command": "ui-ShowChoices(Service)",
+            "inner_rect_px": [
+              72,
+              262,
+              728,
+              282
+            ],
+            "visible_white_ink_pixels": 625,
+            "ink_bbox_within_inner_rect": [
+              7,
+              3,
+              545,
+              17
+            ]
+          }
+        ]
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "visual_inspection_pending": false,
+      "visual_inspection_complete": true,
+      "visual_observation": "Full long service text visible within its selector and initial viewport; selector wraps to two lines at640x480.",
+      "limitation": null
+    },
+    {
+      "status": "PASS",
+      "frame": "country-640x480/current-snap-menu.png",
+      "frame_sha256": "48dc1519d9f25c1c47c6a34354e5507cde6bffbb56c05dc22f14b08ce2f8cbae",
+      "raw_checkpoint_sha256": "fbffcc8cf27d28bbcc6ceee96d8229fcbe9f11930224febeda5231f4a0f06d25",
+      "log_sha256": "eae2275c8a63966c5db07160d249ac580d39ea3c48b8d2bdd7e162337d29ea0a",
+      "frame_size_px": [
+        640,
+        480
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "viewport": {
+        "max": [
+          584.0,
+          392.0
+        ],
+        "min": [
+          56.0,
+          127.0
+        ],
+        "name": "player-scroll"
+      },
+      "footer": {
+        "max": [
+          584.0,
+          425.0
+        ],
+        "min": [
+          56.0,
+          400.0
+        ],
+        "name": "launch-footer"
+      },
+      "layout": {
+        "country_choices_fully_visible": 8,
+        "commands": [
+          {
+            "max": [
+              316.0,
+              226.0
+            ],
+            "min": [
+              56.0,
+              194.0
+            ],
+            "name": "ui-SelectCountry(0)"
+          },
+          {
+            "max": [
+              584.0,
+              226.0
+            ],
+            "min": [
+              324.0,
+              194.0
+            ],
+            "name": "ui-SelectCountry(1)"
+          },
+          {
+            "max": [
+              316.0,
+              270.0
+            ],
+            "min": [
+              56.0,
+              238.0
+            ],
+            "name": "ui-SelectCountry(2)"
+          },
+          {
+            "max": [
+              584.0,
+              270.0
+            ],
+            "min": [
+              324.0,
+              238.0
+            ],
+            "name": "ui-SelectCountry(3)"
+          },
+          {
+            "max": [
+              316.0,
+              314.0
+            ],
+            "min": [
+              56.0,
+              282.0
+            ],
+            "name": "ui-SelectCountry(4)"
+          },
+          {
+            "max": [
+              584.0,
+              314.0
+            ],
+            "min": [
+              324.0,
+              282.0
+            ],
+            "name": "ui-SelectCountry(5)"
+          },
+          {
+            "max": [
+              316.0,
+              358.0
+            ],
+            "min": [
+              56.0,
+              326.0
+            ],
+            "name": "ui-SelectCountry(6)"
+          },
+          {
+            "max": [
+              584.0,
+              358.0
+            ],
+            "min": [
+              324.0,
+              326.0
+            ],
+            "name": "ui-SelectCountry(7)"
+          }
+        ],
+        "labels": [
+          "Todos los países",
+          "Argentina",
+          "Australia",
+          "Estados Unidos",
+          "Portugal",
+          "Reino Unido",
+          "Sin dato de país",
+          "Francia"
+        ],
+        "button_ink": [
+          {
+            "command": "ui-SelectCountry(0)",
+            "inner_rect_px": [
+              62,
+              200,
+              310,
+              220
+            ],
+            "visible_white_ink_pixels": 247,
+            "ink_bbox_within_inner_rect": [
+              18,
+              3,
+              227,
+              14
+            ]
+          },
+          {
+            "command": "ui-SelectCountry(1)",
+            "inner_rect_px": [
+              330,
+              200,
+              578,
+              220
+            ],
+            "visible_white_ink_pixels": 167,
+            "ink_bbox_within_inner_rect": [
+              54,
+              5,
+              193,
+              17
+            ]
+          },
+          {
+            "command": "ui-SelectCountry(2)",
+            "inner_rect_px": [
+              62,
+              244,
+              310,
+              264
+            ],
+            "visible_white_ink_pixels": 177,
+            "ink_bbox_within_inner_rect": [
+              50,
+              3,
+              196,
+              14
+            ]
+          },
+          {
+            "command": "ui-SelectCountry(3)",
+            "inner_rect_px": [
+              330,
+              244,
+              578,
+              264
+            ],
+            "visible_white_ink_pixels": 231,
+            "ink_bbox_within_inner_rect": [
+              31,
+              5,
+              216,
+              14
+            ]
+          },
+          {
+            "command": "ui-SelectCountry(4)",
+            "inner_rect_px": [
+              62,
+              288,
+              310,
+              308
+            ],
+            "visible_white_ink_pixels": 165,
+            "ink_bbox_within_inner_rect": [
+              54,
+              3,
+              192,
+              17
+            ]
+          },
+          {
+            "command": "ui-SelectCountry(5)",
+            "inner_rect_px": [
+              330,
+              288,
+              578,
+              308
+            ],
+            "visible_white_ink_pixels": 185,
+            "ink_bbox_within_inner_rect": [
+              42,
+              5,
+              203,
+              14
+            ]
+          },
+          {
+            "command": "ui-SelectCountry(6)",
+            "inner_rect_px": [
+              62,
+              332,
+              310,
+              352
+            ],
+            "visible_white_ink_pixels": 226,
+            "ink_bbox_within_inner_rect": [
+              23,
+              5,
+              224,
+              17
+            ]
+          },
+          {
+            "command": "ui-SelectCountry(7)",
+            "inner_rect_px": [
+              330,
+              332,
+              578,
+              352
+            ],
+            "visible_white_ink_pixels": 133,
+            "ink_bbox_within_inner_rect": [
+              59,
+              5,
+              188,
+              14
+            ]
+          },
+          {
+            "command": "ui-NewGameStep(Country)",
+            "inner_rect_px": [
+              62,
+              93,
+              137,
+              113
+            ],
+            "visible_white_ink_pixels": 64,
+            "ink_bbox_within_inner_rect": [
+              8,
+              4,
+              67,
+              13
+            ]
+          },
+          {
+            "command": "ui-Close",
+            "inner_rect_px": [
+              243,
+              53,
+              349,
+              73
+            ],
+            "visible_white_ink_pixels": 100,
+            "ink_bbox_within_inner_rect": [
+              7,
+              3,
+              98,
+              14
+            ]
+          }
+        ]
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "visual_inspection_pending": false,
+      "visual_inspection_complete": true,
+      "visual_observation": "Eight country choices, navigation and footer fully visible.",
+      "limitation": "At640x480 the optional country explanation below all eight choices is partially clipped; the choices, heading and fixed footer remain complete."
+    },
+    {
+      "status": "PASS",
+      "frame": "route-640x480/current-snap-menu.png",
+      "frame_sha256": "bc1be4c48dfb0357c6dbf82376108132e02d84dc2150c52eab96b4676305cf94",
+      "raw_checkpoint_sha256": "7ff6010d3326c95f9bfb33d2b3f49d4f4f1f351d6bf3c4e6087fd97e06797574",
+      "log_sha256": "bc4a43744d0e3d962073595d077fc2703087a5c9816074301020c3659607e1b5",
+      "frame_size_px": [
+        640,
+        480
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "viewport": {
+        "max": [
+          584.0,
+          341.0
+        ],
+        "min": [
+          56.0,
+          127.0
+        ],
+        "name": "player-scroll"
+      },
+      "footer": {
+        "max": [
+          584.0,
+          425.0
+        ],
+        "min": [
+          56.0,
+          349.0
+        ],
+        "name": "launch-footer"
+      },
+      "layout": {
+        "service_button": {
+          "max": [
+            584.0,
+            295.0
+          ],
+          "min": [
+            56.0,
+            249.0
+          ],
+          "name": "ui-ShowChoices(Service)"
+        },
+        "service_label": {
+          "size": [
+            504.0,
+            32.0
+          ],
+          "text": "Servicio: Chiltern extendido: Northolt Park → Gerrards Cross · Elegir",
+          "visible": true
+        },
+        "service_inner_size_px": [
+          504.0,
+          32.0
+        ],
+        "maximum_tolerance_px": 1,
+        "service_fully_inside_initial_viewport": true,
+        "button_ink": [
+          {
+            "command": "ui-NewGameStep(Country)",
+            "inner_rect_px": [
+              62,
+              133,
+              578,
+              153
+            ],
+            "visible_white_ink_pixels": 287,
+            "ink_bbox_within_inner_rect": [
+              133,
+              3,
+              382,
+              14
+            ]
+          },
+          {
+            "command": "ui-NewGameStep(Train)",
+            "inner_rect_px": [
+              62,
+              399,
+              208,
+              419
+            ],
+            "visible_white_ink_pixels": 163,
+            "ink_bbox_within_inner_rect": [
+              7,
+              5,
+              138,
+              17
+            ]
+          },
+          {
+            "command": "ui-NewGameStep(Environment)",
+            "inner_rect_px": [
+              433,
+              93,
+              571,
+              113
+            ],
+            "visible_white_ink_pixels": 131,
+            "ink_bbox_within_inner_rect": [
+              7,
+              3,
+              130,
+              17
+            ]
+          },
+          {
+            "command": "ui-NewGameStep(Train)",
+            "inner_rect_px": [
+              338,
+              93,
+              413,
+              113
+            ],
+            "visible_white_ink_pixels": 54,
+            "ink_bbox_within_inner_rect": [
+              8,
+              5,
+              67,
+              14
+            ]
+          },
+          {
+            "command": "ui-NewGameStep(Route)",
+            "inner_rect_px": [
+              157,
+              93,
+              318,
+              113
+            ],
+            "visible_white_ink_pixels": 148,
+            "ink_bbox_within_inner_rect": [
+              7,
+              4,
+              154,
+              16
+            ]
+          },
+          {
+            "command": "ui-NewGameStep(Country)",
+            "inner_rect_px": [
+              62,
+              93,
+              137,
+              113
+            ],
+            "visible_white_ink_pixels": 64,
+            "ink_bbox_within_inner_rect": [
+              8,
+              5,
+              67,
+              14
+            ]
+          },
+          {
+            "command": "ui-Close",
+            "inner_rect_px": [
+              243,
+              53,
+              349,
+              73
+            ],
+            "visible_white_ink_pixels": 100,
+            "ink_bbox_within_inner_rect": [
+              7,
+              3,
+              98,
+              14
+            ]
+          },
+          {
+            "command": "ui-ShowChoices(Service)",
+            "inner_rect_px": [
+              62,
+              255,
+              578,
+              289
+            ],
+            "visible_white_ink_pixels": 636,
+            "ink_bbox_within_inner_rect": [
+              7,
+              2,
+              488,
+              32
+            ]
+          }
+        ]
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "visual_inspection_pending": false,
+      "visual_inspection_complete": true,
+      "visual_observation": "Full long service text visible within its selector and initial viewport; selector wraps to two lines at640x480.",
+      "limitation": null
+    }
+  ],
+  "preserved_previous_evidence": [
+    "FIFTH40_SNAP_ALPHA6_X15_BLUE_PULLMAN.json",
+    "FIFTH40_MENU_PHASE29_REJECTED.json",
+    "FIFTH40_MENU_PHASE30_REJECTED.json",
+    "FIFTH40_MENU_PHASE31.json"
+  ],
+  "limitations": [
+    "Driver and exterior use current packaged graph/CON metadata plus a separate explicit read-only author WORLD overlay under Common. They verify confined original render, not the original menu resolver or actual click flow.",
+    "Menu-page hooks call the normal builders; they do not test country selection events, every resource-library combination or every UI page.",
+    "Static readiness captures do not certify whole-route physics, moving formation behavior, intense-weather performance or two-hour memory stability.",
+    "x16 predates the fog-texture pool correction. No acceptance of issue403 or future binaries may be inferred.",
+    "All previous images and failed attempts are preserved; seven new images belong solely to revision x16."
+  ]
+}

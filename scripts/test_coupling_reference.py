@@ -30,7 +30,12 @@ class CouplingReferenceTests(unittest.TestCase):
                          "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679")
         for path, expected in manifest["files"].items():
             self.assertEqual(hashlib.sha256((ROOT / path).read_bytes()).hexdigest(), expected, path)
-        for path, expected in manifest["runtime_source_files"].items():
+        replay = manifest["replays"][-1]
+        self.assertEqual(replay["status"], "pass")
+        self.assertTrue(replay["source_inputs_unchanged_during_build"])
+        self.assertEqual(replay["rust_output_sha256"], manifest["rust_capture"]["rust_output_sha256"])
+        self.assertTrue(replay["rust_output_byte_identical_to_historical32"])
+        for path, expected in replay["runtime_source_files"].items():
             self.assertEqual(hashlib.sha256((ROOT / path).read_bytes()).hexdigest(), expected, path)
 
     def test_reference_cannot_reset_pressure_or_keep_a_donor_reservation(self):

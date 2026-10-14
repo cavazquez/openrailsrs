@@ -376,6 +376,47 @@ las pestañas y «Jugar»: ninguna debe aparecer como un rectángulo vacío ni q
 tapada por el contenido. Las listas y herramientas posteriores pueden desplazarse
 mientras el pie permanece fijo.
 
+La revisión Snap `x16` incorpora la corrección de composición de fase 31. Se
+repitieron siete capturas bajo confinamiento estricto: menú, cabina y exterior de
+Blue Pullman, más País/Ruta a 800×600 y 640×480. Las siete imágenes fueron
+inspeccionadas; los cuatro menús también exigen tinta visible, dimensiones de
+texto positivas, ocho opciones completas y el servicio largo dentro de su
+botón y del viewport. El
+[recibo intermedio x16](validation/FIFTH40_SNAP_ALPHA6_X16_BLUE_PULLMAN.json)
+identifica el artefacto y la fuente `e0b55efd`; conserva x15 y los rechazos
+anteriores. A 640×480 sólo se recorta parcialmente la nota explicativa secundaria
+debajo de las ocho opciones de país; el encabezado, las opciones y el pie fijo
+permanecen completos.
+
+Esta revisión sigue siendo intermedia: las vistas originales usan el mismo
+overlay explícito de lectura en Common y los menús usan hooks de captura del
+constructor normal, sin simular clics. x16 precede al pool de texturas de niebla;
+no certifica esa corrección posterior ni la prueba obligatoria de memoria de dos
+horas. La aceptación del paquete publicado debe identificar su propia fuente,
+revisión y capturas.
+
+El candidato final de renderizado `x17` (`0.1.0-alpha.6`, fuente `bd0b5e43`)
+repitió nueve capturas en el Snap estricto: las siete de juego/menú anteriores y
+dos referencias de niebla con semilla 1, faros altos, hora 09:55, calidad
+volumétrica de 32 pasos y las mismas cámaras. El
+[recibo de x17](validation/FIFTH40_SNAP_ALPHA6_X17_BLUE_PULLMAN.json)
+conserva identidad del paquete, PNG nuevos, observador de captura, recursos
+completos y cero shaders pendientes o fallidos. Los cuatro menús pequeños pasan
+además tinta visible y límites reales; todas las imágenes se inspeccionaron.
+
+El pool de niebla conserva el generador 32³/R8, el sampler, el shader y la
+evolución climática. Las dos vistas mantienen el aspecto diurno de x16: cielo
+gris y escena más oscura. Estas imágenes no demuestran un banco denso que oculte
+claramente la vía cercana ni un haz destacado; esos valores de telemetría no
+sustituyen una comprobación visual. La reutilización cambia la vida útil de la
+textura, no pretende aumentar la intensidad del clima.
+
+x17 acepta el renderizado y la composición de este paquete concreto. El
+lanzamiento directo con overlay y los hooks de menú mantienen el alcance ya
+descrito; los clics reales tienen pruebas separadas. La estabilidad de memoria
+requiere su ensayo real de dos horas del issue #403, que sigue pendiente, y la
+publicación en la tienda no se infiere de estas capturas.
+
 Una prueba pesada de nieve y cámara ABA en la GPU integrada recibió `DeviceLost`
 de RADV y falló; no se cuenta como aceptación. Las capturas livianas de pasajeros,
 pared y nieve en curva pasaron en esa GPU, y el WORLD nevado se comprobó aparte en

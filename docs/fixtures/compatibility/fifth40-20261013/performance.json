@@ -3,7 +3,7 @@
   "reference_openrails": "1.6.1",
   "bevy": "0.19.1",
   "hanabi": "0.19.0",
-  "status": "Timing, caches, audio banks, quality and residency measured; final 7200-second lifetime test remains in progress.",
+  "status": "Performance measurements preserved; final prolonged stability and causal frame improvement remain pending.",
   "hardware": {
     "cpu": "AMD Ryzen 5 9600X",
     "benchmark_gpu": "AMD Radeon RX 7600",
@@ -2436,7 +2436,1166 @@
     "limits": {
       "samples": 64,
       "unique_pcm_mib": 128,
-      "state_mailbox": 2
+      "state_mailbox": 2,
+      "samples_scope": "Target of64 cached idle/evictable entries; live loop references are preserved, so the entry count may exceed64 when all entries are active. Unique PCM remains within the128MiB payload budget; allocator/program metadata overhead is separate."
+    },
+    "baseline_scope": "Measured SoundReport from the real D9 executable and original SMS/WAV files with ALSA-null device=true, not an eager-policy estimate. Legacy baseline has no per-bank read/decode timing fields; those are unavailable rather than inferred.",
+    "final_confirmation27": {
+      "raw_report_sha256": "71d1fc06b99d03fb8b41d9905f7995a8c586d35f6c12e333921310aecc4aa2f4",
+      "configuration": {
+        "scenario_sha256": "faac5f908bfafd4a73ecf5be3e1c9601970c110b8926b7c80ac3221387baf5bf",
+        "seed": 42,
+        "camera": "driver",
+        "checkpoint_m": 2500,
+        "audio": "private ALSA null",
+        "cache_scope": "cold/warm refers to this executable's private application-data cache; OS file cache and Mesa shader cache are not cleared"
+      },
+      "versions": {
+        "baseline": {
+          "binary_sha256": "fcc8bee54cd6310f5b723f50e9cc0caa8576c6bc0db14da2ef2efcb254dd2053",
+          "measured_device": true,
+          "programs": 48,
+          "streams": 174,
+          "sample_references": 69,
+          "active_voices": 38,
+          "unique_pcm_mib": 10.446857452392578,
+          "per_bank_metrics_available": false,
+          "banks": null,
+          "cache": {
+            "sample_cache_hits": null,
+            "sample_cache_misses": null,
+            "sample_cache_evictions": null,
+            "file_open_us": null,
+            "decode_us": null
+          }
+        },
+        "candidate": {
+          "binary_sha256": "b00a0840c9179fd7d357436d144d16e36224b3b3a4d66f9154a0d9f7013c1217",
+          "measured_device": true,
+          "programs": 48,
+          "streams": 174,
+          "sample_references": 69,
+          "active_voices": 38,
+          "unique_pcm_mib": 4.939460754394531,
+          "per_bank_metrics_available": true,
+          "banks": [
+            {
+              "program": "RF_BP_DMBSeng.sms",
+              "program_read_parse_us": 1123,
+              "referenced_samples": 21,
+              "resident_pcm_mib": 0.9818000793457031,
+              "resident_samples": 9,
+              "sample_decode_us": 2729,
+              "sample_file_open_us": 76,
+              "train": 0,
+              "vehicle": 0
+            },
+            {
+              "program": "RF_BP_DMBSwag.sms",
+              "program_read_parse_us": 941,
+              "referenced_samples": 28,
+              "resident_pcm_mib": 1.7180633544921875,
+              "resident_samples": 12,
+              "sample_decode_us": 4178,
+              "sample_file_open_us": 38,
+              "train": 0,
+              "vehicle": 0
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 311,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 0,
+              "vehicle": 1
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 281,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 0,
+              "vehicle": 1
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 293,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 0,
+              "vehicle": 2
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 319,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 0,
+              "vehicle": 2
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 281,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 0,
+              "vehicle": 3
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 303,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 0,
+              "vehicle": 3
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 298,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 0,
+              "vehicle": 4
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 277,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 0,
+              "vehicle": 4
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 272,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 0,
+              "vehicle": 5
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 297,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 0,
+              "vehicle": 5
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 285,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 0,
+              "vehicle": 6
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 266,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 0,
+              "vehicle": 6
+            },
+            {
+              "program": "RF_BP_DMBSeng.sms",
+              "program_read_parse_us": 769,
+              "referenced_samples": 21,
+              "resident_pcm_mib": 0.9818000793457031,
+              "resident_samples": 9,
+              "sample_decode_us": 2729,
+              "sample_file_open_us": 76,
+              "train": 0,
+              "vehicle": 7
+            },
+            {
+              "program": "RF_BP_DMBSwag.sms",
+              "program_read_parse_us": 858,
+              "referenced_samples": 28,
+              "resident_pcm_mib": 1.7180633544921875,
+              "resident_samples": 12,
+              "sample_decode_us": 4178,
+              "sample_file_open_us": 38,
+              "train": 0,
+              "vehicle": 7
+            },
+            {
+              "program": "RF_BP_DMBSeng.sms",
+              "program_read_parse_us": 1038,
+              "referenced_samples": 21,
+              "resident_pcm_mib": 0.9818000793457031,
+              "resident_samples": 9,
+              "sample_decode_us": 2729,
+              "sample_file_open_us": 76,
+              "train": 1,
+              "vehicle": 0
+            },
+            {
+              "program": "RF_BP_DMBSwag.sms",
+              "program_read_parse_us": 1074,
+              "referenced_samples": 28,
+              "resident_pcm_mib": 1.7180633544921875,
+              "resident_samples": 12,
+              "sample_decode_us": 4178,
+              "sample_file_open_us": 38,
+              "train": 1,
+              "vehicle": 0
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 284,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 1,
+              "vehicle": 1
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 269,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 1,
+              "vehicle": 1
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 267,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 1,
+              "vehicle": 2
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 263,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 1,
+              "vehicle": 2
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 266,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 1,
+              "vehicle": 3
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 261,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 1,
+              "vehicle": 3
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 266,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 1,
+              "vehicle": 4
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 271,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 1,
+              "vehicle": 4
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 269,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 1,
+              "vehicle": 5
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 267,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 1,
+              "vehicle": 5
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 268,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 1,
+              "vehicle": 6
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 269,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 1,
+              "vehicle": 6
+            },
+            {
+              "program": "RF_BP_DMBSeng.sms",
+              "program_read_parse_us": 764,
+              "referenced_samples": 21,
+              "resident_pcm_mib": 0.9818000793457031,
+              "resident_samples": 9,
+              "sample_decode_us": 2729,
+              "sample_file_open_us": 76,
+              "train": 1,
+              "vehicle": 7
+            },
+            {
+              "program": "RF_BP_DMBSwag.sms",
+              "program_read_parse_us": 941,
+              "referenced_samples": 28,
+              "resident_pcm_mib": 1.7180633544921875,
+              "resident_samples": 12,
+              "sample_decode_us": 4178,
+              "sample_file_open_us": 38,
+              "train": 1,
+              "vehicle": 7
+            },
+            {
+              "program": "RF_BP_DMBSeng.sms",
+              "program_read_parse_us": 756,
+              "referenced_samples": 21,
+              "resident_pcm_mib": 0.9818000793457031,
+              "resident_samples": 9,
+              "sample_decode_us": 2729,
+              "sample_file_open_us": 76,
+              "train": 2,
+              "vehicle": 0
+            },
+            {
+              "program": "RF_BP_DMBSwag.sms",
+              "program_read_parse_us": 843,
+              "referenced_samples": 28,
+              "resident_pcm_mib": 1.7180633544921875,
+              "resident_samples": 12,
+              "sample_decode_us": 4178,
+              "sample_file_open_us": 38,
+              "train": 2,
+              "vehicle": 0
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 279,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 2,
+              "vehicle": 1
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 271,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 2,
+              "vehicle": 1
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 268,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 2,
+              "vehicle": 2
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 266,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 2,
+              "vehicle": 2
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 264,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 2,
+              "vehicle": 3
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 268,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 2,
+              "vehicle": 3
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 268,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 2,
+              "vehicle": 4
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 270,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 2,
+              "vehicle": 4
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 381,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 2,
+              "vehicle": 5
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 309,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 2,
+              "vehicle": 5
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 272,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 2,
+              "vehicle": 6
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 268,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 7408,
+              "sample_file_open_us": 153,
+              "train": 2,
+              "vehicle": 6
+            },
+            {
+              "program": "RF_BP_DMBSeng.sms",
+              "program_read_parse_us": 787,
+              "referenced_samples": 21,
+              "resident_pcm_mib": 0.9818000793457031,
+              "resident_samples": 9,
+              "sample_decode_us": 2729,
+              "sample_file_open_us": 76,
+              "train": 2,
+              "vehicle": 7
+            },
+            {
+              "program": "RF_BP_DMBSwag.sms",
+              "program_read_parse_us": 859,
+              "referenced_samples": 28,
+              "resident_pcm_mib": 1.7180633544921875,
+              "resident_samples": 12,
+              "sample_decode_us": 4178,
+              "sample_file_open_us": 38,
+              "train": 2,
+              "vehicle": 7
+            }
+          ],
+          "cache": {
+            "sample_cache_hits": 4808,
+            "sample_cache_misses": 38,
+            "sample_cache_evictions": 0,
+            "file_open_us": 257,
+            "decode_us": 13365
+          }
+        }
+      }
+    },
+    "final_confirmation32": {
+      "raw_report_sha256": "e70f2718f70be6071e61aa7a8c502f139e93de1c7bfd0e22574cdac1a956f29c",
+      "configuration": {
+        "scenario_sha256": "faac5f908bfafd4a73ecf5be3e1c9601970c110b8926b7c80ac3221387baf5bf",
+        "seed": 42,
+        "camera": "driver",
+        "checkpoint_m": 2500.0,
+        "audio": "private ALSA null",
+        "cache_scope": "cold/warm refers to this executable's private application-data cache; OS file cache and Mesa shader cache are not cleared"
+      },
+      "versions": {
+        "baseline": {
+          "binary_sha256": "fcc8bee54cd6310f5b723f50e9cc0caa8576c6bc0db14da2ef2efcb254dd2053",
+          "measured_device": true,
+          "programs": 48,
+          "streams": 174,
+          "sample_references": 69,
+          "active_voices": 38,
+          "unique_pcm_mib": 10.446857452392578,
+          "per_bank_metrics_available": false,
+          "banks": null,
+          "cache": {
+            "sample_cache_hits": null,
+            "sample_cache_misses": null,
+            "sample_cache_evictions": null,
+            "file_open_us": null,
+            "decode_us": null
+          }
+        },
+        "candidate": {
+          "binary_sha256": "4ee97d35ead40ca675852ea0a011bc1e8c684cc3d86f88c3a99b82ed5032276f",
+          "measured_device": true,
+          "programs": 48,
+          "streams": 174,
+          "sample_references": 69,
+          "active_voices": 38,
+          "unique_pcm_mib": 4.939460754394531,
+          "per_bank_metrics_available": true,
+          "banks": [
+            {
+              "program": "RF_BP_DMBSeng.sms",
+              "program_read_parse_us": 1329,
+              "referenced_samples": 21,
+              "resident_pcm_mib": 0.9818000793457031,
+              "resident_samples": 9,
+              "sample_decode_us": 2847,
+              "sample_file_open_us": 73,
+              "train": 0,
+              "vehicle": 0
+            },
+            {
+              "program": "RF_BP_DMBSwag.sms",
+              "program_read_parse_us": 1206,
+              "referenced_samples": 28,
+              "resident_pcm_mib": 1.7180633544921875,
+              "resident_samples": 12,
+              "sample_decode_us": 4163,
+              "sample_file_open_us": 32,
+              "train": 0,
+              "vehicle": 0
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 390,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 0,
+              "vehicle": 1
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 342,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 0,
+              "vehicle": 1
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 360,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 0,
+              "vehicle": 2
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 364,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 0,
+              "vehicle": 2
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 362,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 0,
+              "vehicle": 3
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 288,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 0,
+              "vehicle": 3
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 291,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 0,
+              "vehicle": 4
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 275,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 0,
+              "vehicle": 4
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 272,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 0,
+              "vehicle": 5
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 269,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 0,
+              "vehicle": 5
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 273,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 0,
+              "vehicle": 6
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 268,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 0,
+              "vehicle": 6
+            },
+            {
+              "program": "RF_BP_DMBSeng.sms",
+              "program_read_parse_us": 1104,
+              "referenced_samples": 21,
+              "resident_pcm_mib": 0.9818000793457031,
+              "resident_samples": 9,
+              "sample_decode_us": 2847,
+              "sample_file_open_us": 73,
+              "train": 0,
+              "vehicle": 7
+            },
+            {
+              "program": "RF_BP_DMBSwag.sms",
+              "program_read_parse_us": 1072,
+              "referenced_samples": 28,
+              "resident_pcm_mib": 1.7180633544921875,
+              "resident_samples": 12,
+              "sample_decode_us": 4163,
+              "sample_file_open_us": 32,
+              "train": 0,
+              "vehicle": 7
+            },
+            {
+              "program": "RF_BP_DMBSeng.sms",
+              "program_read_parse_us": 774,
+              "referenced_samples": 21,
+              "resident_pcm_mib": 0.9818000793457031,
+              "resident_samples": 9,
+              "sample_decode_us": 2847,
+              "sample_file_open_us": 73,
+              "train": 1,
+              "vehicle": 0
+            },
+            {
+              "program": "RF_BP_DMBSwag.sms",
+              "program_read_parse_us": 887,
+              "referenced_samples": 28,
+              "resident_pcm_mib": 1.7180633544921875,
+              "resident_samples": 12,
+              "sample_decode_us": 4163,
+              "sample_file_open_us": 32,
+              "train": 1,
+              "vehicle": 0
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 290,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 1,
+              "vehicle": 1
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 272,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 1,
+              "vehicle": 1
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 287,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 1,
+              "vehicle": 2
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 308,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 1,
+              "vehicle": 2
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 276,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 1,
+              "vehicle": 3
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 299,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 1,
+              "vehicle": 3
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 276,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 1,
+              "vehicle": 4
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 274,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 1,
+              "vehicle": 4
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 352,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 1,
+              "vehicle": 5
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 344,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 1,
+              "vehicle": 5
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 297,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 1,
+              "vehicle": 6
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 275,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 1,
+              "vehicle": 6
+            },
+            {
+              "program": "RF_BP_DMBSeng.sms",
+              "program_read_parse_us": 768,
+              "referenced_samples": 21,
+              "resident_pcm_mib": 0.9818000793457031,
+              "resident_samples": 9,
+              "sample_decode_us": 2847,
+              "sample_file_open_us": 73,
+              "train": 1,
+              "vehicle": 7
+            },
+            {
+              "program": "RF_BP_DMBSwag.sms",
+              "program_read_parse_us": 857,
+              "referenced_samples": 28,
+              "resident_pcm_mib": 1.7180633544921875,
+              "resident_samples": 12,
+              "sample_decode_us": 4163,
+              "sample_file_open_us": 32,
+              "train": 1,
+              "vehicle": 7
+            },
+            {
+              "program": "RF_BP_DMBSeng.sms",
+              "program_read_parse_us": 764,
+              "referenced_samples": 21,
+              "resident_pcm_mib": 0.9818000793457031,
+              "resident_samples": 9,
+              "sample_decode_us": 2847,
+              "sample_file_open_us": 73,
+              "train": 2,
+              "vehicle": 0
+            },
+            {
+              "program": "RF_BP_DMBSwag.sms",
+              "program_read_parse_us": 850,
+              "referenced_samples": 28,
+              "resident_pcm_mib": 1.7180633544921875,
+              "resident_samples": 12,
+              "sample_decode_us": 4163,
+              "sample_file_open_us": 32,
+              "train": 2,
+              "vehicle": 0
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 285,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 2,
+              "vehicle": 1
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 274,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 2,
+              "vehicle": 1
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 272,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 2,
+              "vehicle": 2
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 269,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 2,
+              "vehicle": 2
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 272,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 2,
+              "vehicle": 3
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 273,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 2,
+              "vehicle": 3
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 274,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 2,
+              "vehicle": 4
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 270,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 2,
+              "vehicle": 4
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 269,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 2,
+              "vehicle": 5
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 268,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 2,
+              "vehicle": 5
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 319,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 2,
+              "vehicle": 6
+            },
+            {
+              "program": "genpasswagmodern.sms",
+              "program_read_parse_us": 331,
+              "referenced_samples": 27,
+              "resident_pcm_mib": 2.56201171875,
+              "resident_samples": 19,
+              "sample_decode_us": 6824,
+              "sample_file_open_us": 181,
+              "train": 2,
+              "vehicle": 6
+            },
+            {
+              "program": "RF_BP_DMBSeng.sms",
+              "program_read_parse_us": 815,
+              "referenced_samples": 21,
+              "resident_pcm_mib": 0.9818000793457031,
+              "resident_samples": 9,
+              "sample_decode_us": 2847,
+              "sample_file_open_us": 73,
+              "train": 2,
+              "vehicle": 7
+            },
+            {
+              "program": "RF_BP_DMBSwag.sms",
+              "program_read_parse_us": 874,
+              "referenced_samples": 28,
+              "resident_pcm_mib": 1.7180633544921875,
+              "resident_samples": 12,
+              "sample_decode_us": 4163,
+              "sample_file_open_us": 32,
+              "train": 2,
+              "vehicle": 7
+            }
+          ],
+          "cache": {
+            "sample_cache_hits": 4820,
+            "sample_cache_misses": 38,
+            "sample_cache_evictions": 0,
+            "file_open_us": 273,
+            "decode_us": 12810
+          }
+        }
+      },
+      "scope": "Real liveALSA-null SoundReports,not inferred eagerpool. D9 perbanktimings remainunavailable; candidatebanks record realopen/decode/retain byvehicle. Shared samples canbelongto multiplebanks,so neveraddbankPCMtosummarizeuniquePCM."
     }
   },
   "native_cache": {
@@ -2475,7 +3634,47 @@
         "cache_unchanged": true
       }
     ],
-    "scope": "same executable, fresh/cold/warm import including native graph, metadata and compiled SIGSCR; rendering is measured separately"
+    "scope": "same executable, fresh/cold/warm import including native graph, metadata and compiled SIGSCR; rendering is measured separately",
+    "final_confirmation32": {
+      "binary_sha256": "185500fa159b8c4ded3f13d7cbc77cbdd741efe00e85b0e3dc283b92722328dc",
+      "raw_report_sha256": "898506f556fcb287445c158b418abaf4383130379772a20832dde402009fa7f2",
+      "results": [
+        {
+          "mode": "fresh",
+          "elapsed_s": 12.383624078000139,
+          "graph_sha256": "b4cdbfbef1d845a597cb04136e4597a54fa56c7edbed9c2c4e237e4b325446d0",
+          "graph_bytes": 42629796,
+          "cache_files": 0,
+          "cache_unchanged": false
+        },
+        {
+          "mode": "cold",
+          "elapsed_s": 11.900366055000632,
+          "graph_sha256": "b4cdbfbef1d845a597cb04136e4597a54fa56c7edbed9c2c4e237e4b325446d0",
+          "graph_bytes": 42629796,
+          "cache_files": 1,
+          "cache_unchanged": false
+        },
+        {
+          "mode": "warm",
+          "elapsed_s": 0.1462419450035668,
+          "graph_sha256": "b4cdbfbef1d845a597cb04136e4597a54fa56c7edbed9c2c4e237e4b325446d0",
+          "graph_bytes": 42629796,
+          "cache_files": 1,
+          "cache_unchanged": true
+        },
+        {
+          "mode": "warm-repeat",
+          "elapsed_s": 0.1282649249988026,
+          "graph_sha256": "b4cdbfbef1d845a597cb04136e4597a54fa56c7edbed9c2c4e237e4b325446d0",
+          "graph_bytes": 42629796,
+          "cache_files": 1,
+          "cache_unchanged": true
+        }
+      ],
+      "scope": "Exact final32CLI,fresh/cold/warm/repeat,all sourcegraph/SIGSCRbytesidentical;unchangedcachemtime onwarm;headless no3Dcamera or drivingFPS.",
+      "concurrent_workloads": "Integrated32endurance plus Native TGV GPUQA75s/CLIhelper;timings local,not hardware guarantee. No Cargo/Snapbuild."
+    }
   },
   "traffic": {
     "camera": "headless",
@@ -2557,7 +3756,159 @@
     ],
     "schema": 2,
     "seed": 42,
-    "binary_sha256": "5c4912dc642a0069e3c52d0f19ab90032a85717c97b11b6e3bcc44463dfdb784"
+    "binary_sha256": "5c4912dc642a0069e3c52d0f19ab90032a85717c97b11b6e3bcc44463dfdb784",
+    "final_confirmation32": {
+      "camera": "headless",
+      "corridor": {
+        "runs": [
+          {
+            "driving_ms": 95.67711399999999,
+            "initial_load_ms": 19.346909,
+            "services": 2,
+            "simulated_seconds": 60,
+            "state_sha256": "1211bfcd9981e8e8b593f4461d0eaeee24db95fddd45d97a7063f11e99f7f12b",
+            "workers": 1
+          },
+          {
+            "driving_ms": 115.794806,
+            "initial_load_ms": 17.62907,
+            "services": 2,
+            "simulated_seconds": 60,
+            "state_sha256": "1211bfcd9981e8e8b593f4461d0eaeee24db95fddd45d97a7063f11e99f7f12b",
+            "workers": 2
+          },
+          {
+            "driving_ms": 141.222835,
+            "initial_load_ms": 17.911585000000002,
+            "services": 2,
+            "simulated_seconds": 60,
+            "state_sha256": "1211bfcd9981e8e8b593f4461d0eaeee24db95fddd45d97a7063f11e99f7f12b",
+            "workers": 4
+          },
+          {
+            "driving_ms": 188.994439,
+            "initial_load_ms": 16.391974,
+            "services": 2,
+            "simulated_seconds": 60,
+            "state_sha256": "1211bfcd9981e8e8b593f4461d0eaeee24db95fddd45d97a7063f11e99f7f12b",
+            "workers": 8
+          }
+        ],
+        "scenario": "examples/chiltern_extended/scenario.toml",
+        "scenario_sha256": "faac5f908bfafd4a73ecf5be3e1c9601970c110b8926b7c80ac3221387baf5bf",
+        "scope": "repository corridor physics, switches and signalling; native rendering/content audit remains separate"
+      },
+      "formation_sha256": "56141328bc73a735ff43f95cb1ef61679d42c01ac01e4afe6b344cd9d8fceea2",
+      "graph_sha256": "eee13a2927393dd0732369b5d01e7d77782aedf5e57afd4bff5d7831b634c6ed",
+      "reference": "same binary, serial worker as algorithmic reference",
+      "runs": [
+        {
+          "driving_ms": 1248.764036,
+          "initial_load_ms": 35.781592,
+          "services": 32,
+          "simulated_seconds": 60,
+          "state_sha256": "2719cd3c6fbf6659da9e0b118a4f9606c621a5804265f3264e41e1181cc40150",
+          "workers": 1
+        },
+        {
+          "driving_ms": 1219.5093299999999,
+          "initial_load_ms": 33.02843,
+          "services": 32,
+          "simulated_seconds": 60,
+          "state_sha256": "2719cd3c6fbf6659da9e0b118a4f9606c621a5804265f3264e41e1181cc40150",
+          "workers": 2
+        },
+        {
+          "driving_ms": 1288.014368,
+          "initial_load_ms": 31.830126,
+          "services": 32,
+          "simulated_seconds": 60,
+          "state_sha256": "2719cd3c6fbf6659da9e0b118a4f9606c621a5804265f3264e41e1181cc40150",
+          "workers": 4
+        },
+        {
+          "driving_ms": 1436.7134740000001,
+          "initial_load_ms": 32.029745999999996,
+          "services": 32,
+          "simulated_seconds": 60,
+          "state_sha256": "2719cd3c6fbf6659da9e0b118a4f9606c621a5804265f3264e41e1181cc40150",
+          "workers": 8
+        }
+      ],
+      "schema": 2,
+      "seed": 42,
+      "binary_sha256": "f30fdfcfccfd46ea89a135075d3877a7f5eab4d7e7cb15e17b2ce63d602e7a2d",
+      "build": {
+        "source_sha256": "363164a0e3d493e143dd2f66489ce988614ed2d4e70792a8d42c15607cab40d9",
+        "binary_sha256": "f30fdfcfccfd46ea89a135075d3877a7f5eab4d7e7cb15e17b2ce63d602e7a2d",
+        "dependencies": {
+          "openrailsrs_sim": {
+            "name": "libopenrailsrs_sim-0b4c8ec2009dde6a.rlib",
+            "sha256": "a3cc458b4f116c98f987bb13f5541031da1630257729e88d4c75e86eef70ffeb"
+          },
+          "openrailsrs_scenarios": {
+            "name": "libopenrailsrs_scenarios-01d572d59d2a22f8.rlib",
+            "sha256": "d32bc2a41290141d0d2284d49d027750d9b49f32eafc541f0864cd3bfafb2f0d"
+          },
+          "serde_json": {
+            "name": "libserde_json-db6ce5f9e7610b86.rlib",
+            "sha256": "a80bd3f38dd45ee245c72047108108a451208074c35a6bf0b08a4cb9563caafc"
+          },
+          "sha2": {
+            "name": "libsha2-467fd278a833f32e.rlib",
+            "sha256": "98443cc93339931e6f48a386c4ea6fa3d8810e85881ddf00cb743724a1e91350"
+          },
+          "tempfile": {
+            "name": "libtempfile-94089ac7d4abe840.rlib",
+            "sha256": "06ccf5349ccf464064f0d87cf59fe99b6a386c2765356b91f886d08698c8be6e"
+          },
+          "toml": {
+            "name": "libtoml-0001ac8dac2bc7c1.rlib",
+            "sha256": "665f76a02b7b9fbac75544577a22741940a06cd4b8f44eb9c21736e1dbe18715"
+          }
+        },
+        "scope": "Onlyexample compiled with exactfinal32release rlibs;no Cargo/dependency/source rebuild. SHA2fingerprint8323511470264226875matchesSim.",
+        "command": [
+          "/root/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc",
+          "--edition=2024",
+          "-C",
+          "opt-level=1",
+          "-C",
+          "debuginfo=0",
+          "-C",
+          "strip=symbols",
+          "-L",
+          "dependency=/root/parts/application/build/target/release/deps",
+          "--extern",
+          "openrailsrs_sim=/root/parts/application/build/target/release/deps/libopenrailsrs_sim-0b4c8ec2009dde6a.rlib",
+          "--extern",
+          "openrailsrs_scenarios=/root/parts/application/build/target/release/deps/libopenrailsrs_scenarios-01d572d59d2a22f8.rlib",
+          "--extern",
+          "serde_json=/root/parts/application/build/target/release/deps/libserde_json-db6ce5f9e7610b86.rlib",
+          "--extern",
+          "sha2=/root/parts/application/build/target/release/deps/libsha2-467fd278a833f32e.rlib",
+          "--extern",
+          "tempfile=/root/parts/application/build/target/release/deps/libtempfile-94089ac7d4abe840.rlib",
+          "--extern",
+          "toml=/root/parts/application/build/target/release/deps/libtoml-0001ac8dac2bc7c1.rlib",
+          "/root/parts/application/build/crates/openrailsrs-sim/examples/traffic_benchmark.rs",
+          "-o",
+          "/root/fifth40-traffic32/traffic-benchmark"
+        ],
+        "returncode": 0
+      },
+      "execution": {
+        "started_utc": "2026-10-14T04:42:10.617514+00:00",
+        "finished_utc": "2026-10-14T04:42:16.588311+00:00",
+        "elapsed_wall_s": 5.970796266999969,
+        "returncode": 0,
+        "binary_sha256": "f30fdfcfccfd46ea89a135075d3877a7f5eab4d7e7cb15e17b2ce63d602e7a2d",
+        "concurrency": "Only own integrated GPU endurance32 on the host; no other CPU QA, Cargo or RX renderer. Standalone release32-linked example, not the D9 binary."
+      },
+      "raw_report_sha256": "b4f4b0da58388c049d8ec82e1025596f5f01471a766de79a65d0244406733ee8",
+      "service_count_scope": "services fields count AI only:32+player=33 in authored lanes and2+player=3 in repository Chiltern.",
+      "limits": "One measurement per worker count,60simulated seconds; exact snapshot equality,not original20AI validation or OpenRails parity. Serial worker is same compiled binary algorithmic reference; rendering/camera absent. No general scaling speedup asserted."
+    }
   },
   "residency": {
     "raw_report_sha256": "3bbdcd87a87f4b4e9cbb386cd12d6c175ce1a841c3054a0816cb6fc2b8c48cb1",
@@ -2684,6 +4035,536 @@
           "shape_release_calls": 234
         }
       }
+    },
+    "final_confirmation32": {
+      "schema": 1,
+      "viewer_sha256": "4ee97d35ead40ca675852ea0a011bc1e8c684cc3d86f88c3a99b82ed5032276f",
+      "scenario_sha256": "faac5f908bfafd4a73ecf5be3e1c9601970c110b8926b7c80ac3221387baf5bf",
+      "checkpoint_m": 8000.0,
+      "process_budget_mib": 1024,
+      "scope": "measured process residency against a reduced budget; physical device capacity is unchanged; no forced device OOM",
+      "cache_scope": "one fresh private application cache; the physical-policy run seeds it and the reduced-budget run reuses it; this is not a cache-speed comparison",
+      "configuration": {
+        "camera": "driver",
+        "seed": 42,
+        "window": [
+          1280,
+          720
+        ],
+        "view_distance_m": 500,
+        "speed_multiplier": 4,
+        "autodrive": 0.5,
+        "audio": "private ALSA null",
+        "profile_systems": true
+      },
+      "raw_report_sha256": "fefaee52e80f3ed1c1aac32eb851208f8dddcbbc48e74aa647c149127eed0bb3",
+      "cases": {
+        "physical": {
+          "released": {
+            "terrain_meshes": 73,
+            "terrain_materials": 30,
+            "terrain_images": 30,
+            "shape_release_calls": 10
+          },
+          "capture": {
+            "odometer_m": 8000.283933797005,
+            "gpu_tiles": 9,
+            "unactivated_near_shapes": 0,
+            "pending_gpu_uploads": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "performance": {
+              "elapsed_s": 265.834678243,
+              "frame_p50_ms": 25,
+              "frame_p95_ms": 39,
+              "frame_p99_ms": 54,
+              "frames": 9929,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 39,
+              "gameplay_frame_p99_ms": 54,
+              "gameplay_frames": 9532,
+              "gameplay_hitches_over_100_ms": 2,
+              "gameplay_longest_frame_ms": 147.908119,
+              "hitches_over_100_ms": 4,
+              "loading_frames": 3757,
+              "longest_frame_ms": 1595.2070840000001,
+              "peak_rss_mib": 2156.86328125,
+              "rss_mib": 2156.86328125,
+              "startup_longest_frame_ms": 1595.2070840000001
+            },
+            "render_budget": {
+              "memory_pressure": false,
+              "particles": 8192,
+              "passenger_lights": 8,
+              "station_lights": 24,
+              "train_lights": 8,
+              "upload_mib": 8,
+              "vegetation_divisor": 1
+            },
+            "residency": {
+              "basis": "measured active-device usage / physical device total",
+              "budget_mib": 8176.0,
+              "pressured": false,
+              "transitions": 0
+            },
+            "graphics_memory": {
+              "active_device_pci": "0000:03:00.0",
+              "device_total_mib": 8176.0,
+              "device_used_mib": 2914.34765625,
+              "devices": [
+                {
+                  "device_total_mib": 8176.0,
+                  "device_used_mib": 2914.34765625,
+                  "pci": "0000:03:00.0",
+                  "process_gtt_mib": 20.171875,
+                  "process_vram_mib": 2051.62109375
+                },
+                {
+                  "device_total_mib": 512.0,
+                  "device_used_mib": 458.41015625,
+                  "pci": "0000:0e:00.0",
+                  "process_gtt_mib": 2.0,
+                  "process_vram_mib": 0.01171875
+                }
+              ],
+              "peak_process_vram_mib": 2051.6328125,
+              "process_gtt_mib": 22.171875,
+              "process_vram_mib": 2051.6328125,
+              "source": "linux_drm_fdinfo"
+            },
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "host_usage": {
+              "cpu_percent_one_core": 272.3746973369715,
+              "gpu_busy_percent_mean": 28.019736842105264,
+              "selected_gpu_pci": "0000:03:00.0",
+              "gpu_busy_percent_by_device": {
+                "0000:0e:00.0": 81.1062030075188,
+                "0000:03:00.0": 28.019736842105264
+              },
+              "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
+              "private_compositor": {
+                "gl_renderer": "AMD Radeon RX 7600 (radeonsi, navi33, ACO, DRM 3.64, 7.0.0-38-generic)",
+                "egl_device": "/dev/dri/renderD129",
+                "DRI_PRIME": "pci-0000_03_00_0",
+                "scope": "GL renderer identifies effective offload device; EGL device may retain enumeration node"
+              }
+            },
+            "shape_stages": {
+              "cpu_prepare": {
+                "calls": 1253,
+                "maximum_us": 15212,
+                "slowest_shape": "DynaTrax-40223.s",
+                "total_us": 204621
+              },
+              "cpu_prepare_lods": {
+                "calls": 1222,
+                "maximum_us": 77258,
+                "slowest_shape": "SG_Pallet02.s",
+                "total_us": 11556175
+              },
+              "geometry_cache_read": {
+                "calls": 1222,
+                "maximum_us": 9893,
+                "slowest_shape": "ukfs_tcr_l_250m_7d13.s",
+                "total_us": 544698
+              },
+              "geometry_cache_write": {
+                "calls": 1222,
+                "maximum_us": 17621,
+                "slowest_shape": "GPofficesA01C.s",
+                "total_us": 2780004
+              },
+              "prepare_silhouette": {
+                "calls": 1222,
+                "maximum_us": 204,
+                "slowest_shape": "ukfs_s_1x5m.s",
+                "total_us": 8245
+              },
+              "publish_auxiliary": {
+                "calls": 208,
+                "maximum_us": 136582,
+                "slowest_shape": "CarSpawner",
+                "total_us": 574227
+              },
+              "publish_gpu_assets": {
+                "calls": 1222,
+                "maximum_us": 54560,
+                "slowest_shape": "SG_Pallet02.s",
+                "total_us": 3814124
+              },
+              "publish_lod_gpu_assets": {
+                "calls": 1272,
+                "maximum_us": 44652,
+                "slowest_shape": "ukfs_is_0m254.s",
+                "total_us": 2805470
+              },
+              "release_gpu_assets": {
+                "calls": 10,
+                "maximum_us": 489,
+                "slowest_shape": "world shape",
+                "total_us": 2583
+              },
+              "resolve_texture_dependencies": {
+                "calls": 1222,
+                "maximum_us": 75118,
+                "slowest_shape": "SG_Pallet02.s",
+                "total_us": 8748089
+              },
+              "source_read_parse": {
+                "calls": 1253,
+                "maximum_us": 34513,
+                "slowest_shape": "GPofficesA01A.s",
+                "total_us": 2683691
+              }
+            },
+            "geometry_cache": {
+              "gpu_handles_cached": false,
+              "hits": 0,
+              "max_disk_mib": 256,
+              "misses": 1222,
+              "schema": 1
+            },
+            "render_resources": {
+              "allocator": null,
+              "bin_unpacking_lifetime": {
+                "cached_keys": 2,
+                "retired_keys": 0,
+                "source_keys": 2,
+                "stale_keys_after": 0,
+                "stale_keys_before": 0
+              },
+              "bindless_material_allocations": 1825,
+              "bindless_material_allocations_scope": "Raw upstream allocated_resource_count may overcount repeated bindings within a material; use material_owners for actual map ownership.",
+              "images": 992,
+              "indexed_mesh_allocations": 534,
+              "material_owners": {
+                "bindings": {
+                  "available": true,
+                  "by_type": {
+                    "MoonMaterial": 1,
+                    "OrCabMaterial": 69,
+                    "OrForestMaterial": 10,
+                    "RailwaySkyMaterial": 1,
+                    "StandardMaterial": 10130,
+                    "TerrainMaterial": 53
+                  },
+                  "total": 10264
+                },
+                "prepared": {
+                  "available": true,
+                  "by_type": {
+                    "MoonMaterial": 1,
+                    "OrCabMaterial": 69,
+                    "OrForestMaterial": 10,
+                    "RailwaySkyMaterial": 1,
+                    "StandardMaterial": 10130,
+                    "TerrainMaterial": 53
+                  },
+                  "total": 10264
+                }
+              },
+              "material_slab_bytes": 1945344,
+              "material_slabs": 1,
+              "mesh_slab_bytes": 295821216,
+              "mesh_slabs": 3,
+              "meshes": 6632,
+              "oit_head_capacity": 921600,
+              "oit_node_capacity": 3686400,
+              "pipelines": 91,
+              "views": 14
+            },
+            "native_audio": {
+              "programs": 48,
+              "streams": 174,
+              "samples": 69,
+              "active_voices": 54,
+              "decoded_mib": 5.144256591796875,
+              "device": true
+            },
+            "weather_atmosphere": {
+              "cloud_cover": 0.2199999988079071,
+              "flake_size": 1.0,
+              "fog_density": 3.9999998989515007e-05,
+              "overcast": 0.0,
+              "phase": "calm",
+              "rain": 0.0,
+              "snow": 0.0,
+              "snow_cover": 0.0,
+              "storm": 0.0,
+              "temperature_c": 20.626436233520508,
+              "visibility_m": 20000.0,
+              "wind_mps": [
+                0.7108923196792603,
+                0.0,
+                0.18833710253238678
+              ]
+            }
+          },
+          "png_sha256": "472563280593fe407b733a038feb373fa583c267eb76f7514477eb4c5cea9f36",
+          "png_bytes": 892368,
+          "inspection": "Actual original textured cab, HUD and track inspected; no screenshot reused."
+        },
+        "reduced-process": {
+          "released": {
+            "terrain_meshes": 99,
+            "terrain_materials": 30,
+            "terrain_images": 30,
+            "shape_release_calls": 234
+          },
+          "capture": {
+            "odometer_m": 8000.283933797005,
+            "gpu_tiles": 7,
+            "unactivated_near_shapes": 0,
+            "pending_gpu_uploads": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "performance": {
+              "elapsed_s": 265.60790832000026,
+              "frame_p50_ms": 25,
+              "frame_p95_ms": 35,
+              "frame_p99_ms": 50,
+              "frames": 10076,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 35,
+              "gameplay_frame_p99_ms": 50,
+              "gameplay_frames": 9687,
+              "gameplay_hitches_over_100_ms": 3,
+              "gameplay_longest_frame_ms": 150.686252,
+              "hitches_over_100_ms": 5,
+              "loading_frames": 3723,
+              "longest_frame_ms": 1671.005321,
+              "peak_rss_mib": 2049.890625,
+              "rss_mib": 2049.890625,
+              "startup_longest_frame_ms": 1671.005321
+            },
+            "render_budget": {
+              "memory_pressure": true,
+              "particles": 4096,
+              "passenger_lights": 8,
+              "station_lights": 4,
+              "train_lights": 8,
+              "upload_mib": 2,
+              "vegetation_divisor": 2
+            },
+            "residency": {
+              "basis": "measured process residency / configured budget",
+              "budget_mib": 1024.0,
+              "pressured": true,
+              "transitions": 1
+            },
+            "graphics_memory": {
+              "active_device_pci": "0000:03:00.0",
+              "device_total_mib": 8176.0,
+              "device_used_mib": 2797.9375,
+              "devices": [
+                {
+                  "device_total_mib": 8176.0,
+                  "device_used_mib": 2797.9375,
+                  "pci": "0000:03:00.0",
+                  "process_gtt_mib": 20.171875,
+                  "process_vram_mib": 1879.9375
+                },
+                {
+                  "device_total_mib": 512.0,
+                  "device_used_mib": 458.41796875,
+                  "pci": "0000:0e:00.0",
+                  "process_gtt_mib": 2.0,
+                  "process_vram_mib": 0.01171875
+                }
+              ],
+              "peak_process_vram_mib": 1879.94921875,
+              "process_gtt_mib": 22.171875,
+              "process_vram_mib": 1879.94921875,
+              "source": "linux_drm_fdinfo"
+            },
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "host_usage": {
+              "cpu_percent_one_core": 259.8078007483002,
+              "gpu_busy_percent_mean": 25.989651928504234,
+              "selected_gpu_pci": "0000:03:00.0",
+              "gpu_busy_percent_by_device": {
+                "0000:0e:00.0": 40.2859830667921,
+                "0000:03:00.0": 25.989651928504234
+              },
+              "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
+              "private_compositor": {
+                "gl_renderer": "AMD Radeon RX 7600 (radeonsi, navi33, ACO, DRM 3.64, 7.0.0-38-generic)",
+                "egl_device": "/dev/dri/renderD129",
+                "DRI_PRIME": "pci-0000_03_00_0",
+                "scope": "GL renderer identifies effective offload device; EGL device may retain enumeration node"
+              }
+            },
+            "shape_stages": {
+              "cpu_prepare": {
+                "calls": 698,
+                "maximum_us": 6530,
+                "slowest_shape": "Autoshop.s",
+                "total_us": 110046
+              },
+              "cpu_prepare_lods": {
+                "calls": 667,
+                "maximum_us": 62589,
+                "slowest_shape": "SG_Pallet02.s",
+                "total_us": 5483437
+              },
+              "geometry_cache_read": {
+                "calls": 1224,
+                "maximum_us": 12220,
+                "slowest_shape": "hwy2l2wna40r20dnp.s",
+                "total_us": 738624
+              },
+              "geometry_cache_write": {
+                "calls": 667,
+                "maximum_us": 12591,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 2139040
+              },
+              "prepare_silhouette": {
+                "calls": 1224,
+                "maximum_us": 294,
+                "slowest_shape": "GW_Type27cNortholtEastJcn.s",
+                "total_us": 8864
+              },
+              "publish_auxiliary": {
+                "calls": 208,
+                "maximum_us": 128179,
+                "slowest_shape": "CarSpawner",
+                "total_us": 480025
+              },
+              "publish_gpu_assets": {
+                "calls": 1224,
+                "maximum_us": 55761,
+                "slowest_shape": "SG_Pallet02.s",
+                "total_us": 3753013
+              },
+              "publish_lod_gpu_assets": {
+                "calls": 1272,
+                "maximum_us": 13787,
+                "slowest_shape": "ukfs_s_2x10m_12.s",
+                "total_us": 2650718
+              },
+              "release_gpu_assets": {
+                "calls": 234,
+                "maximum_us": 1182,
+                "slowest_shape": "world shape",
+                "total_us": 44096
+              },
+              "resolve_texture_dependencies": {
+                "calls": 1224,
+                "maximum_us": 59635,
+                "slowest_shape": "SG_Pallet02.s",
+                "total_us": 8102831
+              },
+              "source_read_parse": {
+                "calls": 698,
+                "maximum_us": 27131,
+                "slowest_shape": "RF_WP_DMBSA.s",
+                "total_us": 1399841
+              }
+            },
+            "geometry_cache": {
+              "gpu_handles_cached": false,
+              "hits": 557,
+              "max_disk_mib": 256,
+              "misses": 667,
+              "schema": 1
+            },
+            "render_resources": {
+              "allocator": null,
+              "bin_unpacking_lifetime": {
+                "cached_keys": 2,
+                "retired_keys": 0,
+                "source_keys": 2,
+                "stale_keys_after": 0,
+                "stale_keys_before": 0
+              },
+              "bindless_material_allocations": 1581,
+              "bindless_material_allocations_scope": "Raw upstream allocated_resource_count may overcount repeated bindings within a material; use material_owners for actual map ownership.",
+              "images": 869,
+              "indexed_mesh_allocations": 449,
+              "material_owners": {
+                "bindings": {
+                  "available": true,
+                  "by_type": {
+                    "MoonMaterial": 1,
+                    "OrCabMaterial": 69,
+                    "OrForestMaterial": 10,
+                    "RailwaySkyMaterial": 1,
+                    "StandardMaterial": 9373,
+                    "TerrainMaterial": 53
+                  },
+                  "total": 9507
+                },
+                "prepared": {
+                  "available": true,
+                  "by_type": {
+                    "MoonMaterial": 1,
+                    "OrCabMaterial": 69,
+                    "OrForestMaterial": 10,
+                    "RailwaySkyMaterial": 1,
+                    "StandardMaterial": 9373,
+                    "TerrainMaterial": 53
+                  },
+                  "total": 9507
+                }
+              },
+              "material_slab_bytes": 1904064,
+              "material_slabs": 1,
+              "mesh_slab_bytes": 197563680,
+              "mesh_slabs": 3,
+              "meshes": 5874,
+              "oit_head_capacity": 1,
+              "oit_node_capacity": 1,
+              "pipelines": 96,
+              "views": 14
+            },
+            "native_audio": {
+              "programs": 48,
+              "streams": 174,
+              "samples": 69,
+              "active_voices": 54,
+              "decoded_mib": 5.144256591796875,
+              "device": true
+            },
+            "weather_atmosphere": {
+              "cloud_cover": 0.2199999988079071,
+              "flake_size": 1.0,
+              "fog_density": 3.9999998989515007e-05,
+              "overcast": 0.0,
+              "phase": "calm",
+              "rain": 0.0,
+              "snow": 0.0,
+              "snow_cover": 0.0,
+              "storm": 0.0,
+              "temperature_c": 20.626436233520508,
+              "visibility_m": 20000.0,
+              "wind_mps": [
+                0.7108923196792603,
+                0.0,
+                0.18833710253238678
+              ]
+            }
+          },
+          "png_sha256": "934272c348ad35578fd6d7c852af3677a12421bab05ae3321819f9ed305d2cdd",
+          "png_bytes": 897116,
+          "inspection": "Actual original textured cab, HUD and track inspected; no screenshot reused."
+        }
+      },
+      "interpretation": "Original Chiltern8km completed under both policies. Physical capacity8176MiB, configured process threshold1024MiB triggers pressure; process VRAM2051.633/1879.949MiB and GTT22.172/22.172MiB. Terrain meshes released73/99, shapes released10/234, near/uploads/shaders0. The threshold is not a hard1GiB cap or device OOM experiment. Second run reuses cache: no causal FPS comparison."
     }
   },
   "quality_aba": {
@@ -4123,6 +6004,1008 @@
         "rain_strength": 1.0,
         "gpu_whole_launch_busy_percent": 22.151162790697676
       }
+    },
+    "final_confirmation32": {
+      "schema": 1,
+      "viewer_sha256": "4ee97d35ead40ca675852ea0a011bc1e8c684cc3d86f88c3a99b82ed5032276f",
+      "scenario_sha256": "faac5f908bfafd4a73ecf5be3e1c9601970c110b8926b7c80ac3221387baf5bf",
+      "hardware": {
+        "system": "Linux",
+        "node": "arriba",
+        "release": "7.0.0-38-generic",
+        "version": "#38-Ubuntu SMP PREEMPT_DYNAMIC Fri Sep  4 09:10:14 UTC 2026",
+        "machine": "x86_64",
+        "processor": ""
+      },
+      "configuration": {
+        "weather": "downpour",
+        "weather_seed": 42,
+        "camera": "driver",
+        "window": [
+          1280,
+          720
+        ],
+        "checkpoint_m": 2500.0,
+        "view_distance_m": 500,
+        "autodrive": 0.5,
+        "speed_multiplier": 4,
+        "configured_particles": 2048,
+        "shadows": true,
+        "framepace": "off",
+        "profile_systems": true,
+        "audio": "private ALSA null"
+      },
+      "concurrent_workloads": "Integrated32endurance exclusivelyPCI0e as background;ROOT softwarefolderQA andNativeTGV/wine finished;noCargo/builds. Fixed qualitysettings normal/reduced/normal explicit;not a hidden change of weatherstrength.",
+      "cache_scope": "first run seeds a fresh application cache; the three comparisons reuse that same cache, OS/Mesa caches are not cleared",
+      "scope": "fixed PlayerSettings limits also exposed through F10; normal/reduced/normal controls repeat order; visual reduction is explicit and simulation/weather settings stay equal",
+      "raw_report_sha256": "9920f4565e1851ff51a886d85ad5edd64373e137f5f08ab42237b12d76293809",
+      "cases": {
+        "priming-cold": {
+          "quality_level": 0,
+          "capture": {
+            "odometer_m": 2501.1992980011064,
+            "gpu_tiles": 5,
+            "unactivated_near_shapes": 0,
+            "pending_gpu_uploads": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "performance": {
+              "elapsed_s": 63.2134473140001,
+              "frame_p50_ms": 25,
+              "frame_p95_ms": 26,
+              "frame_p99_ms": 31,
+              "frames": 2413,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 26,
+              "gameplay_frame_p99_ms": 31,
+              "gameplay_frames": 2019,
+              "gameplay_hitches_over_100_ms": 0,
+              "gameplay_longest_frame_ms": 58.468149,
+              "hitches_over_100_ms": 2,
+              "loading_frames": 1173,
+              "longest_frame_ms": 1750.715028,
+              "peak_rss_mib": 1862.1484375,
+              "rss_mib": 1862.1484375,
+              "startup_longest_frame_ms": 1750.715028
+            },
+            "render_budget": {
+              "memory_pressure": false,
+              "particles": 2048,
+              "passenger_lights": 8,
+              "station_lights": 24,
+              "train_lights": 8,
+              "upload_mib": 8,
+              "vegetation_divisor": 1
+            },
+            "residency": {
+              "basis": "measured active-device usage / physical device total",
+              "budget_mib": 8176.0,
+              "pressured": false,
+              "transitions": 0
+            },
+            "graphics_memory": {
+              "active_device_pci": "0000:03:00.0",
+              "device_total_mib": 8176.0,
+              "device_used_mib": 2566.3671875,
+              "devices": [
+                {
+                  "device_total_mib": 8176.0,
+                  "device_used_mib": 2566.3671875,
+                  "pci": "0000:03:00.0",
+                  "process_gtt_mib": 20.171875,
+                  "process_vram_mib": 1511.953125
+                },
+                {
+                  "device_total_mib": 512.0,
+                  "device_used_mib": 458.421875,
+                  "pci": "0000:0e:00.0",
+                  "process_gtt_mib": 2.0,
+                  "process_vram_mib": 0.01171875
+                }
+              ],
+              "peak_process_vram_mib": 1511.96484375,
+              "process_gtt_mib": 22.171875,
+              "process_vram_mib": 1511.96484375,
+              "source": "linux_drm_fdinfo"
+            },
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "host_usage": {
+              "cpu_percent_one_core": 228.29254913200475,
+              "gpu_busy_percent_mean": 22.72200772200772,
+              "selected_gpu_pci": "0000:03:00.0",
+              "gpu_busy_percent_by_device": {
+                "0000:0e:00.0": 95.31274131274131,
+                "0000:03:00.0": 22.72200772200772
+              },
+              "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
+              "private_compositor": {
+                "gl_renderer": "AMD Radeon RX 7600 (radeonsi, navi33, ACO, DRM 3.64, 7.0.0-38-generic)",
+                "egl_device": "/dev/dri/renderD129",
+                "DRI_PRIME": "pci-0000_03_00_0",
+                "scope": "GL renderer identifies effective offload device; EGL device may retain enumeration node"
+              }
+            },
+            "shape_stages": {
+              "cpu_prepare": {
+                "calls": 483,
+                "maximum_us": 6250,
+                "slowest_shape": "Allotment.s",
+                "total_us": 80059
+              },
+              "cpu_prepare_lods": {
+                "calls": 472,
+                "maximum_us": 50692,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 2776184
+              },
+              "geometry_cache_read": {
+                "calls": 472,
+                "maximum_us": 3706,
+                "slowest_shape": "50mberm.s",
+                "total_us": 65820
+              },
+              "geometry_cache_write": {
+                "calls": 472,
+                "maximum_us": 12159,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 660628
+              },
+              "prepare_silhouette": {
+                "calls": 472,
+                "maximum_us": 57,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 2796
+              },
+              "publish_auxiliary": {
+                "calls": 26,
+                "maximum_us": 19753,
+                "slowest_shape": "CarSpawner",
+                "total_us": 39391
+              },
+              "publish_gpu_assets": {
+                "calls": 472,
+                "maximum_us": 41556,
+                "slowest_shape": "SG_Waslijn.s",
+                "total_us": 1165584
+              },
+              "publish_lod_gpu_assets": {
+                "calls": 276,
+                "maximum_us": 12804,
+                "slowest_shape": "CMhenlowshops.s",
+                "total_us": 455660
+              },
+              "resolve_texture_dependencies": {
+                "calls": 472,
+                "maximum_us": 40634,
+                "slowest_shape": "CMhenlowshops.s",
+                "total_us": 2108506
+              },
+              "source_read_parse": {
+                "calls": 483,
+                "maximum_us": 30979,
+                "slowest_shape": "RF_WP_DMBSA.s",
+                "total_us": 1002443
+              }
+            },
+            "geometry_cache": {
+              "gpu_handles_cached": false,
+              "hits": 0,
+              "max_disk_mib": 256,
+              "misses": 472,
+              "schema": 1
+            },
+            "render_resources": {
+              "allocator": null,
+              "bin_unpacking_lifetime": {
+                "cached_keys": 2,
+                "retired_keys": 0,
+                "source_keys": 2,
+                "stale_keys_after": 0,
+                "stale_keys_before": 0
+              },
+              "bindless_material_allocations": 891,
+              "bindless_material_allocations_scope": "Raw upstream allocated_resource_count may overcount repeated bindings within a material; use material_owners for actual map ownership.",
+              "images": 544,
+              "indexed_mesh_allocations": 274,
+              "material_owners": {
+                "bindings": {
+                  "available": true,
+                  "by_type": {
+                    "MoonMaterial": 1,
+                    "OrCabMaterial": 69,
+                    "ParticleMaterial": 1,
+                    "RailwaySkyMaterial": 1,
+                    "StandardMaterial": 2611,
+                    "TerrainMaterial": 49
+                  },
+                  "total": 2732
+                },
+                "prepared": {
+                  "available": true,
+                  "by_type": {
+                    "MoonMaterial": 1,
+                    "OrCabMaterial": 69,
+                    "ParticleMaterial": 1,
+                    "RailwaySkyMaterial": 1,
+                    "StandardMaterial": 2611,
+                    "TerrainMaterial": 49
+                  },
+                  "total": 2732
+                }
+              },
+              "material_slab_bytes": 501504,
+              "material_slabs": 1,
+              "mesh_slab_bytes": 198612280,
+              "mesh_slabs": 4,
+              "meshes": 2273,
+              "oit_head_capacity": 921600,
+              "oit_node_capacity": 3686400,
+              "pipelines": 103,
+              "views": 14
+            },
+            "native_audio": {
+              "programs": 48,
+              "streams": 174,
+              "samples": 69,
+              "active_voices": 38,
+              "decoded_mib": 4.939460754394531,
+              "device": true
+            },
+            "weather_atmosphere": {
+              "cloud_cover": 0.9800000190734863,
+              "flake_size": 1.0,
+              "fog_density": 0.0005799999926239252,
+              "overcast": 0.8500000238418579,
+              "phase": "calm",
+              "rain": 1.0,
+              "snow": 0.0,
+              "snow_cover": 0.0,
+              "storm": 0.0,
+              "temperature_c": 17.42066764831543,
+              "visibility_m": 3000.0,
+              "wind_mps": [
+                2.8628203868865967,
+                0.0,
+                1.2659224271774292
+              ]
+            }
+          },
+          "png_sha256": "650576b8fb36fb2511b71564a46973f8df27dd3c4848d291b0b95d59e23042e1",
+          "png_bytes": 793075,
+          "inspection": "Actual original textured cab, HUD and track inspected; no screenshot reused."
+        },
+        "normal-warm": {
+          "quality_level": 0,
+          "capture": {
+            "odometer_m": 2500.6907735943855,
+            "gpu_tiles": 5,
+            "unactivated_near_shapes": 0,
+            "pending_gpu_uploads": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "performance": {
+              "elapsed_s": 63.24974566600002,
+              "frame_p50_ms": 25,
+              "frame_p95_ms": 26,
+              "frame_p99_ms": 33,
+              "frames": 2409,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 26,
+              "gameplay_frame_p99_ms": 33,
+              "gameplay_frames": 2017,
+              "gameplay_hitches_over_100_ms": 0,
+              "gameplay_longest_frame_ms": 57.612532,
+              "hitches_over_100_ms": 2,
+              "loading_frames": 1172,
+              "longest_frame_ms": 1782.4884189999998,
+              "peak_rss_mib": 1649.39453125,
+              "rss_mib": 1649.39453125,
+              "startup_longest_frame_ms": 1782.4884189999998
+            },
+            "render_budget": {
+              "memory_pressure": false,
+              "particles": 2048,
+              "passenger_lights": 8,
+              "station_lights": 24,
+              "train_lights": 8,
+              "upload_mib": 8,
+              "vegetation_divisor": 1
+            },
+            "residency": {
+              "basis": "measured active-device usage / physical device total",
+              "budget_mib": 8176.0,
+              "pressured": false,
+              "transitions": 0
+            },
+            "graphics_memory": {
+              "active_device_pci": "0000:03:00.0",
+              "device_total_mib": 8176.0,
+              "device_used_mib": 2417.62890625,
+              "devices": [
+                {
+                  "device_total_mib": 8176.0,
+                  "device_used_mib": 2417.62890625,
+                  "pci": "0000:03:00.0",
+                  "process_gtt_mib": 20.171875,
+                  "process_vram_mib": 1510.625
+                },
+                {
+                  "device_total_mib": 512.0,
+                  "device_used_mib": 459.53515625,
+                  "pci": "0000:0e:00.0",
+                  "process_gtt_mib": 2.0,
+                  "process_vram_mib": 0.01171875
+                }
+              ],
+              "peak_process_vram_mib": 1510.63671875,
+              "process_gtt_mib": 22.171875,
+              "process_vram_mib": 1510.63671875,
+              "source": "linux_drm_fdinfo"
+            },
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "host_usage": {
+              "cpu_percent_one_core": 223.13522382764717,
+              "gpu_busy_percent_mean": 22.442307692307693,
+              "selected_gpu_pci": "0000:03:00.0",
+              "gpu_busy_percent_by_device": {
+                "0000:0e:00.0": 90.3576923076923,
+                "0000:03:00.0": 22.442307692307693
+              },
+              "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
+              "private_compositor": {
+                "gl_renderer": "AMD Radeon RX 7600 (radeonsi, navi33, ACO, DRM 3.64, 7.0.0-38-generic)",
+                "egl_device": "/dev/dri/renderD129",
+                "DRI_PRIME": "pci-0000_03_00_0",
+                "scope": "GL renderer identifies effective offload device; EGL device may retain enumeration node"
+              }
+            },
+            "shape_stages": {
+              "cpu_prepare": {
+                "calls": 17,
+                "maximum_us": 1723,
+                "slowest_shape": "RF_WP_DMBSA.s",
+                "total_us": 15634
+              },
+              "cpu_prepare_lods": {
+                "calls": 6,
+                "maximum_us": 6261,
+                "slowest_shape": "SpeedSign_60.s",
+                "total_us": 24713
+              },
+              "geometry_cache_read": {
+                "calls": 473,
+                "maximum_us": 10564,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 481672
+              },
+              "geometry_cache_write": {
+                "calls": 6,
+                "maximum_us": 1414,
+                "slowest_shape": "SpeedSign_60.s",
+                "total_us": 1858
+              },
+              "prepare_silhouette": {
+                "calls": 473,
+                "maximum_us": 223,
+                "slowest_shape": "MShorseChestnut15B.s",
+                "total_us": 3444
+              },
+              "publish_auxiliary": {
+                "calls": 26,
+                "maximum_us": 26848,
+                "slowest_shape": "CarSpawner",
+                "total_us": 41260
+              },
+              "publish_gpu_assets": {
+                "calls": 473,
+                "maximum_us": 37321,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 1198517
+              },
+              "publish_lod_gpu_assets": {
+                "calls": 276,
+                "maximum_us": 12938,
+                "slowest_shape": "CMhenlowshops.s",
+                "total_us": 465767
+              },
+              "resolve_texture_dependencies": {
+                "calls": 473,
+                "maximum_us": 79523,
+                "slowest_shape": "ukfs_c_1x5000m_1d.s",
+                "total_us": 2323392
+              },
+              "source_read_parse": {
+                "calls": 17,
+                "maximum_us": 28793,
+                "slowest_shape": "RF_WP_DMBSA.s",
+                "total_us": 235464
+              }
+            },
+            "geometry_cache": {
+              "gpu_handles_cached": false,
+              "hits": 467,
+              "max_disk_mib": 256,
+              "misses": 6,
+              "schema": 1
+            },
+            "render_resources": {
+              "allocator": null,
+              "bin_unpacking_lifetime": {
+                "cached_keys": 2,
+                "retired_keys": 0,
+                "source_keys": 2,
+                "stale_keys_after": 0,
+                "stale_keys_before": 0
+              },
+              "bindless_material_allocations": 887,
+              "bindless_material_allocations_scope": "Raw upstream allocated_resource_count may overcount repeated bindings within a material; use material_owners for actual map ownership.",
+              "images": 544,
+              "indexed_mesh_allocations": 271,
+              "material_owners": {
+                "bindings": {
+                  "available": true,
+                  "by_type": {
+                    "MoonMaterial": 1,
+                    "OrCabMaterial": 69,
+                    "ParticleMaterial": 1,
+                    "RailwaySkyMaterial": 1,
+                    "StandardMaterial": 2611,
+                    "TerrainMaterial": 49
+                  },
+                  "total": 2732
+                },
+                "prepared": {
+                  "available": true,
+                  "by_type": {
+                    "MoonMaterial": 1,
+                    "OrCabMaterial": 69,
+                    "ParticleMaterial": 1,
+                    "RailwaySkyMaterial": 1,
+                    "StandardMaterial": 2611,
+                    "TerrainMaterial": 49
+                  },
+                  "total": 2732
+                }
+              },
+              "material_slab_bytes": 501504,
+              "material_slabs": 1,
+              "mesh_slab_bytes": 198612280,
+              "mesh_slabs": 4,
+              "meshes": 2272,
+              "oit_head_capacity": 921600,
+              "oit_node_capacity": 3686400,
+              "pipelines": 102,
+              "views": 14
+            },
+            "native_audio": {
+              "programs": 48,
+              "streams": 174,
+              "samples": 69,
+              "active_voices": 38,
+              "decoded_mib": 4.939460754394531,
+              "device": true
+            },
+            "weather_atmosphere": {
+              "cloud_cover": 0.9800000190734863,
+              "flake_size": 1.0,
+              "fog_density": 0.0005799999926239252,
+              "overcast": 0.8500000238418579,
+              "phase": "calm",
+              "rain": 1.0,
+              "snow": 0.0,
+              "snow_cover": 0.0,
+              "storm": 0.0,
+              "temperature_c": 17.420654296875,
+              "visibility_m": 3000.0,
+              "wind_mps": [
+                2.864300012588501,
+                0.0,
+                1.2653954029083252
+              ]
+            }
+          },
+          "png_sha256": "adf0a5df1909099b20f0cba6c0b746203139e580a7ffb5c28b18cc7a05c5af25",
+          "png_bytes": 793001,
+          "inspection": "Actual original textured cab, HUD and track inspected; no screenshot reused."
+        },
+        "reduced-warm": {
+          "quality_level": 2,
+          "capture": {
+            "odometer_m": 2500.6907735943855,
+            "gpu_tiles": 5,
+            "unactivated_near_shapes": 0,
+            "pending_gpu_uploads": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "performance": {
+              "elapsed_s": 63.51936396600012,
+              "frame_p50_ms": 25,
+              "frame_p95_ms": 26,
+              "frame_p99_ms": 29,
+              "frames": 2425,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 26,
+              "gameplay_frame_p99_ms": 28,
+              "gameplay_frames": 2031,
+              "gameplay_hitches_over_100_ms": 0,
+              "gameplay_longest_frame_ms": 46.683452,
+              "hitches_over_100_ms": 2,
+              "loading_frames": 1181,
+              "longest_frame_ms": 1841.0582579999998,
+              "peak_rss_mib": 1492.6796875,
+              "rss_mib": 1485.98828125,
+              "startup_longest_frame_ms": 1841.0582579999998
+            },
+            "render_budget": {
+              "memory_pressure": false,
+              "particles": 512,
+              "passenger_lights": 2,
+              "station_lights": 0,
+              "train_lights": 8,
+              "upload_mib": 8,
+              "vegetation_divisor": 4
+            },
+            "residency": {
+              "basis": "measured active-device usage / physical device total",
+              "budget_mib": 8176.0,
+              "pressured": false,
+              "transitions": 0
+            },
+            "graphics_memory": {
+              "active_device_pci": "0000:03:00.0",
+              "device_total_mib": 8176.0,
+              "device_used_mib": 2467.27734375,
+              "devices": [
+                {
+                  "device_total_mib": 8176.0,
+                  "device_used_mib": 2467.27734375,
+                  "pci": "0000:03:00.0",
+                  "process_gtt_mib": 20.171875,
+                  "process_vram_mib": 1509.53515625
+                },
+                {
+                  "device_total_mib": 512.0,
+                  "device_used_mib": 458.73046875,
+                  "pci": "0000:0e:00.0",
+                  "process_gtt_mib": 2.0,
+                  "process_vram_mib": 0.01171875
+                }
+              ],
+              "peak_process_vram_mib": 1509.546875,
+              "process_gtt_mib": 22.171875,
+              "process_vram_mib": 1509.546875,
+              "source": "linux_drm_fdinfo"
+            },
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "host_usage": {
+              "cpu_percent_one_core": 224.71579698218025,
+              "gpu_busy_percent_mean": 23.29230769230769,
+              "selected_gpu_pci": "0000:03:00.0",
+              "gpu_busy_percent_by_device": {
+                "0000:0e:00.0": 54.83076923076923,
+                "0000:03:00.0": 23.29230769230769
+              },
+              "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
+              "private_compositor": {
+                "gl_renderer": "AMD Radeon RX 7600 (radeonsi, navi33, ACO, DRM 3.64, 7.0.0-38-generic)",
+                "egl_device": "/dev/dri/renderD129",
+                "DRI_PRIME": "pci-0000_03_00_0",
+                "scope": "GL renderer identifies effective offload device; EGL device may retain enumeration node"
+              }
+            },
+            "shape_stages": {
+              "cpu_prepare": {
+                "calls": 17,
+                "maximum_us": 2567,
+                "slowest_shape": "RF_WP_DMBSA.s",
+                "total_us": 16216
+              },
+              "cpu_prepare_lods": {
+                "calls": 6,
+                "maximum_us": 5979,
+                "slowest_shape": "IJ_semi_detached2_x2_var2.s",
+                "total_us": 20348
+              },
+              "geometry_cache_read": {
+                "calls": 474,
+                "maximum_us": 15023,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 499245
+              },
+              "geometry_cache_write": {
+                "calls": 6,
+                "maximum_us": 1523,
+                "slowest_shape": "wolseley1660.S",
+                "total_us": 1924
+              },
+              "prepare_silhouette": {
+                "calls": 474,
+                "maximum_us": 144,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 3133
+              },
+              "publish_auxiliary": {
+                "calls": 26,
+                "maximum_us": 18158,
+                "slowest_shape": "CarSpawner",
+                "total_us": 32322
+              },
+              "publish_gpu_assets": {
+                "calls": 474,
+                "maximum_us": 49466,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 1199641
+              },
+              "publish_lod_gpu_assets": {
+                "calls": 276,
+                "maximum_us": 14993,
+                "slowest_shape": "CMhenlowshops.s",
+                "total_us": 472975
+              },
+              "resolve_texture_dependencies": {
+                "calls": 474,
+                "maximum_us": 49963,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 2229332
+              },
+              "source_read_parse": {
+                "calls": 17,
+                "maximum_us": 31133,
+                "slowest_shape": "RF_WP_DMBSA.s",
+                "total_us": 228880
+              }
+            },
+            "geometry_cache": {
+              "gpu_handles_cached": false,
+              "hits": 468,
+              "max_disk_mib": 256,
+              "misses": 6,
+              "schema": 1
+            },
+            "render_resources": {
+              "allocator": null,
+              "bin_unpacking_lifetime": {
+                "cached_keys": 2,
+                "retired_keys": 0,
+                "source_keys": 2,
+                "stale_keys_after": 0,
+                "stale_keys_before": 0
+              },
+              "bindless_material_allocations": 887,
+              "bindless_material_allocations_scope": "Raw upstream allocated_resource_count may overcount repeated bindings within a material; use material_owners for actual map ownership.",
+              "images": 542,
+              "indexed_mesh_allocations": 273,
+              "material_owners": {
+                "bindings": {
+                  "available": true,
+                  "by_type": {
+                    "MoonMaterial": 1,
+                    "OrCabMaterial": 69,
+                    "ParticleMaterial": 1,
+                    "RailwaySkyMaterial": 1,
+                    "StandardMaterial": 2611,
+                    "TerrainMaterial": 49
+                  },
+                  "total": 2732
+                },
+                "prepared": {
+                  "available": true,
+                  "by_type": {
+                    "MoonMaterial": 1,
+                    "OrCabMaterial": 69,
+                    "ParticleMaterial": 1,
+                    "RailwaySkyMaterial": 1,
+                    "StandardMaterial": 2611,
+                    "TerrainMaterial": 49
+                  },
+                  "total": 2732
+                }
+              },
+              "material_slab_bytes": 501312,
+              "material_slabs": 1,
+              "mesh_slab_bytes": 198612280,
+              "mesh_slabs": 4,
+              "meshes": 2271,
+              "oit_head_capacity": 921600,
+              "oit_node_capacity": 3686400,
+              "pipelines": 102,
+              "views": 14
+            },
+            "native_audio": {
+              "programs": 48,
+              "streams": 174,
+              "samples": 69,
+              "active_voices": 38,
+              "decoded_mib": 4.939460754394531,
+              "device": true
+            },
+            "weather_atmosphere": {
+              "cloud_cover": 0.9800000190734863,
+              "flake_size": 1.0,
+              "fog_density": 0.0005799999926239252,
+              "overcast": 0.8500000238418579,
+              "phase": "calm",
+              "rain": 1.0,
+              "snow": 0.0,
+              "snow_cover": 0.0,
+              "storm": 0.0,
+              "temperature_c": 17.420654296875,
+              "visibility_m": 3000.0,
+              "wind_mps": [
+                2.864300012588501,
+                0.0,
+                1.2653954029083252
+              ]
+            }
+          },
+          "png_sha256": "fe5587243705f6a97913ae30b017fa7f43cc02afcbdcd6818d7c0c8b9af510e7",
+          "png_bytes": 792991,
+          "inspection": "Actual original textured cab, HUD and track inspected; no screenshot reused."
+        },
+        "normal-repeat-warm": {
+          "quality_level": 0,
+          "capture": {
+            "odometer_m": 2501.1992980011064,
+            "gpu_tiles": 5,
+            "unactivated_near_shapes": 0,
+            "pending_gpu_uploads": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "performance": {
+              "elapsed_s": 63.21690323500002,
+              "frame_p50_ms": 25,
+              "frame_p95_ms": 25,
+              "frame_p99_ms": 29,
+              "frames": 2413,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 25,
+              "gameplay_frame_p99_ms": 28,
+              "gameplay_frames": 2028,
+              "gameplay_hitches_over_100_ms": 0,
+              "gameplay_longest_frame_ms": 47.089546000000006,
+              "hitches_over_100_ms": 3,
+              "loading_frames": 1160,
+              "longest_frame_ms": 1799.238895,
+              "peak_rss_mib": 1721.4765625,
+              "rss_mib": 1721.4765625,
+              "startup_longest_frame_ms": 1799.238895
+            },
+            "render_budget": {
+              "memory_pressure": false,
+              "particles": 2048,
+              "passenger_lights": 8,
+              "station_lights": 24,
+              "train_lights": 8,
+              "upload_mib": 8,
+              "vegetation_divisor": 1
+            },
+            "residency": {
+              "basis": "measured active-device usage / physical device total",
+              "budget_mib": 8176.0,
+              "pressured": false,
+              "transitions": 0
+            },
+            "graphics_memory": {
+              "active_device_pci": "0000:03:00.0",
+              "device_total_mib": 8176.0,
+              "device_used_mib": 2446.19921875,
+              "devices": [
+                {
+                  "device_total_mib": 8176.0,
+                  "device_used_mib": 2446.19921875,
+                  "pci": "0000:03:00.0",
+                  "process_gtt_mib": 20.171875,
+                  "process_vram_mib": 1510.1875
+                },
+                {
+                  "device_total_mib": 512.0,
+                  "device_used_mib": 458.421875,
+                  "pci": "0000:0e:00.0",
+                  "process_gtt_mib": 2.0,
+                  "process_vram_mib": 0.01171875
+                }
+              ],
+              "peak_process_vram_mib": 1510.19921875,
+              "process_gtt_mib": 22.171875,
+              "process_vram_mib": 1510.19921875,
+              "source": "linux_drm_fdinfo"
+            },
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "host_usage": {
+              "cpu_percent_one_core": 213.71198939224683,
+              "gpu_busy_percent_mean": 23.15891472868217,
+              "selected_gpu_pci": "0000:03:00.0",
+              "gpu_busy_percent_by_device": {
+                "0000:0e:00.0": 28.08139534883721,
+                "0000:03:00.0": 23.15891472868217
+              },
+              "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
+              "private_compositor": {
+                "gl_renderer": "AMD Radeon RX 7600 (radeonsi, navi33, ACO, DRM 3.64, 7.0.0-38-generic)",
+                "egl_device": "/dev/dri/renderD129",
+                "DRI_PRIME": "pci-0000_03_00_0",
+                "scope": "GL renderer identifies effective offload device; EGL device may retain enumeration node"
+              }
+            },
+            "shape_stages": {
+              "cpu_prepare": {
+                "calls": 16,
+                "maximum_us": 1717,
+                "slowest_shape": "RF_WP_DMBSH.s",
+                "total_us": 15098
+              },
+              "cpu_prepare_lods": {
+                "calls": 5,
+                "maximum_us": 5237,
+                "slowest_shape": "IJ_semi_detached2_x2_var1.s",
+                "total_us": 15211
+              },
+              "geometry_cache_read": {
+                "calls": 473,
+                "maximum_us": 10134,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 461509
+              },
+              "geometry_cache_write": {
+                "calls": 5,
+                "maximum_us": 111,
+                "slowest_shape": "IJ_semi_detached2_x2_var3.s",
+                "total_us": 474
+              },
+              "prepare_silhouette": {
+                "calls": 473,
+                "maximum_us": 121,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 3046
+              },
+              "publish_auxiliary": {
+                "calls": 26,
+                "maximum_us": 16565,
+                "slowest_shape": "CarSpawner",
+                "total_us": 32006
+              },
+              "publish_gpu_assets": {
+                "calls": 473,
+                "maximum_us": 37832,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 1115057
+              },
+              "publish_lod_gpu_assets": {
+                "calls": 276,
+                "maximum_us": 13490,
+                "slowest_shape": "CMhenlowshops.s",
+                "total_us": 444714
+              },
+              "resolve_texture_dependencies": {
+                "calls": 473,
+                "maximum_us": 38933,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 2106556
+              },
+              "source_read_parse": {
+                "calls": 16,
+                "maximum_us": 28130,
+                "slowest_shape": "RF_WP_DMBSA.s",
+                "total_us": 213827
+              }
+            },
+            "geometry_cache": {
+              "gpu_handles_cached": false,
+              "hits": 468,
+              "max_disk_mib": 256,
+              "misses": 5,
+              "schema": 1
+            },
+            "render_resources": {
+              "allocator": null,
+              "bin_unpacking_lifetime": {
+                "cached_keys": 2,
+                "retired_keys": 0,
+                "source_keys": 2,
+                "stale_keys_after": 0,
+                "stale_keys_before": 0
+              },
+              "bindless_material_allocations": 889,
+              "bindless_material_allocations_scope": "Raw upstream allocated_resource_count may overcount repeated bindings within a material; use material_owners for actual map ownership.",
+              "images": 544,
+              "indexed_mesh_allocations": 273,
+              "material_owners": {
+                "bindings": {
+                  "available": true,
+                  "by_type": {
+                    "MoonMaterial": 1,
+                    "OrCabMaterial": 69,
+                    "ParticleMaterial": 1,
+                    "RailwaySkyMaterial": 1,
+                    "StandardMaterial": 2613,
+                    "TerrainMaterial": 49
+                  },
+                  "total": 2734
+                },
+                "prepared": {
+                  "available": true,
+                  "by_type": {
+                    "MoonMaterial": 1,
+                    "OrCabMaterial": 69,
+                    "ParticleMaterial": 1,
+                    "RailwaySkyMaterial": 1,
+                    "StandardMaterial": 2613,
+                    "TerrainMaterial": 49
+                  },
+                  "total": 2734
+                }
+              },
+              "material_slab_bytes": 501888,
+              "material_slabs": 1,
+              "mesh_slab_bytes": 198612280,
+              "mesh_slabs": 4,
+              "meshes": 2274,
+              "oit_head_capacity": 921600,
+              "oit_node_capacity": 3686400,
+              "pipelines": 102,
+              "views": 14
+            },
+            "native_audio": {
+              "programs": 48,
+              "streams": 174,
+              "samples": 69,
+              "active_voices": 40,
+              "decoded_mib": 4.939460754394531,
+              "device": true
+            },
+            "weather_atmosphere": {
+              "cloud_cover": 0.9800000190734863,
+              "flake_size": 1.0,
+              "fog_density": 0.0005799999926239252,
+              "overcast": 0.8500000238418579,
+              "phase": "calm",
+              "rain": 1.0,
+              "snow": 0.0,
+              "snow_cover": 0.0,
+              "storm": 0.0,
+              "temperature_c": 17.42066764831543,
+              "visibility_m": 3000.0,
+              "wind_mps": [
+                2.8628203868865967,
+                0.0,
+                1.2659224271774292
+              ]
+            }
+          },
+          "png_sha256": "f33cfb6822bb340598989c5028c80dde6024293e4f58249f6ed37959d15a5f3f",
+          "png_bytes": 792964,
+          "inspection": "Actual original textured cab, HUD and track inspected; no screenshot reused."
+        }
+      },
+      "interpretation": "Normal/reduced/normal-repeat gameplay P99 33/28/28 ms and maximum 57.613/46.683/47.090 ms. The repeated normal also improves, so no isolated causal FPS gain is claimed. Actual caps change particles 2048/512/2048, station lights 24/0/24, vegetation divisor 1/4/1; player train-light cap stays8. Startup maxima 1782.488/1841.058/1799.239 ms remain reported separately."
     }
   },
   "allocation_lifetime": {
@@ -4844,7 +7727,7 @@
       "last_rss_mib": 2414.84375
     },
     "final_candidate27": {
-      "status": "In progress; no 7200-second acceptance claim.",
+      "status": "Rejected partial diagnosis: last rawsample7170.042s, wrapperexit143 without finalcapture/report; equivalent visits also show increasing anonymous GPU textures.",
       "started_utc": "2026-10-14T01:45:20Z",
       "expected_end_utc": "2026-10-14T03:45:20Z",
       "viewer_sha256": "b00a0840c9179fd7d357436d144d16e36224b3b3a4d66f9154a0d9f7013c1217",
@@ -4880,7 +7763,16 @@
         "No Cargo or Snap CPU compilation at startup.",
         "Dedicated RX visual captures followed by sequential D9\u219227 benchmark; integrated GPU remains exclusive.",
         "Later release/Snap CPU builds will be timestamped; endurance is not an FPS claim."
-      ]
+      ],
+      "post27_interface_scope": {
+        "changed_files": [
+          "crates/openrailsrs-viewer3d/src/player_ui.rs",
+          "crates/openrailsrs-viewer3d/src/player_ui/choices.rs",
+          "crates/openrailsrs-viewer3d/src/player_ui/launcher.rs",
+          "crates/openrailsrs-viewer3d/src/player_ui/menu_country.rs"
+        ],
+        "scope": "The31 snapshot changes these four interface files relative to27. No claim of a31 endurance run; UI snapshots are validated separately. The density lifetime correction changes render resource ownership and therefore requires a new full run."
+      }
     },
     "first_retirement27": {
       "wall_s": 210.027424094,
@@ -4919,6 +7811,582 @@
           "total": 43
         }
       }
+    },
+    "texture_growth_diagnostic27": {
+      "status": "Measured growth; final stability remains pending a new candidate",
+      "comparison_scope": "Same original scenario,age120s,calendarHeavySnow/DriverCam and recorded effective particle/light/vegetation budgets. This is not an attribution of all GPU memory or RSS to the density image.",
+      "samples": [
+        {
+          "wall_s": 840.009608098,
+          "scenario": "Laboratorio de fuelles, mangueras y acopladores",
+          "calendar_weather_profile": "HeavySnow",
+          "calendar_camera": "DriverCam",
+          "interval_phase_s": 120,
+          "effective_render_budget": {
+            "memory_pressure": true,
+            "particles": 256,
+            "passenger_lights": 0,
+            "station_lights": 0,
+            "train_lights": 5,
+            "upload_mib": 2,
+            "vegetation_divisor": 8
+          },
+          "unlabeled_texture_allocations": 40,
+          "unlabeled_texture_bytes": 17320032,
+          "gpu_allocated_bytes": 436085352,
+          "gpu_reserved_bytes": 1291579672,
+          "material_owners": {
+            "bindings": {
+              "available": true,
+              "by_type": {
+                "MoonMaterial": 1,
+                "ParticleMaterial": 1,
+                "RailwaySkyMaterial": 1,
+                "StandardMaterial": 28
+              },
+              "total": 31
+            },
+            "prepared": {
+              "available": true,
+              "by_type": {
+                "MoonMaterial": 1,
+                "ParticleMaterial": 1,
+                "RailwaySkyMaterial": 1,
+                "StandardMaterial": 28
+              },
+              "total": 31
+            }
+          },
+          "heap_allocator": {
+            "allocator": "glibc mallinfo2",
+            "arena": 2266456064,
+            "available": true,
+            "fordblks": 1896281248,
+            "hblkhd": 80,
+            "scope": "Raw bytes: arena includes libc heap capacity; uordblks/fordblks describe arena use/free space, hblkhd separate mmap allocation space. These statistics do not equal total PSS, Rust live-object bytes or all driver allocations. No malloc_trim is called.",
+            "uordblks": 370174816
+          },
+          "rss_mib": 2219.0546875,
+          "graphics_memory": {
+            "active_device_pci": "0000:0e:00.0",
+            "device_total_mib": 512.0,
+            "device_used_mib": 469.86328125,
+            "devices": [
+              {
+                "device_total_mib": 8176.0,
+                "device_used_mib": 769.18359375,
+                "pci": "0000:03:00.0",
+                "process_gtt_mib": 2.0,
+                "process_vram_mib": 0.01171875
+              },
+              {
+                "device_total_mib": 512.0,
+                "device_used_mib": 469.86328125,
+                "pci": "0000:0e:00.0",
+                "process_gtt_mib": 1066.96875,
+                "process_vram_mib": 432.328125
+              }
+            ],
+            "peak_process_vram_mib": 466.04296875,
+            "process_gtt_mib": 1068.96875,
+            "process_vram_mib": 432.33984375,
+            "source": "linux_drm_fdinfo"
+          }
+        },
+        {
+          "wall_s": 3000.013027212,
+          "scenario": "Laboratorio de fuelles, mangueras y acopladores",
+          "calendar_weather_profile": "HeavySnow",
+          "calendar_camera": "DriverCam",
+          "interval_phase_s": 120,
+          "effective_render_budget": {
+            "memory_pressure": true,
+            "particles": 256,
+            "passenger_lights": 0,
+            "station_lights": 0,
+            "train_lights": 5,
+            "upload_mib": 2,
+            "vegetation_divisor": 8
+          },
+          "unlabeled_texture_allocations": 52,
+          "unlabeled_texture_bytes": 20480888,
+          "gpu_allocated_bytes": 439241264,
+          "gpu_reserved_bytes": 1157361944,
+          "material_owners": {
+            "bindings": {
+              "available": true,
+              "by_type": {
+                "MoonMaterial": 1,
+                "ParticleMaterial": 1,
+                "RailwaySkyMaterial": 1,
+                "StandardMaterial": 28
+              },
+              "total": 31
+            },
+            "prepared": {
+              "available": true,
+              "by_type": {
+                "MoonMaterial": 1,
+                "ParticleMaterial": 1,
+                "RailwaySkyMaterial": 1,
+                "StandardMaterial": 28
+              },
+              "total": 31
+            }
+          },
+          "heap_allocator": {
+            "allocator": "glibc mallinfo2",
+            "arena": 3081265152,
+            "available": true,
+            "fordblks": 2687064288,
+            "hblkhd": 80,
+            "scope": "Raw bytes: arena includes libc heap capacity; uordblks/fordblks describe arena use/free space, hblkhd separate mmap allocation space. These statistics do not equal total PSS, Rust live-object bytes or all driver allocations. No malloc_trim is called.",
+            "uordblks": 394200864
+          },
+          "rss_mib": 2927.3046875,
+          "graphics_memory": {
+            "active_device_pci": "0000:0e:00.0",
+            "device_total_mib": 512.0,
+            "device_used_mib": 472.0234375,
+            "devices": [
+              {
+                "device_total_mib": 8176.0,
+                "device_used_mib": 853.62109375,
+                "pci": "0000:03:00.0",
+                "process_gtt_mib": 2.0,
+                "process_vram_mib": 0.01171875
+              },
+              {
+                "device_total_mib": 512.0,
+                "device_used_mib": 472.0234375,
+                "pci": "0000:0e:00.0",
+                "process_gtt_mib": 982.43359375,
+                "process_vram_mib": 434.48828125
+              }
+            ],
+            "peak_process_vram_mib": 466.04296875,
+            "process_gtt_mib": 984.43359375,
+            "process_vram_mib": 434.5,
+            "source": "linux_drm_fdinfo"
+          }
+        },
+        {
+          "wall_s": 5160.019011489,
+          "scenario": "Laboratorio de fuelles, mangueras y acopladores",
+          "calendar_weather_profile": "HeavySnow",
+          "calendar_camera": "DriverCam",
+          "interval_phase_s": 120,
+          "effective_render_budget": {
+            "memory_pressure": true,
+            "particles": 256,
+            "passenger_lights": 0,
+            "station_lights": 0,
+            "train_lights": 5,
+            "upload_mib": 2,
+            "vegetation_divisor": 8
+          },
+          "unlabeled_texture_allocations": 64,
+          "unlabeled_texture_bytes": 23639136,
+          "gpu_allocated_bytes": 442536824,
+          "gpu_reserved_bytes": 1224470808,
+          "material_owners": {
+            "bindings": {
+              "available": true,
+              "by_type": {
+                "MoonMaterial": 1,
+                "ParticleMaterial": 1,
+                "RailwaySkyMaterial": 1,
+                "StandardMaterial": 28
+              },
+              "total": 31
+            },
+            "prepared": {
+              "available": true,
+              "by_type": {
+                "MoonMaterial": 1,
+                "ParticleMaterial": 1,
+                "RailwaySkyMaterial": 1,
+                "StandardMaterial": 28
+              },
+              "total": 31
+            }
+          },
+          "heap_allocator": {
+            "allocator": "glibc mallinfo2",
+            "arena": 2950393856,
+            "available": true,
+            "fordblks": 2546714688,
+            "hblkhd": 80,
+            "scope": "Raw bytes: arena includes libc heap capacity; uordblks/fordblks describe arena use/free space, hblkhd separate mmap allocation space. These statistics do not equal total PSS, Rust live-object bytes or all driver allocations. No malloc_trim is called.",
+            "uordblks": 403679168
+          },
+          "rss_mib": 2830.6875,
+          "graphics_memory": {
+            "active_device_pci": "0000:0e:00.0",
+            "device_total_mib": 512.0,
+            "device_used_mib": 406.13671875,
+            "devices": [
+              {
+                "device_total_mib": 8176.0,
+                "device_used_mib": 898.125,
+                "pci": "0000:03:00.0",
+                "process_gtt_mib": 2.0,
+                "process_vram_mib": 0.01171875
+              },
+              {
+                "device_total_mib": 512.0,
+                "device_used_mib": 406.13671875,
+                "pci": "0000:0e:00.0",
+                "process_gtt_mib": 1163.984375,
+                "process_vram_mib": 368.6015625
+              }
+            ],
+            "peak_process_vram_mib": 466.04296875,
+            "process_gtt_mib": 1165.984375,
+            "process_vram_mib": 368.61328125,
+            "source": "linux_drm_fdinfo"
+          }
+        }
+      ],
+      "observed_unlabeled_texture_allocations": [
+        40,
+        52,
+        64
+      ],
+      "planned_correction": "Reuse one labelled 32^3 R8Unorm ground-fog density image with MAIN_WORLD and RENDER_WORLD; preserve identical density bytes/sampler/volume/weather/shader. A dedicated allocator counter observes this small label outside the largest16 cutoff. Confirm on live GPU before a new complete7200-second run.",
+      "source_regressions": [
+        "twelve_scene_reloads_reuse_one_fog_density_image_without_changing_its_payload",
+        "shared_fog_allocation_is_counted_even_below_the_largest_label_cutoff",
+        "missing_fog_allocation_label_stays_unavailable_instead_of_zero_filled"
+      ]
+    },
+    "rejected_partial27": {
+      "status": "rejected_partial_wrapper_signal_and_texture_growth",
+      "viewer_sha256": "b00a0840c9179fd7d357436d144d16e36224b3b3a4d66f9154a0d9f7013c1217",
+      "observed_wall_s": 7170.042315535,
+      "valid_rows": 239,
+      "invalid_lines": [],
+      "observed_route_transitions": 39,
+      "actual_json_session_traffic_restores": 119,
+      "unified_exec_returncode": 143,
+      "fresh_final_capture": false,
+      "final_harness_report": false,
+      "source_of_signal": "Unknown; agent did not issue a termination signal. No cause asserted.",
+      "duration_scope": "Not7200seconds; no rounding or combination with other runs.",
+      "stability_scope": "Earlier equivalent visits already showed anonymous GPU texture growth; this run cannot close391/403 regardless of missing finalduration."
+    },
+    "final_candidate32": {
+      "status": "rejected: proportional GPU image growth under equivalent ownership/budget;3090.012s sampled, not7200",
+      "viewer_sha256": "4ee97d35ead40ca675852ea0a011bc1e8c684cc3d86f88c3a99b82ed5032276f",
+      "viewer_bytes": 172568480,
+      "started_utc": "2026-10-14T03:59:49.936608+00:00",
+      "expected_end_utc": "2026-10-14T05:59:49.936608+00:00",
+      "requested_wall_seconds": 7200,
+      "source_snapshot_sha256": "67a4571014e9b08b6cfd28b760616e85882dafb42ab62e7025e609893ec44665",
+      "acceptance_plan_sha256": "84fb590b3927030d6682c8a8f3e3bd05e3b5ef6d8a157cebbb9014bea89c8460",
+      "configuration": {
+        "route_interval_s": 180,
+        "framepace": 30,
+        "camera_weather_json_restore_interval_s": 60,
+        "wall_sample_interval_s": 30,
+        "audio": "private ALSA-null",
+        "gpu": "Integrated RADV RAPHAEL_MENDOCINO1002:13c0",
+        "gpu_policy": "natural active physical budget,MemoryUsage",
+        "particle_budget": 2048,
+        "adaptive_quality": {
+          "enabled": true,
+          "target_fps": 30,
+          "min_level": 0,
+          "max_level": 3
+        },
+        "window": [
+          1280,
+          720
+        ],
+        "weather_seed": 42,
+        "autodrive": 0.5,
+        "speed_multiplier": 4,
+        "compositor_gl_pci": "0000:0e:00.0"
+      },
+      "cache_scope": "Warm private derivatives moved from rejected27 through an88.7-second wrong-GL diagnostic;source/compiler unchanged,not a cold-start benchmark.",
+      "scope": "Independent real7200s;no summation of rejected/partial runs.120JSONsession/traffic restores are in-memory,not disk savefile tests."
+    },
+    "shared_density_gate32": {
+      "status": "passed_shared_gpu_density_image",
+      "scope": "Short live-GPU image lifetime test; not a two-hour stability acceptance. Other GPU allocations, heap, reserves and GTT still require the complete final run.",
+      "actual_wall_s": 420.011010777,
+      "observed_route_changes": 13,
+      "observed_changes_after_first_available_label": 12,
+      "initial_unavailable_density_samples": [
+        {
+          "wall_s": 30.021806071,
+          "scenario": "Chiltern extendido: Northolt Park \u2192 Gerrards Cross",
+          "density": null
+        }
+      ],
+      "executed_session_traffic_restores": 7,
+      "gpu_label": "openrailsrs-ground-fog-density",
+      "gpu_allocations_per_sample": 1,
+      "gpu_density_bytes_per_sample": 32768,
+      "retired_keys": 26,
+      "stale_after_max": 0,
+      "final_pending_uploads": 0,
+      "raw_trace_sha256": "fe847aae16269d149e27fc84064470acd1789c95938e1a9b503a4ec31408dc5f",
+      "raw_trace_bytes": 229696,
+      "viewer_sha256": "4ee97d35ead40ca675852ea0a011bc1e8c684cc3d86f88c3a99b82ed5032276f",
+      "supervisor_status": "completed",
+      "supervisor_child_returncode": 0,
+      "gpu": "Discrete RX7600 for Vulkan and GL",
+      "final_readiness": {
+        "near_shapes": 0,
+        "gpu_uploads": 0,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        },
+        "png_sha256": "8f2ca42ba2d832c9e0a2b62da55336fca806bcbe64754125f4419b83b2198c08",
+        "png_inspected": true
+      }
+    },
+    "predeclared_acceptance32": {
+      "status": "Predeclared criteria; no result yet",
+      "duration": {
+        "real_wall_seconds_min": 7200,
+        "summation_of_failed_or_partial_runs_allowed": false,
+        "observed_route_transitions_min": 39,
+        "executed_serialized_session_and_traffic_restores_min": 120,
+        "restore_scope": "In-memory JSON serialization and restoration, not disk save-file loading."
+      },
+      "short_gpu_gate": {
+        "wall_seconds": 420,
+        "route_interval_seconds": 30,
+        "observed_route_transitions_min": 12,
+        "ground_fog_label": "openrailsrs-ground-fog-density",
+        "live_gpu_density_allocations_each_sample": 1,
+        "density_allocation_bytes_each_sample": "Exactly the same nonzero value; backend report required. A missing label is unavailable and fails this gate.",
+        "other_allocations": "Report unlabelled textures, actual material owners and live/reserved GPU allocations; any remaining repeated per-transition growth is investigated before acceptance."
+      },
+      "comparison": {
+        "warmup_wall_seconds": 600,
+        "minimum_equivalent_visits": 3,
+        "use": "Last three available visits per eligible equivalent scene/phase after warmup, plus all rows for bounded-resource and queue/error checks.",
+        "identity": [
+          "scenario",
+          "age within 180-second route interval",
+          "calendar weather profile",
+          "camera",
+          "effective particle/light/vegetation/upload budget"
+        ],
+        "calendar_combination_period_seconds": 2160,
+        "insufficient_comparables": "Explicit unavailable result, never a zero-filled pass. At least the own-laboratory and depot configurations need three comparable visits. Native-route samples and any differing budgets remain reported separately."
+      },
+      "fixed_ownership": {
+        "density_gpu_allocation_count": 1,
+        "density_bytes": "Invariant nonzero reported byte size",
+        "font_asset_count": 1,
+        "font_atlas_image_count_max": 12,
+        "gpu_preprocessing_source_and_cached_keys_present": true,
+        "retired_gpu_bind_group_keys_min": 39,
+        "stale_gpu_bind_group_keys_after_max": 0,
+        "actual_material_owner_maps": "Both public maps must be available. Same material types/counts on the own scenes at equivalent budgets; all native changes are reported rather than inferred from the upstream overcounting statistic.",
+        "anonymous_textures_and_other_pools": "Track counts and bytes of Unlabeled texture plus actual RenderAssets/Image/Material maps, mesh slabs, Hanabi assets/buffers and caches. A repeated increase proportional to route reloads triggers investigation/rejection even if total bytes stay below the2MiB allowance. Missing reports/maps are unavailable, never accepted as zeros."
+      },
+      "memory_review_limits": {
+        "live_gpu_last_minus_first_mib_max": 2,
+        "live_gpu_reason": "Allows transient staging and upload alignment; a recurring256KiB scene image grows by3MiB over12 transitions and would exceed this allowance between equivalent visits.",
+        "libc_used_last_minus_first_mib_max": 8,
+        "libc_used_range_mib_max": 16,
+        "libc_used_reason": "Allows bounded shader/cache bookkeeping and in-flight tasks while exposing sustained CPU ownership growth. Actual maps and cache limits must also remain bounded.",
+        "rss_last_minus_first_mib_max": 64,
+        "rss_range_mib_max": 256,
+        "gpu_reserved_last_minus_first_mib_max": 64,
+        "gpu_reserved_range_mib_max": 256,
+        "process_gtt_last_minus_first_mib_max": 64,
+        "process_gtt_range_mib_max": 256,
+        "capacity_reason": "Allocator arenas/blocks are reusable capacity, distinct from live bytes. A single64MiB allocator-block step and256MiB bounded oscillation are visible, but repeated larger upward steps or monotonic growth fail review. Raw libc capacity/free and GPU reserve/GTT remain published; these limits do not hide them.",
+        "pcm_unique_payload_mib_max": 128,
+        "equivalent_native_pcm_resident_range_mib_max": 1,
+        "pcm_reason": "Global unique-PCM payload budget is128MiB; a one-MiB equivalent-phase allowance covers deferred short cues. Actual SMS programs, samples, voices, shared-pool entries and bounded worker queues are reported separately."
+      },
+      "final_readiness": {
+        "pending_gpu_uploads": 0,
+        "required_near_shapes": 0,
+        "pending_shader_compilations": 0,
+        "shader_failures": 0,
+        "fresh_final_png_required": true,
+        "raw_trace_truncation_or_invalid_lines_allowed": false,
+        "device_loss_or_runtime_panic_allowed": false
+      },
+      "decision_scope": "Limits flag review and do not automatically close an issue. If any trend or gate fails, retain the run as a diagnosis and investigate without loosening thresholds to obtain a pass. Report live bytes, capacity, RSS, dedicated VRAM and shared GTT separately. No malloc_trim or graphics-quality change is introduced to satisfy this plan. Background CPU loads are recorded; this endurance test is not an isolated FPS benchmark. Any capture failure or incomplete shader/publication queues prevents acceptance. The parent approved these limits before the final candidate starts; no post-result relaxation is allowed."
+    },
+    "rejected_partial32": {
+      "status": "rejected_partial",
+      "reason": "Equivalent same-budget scene has proportional RenderAssets GPU image and anonymous texture growth; not accepted as stable. Fog pool alone remains bounded.",
+      "requested_stop_utc": "2026-10-14T04:51:26.418395+00:00",
+      "exact_supervisor_pid": 482894,
+      "raw_sha256_at_requested_stop": "4f7f6489d5c9a54bbff9d36de1c64d694106acb1578c1a9e7c8163794eccd7f5",
+      "valid_rows_at_requested_stop": 103,
+      "actual_last_wall_s": 3090.012064126,
+      "observed_route_transitions": 17,
+      "in_memory_json_restores": 51,
+      "matched_phase_receipt": "same-phase-840-3000.json",
+      "duration_requirement_s": 7200,
+      "does_not_count_as_complete_duration": true,
+      "does_not_count_restores_as_disk_saves": true,
+      "supervisor_result": {
+        "status": "interrupted_signal",
+        "started_utc": "2026-10-14T03:59:49.949655+00:00",
+        "supervisor_pid": 482894,
+        "supervisor_sid": 482894,
+        "spec_sha256": "c25545306e6c6893db5ef9e7c989950284b2043278c97f02430275339b61ce45",
+        "command": [
+          "/usr/bin/python3",
+          "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/scripts/check_viewer_soak.py",
+          "--viewer",
+          "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/fifth40-20261013/phase32-viewer",
+          "--out-dir",
+          "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/fifth40-20261013/endurance-phase32-integrated-isolated",
+          "--route-root",
+          "/home/cristian/.local/share/openrailsrs/official-content/chiltern-v4-2fc79dd1c7f0eebc/Chiltern-Route-v4-8236df20ed9f596b8cf15720c43bfbdd0c43125d/ROUTES/Chiltern",
+          "--routes-json",
+          "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/fifth40-20261013/soak-routes-complete.json",
+          "--audio-null",
+          "--framepace",
+          "30",
+          "--route-interval-s",
+          "180",
+          "--seconds",
+          "7200"
+        ],
+        "viewer_sha256": "4ee97d35ead40ca675852ea0a011bc1e8c684cc3d86f88c3a99b82ed5032276f",
+        "child_pid": 482895,
+        "received_signal": 2,
+        "child_returncode": -2,
+        "finished_utc": "2026-10-14T04:51:26.734161+00:00",
+        "elapsed_wall_s": 3096.784513275001
+      },
+      "raw_report_sha256_final": "4f7f6489d5c9a54bbff9d36de1c64d694106acb1578c1a9e7c8163794eccd7f5",
+      "same_phase_comparison": {
+        "status": "Growth repeats under equivalent scene; not accepted as stable",
+        "samples": [
+          {
+            "wall_s": 840.033228471,
+            "scenario": "Laboratorio de fuelles, mangueras y acopladores",
+            "camera_weather_cycle": 14,
+            "main_images": 26,
+            "render_images": 31,
+            "font_atlases": 12,
+            "fonts": 1,
+            "entities": 764,
+            "material_owners": {
+              "bindings": {
+                "available": true,
+                "by_type": {
+                  "MoonMaterial": 1,
+                  "ParticleMaterial": 1,
+                  "RailwaySkyMaterial": 1,
+                  "StandardMaterial": 28
+                },
+                "total": 31
+              },
+              "prepared": {
+                "available": true,
+                "by_type": {
+                  "MoonMaterial": 1,
+                  "ParticleMaterial": 1,
+                  "RailwaySkyMaterial": 1,
+                  "StandardMaterial": 28
+                },
+                "total": 31
+              }
+            },
+            "render_budget": {
+              "memory_pressure": true,
+              "particles": 256,
+              "passenger_lights": 0,
+              "station_lights": 0,
+              "train_lights": 5,
+              "upload_mib": 2,
+              "vegetation_divisor": 8
+            },
+            "anonymous_textures": {
+              "allocations": 39,
+              "bytes": 17311664,
+              "name": "Unlabeled texture"
+            },
+            "fog_density": {
+              "allocations": 1,
+              "bytes": 32768,
+              "name": "openrailsrs-ground-fog-density"
+            },
+            "gpu_live_bytes": 435931736,
+            "gpu_reserved_bytes": 1224470808,
+            "heap_used_bytes": 366653456,
+            "rss_mib": 2498.08203125,
+            "pending_uploads": 0,
+            "shader_count_scope": "The former second queues entry was total shader asset count, not pending. Pipeline pending/failed are separately measured by ScenePipelineStatus."
+          },
+          {
+            "wall_s": 3000.010133388,
+            "scenario": "Laboratorio de fuelles, mangueras y acopladores",
+            "camera_weather_cycle": 50,
+            "main_images": 26,
+            "render_images": 43,
+            "font_atlases": 12,
+            "fonts": 1,
+            "entities": 764,
+            "material_owners": {
+              "bindings": {
+                "available": true,
+                "by_type": {
+                  "MoonMaterial": 1,
+                  "ParticleMaterial": 1,
+                  "RailwaySkyMaterial": 1,
+                  "StandardMaterial": 28
+                },
+                "total": 31
+              },
+              "prepared": {
+                "available": true,
+                "by_type": {
+                  "MoonMaterial": 1,
+                  "ParticleMaterial": 1,
+                  "RailwaySkyMaterial": 1,
+                  "StandardMaterial": 28
+                },
+                "total": 31
+              }
+            },
+            "render_budget": {
+              "memory_pressure": true,
+              "particles": 256,
+              "passenger_lights": 0,
+              "station_lights": 0,
+              "train_lights": 5,
+              "upload_mib": 2,
+              "vegetation_divisor": 8
+            },
+            "anonymous_textures": {
+              "allocations": 51,
+              "bytes": 20474416,
+              "name": "Unlabeled texture"
+            },
+            "fog_density": {
+              "allocations": 1,
+              "bytes": 32768,
+              "name": "openrailsrs-ground-fog-density"
+            },
+            "gpu_live_bytes": 439200816,
+            "gpu_reserved_bytes": 1241248024,
+            "heap_used_bytes": 390626048,
+            "rss_mib": 3060.58203125,
+            "pending_uploads": 0,
+            "shader_count_scope": "The former second queues entry was total shader asset count, not pending. Pipeline pending/failed are separately measured by ScenePipelineStatus."
+          }
+        ]
+      },
+      "final_capture_available": false,
+      "scope": "Intentional own-PID stop after confirmed proportional GPU image growth. No final screenshot was produced; shorter420-second pool gate has its own independently captured PNG, not a substitute final capture."
     }
   },
   "limits": [
@@ -6122,5 +9590,991 @@
         }
       }
     }
+  },
+  "final_global_reference32": {
+    "scope": "ExactD9 andfinal32 sequentialcold/warm launches. Both dedicatedRX7600 for Vulkan+GL. Regressions preserved; not an isolated causal attribution because the integrated endurance background changes scenes between cases.",
+    "raw_report_sha256": "e70f2718f70be6071e61aa7a8c502f139e93de1c7bfd0e22574cdac1a956f29c",
+    "configuration": {
+      "scenario_sha256": "faac5f908bfafd4a73ecf5be3e1c9601970c110b8926b7c80ac3221387baf5bf",
+      "seed": 42,
+      "camera": "driver",
+      "window": [
+        1280,
+        720
+      ],
+      "view_distance_m": 500,
+      "speed_multiplier": 4,
+      "weather_particle_budget": 2048,
+      "audio": "private ALSA null",
+      "checkpoint_m": 2500.0,
+      "cache_scope": "cold/warm refers to this executable's private application-data cache; OS file cache and Mesa shader cache are not cleared",
+      "framepace": "off",
+      "concurrent_workloads": "Only independent7200-second32 soak on integratedVulkan+GLPCI0e. Rootsoftware-menuQA ended04:03:30UTC before this newattempt;priorattemptrejected. NoCargo/Snapbuild/simulations/compilers;scenario phases of integrated background vary. Both benchmarkVulkan andGL isolatedRXPCI03.",
+      "profile_systems": true,
+      "weathers": [
+        "downpour"
+      ]
+    },
+    "versions": {
+      "baseline": {
+        "binary_sha256": "fcc8bee54cd6310f5b723f50e9cc0caa8576c6bc0db14da2ef2efcb254dd2053",
+        "cases": {
+          "downpour-cold": {
+            "odometer_m": 2501.1992980011064,
+            "gpu_tiles": 2,
+            "visible_neighbourhood_pending": 0,
+            "pending_uploads": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "gameplay": {
+              "gameplay_frames": 2010,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 27,
+              "gameplay_frame_p99_ms": 37,
+              "gameplay_longest_frame_ms": 65.40020700000001,
+              "gameplay_hitches_over_100_ms": 0
+            },
+            "startup_inclusive_max_ms": 1707.11499,
+            "loading_frames": 1102,
+            "rss_mib": 1810.66015625,
+            "peak_rss_mib": 1883.1,
+            "png_sha256": "185f69e6d8ee0f57e1f7222e2df0cfb59b798f352c33c7bd8678c395d703afd0",
+            "png_bytes": 789372,
+            "graphics_memory": {
+              "device_total_mib": 8688.0,
+              "device_used_mib": 3100.1328125,
+              "peak_process_vram_mib": 1383.4609375,
+              "process_gtt_mib": 82.20703125,
+              "process_vram_mib": 1383.4609375,
+              "source": "linux_drm_fdinfo"
+            },
+            "geometry_cache": null,
+            "system_stages": null,
+            "shape_stages": null,
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "host_usage": {
+              "cpu_percent_one_core": 215.3630185060199,
+              "gpu_busy_percent_mean": 31.439393939393938,
+              "selected_gpu_pci": "0000:03:00.0",
+              "gpu_busy_percent_by_device": {
+                "0000:0e:00.0": 38.84090909090909,
+                "0000:03:00.0": 31.439393939393938
+              },
+              "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
+              "private_compositor": {
+                "gl_renderer": "AMD Radeon RX 7600 (radeonsi, navi33, ACO, DRM 3.64, 7.0.0-38-generic)",
+                "egl_device": "/dev/dri/renderD129",
+                "DRI_PRIME": "pci-0000_03_00_0",
+                "scope": "GL renderer identifies effective offload device; EGL device may retain enumeration node"
+              }
+            },
+            "render_resources": null
+          },
+          "downpour-warm": {
+            "odometer_m": 2500.6907735943855,
+            "gpu_tiles": 2,
+            "visible_neighbourhood_pending": 0,
+            "pending_uploads": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "gameplay": {
+              "gameplay_frames": 2027,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 26,
+              "gameplay_frame_p99_ms": 29,
+              "gameplay_longest_frame_ms": 50.650589000000004,
+              "gameplay_hitches_over_100_ms": 0
+            },
+            "startup_inclusive_max_ms": 1734.413744,
+            "loading_frames": 1084,
+            "rss_mib": 1866.9453125,
+            "peak_rss_mib": 1934.8,
+            "png_sha256": "e0522c935352de88b2c1499abed643acae3dfa97274a1631b18d84d244b5d8a8",
+            "png_bytes": 789415,
+            "graphics_memory": {
+              "device_total_mib": 8688.0,
+              "device_used_mib": 2723.859375,
+              "peak_process_vram_mib": 1382.1015625,
+              "process_gtt_mib": 82.20703125,
+              "process_vram_mib": 1382.1015625,
+              "source": "linux_drm_fdinfo"
+            },
+            "geometry_cache": null,
+            "system_stages": null,
+            "shape_stages": null,
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "host_usage": {
+              "cpu_percent_one_core": 211.22095382459176,
+              "gpu_busy_percent_mean": 31.37121212121212,
+              "selected_gpu_pci": "0000:03:00.0",
+              "gpu_busy_percent_by_device": {
+                "0000:0e:00.0": 51.89393939393939,
+                "0000:03:00.0": 31.37121212121212
+              },
+              "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
+              "private_compositor": {
+                "gl_renderer": "AMD Radeon RX 7600 (radeonsi, navi33, ACO, DRM 3.64, 7.0.0-38-generic)",
+                "egl_device": "/dev/dri/renderD129",
+                "DRI_PRIME": "pci-0000_03_00_0",
+                "scope": "GL renderer identifies effective offload device; EGL device may retain enumeration node"
+              }
+            },
+            "render_resources": null
+          }
+        }
+      },
+      "candidate": {
+        "binary_sha256": "4ee97d35ead40ca675852ea0a011bc1e8c684cc3d86f88c3a99b82ed5032276f",
+        "cases": {
+          "downpour-cold": {
+            "odometer_m": 2501.1992980011064,
+            "gpu_tiles": 5,
+            "visible_neighbourhood_pending": 0,
+            "pending_uploads": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "gameplay": {
+              "gameplay_frames": 1998,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 29,
+              "gameplay_frame_p99_ms": 40,
+              "gameplay_longest_frame_ms": 78.159086,
+              "gameplay_hitches_over_100_ms": 0
+            },
+            "startup_inclusive_max_ms": 1655.105461,
+            "loading_frames": 1196,
+            "rss_mib": 1809.0390625,
+            "peak_rss_mib": 1942.7,
+            "png_sha256": "527c2c34f0c06f01bb2f7b9a4345b85e8386d9f46b60f7bf102786c4e3dc282f",
+            "png_bytes": 792629,
+            "graphics_memory": {
+              "active_device_pci": "0000:03:00.0",
+              "device_total_mib": 8176.0,
+              "device_used_mib": 2541.84765625,
+              "devices": [
+                {
+                  "device_total_mib": 8176.0,
+                  "device_used_mib": 2541.84765625,
+                  "pci": "0000:03:00.0",
+                  "process_gtt_mib": 20.171875,
+                  "process_vram_mib": 1445.33203125
+                },
+                {
+                  "device_total_mib": 512.0,
+                  "device_used_mib": 474.8984375,
+                  "pci": "0000:0e:00.0",
+                  "process_gtt_mib": 2.0,
+                  "process_vram_mib": 0.01171875
+                }
+              ],
+              "peak_process_vram_mib": 1445.34375,
+              "process_gtt_mib": 22.171875,
+              "process_vram_mib": 1445.34375,
+              "source": "linux_drm_fdinfo"
+            },
+            "geometry_cache": {
+              "gpu_handles_cached": false,
+              "hits": 0,
+              "max_disk_mib": 256,
+              "misses": 474,
+              "schema": 1
+            },
+            "system_stages": {
+              "camera_collision": {
+                "calls": 2403,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 17,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 2241
+              },
+              "effect_obstacles": {
+                "calls": 2403,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 3225,
+                "p50_ms": 0.3,
+                "p99_ms": 1.6,
+                "total_us": 957223
+              },
+              "flexible_connections": {
+                "calls": 2403,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 61,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 18811
+              },
+              "horizon": {
+                "calls": 2404,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 25458,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 67889
+              },
+              "jacobs_bogie": {
+                "calls": 2404,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 99,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 25155
+              },
+              "level_crossing_register": {
+                "calls": 2404,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 12463,
+                "p50_ms": 0.1,
+                "p99_ms": 0.2,
+                "total_us": 42960
+              },
+              "live_drive": {
+                "calls": 3081,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 5031,
+                "p50_ms": 0.3,
+                "p99_ms": 2.6,
+                "total_us": 1049862
+              },
+              "mirrors": {
+                "calls": 2403,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 7,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1463
+              },
+              "platform_people": {
+                "calls": 2403,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 24,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 10331
+              },
+              "road_cars": {
+                "calls": 2404,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 180,
+                "p50_ms": 0.1,
+                "p99_ms": 0.2,
+                "total_us": 47794
+              },
+              "snow_materials": {
+                "calls": 2403,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 104,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 8910
+              },
+              "snow_roof_markers": {
+                "calls": 2404,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 4,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 19
+              },
+              "snow_tracks": {
+                "calls": 2403,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 6,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 158
+              },
+              "streaming_forecast.update": {
+                "calls": 2403,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 23,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1709
+              },
+              "terrain_spawn.terrain_tile_bundle_materialize_system": {
+                "calls": 2403,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 135,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 2335
+              },
+              "terrain_spawn.terrain_tile_spawn_stream_system": {
+                "calls": 2403,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 113,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1333
+              },
+              "terrain_spawn.terrain_tile_stream_system": {
+                "calls": 2403,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 2922,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 74555
+              },
+              "terrain_spawn.terrain_tile_unload_system": {
+                "calls": 2403,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 28,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 8833
+              },
+              "wet_surfaces": {
+                "calls": 2404,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 1519,
+                "p50_ms": 0.1,
+                "p99_ms": 0.7,
+                "total_us": 117144
+              },
+              "world.progressive_world_spawn_system": {
+                "calls": 2403,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 39600,
+                "p50_ms": 0.1,
+                "p99_ms": 9.5,
+                "total_us": 2047845
+              },
+              "world.update_world_scenery_lod": {
+                "calls": 2403,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 14465,
+                "p50_ms": 0.1,
+                "p99_ms": 5.0,
+                "total_us": 2335015
+              },
+              "world.world_stream_scenery_system": {
+                "calls": 2403,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 23843,
+                "p50_ms": 0.1,
+                "p99_ms": 7.6,
+                "total_us": 636078
+              },
+              "world.world_tile_bundle_materialize_system": {
+                "calls": 2403,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 2010,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 9578
+              },
+              "world.world_tile_stream_system": {
+                "calls": 2403,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 57,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 19139
+              },
+              "world.world_tile_unload_system": {
+                "calls": 2403,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 3520,
+                "p50_ms": 0.1,
+                "p99_ms": 2.0,
+                "total_us": 160751
+              }
+            },
+            "shape_stages": {
+              "cpu_prepare": {
+                "calls": 485,
+                "maximum_us": 1999,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 72451
+              },
+              "cpu_prepare_lods": {
+                "calls": 474,
+                "maximum_us": 49771,
+                "slowest_shape": "ukfs_c_1x250m_10d.s",
+                "total_us": 3027938
+              },
+              "geometry_cache_read": {
+                "calls": 474,
+                "maximum_us": 7976,
+                "slowest_shape": "50mberm.s",
+                "total_us": 65209
+              },
+              "geometry_cache_write": {
+                "calls": 474,
+                "maximum_us": 11425,
+                "slowest_shape": "BRS-TU-H.s",
+                "total_us": 718425
+              },
+              "prepare_silhouette": {
+                "calls": 474,
+                "maximum_us": 76,
+                "slowest_shape": "hwy2l2wna1500r20dp.s",
+                "total_us": 2897
+              },
+              "publish_auxiliary": {
+                "calls": 26,
+                "maximum_us": 21432,
+                "slowest_shape": "CarSpawner",
+                "total_us": 41064
+              },
+              "publish_gpu_assets": {
+                "calls": 474,
+                "maximum_us": 38267,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 1233032
+              },
+              "publish_lod_gpu_assets": {
+                "calls": 276,
+                "maximum_us": 15290,
+                "slowest_shape": "CMhenlowshops.s",
+                "total_us": 478672
+              },
+              "resolve_texture_dependencies": {
+                "calls": 474,
+                "maximum_us": 42815,
+                "slowest_shape": "CMhenlowshops.s",
+                "total_us": 2301505
+              },
+              "source_read_parse": {
+                "calls": 485,
+                "maximum_us": 27629,
+                "slowest_shape": "Doc_NortholtPkStn.s",
+                "total_us": 1059378
+              }
+            },
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "host_usage": {
+              "cpu_percent_one_core": 231.9161239613594,
+              "gpu_busy_percent_mean": 23.723076923076924,
+              "selected_gpu_pci": "0000:03:00.0",
+              "gpu_busy_percent_by_device": {
+                "0000:0e:00.0": 88.99615384615385,
+                "0000:03:00.0": 23.723076923076924
+              },
+              "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
+              "private_compositor": {
+                "gl_renderer": "AMD Radeon RX 7600 (radeonsi, navi33, ACO, DRM 3.64, 7.0.0-38-generic)",
+                "egl_device": "/dev/dri/renderD129",
+                "DRI_PRIME": "pci-0000_03_00_0",
+                "scope": "GL renderer identifies effective offload device; EGL device may retain enumeration node"
+              }
+            },
+            "render_resources": {
+              "allocator": null,
+              "bin_unpacking_lifetime": {
+                "cached_keys": 2,
+                "retired_keys": 0,
+                "source_keys": 2,
+                "stale_keys_after": 0,
+                "stale_keys_before": 0
+              },
+              "bindless_material_allocations": 887,
+              "bindless_material_allocations_scope": "Raw upstream allocated_resource_count may overcount repeated bindings within a material; use material_owners for actual map ownership.",
+              "images": 542,
+              "indexed_mesh_allocations": 273,
+              "material_owners": {
+                "bindings": {
+                  "available": true,
+                  "by_type": {
+                    "MoonMaterial": 1,
+                    "OrCabMaterial": 69,
+                    "ParticleMaterial": 1,
+                    "RailwaySkyMaterial": 1,
+                    "StandardMaterial": 2600,
+                    "TerrainMaterial": 49
+                  },
+                  "total": 2721
+                },
+                "prepared": {
+                  "available": true,
+                  "by_type": {
+                    "MoonMaterial": 1,
+                    "OrCabMaterial": 69,
+                    "ParticleMaterial": 1,
+                    "RailwaySkyMaterial": 1,
+                    "StandardMaterial": 2600,
+                    "TerrainMaterial": 49
+                  },
+                  "total": 2721
+                }
+              },
+              "material_slab_bytes": 499392,
+              "material_slabs": 1,
+              "mesh_slab_bytes": 198612280,
+              "mesh_slabs": 4,
+              "meshes": 2262,
+              "oit_head_capacity": 921600,
+              "oit_node_capacity": 3686400,
+              "pipelines": 102,
+              "views": 14
+            }
+          },
+          "downpour-warm": {
+            "odometer_m": 2500.6907735943855,
+            "gpu_tiles": 5,
+            "visible_neighbourhood_pending": 0,
+            "pending_uploads": 0,
+            "shader_pipelines": {
+              "failed": 0,
+              "pending": 0
+            },
+            "gameplay": {
+              "gameplay_frames": 2019,
+              "gameplay_frame_p50_ms": 25,
+              "gameplay_frame_p95_ms": 26,
+              "gameplay_frame_p99_ms": 32,
+              "gameplay_longest_frame_ms": 55.388565,
+              "gameplay_hitches_over_100_ms": 0
+            },
+            "startup_inclusive_max_ms": 2007.909658,
+            "loading_frames": 1169,
+            "rss_mib": 1779.84375,
+            "peak_rss_mib": 1967.5,
+            "png_sha256": "1ca11b09fef84ec82d375327d77eafdc2cac45ed07a7a58573c5b598fff615c8",
+            "png_bytes": 795327,
+            "graphics_memory": {
+              "active_device_pci": "0000:03:00.0",
+              "device_total_mib": 8176.0,
+              "device_used_mib": 2511.1953125,
+              "devices": [
+                {
+                  "device_total_mib": 8176.0,
+                  "device_used_mib": 2511.1953125,
+                  "pci": "0000:03:00.0",
+                  "process_gtt_mib": 20.171875,
+                  "process_vram_mib": 1510.0
+                },
+                {
+                  "device_total_mib": 512.0,
+                  "device_used_mib": 475.52734375,
+                  "pci": "0000:0e:00.0",
+                  "process_gtt_mib": 2.0,
+                  "process_vram_mib": 0.01171875
+                }
+              ],
+              "peak_process_vram_mib": 1510.01171875,
+              "process_gtt_mib": 22.171875,
+              "process_vram_mib": 1510.01171875,
+              "source": "linux_drm_fdinfo"
+            },
+            "geometry_cache": {
+              "gpu_handles_cached": false,
+              "hits": 467,
+              "max_disk_mib": 256,
+              "misses": 5,
+              "schema": 1
+            },
+            "system_stages": {
+              "camera_collision": {
+                "calls": 2407,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 11,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 2323
+              },
+              "effect_obstacles": {
+                "calls": 2407,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 2578,
+                "p50_ms": 0.3,
+                "p99_ms": 1.5,
+                "total_us": 921627
+              },
+              "flexible_connections": {
+                "calls": 2407,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 60,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 17801
+              },
+              "horizon": {
+                "calls": 2408,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 21146,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 63858
+              },
+              "jacobs_bogie": {
+                "calls": 2408,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 35,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 24259
+              },
+              "level_crossing_register": {
+                "calls": 2408,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 14132,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 44231
+              },
+              "live_drive": {
+                "calls": 3073,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 5018,
+                "p50_ms": 0.3,
+                "p99_ms": 2.5,
+                "total_us": 1028483
+              },
+              "mirrors": {
+                "calls": 2407,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 5,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1357
+              },
+              "platform_people": {
+                "calls": 2407,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 24,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 10974
+              },
+              "road_cars": {
+                "calls": 2408,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 106,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 45560
+              },
+              "snow_materials": {
+                "calls": 2407,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 36,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 8787
+              },
+              "snow_roof_markers": {
+                "calls": 2408,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 4,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 20
+              },
+              "snow_tracks": {
+                "calls": 2407,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 2,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 153
+              },
+              "streaming_forecast.update": {
+                "calls": 2407,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 48,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1680
+              },
+              "terrain_spawn.terrain_tile_bundle_materialize_system": {
+                "calls": 2407,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 201,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 2388
+              },
+              "terrain_spawn.terrain_tile_spawn_stream_system": {
+                "calls": 2407,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 156,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 1225
+              },
+              "terrain_spawn.terrain_tile_stream_system": {
+                "calls": 2407,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 2711,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 73278
+              },
+              "terrain_spawn.terrain_tile_unload_system": {
+                "calls": 2407,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 27,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 8645
+              },
+              "wet_surfaces": {
+                "calls": 2408,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 780,
+                "p50_ms": 0.1,
+                "p99_ms": 0.6,
+                "total_us": 114546
+              },
+              "world.progressive_world_spawn_system": {
+                "calls": 2407,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 39347,
+                "p50_ms": 0.1,
+                "p99_ms": 9.9,
+                "total_us": 2023342
+              },
+              "world.update_world_scenery_lod": {
+                "calls": 2407,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 14592,
+                "p50_ms": 0.1,
+                "p99_ms": 4.8,
+                "total_us": 2339281
+              },
+              "world.world_stream_scenery_system": {
+                "calls": 2407,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 26471,
+                "p50_ms": 0.1,
+                "p99_ms": 6.1,
+                "total_us": 526418
+              },
+              "world.world_tile_bundle_materialize_system": {
+                "calls": 2407,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 1216,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 8939
+              },
+              "world.world_tile_stream_system": {
+                "calls": 2407,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 61,
+                "p50_ms": 0.1,
+                "p99_ms": 0.1,
+                "total_us": 19346
+              },
+              "world.world_tile_unload_system": {
+                "calls": 2407,
+                "histogram_ceiling_ms": 204.8,
+                "histogram_width_ms": 0.1,
+                "maximum_us": 11355,
+                "p50_ms": 0.1,
+                "p99_ms": 1.8,
+                "total_us": 148642
+              }
+            },
+            "shape_stages": {
+              "cpu_prepare": {
+                "calls": 16,
+                "maximum_us": 2079,
+                "slowest_shape": "RF_WP_DMBSA.s",
+                "total_us": 15634
+              },
+              "cpu_prepare_lods": {
+                "calls": 5,
+                "maximum_us": 5286,
+                "slowest_shape": "IJ_semi_detached2_x2_var1.s",
+                "total_us": 15526
+              },
+              "geometry_cache_read": {
+                "calls": 472,
+                "maximum_us": 14208,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 478072
+              },
+              "geometry_cache_write": {
+                "calls": 5,
+                "maximum_us": 94,
+                "slowest_shape": "IJ_semi_detached2_x2_var1.s",
+                "total_us": 399
+              },
+              "prepare_silhouette": {
+                "calls": 472,
+                "maximum_us": 72,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 3114
+              },
+              "publish_auxiliary": {
+                "calls": 26,
+                "maximum_us": 19433,
+                "slowest_shape": "CarSpawner",
+                "total_us": 38070
+              },
+              "publish_gpu_assets": {
+                "calls": 472,
+                "maximum_us": 38007,
+                "slowest_shape": "KGB5080.s",
+                "total_us": 1198601
+              },
+              "publish_lod_gpu_assets": {
+                "calls": 276,
+                "maximum_us": 15631,
+                "slowest_shape": "ukfs_s_1x10m.s",
+                "total_us": 490955
+              },
+              "resolve_texture_dependencies": {
+                "calls": 472,
+                "maximum_us": 44466,
+                "slowest_shape": "CMhenlowshops.s",
+                "total_us": 2209537
+              },
+              "source_read_parse": {
+                "calls": 16,
+                "maximum_us": 32008,
+                "slowest_shape": "RF_WP_DMBSA.s",
+                "total_us": 233502
+              }
+            },
+            "renderer": {
+              "backend": "Vulkan",
+              "device_type": "DiscreteGpu",
+              "hardware": true,
+              "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+            },
+            "host_usage": {
+              "cpu_percent_one_core": 227.1716955410951,
+              "gpu_busy_percent_mean": 23.01923076923077,
+              "selected_gpu_pci": "0000:03:00.0",
+              "gpu_busy_percent_by_device": {
+                "0000:0e:00.0": 66.54230769230769,
+                "0000:03:00.0": 23.01923076923077
+              },
+              "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
+              "private_compositor": {
+                "gl_renderer": "AMD Radeon RX 7600 (radeonsi, navi33, ACO, DRM 3.64, 7.0.0-38-generic)",
+                "egl_device": "/dev/dri/renderD129",
+                "DRI_PRIME": "pci-0000_03_00_0",
+                "scope": "GL renderer identifies effective offload device; EGL device may retain enumeration node"
+              }
+            },
+            "render_resources": {
+              "allocator": null,
+              "bin_unpacking_lifetime": {
+                "cached_keys": 2,
+                "retired_keys": 0,
+                "source_keys": 2,
+                "stale_keys_after": 0,
+                "stale_keys_before": 0
+              },
+              "bindless_material_allocations": 891,
+              "bindless_material_allocations_scope": "Raw upstream allocated_resource_count may overcount repeated bindings within a material; use material_owners for actual map ownership.",
+              "images": 544,
+              "indexed_mesh_allocations": 274,
+              "material_owners": {
+                "bindings": {
+                  "available": true,
+                  "by_type": {
+                    "MoonMaterial": 1,
+                    "OrCabMaterial": 69,
+                    "ParticleMaterial": 1,
+                    "RailwaySkyMaterial": 1,
+                    "StandardMaterial": 2611,
+                    "TerrainMaterial": 49
+                  },
+                  "total": 2732
+                },
+                "prepared": {
+                  "available": true,
+                  "by_type": {
+                    "MoonMaterial": 1,
+                    "OrCabMaterial": 69,
+                    "ParticleMaterial": 1,
+                    "RailwaySkyMaterial": 1,
+                    "StandardMaterial": 2611,
+                    "TerrainMaterial": 49
+                  },
+                  "total": 2732
+                }
+              },
+              "material_slab_bytes": 501504,
+              "material_slabs": 1,
+              "mesh_slab_bytes": 198612280,
+              "mesh_slabs": 4,
+              "meshes": 2273,
+              "oit_head_capacity": 921600,
+              "oit_node_capacity": 3686400,
+              "pipelines": 102,
+              "views": 14
+            }
+          }
+        }
+      }
+    },
+    "interpretation": "Cold/warm drivingP99 worsen37\u219240/29\u219232ms; drivingmax65.400\u219278.159/50.651\u219255.389ms. Initialmax1707.115\u21921655.105coldimproves,1734.414\u21922007.910warmworsens. No generalfinalfluencygain asserted. Predeclared post-endurance ABBA without background is still pending."
   }
 }

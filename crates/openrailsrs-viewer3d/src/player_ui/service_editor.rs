@@ -39,10 +39,12 @@ pub(super) fn build(
                 (b.0.min(n.1), b.1.min(n.2), b.2.max(n.1), b.3.max(n.2))
             });
         p.spawn((
+            Name::new("itinerary-map"),
             Node {
                 width: px(600),
                 max_width: percent(100),
                 height: px(220),
+                flex_shrink: 0.0,
                 position_type: PositionType::Relative,
                 ..default()
             },

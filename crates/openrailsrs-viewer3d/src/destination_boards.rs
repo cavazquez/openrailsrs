@@ -9,6 +9,49 @@ struct Display {
     image: Handle<Image>,
     material: Handle<StandardMaterial>,
 }
+impl Display {
+    fn refresh(
+        &mut self,
+        text: String,
+        images: &mut Assets<Image>,
+        materials: &mut Assets<StandardMaterial>,
+    ) {
+        // A scene transfer can retire the image or material even when the next
+        // service has exactly the same destination. Text equality alone cannot
+        // establish that the cached renderer still has valid asset owners.
+        if self.text != text || self.image == Handle::default() || !images.contains(self.image.id())
+        {
+            let image = texture(&text);
+            if self.image != Handle::default()
+                && let Some(mut existing) = images.get_mut(&self.image)
+            {
+                *existing = image;
+            } else {
+                self.image = images.add(image);
+            }
+            self.text = text;
+        }
+        if self.material != Handle::default()
+            && materials
+                .get(&self.material)
+                .is_some_and(|m| m.base_color_texture.as_ref() == Some(&self.image))
+        {
+            return;
+        }
+        if self.material != Handle::default()
+            && let Some(mut material) = materials.get_mut(&self.material)
+        {
+            material.base_color_texture = Some(self.image.clone());
+        } else {
+            self.material = materials.add(StandardMaterial {
+                base_color_texture: Some(self.image.clone()),
+                unlit: true,
+                emissive: LinearRgba::new(0.15, 0.10, 0.01, 1.),
+                ..default()
+            });
+        }
+    }
+}
 #[derive(Resource, Default)]
 pub struct Boards(std::collections::HashMap<usize, Display>);
 impl Boards {
@@ -121,6 +164,7 @@ pub fn texture(text: &str) -> Image {
         RenderAssetUsages::default(),
     );
     image.sampler = ImageSampler::nearest();
+    image.texture_descriptor.label = Some("openrailsrs-destination-board");
     image
 }
 pub fn update(
@@ -149,21 +193,7 @@ pub fn update(
         };
         let text = session.destination_display();
         let display = cache.0.entry(board.0).or_default();
-        if display.text != text || display.image == Handle::default() {
-            let image = texture(&text);
-            if let Some(mut existing) = images.get_mut(&display.image) {
-                *existing = image;
-            } else {
-                display.image = images.add(image);
-                display.material = materials.add(StandardMaterial {
-                    base_color_texture: Some(display.image.clone()),
-                    unlit: true,
-                    emissive: LinearRgba::new(0.15, 0.10, 0.01, 1.),
-                    ..default()
-                });
-            }
-            display.text = text;
-        }
+        display.refresh(text, &mut images, &mut materials);
         if current.is_none_or(|m| m.0 != display.material) {
             commands
                 .entity(entity)
@@ -174,6 +204,113 @@ pub fn update(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn empty_destination_uses_own_assets_and_preserves_global_defaults() {
+        let mut images = Assets::<Image>::default();
+        let mut materials = Assets::<StandardMaterial>::default();
+        let default_image = Handle::<Image>::default();
+        let default_material = Handle::<StandardMaterial>::default();
+        let white = Image::default();
+        let white_pixels = white.data.clone();
+        images.insert(default_image.id(), white).unwrap();
+        let global_color = Color::srgb(0.25, 0.5, 0.75);
+        materials
+            .insert(
+                default_material.id(),
+                StandardMaterial {
+                    base_color: global_color,
+                    ..default()
+                },
+            )
+            .unwrap();
+
+        let mut display = Display::default();
+        display.refresh(String::new(), &mut images, &mut materials);
+        assert_ne!(display.image, default_image);
+        assert_ne!(display.material, default_material);
+        assert_eq!(images.get(&default_image).unwrap().data, white_pixels);
+        assert_eq!(images.get(&default_image).unwrap().width(), 1);
+        let global = materials.get(&default_material).unwrap();
+        assert_eq!(global.base_color, global_color);
+        assert!(!global.unlit);
+        assert!(global.base_color_texture.is_none());
+        let own = materials.get(&display.material).unwrap();
+        assert!(own.unlit);
+        assert_eq!(own.base_color_texture.as_ref(), Some(&display.image));
+        assert_eq!(images.get(&display.image).unwrap().width(), 512);
+        assert_eq!(images.get(&display.image).unwrap().data, texture("").data);
+        let ids = (display.image.id(), display.material.id());
+        display.refresh(String::new(), &mut images, &mut materials);
+        assert_eq!((display.image.id(), display.material.id()), ids);
+        assert_eq!(images.len(), 2);
+        assert_eq!(materials.len(), 2);
+    }
+    #[test]
+    fn unchanged_destination_recovers_removed_image_and_material_without_asset_churn() {
+        let mut images = Assets::<Image>::default();
+        let mut materials = Assets::<StandardMaterial>::default();
+        let mut display = Display::default();
+        display.refresh("GERRARDS CROSS".into(), &mut images, &mut materials);
+        let first_image = display.image.id();
+        let first_material = display.material.id();
+        let first_pixels = images.get(first_image).unwrap().data.clone();
+        display.refresh("GERRARDS CROSS".into(), &mut images, &mut materials);
+        assert_eq!(display.image.id(), first_image);
+        assert_eq!(display.material.id(), first_material);
+        assert_eq!(images.len(), 1);
+        assert_eq!(materials.len(), 1);
+
+        materials.remove(first_material);
+        display.refresh("GERRARDS CROSS".into(), &mut images, &mut materials);
+        assert_eq!(display.image.id(), first_image);
+        assert!(materials.contains(display.material.id()));
+        images.remove(first_image);
+        display.refresh("GERRARDS CROSS".into(), &mut images, &mut materials);
+        assert_ne!(display.image.id(), first_image);
+        assert_eq!(images.get(&display.image).unwrap().data, first_pixels);
+        assert_eq!(
+            materials
+                .get(&display.material)
+                .unwrap()
+                .base_color_texture
+                .as_ref(),
+            Some(&display.image),
+        );
+        let restored_image = display.image.id();
+        display.refresh("MARYLEBONE".into(), &mut images, &mut materials);
+        assert_eq!(display.image.id(), restored_image);
+        assert_ne!(images.get(&display.image).unwrap().data, first_pixels);
+        assert_eq!(images.len(), 1);
+        assert_eq!(materials.len(), 1);
+    }
+
+    #[test]
+    fn repeated_scene_transfers_release_destination_cache_and_recreate_the_same_text() {
+        let mut world = World::new();
+        world.init_resource::<Assets<Image>>();
+        world.init_resource::<Assets<StandardMaterial>>();
+        world.init_resource::<Boards>();
+        crate::scene_cleanup::begin_loading(&mut world);
+        for _ in 0..12 {
+            world.resource_scope(|world, mut boards: Mut<Boards>| {
+                world.resource_scope(|world, mut images: Mut<Assets<Image>>| {
+                    let mut materials = world.resource_mut::<Assets<StandardMaterial>>();
+                    boards.0.entry(0).or_default().refresh(
+                        "GERRARDS CROSS".into(),
+                        &mut images,
+                        &mut materials,
+                    );
+                });
+            });
+            assert_eq!(world.resource::<Boards>().report(), vec!["GERRARDS CROSS"]);
+            assert_eq!(world.resource::<Assets<Image>>().len(), 1);
+            assert_eq!(world.resource::<Assets<StandardMaterial>>().len(), 1);
+            crate::scene_cleanup::begin_loading(&mut world);
+            assert!(world.resource::<Boards>().report().is_empty());
+            assert!(world.resource::<Assets<Image>>().is_empty());
+            assert!(world.resource::<Assets<StandardMaterial>>().is_empty());
+        }
+    }
     #[test]
     fn changing_service_changes_pixels_but_render_is_bounded() {
         let a = texture("MARYLEBONE\nSERVICE 1");

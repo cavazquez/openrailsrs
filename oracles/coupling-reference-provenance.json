@@ -103,5 +103,151 @@
     "Host cache selection chose incompatible crate identities; target disappeared externally before a coherent host comparison could run. Builder release cache used instead.",
     "Parked donor begins secured; QA explicitly releases its handbrakes through real operations before checking the unsecured-donor rejection. No runtime source was changed."
   ],
-  "author_bytes_versioned": false
+  "author_bytes_versioned": false,
+  "replays": [
+    {
+      "phase": 36,
+      "status": "pass",
+      "source_base_commit": "baa8a4cb482bc7a6d6b2c5a14dbcc09ffb2b3c79",
+      "source_dirty": true,
+      "source_snapshot_sha256": "e65173de2fe9c6f0e3bf1c90029bb4071b386f854ebfbce8bf12b3cae897e726",
+      "source_inputs_unchanged_during_build": true,
+      "viewer_sha256": "06ae19253b4ca0d040e13152be8527dda91d86a71334d8a8314f28501d540a56",
+      "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+      "cargo_invoked": false,
+      "runtime_modified_by_capture": false,
+      "original_assets_versioned": false,
+      "libraries": {
+        "openrailsrs_sim": {
+          "file": "libopenrailsrs_sim-8aea4f5f640cd4f3.rlib",
+          "sha256": "d0e91f04852f2c6a50bbd18a735e6a3a1f5267d0cd83a5c7dd4b403922b5d4ed"
+        },
+        "openrailsrs_scenarios": {
+          "file": "libopenrailsrs_scenarios-9cd3e3309e3e4a46.rlib",
+          "sha256": "55fb4995e853cccc76579071810bfec4c9bde728b4b57b52afc2f39ccbdfcc38"
+        },
+        "serde_json": {
+          "file": "libserde_json-87a8e1f99d134334.rlib",
+          "sha256": "688f8881d192157e337b7e1b75f77edc09de0e93cbfed0cc21457bf92d2905ef"
+        }
+      },
+      "runtime_source_files": {
+        "crates/openrailsrs-sim/src/independent_coupling.rs": "109c13b5efdc6c96389b44ed93feb07b0169a6710f8ad069f89fa24a1f205a42",
+        "crates/openrailsrs-sim/src/live_traffic.rs": "70210444b05173eeb00e0ea0e9e1b908b0fcefe5d66e601fc0903a8b58671a98",
+        "crates/openrailsrs-sim/src/operations.rs": "7eae74f28646ffd06fcfed2050efd0fb9255aca354fcfbec94eebd8faf9cb37f",
+        "crates/openrailsrs-sim/src/coupler.rs": "9c82372fabe491de81675c11859486863aac6c478bc0e3cd771aef8f9977f511",
+        "crates/openrailsrs-sim/src/brake.rs": "27d5ad32b1fc6428e64e63c8dab733421c5afab79ab4d44d249afb9ec1cc43e2",
+        "crates/openrailsrs-sim/src/depot.rs": "617631cc53f7bdb923710ec524f44d51f7e961e7b85544d7ff4813eb184a4e8e",
+        "crates/openrailsrs-sim/src/engine_equipment.rs": "a35e503bb105e7767a4e471ecac9be58659dfab4ae19f5f25474ff52211411bb",
+        "crates/openrailsrs-sim/src/live_drive.rs": "f70af4b1a0cc9fe8d38a5c747ee2724931843b32ae8aa475be5bc05ee858a563"
+      },
+      "original_files": {
+        "RF_WP_DMBSA.eng": "4da0da99e3141c2dd6938a58b5b94d3844e96d9fd6689b1d80f639b5027b92ea",
+        "RF_WP_PSB.wag": "a496249a60b460bbfa9c4163b77e8367985029462c2aa1277b7003835cf88beb",
+        "RF_WP_KFC.wag": "fca08cc01ba9fe0f732e0c5c79fcc8461a8367c14201ae2fc0d8c86f57add6c4",
+        "RF_WP_PCFD.wag": "b8a58bf85bd6f5e947a8033fdf87e85f9f422c3cc1ada9114c6d14044242ef00",
+        "RF_WP_PCFE.wag": "822160aaf16cba4d5cba07d3b37c7131441853d2daf71c8b401ad8b781ce2030",
+        "RF_WP_KFF.wag": "79f8c539828b1a961dfc859267981547de0c0268fa72493355ddd857bad9d3a3",
+        "RF_WP_PSG.wag": "4ae0e96cce97002751fe7d8c034af29b65283a55acf0abdcbe1e2511085bc72a",
+        "RF_WP_DMBSH.eng": "468a335e44e17fe206e016b61cc98459bb88cd42839b374cae6c3224bd27d402"
+      },
+      "raw_receipt_sha256": "f674bf297a1dcd5ab7979471484a75ab0e0f1a549562999b266947023c0290b4",
+      "reference_sha256": "856bfa60d0be9fac22c6e05a8d05f3cf510a4bd7cebc253f87b0015329d195a4",
+      "rust_output_file": "oracles/coupling-rust32.json",
+      "rust_output_sha256": "2eeb73e081d6e32a94ab14f6c14c633890ca882f0266ce6621493a90fa778927",
+      "depot_output_sha256": "21d93ccb7eb98d81bd377a30715f83b980df2db4498fef4835f4075f4b934239",
+      "rust_output_byte_identical_to_historical32": true,
+      "depot_observed_identical_to_historical32": true,
+      "coupling_runner_sha256": "9312f04194acfb1572d3ec9ae2f1114e955e450467633c2d0834311a7c99182f",
+      "depot_runner_sha256": "bbf97e720fc58732aba8a2fe3af1963b9fa7bc5e395365b1ea4b2dcd57cdc894",
+      "capture_script_sha256": "d18d69efc3d96ed1e83619b89f27dea85c6e2b10a18b406bd71c63742e1ce9bc",
+      "comparison": {
+        "status": "pass",
+        "reference": "Open Rails 1.6.1",
+        "transferred_original_vehicles": 8,
+        "force_cases": 3,
+        "maximum_force_error_n": 0.00038474577013403177,
+        "driving_after_restore_m": 15.569013531968608,
+        "limits": [
+          "Stationary manual rear-to-front joining only in Rust",
+          "OR automatically requires signed movement; zero-speed scan is retained separately",
+          "Different simple rigid / elastic transient and slack laws are not declared equivalent",
+          "Original stock is driven on owned synthetic track; native route/signal/full-physics parity not certified"
+        ]
+      },
+      "scope": "A real new Rust replay with coherent host debug/all-features libraries. Original OR DLL capture is unchanged. Identical output bytes retain the historical raw filename rather than relabelling the old execution."
+    },
+    {
+      "phase": 37,
+      "status": "pass",
+      "source_base_commit": "baa8a4cb482bc7a6d6b2c5a14dbcc09ffb2b3c79",
+      "source_dirty": true,
+      "source_snapshot_sha256": "9397e55550becf116c503a13ac1bda32dc4a428d8138f861d3cc1562b6d036ee",
+      "source_inputs_unchanged_during_build": true,
+      "viewer_sha256": "35f4e5ce719e5d7e67c040cab96aabf2acc909dd7cdcb99df4a0f9bcc5472639",
+      "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+      "cargo_invoked": false,
+      "runtime_modified_by_capture": false,
+      "original_assets_versioned": false,
+      "libraries": {
+        "openrailsrs_sim": {
+          "file": "libopenrailsrs_sim-8aea4f5f640cd4f3.rlib",
+          "sha256": "e1a450d46cea038c75f766d00252442bce0164fb4cf9163f7b7d94ea002edadd"
+        },
+        "openrailsrs_scenarios": {
+          "file": "libopenrailsrs_scenarios-9cd3e3309e3e4a46.rlib",
+          "sha256": "55fb4995e853cccc76579071810bfec4c9bde728b4b57b52afc2f39ccbdfcc38"
+        },
+        "serde_json": {
+          "file": "libserde_json-87a8e1f99d134334.rlib",
+          "sha256": "688f8881d192157e337b7e1b75f77edc09de0e93cbfed0cc21457bf92d2905ef"
+        }
+      },
+      "runtime_source_files": {
+        "crates/openrailsrs-sim/src/independent_coupling.rs": "109c13b5efdc6c96389b44ed93feb07b0169a6710f8ad069f89fa24a1f205a42",
+        "crates/openrailsrs-sim/src/live_traffic.rs": "04f972018dc4a4102b4fdbdce5b34135ac1212ad3378de79241aefdfacdfb805",
+        "crates/openrailsrs-sim/src/operations.rs": "7eae74f28646ffd06fcfed2050efd0fb9255aca354fcfbec94eebd8faf9cb37f",
+        "crates/openrailsrs-sim/src/coupler.rs": "9c82372fabe491de81675c11859486863aac6c478bc0e3cd771aef8f9977f511",
+        "crates/openrailsrs-sim/src/brake.rs": "27d5ad32b1fc6428e64e63c8dab733421c5afab79ab4d44d249afb9ec1cc43e2",
+        "crates/openrailsrs-sim/src/depot.rs": "617631cc53f7bdb923710ec524f44d51f7e961e7b85544d7ff4813eb184a4e8e",
+        "crates/openrailsrs-sim/src/engine_equipment.rs": "a35e503bb105e7767a4e471ecac9be58659dfab4ae19f5f25474ff52211411bb",
+        "crates/openrailsrs-sim/src/live_drive.rs": "f70af4b1a0cc9fe8d38a5c747ee2724931843b32ae8aa475be5bc05ee858a563"
+      },
+      "original_files": {
+        "RF_WP_DMBSA.eng": "4da0da99e3141c2dd6938a58b5b94d3844e96d9fd6689b1d80f639b5027b92ea",
+        "RF_WP_PSB.wag": "a496249a60b460bbfa9c4163b77e8367985029462c2aa1277b7003835cf88beb",
+        "RF_WP_KFC.wag": "fca08cc01ba9fe0f732e0c5c79fcc8461a8367c14201ae2fc0d8c86f57add6c4",
+        "RF_WP_PCFD.wag": "b8a58bf85bd6f5e947a8033fdf87e85f9f422c3cc1ada9114c6d14044242ef00",
+        "RF_WP_PCFE.wag": "822160aaf16cba4d5cba07d3b37c7131441853d2daf71c8b401ad8b781ce2030",
+        "RF_WP_KFF.wag": "79f8c539828b1a961dfc859267981547de0c0268fa72493355ddd857bad9d3a3",
+        "RF_WP_PSG.wag": "4ae0e96cce97002751fe7d8c034af29b65283a55acf0abdcbe1e2511085bc72a",
+        "RF_WP_DMBSH.eng": "468a335e44e17fe206e016b61cc98459bb88cd42839b374cae6c3224bd27d402"
+      },
+      "raw_receipt_sha256": "43d31b03a27e8eb812ecafcc99d8b66d9f9e0177824898b198b04a405c4f37b8",
+      "reference_sha256": "856bfa60d0be9fac22c6e05a8d05f3cf510a4bd7cebc253f87b0015329d195a4",
+      "rust_output_file": "oracles/coupling-rust32.json",
+      "rust_output_sha256": "2eeb73e081d6e32a94ab14f6c14c633890ca882f0266ce6621493a90fa778927",
+      "depot_output_sha256": "21d93ccb7eb98d81bd377a30715f83b980df2db4498fef4835f4075f4b934239",
+      "rust_output_byte_identical_to_historical32": true,
+      "depot_observed_identical_to_historical32": true,
+      "coupling_runner_sha256": "a4b95888fe514915c9f5617d690164a920e783ce51201376044c42bb4db6dd99",
+      "depot_runner_sha256": "0b9f9f28ef8ee4cefaaebe3de567865290b1ab2fc229ce2a434769f4de35ef7b",
+      "capture_script_sha256": "d18d69efc3d96ed1e83619b89f27dea85c6e2b10a18b406bd71c63742e1ce9bc",
+      "comparison": {
+        "status": "pass",
+        "reference": "Open Rails 1.6.1",
+        "transferred_original_vehicles": 8,
+        "force_cases": 3,
+        "maximum_force_error_n": 0.00038474577013403177,
+        "driving_after_restore_m": 15.569013531968608,
+        "limits": [
+          "Stationary manual rear-to-front joining only in Rust",
+          "OR automatically requires signed movement; zero-speed scan is retained separately",
+          "Different simple rigid / elastic transient and slack laws are not declared equivalent",
+          "Original stock is driven on owned synthetic track; native route/signal/full-physics parity not certified"
+        ]
+      },
+      "scope": "A real new Rust replay with coherent host debug/all-features libraries. Original OR DLL capture is unchanged. Identical output bytes retain the historical raw filename rather than relabelling the old execution."
+    }
+  ]
 }

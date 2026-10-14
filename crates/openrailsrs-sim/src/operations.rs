@@ -157,6 +157,10 @@ pub struct SessionSnapshot {
     pub formation: FormationState,
     pub exterior: RollingStockExteriorState,
     pub signal_runtime: HashMap<String, SignalAspect>,
+    /// Optional backward-compatible extension; absence marks older saves whose
+    /// native aspects and pending refresh must be reconstructed conservatively.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub native_signal_cache: Option<crate::native_signals::NativeSignalSnapshot>,
     pub signal_overrides: HashMap<String, SignalAspect>,
     #[serde(default)]
     pub track_reservations: Vec<crate::native_signals::TrackOccupancy>,
@@ -254,6 +258,7 @@ impl LiveDriveSession {
             formation: self.formation.clone(),
             exterior: self.exterior.clone(),
             signal_runtime: self.signal_runtime.clone(),
+            native_signal_cache: Some(self.native_signals.snapshot()),
             signal_overrides: self.signal_overrides.clone(),
             track_reservations: self.own_track_reservations.clone(),
             script_state: None,
@@ -304,6 +309,15 @@ impl LiveDriveSession {
 
     /// Validate completely before mutating the current game.
     pub fn validate_snapshot(&self, saved: &SessionSnapshot) -> Result<(), String> {
+        if let Some(native) = &saved.native_signal_cache {
+            self.native_signals.validate_snapshot(
+                native,
+                &self.graph,
+                &saved.state.path_edges,
+                &saved.signal_runtime,
+                &saved.signal_overrides,
+            )?;
+        }
         if saved
             .refilling
             .as_ref()
@@ -885,10 +899,13 @@ impl LiveDriveSession {
         self.rebuild_formation_physics();
         self.state.electric = saved_electric;
         self.state.power_supply = saved_power_supply;
-        self.evaluate_native_signals();
-        // Traffic footprints are restored separately; recompute after that sync,
-        // including when the player remains paused on the loaded frame.
-        self.native_signals.needs_refresh = true;
+        if let Some(native) = saved.native_signal_cache {
+            self.native_signals.restore_validated_snapshot(native);
+        } else {
+            // Legacy files lack the cache and its refresh flag. A complete
+            // SavedGame rebuilds again after all traffic footprints reconnect.
+            self.rebuild_legacy_native_signal_cache();
+        }
         Ok(())
     }
 

@@ -1288,12 +1288,12 @@ dinámico. Ver [TRACTION_SUPPORT.md](TRACTION_SUPPORT.md).
 
 Cerrá el visor anterior y abrí el binario actualizado con `--menu`.
 
-1. Entrá en **Nueva partida → 1 · Ruta y servicio**, elegí Chiltern y esperá
+1. Entrá en **Nueva partida → 1 · País → Todos los países → 2 · Ruta y servicio**, elegí Chiltern y esperá
    su diagnóstico de formación. En la primera revisión
-   puede aparecer «Revisando archivos…»; las flechas de ruta y servicio deben
+   puede aparecer «Revisando archivos…»; las listas de ruta y servicio deben
    seguir respondiendo mientras se revisa el contenido.
 2. Cambiá a Mitre y volvé a Chiltern varias veces. La ruta y sus opciones deben
-   cambiar al pulsar la flecha, sin el bloqueo de varios segundos. La revisión
+   cambiar al seleccionar su nombre en la lista con buscador, sin el bloqueo de varios segundos. La revisión
    terminada se conserva durante esa sesión del menú.
 3. Mientras aparezca «Revisando formación…», cambiá rápidamente de ruta, servicio
    y formación. El diagnóstico final debe corresponder al archivo seleccionado;
@@ -1301,7 +1301,7 @@ Cerrá el visor anterior y abrí el binario actualizado con `--menu`.
 4. «Jugar» se habilita cuando termina la revisión de una formación apta para
    conducir. Una formación con archivos necesarios ausentes muestra «Jugar · no
    disponible» y «Ver detalles»; conservar la caché no elimina esa validación.
-5. Después de completar archivos faltantes desde su origen, en **2 · Tren**
+5. Después de completar archivos faltantes desde su origen, en **3 · Tren**
    pulsá «Revisar archivos otra vez». El diagnóstico debe actualizarse sin congelar la ventana
    ni cambiar ruta, servicio, formación, recorrido u hora de salida.
 
@@ -1310,7 +1310,7 @@ revisión manual y la instalación de un paquete permiten renovar los resultados
 los modelos y texturas de una partida todavía se cargan al iniciar el servicio.
 
 
-## 40. Inicio con cuatro opciones y nueva partida en tres pasos
+## 40. Inicio con cuatro opciones y nueva partida en cuatro pasos
 
 Cerrá el visor anterior y abrí el binario actualizado con `--menu`. Probá primero
 en una ventana de **1280×720** y con interfaz al **100%**.
@@ -1318,18 +1318,26 @@ en una ventana de **1280×720** y con interfaz al **100%**.
 1. **Inicio.** Deben verse Nueva partida, Continuar, Biblioteca y Ajustes, con una
    frase que explique cada opción. Salir aparece abajo; el inicio no muestra
    rutas absolutas ni diagnósticos extensos.
-2. **Nueva partida.** Elegí Chiltern local en Ruta y servicio. Deben aparecer
+2. **Nueva partida.** Primero aparece **1 · País**, con elecciones directas,
+   **Todos los países** y **Sin dato de país**. Elegí **Reino Unido**, pasá a
+   **2 · Ruta y servicio** y elegí Chiltern local. Deben aparecer
    Northolt Park, South Ruislip y West Ruislip, tres paradas y unos 13 minutos de
-   horario previsto. Pasá a Tren: deben verse la formación, su esquema de tamaño,
-   longitud, masa y cabinas disponibles. El esquema no es una foto del modelo.
-3. **Condiciones.** En Hora y clima elegí otra hora, Nieve y una estación del año.
+   horario previsto. Pasá a **3 · Tren**: deben verse la formación, longitud,
+   masa y cabinas disponibles, con preview 3D cuando estén sus modelos. El país
+   de la ruta no impide elegir un tren de otro país; sus avisos de trocha o
+   alimentación siguen visibles. Volvé a Ruta: Reino Unido y Chiltern se conservan.
+3. **Condiciones.** En **4 · Hora y clima** elegí otra hora, Nieve y una estación del año.
    Abrí las opciones del lugar para elegir hora/clima actual o manual. Cambiá de
    paso y volvé: deben conservarse las elecciones. Si usás clima actual, la
    selección manual sirve de respaldo.
-4. **Jugar y resumen.** Ambos permanecen abajo en los tres pasos, incluso al
+4. **Jugar y resumen.** Ambos permanecen abajo en los cuatro pasos, incluso al
    desplazar el contenido con la rueda. Se puede empezar desde cualquier paso
    usando las elecciones actuales. Con archivos faltantes, el inicio queda
    deshabilitado y el detalle explica qué archivos poner y dónde.
+   Volvé a País y elegí uno sin rutas instaladas: debe explicar que no hay rutas
+   y ofrecer Biblioteca, sin dejar la preview ni Jugar de la selección anterior.
+   Repetí en 800×600 y 640×480: las elecciones de país y los botones principales
+   deben entrar; el nombre de un servicio largo debe envolver dentro de su botón.
 5. **Detalle y regreso.** En Tren abrí Ver detalles. Deben seguir disponibles
    Abrir carpeta, Copiar diagnóstico y Reauditar. Volver o Esc regresa al paso
    Tren, con la misma selección. El informe muestra avisos de compatibilidad
@@ -1729,7 +1737,7 @@ Reiniciá el visor compilado y usá Pullman/Chiltern con modelos originales. Los
 
 Reiniciá el visor actualizado con `./target/debug/openrailsrs-viewer3d` desde la carpeta del proyecto.
 
-1. **Elegir cantidad antes de jugar.** Nueva partida → 3 · Hora y clima → Modo del clima: Fijo. Elegí Lluvia: aparece Intensidad, con Leve, Moderada e Intensa. Elegí Nieve y repetí los tres niveles. El resumen inferior debe incluir clima e intensidad, y el botón de inicio mantenerse accesible aunque sea necesario desplazar el contenido.
+1. **Elegir cantidad antes de jugar.** Nueva partida → 4 · Hora y clima → Modo del clima: Fijo. Elegí Lluvia: aparece Intensidad, con Leve, Moderada e Intensa. Elegí Nieve y repetí los tres niveles. El resumen inferior debe incluir clima e intensidad, y el botón de inicio mantenerse accesible aunque sea necesario desplazar el contenido.
 2. **Comparar en la partida.** En F10 → Hora y clima, elegí clima fijo y alterná las intensidades de Lluvia o Nieve. Continuá y esperá unos segundos de simulación: Leve debe tener menos gotas/copos, más visibilidad y menos viento; Intensa debe tener más precipitación. Moderada queda entre ambas. La calidad gráfica y el presupuesto de partículas son controles separados de la intensidad meteorológica.
 3. **Cambiar de clima.** Después de Lluvia intensa, elegí Nieve y luego Despejado. Debe cambiar la precipitación y desaparecer gradualmente al despejar; el perfil anterior no debe dejar lluvia al elegir nieve. Los edificios conservan sus materiales. Elegir un clima fijo desde clima actual del lugar también permite ajustar la intensidad manualmente.
 4. **Aleatorio.** En Nueva partida o F10, elegí Modo del clima: Aleatorio y Ritmo de cambios: Rápido. Elegí Despejado como clima inicial. En el primer minuto de simulación deben aumentar gradualmente las nubes y aparecer precipitación o tormenta; en el siguiente se despeja, queda nublado o aparece niebla. El aviso inferior muestra el clima efectivo y su intensidad. Nubes, viento, niebla, sonido, precipitación y adherencia deben responder al mismo estado. Para ver nieve posible, elegí Invierno o Nieve como clima inicial. No todos los intervalos de invierno son nevadas.

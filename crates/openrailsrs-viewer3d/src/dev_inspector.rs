@@ -241,9 +241,52 @@ pub fn install(app: &mut App) {
                 .before(crate::camera::fly_camera_system),
         )
         .add_systems(EguiPrimaryContextPass, panel)
+        .add_systems(
+            Last,
+            retire_dead_context_textures
+                .after(bevy_inspector_egui::bevy_egui::free_egui_textures_system),
+        )
         .add_observer(select);
     app.world_mut().resource_mut::<InspectorState>().enabled =
         std::env::var("OPENRAILSRS_DEV_INSPECTOR").is_ok_and(|v| v == "1");
+}
+
+/// bevy_egui 0.40 frees managed textures from a live context's `textures_delta`.
+/// A despawned camera cannot submit that delta. Its managed-texture cache and
+/// the extracted cache would otherwise keep the old font image's strong handle
+/// alive after scene cleanup removes it from the main asset store.
+///
+/// Retire only entries whose actual Egui context is gone. Render-only images,
+/// the native HUD font atlases and textures belonging to live contexts are not
+/// candidates. Extraction releases its old clones and Bevy subsequently emits
+/// `Unused` when the final strong handle disappears.
+pub(crate) fn retire_dead_context_textures(world: &mut World) {
+    use bevy_inspector_egui::bevy_egui::EguiManagedTextures;
+    if !world.contains_resource::<EguiManagedTextures>() {
+        return;
+    }
+    world.resource_scope(|world, mut textures: Mut<EguiManagedTextures>| {
+        let dead = textures
+            .keys()
+            .filter(|(owner, _)| world.get::<EguiContext>(*owner).is_none())
+            .copied()
+            .collect::<Vec<_>>();
+        for key in dead {
+            if let Some(texture) = textures.remove(&key) {
+                if std::env::var("OPENRAILSRS_GPU_ALLOCATIONS").is_ok_and(|v| v == "1") {
+                    crate::viewer_log!(
+                        "inspector texture cleanup: retired context {:?}, image {:?}, pixels {:?}",
+                        key.0,
+                        texture.handle.id(),
+                        texture.color_image.size,
+                    );
+                }
+                if let Some(mut images) = world.get_resource_mut::<Assets<Image>>() {
+                    images.remove(texture.handle.id());
+                }
+            }
+        }
+    });
 }
 fn register_diagnostic_types(app: &mut App) {
     // Reflect registration alone does not supply readonly widgets for opaque
@@ -439,6 +482,91 @@ fn panel(world: &mut World) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn twelve_retired_egui_contexts_release_strong_image_owners_and_keep_live_textures() {
+        use bevy::render::extract_resource::ExtractResource;
+        use bevy_inspector_egui::bevy_egui::render::systems::ExtractedEguiManagedTextures;
+        use bevy_inspector_egui::bevy_egui::{EguiManagedTexture, EguiManagedTextures};
+        use std::sync::Arc;
+
+        let mut world = World::new();
+        world.init_resource::<Assets<Image>>();
+        world.init_resource::<EguiManagedTextures>();
+        let live = world.spawn(EguiContext::default()).id();
+        let live_image = world.resource_mut::<Assets<Image>>().add(Image::default());
+        let live_id = live_image.id();
+        world.resource_mut::<EguiManagedTextures>().insert(
+            (live, 0),
+            EguiManagedTexture {
+                handle: live_image,
+                color_image: egui::ColorImage::filled([1, 1], egui::Color32::WHITE),
+            },
+        );
+        // A legitimate render-world-only owner is independent of Egui and
+        // must remain untouched even though its Image is absent in Main.
+        let render_only = world.resource_mut::<Assets<Image>>().add(Image::default());
+        world
+            .resource_mut::<Assets<Image>>()
+            .remove(render_only.id());
+
+        crate::scene_cleanup::begin_loading(&mut world);
+        assert!(world.resource::<Assets<Image>>().contains(live_id));
+
+        for _ in 0..12 {
+            let context = world.spawn(EguiContext::default()).id();
+            let image = world.resource_mut::<Assets<Image>>().add(Image::default());
+            let id = image.id();
+            let Handle::Strong(strong) = &image else {
+                panic!("Assets::add must produce a strong image handle");
+            };
+            let weak = Arc::downgrade(strong);
+            world.resource_mut::<EguiManagedTextures>().insert(
+                (context, 0),
+                EguiManagedTexture {
+                    handle: image,
+                    color_image: egui::ColorImage::filled([2048, 32], egui::Color32::WHITE),
+                },
+            );
+            let mut extracted = ExtractedEguiManagedTextures::extract_resource(
+                world.resource::<EguiManagedTextures>(),
+            );
+            assert_eq!(extracted.0.len(), 2);
+            assert!(world.despawn(context));
+            retire_dead_context_textures(&mut world);
+            assert!(
+                weak.upgrade().is_some(),
+                "The preceding render extract legitimately retains one owner until the next extract"
+            );
+            extracted = ExtractedEguiManagedTextures::extract_resource(
+                world.resource::<EguiManagedTextures>(),
+            );
+            assert_eq!(extracted.0.len(), 1);
+            assert!(
+                weak.upgrade().is_none(),
+                "Both real Main and extracted managed caches released their strong owners"
+            );
+            assert!(!world.resource::<Assets<Image>>().contains(id));
+            assert!(world.resource::<Assets<Image>>().contains(live_id));
+            assert_eq!(world.resource::<EguiManagedTextures>().len(), 1);
+            assert!(
+                world
+                    .resource::<EguiManagedTextures>()
+                    .contains_key(&(live, 0))
+            );
+            assert!(matches!(&render_only, Handle::Strong(_)));
+            crate::scene_cleanup::begin_loading(&mut world);
+            assert!(world.resource::<Assets<Image>>().contains(live_id));
+            assert_eq!(world.resource::<EguiManagedTextures>().len(), 1);
+        }
+
+        // Removing the context component from a still-live entity also
+        // retires its managed textures; entity existence alone is insufficient.
+        world.entity_mut(live).remove::<EguiContext>();
+        retire_dead_context_textures(&mut world);
+        assert!(world.get_entity(live).is_ok());
+        assert!(world.resource::<EguiManagedTextures>().is_empty());
+        assert!(!world.resource::<Assets<Image>>().contains(live_id));
+    }
     #[test]
     fn readonly_snapshot_has_widgets_for_opaque_native_values() {
         use std::any::TypeId;

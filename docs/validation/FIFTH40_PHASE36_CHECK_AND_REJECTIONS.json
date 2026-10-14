@@ -1,0 +1,372 @@
+{
+  "schema": 1,
+  "status": "partial_validation_not_final_acceptance",
+  "issues_closed": false,
+  "candidate": "phase36",
+  "build": {
+    "status": "passed",
+    "returncode": 0,
+    "elapsed_s": 92.03252406299998,
+    "start_utc": "2026-10-14T16:53:09.214413+00:00",
+    "end_utc": "2026-10-14T16:54:41.262191+00:00",
+    "command": [
+      "cargo",
+      "build",
+      "--offline",
+      "--locked",
+      "--workspace",
+      "--all-features",
+      "--jobs",
+      "2"
+    ],
+    "git_head": "baa8a4cb482bc7a6d6b2c5a14dbcc09ffb2b3c79",
+    "inputs_count": 751,
+    "inputs_unchanged": true,
+    "user_traces_unchanged": true,
+    "profile": {
+      "CARGO_PROFILE_DEV_OPT_LEVEL": "1",
+      "CARGO_PROFILE_DEV_DEBUG": "0",
+      "CARGO_PROFILE_DEV_STRIP": "symbols",
+      "CARGO_PROFILE_DEV_INCREMENTAL": "false",
+      "CARGO_PROFILE_TEST_OPT_LEVEL": "1",
+      "CARGO_PROFILE_TEST_DEBUG": "0",
+      "CARGO_PROFILE_TEST_STRIP": "symbols",
+      "CARGO_PROFILE_TEST_INCREMENTAL": "false",
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "2"
+    },
+    "log_sha256": "765e26abbbba14054c28f48752af2323acf5c08fb698ad6c7227aa08f39ef611",
+    "binaries": {
+      "phase36-viewer": {
+        "path": "<private-qa>/phase36-viewer",
+        "bytes": 172775584,
+        "sha256": "06ae19253b4ca0d040e13152be8527dda91d86a71334d8a8314f28501d540a56"
+      },
+      "phase36-cli": {
+        "path": "<private-qa>/phase36-cli",
+        "bytes": 68041392,
+        "sha256": "31ab5bce4f0ce9509c475e1cfd57b2f129838bd7e638a7bf7d621d7567b82990"
+      },
+      "phase36-prepare": {
+        "path": "<private-qa>/phase36-prepare",
+        "bytes": 60575496,
+        "sha256": "e9db4859175680b78b12d9abd38c711930899179d89ec9823fa0b80badec836a"
+      }
+    }
+  },
+  "complete_check": {
+    "status": "passed",
+    "returncode": 0,
+    "elapsed_s": 291.36359091899976,
+    "start_utc": "2026-10-14T16:59:21.160131+00:00",
+    "end_utc": "2026-10-14T17:04:15.492238+00:00",
+    "command": [
+      "bash",
+      "check.sh"
+    ],
+    "git_head": "baa8a4cb482bc7a6d6b2c5a14dbcc09ffb2b3c79",
+    "inputs_count": 31870,
+    "inputs_unchanged": true,
+    "user_traces_unchanged": true,
+    "profile": {
+      "CARGO_PROFILE_DEV_OPT_LEVEL": "1",
+      "CARGO_PROFILE_DEV_DEBUG": "0",
+      "CARGO_PROFILE_DEV_STRIP": "symbols",
+      "CARGO_PROFILE_DEV_INCREMENTAL": "false",
+      "CARGO_PROFILE_TEST_OPT_LEVEL": "1",
+      "CARGO_PROFILE_TEST_DEBUG": "0",
+      "CARGO_PROFILE_TEST_STRIP": "symbols",
+      "CARGO_PROFILE_TEST_INCREMENTAL": "false",
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "2"
+    },
+    "log_sha256": "01c861a10dae572721f3fa816c87b0d0adfa4b9ed1b9c655a3696407fa99af07",
+    "rust": {
+      "passed": 2068,
+      "failed": 0,
+      "ignored": 49,
+      "summaries": 152
+    },
+    "python": {
+      "tests": 127,
+      "summaries": 25
+    },
+    "changed_inputs": []
+  },
+  "regression_filters": {
+    "status": "passed",
+    "start_utc": "2026-10-14T16:56:01.528176+00:00",
+    "end_utc": "2026-10-14T16:57:24.617319+00:00",
+    "elapsed_s": 83.08914451400051,
+    "git_head": "baa8a4cb482bc7a6d6b2c5a14dbcc09ffb2b3c79",
+    "inputs_count": 751,
+    "inputs_unchanged": true,
+    "protected_build_inputs_match": true,
+    "user_traces_unchanged": true,
+    "trace_restore_required": false,
+    "filters": [
+      "soak::tests",
+      "saved_game::tests",
+      "track_reservations::tests",
+      "dev_inspector::tests",
+      "destination_boards::tests",
+      "scene_cleanup::tests",
+      "native_signals::tests"
+    ],
+    "results": [
+      {
+        "filter": "soak::tests",
+        "returncode": 0,
+        "elapsed_s": 75.62219277300028,
+        "log": "<private-qa>/test-phase36-soak-tests.log",
+        "log_sha256": "24e65c68566fbd954c381ba736ab99fbfecbbd054115e1bc75ae9fe7cb53294a"
+      },
+      {
+        "filter": "saved_game::tests",
+        "returncode": 0,
+        "elapsed_s": 0.2637296240000069,
+        "log": "<private-qa>/test-phase36-saved_game-tests.log",
+        "log_sha256": "471f81e99c350893ef3b119b4540782806deaed0c9bf75b965ddb944fb0d0960"
+      },
+      {
+        "filter": "track_reservations::tests",
+        "returncode": 0,
+        "elapsed_s": 0.2761888380000528,
+        "log": "<private-qa>/test-phase36-track_reservations-tests.log",
+        "log_sha256": "dc2dda5579256c7dcbcb42d0f5ed711d5d87647764e44b3f8dca11c77e2715c0"
+      },
+      {
+        "filter": "dev_inspector::tests",
+        "returncode": 0,
+        "elapsed_s": 0.24194717499995022,
+        "log": "<private-qa>/test-phase36-dev_inspector-tests.log",
+        "log_sha256": "c4866cba11dadb6959d8029d2ccab2ec28b88304d6ee627fcade2d3daba79676"
+      },
+      {
+        "filter": "destination_boards::tests",
+        "returncode": 0,
+        "elapsed_s": 0.24443619700014096,
+        "log": "<private-qa>/test-phase36-destination_boards-tests.log",
+        "log_sha256": "977781ac334121198afb742ffec6fbb403ce4f44ba28d718a8e2fbf62a9a28f0"
+      },
+      {
+        "filter": "scene_cleanup::tests",
+        "returncode": 0,
+        "elapsed_s": 0.24121976900005393,
+        "log": "<private-qa>/test-phase36-scene_cleanup-tests.log",
+        "log_sha256": "817db76d73cbdb3f3fae5e63164b026817ed168dfe5b4c1f546bc73dc8c4664e"
+      },
+      {
+        "filter": "native_signals::tests",
+        "returncode": 0,
+        "elapsed_s": 6.181865563999963,
+        "log": "<private-qa>/test-phase36-native_signals-tests.log",
+        "log_sha256": "62011e6c57d5cec7ee9c48313046b5639a3f851999c2c378c023008a6871fa23"
+      }
+    ]
+  },
+  "short_gpu_ownership35": {
+    "status": "passed_short_gpu_ownership_gate",
+    "binary_sha256": "41a85a16b9e19205c83d64b85261ad830ed602b3ad9fb13be1923ea899b60d39",
+    "samples": 14,
+    "actual_process_result": {
+      "status": "completed",
+      "returncode": 0,
+      "elapsed_s": 423.0511441929998,
+      "completed_utc": "2026-10-14T16:30:31.029563+00:00",
+      "fresh_capture": true
+    },
+    "selected_samples": [
+      {
+        "wall_s": 30.021475236,
+        "route_changes": 0,
+        "main_images": 33,
+        "gpu_images": 33,
+        "retained_font_images": [],
+        "anonymous_textures": {
+          "allocations": 17,
+          "bytes": 6107808,
+          "name": "Unlabeled texture"
+        },
+        "ground_fog_density": null,
+        "material_owners": {
+          "bindings": {
+            "available": true,
+            "by_type": {
+              "MoonMaterial": 1,
+              "ParticleMaterial": 1,
+              "RailwaySkyMaterial": 1,
+              "SnowMaterial": 16,
+              "StandardMaterial": 38,
+              "TerrainMaterial": 1
+            },
+            "total": 58
+          },
+          "prepared": {
+            "available": true,
+            "by_type": {
+              "MoonMaterial": 1,
+              "ParticleMaterial": 1,
+              "RailwaySkyMaterial": 1,
+              "SnowMaterial": 16,
+              "StandardMaterial": 38,
+              "TerrainMaterial": 1
+            },
+            "total": 58
+          }
+        },
+        "disk_save_attempts": 0,
+        "disk_save_restore_cycles": 0,
+        "disk_save_failures": 0
+      },
+      {
+        "wall_s": 60.0258955,
+        "route_changes": 1,
+        "main_images": 32,
+        "gpu_images": 33,
+        "retained_font_images": [],
+        "anonymous_textures": {
+          "allocations": 40,
+          "bytes": 16533424,
+          "name": "Unlabeled texture"
+        },
+        "ground_fog_density": {
+          "allocations": 1,
+          "bytes": 32768,
+          "name": "openrailsrs-ground-fog-density"
+        },
+        "material_owners": {
+          "bindings": {
+            "available": true,
+            "by_type": {
+              "MoonMaterial": 1,
+              "ParticleMaterial": 1,
+              "RailwaySkyMaterial": 1,
+              "SnowMaterial": 16,
+              "StandardMaterial": 38,
+              "TerrainMaterial": 1
+            },
+            "total": 58
+          },
+          "prepared": {
+            "available": true,
+            "by_type": {
+              "MoonMaterial": 1,
+              "ParticleMaterial": 1,
+              "RailwaySkyMaterial": 1,
+              "SnowMaterial": 16,
+              "StandardMaterial": 38,
+              "TerrainMaterial": 1
+            },
+            "total": 58
+          }
+        },
+        "disk_save_attempts": 1,
+        "disk_save_restore_cycles": 1,
+        "disk_save_failures": 0
+      },
+      {
+        "wall_s": 420.030092612,
+        "route_changes": 13,
+        "main_images": 32,
+        "gpu_images": 33,
+        "retained_font_images": [],
+        "anonymous_textures": {
+          "allocations": 40,
+          "bytes": 16528592,
+          "name": "Unlabeled texture"
+        },
+        "ground_fog_density": {
+          "allocations": 1,
+          "bytes": 32768,
+          "name": "openrailsrs-ground-fog-density"
+        },
+        "material_owners": {
+          "bindings": {
+            "available": true,
+            "by_type": {
+              "MoonMaterial": 1,
+              "ParticleMaterial": 1,
+              "RailwaySkyMaterial": 1,
+              "SnowMaterial": 16,
+              "StandardMaterial": 38,
+              "TerrainMaterial": 1
+            },
+            "total": 58
+          },
+          "prepared": {
+            "available": true,
+            "by_type": {
+              "MoonMaterial": 1,
+              "ParticleMaterial": 1,
+              "RailwaySkyMaterial": 1,
+              "SnowMaterial": 16,
+              "StandardMaterial": 38,
+              "TerrainMaterial": 1
+            },
+            "total": 58
+          }
+        },
+        "disk_save_attempts": 7,
+        "disk_save_restore_cycles": 7,
+        "disk_save_failures": 0
+      }
+    ],
+    "scope": "420-second lifecycle replica with13actual scene transfers. This is not the final7200s endurance. It does not measure a causal FPS gain. New empty-destination/default-asset regression added after this frozen binary, so it needs subsequent candidate tests. Seven disk save/read/restore attempts succeeded for this own non-native fixture; native SIGSCR continuity remains a separate gate.",
+    "private_summary_sha256": "7152922c7676654580d309242b2c15e9f90d03f99026db97c16cb1723e5bd194"
+  },
+  "native_real_saved_game36_rejected": {
+    "status": "rejected_actual_native_saved_game",
+    "reason": "Enclavamientos incompatibles en n5667",
+    "wall_s": 92.300692793,
+    "scenario": "RS_Football Special",
+    "schema": 3,
+    "cycles": 1,
+    "disk_attempts": 1,
+    "disk_restores": 0,
+    "disk_failures": 1,
+    "actual_process_result": {
+      "status": "rejected",
+      "reason": "Actual SavedGame disk restore failed",
+      "completed_utc": "2026-10-14T17:00:32.061014+00:00",
+      "actual_process_elapsed_s": 99.01188439999987,
+      "viewer_sha256": "06ae19253b4ca0d040e13152be8527dda91d86a71334d8a8314f28501d540a56",
+      "actual_returncode": -15
+    },
+    "sources_unchanged": true,
+    "evidence": {
+      "samples.jsonl": {
+        "bytes": 71178,
+        "sha256": "a0800c8bcf9887b9a91ea394d64d5c82a72a6f45de09de58269ff23e5085b119"
+      },
+      "viewer.log": {
+        "bytes": 15469,
+        "sha256": "54b109c32c00dca6ea9d2686148d2014e5f7348e977aa1e0cbb25a65b67c97db"
+      },
+      "spec.json": {
+        "bytes": 4489,
+        "sha256": "b743b59b08caba7f8f2c3be3c4d9dd96c213e7085b1e89026a7184d4a0b88dc4"
+      },
+      "soak-disk-54795-1791997133135865863/round-trip.json": {
+        "bytes": 8321283,
+        "sha256": "6b1c7a9158b1099a14a34fa203b526ff9b15db98bcb5284c45e707769a358059"
+      }
+    },
+    "scope": "OriginalFootBallSpecial/Pullman8 fails the real read/restore interlocking validation. One92.3s partial cannot count toward7200s; no finalcapture. Validator remains strict.",
+    "original_source_hashes_after_gpu": {
+      "<original-content>/chiltern-v4-2fc79dd1c7f0eebc/Chiltern-Route-v4-8236df20ed9f596b8cf15720c43bfbdd0c43125d/ROUTES/Chiltern/ACTIVITIES/RS_Football Special.act": "12648b75aa665c1cd389f034e529405319c2132bebdb73e15d33cc04d2ee387e",
+      "<original-content>/chiltern-v4-2fc79dd1c7f0eebc/Chiltern-Route-v4-8236df20ed9f596b8cf15720c43bfbdd0c43125d/TRAINS/CONSISTS/Birmingham Pullman.con": "1be577c48940fc227f5bd0c4a05e21795d1b48a1cc113247cfb028fc18d79b72",
+      "<original-content>/chiltern-v4-2fc79dd1c7f0eebc/Chiltern-Route-v4-8236df20ed9f596b8cf15720c43bfbdd0c43125d/ROUTES/Chiltern/Chiltern.tdb": "13db029c3b2ac4a2b23eacb349c7bddbac784ebdf8cee5b327f13b0bf1a3e33d",
+      "<original-content>/chiltern-v4-2fc79dd1c7f0eebc/Chiltern-Route-v4-8236df20ed9f596b8cf15720c43bfbdd0c43125d/ROUTES/Chiltern/sigcfg.dat": "3fe635231d0a9c8ac6adc915e2562ebf8da1733c7e442a763ed26d1eb3d33fca",
+      "<original-content>/chiltern-v4-2fc79dd1c7f0eebc/Chiltern-Route-v4-8236df20ed9f596b8cf15720c43bfbdd0c43125d/ROUTES/Chiltern/sigscr.dat": "9157868bb131130a866ccd8f6933672579a02d09a5a1a24d50cfce57cbdcd18c"
+    },
+    "original_sources_after_gpu_unchanged": true
+  },
+  "pending": [
+    "Repair coherent original-route interlocking before the first tick and aggregated JSON restoration.",
+    "Repeat original route gate, then complete a single7200s endurance with predeclared memory bounds and120 real disk restores.",
+    "Final exclusive reference/candidate performance comparison and rebuilt strict Snap acceptance."
+  ],
+  "not_a_parity_certificate": true,
+  "path_redaction": "Only private local path prefixes are replaced; original logs/manifests keep their independently recorded SHA256."
+}

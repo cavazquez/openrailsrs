@@ -883,7 +883,7 @@ python3 scripts/capture_player_menu.py \
 ```
 
 Prueba de cada opción y resultado esperado en la
-[sección 40 de pruebas manuales](PLAYER_MANUAL_TESTS.md#40-inicio-con-cuatro-opciones-y-nueva-partida-en-tres-pasos).
+[sección 40 de pruebas manuales](PLAYER_MANUAL_TESTS.md#40-inicio-con-cuatro-opciones-y-nueva-partida-en-cuatro-pasos).
 
 ## Chiltern v4: instalación externa y actividades nativas
 

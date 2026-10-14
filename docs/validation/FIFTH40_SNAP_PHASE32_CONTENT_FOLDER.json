@@ -1,0 +1,255 @@
+{
+  "schema": 1,
+  "issue": 373,
+  "status": "STRICT_SNAP_FINAL32_FOLDER_AND_UPGRADE_VERIFIED_WITH_SEPARATE_SPACE_PROOFS",
+  "scope": "Three actual CPU/software-menu folder cases on installed strict x17,plus five actual pre/post-upgrade file hashes. These tests do not certify hardware gameplay or OpenRails graphic parity.",
+  "package": {
+    "name": "openrailsrs",
+    "version": "0.1.0-alpha.6",
+    "base": "core24",
+    "confinement": "strict",
+    "revision": "x17",
+    "metadata_sha256": "9f0f0667e196446968f3298e473f43982e0845ae8507d7e49ce8a19210ed20bd",
+    "snap_sha256": "63a251bdafc579a6726be522db367a36adeea0f6329927d60f1669430ff7e479",
+    "snap_bytes": 165498880,
+    "snapd_state": {
+      "active": true,
+      "current": "x17"
+    }
+  },
+  "source_build_identity": {
+    "source_commit": "bd0b5e437ff71135cfd31aa19c588c0c5a07d66c",
+    "source_dirty": false,
+    "source_snapshot_sha256": "545f587ccd08b8b0e71d1d2f675a85e3e408f18f9f5d480266391abf4e0ca2c2",
+    "architecture": "x86_64",
+    "build_libc": [
+      "glibc",
+      "2.39"
+    ],
+    "required_glibc": "2.39",
+    "downloaded_content_included": false,
+    "binary_sha256": {
+      "openrailsrs": "52fc1a4aaaece70993a24f072a1c0fbd0d22dd34fe9e8defddc736ca49257ab4",
+      "openrailsrs-viewer3d": "80dac555da2468e0e24652485d3157af7eb190959d1612b14ba2ab9e8a3d55c1",
+      "openrailsrs-prepare-content": "7187a90afa85c16d60e93cba220ec63aa1f847798943430b26d23f93c55960bf"
+    }
+  },
+  "source_package_receipt_sha256": "e89b73bac3c56c990ca789e0aea071b49d2d9f29cae57ce7981414e1590333df",
+  "installed_package_identity_receipt": "FIFTH40_SNAP_ALPHA6_X17_BLUE_PULLMAN.json",
+  "installed_package_identity_receipt_sha256": "211424676c949a84d52f90d3867d5b747511010cdf91ce608637ec9d79467190",
+  "QA_harness": "snap-folder-phase32.py",
+  "QA_harness_sha256": "95eb2e6e3148c16c3987b92da60dc6fe3a27838c054d1bd85387c1c266469270",
+  "raw_QA_receipt_sha256": "d3fa29e53ec1d63dbbb9cf2d69b5f77ba7e9bea514c71d92ab5d2290e8302263",
+  "method": {
+    "folder_controls": "actual private Xvfb mouse clicks",
+    "initial_page": "Library-tools capture hook uses the normal builder; folder actions use real private Xvfb clicks.",
+    "renderer": "CPU/software Vulkan llvmpipe",
+    "new_runtime_during_inspection": false
+  },
+  "cases": [
+    {
+      "case": "select",
+      "status": "PASS_STRICT_SNAP_MENU_STORAGE_SCOPE",
+      "frame": "select.png",
+      "frame_sha256": "2a10f3661d4429cf38f98ddc96eb5beccecb04ac7ab759170d8e2ddbe02b54d5",
+      "frame_bytes": 156511,
+      "checkpoint_sha256": "bbfd41915123b8cd14af621a022cb9d36c05f1fb1c4804854f9379402f7931f7",
+      "log_sha256": "c1dc12016c3b639e6578db631161ca86d9ca6589eeb44fbc759765b39ae9e3d5",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "Cpu",
+        "hardware": false,
+        "name": "llvmpipe (LLVM 20.1.2, 256 bits)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "gameplay_frames": 0,
+      "observer_save_verified": true,
+      "normal_exit_marker_verified": true,
+      "visual_inspection_complete": true,
+      "preference_preserved_qa_assertion": true,
+      "UX_marker_preserved_qa_assertion": true,
+      "visual_observation": "Permitted configured content folder is selected through actual clipboard/browser controls; original installation rows remain in the library.",
+      "selection_scope": "Same already configured storage is selected and persisted. A move to a different storage root is not inferred from this case."
+    },
+    {
+      "case": "readonly",
+      "status": "PASS_STRICT_SNAP_MENU_STORAGE_SCOPE",
+      "frame": "readonly.png",
+      "frame_sha256": "6eecdca5e5f6073d4bb7a09651604677fbdfb103be8909fab4732609d240d9f2",
+      "frame_bytes": 87084,
+      "checkpoint_sha256": "c629fcf21db186eea8644390cba8fc14aaf6952bea0940a371da7ee0618ecf3b",
+      "log_sha256": "240c9666712d098599d03281a7ef77e8c25e61de8af687c92d2e8b7458f6b5f9",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "Cpu",
+        "hardware": false,
+        "name": "llvmpipe (LLVM 20.1.2, 256 bits)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "gameplay_frames": 0,
+      "observer_save_verified": true,
+      "normal_exit_marker_verified": true,
+      "visual_inspection_complete": true,
+      "preference_preserved_qa_assertion": true,
+      "UX_marker_preserved_qa_assertion": true,
+      "visual_observation": "Read-only /snap is browsed while the effective valid download root remains displayed; explicit rejection diagnosis is emitted below the initial viewport.",
+      "explicit_rejection": {
+        "text": "Elegí una carpeta absoluta escribible fuera de /snap",
+        "computed_size_px": [
+          844.0,
+          17.0
+        ],
+        "inherited_visible": true,
+        "inside_initial_png_viewport": false,
+        "scroll_required": true,
+        "scope": "Error text plus preserved preference; no rejection inferred from unchanged config alone."
+      }
+    },
+    {
+      "case": "restart",
+      "status": "PASS_STRICT_SNAP_MENU_STORAGE_SCOPE",
+      "frame": "restart.png",
+      "frame_sha256": "000691c68e5c3c69acd459e1dee97f0b2df84ce4d4178cd5749e6e16b8c32883",
+      "frame_bytes": 157361,
+      "checkpoint_sha256": "8e1714a38848349f5d0b9deeae3dd07cc0339cfcd01f919e46ca1fc7f9af0118",
+      "log_sha256": "e8797a7451cfc57ce09084ceede0244699b6415f386151103515934ca75e8034",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "Cpu",
+        "hardware": false,
+        "name": "llvmpipe (LLVM 20.1.2, 256 bits)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "gameplay_frames": 0,
+      "observer_save_verified": true,
+      "normal_exit_marker_verified": true,
+      "visual_inspection_complete": true,
+      "preference_preserved_qa_assertion": true,
+      "UX_marker_preserved_qa_assertion": true,
+      "visual_observation": "Fresh restart displays the same content-folder preference and previous original installation rows; their actual manifests have separate hash verification."
+    }
+  ],
+  "upgrade_persistence": {
+    "from_revision": "x16",
+    "to_revision": "x17",
+    "verified_after_upgrade": true,
+    "pre_receipt_sha256": "5dd30f5d73e236dfe4ff2930b952c5972d07c83fc5167e80b1b57ad8ac9fda22",
+    "post_receipt_sha256": "e6590f1ec1d6861964586789a4f38235a49d96072b6deaeb696a5c917a4d63f5",
+    "verified_utc": "2026-10-14T04:25:56.857772+00:00",
+    "files": [
+      {
+        "role": "player_settings",
+        "filename": "settings.json",
+        "bytes": 125,
+        "sha256": "6d1b9f7f678bec460b02885d63ea04a0e0c5e8f8c25d3d765f6a4f3c8b07980c",
+        "before_after_identical": true
+      },
+      {
+        "role": "content_location",
+        "filename": "content-location.json",
+        "bytes": 193,
+        "sha256": "16e349ddca56e24b795aaea6efb71632e9baffb27846776379c019ea0cafbfb4",
+        "before_after_identical": true
+      },
+      {
+        "role": "provenance_demo_model_1",
+        "filename": "openrailsrs-content.json",
+        "bytes": 959,
+        "sha256": "4b5d1b5f3a8135548f633b592e07307a6ebf8e9095c0898c4815c37c9145654c",
+        "before_after_identical": true
+      },
+      {
+        "role": "provenance_chiltern_v4",
+        "filename": "openrailsrs-content.json",
+        "bytes": 1271,
+        "sha256": "1bdfc0ec4753572e142aba21783af926db14d854c94622557c015b5736d009b2",
+        "before_after_identical": true
+      },
+      {
+        "role": "provenance_jeanprisca_maj",
+        "filename": "openrailsrs-content.json",
+        "bytes": 20441,
+        "sha256": "7ea62475e95fe5d847541e4e46d6ca986586faf3068097246569cc63bccb1fc5",
+        "before_after_identical": true
+      }
+    ],
+    "scope": "Actual settings,storage preference and three original provenance manifests unchanged; not a byte-by-byte whole-content integrity or gameplay claim."
+  },
+  "portable_acceptance": {
+    "receipt": "FIFTH40_PORTABLE_PHASE32_CONTENT_FOLDER.json",
+    "receipt_sha256": "96fc5714875240264d6ec70598da714d406907d5dfba8d923e3ba1cf2dce9692",
+    "scope": "Four moved-bundle CPU menus,clipboard selection,read-only rejection,restart and Country; same source/build/glibc2.39,not hardware-gameplay equivalence."
+  },
+  "space_evidence_separate": {
+    "historical_real_runtime": {
+      "receipt": "docs/fixtures/compatibility/content-runtime-20261013/receipt.json",
+      "sha256": "f4d5cb489cc0662a107c42b285bc4e017f7a53c5b8d23265324e9836eae26302",
+      "source": {
+        "source_commit": "d9dba7af1f531183de594af3201373d3b1b20590",
+        "source_dirty": true,
+        "source_snapshot_sha256": "70a4f47e091c8a2d70a0ee56d2bbd2d8b3de722934798b436c2ad01da6cd323f",
+        "architecture": "x86_64",
+        "build_libc": [
+          "glibc",
+          "2.39"
+        ],
+        "required_glibc": "2.39",
+        "downloaded_content_included": false,
+        "binary_sha256": {
+          "openrailsrs": "501df6c4c74ec79e3a6b809f92a2931f27f8d4b51d78e339102d956ae9c189a4",
+          "openrailsrs-viewer3d": "e8ad11edd9b7f6669501d98b9631b84c714842a517a021ecb0e53fb5a90436c9",
+          "openrailsrs-prepare-content": "961edf1083f74ff45b841deb12fb0c4886c97a22869f43836ecb650a7da31bf9"
+        }
+      },
+      "snap_version": "0.1.0-alpha.5",
+      "snap_revision": "x13",
+      "observed": {
+        "low_disk_real_download_aborted_without_partial_registration": true
+      },
+      "scope": "Real original download on the older recorded dirty snapshot/x13; preserved historical identity,not relabelled as final x17."
+    },
+    "frozen32_regression": {
+      "test": "test_content_url.UrlContent.test_low_space_does_not_start_a_download",
+      "suite_invocation": "python3 -m unittest discover -s scripts -p test_content_url.py",
+      "test_file_sha256": "0676dba7716f06e6e27e1cd6110b9c09a9512ef00cdb3751047c63dc0e0b95df",
+      "installer_file_sha256": "2cb134348d64f4bcfade8f28dad5aaaffa3b9e6e851d5edbc1b2273a0ef55408",
+      "check_script_sha256": "f45542dee4b98bb10eeb2ba9166482f7219832fdfd4c9b37e69c50e7410c1253",
+      "check_log_sha256": "2f20330e501e815b817cd95acbadfb0709fa0b349f731bd3b46b538105b8de61",
+      "check_exit_sha256": "09e4cb00cdfd4db00905d0474153777c9fc2663317f8ac9355edc36420d16767",
+      "scope": "Frozen32suite uses mocked1byte free space and proves no network or partial registration; this is not a new actual x17 disk-exhaustion run."
+    }
+  },
+  "acceptance": {
+    "strict_menu_cases": 3,
+    "PNG_inspected": 3,
+    "same_permitted_folder_selection_and_restart_verified": true,
+    "explicit_readonly_diagnostic_verified": true,
+    "readonly_error_in_initial_viewport": false,
+    "readonly_requires_scroll_to_read": true,
+    "UX_marker_preserved": true,
+    "actual_upgrade_files_unchanged": 5,
+    "actual_whole_content_integrity_verified": false,
+    "low_space_exercised_by_these_three_menu_cases": false,
+    "hardware_gameplay_certified_here": false,
+    "optional_CSharp_host_exercised": false,
+    "personal_file_contents_copied": false,
+    "issue_closed_by_this_receipt": false
+  },
+  "limits": [
+    "Same-storage Snap selection is combined with the separate portable different-folder case; it is not presented as a Snap data migration.",
+    "The previous-installation marker tests storage UX only. Actual existing installations are represented separately by three unchanged provenance manifests,not merely by that marker.",
+    "Explicit read-only error exists below the initial scroll viewport; the PNG does not show a visible rejection banner.",
+    "Space tests have their own historical runtime and frozen32unit scopes; no real final x17 low-space attempt is invented.",
+    "Software menus have0gameplay frames and provide neither hardware performance nor graphic-parity acceptance.",
+    "NoCSharp model or private player file contents were copied; only hashes/roles identify upgrade preservation."
+  ]
+}

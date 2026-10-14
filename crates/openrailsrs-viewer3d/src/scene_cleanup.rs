@@ -4,11 +4,13 @@ use bevy::{asset::UntypedAssetId, prelude::*};
 use std::{
     any::TypeId,
     collections::{HashMap, HashSet},
+    time::Instant,
 };
 
 #[derive(Resource, Default)]
 pub struct SceneCleanup {
     initialized: bool,
+    scene_started: Option<Instant>,
     global_entities: HashSet<Entity>,
     global_assets: HashMap<TypeId, HashSet<UntypedAssetId>>,
     pub cycles: u64,
@@ -17,7 +19,8 @@ pub struct SceneCleanup {
 }
 impl SceneCleanup {
     pub fn report(&self) -> serde_json::Value {
-        serde_json::json!({"cycles":self.cycles,"retired_entities":self.retired_entities,"retired_assets":self.retired_assets})
+        serde_json::json!({"cycles":self.cycles,"retired_entities":self.retired_entities,"retired_assets":self.retired_assets,
+            "scene_elapsed_s":self.scene_started.map(|started| started.elapsed().as_secs_f64())})
     }
 }
 pub fn install(app: &mut App) {
@@ -100,6 +103,9 @@ fn remember_with_extra<T: Asset>(
 }
 pub fn begin_loading(world: &mut World) {
     let mut cleanup = world.remove_resource::<SceneCleanup>().unwrap_or_default();
+    // Include loading work in the scene's real age. Presented-frame time only
+    // advances in Playing and cannot identify equivalent reload checkpoints.
+    cleanup.scene_started = Some(Instant::now());
     if !cleanup.initialized {
         cleanup.global_entities = world
             .query::<Entity>()
@@ -136,6 +142,8 @@ pub fn begin_loading(world: &mut World) {
         }
     }
     cleanup.retired_entities += u64::from(before - world.entities().count_spawned());
+    #[cfg(feature = "dev-inspector")]
+    crate::dev_inspector::retire_dead_context_textures(world);
     // Bevy retains glyph textures across routes; keeping those images preserves
     // existing font atlas locations and accented HUD text after a transfer.
     let mut fonts = world
@@ -153,6 +161,18 @@ pub fn begin_loading(world: &mut World) {
             luts.agx.id().untyped(),
             luts.tony_mc_mapface.id().untyped(),
         ]);
+    }
+    // The inspector GC above removed only destroyed contexts. A global live
+    // context may still need its Main image for a partial font-atlas update.
+    #[cfg(feature = "dev-inspector")]
+    if let Some(textures) =
+        world.get_resource::<bevy_inspector_egui::bevy_egui::EguiManagedTextures>()
+    {
+        fonts.extend(
+            textures
+                .values()
+                .map(|texture| texture.handle.id().untyped()),
+        );
     }
     if let Some(mesh) = world.get_resource::<bevy_hanabi::DefaultMesh>() {
         fonts.insert(mesh.0.id().untyped());
@@ -173,6 +193,7 @@ pub fn begin_loading(world: &mut World) {
     reset::<crate::track_position::TrackPositionResolverCache>(world);
     reset::<crate::weather_particles::WeatherParticles>(world);
     reset::<crate::train_effects::TrainEffects>(world);
+    reset::<crate::destination_boards::Boards>(world);
     reset::<crate::precipitation::PrecipitationState>(world);
     reset::<crate::cab_view::CabInteriorState>(world);
     reset::<crate::cab_cvf::CabCvfState>(world);
@@ -213,6 +234,19 @@ pub fn begin_loading(world: &mut World) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn scene_age_is_unavailable_before_loading_and_reports_a_real_loading_clock() {
+        let mut world = World::new();
+        world.init_resource::<SceneCleanup>();
+        assert!(world.resource::<SceneCleanup>().report()["scene_elapsed_s"].is_null());
+        begin_loading(&mut world);
+        let report = world.resource::<SceneCleanup>().report();
+        let age = report["scene_elapsed_s"].as_f64().unwrap();
+        assert!(age.is_finite() && age >= 0.0);
+        assert_eq!(report["cycles"], 1);
+        assert!(world.resource::<SceneCleanup>().scene_started.is_some());
+    }
+
     #[test]
     fn repeated_route_transfers_preserve_globals_and_release_old_scene_owners() {
         let mut world = World::new();
