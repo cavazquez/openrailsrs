@@ -1,0 +1,1739 @@
+{
+  "schema": 1,
+  "status": "passed_predeclared_four_pair_acceptance_scoped",
+  "reviewed_utc": "2026-10-14T23:49:05.383505+00:00",
+  "runtime_commit": "a1b59e14bea6db433c0746dd0f1f2644dc5bc4dd",
+  "candidate_phase": 39,
+  "candidate_binary_sha256": "f1138d03ea6978baaab8e5fe8b4e8995c626a6df319a690bb7a92955512c0239",
+  "baseline_binary_sha256": "531ec4d91cfa3391f1f24a8d62d8abef026603609528462efacbb8ae7a096e08",
+  "reference_commit": "d9dba7af1f531183de594af3201373d3b1b20590",
+  "plan_sha256": "b26d071a8bc109486a6c8edbc7b28b46b8a7d97b7d1962067ecdba4cf7d590e9",
+  "raw_result_sha256": "abc94d5217f75cf5865d69cac4f215ded6d0c4aafd50bb79d3694f5873e26863",
+  "raw_runs_sha256": "a724b01333125e52f89a97dbe8785dafc8951a41c9963173dbb181c336be5de9",
+  "raw_spec_sha256": "fb260deef2f08d75ed1699f237d78a65ea7056f3d378dcd474188f45e3f0256f",
+  "quiet_receipt_sha256": "cbaa5f05404762f2a77be71e04de6e7b8a6e7d4aa281c6874416d30c9b356407",
+  "supervisor_receipt_sha256": "44d47886c2edbbd492652b40671c1d0128356962e32c6f1c4f8c63036620d2eb",
+  "process_release_receipt_sha256": "0fbb9f8967341ff5e67cb26324b3c6fbcf120d49c00c5eaee053830460038dde",
+  "started_utc": "2026-10-14T23:22:24.727335+00:00",
+  "completed_utc": "2026-10-14T23:35:24.629490+00:00",
+  "actual_process_elapsed_s": 779.9021505479977,
+  "actual_runner_exit_code": 0,
+  "actual_runs": 8,
+  "all_processes_exit_zero": true,
+  "all_captures_reviewed": true,
+  "root_visual_review": true,
+  "all_readiness_passed": true,
+  "all_configured_quality_passed": true,
+  "strict_pairs_passed": 4,
+  "strict_pairs_required": 4,
+  "primary_metric_fields": [
+    "journey.gameplay_frame_p99_ms",
+    "journey.gameplay_longest_frame_ms"
+  ],
+  "configuration": {
+    "scenario": "examples/chiltern_extended/scenario.toml",
+    "scenario_sha256_policy": "hash at freeze, same scenario and original rollingstock/route per launch",
+    "resolution": [1280,720],
+    "target_m": 2500,
+    "ready_frames": 600,
+    "minimum_gameplay_frames": 300,
+    "view_radius_m": 2000,
+    "follow": "driver",
+    "cab_fov_deg": 55,
+    "weather": "rain",
+    "weather_profile": "downpour",
+    "seed": 42,
+    "particle_budget": 2048,
+    "autodrive": 0.75,
+    "speed_multiplier": 4,
+    "shadows": true,
+    "contact_shadow_quality": 1,
+    "auto_quality_limits": false,
+    "framepace": "off",
+    "gpu": "VulkanRX1002:7480 /PCI0000:03:00.0 and same WestonGL",
+    "audio": "disabled equally",
+    "present_mode": "auto_vsync",
+    "timeout_s_per_run": 420,
+    "frame_spans": false,
+    "profile_systems": false,
+    "weather_quality": "high",
+    "shader_diagnostics": false,
+    "train_effects": {
+      "particle_limit": 512,
+      "adaptive_level_policy": "Observed independent native controller, not forced; paired actual quality levels must agree. Precipitation high/2048 does not imply2048 live train particles."
+    }
+  },
+  "cache_policy": {
+    "cold": "Fresh private player-data + XDG/Mesa caches for each A1/B1/B2/A2 block; no application/driver cache reuse across blocks",
+    "warm": "Second process in the same block with its existing player/driver caches and unchanged settings/resources",
+    "os_page_cache": "Not globally flushed; explicitly not disk-cold. Do not call it OS/disk cold.",
+    "original_content": "Read only; no clearing user caches or install content"
+  },
+  "normalized_build_profiles": {
+    "CARGO_PROFILE_DEV_OPT_LEVEL": "1",
+    "CARGO_PROFILE_DEV_DEBUG": "0",
+    "CARGO_PROFILE_DEV_STRIP": "symbols",
+    "CARGO_PROFILE_DEV_INCREMENTAL": "false",
+    "CARGO_PROFILE_TEST_OPT_LEVEL": "1",
+    "CARGO_PROFILE_TEST_DEBUG": "0",
+    "CARGO_PROFILE_TEST_STRIP": "symbols",
+    "CARGO_PROFILE_TEST_INCREMENTAL": "false",
+    "CARGO_INCREMENTAL": "0",
+    "CARGO_BUILD_JOBS": "2"
+  },
+  "resource_hash_sets": {
+    "baseline": {
+      "sha256": "e92bd06d40a2c72787b3bc3113a563462855ec42b94a9f843474c6a951aa93e3",
+      "file_count": 21
+    },
+    "candidate": {
+      "sha256": "b181ed41c8b02b71ed63f0daf1b46cf2f60c855f7529c1524fa7911b017fc6a4",
+      "file_count": 23
+    }
+  },
+  "quiet_control": {
+    "approved": "approved_exclusive_quiet",
+    "no_other_controlled_workloads": true,
+    "source_preflight_sha256": "034094d869322dce77c83415bbe19beb3bd932fa2de64ced88ca55a8f2a41bae",
+    "ambient_scope": "Lightweight GitHub annotations/monitoring/conversation and untouched user desktop/services are ambient, not stopped or asserted absent. Record them; do not touch user processes.",
+    "released_supervised_session_empty": true
+  },
+  "renderer": {
+    "backend": "Vulkan",
+    "device_type": "DiscreteGpu",
+    "hardware": true,
+    "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+  },
+  "runs": [
+    {
+      "id": "A1-cold",
+      "label": "baseline",
+      "binary_sha256": "531ec4d91cfa3391f1f24a8d62d8abef026603609528462efacbb8ae7a096e08",
+      "started_utc": "2026-10-14T23:22:25.723027+00:00",
+      "completed_utc": "2026-10-14T23:24:09.189474+00:00",
+      "process_wall_elapsed_s": 103.466447,
+      "viewer_elapsed_s_exported": 103.5,
+      "viewer_pid": 261791,
+      "viewer_start_ticks": 2768569,
+      "performance": {
+        "elapsed_s": 98.91363928599993,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 27,
+        "frame_p99_ms": 51,
+        "frames": 3804,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 29,
+        "gameplay_frame_p99_ms": 41,
+        "gameplay_frames": 2486,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 80.732258,
+        "hitches_over_100_ms": 3,
+        "loading_frames": 2474,
+        "longest_frame_ms": 1465.122607,
+        "peak_rss_mib": 2338.8203125,
+        "rss_mib": 2124.41015625,
+        "startup_longest_frame_ms": 1465.122607
+      },
+      "diagnostics": {
+        "frame_ms": {
+          "p50": 25.039827,
+          "p95": 37.253428,
+          "p99": 51.674543
+        },
+        "cpu_main_ms": {
+          "p50": 14.244026,
+          "p95": 31.154832,
+          "p99": 43.648134
+        },
+        "gpu_ms": {
+          "p50": 1.3722,
+          "p95": 1.58692,
+          "p99": 1.75676
+        },
+        "input_queue_ms": {
+          "p50": 9.576819,
+          "p95": 15.877591,
+          "p99": 16.456612999999997
+        },
+        "hitches_over_100_ms": 0,
+        "samples": 2425,
+        "warmup_frames": 60
+      },
+      "timings": {
+        "route_bootstrap_complete_log_ms": 37384.6,
+        "screenshot_requested_log_ms": 100578.4,
+        "screenshot_saved_observer_log_ms": null,
+        "first_physically_presented_ms": null,
+        "scene_ready_ms": null
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 146.65624243709635,
+        "gpu_busy_percent_mean": 32.22195121951219,
+        "selected_gpu_pci": "0000:03:00.0"
+      },
+      "effective_quality": {
+        "adaptive_changes": 0,
+        "adaptive_level": 0,
+        "weather_quality_level": 0,
+        "weather_gpu_capacity": 2048,
+        "train_quality_level": 0,
+        "train_particle_limit": 512,
+        "train_native_emitters": 6,
+        "train_gpu_emitters": 30
+      },
+      "workset": {
+        "cpu_tiles": 30,
+        "gpu_tiles": 8,
+        "draw_calls": {
+          "grass": 0,
+          "opaque": 324,
+          "shadow": 211
+        },
+        "gpu_entities": 15929,
+        "odometer_m": 2500.673563507305
+      },
+      "readiness": {
+        "pending_gpu_uploads": 0,
+        "pending_terrain_tiles": 0,
+        "unactivated_near_shapes": 0,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        }
+      },
+      "actual_camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 42.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [-12465717.0,42.887290954589844,-30570440.0],
+        "rotation_xyzw": [-0.09416281431913376,0.7484831809997559,0.10350401699542999,0.6482231616973877],
+        "target_world": [-12465719.0,40.0029411315918,-30570440.0],
+        "yaw_rad": -3.004870891571045
+      },
+      "cab_geometry": {
+        "mesh_parts": 69,
+        "visible_mesh_parts": 52,
+        "camera_inside_geometry": true,
+        "eye_error_m": 0.00026746440562419593
+      },
+      "formation_vehicles": 8,
+      "geometry_cache": null,
+      "capture": {
+        "private_name": "A1-cold.png",
+        "sha256": "77b5cf6221cfcb619cb2b86f2244e4ad7c20e916ad5891ebed5360a08e0f5deb",
+        "bytes": 795094,
+        "resolution": [1280,720],
+        "visually_reviewed": true
+      },
+      "artifacts_sha256": {
+        ".png": "77b5cf6221cfcb619cb2b86f2244e4ad7c20e916ad5891ebed5360a08e0f5deb",
+        ".stream.json": "b923b770072e826a97c9bb4003c0c024147a4bbaafcfb92cb4246003eb8756f9",
+        ".log": "20bcbd72c40a829999ef5ec4ba4f60d6e9496ea53f3ab826c51139812e9304f6",
+        ".xvfb.log": "ac998f0ff830ccce3af910dbace82b02380d15454bb1e0f721aee2a809e054ba",
+        ".external-memory.jsonl": "10c9a162c60dcad24ae99353602b22b382dcc0c75e6b6774525209634bce5fb6",
+        ".memory-events.json": "1ba8a2793f9ab8601171d6ab6c7b930e46b2dbdd84d09a6c074c796ebf25e84a",
+        ".memory-summary.json": "c0ad66a76665664a0ec648eca8fe49f43081f35de8f12c58049fb3501f3338fd"
+      }
+    },
+    {
+      "id": "A1-warm",
+      "label": "baseline",
+      "binary_sha256": "531ec4d91cfa3391f1f24a8d62d8abef026603609528462efacbb8ae7a096e08",
+      "started_utc": "2026-10-14T23:24:09.298501+00:00",
+      "completed_utc": "2026-10-14T23:25:52.248153+00:00",
+      "process_wall_elapsed_s": 102.949652,
+      "viewer_elapsed_s_exported": 102.9,
+      "viewer_pid": 262823,
+      "viewer_start_ticks": 2778926,
+      "performance": {
+        "elapsed_s": 98.40791903000023,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 28,
+        "frame_p99_ms": 52,
+        "frames": 3782,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 29,
+        "gameplay_frame_p99_ms": 41,
+        "gameplay_frames": 2485,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 71.647066,
+        "hitches_over_100_ms": 3,
+        "loading_frames": 2450,
+        "longest_frame_ms": 1512.666258,
+        "peak_rss_mib": 2394.62890625,
+        "rss_mib": 2117.046875,
+        "startup_longest_frame_ms": 1512.666258
+      },
+      "diagnostics": {
+        "frame_ms": {
+          "p50": 24.97222,
+          "p95": 36.420718,
+          "p99": 53.378848
+        },
+        "cpu_main_ms": {
+          "p50": 14.219724,
+          "p95": 31.143032,
+          "p99": 43.172949
+        },
+        "gpu_ms": {
+          "p50": 1.3656,
+          "p95": 1.58688,
+          "p99": 1.75524
+        },
+        "input_queue_ms": {
+          "p50": 10.64344,
+          "p95": 15.098193,
+          "p99": 15.690089
+        },
+        "hitches_over_100_ms": 0,
+        "samples": 2425,
+        "warmup_frames": 60
+      },
+      "timings": {
+        "route_bootstrap_complete_log_ms": 36894.4,
+        "screenshot_requested_log_ms": 100090.0,
+        "screenshot_saved_observer_log_ms": null,
+        "first_physically_presented_ms": null,
+        "scene_ready_ms": null
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 142.37151683832826,
+        "gpu_busy_percent_mean": 32.36274509803921,
+        "selected_gpu_pci": "0000:03:00.0"
+      },
+      "effective_quality": {
+        "adaptive_changes": 0,
+        "adaptive_level": 0,
+        "weather_quality_level": 0,
+        "weather_gpu_capacity": 2048,
+        "train_quality_level": 0,
+        "train_particle_limit": 512,
+        "train_native_emitters": 6,
+        "train_gpu_emitters": 30
+      },
+      "workset": {
+        "cpu_tiles": 30,
+        "gpu_tiles": 8,
+        "draw_calls": {
+          "grass": 0,
+          "opaque": 315,
+          "shadow": 226
+        },
+        "gpu_entities": 15970,
+        "odometer_m": 2500.673563507305
+      },
+      "readiness": {
+        "pending_gpu_uploads": 0,
+        "pending_terrain_tiles": 0,
+        "unactivated_near_shapes": 0,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        }
+      },
+      "actual_camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 42.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [-12465717.0,42.88545227050781,-30570440.0],
+        "rotation_xyzw": [-0.0941670760512352,0.7484581470489502,0.10350080579519272,0.6482520699501038],
+        "target_world": [-12465718.0,40.00111770629883,-30570442.0],
+        "yaw_rad": -3.004927635192871
+      },
+      "cab_geometry": {
+        "mesh_parts": 69,
+        "visible_mesh_parts": 52,
+        "camera_inside_geometry": true,
+        "eye_error_m": 0.000269115756964311
+      },
+      "formation_vehicles": 8,
+      "geometry_cache": null,
+      "capture": {
+        "private_name": "A1-warm.png",
+        "sha256": "258902e6516d2e23edf5df4e5cc0d35b86fb9084cef2b220093d780ae6f5b2bf",
+        "bytes": 795617,
+        "resolution": [1280,720],
+        "visually_reviewed": true
+      },
+      "artifacts_sha256": {
+        ".png": "258902e6516d2e23edf5df4e5cc0d35b86fb9084cef2b220093d780ae6f5b2bf",
+        ".stream.json": "775f7f38f9f9a1f1efa711f6fd2f5da0a40aae83cc507c99d5d62798eb769b4d",
+        ".log": "e23223609b888466b888f4304f7a326addca3c82ea9baf9b85123c98072ee196",
+        ".xvfb.log": "3b5e3bcc172db6750322d8c664af523399e2f4e7bed25fbb6f4acb5bd14c1519",
+        ".external-memory.jsonl": "77a39394e5568eecf08ca3e08060c1ec3affad72e2d625e2189e4adab88c9898",
+        ".memory-events.json": "f27f076c2d6cee23d38b21cb80fc24b9231ef31fe3248d4be197071a237c50f2",
+        ".memory-summary.json": "7a63f6f388e16d7ca79d7f0d437c00eb9b06703f4b179058c0a61b5fda413a94"
+      }
+    },
+    {
+      "id": "B1-cold",
+      "label": "candidate",
+      "binary_sha256": "f1138d03ea6978baaab8e5fe8b4e8995c626a6df319a690bb7a92955512c0239",
+      "started_utc": "2026-10-14T23:25:52.357039+00:00",
+      "completed_utc": "2026-10-14T23:27:23.772659+00:00",
+      "process_wall_elapsed_s": 91.41562,
+      "viewer_elapsed_s_exported": 91.4,
+      "viewer_pid": 264353,
+      "viewer_start_ticks": 2789232,
+      "performance": {
+        "elapsed_s": 89.26864959100003,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 31,
+        "frame_p99_ms": 38,
+        "frames": 3444,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 32,
+        "gameplay_frame_p99_ms": 40,
+        "gameplay_frames": 2455,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 58.583034999999995,
+        "hitches_over_100_ms": 2,
+        "loading_frames": 2067,
+        "longest_frame_ms": 814.761395,
+        "peak_rss_mib": 2291.2109375,
+        "rss_mib": 1881.765625,
+        "startup_longest_frame_ms": 814.761395
+      },
+      "diagnostics": {
+        "frame_ms": {
+          "p50": 25.292739,
+          "p95": 35.155123,
+          "p99": 42.836898
+        },
+        "cpu_main_ms": {
+          "p50": 15.837596999999999,
+          "p95": 32.876580000000004,
+          "p99": 36.880439
+        },
+        "gpu_ms": {
+          "p50": 1.48584,
+          "p95": 1.71808,
+          "p99": 1.87692
+        },
+        "input_queue_ms": {
+          "p50": 8.836003999999999,
+          "p95": 14.225379,
+          "p99": 15.793364
+        },
+        "hitches_over_100_ms": 0,
+        "samples": 2389,
+        "warmup_frames": 60
+      },
+      "timings": {
+        "route_bootstrap_complete_log_ms": 27614.4,
+        "screenshot_requested_log_ms": 90813.9,
+        "screenshot_saved_observer_log_ms": 90895.5,
+        "first_physically_presented_ms": null,
+        "scene_ready_ms": null
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 160.13607943155867,
+        "gpu_busy_percent_mean": 24.224376731301938,
+        "selected_gpu_pci": "0000:03:00.0"
+      },
+      "effective_quality": {
+        "adaptive_changes": 0,
+        "adaptive_level": 0,
+        "weather_quality_level": 0,
+        "weather_gpu_capacity": 2048,
+        "train_quality_level": 0,
+        "train_particle_limit": 512,
+        "train_native_emitters": 6,
+        "train_gpu_emitters": 30
+      },
+      "workset": {
+        "cpu_tiles": 30,
+        "gpu_tiles": 11,
+        "draw_calls": {
+          "grass": 0,
+          "opaque": 308,
+          "shadow": 220
+        },
+        "gpu_entities": 21022,
+        "odometer_m": 2500.165185885929
+      },
+      "readiness": {
+        "pending_gpu_uploads": 0,
+        "pending_terrain_tiles": 0,
+        "unactivated_near_shapes": 0,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        }
+      },
+      "actual_camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 42.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [-12465716.0,42.89484786987305,-30570440.0],
+        "rotation_xyzw": [-0.09408000856637955,0.7484166622161865,0.10341983288526535,0.6483253836631775],
+        "target_world": [-12465718.0,40.00880813598633,-30570442.0],
+        "yaw_rad": -3.0046892166137695
+      },
+      "cab_geometry": {
+        "mesh_parts": 69,
+        "visible_mesh_parts": 52,
+        "camera_inside_geometry": true,
+        "eye_error_m": 0.00032344184000976384
+      },
+      "formation_vehicles": 8,
+      "geometry_cache": {
+        "admission_skips": 5,
+        "compression": "zstd-1",
+        "disk_bytes": 23797509,
+        "evictions": 0,
+        "format": 2,
+        "gpu_handles_cached": false,
+        "hits": 0,
+        "invalid_entries": 0,
+        "inventory_scans": 1,
+        "json_bytes_written": 319019816,
+        "legacy_hits": 0,
+        "max_disk_mib": 256,
+        "max_entry_mib": 32,
+        "misses": 1301,
+        "schema": 1,
+        "stored_bytes_written": 23797501,
+        "writes": 1296
+      },
+      "capture": {
+        "private_name": "B1-cold.png",
+        "sha256": "23fbae072cf4d5340e63b566f223f10de7e696944850fb133e3d23db8ce56615",
+        "bytes": 798480,
+        "resolution": [1280,720],
+        "visually_reviewed": true
+      },
+      "artifacts_sha256": {
+        ".png": "23fbae072cf4d5340e63b566f223f10de7e696944850fb133e3d23db8ce56615",
+        ".stream.json": "a17de3f34cf7a3b6b4c5caea88f371888da93abf3591492d5dde8615686f8a53",
+        ".log": "49581c16d6b61926a839c75b8711529342b7db3b0f0fcb77015bbde368122a93",
+        ".xvfb.log": "f8ddc7f8befdf1ea9f7deac47bd781d52b0d3773d8858dc8a9d5dca35767c8cc",
+        ".external-memory.jsonl": "b025d5440a4fde4a4f0b6c603fb16dc9fd8f8291034f43155f2fffa0b15bdecc",
+        ".memory-events.json": "ab5b644d6f623b68714919eaf46b4eae1e00969b77bd9b61088c295660af26a5",
+        ".memory-summary.json": "b80a63e52d0e341615169208aee2b0079384b1bf25f648137863dcc893fc6932"
+      }
+    },
+    {
+      "id": "B1-warm",
+      "label": "candidate",
+      "binary_sha256": "f1138d03ea6978baaab8e5fe8b4e8995c626a6df319a690bb7a92955512c0239",
+      "started_utc": "2026-10-14T23:27:23.884635+00:00",
+      "completed_utc": "2026-10-14T23:28:54.796069+00:00",
+      "process_wall_elapsed_s": 90.911434,
+      "viewer_elapsed_s_exported": 90.9,
+      "viewer_pid": 265231,
+      "viewer_start_ticks": 2798385,
+      "performance": {
+        "elapsed_s": 88.75457722099985,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 31,
+        "frame_p99_ms": 38,
+        "frames": 3423,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 32,
+        "gameplay_frame_p99_ms": 39,
+        "gameplay_frames": 2451,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 66.854097,
+        "hitches_over_100_ms": 2,
+        "loading_frames": 2035,
+        "longest_frame_ms": 777.2473789999999,
+        "peak_rss_mib": 2104.4140625,
+        "rss_mib": 1705.2890625,
+        "startup_longest_frame_ms": 777.2473789999999
+      },
+      "diagnostics": {
+        "frame_ms": {
+          "p50": 25.280903000000002,
+          "p95": 35.395014,
+          "p99": 42.681048
+        },
+        "cpu_main_ms": {
+          "p50": 15.703783,
+          "p95": 33.123225,
+          "p99": 37.573032
+        },
+        "gpu_ms": {
+          "p50": 1.48912,
+          "p95": 1.72108,
+          "p99": 1.88632
+        },
+        "input_queue_ms": {
+          "p50": 8.933385,
+          "p95": 14.718506,
+          "p99": 15.099141999999999
+        },
+        "hitches_over_100_ms": 0,
+        "samples": 2386,
+        "warmup_frames": 60
+      },
+      "timings": {
+        "route_bootstrap_complete_log_ms": 27117.7,
+        "screenshot_requested_log_ms": 90292.0,
+        "screenshot_saved_observer_log_ms": 90374.0,
+        "first_physically_presented_ms": null,
+        "scene_ready_ms": null
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 152.69774568326685,
+        "gpu_busy_percent_mean": 24.2033426183844,
+        "selected_gpu_pci": "0000:03:00.0"
+      },
+      "effective_quality": {
+        "adaptive_changes": 0,
+        "adaptive_level": 0,
+        "weather_quality_level": 0,
+        "weather_gpu_capacity": 2048,
+        "train_quality_level": 0,
+        "train_particle_limit": 512,
+        "train_native_emitters": 6,
+        "train_gpu_emitters": 30
+      },
+      "workset": {
+        "cpu_tiles": 30,
+        "gpu_tiles": 11,
+        "draw_calls": {
+          "grass": 0,
+          "opaque": 315,
+          "shadow": 221
+        },
+        "gpu_entities": 21045,
+        "odometer_m": 2500.165185885929
+      },
+      "readiness": {
+        "pending_gpu_uploads": 0,
+        "pending_terrain_tiles": 0,
+        "unactivated_near_shapes": 0,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        }
+      },
+      "actual_camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 42.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [-12465716.0,42.900299072265625,-30570440.0],
+        "rotation_xyzw": [-0.09405834227800369,0.7484702467918396,0.10341750085353851,0.6482670307159424],
+        "target_world": [-12465718.0,40.01399612426758,-30570440.0],
+        "yaw_rad": -3.004528045654297
+      },
+      "cab_geometry": {
+        "mesh_parts": 69,
+        "visible_mesh_parts": 52,
+        "camera_inside_geometry": true,
+        "eye_error_m": 0.0003255369665566832
+      },
+      "formation_vehicles": 8,
+      "geometry_cache": {
+        "admission_skips": 5,
+        "compression": "zstd-1",
+        "disk_bytes": 0,
+        "evictions": 0,
+        "format": 2,
+        "gpu_handles_cached": false,
+        "hits": 1296,
+        "invalid_entries": 0,
+        "inventory_scans": 0,
+        "json_bytes_written": 0,
+        "legacy_hits": 0,
+        "max_disk_mib": 256,
+        "max_entry_mib": 32,
+        "misses": 5,
+        "schema": 1,
+        "stored_bytes_written": 0,
+        "writes": 0
+      },
+      "capture": {
+        "private_name": "B1-warm.png",
+        "sha256": "a72fc7be08a93c6a3644c960bf1f8be1835d8d141815a37737dcae1e362c3ec3",
+        "bytes": 798179,
+        "resolution": [1280,720],
+        "visually_reviewed": true
+      },
+      "artifacts_sha256": {
+        ".png": "a72fc7be08a93c6a3644c960bf1f8be1835d8d141815a37737dcae1e362c3ec3",
+        ".stream.json": "4072d8a729a1096ea07502a0e1e7a922d620758c252293c107d9c32d6013c427",
+        ".log": "55d752dc62df2ac306d9063e190da1e1bccfd7a096b7de97a980f1cb8d570dae",
+        ".xvfb.log": "c5bf48e4b553c3118addf596e7e7406b3806987cb916940faffead502692e2f0",
+        ".external-memory.jsonl": "4d1d42331097768f3f7afd5dd5185b84a57b100897e3bdfa3e03d10164934b8e",
+        ".memory-events.json": "689cffb4d408178c22c0838ed1b78f4b0f30a5884ec258bededf1b896857827a",
+        ".memory-summary.json": "6d65b9780f6a687c8f1749d8d1ab76798d9766a3b9d65a5351ff7c8bfb00fa79"
+      }
+    },
+    {
+      "id": "B2-cold",
+      "label": "candidate",
+      "binary_sha256": "f1138d03ea6978baaab8e5fe8b4e8995c626a6df319a690bb7a92955512c0239",
+      "started_utc": "2026-10-14T23:28:54.908011+00:00",
+      "completed_utc": "2026-10-14T23:30:26.319259+00:00",
+      "process_wall_elapsed_s": 91.411248,
+      "viewer_elapsed_s_exported": 91.4,
+      "viewer_pid": 267175,
+      "viewer_start_ticks": 2807487,
+      "performance": {
+        "elapsed_s": 89.28829030999992,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 30,
+        "frame_p99_ms": 37,
+        "frames": 3458,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 31,
+        "gameplay_frame_p99_ms": 37,
+        "gameplay_frames": 2467,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 49.776866000000005,
+        "hitches_over_100_ms": 2,
+        "loading_frames": 2073,
+        "longest_frame_ms": 821.206209,
+        "peak_rss_mib": 2261.53515625,
+        "rss_mib": 1874.01953125,
+        "startup_longest_frame_ms": 821.206209
+      },
+      "diagnostics": {
+        "frame_ms": {
+          "p50": 25.282889,
+          "p95": 34.374229,
+          "p99": 41.927527999999995
+        },
+        "cpu_main_ms": {
+          "p50": 15.305106,
+          "p95": 31.804495000000003,
+          "p99": 35.355517000000006
+        },
+        "gpu_ms": {
+          "p50": 1.5352,
+          "p95": 1.7638,
+          "p99": 1.91
+        },
+        "input_queue_ms": {
+          "p50": 9.587108,
+          "p95": 15.365658000000002,
+          "p99": 15.928250000000002
+        },
+        "hitches_over_100_ms": 0,
+        "samples": 2400,
+        "warmup_frames": 60
+      },
+      "timings": {
+        "route_bootstrap_complete_log_ms": 27652.3,
+        "screenshot_requested_log_ms": 90836.1,
+        "screenshot_saved_observer_log_ms": 90915.8,
+        "first_physically_presented_ms": null,
+        "scene_ready_ms": null
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 156.78649186552167,
+        "gpu_busy_percent_mean": 24.42382271468144,
+        "selected_gpu_pci": "0000:03:00.0"
+      },
+      "effective_quality": {
+        "adaptive_changes": 0,
+        "adaptive_level": 0,
+        "weather_quality_level": 0,
+        "weather_gpu_capacity": 2048,
+        "train_quality_level": 0,
+        "train_particle_limit": 512,
+        "train_native_emitters": 6,
+        "train_gpu_emitters": 30
+      },
+      "workset": {
+        "cpu_tiles": 30,
+        "gpu_tiles": 11,
+        "draw_calls": {
+          "grass": 0,
+          "opaque": 301,
+          "shadow": 219
+        },
+        "gpu_entities": 21078,
+        "odometer_m": 2500.673563507305
+      },
+      "readiness": {
+        "pending_gpu_uploads": 0,
+        "pending_terrain_tiles": 0,
+        "unactivated_near_shapes": 0,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        }
+      },
+      "actual_camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 42.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [-12465717.0,42.88471221923828,-30570440.0],
+        "rotation_xyzw": [-0.09418615698814392,0.7483212947845459,0.10350031405687332,0.6484072804450989],
+        "target_world": [-12465719.0,40.000614166259766,-30570440.0],
+        "yaw_rad": -3.004943370819092
+      },
+      "cab_geometry": {
+        "mesh_parts": 69,
+        "visible_mesh_parts": 52,
+        "camera_inside_geometry": true,
+        "eye_error_m": 0.00026746440562419593
+      },
+      "formation_vehicles": 8,
+      "geometry_cache": {
+        "admission_skips": 5,
+        "compression": "zstd-1",
+        "disk_bytes": 23797509,
+        "evictions": 0,
+        "format": 2,
+        "gpu_handles_cached": false,
+        "hits": 0,
+        "invalid_entries": 0,
+        "inventory_scans": 1,
+        "json_bytes_written": 319019816,
+        "legacy_hits": 0,
+        "max_disk_mib": 256,
+        "max_entry_mib": 32,
+        "misses": 1301,
+        "schema": 1,
+        "stored_bytes_written": 23797501,
+        "writes": 1296
+      },
+      "capture": {
+        "private_name": "B2-cold.png",
+        "sha256": "3f04a5f2350374441e226410ab0e8e4afe08c8c0c8b706fa3636455f2aaf5a1d",
+        "bytes": 798888,
+        "resolution": [1280,720],
+        "visually_reviewed": true
+      },
+      "artifacts_sha256": {
+        ".png": "3f04a5f2350374441e226410ab0e8e4afe08c8c0c8b706fa3636455f2aaf5a1d",
+        ".stream.json": "af62ed7ae842b0db3ea420a92b23403176ac0497a7ba74c9436a1073ecc4f657",
+        ".log": "2b69f882603f9bda39fce6e1b145c54457a2f168f97c7e54efd80fb4b4bd7c09",
+        ".xvfb.log": "618bed812bac8effa961afd7af8563849403d6aa4c6b942115bfa633c96a1663",
+        ".external-memory.jsonl": "786ae3ab1481ed7cd7c17e0512dafed6e9bd2f13147df5ef5ec82c8d1fed837d",
+        ".memory-events.json": "606f004471f6e1a60c4374dccb001ee50b800a682a6af6057815bb62b1f82a8f",
+        ".memory-summary.json": "b07c3957daa99e88edde320bfc10582d23ed4f43f4070922fed0159f17630785"
+      }
+    },
+    {
+      "id": "B2-warm",
+      "label": "candidate",
+      "binary_sha256": "f1138d03ea6978baaab8e5fe8b4e8995c626a6df319a690bb7a92955512c0239",
+      "started_utc": "2026-10-14T23:30:26.431397+00:00",
+      "completed_utc": "2026-10-14T23:31:57.344538+00:00",
+      "process_wall_elapsed_s": 90.913141,
+      "viewer_elapsed_s_exported": 90.9,
+      "viewer_pid": 268066,
+      "viewer_start_ticks": 2816639,
+      "performance": {
+        "elapsed_s": 88.77863214400008,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 31,
+        "frame_p99_ms": 37,
+        "frames": 3427,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 32,
+        "gameplay_frame_p99_ms": 38,
+        "gameplay_frames": 2455,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 50.052784,
+        "hitches_over_100_ms": 2,
+        "loading_frames": 2033,
+        "longest_frame_ms": 801.701196,
+        "peak_rss_mib": 2109.515625,
+        "rss_mib": 1727.36328125,
+        "startup_longest_frame_ms": 801.701196
+      },
+      "diagnostics": {
+        "frame_ms": {
+          "p50": 25.264097,
+          "p95": 34.713272,
+          "p99": 42.257645000000004
+        },
+        "cpu_main_ms": {
+          "p50": 15.683679999999999,
+          "p95": 32.618838999999994,
+          "p99": 36.316663999999996
+        },
+        "gpu_ms": {
+          "p50": 1.54512,
+          "p95": 1.7696,
+          "p99": 1.92648
+        },
+        "input_queue_ms": {
+          "p50": 9.597469,
+          "p95": 15.299828,
+          "p99": 15.652992000000001
+        },
+        "hitches_over_100_ms": 0,
+        "samples": 2390,
+        "warmup_frames": 60
+      },
+      "timings": {
+        "route_bootstrap_complete_log_ms": 27150.4,
+        "screenshot_requested_log_ms": 90316.2,
+        "screenshot_saved_observer_log_ms": 90396.5,
+        "first_physically_presented_ms": null,
+        "scene_ready_ms": null
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 152.507770915381,
+        "gpu_busy_percent_mean": 24.420612813370475,
+        "selected_gpu_pci": "0000:03:00.0"
+      },
+      "effective_quality": {
+        "adaptive_changes": 0,
+        "adaptive_level": 0,
+        "weather_quality_level": 0,
+        "weather_gpu_capacity": 2048,
+        "train_quality_level": 0,
+        "train_particle_limit": 512,
+        "train_native_emitters": 6,
+        "train_gpu_emitters": 30
+      },
+      "workset": {
+        "cpu_tiles": 30,
+        "gpu_tiles": 11,
+        "draw_calls": {
+          "grass": 0,
+          "opaque": 311,
+          "shadow": 214
+        },
+        "gpu_entities": 21078,
+        "odometer_m": 2500.165185885929
+      },
+      "readiness": {
+        "pending_gpu_uploads": 0,
+        "pending_terrain_tiles": 0,
+        "unactivated_near_shapes": 0,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        }
+      },
+      "actual_camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 42.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [-12465716.0,42.90250015258789,-30570440.0],
+        "rotation_xyzw": [-0.0940421000123024,0.748684823513031,0.10343550890684128,0.6480187773704529],
+        "target_world": [-12465718.0,40.01611328125,-30570440.0],
+        "yaw_rad": -3.004462480545044
+      },
+      "cab_geometry": {
+        "mesh_parts": 69,
+        "visible_mesh_parts": 52,
+        "camera_inside_geometry": true,
+        "eye_error_m": 0.00032331107649952173
+      },
+      "formation_vehicles": 8,
+      "geometry_cache": {
+        "admission_skips": 5,
+        "compression": "zstd-1",
+        "disk_bytes": 0,
+        "evictions": 0,
+        "format": 2,
+        "gpu_handles_cached": false,
+        "hits": 1295,
+        "invalid_entries": 0,
+        "inventory_scans": 0,
+        "json_bytes_written": 0,
+        "legacy_hits": 0,
+        "max_disk_mib": 256,
+        "max_entry_mib": 32,
+        "misses": 5,
+        "schema": 1,
+        "stored_bytes_written": 0,
+        "writes": 0
+      },
+      "capture": {
+        "private_name": "B2-warm.png",
+        "sha256": "d71b3140201486576e9cf06dec213ef4a9f9461b27caf71b34e84b0ebd849c7c",
+        "bytes": 798316,
+        "resolution": [1280,720],
+        "visually_reviewed": true
+      },
+      "artifacts_sha256": {
+        ".png": "d71b3140201486576e9cf06dec213ef4a9f9461b27caf71b34e84b0ebd849c7c",
+        ".stream.json": "2c7aae3f11f9f681c5f4db92ccc2a8ad63de8a16d854b9b81d9fb1206c308f5b",
+        ".log": "5eb6a83353fed13007189c81e8bddfe4485794bdffd36be75b077052e0bd1b44",
+        ".xvfb.log": "bbb7d0a24bebd1cd3812127325bc9a964298df38352a43adc104f6b1871bb6af",
+        ".external-memory.jsonl": "8a01860ba5a8de2857545518ce45da8520bb65081dee9b97194194457cb16a75",
+        ".memory-events.json": "10123e2dbc21a0a0773f696f8040eb4d943507031d40e7644fa9e6601ad0e188",
+        ".memory-summary.json": "5f9013f76e134b2618c4a0f964f8f2cfdc769c4cd52e9c005530b119831c1a99"
+      }
+    },
+    {
+      "id": "A2-cold",
+      "label": "baseline",
+      "binary_sha256": "531ec4d91cfa3391f1f24a8d62d8abef026603609528462efacbb8ae7a096e08",
+      "started_utc": "2026-10-14T23:31:57.457551+00:00",
+      "completed_utc": "2026-10-14T23:33:41.436858+00:00",
+      "process_wall_elapsed_s": 103.979307,
+      "viewer_elapsed_s_exported": 104.0,
+      "viewer_pid": 268880,
+      "viewer_start_ticks": 2825742,
+      "performance": {
+        "elapsed_s": 99.20174085400001,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 28,
+        "frame_p99_ms": 53,
+        "frames": 3808,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 29,
+        "gameplay_frame_p99_ms": 40,
+        "gameplay_frames": 2489,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 80.618536,
+        "hitches_over_100_ms": 3,
+        "loading_frames": 2481,
+        "longest_frame_ms": 1513.1330589999998,
+        "peak_rss_mib": 2416.1484375,
+        "rss_mib": 2190.4296875,
+        "startup_longest_frame_ms": 1513.1330589999998
+      },
+      "diagnostics": {
+        "frame_ms": {
+          "p50": 25.026751,
+          "p95": 36.922360000000005,
+          "p99": 52.525783
+        },
+        "cpu_main_ms": {
+          "p50": 14.428986,
+          "p95": 31.450807999999995,
+          "p99": 43.572667
+        },
+        "gpu_ms": {
+          "p50": 1.36232,
+          "p95": 1.58504,
+          "p99": 1.76608
+        },
+        "input_queue_ms": {
+          "p50": 8.65896,
+          "p95": 15.021634,
+          "p99": 16.181404
+        },
+        "hitches_over_100_ms": 0,
+        "samples": 2428,
+        "warmup_frames": 60
+      },
+      "timings": {
+        "route_bootstrap_complete_log_ms": 37522.7,
+        "screenshot_requested_log_ms": 100893.3,
+        "screenshot_saved_observer_log_ms": null,
+        "first_physically_presented_ms": null,
+        "scene_ready_ms": null
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 147.72179014353208,
+        "gpu_busy_percent_mean": 32.092457420924575,
+        "selected_gpu_pci": "0000:03:00.0"
+      },
+      "effective_quality": {
+        "adaptive_changes": 0,
+        "adaptive_level": 0,
+        "weather_quality_level": 0,
+        "weather_gpu_capacity": 2048,
+        "train_quality_level": 0,
+        "train_particle_limit": 512,
+        "train_native_emitters": 6,
+        "train_gpu_emitters": 30
+      },
+      "workset": {
+        "cpu_tiles": 30,
+        "gpu_tiles": 8,
+        "draw_calls": {
+          "grass": 0,
+          "opaque": 326,
+          "shadow": 230
+        },
+        "gpu_entities": 15952,
+        "odometer_m": 2500.165185885929
+      },
+      "readiness": {
+        "pending_gpu_uploads": 0,
+        "pending_terrain_tiles": 0,
+        "unactivated_near_shapes": 0,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        }
+      },
+      "actual_camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 42.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [-12465717.0,42.89604187011719,-30570442.0],
+        "rotation_xyzw": [-0.09407106041908264,0.7484279870986938,0.10342026501893997,0.6483136415481567],
+        "target_world": [-12465718.0,40.009918212890625,-30570442.0],
+        "yaw_rad": -3.0046546459198
+      },
+      "cab_geometry": {
+        "mesh_parts": 69,
+        "visible_mesh_parts": 52,
+        "camera_inside_geometry": true,
+        "eye_error_m": 0.00032361052581109107
+      },
+      "formation_vehicles": 8,
+      "geometry_cache": null,
+      "capture": {
+        "private_name": "A2-cold.png",
+        "sha256": "bda086062219258980add229c406027368ba62e5b3eab3178352e590ddd919bb",
+        "bytes": 794653,
+        "resolution": [1280,720],
+        "visually_reviewed": true
+      },
+      "artifacts_sha256": {
+        ".png": "bda086062219258980add229c406027368ba62e5b3eab3178352e590ddd919bb",
+        ".stream.json": "28bbb6d91668b168c90f0acfa4024d45400dfe4402f545fd344b9162a9b0f604",
+        ".log": "456f63133e4d97ab8da0c0bea6c8725d0d4e1fb6fc281a20302d338788149540",
+        ".xvfb.log": "64649eda36d2c973e4f3e90174e1f9490d0fa2a4a6b9c33441768a8285054431",
+        ".external-memory.jsonl": "a4c9cfd8de961748445a3aef01cc04fca06b0d120faf10fa5a34fa9815f184f4",
+        ".memory-events.json": "6a0b2711b8cb39b4a62f36b839458a66bdc20b0dc866edc7b552679dcd576953",
+        ".memory-summary.json": "2d709efd71e818a4876655ff2c97ef475ff7ae8b4d156e96060bae1544014391"
+      }
+    },
+    {
+      "id": "A2-warm",
+      "label": "baseline",
+      "binary_sha256": "531ec4d91cfa3391f1f24a8d62d8abef026603609528462efacbb8ae7a096e08",
+      "started_utc": "2026-10-14T23:33:41.545113+00:00",
+      "completed_utc": "2026-10-14T23:35:24.502679+00:00",
+      "process_wall_elapsed_s": 102.957566,
+      "viewer_elapsed_s_exported": 103.0,
+      "viewer_pid": 269671,
+      "viewer_start_ticks": 2836151,
+      "performance": {
+        "elapsed_s": 98.24835934399992,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 29,
+        "frame_p99_ms": 50,
+        "frames": 3780,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 30,
+        "gameplay_frame_p99_ms": 41,
+        "gameplay_frames": 2483,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 92.856882,
+        "hitches_over_100_ms": 3,
+        "loading_frames": 2451,
+        "longest_frame_ms": 1423.059174,
+        "peak_rss_mib": 2387.76171875,
+        "rss_mib": 2179.8671875,
+        "startup_longest_frame_ms": 1423.059174
+      },
+      "diagnostics": {
+        "frame_ms": {
+          "p50": 25.011265,
+          "p95": 37.114520999999996,
+          "p99": 50.805952000000005
+        },
+        "cpu_main_ms": {
+          "p50": 14.432585,
+          "p95": 31.746991,
+          "p99": 41.867762000000006
+        },
+        "gpu_ms": {
+          "p50": 1.36472,
+          "p95": 1.58588,
+          "p99": 1.73392
+        },
+        "input_queue_ms": {
+          "p50": 10.383699,
+          "p95": 14.842974,
+          "p99": 15.514911
+        },
+        "hitches_over_100_ms": 1,
+        "samples": 2423,
+        "warmup_frames": 60
+      },
+      "timings": {
+        "route_bootstrap_complete_log_ms": 36741.2,
+        "screenshot_requested_log_ms": 99929.8,
+        "screenshot_saved_observer_log_ms": null,
+        "first_physically_presented_ms": null,
+        "scene_ready_ms": null
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 143.49687626093987,
+        "gpu_busy_percent_mean": 32.26960784313726,
+        "selected_gpu_pci": "0000:03:00.0"
+      },
+      "effective_quality": {
+        "adaptive_changes": 0,
+        "adaptive_level": 0,
+        "weather_quality_level": 0,
+        "weather_gpu_capacity": 2048,
+        "train_quality_level": 0,
+        "train_particle_limit": 512,
+        "train_native_emitters": 6,
+        "train_gpu_emitters": 30
+      },
+      "workset": {
+        "cpu_tiles": 30,
+        "gpu_tiles": 8,
+        "draw_calls": {
+          "grass": 0,
+          "opaque": 308,
+          "shadow": 221
+        },
+        "gpu_entities": 15976,
+        "odometer_m": 2500.673563507305
+      },
+      "readiness": {
+        "pending_gpu_uploads": 0,
+        "pending_terrain_tiles": 0,
+        "unactivated_near_shapes": 0,
+        "shader_pipelines": {
+          "failed": 0,
+          "pending": 0
+        }
+      },
+      "actual_camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 42.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [-12465717.0,42.88923645019531,-30570440.0],
+        "rotation_xyzw": [-0.09418359398841858,0.748367428779602,0.10350699722766876,0.6483532786369324],
+        "target_world": [-12465718.0,40.00520324707031,-30570440.0],
+        "yaw_rad": -3.004800796508789
+      },
+      "cab_geometry": {
+        "mesh_parts": 69,
+        "visible_mesh_parts": 52,
+        "camera_inside_geometry": true,
+        "eye_error_m": 0.0002712746791075915
+      },
+      "formation_vehicles": 8,
+      "geometry_cache": null,
+      "capture": {
+        "private_name": "A2-warm.png",
+        "sha256": "5c9d0c8106aae3e393426291cf4453cd9514b64f02868dc1e28b98842ae8bc2f",
+        "bytes": 795654,
+        "resolution": [1280,720],
+        "visually_reviewed": true
+      },
+      "artifacts_sha256": {
+        ".png": "5c9d0c8106aae3e393426291cf4453cd9514b64f02868dc1e28b98842ae8bc2f",
+        ".stream.json": "f37ea30dd73b221438f764ae475b78ceaaac7a28ec2c563d8bd826847628f9d4",
+        ".log": "be06ace0e046139ee62e06fa81d345821912e8ccaef217c3f05ea8353fce138d",
+        ".xvfb.log": "9e236383d641096d6cda3174b0275270781b909e554092b6af062a6ccbc57727",
+        ".external-memory.jsonl": "540fd8797625e845e42b1273f63331462a11aa798dd15558f596bd24f7bd6842",
+        ".memory-events.json": "8a08bbe2a9e69b93c9a7a06503a99ad8bc57ce32b348ec50c22508bf11a11430",
+        ".memory-summary.json": "10a17e04ee4662b1e35ab26a7e15fcc9c21af05682011b2a2560526cbe7b9103"
+      }
+    }
+  ],
+  "pairs": [
+    {
+      "baseline": "A1-cold",
+      "candidate": "B1-cold",
+      "strict_primary_acceptance_passed": true,
+      "metrics": {
+        "journey.elapsed_s": {"baseline":98.91363928599993,"candidate":89.26864959100003,"delta":-9.644989694999907},
+        "journey.frame_p50_ms": {"baseline":25,"candidate":25,"delta":0},
+        "journey.frame_p95_ms": {"baseline":27,"candidate":31,"delta":4},
+        "journey.frame_p99_ms": {"baseline":51,"candidate":38,"delta":-13},
+        "journey.gameplay_frame_p50_ms": {"baseline":25,"candidate":25,"delta":0},
+        "journey.gameplay_frame_p95_ms": {"baseline":29,"candidate":32,"delta":3},
+        "journey.gameplay_frame_p99_ms": {"baseline":41,"candidate":40,"delta":-1},
+        "journey.gameplay_hitches_over_100_ms": {"baseline":0,"candidate":0,"delta":0},
+        "journey.gameplay_longest_frame_ms": {"baseline":80.732258,"candidate":58.583034999999995,"delta":-22.149223000000006},
+        "journey.hitches_over_100_ms": {"baseline":3,"candidate":2,"delta":-1},
+        "journey.longest_frame_ms": {"baseline":1465.122607,"candidate":814.761395,"delta":-650.361212},
+        "journey.startup_longest_frame_ms": {"baseline":1465.122607,"candidate":814.761395,"delta":-650.361212},
+        "diagnostics.frame_ms.p50": {"baseline":25.039827,"candidate":25.292739,"delta":0.252912000000002},
+        "diagnostics.frame_ms.p95": {"baseline":37.253428,"candidate":35.155123,"delta":-2.0983049999999963},
+        "diagnostics.frame_ms.p99": {"baseline":51.674543,"candidate":42.836898,"delta":-8.837645000000002},
+        "diagnostics.cpu_main_ms.p50": {"baseline":14.244026,"candidate":15.837596999999999,"delta":1.593570999999999},
+        "diagnostics.cpu_main_ms.p95": {"baseline":31.154832,"candidate":32.876580000000004,"delta":1.7217480000000052},
+        "diagnostics.cpu_main_ms.p99": {"baseline":43.648134,"candidate":36.880439,"delta":-6.767694999999996},
+        "diagnostics.gpu_ms.p50": {"baseline":1.3722,"candidate":1.48584,"delta":0.11363999999999996},
+        "diagnostics.gpu_ms.p95": {"baseline":1.58692,"candidate":1.71808,"delta":0.13115999999999994},
+        "diagnostics.gpu_ms.p99": {"baseline":1.75676,"candidate":1.87692,"delta":0.12015999999999982},
+        "diagnostics.input_queue_ms.p50": {"baseline":9.576819,"candidate":8.836003999999999,"delta":-0.7408150000000013},
+        "diagnostics.input_queue_ms.p95": {"baseline":15.877591,"candidate":14.225379,"delta":-1.6522120000000005},
+        "diagnostics.input_queue_ms.p99": {"baseline":16.456612999999997,"candidate":15.793364,"delta":-0.6632489999999969},
+        "diagnostics.hitches_over_100_ms": {"baseline":0,"candidate":0,"delta":0},
+        "process_wall_elapsed_s": {"baseline":103.466447,"candidate":91.41562,"delta":-12.050826999999998},
+        "route_bootstrap_complete_log_ms": {"baseline":37384.6,"candidate":27614.4,"delta":-9770.199999999997}
+      }
+    },
+    {
+      "baseline": "A1-warm",
+      "candidate": "B1-warm",
+      "strict_primary_acceptance_passed": true,
+      "metrics": {
+        "journey.elapsed_s": {"baseline":98.40791903000023,"candidate":88.75457722099985,"delta":-9.65334180900038},
+        "journey.frame_p50_ms": {"baseline":25,"candidate":25,"delta":0},
+        "journey.frame_p95_ms": {"baseline":28,"candidate":31,"delta":3},
+        "journey.frame_p99_ms": {"baseline":52,"candidate":38,"delta":-14},
+        "journey.gameplay_frame_p50_ms": {"baseline":25,"candidate":25,"delta":0},
+        "journey.gameplay_frame_p95_ms": {"baseline":29,"candidate":32,"delta":3},
+        "journey.gameplay_frame_p99_ms": {"baseline":41,"candidate":39,"delta":-2},
+        "journey.gameplay_hitches_over_100_ms": {"baseline":0,"candidate":0,"delta":0},
+        "journey.gameplay_longest_frame_ms": {"baseline":71.647066,"candidate":66.854097,"delta":-4.792968999999999},
+        "journey.hitches_over_100_ms": {"baseline":3,"candidate":2,"delta":-1},
+        "journey.longest_frame_ms": {"baseline":1512.666258,"candidate":777.2473789999999,"delta":-735.4188790000001},
+        "journey.startup_longest_frame_ms": {"baseline":1512.666258,"candidate":777.2473789999999,"delta":-735.4188790000001},
+        "diagnostics.frame_ms.p50": {"baseline":24.97222,"candidate":25.280903000000002,"delta":0.30868300000000204},
+        "diagnostics.frame_ms.p95": {"baseline":36.420718,"candidate":35.395014,"delta":-1.0257039999999975},
+        "diagnostics.frame_ms.p99": {"baseline":53.378848,"candidate":42.681048,"delta":-10.6978},
+        "diagnostics.cpu_main_ms.p50": {"baseline":14.219724,"candidate":15.703783,"delta":1.4840590000000002},
+        "diagnostics.cpu_main_ms.p95": {"baseline":31.143032,"candidate":33.123225,"delta":1.9801929999999963},
+        "diagnostics.cpu_main_ms.p99": {"baseline":43.172949,"candidate":37.573032,"delta":-5.599917000000005},
+        "diagnostics.gpu_ms.p50": {"baseline":1.3656,"candidate":1.48912,"delta":0.12352000000000007},
+        "diagnostics.gpu_ms.p95": {"baseline":1.58688,"candidate":1.72108,"delta":0.13419999999999987},
+        "diagnostics.gpu_ms.p99": {"baseline":1.75524,"candidate":1.88632,"delta":0.13108000000000009},
+        "diagnostics.input_queue_ms.p50": {"baseline":10.64344,"candidate":8.933385,"delta":-1.7100550000000005},
+        "diagnostics.input_queue_ms.p95": {"baseline":15.098193,"candidate":14.718506,"delta":-0.37968700000000055},
+        "diagnostics.input_queue_ms.p99": {"baseline":15.690089,"candidate":15.099141999999999,"delta":-0.5909470000000017},
+        "diagnostics.hitches_over_100_ms": {"baseline":0,"candidate":0,"delta":0},
+        "process_wall_elapsed_s": {"baseline":102.949652,"candidate":90.911434,"delta":-12.038218},
+        "route_bootstrap_complete_log_ms": {"baseline":36894.4,"candidate":27117.7,"delta":-9776.7}
+      }
+    },
+    {
+      "baseline": "A2-cold",
+      "candidate": "B2-cold",
+      "strict_primary_acceptance_passed": true,
+      "metrics": {
+        "journey.elapsed_s": {"baseline":99.20174085400001,"candidate":89.28829030999992,"delta":-9.913450544000085},
+        "journey.frame_p50_ms": {"baseline":25,"candidate":25,"delta":0},
+        "journey.frame_p95_ms": {"baseline":28,"candidate":30,"delta":2},
+        "journey.frame_p99_ms": {"baseline":53,"candidate":37,"delta":-16},
+        "journey.gameplay_frame_p50_ms": {"baseline":25,"candidate":25,"delta":0},
+        "journey.gameplay_frame_p95_ms": {"baseline":29,"candidate":31,"delta":2},
+        "journey.gameplay_frame_p99_ms": {"baseline":40,"candidate":37,"delta":-3},
+        "journey.gameplay_hitches_over_100_ms": {"baseline":0,"candidate":0,"delta":0},
+        "journey.gameplay_longest_frame_ms": {"baseline":80.618536,"candidate":49.776866000000005,"delta":-30.84167},
+        "journey.hitches_over_100_ms": {"baseline":3,"candidate":2,"delta":-1},
+        "journey.longest_frame_ms": {"baseline":1513.1330589999998,"candidate":821.206209,"delta":-691.9268499999998},
+        "journey.startup_longest_frame_ms": {"baseline":1513.1330589999998,"candidate":821.206209,"delta":-691.9268499999998},
+        "diagnostics.frame_ms.p50": {"baseline":25.026751,"candidate":25.282889,"delta":0.256138},
+        "diagnostics.frame_ms.p95": {"baseline":36.922360000000005,"candidate":34.374229,"delta":-2.548131000000005},
+        "diagnostics.frame_ms.p99": {"baseline":52.525783,"candidate":41.927527999999995,"delta":-10.598255000000002},
+        "diagnostics.cpu_main_ms.p50": {"baseline":14.428986,"candidate":15.305106,"delta":0.8761200000000002},
+        "diagnostics.cpu_main_ms.p95": {"baseline":31.450807999999995,"candidate":31.804495000000003,"delta":0.35368700000000786},
+        "diagnostics.cpu_main_ms.p99": {"baseline":43.572667,"candidate":35.355517000000006,"delta":-8.217149999999997},
+        "diagnostics.gpu_ms.p50": {"baseline":1.36232,"candidate":1.5352,"delta":0.17287999999999992},
+        "diagnostics.gpu_ms.p95": {"baseline":1.58504,"candidate":1.7638,"delta":0.17876000000000003},
+        "diagnostics.gpu_ms.p99": {"baseline":1.76608,"candidate":1.91,"delta":0.14391999999999983},
+        "diagnostics.input_queue_ms.p50": {"baseline":8.65896,"candidate":9.587108,"delta":0.9281480000000002},
+        "diagnostics.input_queue_ms.p95": {"baseline":15.021634,"candidate":15.365658000000002,"delta":0.344024000000001},
+        "diagnostics.input_queue_ms.p99": {"baseline":16.181404,"candidate":15.928250000000002,"delta":-0.25315399999999855},
+        "diagnostics.hitches_over_100_ms": {"baseline":0,"candidate":0,"delta":0},
+        "process_wall_elapsed_s": {"baseline":103.979307,"candidate":91.411248,"delta":-12.568059000000005},
+        "route_bootstrap_complete_log_ms": {"baseline":37522.7,"candidate":27652.3,"delta":-9870.399999999998}
+      }
+    },
+    {
+      "baseline": "A2-warm",
+      "candidate": "B2-warm",
+      "strict_primary_acceptance_passed": true,
+      "metrics": {
+        "journey.elapsed_s": {"baseline":98.24835934399992,"candidate":88.77863214400008,"delta":-9.469727199999838},
+        "journey.frame_p50_ms": {"baseline":25,"candidate":25,"delta":0},
+        "journey.frame_p95_ms": {"baseline":29,"candidate":31,"delta":2},
+        "journey.frame_p99_ms": {"baseline":50,"candidate":37,"delta":-13},
+        "journey.gameplay_frame_p50_ms": {"baseline":25,"candidate":25,"delta":0},
+        "journey.gameplay_frame_p95_ms": {"baseline":30,"candidate":32,"delta":2},
+        "journey.gameplay_frame_p99_ms": {"baseline":41,"candidate":38,"delta":-3},
+        "journey.gameplay_hitches_over_100_ms": {"baseline":0,"candidate":0,"delta":0},
+        "journey.gameplay_longest_frame_ms": {"baseline":92.856882,"candidate":50.052784,"delta":-42.804097999999996},
+        "journey.hitches_over_100_ms": {"baseline":3,"candidate":2,"delta":-1},
+        "journey.longest_frame_ms": {"baseline":1423.059174,"candidate":801.701196,"delta":-621.357978},
+        "journey.startup_longest_frame_ms": {"baseline":1423.059174,"candidate":801.701196,"delta":-621.357978},
+        "diagnostics.frame_ms.p50": {"baseline":25.011265,"candidate":25.264097,"delta":0.25283199999999795},
+        "diagnostics.frame_ms.p95": {"baseline":37.114520999999996,"candidate":34.713272,"delta":-2.401248999999993},
+        "diagnostics.frame_ms.p99": {"baseline":50.805952000000005,"candidate":42.257645000000004,"delta":-8.548307000000001},
+        "diagnostics.cpu_main_ms.p50": {"baseline":14.432585,"candidate":15.683679999999999,"delta":1.2510949999999994},
+        "diagnostics.cpu_main_ms.p95": {"baseline":31.746991,"candidate":32.618838999999994,"delta":0.8718479999999929},
+        "diagnostics.cpu_main_ms.p99": {"baseline":41.867762000000006,"candidate":36.316663999999996,"delta":-5.55109800000001},
+        "diagnostics.gpu_ms.p50": {"baseline":1.36472,"candidate":1.54512,"delta":0.18040000000000012},
+        "diagnostics.gpu_ms.p95": {"baseline":1.58588,"candidate":1.7696,"delta":0.1837200000000001},
+        "diagnostics.gpu_ms.p99": {"baseline":1.73392,"candidate":1.92648,"delta":0.19256000000000006},
+        "diagnostics.input_queue_ms.p50": {"baseline":10.383699,"candidate":9.597469,"delta":-0.7862299999999998},
+        "diagnostics.input_queue_ms.p95": {"baseline":14.842974,"candidate":15.299828,"delta":0.45685399999999987},
+        "diagnostics.input_queue_ms.p99": {"baseline":15.514911,"candidate":15.652992000000001,"delta":0.13808100000000145},
+        "diagnostics.hitches_over_100_ms": {"baseline":1,"candidate":0,"delta":-1},
+        "process_wall_elapsed_s": {"baseline":102.957566,"candidate":90.913141,"delta":-12.044425000000004},
+        "route_bootstrap_complete_log_ms": {"baseline":36741.2,"candidate":27150.4,"delta":-9590.799999999996}
+      }
+    }
+  ],
+  "secondary_regressions": [
+    {
+      "pair": "A1-cold→B1-cold",
+      "field": "journey.frame_p95_ms",
+      "baseline": 27,
+      "candidate": 31,
+      "delta": 4
+    },
+    {
+      "pair": "A1-cold→B1-cold",
+      "field": "journey.gameplay_frame_p95_ms",
+      "baseline": 29,
+      "candidate": 32,
+      "delta": 3
+    },
+    {
+      "pair": "A1-cold→B1-cold",
+      "field": "diagnostics.frame_ms.p50",
+      "baseline": 25.039827,
+      "candidate": 25.292739,
+      "delta": 0.252912000000002
+    },
+    {
+      "pair": "A1-cold→B1-cold",
+      "field": "diagnostics.cpu_main_ms.p50",
+      "baseline": 14.244026,
+      "candidate": 15.837596999999999,
+      "delta": 1.593570999999999
+    },
+    {
+      "pair": "A1-cold→B1-cold",
+      "field": "diagnostics.cpu_main_ms.p95",
+      "baseline": 31.154832,
+      "candidate": 32.876580000000004,
+      "delta": 1.7217480000000052
+    },
+    {
+      "pair": "A1-cold→B1-cold",
+      "field": "diagnostics.gpu_ms.p50",
+      "baseline": 1.3722,
+      "candidate": 1.48584,
+      "delta": 0.11363999999999996
+    },
+    {
+      "pair": "A1-cold→B1-cold",
+      "field": "diagnostics.gpu_ms.p95",
+      "baseline": 1.58692,
+      "candidate": 1.71808,
+      "delta": 0.13115999999999994
+    },
+    {
+      "pair": "A1-cold→B1-cold",
+      "field": "diagnostics.gpu_ms.p99",
+      "baseline": 1.75676,
+      "candidate": 1.87692,
+      "delta": 0.12015999999999982
+    },
+    {
+      "pair": "A1-warm→B1-warm",
+      "field": "journey.frame_p95_ms",
+      "baseline": 28,
+      "candidate": 31,
+      "delta": 3
+    },
+    {
+      "pair": "A1-warm→B1-warm",
+      "field": "journey.gameplay_frame_p95_ms",
+      "baseline": 29,
+      "candidate": 32,
+      "delta": 3
+    },
+    {
+      "pair": "A1-warm→B1-warm",
+      "field": "diagnostics.frame_ms.p50",
+      "baseline": 24.97222,
+      "candidate": 25.280903000000002,
+      "delta": 0.30868300000000204
+    },
+    {
+      "pair": "A1-warm→B1-warm",
+      "field": "diagnostics.cpu_main_ms.p50",
+      "baseline": 14.219724,
+      "candidate": 15.703783,
+      "delta": 1.4840590000000002
+    },
+    {
+      "pair": "A1-warm→B1-warm",
+      "field": "diagnostics.cpu_main_ms.p95",
+      "baseline": 31.143032,
+      "candidate": 33.123225,
+      "delta": 1.9801929999999963
+    },
+    {
+      "pair": "A1-warm→B1-warm",
+      "field": "diagnostics.gpu_ms.p50",
+      "baseline": 1.3656,
+      "candidate": 1.48912,
+      "delta": 0.12352000000000007
+    },
+    {
+      "pair": "A1-warm→B1-warm",
+      "field": "diagnostics.gpu_ms.p95",
+      "baseline": 1.58688,
+      "candidate": 1.72108,
+      "delta": 0.13419999999999987
+    },
+    {
+      "pair": "A1-warm→B1-warm",
+      "field": "diagnostics.gpu_ms.p99",
+      "baseline": 1.75524,
+      "candidate": 1.88632,
+      "delta": 0.13108000000000009
+    },
+    {
+      "pair": "A2-cold→B2-cold",
+      "field": "journey.frame_p95_ms",
+      "baseline": 28,
+      "candidate": 30,
+      "delta": 2
+    },
+    {
+      "pair": "A2-cold→B2-cold",
+      "field": "journey.gameplay_frame_p95_ms",
+      "baseline": 29,
+      "candidate": 31,
+      "delta": 2
+    },
+    {
+      "pair": "A2-cold→B2-cold",
+      "field": "diagnostics.frame_ms.p50",
+      "baseline": 25.026751,
+      "candidate": 25.282889,
+      "delta": 0.256138
+    },
+    {
+      "pair": "A2-cold→B2-cold",
+      "field": "diagnostics.cpu_main_ms.p50",
+      "baseline": 14.428986,
+      "candidate": 15.305106,
+      "delta": 0.8761200000000002
+    },
+    {
+      "pair": "A2-cold→B2-cold",
+      "field": "diagnostics.cpu_main_ms.p95",
+      "baseline": 31.450807999999995,
+      "candidate": 31.804495000000003,
+      "delta": 0.35368700000000786
+    },
+    {
+      "pair": "A2-cold→B2-cold",
+      "field": "diagnostics.gpu_ms.p50",
+      "baseline": 1.36232,
+      "candidate": 1.5352,
+      "delta": 0.17287999999999992
+    },
+    {
+      "pair": "A2-cold→B2-cold",
+      "field": "diagnostics.gpu_ms.p95",
+      "baseline": 1.58504,
+      "candidate": 1.7638,
+      "delta": 0.17876000000000003
+    },
+    {
+      "pair": "A2-cold→B2-cold",
+      "field": "diagnostics.gpu_ms.p99",
+      "baseline": 1.76608,
+      "candidate": 1.91,
+      "delta": 0.14391999999999983
+    },
+    {
+      "pair": "A2-cold→B2-cold",
+      "field": "diagnostics.input_queue_ms.p50",
+      "baseline": 8.65896,
+      "candidate": 9.587108,
+      "delta": 0.9281480000000002
+    },
+    {
+      "pair": "A2-cold→B2-cold",
+      "field": "diagnostics.input_queue_ms.p95",
+      "baseline": 15.021634,
+      "candidate": 15.365658000000002,
+      "delta": 0.344024000000001
+    },
+    {
+      "pair": "A2-warm→B2-warm",
+      "field": "journey.frame_p95_ms",
+      "baseline": 29,
+      "candidate": 31,
+      "delta": 2
+    },
+    {
+      "pair": "A2-warm→B2-warm",
+      "field": "journey.gameplay_frame_p95_ms",
+      "baseline": 30,
+      "candidate": 32,
+      "delta": 2
+    },
+    {
+      "pair": "A2-warm→B2-warm",
+      "field": "diagnostics.frame_ms.p50",
+      "baseline": 25.011265,
+      "candidate": 25.264097,
+      "delta": 0.25283199999999795
+    },
+    {
+      "pair": "A2-warm→B2-warm",
+      "field": "diagnostics.cpu_main_ms.p50",
+      "baseline": 14.432585,
+      "candidate": 15.683679999999999,
+      "delta": 1.2510949999999994
+    },
+    {
+      "pair": "A2-warm→B2-warm",
+      "field": "diagnostics.cpu_main_ms.p95",
+      "baseline": 31.746991,
+      "candidate": 32.618838999999994,
+      "delta": 0.8718479999999929
+    },
+    {
+      "pair": "A2-warm→B2-warm",
+      "field": "diagnostics.gpu_ms.p50",
+      "baseline": 1.36472,
+      "candidate": 1.54512,
+      "delta": 0.18040000000000012
+    },
+    {
+      "pair": "A2-warm→B2-warm",
+      "field": "diagnostics.gpu_ms.p95",
+      "baseline": 1.58588,
+      "candidate": 1.7696,
+      "delta": 0.1837200000000001
+    },
+    {
+      "pair": "A2-warm→B2-warm",
+      "field": "diagnostics.gpu_ms.p99",
+      "baseline": 1.73392,
+      "candidate": 1.92648,
+      "delta": 0.19256000000000006
+    },
+    {
+      "pair": "A2-warm→B2-warm",
+      "field": "diagnostics.input_queue_ms.p95",
+      "baseline": 14.842974,
+      "candidate": 15.299828,
+      "delta": 0.45685399999999987
+    },
+    {
+      "pair": "A2-warm→B2-warm",
+      "field": "diagnostics.input_queue_ms.p99",
+      "baseline": 15.514911,
+      "candidate": 15.652992000000001,
+      "delta": 0.13808100000000145
+    }
+  ],
+  "secondary_regression_count": 36,
+  "secondary_regression_counts_by_field": {
+    "journey.frame_p95_ms": 4,
+    "journey.gameplay_frame_p95_ms": 4,
+    "diagnostics.frame_ms.p50": 4,
+    "diagnostics.cpu_main_ms.p50": 4,
+    "diagnostics.cpu_main_ms.p95": 4,
+    "diagnostics.gpu_ms.p50": 4,
+    "diagnostics.gpu_ms.p95": 4,
+    "diagnostics.gpu_ms.p99": 4,
+    "diagnostics.input_queue_ms.p50": 1,
+    "diagnostics.input_queue_ms.p95": 2,
+    "diagnostics.input_queue_ms.p99": 1
+  },
+  "higher_whole_launch_utilization_observations": [
+    {
+      "pair": "A1-cold→B1-cold",
+      "field": "cpu_percent_one_core",
+      "baseline": 146.65624243709635,
+      "candidate": 160.13607943155867,
+      "delta": 13.479836994462318,
+      "scope": "Observed whole-launch utilization, not a latency or total-CPU-time conclusion; global GPU busy can include desktop/compositor."
+    },
+    {
+      "pair": "A1-warm→B1-warm",
+      "field": "cpu_percent_one_core",
+      "baseline": 142.37151683832826,
+      "candidate": 152.69774568326685,
+      "delta": 10.326228844938584,
+      "scope": "Observed whole-launch utilization, not a latency or total-CPU-time conclusion; global GPU busy can include desktop/compositor."
+    },
+    {
+      "pair": "A2-cold→B2-cold",
+      "field": "cpu_percent_one_core",
+      "baseline": 147.72179014353208,
+      "candidate": 156.78649186552167,
+      "delta": 9.064701721989593,
+      "scope": "Observed whole-launch utilization, not a latency or total-CPU-time conclusion; global GPU busy can include desktop/compositor."
+    },
+    {
+      "pair": "A2-warm→B2-warm",
+      "field": "cpu_percent_one_core",
+      "baseline": 143.49687626093987,
+      "candidate": 152.507770915381,
+      "delta": 9.010894654441131,
+      "scope": "Observed whole-launch utilization, not a latency or total-CPU-time conclusion; global GPU busy can include desktop/compositor."
+    }
+  ],
+  "external_process_memory": {
+    "receipt": "docs/validation/FIFTH40_PHASE39_PROCESS_MEMORY.json",
+    "sha256": "1ead6cc7bc28a4acfbd53ee8409b4211384126cbb81434694622c03448ba3b70",
+    "observations": 777,
+    "unique_pid_start_ticks_identities": 8,
+    "all_identity_counter_and_phase_audits_passed": true,
+    "higher_observed_counter_comparisons": 48,
+    "regression_pointer": "/higher_observed_memory_counters",
+    "scope": "Symmetric1Hz selected-PCI observations only; D9 legacy internal GPU memory excluded. All seven counters and three uncertain phase boundaries stay distinct. Higher VRAM measurements remain reported; no blanket saving claim."
+  },
+  "capture_review": {
+    "root_visual_review": true,
+    "root_viewed_actual_frames": [
+      "A1-cold",
+      "B2-warm"
+    ],
+    "delegated_agent_viewed_actual_frames": [
+      "A1-cold",
+      "A1-warm",
+      "B1-cold",
+      "B1-warm",
+      "B2-cold",
+      "B2-warm",
+      "A2-cold",
+      "A2-warm"
+    ],
+    "method": "tools.view_image on all eight original local PNGs, plus Root visual checks recorded in the immutable release receipt. Frame hashes/dimensions were verified; no regenerated or edited image.",
+    "accepted_scope": "Fixed original driver-cab composition, complete nearby scene, coherent lighting/rain/materials/HUD and legible instruments.",
+    "limitations": [
+      "Congruent composition is not pixel equality or the same effective GPU workload.",
+      "All frames are driver cab; this does not exercise actual key2 transition in the final Snap."
+    ]
+  },
+  "timing_scope": {
+    "journey": "JourneyPerformance counts Time<Real> render-world intervals once perPlayingUpdate; DevMetrics samples Last-to-Last after60ready frames, CPU First-to-Last. No claim of physical presented frames.",
+    "diagnostics": "DevMetrics frame intervals are Last-to-Last after60 ready frames; CPU is First-to-Last. GPU is the longest instrumented span, not summed nested passes or a presented whole GPU frame.",
+    "input": "Synthetic queue-to-next-ECS-frame samples, not physical key-to-display latency.",
+    "startup": "Keep whole-run quantiles/maxima/hitches, startup longest frame, producer loading counter and explicit bootstrap/capture log markers. Startup P50/P95/P99 are not exported separately and are not inferred from whole-run values.",
+    "phase_counts": "Producer frame/loading/gameplay counts are retained exactly; they are not assumed to form a disjoint partition or summed to invent additional observations.",
+    "memory": "Separate external observer phases retain exact log brackets and boundary ambiguity. They are not frame-timing phases or first-presented/scene-ready timestamps."
+  },
+  "limits": [
+    "Only the frozen2500m/default2000m/downpour/Pullman8/driver55deg RX/Vulkan/privateWayland/AutoVsync contract; no generalFPS, full-service, OR pixel/physics parity or allocator-isolated claim.",
+    "All eight actual launches and captures are retained. Cold means fresh private application/Mesa caches, not flushed OS/disk caches; warm is a second process in the same block.",
+    "Configured quality is constant and adaptive changes are zero, but actual residency is8 baseline vs11 candidate GPU tiles. CPU tiles are30 in every run; baseline gpu_entities15929–15976 vs candidate21022–21078 and WORLD draw counts differ. No identical-workset or isolated-component causality claim.",
+    "Gameplay P95 worsens in all four pairs even while primary P99/max improve; all positive deltas in the declared timing/latency secondary grid and all higher utilization observations are retained, not copied from38.",
+    "GPU span P50/P95/P99 are higher in all four pairs; they never replace primary journey P99. Preserve input-queue and CPU quantile regressions as reported.",
+    "All external memory regressions are separately enumerated by PID/PCI/counter/phase in the linked receipt. Observed1Hz maxima and kernel VmHWM are not every physical peak; no homogeneous total-GPU-memory or global reduction claim.",
+    "Baseline D9 internal device totals aggregate adapters and are excluded from memory comparisons. Raw originals retain those fields for provenance.",
+    "Geometry-cache warm disk_bytes=0 is retained producer telemetry with inventory_scans=0, not a claim that the private cache is empty; cold writes and warm hits are preserved separately.",
+    "No current final-Snap Jugar/cab/key2/exterior execution is supplied here. #381 remains pending that shared native transition; this receipt does not close any issue or certify7200 stability."
+  ],
+  "shared_run_field_scopes": {
+    "host_usage.scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
+    "timings.scope": "Explicit application log markers only; null presentation/physical-ready times were not exported and are not inferred from bootstrap or capture.",
+    "diagnostics.gpu_time_scope": "longest instrumented render span; nested passes are not summed",
+    "diagnostics.input_latency_scope": "synthetic queue to next ECS frame; excludes hardware and display",
+    "capture.review": "Original cab, track/terrain/fences/vegetation, rain, instruments and HUD are complete and compositionally congruent. PAUSA is the intended final capture state; no central pause panel or loading screen.",
+    "workset.draw_calls.scope": "actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi"
+  },
+  "viewer_sha256": "f1138d03ea6978baaab8e5fe8b4e8995c626a6df319a690bb7a92955512c0239",
+  "root_visual_review_passed": true
+}

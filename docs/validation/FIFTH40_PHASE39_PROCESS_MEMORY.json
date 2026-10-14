@@ -1,0 +1,1768 @@
+{
+  "schema": 1,
+  "reviewed_utc": "2026-10-14T23:46:01.277581+00:00",
+  "status": "eight_run_external_memory_observations_audited",
+  "runtime_commit": "a1b59e14bea6db433c0746dd0f1f2644dc5bc4dd",
+  "raw_result_sha256": "abc94d5217f75cf5865d69cac4f215ded6d0c4aafd50bb79d3694f5873e26863",
+  "selected_gpu_pci": "0000:03:00.0",
+  "sampling_target_hz": 1,
+  "run_count": 8,
+  "unique_pid_start_ticks_identities": 8,
+  "all_identity_and_counter_audits_passed": true,
+  "phase_counter_columns": [
+    "certain_samples_observed_max_bytes",
+    "including_boundary_samples_observed_max_bytes",
+    "certain_available_samples",
+    "possible_available_samples"
+  ],
+  "comparison_columns": [
+    "baseline_bytes",
+    "candidate_bytes",
+    "delta_candidate_minus_baseline_bytes"
+  ],
+  "runs": [
+    {
+      "id": "A1-cold",
+      "binary_sha256": "531ec4d91cfa3391f1f24a8d62d8abef026603609528462efacbb8ae7a096e08",
+      "pid": 261791,
+      "start_ticks": 2768569,
+      "exe_label": "baseline-d9-viewer",
+      "observed_after_popen_utc": "2026-10-14T23:22:25.774327+00:00",
+      "observed_after_popen_monotonic_ns": 27685691378421,
+      "sample_count": 103,
+      "actual_max_gap_s": 1.008103192,
+      "whole_process_observed_maxima_bytes": {
+        "rss_bytes": 2452369408,
+        "vram_resident_bytes": 2316214272,
+        "vram_memory_bytes": 2316214272,
+        "vram_total_bytes": 2316214272,
+        "gtt_resident_bytes": 84140032,
+        "gtt_memory_bytes": 84140032,
+        "gtt_total_bytes": 84140032
+      },
+      "kernel_vmhwm_max_bytes": 2452369408,
+      "phases": {
+        "preparation": {
+          "certain_sample_count": 37,
+          "possible_sample_count": 38,
+          "counters": {
+            "rss_bytes": [2452369408,2452369408,37,38],
+            "vram_resident_bytes": [2032902144,2033852416,35,36],
+            "vram_memory_bytes": [2032902144,2033852416,35,36],
+            "vram_total_bytes": [2032902144,2033852416,35,36],
+            "gtt_resident_bytes": [84140032,84140032,35,36],
+            "gtt_memory_bytes": [84140032,84140032,35,36],
+            "gtt_total_bytes": [84140032,84140032,35,36]
+          }
+        },
+        "running_streaming": {
+          "certain_sample_count": 62,
+          "possible_sample_count": 64,
+          "counters": {
+            "rss_bytes": [2227605504,2227605504,62,64],
+            "vram_resident_bytes": [2316210176,2316214272,62,64],
+            "vram_memory_bytes": [2316210176,2316214272,62,64],
+            "vram_total_bytes": [2316210176,2316214272,62,64],
+            "gtt_resident_bytes": [84140032,84140032,62,64],
+            "gtt_memory_bytes": [84140032,84140032,62,64],
+            "gtt_total_bytes": [84140032,84140032,62,64]
+          }
+        },
+        "capture_shutdown": {
+          "certain_sample_count": 2,
+          "possible_sample_count": 3,
+          "counters": {
+            "rss_bytes": [2228465664,2228465664,2,3],
+            "vram_resident_bytes": [2316214272,2316214272,2,3],
+            "vram_memory_bytes": [2316214272,2316214272,2,3],
+            "vram_total_bytes": [2316214272,2316214272,2,3],
+            "gtt_resident_bytes": [84140032,84140032,2,3],
+            "gtt_memory_bytes": [84140032,84140032,2,3],
+            "gtt_total_bytes": [84140032,84140032,2,3]
+          }
+        }
+      },
+      "markers": {
+        "bootstrap": [
+          {
+            "application_log_elapsed_ms": 37384.6,
+            "first_observed_utc": "2026-10-14T23:23:03.245070+00:00",
+            "lower_monotonic_ns": 27722909982184,
+            "upper_monotonic_ns": 27723162030101
+          }
+        ],
+        "capture": [
+          {
+            "application_log_elapsed_ms": 100578.4,
+            "first_observed_utc": "2026-10-14T23:24:06.396910+00:00",
+            "lower_monotonic_ns": 27786062399956,
+            "upper_monotonic_ns": 27786313861311
+          }
+        ]
+      },
+      "raw_memory_sha256": "10c9a162c60dcad24ae99353602b22b382dcc0c75e6b6774525209634bce5fb6",
+      "memory_summary_sha256": "c0ad66a76665664a0ec648eca8fe49f43081f35de8f12c58049fb3501f3338fd",
+      "memory_events_sha256": "1ba8a2793f9ab8601171d6ab6c7b930e46b2dbdd84d09a6c074c796ebf25e84a",
+      "audit": {
+        "identity_mismatches": 0,
+        "observed_adapter_pcis": [
+          "0000:03:00.0",
+          "0000:0e:00.0"
+        ],
+        "device_aggregation_recomputed": true,
+        "incomplete_fdinfo_sets_device_counters_null": true,
+        "raw_alias_records_retained": true,
+        "per_counter_nulls_retained": true,
+        "possible_phase_maxima_and_counts_recomputed": true,
+        "counts": {
+          "deduplicated_clients": 306,
+          "duplicate_fd_records_not_added": 204,
+          "raw_drm_records": 510,
+          "fdinfo_incomplete_samples": 2,
+          "samples_with_unidentified_clients": 0,
+          "samples_with_errors": 2
+        },
+        "null_sample_counts": {
+          "rss_bytes": 0,
+          "vram_resident_bytes": 2,
+          "vram_memory_bytes": 2,
+          "vram_total_bytes": 2,
+          "gtt_resident_bytes": 2,
+          "gtt_memory_bytes": 2,
+          "gtt_total_bytes": 2
+        },
+        "all_phase_membership_maxima_and_counts_recomputed": true,
+        "exact_boundary_inclusivity_preserved": true,
+        "observer_source_sha256_statically_read": "bc40efe23c63ecc5dc1fcbe13588f18117cc4f51113dd4b440cbbe69ef37deb9"
+      }
+    },
+    {
+      "id": "A1-warm",
+      "binary_sha256": "531ec4d91cfa3391f1f24a8d62d8abef026603609528462efacbb8ae7a096e08",
+      "pid": 262823,
+      "start_ticks": 2778926,
+      "exe_label": "baseline-d9-viewer",
+      "observed_after_popen_utc": "2026-10-14T23:24:09.349704+00:00",
+      "observed_after_popen_monotonic_ns": 27789266757106,
+      "sample_count": 103,
+      "actual_max_gap_s": 1.008277906,
+      "whole_process_observed_maxima_bytes": {
+        "rss_bytes": 2510950400,
+        "vram_resident_bytes": 2284703744,
+        "vram_memory_bytes": 2284703744,
+        "vram_total_bytes": 2284703744,
+        "gtt_resident_bytes": 84103168,
+        "gtt_memory_bytes": 84103168,
+        "gtt_total_bytes": 84103168
+      },
+      "kernel_vmhwm_max_bytes": 2512928768,
+      "phases": {
+        "preparation": {
+          "certain_sample_count": 37,
+          "possible_sample_count": 37,
+          "counters": {
+            "rss_bytes": [2510950400,2510950400,37,37],
+            "vram_resident_bytes": [1987084288,1987084288,36,36],
+            "vram_memory_bytes": [1987084288,1987084288,36,36],
+            "vram_total_bytes": [1987084288,1987084288,36,36],
+            "gtt_resident_bytes": [84103168,84103168,36,36],
+            "gtt_memory_bytes": [84103168,84103168,36,36],
+            "gtt_total_bytes": [84103168,84103168,36,36]
+          }
+        },
+        "running_streaming": {
+          "certain_sample_count": 63,
+          "possible_sample_count": 63,
+          "counters": {
+            "rss_bytes": [2225860608,2225860608,63,63],
+            "vram_resident_bytes": [2284699648,2284699648,63,63],
+            "vram_memory_bytes": [2284699648,2284699648,63,63],
+            "vram_total_bytes": [2284699648,2284699648,63,63],
+            "gtt_resident_bytes": [84103168,84103168,63,63],
+            "gtt_memory_bytes": [84103168,84103168,63,63],
+            "gtt_total_bytes": [84103168,84103168,63,63]
+          }
+        },
+        "capture_shutdown": {
+          "certain_sample_count": 3,
+          "possible_sample_count": 3,
+          "counters": {
+            "rss_bytes": [2219884544,2219884544,3,3],
+            "vram_resident_bytes": [2284703744,2284703744,3,3],
+            "vram_memory_bytes": [2284703744,2284703744,3,3],
+            "vram_total_bytes": [2284703744,2284703744,3,3],
+            "gtt_resident_bytes": [84103168,84103168,3,3],
+            "gtt_memory_bytes": [84103168,84103168,3,3],
+            "gtt_total_bytes": [84103168,84103168,3,3]
+          }
+        }
+      },
+      "markers": {
+        "bootstrap": [
+          {
+            "application_log_elapsed_ms": 36894.4,
+            "first_observed_utc": "2026-10-14T23:24:46.313529+00:00",
+            "lower_monotonic_ns": 27825979035444,
+            "upper_monotonic_ns": 27826230511317
+          }
+        ],
+        "capture": [
+          {
+            "application_log_elapsed_ms": 100090.0,
+            "first_observed_utc": "2026-10-14T23:25:49.456137+00:00",
+            "lower_monotonic_ns": 27889121702507,
+            "upper_monotonic_ns": 27889373110018
+          }
+        ]
+      },
+      "raw_memory_sha256": "77a39394e5568eecf08ca3e08060c1ec3affad72e2d625e2189e4adab88c9898",
+      "memory_summary_sha256": "7a63f6f388e16d7ca79d7f0d437c00eb9b06703f4b179058c0a61b5fda413a94",
+      "memory_events_sha256": "f27f076c2d6cee23d38b21cb80fc24b9231ef31fe3248d4be197071a237c50f2",
+      "audit": {
+        "identity_mismatches": 0,
+        "observed_adapter_pcis": [
+          "0000:03:00.0",
+          "0000:0e:00.0"
+        ],
+        "device_aggregation_recomputed": true,
+        "incomplete_fdinfo_sets_device_counters_null": true,
+        "raw_alias_records_retained": true,
+        "per_counter_nulls_retained": true,
+        "possible_phase_maxima_and_counts_recomputed": true,
+        "counts": {
+          "deduplicated_clients": 306,
+          "duplicate_fd_records_not_added": 204,
+          "raw_drm_records": 510,
+          "fdinfo_incomplete_samples": 1,
+          "samples_with_unidentified_clients": 0,
+          "samples_with_errors": 1
+        },
+        "null_sample_counts": {
+          "rss_bytes": 0,
+          "vram_resident_bytes": 1,
+          "vram_memory_bytes": 1,
+          "vram_total_bytes": 1,
+          "gtt_resident_bytes": 1,
+          "gtt_memory_bytes": 1,
+          "gtt_total_bytes": 1
+        },
+        "all_phase_membership_maxima_and_counts_recomputed": true,
+        "exact_boundary_inclusivity_preserved": true,
+        "observer_source_sha256_statically_read": "bc40efe23c63ecc5dc1fcbe13588f18117cc4f51113dd4b440cbbe69ef37deb9"
+      }
+    },
+    {
+      "id": "B1-cold",
+      "binary_sha256": "f1138d03ea6978baaab8e5fe8b4e8995c626a6df319a690bb7a92955512c0239",
+      "pid": 264353,
+      "start_ticks": 2789232,
+      "exe_label": "phase39-viewer",
+      "observed_after_popen_utc": "2026-10-14T23:25:52.408222+00:00",
+      "observed_after_popen_monotonic_ns": 27892325274533,
+      "sample_count": 91,
+      "actual_max_gap_s": 1.008020124,
+      "whole_process_observed_maxima_bytes": {
+        "rss_bytes": 2370564096,
+        "vram_resident_bytes": 2396372992,
+        "vram_memory_bytes": 2396372992,
+        "vram_total_bytes": 2396372992,
+        "gtt_resident_bytes": 21151744,
+        "gtt_memory_bytes": 21151744,
+        "gtt_total_bytes": 21151744
+      },
+      "kernel_vmhwm_max_bytes": 2403049472,
+      "phases": {
+        "preparation": {
+          "certain_sample_count": 28,
+          "possible_sample_count": 28,
+          "counters": {
+            "rss_bytes": [2370564096,2370564096,28,28],
+            "vram_resident_bytes": [1984155648,1984155648,27,27],
+            "vram_memory_bytes": [1984155648,1984155648,27,27],
+            "vram_total_bytes": [1984155648,1984155648,27,27],
+            "gtt_resident_bytes": [21151744,21151744,27,27],
+            "gtt_memory_bytes": [21151744,21151744,27,27],
+            "gtt_total_bytes": [21151744,21151744,27,27]
+          }
+        },
+        "running_streaming": {
+          "certain_sample_count": 62,
+          "possible_sample_count": 63,
+          "counters": {
+            "rss_bytes": [2038267904,2038267904,62,63],
+            "vram_resident_bytes": [2396372992,2396372992,62,63],
+            "vram_memory_bytes": [2396372992,2396372992,62,63],
+            "vram_total_bytes": [2396372992,2396372992,62,63],
+            "gtt_resident_bytes": [21151744,21151744,62,63],
+            "gtt_memory_bytes": [21151744,21151744,62,63],
+            "gtt_total_bytes": [21151744,21151744,62,63]
+          }
+        },
+        "capture_shutdown": {
+          "certain_sample_count": 0,
+          "possible_sample_count": 1,
+          "counters": {
+            "rss_bytes": [null,1973460992,0,1],
+            "vram_resident_bytes": [null,2396372992,0,1],
+            "vram_memory_bytes": [null,2396372992,0,1],
+            "vram_total_bytes": [null,2396372992,0,1],
+            "gtt_resident_bytes": [null,21151744,0,1],
+            "gtt_memory_bytes": [null,21151744,0,1],
+            "gtt_total_bytes": [null,21151744,0,1]
+          }
+        }
+      },
+      "markers": {
+        "bootstrap": [
+          {
+            "application_log_elapsed_ms": 27614.4,
+            "first_observed_utc": "2026-10-14T23:26:20.078623+00:00",
+            "lower_monotonic_ns": 27919744421117,
+            "upper_monotonic_ns": 27919995589325
+          }
+        ],
+        "capture": [
+          {
+            "application_log_elapsed_ms": 90813.9,
+            "first_observed_utc": "2026-10-14T23:27:23.247151+00:00",
+            "lower_monotonic_ns": 27982912112632,
+            "upper_monotonic_ns": 27983164050363
+          }
+        ]
+      },
+      "raw_memory_sha256": "b025d5440a4fde4a4f0b6c603fb16dc9fd8f8291034f43155f2fffa0b15bdecc",
+      "memory_summary_sha256": "b80a63e52d0e341615169208aee2b0079384b1bf25f648137863dcc893fc6932",
+      "memory_events_sha256": "ab5b644d6f623b68714919eaf46b4eae1e00969b77bd9b61088c295660af26a5",
+      "audit": {
+        "identity_mismatches": 0,
+        "observed_adapter_pcis": [
+          "0000:03:00.0",
+          "0000:0e:00.0"
+        ],
+        "device_aggregation_recomputed": true,
+        "incomplete_fdinfo_sets_device_counters_null": true,
+        "raw_alias_records_retained": true,
+        "per_counter_nulls_retained": true,
+        "possible_phase_maxima_and_counts_recomputed": true,
+        "counts": {
+          "deduplicated_clients": 270,
+          "duplicate_fd_records_not_added": 180,
+          "raw_drm_records": 450,
+          "fdinfo_incomplete_samples": 0,
+          "samples_with_unidentified_clients": 0,
+          "samples_with_errors": 0
+        },
+        "null_sample_counts": {
+          "rss_bytes": 0,
+          "vram_resident_bytes": 1,
+          "vram_memory_bytes": 1,
+          "vram_total_bytes": 1,
+          "gtt_resident_bytes": 1,
+          "gtt_memory_bytes": 1,
+          "gtt_total_bytes": 1
+        },
+        "all_phase_membership_maxima_and_counts_recomputed": true,
+        "exact_boundary_inclusivity_preserved": true,
+        "observer_source_sha256_statically_read": "bc40efe23c63ecc5dc1fcbe13588f18117cc4f51113dd4b440cbbe69ef37deb9"
+      }
+    },
+    {
+      "id": "B1-warm",
+      "binary_sha256": "f1138d03ea6978baaab8e5fe8b4e8995c626a6df319a690bb7a92955512c0239",
+      "pid": 265231,
+      "start_ticks": 2798385,
+      "exe_label": "phase39-viewer",
+      "observed_after_popen_utc": "2026-10-14T23:27:23.935917+00:00",
+      "observed_after_popen_monotonic_ns": 27983852965713,
+      "sample_count": 91,
+      "actual_max_gap_s": 1.008095384,
+      "whole_process_observed_maxima_bytes": {
+        "rss_bytes": 2207244288,
+        "vram_resident_bytes": 2445008896,
+        "vram_memory_bytes": 2445008896,
+        "vram_total_bytes": 2445008896,
+        "gtt_resident_bytes": 21188608,
+        "gtt_memory_bytes": 21188608,
+        "gtt_total_bytes": 21188608
+      },
+      "kernel_vmhwm_max_bytes": 2207244288,
+      "phases": {
+        "preparation": {
+          "certain_sample_count": 27,
+          "possible_sample_count": 28,
+          "counters": {
+            "rss_bytes": [2207244288,2207244288,27,28],
+            "vram_resident_bytes": [2032427008,2101104640,26,27],
+            "vram_memory_bytes": [2032427008,2101104640,26,27],
+            "vram_total_bytes": [2032427008,2101104640,26,27],
+            "gtt_resident_bytes": [21188608,21188608,26,27],
+            "gtt_memory_bytes": [21188608,21188608,26,27],
+            "gtt_total_bytes": [21188608,21188608,26,27]
+          }
+        },
+        "running_streaming": {
+          "certain_sample_count": 62,
+          "possible_sample_count": 63,
+          "counters": {
+            "rss_bytes": [1839329280,1839329280,62,63],
+            "vram_resident_bytes": [2445008896,2445008896,62,63],
+            "vram_memory_bytes": [2445008896,2445008896,62,63],
+            "vram_total_bytes": [2445008896,2445008896,62,63],
+            "gtt_resident_bytes": [21188608,21188608,62,63],
+            "gtt_memory_bytes": [21188608,21188608,62,63],
+            "gtt_total_bytes": [21188608,21188608,62,63]
+          }
+        },
+        "capture_shutdown": {
+          "certain_sample_count": 1,
+          "possible_sample_count": 1,
+          "counters": {
+            "rss_bytes": [null,null,0,0],
+            "vram_resident_bytes": [null,null,0,0],
+            "vram_memory_bytes": [null,null,0,0],
+            "vram_total_bytes": [null,null,0,0],
+            "gtt_resident_bytes": [null,null,0,0],
+            "gtt_memory_bytes": [null,null,0,0],
+            "gtt_total_bytes": [null,null,0,0]
+          }
+        }
+      },
+      "markers": {
+        "bootstrap": [
+          {
+            "application_log_elapsed_ms": 27117.7,
+            "first_observed_utc": "2026-10-14T23:27:51.106441+00:00",
+            "lower_monotonic_ns": 28010771834973,
+            "upper_monotonic_ns": 28011023381524
+          }
+        ],
+        "capture": [
+          {
+            "application_log_elapsed_ms": 90292.0,
+            "first_observed_utc": "2026-10-14T23:28:54.270750+00:00",
+            "lower_monotonic_ns": 28073936310953,
+            "upper_monotonic_ns": 28074187680458
+          }
+        ]
+      },
+      "raw_memory_sha256": "4d1d42331097768f3f7afd5dd5185b84a57b100897e3bdfa3e03d10164934b8e",
+      "memory_summary_sha256": "6d65b9780f6a687c8f1749d8d1ab76798d9766a3b9d65a5351ff7c8bfb00fa79",
+      "memory_events_sha256": "689cffb4d408178c22c0838ed1b78f4b0f30a5884ec258bededf1b896857827a",
+      "audit": {
+        "identity_mismatches": 0,
+        "observed_adapter_pcis": [
+          "0000:03:00.0",
+          "0000:0e:00.0"
+        ],
+        "device_aggregation_recomputed": true,
+        "incomplete_fdinfo_sets_device_counters_null": true,
+        "raw_alias_records_retained": true,
+        "per_counter_nulls_retained": true,
+        "possible_phase_maxima_and_counts_recomputed": true,
+        "counts": {
+          "deduplicated_clients": 267,
+          "duplicate_fd_records_not_added": 178,
+          "raw_drm_records": 445,
+          "fdinfo_incomplete_samples": 0,
+          "samples_with_unidentified_clients": 0,
+          "samples_with_errors": 0
+        },
+        "null_sample_counts": {
+          "rss_bytes": 1,
+          "vram_resident_bytes": 2,
+          "vram_memory_bytes": 2,
+          "vram_total_bytes": 2,
+          "gtt_resident_bytes": 2,
+          "gtt_memory_bytes": 2,
+          "gtt_total_bytes": 2
+        },
+        "all_phase_membership_maxima_and_counts_recomputed": true,
+        "exact_boundary_inclusivity_preserved": true,
+        "observer_source_sha256_statically_read": "bc40efe23c63ecc5dc1fcbe13588f18117cc4f51113dd4b440cbbe69ef37deb9"
+      }
+    },
+    {
+      "id": "B2-cold",
+      "binary_sha256": "f1138d03ea6978baaab8e5fe8b4e8995c626a6df319a690bb7a92955512c0239",
+      "pid": 267175,
+      "start_ticks": 2807487,
+      "exe_label": "phase39-viewer",
+      "observed_after_popen_utc": "2026-10-14T23:28:54.959250+00:00",
+      "observed_after_popen_monotonic_ns": 28074876304172,
+      "sample_count": 91,
+      "actual_max_gap_s": 1.008431011,
+      "whole_process_observed_maxima_bytes": {
+        "rss_bytes": 2440556544,
+        "vram_resident_bytes": 2396893184,
+        "vram_memory_bytes": 2396893184,
+        "vram_total_bytes": 2396893184,
+        "gtt_resident_bytes": 21151744,
+        "gtt_memory_bytes": 21151744,
+        "gtt_total_bytes": 21151744
+      },
+      "kernel_vmhwm_max_bytes": 2464182272,
+      "phases": {
+        "preparation": {
+          "certain_sample_count": 28,
+          "possible_sample_count": 28,
+          "counters": {
+            "rss_bytes": [2440556544,2440556544,28,28],
+            "vram_resident_bytes": [1984823296,1984823296,27,27],
+            "vram_memory_bytes": [1984823296,1984823296,27,27],
+            "vram_total_bytes": [1984823296,1984823296,27,27],
+            "gtt_resident_bytes": [21151744,21151744,27,27],
+            "gtt_memory_bytes": [21151744,21151744,27,27],
+            "gtt_total_bytes": [21151744,21151744,27,27]
+          }
+        },
+        "running_streaming": {
+          "certain_sample_count": 63,
+          "possible_sample_count": 63,
+          "counters": {
+            "rss_bytes": [2018938880,2018938880,63,63],
+            "vram_resident_bytes": [2396893184,2396893184,63,63],
+            "vram_memory_bytes": [2396893184,2396893184,63,63],
+            "vram_total_bytes": [2396893184,2396893184,63,63],
+            "gtt_resident_bytes": [21151744,21151744,63,63],
+            "gtt_memory_bytes": [21151744,21151744,63,63],
+            "gtt_total_bytes": [21151744,21151744,63,63]
+          }
+        },
+        "capture_shutdown": {
+          "certain_sample_count": 0,
+          "possible_sample_count": 0,
+          "counters": {
+            "rss_bytes": [null,null,0,0],
+            "vram_resident_bytes": [null,null,0,0],
+            "vram_memory_bytes": [null,null,0,0],
+            "vram_total_bytes": [null,null,0,0],
+            "gtt_resident_bytes": [null,null,0,0],
+            "gtt_memory_bytes": [null,null,0,0],
+            "gtt_total_bytes": [null,null,0,0]
+          }
+        }
+      },
+      "markers": {
+        "bootstrap": [
+          {
+            "application_log_elapsed_ms": 27652.3,
+            "first_observed_utc": "2026-10-14T23:29:22.638633+00:00",
+            "lower_monotonic_ns": 28102303778093,
+            "upper_monotonic_ns": 28102555618924
+          }
+        ],
+        "capture": [
+          {
+            "application_log_elapsed_ms": 90836.1,
+            "first_observed_utc": "2026-10-14T23:30:26.045189+00:00",
+            "lower_monotonic_ns": 28165710950430,
+            "upper_monotonic_ns": 28165962133499
+          }
+        ]
+      },
+      "raw_memory_sha256": "786ae3ab1481ed7cd7c17e0512dafed6e9bd2f13147df5ef5ec82c8d1fed837d",
+      "memory_summary_sha256": "b07c3957daa99e88edde320bfc10582d23ed4f43f4070922fed0159f17630785",
+      "memory_events_sha256": "606f004471f6e1a60c4374dccb001ee50b800a682a6af6057815bb62b1f82a8f",
+      "audit": {
+        "identity_mismatches": 0,
+        "observed_adapter_pcis": [
+          "0000:03:00.0",
+          "0000:0e:00.0"
+        ],
+        "device_aggregation_recomputed": true,
+        "incomplete_fdinfo_sets_device_counters_null": true,
+        "raw_alias_records_retained": true,
+        "per_counter_nulls_retained": true,
+        "possible_phase_maxima_and_counts_recomputed": true,
+        "counts": {
+          "deduplicated_clients": 270,
+          "duplicate_fd_records_not_added": 180,
+          "raw_drm_records": 450,
+          "fdinfo_incomplete_samples": 0,
+          "samples_with_unidentified_clients": 0,
+          "samples_with_errors": 0
+        },
+        "null_sample_counts": {
+          "rss_bytes": 0,
+          "vram_resident_bytes": 1,
+          "vram_memory_bytes": 1,
+          "vram_total_bytes": 1,
+          "gtt_resident_bytes": 1,
+          "gtt_memory_bytes": 1,
+          "gtt_total_bytes": 1
+        },
+        "all_phase_membership_maxima_and_counts_recomputed": true,
+        "exact_boundary_inclusivity_preserved": true,
+        "observer_source_sha256_statically_read": "bc40efe23c63ecc5dc1fcbe13588f18117cc4f51113dd4b440cbbe69ef37deb9"
+      }
+    },
+    {
+      "id": "B2-warm",
+      "binary_sha256": "f1138d03ea6978baaab8e5fe8b4e8995c626a6df319a690bb7a92955512c0239",
+      "pid": 268066,
+      "start_ticks": 2816639,
+      "exe_label": "phase39-viewer",
+      "observed_after_popen_utc": "2026-10-14T23:30:26.482684+00:00",
+      "observed_after_popen_monotonic_ns": 28166399738226,
+      "sample_count": 91,
+      "actual_max_gap_s": 1.007873313,
+      "whole_process_observed_maxima_bytes": {
+        "rss_bytes": 2213965824,
+        "vram_resident_bytes": 2396549120,
+        "vram_memory_bytes": 2396549120,
+        "vram_total_bytes": 2396549120,
+        "gtt_resident_bytes": 21151744,
+        "gtt_memory_bytes": 21151744,
+        "gtt_total_bytes": 21151744
+      },
+      "kernel_vmhwm_max_bytes": 2213965824,
+      "phases": {
+        "preparation": {
+          "certain_sample_count": 27,
+          "possible_sample_count": 28,
+          "counters": {
+            "rss_bytes": [2213965824,2213965824,27,28],
+            "vram_resident_bytes": [1983561728,2052419584,26,27],
+            "vram_memory_bytes": [1983561728,2052419584,26,27],
+            "vram_total_bytes": [1983561728,2052419584,26,27],
+            "gtt_resident_bytes": [21151744,21151744,26,27],
+            "gtt_memory_bytes": [21151744,21151744,26,27],
+            "gtt_total_bytes": [21151744,21151744,26,27]
+          }
+        },
+        "running_streaming": {
+          "certain_sample_count": 62,
+          "possible_sample_count": 63,
+          "counters": {
+            "rss_bytes": [1866448896,1866448896,62,63],
+            "vram_resident_bytes": [2396549120,2396549120,62,63],
+            "vram_memory_bytes": [2396549120,2396549120,62,63],
+            "vram_total_bytes": [2396549120,2396549120,62,63],
+            "gtt_resident_bytes": [21151744,21151744,62,63],
+            "gtt_memory_bytes": [21151744,21151744,62,63],
+            "gtt_total_bytes": [21151744,21151744,62,63]
+          }
+        },
+        "capture_shutdown": {
+          "certain_sample_count": 1,
+          "possible_sample_count": 1,
+          "counters": {
+            "rss_bytes": [null,null,0,0],
+            "vram_resident_bytes": [null,null,0,0],
+            "vram_memory_bytes": [null,null,0,0],
+            "vram_total_bytes": [null,null,0,0],
+            "gtt_resident_bytes": [null,null,0,0],
+            "gtt_memory_bytes": [null,null,0,0],
+            "gtt_total_bytes": [null,null,0,0]
+          }
+        }
+      },
+      "markers": {
+        "bootstrap": [
+          {
+            "application_log_elapsed_ms": 27150.4,
+            "first_observed_utc": "2026-10-14T23:30:53.663708+00:00",
+            "lower_monotonic_ns": 28193329198175,
+            "upper_monotonic_ns": 28193580615749
+          }
+        ],
+        "capture": [
+          {
+            "application_log_elapsed_ms": 90316.2,
+            "first_observed_utc": "2026-10-14T23:31:56.819669+00:00",
+            "lower_monotonic_ns": 28256484760579,
+            "upper_monotonic_ns": 28256736628290
+          }
+        ]
+      },
+      "raw_memory_sha256": "8a01860ba5a8de2857545518ce45da8520bb65081dee9b97194194457cb16a75",
+      "memory_summary_sha256": "5f9013f76e134b2618c4a0f964f8f2cfdc769c4cd52e9c005530b119831c1a99",
+      "memory_events_sha256": "10123e2dbc21a0a0773f696f8040eb4d943507031d40e7644fa9e6601ad0e188",
+      "audit": {
+        "identity_mismatches": 0,
+        "observed_adapter_pcis": [
+          "0000:03:00.0",
+          "0000:0e:00.0"
+        ],
+        "device_aggregation_recomputed": true,
+        "incomplete_fdinfo_sets_device_counters_null": true,
+        "raw_alias_records_retained": true,
+        "per_counter_nulls_retained": true,
+        "possible_phase_maxima_and_counts_recomputed": true,
+        "counts": {
+          "deduplicated_clients": 267,
+          "duplicate_fd_records_not_added": 178,
+          "raw_drm_records": 445,
+          "fdinfo_incomplete_samples": 0,
+          "samples_with_unidentified_clients": 0,
+          "samples_with_errors": 0
+        },
+        "null_sample_counts": {
+          "rss_bytes": 1,
+          "vram_resident_bytes": 2,
+          "vram_memory_bytes": 2,
+          "vram_total_bytes": 2,
+          "gtt_resident_bytes": 2,
+          "gtt_memory_bytes": 2,
+          "gtt_total_bytes": 2
+        },
+        "all_phase_membership_maxima_and_counts_recomputed": true,
+        "exact_boundary_inclusivity_preserved": true,
+        "observer_source_sha256_statically_read": "bc40efe23c63ecc5dc1fcbe13588f18117cc4f51113dd4b440cbbe69ef37deb9"
+      }
+    },
+    {
+      "id": "A2-cold",
+      "binary_sha256": "531ec4d91cfa3391f1f24a8d62d8abef026603609528462efacbb8ae7a096e08",
+      "pid": 268880,
+      "start_ticks": 2825742,
+      "exe_label": "baseline-d9-viewer",
+      "observed_after_popen_utc": "2026-10-14T23:31:57.508840+00:00",
+      "observed_after_popen_monotonic_ns": 28257425894261,
+      "sample_count": 104,
+      "actual_max_gap_s": 1.009246217,
+      "whole_process_observed_maxima_bytes": {
+        "rss_bytes": 2533515264,
+        "vram_resident_bytes": 2288316416,
+        "vram_memory_bytes": 2288316416,
+        "vram_total_bytes": 2288316416,
+        "gtt_resident_bytes": 84103168,
+        "gtt_memory_bytes": 84103168,
+        "gtt_total_bytes": 84103168
+      },
+      "kernel_vmhwm_max_bytes": 2549342208,
+      "phases": {
+        "preparation": {
+          "certain_sample_count": 38,
+          "possible_sample_count": 38,
+          "counters": {
+            "rss_bytes": [2533515264,2533515264,38,38],
+            "vram_resident_bytes": [1990098944,1990098944,36,36],
+            "vram_memory_bytes": [1990098944,1990098944,36,36],
+            "vram_total_bytes": [1990098944,1990098944,36,36],
+            "gtt_resident_bytes": [84103168,84103168,36,36],
+            "gtt_memory_bytes": [84103168,84103168,36,36],
+            "gtt_total_bytes": [84103168,84103168,36,36]
+          }
+        },
+        "running_streaming": {
+          "certain_sample_count": 63,
+          "possible_sample_count": 63,
+          "counters": {
+            "rss_bytes": [2329460736,2329460736,63,63],
+            "vram_resident_bytes": [2288312320,2288312320,63,63],
+            "vram_memory_bytes": [2288312320,2288312320,63,63],
+            "vram_total_bytes": [2288312320,2288312320,63,63],
+            "gtt_resident_bytes": [84103168,84103168,63,63],
+            "gtt_memory_bytes": [84103168,84103168,63,63],
+            "gtt_total_bytes": [84103168,84103168,63,63]
+          }
+        },
+        "capture_shutdown": {
+          "certain_sample_count": 3,
+          "possible_sample_count": 3,
+          "counters": {
+            "rss_bytes": [2296856576,2296856576,2,2],
+            "vram_resident_bytes": [2288316416,2288316416,2,2],
+            "vram_memory_bytes": [2288316416,2288316416,2,2],
+            "vram_total_bytes": [2288316416,2288316416,2,2],
+            "gtt_resident_bytes": [84103168,84103168,2,2],
+            "gtt_memory_bytes": [84103168,84103168,2,2],
+            "gtt_total_bytes": [84103168,84103168,2,2]
+          }
+        }
+      },
+      "markers": {
+        "bootstrap": [
+          {
+            "application_log_elapsed_ms": 37522.7,
+            "first_observed_utc": "2026-10-14T23:32:35.240491+00:00",
+            "lower_monotonic_ns": 28294906260356,
+            "upper_monotonic_ns": 28295157438019
+          }
+        ],
+        "capture": [
+          {
+            "application_log_elapsed_ms": 100893.3,
+            "first_observed_utc": "2026-10-14T23:33:38.648263+00:00",
+            "lower_monotonic_ns": 28358313689971,
+            "upper_monotonic_ns": 28358565220236
+          }
+        ]
+      },
+      "raw_memory_sha256": "a4c9cfd8de961748445a3aef01cc04fca06b0d120faf10fa5a34fa9815f184f4",
+      "memory_summary_sha256": "2d709efd71e818a4876655ff2c97ef475ff7ae8b4d156e96060bae1544014391",
+      "memory_events_sha256": "6a0b2711b8cb39b4a62f36b839458a66bdc20b0dc866edc7b552679dcd576953",
+      "audit": {
+        "identity_mismatches": 0,
+        "observed_adapter_pcis": [
+          "0000:03:00.0",
+          "0000:0e:00.0"
+        ],
+        "device_aggregation_recomputed": true,
+        "incomplete_fdinfo_sets_device_counters_null": true,
+        "raw_alias_records_retained": true,
+        "per_counter_nulls_retained": true,
+        "possible_phase_maxima_and_counts_recomputed": true,
+        "counts": {
+          "deduplicated_clients": 306,
+          "duplicate_fd_records_not_added": 204,
+          "raw_drm_records": 510,
+          "fdinfo_incomplete_samples": 1,
+          "samples_with_unidentified_clients": 0,
+          "samples_with_errors": 1
+        },
+        "null_sample_counts": {
+          "rss_bytes": 1,
+          "vram_resident_bytes": 3,
+          "vram_memory_bytes": 3,
+          "vram_total_bytes": 3,
+          "gtt_resident_bytes": 3,
+          "gtt_memory_bytes": 3,
+          "gtt_total_bytes": 3
+        },
+        "all_phase_membership_maxima_and_counts_recomputed": true,
+        "exact_boundary_inclusivity_preserved": true,
+        "observer_source_sha256_statically_read": "bc40efe23c63ecc5dc1fcbe13588f18117cc4f51113dd4b440cbbe69ef37deb9"
+      }
+    },
+    {
+      "id": "A2-warm",
+      "binary_sha256": "531ec4d91cfa3391f1f24a8d62d8abef026603609528462efacbb8ae7a096e08",
+      "pid": 269671,
+      "start_ticks": 2836151,
+      "exe_label": "baseline-d9-viewer",
+      "observed_after_popen_utc": "2026-10-14T23:33:41.596437+00:00",
+      "observed_after_popen_monotonic_ns": 28361513493003,
+      "sample_count": 103,
+      "actual_max_gap_s": 1.007424703,
+      "whole_process_observed_maxima_bytes": {
+        "rss_bytes": 2503749632,
+        "vram_resident_bytes": 2332901376,
+        "vram_memory_bytes": 2332901376,
+        "vram_total_bytes": 2332901376,
+        "gtt_resident_bytes": 84140032,
+        "gtt_memory_bytes": 84140032,
+        "gtt_total_bytes": 84140032
+      },
+      "kernel_vmhwm_max_bytes": 2503749632,
+      "phases": {
+        "preparation": {
+          "certain_sample_count": 37,
+          "possible_sample_count": 37,
+          "counters": {
+            "rss_bytes": [2503749632,2503749632,37,37],
+            "vram_resident_bytes": [2033389568,2033389568,35,35],
+            "vram_memory_bytes": [2033389568,2033389568,35,35],
+            "vram_total_bytes": [2033389568,2033389568,35,35],
+            "gtt_resident_bytes": [84140032,84140032,35,35],
+            "gtt_memory_bytes": [84140032,84140032,35,35],
+            "gtt_total_bytes": [84140032,84140032,35,35]
+          }
+        },
+        "running_streaming": {
+          "certain_sample_count": 63,
+          "possible_sample_count": 63,
+          "counters": {
+            "rss_bytes": [2285756416,2285756416,63,63],
+            "vram_resident_bytes": [2332897280,2332897280,63,63],
+            "vram_memory_bytes": [2332897280,2332897280,63,63],
+            "vram_total_bytes": [2332897280,2332897280,63,63],
+            "gtt_resident_bytes": [84140032,84140032,63,63],
+            "gtt_memory_bytes": [84140032,84140032,63,63],
+            "gtt_total_bytes": [84140032,84140032,63,63]
+          }
+        },
+        "capture_shutdown": {
+          "certain_sample_count": 3,
+          "possible_sample_count": 3,
+          "counters": {
+            "rss_bytes": [2285756416,2285756416,3,3],
+            "vram_resident_bytes": [2332901376,2332901376,3,3],
+            "vram_memory_bytes": [2332901376,2332901376,3,3],
+            "vram_total_bytes": [2332901376,2332901376,3,3],
+            "gtt_resident_bytes": [84140032,84140032,3,3],
+            "gtt_memory_bytes": [84140032,84140032,3,3],
+            "gtt_total_bytes": [84140032,84140032,3,3]
+          }
+        }
+      },
+      "markers": {
+        "bootstrap": [
+          {
+            "application_log_elapsed_ms": 36741.2,
+            "first_observed_utc": "2026-10-14T23:34:18.565270+00:00",
+            "lower_monotonic_ns": 28398230871786,
+            "upper_monotonic_ns": 28398482229622
+          }
+        ],
+        "capture": [
+          {
+            "application_log_elapsed_ms": 99929.8,
+            "first_observed_utc": "2026-10-14T23:35:21.712411+00:00",
+            "lower_monotonic_ns": 28461377585628,
+            "upper_monotonic_ns": 28461629379326
+          }
+        ]
+      },
+      "raw_memory_sha256": "540fd8797625e845e42b1273f63331462a11aa798dd15558f596bd24f7bd6842",
+      "memory_summary_sha256": "10a17e04ee4662b1e35ab26a7e15fcc9c21af05682011b2a2560526cbe7b9103",
+      "memory_events_sha256": "8a08bbe2a9e69b93c9a7a06503a99ad8bc57ce32b348ec50c22508bf11a11430",
+      "audit": {
+        "identity_mismatches": 0,
+        "observed_adapter_pcis": [
+          "0000:03:00.0",
+          "0000:0e:00.0"
+        ],
+        "device_aggregation_recomputed": true,
+        "incomplete_fdinfo_sets_device_counters_null": true,
+        "raw_alias_records_retained": true,
+        "per_counter_nulls_retained": true,
+        "possible_phase_maxima_and_counts_recomputed": true,
+        "counts": {
+          "deduplicated_clients": 306,
+          "duplicate_fd_records_not_added": 204,
+          "raw_drm_records": 510,
+          "fdinfo_incomplete_samples": 2,
+          "samples_with_unidentified_clients": 0,
+          "samples_with_errors": 2
+        },
+        "null_sample_counts": {
+          "rss_bytes": 0,
+          "vram_resident_bytes": 2,
+          "vram_memory_bytes": 2,
+          "vram_total_bytes": 2,
+          "gtt_resident_bytes": 2,
+          "gtt_memory_bytes": 2,
+          "gtt_total_bytes": 2
+        },
+        "all_phase_membership_maxima_and_counts_recomputed": true,
+        "exact_boundary_inclusivity_preserved": true,
+        "observer_source_sha256_statically_read": "bc40efe23c63ecc5dc1fcbe13588f18117cc4f51113dd4b440cbbe69ef37deb9"
+      }
+    }
+  ],
+  "paired_comparisons": [
+    {
+      "baseline": "A1-cold",
+      "candidate": "B1-cold",
+      "whole_process_bytes": {
+        "rss_bytes": [2452369408,2370564096,-81805312],
+        "vram_resident_bytes": [2316214272,2396372992,80158720],
+        "vram_memory_bytes": [2316214272,2396372992,80158720],
+        "vram_total_bytes": [2316214272,2396372992,80158720],
+        "gtt_resident_bytes": [84140032,21151744,-62988288],
+        "gtt_memory_bytes": [84140032,21151744,-62988288],
+        "gtt_total_bytes": [84140032,21151744,-62988288]
+      },
+      "phases": {
+        "preparation": {
+          "rss_bytes": {
+            "certain_samples": [2452369408,2370564096,-81805312],
+            "including_boundary_samples": [2452369408,2370564096,-81805312]
+          },
+          "vram_resident_bytes": {
+            "certain_samples": [2032902144,1984155648,-48746496],
+            "including_boundary_samples": [2033852416,1984155648,-49696768]
+          },
+          "vram_memory_bytes": {
+            "certain_samples": [2032902144,1984155648,-48746496],
+            "including_boundary_samples": [2033852416,1984155648,-49696768]
+          },
+          "vram_total_bytes": {
+            "certain_samples": [2032902144,1984155648,-48746496],
+            "including_boundary_samples": [2033852416,1984155648,-49696768]
+          },
+          "gtt_resident_bytes": {
+            "certain_samples": [84140032,21151744,-62988288],
+            "including_boundary_samples": [84140032,21151744,-62988288]
+          },
+          "gtt_memory_bytes": {
+            "certain_samples": [84140032,21151744,-62988288],
+            "including_boundary_samples": [84140032,21151744,-62988288]
+          },
+          "gtt_total_bytes": {
+            "certain_samples": [84140032,21151744,-62988288],
+            "including_boundary_samples": [84140032,21151744,-62988288]
+          }
+        },
+        "running_streaming": {
+          "rss_bytes": {
+            "certain_samples": [2227605504,2038267904,-189337600],
+            "including_boundary_samples": [2227605504,2038267904,-189337600]
+          },
+          "vram_resident_bytes": {
+            "certain_samples": [2316210176,2396372992,80162816],
+            "including_boundary_samples": [2316214272,2396372992,80158720]
+          },
+          "vram_memory_bytes": {
+            "certain_samples": [2316210176,2396372992,80162816],
+            "including_boundary_samples": [2316214272,2396372992,80158720]
+          },
+          "vram_total_bytes": {
+            "certain_samples": [2316210176,2396372992,80162816],
+            "including_boundary_samples": [2316214272,2396372992,80158720]
+          },
+          "gtt_resident_bytes": {
+            "certain_samples": [84140032,21151744,-62988288],
+            "including_boundary_samples": [84140032,21151744,-62988288]
+          },
+          "gtt_memory_bytes": {
+            "certain_samples": [84140032,21151744,-62988288],
+            "including_boundary_samples": [84140032,21151744,-62988288]
+          },
+          "gtt_total_bytes": {
+            "certain_samples": [84140032,21151744,-62988288],
+            "including_boundary_samples": [84140032,21151744,-62988288]
+          }
+        },
+        "capture_shutdown": {
+          "rss_bytes": {
+            "certain_samples": [2228465664,null,null],
+            "including_boundary_samples": [2228465664,1973460992,-255004672]
+          },
+          "vram_resident_bytes": {
+            "certain_samples": [2316214272,null,null],
+            "including_boundary_samples": [2316214272,2396372992,80158720]
+          },
+          "vram_memory_bytes": {
+            "certain_samples": [2316214272,null,null],
+            "including_boundary_samples": [2316214272,2396372992,80158720]
+          },
+          "vram_total_bytes": {
+            "certain_samples": [2316214272,null,null],
+            "including_boundary_samples": [2316214272,2396372992,80158720]
+          },
+          "gtt_resident_bytes": {
+            "certain_samples": [84140032,null,null],
+            "including_boundary_samples": [84140032,21151744,-62988288]
+          },
+          "gtt_memory_bytes": {
+            "certain_samples": [84140032,null,null],
+            "including_boundary_samples": [84140032,21151744,-62988288]
+          },
+          "gtt_total_bytes": {
+            "certain_samples": [84140032,null,null],
+            "including_boundary_samples": [84140032,21151744,-62988288]
+          }
+        }
+      }
+    },
+    {
+      "baseline": "A1-warm",
+      "candidate": "B1-warm",
+      "whole_process_bytes": {
+        "rss_bytes": [2510950400,2207244288,-303706112],
+        "vram_resident_bytes": [2284703744,2445008896,160305152],
+        "vram_memory_bytes": [2284703744,2445008896,160305152],
+        "vram_total_bytes": [2284703744,2445008896,160305152],
+        "gtt_resident_bytes": [84103168,21188608,-62914560],
+        "gtt_memory_bytes": [84103168,21188608,-62914560],
+        "gtt_total_bytes": [84103168,21188608,-62914560]
+      },
+      "phases": {
+        "preparation": {
+          "rss_bytes": {
+            "certain_samples": [2510950400,2207244288,-303706112],
+            "including_boundary_samples": [2510950400,2207244288,-303706112]
+          },
+          "vram_resident_bytes": {
+            "certain_samples": [1987084288,2032427008,45342720],
+            "including_boundary_samples": [1987084288,2101104640,114020352]
+          },
+          "vram_memory_bytes": {
+            "certain_samples": [1987084288,2032427008,45342720],
+            "including_boundary_samples": [1987084288,2101104640,114020352]
+          },
+          "vram_total_bytes": {
+            "certain_samples": [1987084288,2032427008,45342720],
+            "including_boundary_samples": [1987084288,2101104640,114020352]
+          },
+          "gtt_resident_bytes": {
+            "certain_samples": [84103168,21188608,-62914560],
+            "including_boundary_samples": [84103168,21188608,-62914560]
+          },
+          "gtt_memory_bytes": {
+            "certain_samples": [84103168,21188608,-62914560],
+            "including_boundary_samples": [84103168,21188608,-62914560]
+          },
+          "gtt_total_bytes": {
+            "certain_samples": [84103168,21188608,-62914560],
+            "including_boundary_samples": [84103168,21188608,-62914560]
+          }
+        },
+        "running_streaming": {
+          "rss_bytes": {
+            "certain_samples": [2225860608,1839329280,-386531328],
+            "including_boundary_samples": [2225860608,1839329280,-386531328]
+          },
+          "vram_resident_bytes": {
+            "certain_samples": [2284699648,2445008896,160309248],
+            "including_boundary_samples": [2284699648,2445008896,160309248]
+          },
+          "vram_memory_bytes": {
+            "certain_samples": [2284699648,2445008896,160309248],
+            "including_boundary_samples": [2284699648,2445008896,160309248]
+          },
+          "vram_total_bytes": {
+            "certain_samples": [2284699648,2445008896,160309248],
+            "including_boundary_samples": [2284699648,2445008896,160309248]
+          },
+          "gtt_resident_bytes": {
+            "certain_samples": [84103168,21188608,-62914560],
+            "including_boundary_samples": [84103168,21188608,-62914560]
+          },
+          "gtt_memory_bytes": {
+            "certain_samples": [84103168,21188608,-62914560],
+            "including_boundary_samples": [84103168,21188608,-62914560]
+          },
+          "gtt_total_bytes": {
+            "certain_samples": [84103168,21188608,-62914560],
+            "including_boundary_samples": [84103168,21188608,-62914560]
+          }
+        },
+        "capture_shutdown": {
+          "rss_bytes": {
+            "certain_samples": [2219884544,null,null],
+            "including_boundary_samples": [2219884544,null,null]
+          },
+          "vram_resident_bytes": {
+            "certain_samples": [2284703744,null,null],
+            "including_boundary_samples": [2284703744,null,null]
+          },
+          "vram_memory_bytes": {
+            "certain_samples": [2284703744,null,null],
+            "including_boundary_samples": [2284703744,null,null]
+          },
+          "vram_total_bytes": {
+            "certain_samples": [2284703744,null,null],
+            "including_boundary_samples": [2284703744,null,null]
+          },
+          "gtt_resident_bytes": {
+            "certain_samples": [84103168,null,null],
+            "including_boundary_samples": [84103168,null,null]
+          },
+          "gtt_memory_bytes": {
+            "certain_samples": [84103168,null,null],
+            "including_boundary_samples": [84103168,null,null]
+          },
+          "gtt_total_bytes": {
+            "certain_samples": [84103168,null,null],
+            "including_boundary_samples": [84103168,null,null]
+          }
+        }
+      }
+    },
+    {
+      "baseline": "A2-cold",
+      "candidate": "B2-cold",
+      "whole_process_bytes": {
+        "rss_bytes": [2533515264,2440556544,-92958720],
+        "vram_resident_bytes": [2288316416,2396893184,108576768],
+        "vram_memory_bytes": [2288316416,2396893184,108576768],
+        "vram_total_bytes": [2288316416,2396893184,108576768],
+        "gtt_resident_bytes": [84103168,21151744,-62951424],
+        "gtt_memory_bytes": [84103168,21151744,-62951424],
+        "gtt_total_bytes": [84103168,21151744,-62951424]
+      },
+      "phases": {
+        "preparation": {
+          "rss_bytes": {
+            "certain_samples": [2533515264,2440556544,-92958720],
+            "including_boundary_samples": [2533515264,2440556544,-92958720]
+          },
+          "vram_resident_bytes": {
+            "certain_samples": [1990098944,1984823296,-5275648],
+            "including_boundary_samples": [1990098944,1984823296,-5275648]
+          },
+          "vram_memory_bytes": {
+            "certain_samples": [1990098944,1984823296,-5275648],
+            "including_boundary_samples": [1990098944,1984823296,-5275648]
+          },
+          "vram_total_bytes": {
+            "certain_samples": [1990098944,1984823296,-5275648],
+            "including_boundary_samples": [1990098944,1984823296,-5275648]
+          },
+          "gtt_resident_bytes": {
+            "certain_samples": [84103168,21151744,-62951424],
+            "including_boundary_samples": [84103168,21151744,-62951424]
+          },
+          "gtt_memory_bytes": {
+            "certain_samples": [84103168,21151744,-62951424],
+            "including_boundary_samples": [84103168,21151744,-62951424]
+          },
+          "gtt_total_bytes": {
+            "certain_samples": [84103168,21151744,-62951424],
+            "including_boundary_samples": [84103168,21151744,-62951424]
+          }
+        },
+        "running_streaming": {
+          "rss_bytes": {
+            "certain_samples": [2329460736,2018938880,-310521856],
+            "including_boundary_samples": [2329460736,2018938880,-310521856]
+          },
+          "vram_resident_bytes": {
+            "certain_samples": [2288312320,2396893184,108580864],
+            "including_boundary_samples": [2288312320,2396893184,108580864]
+          },
+          "vram_memory_bytes": {
+            "certain_samples": [2288312320,2396893184,108580864],
+            "including_boundary_samples": [2288312320,2396893184,108580864]
+          },
+          "vram_total_bytes": {
+            "certain_samples": [2288312320,2396893184,108580864],
+            "including_boundary_samples": [2288312320,2396893184,108580864]
+          },
+          "gtt_resident_bytes": {
+            "certain_samples": [84103168,21151744,-62951424],
+            "including_boundary_samples": [84103168,21151744,-62951424]
+          },
+          "gtt_memory_bytes": {
+            "certain_samples": [84103168,21151744,-62951424],
+            "including_boundary_samples": [84103168,21151744,-62951424]
+          },
+          "gtt_total_bytes": {
+            "certain_samples": [84103168,21151744,-62951424],
+            "including_boundary_samples": [84103168,21151744,-62951424]
+          }
+        },
+        "capture_shutdown": {
+          "rss_bytes": {
+            "certain_samples": [2296856576,null,null],
+            "including_boundary_samples": [2296856576,null,null]
+          },
+          "vram_resident_bytes": {
+            "certain_samples": [2288316416,null,null],
+            "including_boundary_samples": [2288316416,null,null]
+          },
+          "vram_memory_bytes": {
+            "certain_samples": [2288316416,null,null],
+            "including_boundary_samples": [2288316416,null,null]
+          },
+          "vram_total_bytes": {
+            "certain_samples": [2288316416,null,null],
+            "including_boundary_samples": [2288316416,null,null]
+          },
+          "gtt_resident_bytes": {
+            "certain_samples": [84103168,null,null],
+            "including_boundary_samples": [84103168,null,null]
+          },
+          "gtt_memory_bytes": {
+            "certain_samples": [84103168,null,null],
+            "including_boundary_samples": [84103168,null,null]
+          },
+          "gtt_total_bytes": {
+            "certain_samples": [84103168,null,null],
+            "including_boundary_samples": [84103168,null,null]
+          }
+        }
+      }
+    },
+    {
+      "baseline": "A2-warm",
+      "candidate": "B2-warm",
+      "whole_process_bytes": {
+        "rss_bytes": [2503749632,2213965824,-289783808],
+        "vram_resident_bytes": [2332901376,2396549120,63647744],
+        "vram_memory_bytes": [2332901376,2396549120,63647744],
+        "vram_total_bytes": [2332901376,2396549120,63647744],
+        "gtt_resident_bytes": [84140032,21151744,-62988288],
+        "gtt_memory_bytes": [84140032,21151744,-62988288],
+        "gtt_total_bytes": [84140032,21151744,-62988288]
+      },
+      "phases": {
+        "preparation": {
+          "rss_bytes": {
+            "certain_samples": [2503749632,2213965824,-289783808],
+            "including_boundary_samples": [2503749632,2213965824,-289783808]
+          },
+          "vram_resident_bytes": {
+            "certain_samples": [2033389568,1983561728,-49827840],
+            "including_boundary_samples": [2033389568,2052419584,19030016]
+          },
+          "vram_memory_bytes": {
+            "certain_samples": [2033389568,1983561728,-49827840],
+            "including_boundary_samples": [2033389568,2052419584,19030016]
+          },
+          "vram_total_bytes": {
+            "certain_samples": [2033389568,1983561728,-49827840],
+            "including_boundary_samples": [2033389568,2052419584,19030016]
+          },
+          "gtt_resident_bytes": {
+            "certain_samples": [84140032,21151744,-62988288],
+            "including_boundary_samples": [84140032,21151744,-62988288]
+          },
+          "gtt_memory_bytes": {
+            "certain_samples": [84140032,21151744,-62988288],
+            "including_boundary_samples": [84140032,21151744,-62988288]
+          },
+          "gtt_total_bytes": {
+            "certain_samples": [84140032,21151744,-62988288],
+            "including_boundary_samples": [84140032,21151744,-62988288]
+          }
+        },
+        "running_streaming": {
+          "rss_bytes": {
+            "certain_samples": [2285756416,1866448896,-419307520],
+            "including_boundary_samples": [2285756416,1866448896,-419307520]
+          },
+          "vram_resident_bytes": {
+            "certain_samples": [2332897280,2396549120,63651840],
+            "including_boundary_samples": [2332897280,2396549120,63651840]
+          },
+          "vram_memory_bytes": {
+            "certain_samples": [2332897280,2396549120,63651840],
+            "including_boundary_samples": [2332897280,2396549120,63651840]
+          },
+          "vram_total_bytes": {
+            "certain_samples": [2332897280,2396549120,63651840],
+            "including_boundary_samples": [2332897280,2396549120,63651840]
+          },
+          "gtt_resident_bytes": {
+            "certain_samples": [84140032,21151744,-62988288],
+            "including_boundary_samples": [84140032,21151744,-62988288]
+          },
+          "gtt_memory_bytes": {
+            "certain_samples": [84140032,21151744,-62988288],
+            "including_boundary_samples": [84140032,21151744,-62988288]
+          },
+          "gtt_total_bytes": {
+            "certain_samples": [84140032,21151744,-62988288],
+            "including_boundary_samples": [84140032,21151744,-62988288]
+          }
+        },
+        "capture_shutdown": {
+          "rss_bytes": {
+            "certain_samples": [2285756416,null,null],
+            "including_boundary_samples": [2285756416,null,null]
+          },
+          "vram_resident_bytes": {
+            "certain_samples": [2332901376,null,null],
+            "including_boundary_samples": [2332901376,null,null]
+          },
+          "vram_memory_bytes": {
+            "certain_samples": [2332901376,null,null],
+            "including_boundary_samples": [2332901376,null,null]
+          },
+          "vram_total_bytes": {
+            "certain_samples": [2332901376,null,null],
+            "including_boundary_samples": [2332901376,null,null]
+          },
+          "gtt_resident_bytes": {
+            "certain_samples": [84140032,null,null],
+            "including_boundary_samples": [84140032,null,null]
+          },
+          "gtt_memory_bytes": {
+            "certain_samples": [84140032,null,null],
+            "including_boundary_samples": [84140032,null,null]
+          },
+          "gtt_total_bytes": {
+            "certain_samples": [84140032,null,null],
+            "including_boundary_samples": [84140032,null,null]
+          }
+        }
+      }
+    }
+  ],
+  "higher_observed_memory_counters": [
+    {
+      "baseline": "A1-cold",
+      "candidate": "B1-cold",
+      "phase": "whole_process",
+      "scope": "observed_1hz_maximum",
+      "counter": "vram_resident_bytes",
+      "bytes": [2316214272,2396372992,80158720]
+    },
+    {
+      "baseline": "A1-cold",
+      "candidate": "B1-cold",
+      "phase": "whole_process",
+      "scope": "observed_1hz_maximum",
+      "counter": "vram_memory_bytes",
+      "bytes": [2316214272,2396372992,80158720]
+    },
+    {
+      "baseline": "A1-cold",
+      "candidate": "B1-cold",
+      "phase": "whole_process",
+      "scope": "observed_1hz_maximum",
+      "counter": "vram_total_bytes",
+      "bytes": [2316214272,2396372992,80158720]
+    },
+    {
+      "baseline": "A1-cold",
+      "candidate": "B1-cold",
+      "phase": "running_streaming",
+      "scope": "certain_samples",
+      "counter": "vram_resident_bytes",
+      "bytes": [2316210176,2396372992,80162816]
+    },
+    {
+      "baseline": "A1-cold",
+      "candidate": "B1-cold",
+      "phase": "running_streaming",
+      "scope": "including_boundary_samples",
+      "counter": "vram_resident_bytes",
+      "bytes": [2316214272,2396372992,80158720]
+    },
+    {
+      "baseline": "A1-cold",
+      "candidate": "B1-cold",
+      "phase": "running_streaming",
+      "scope": "certain_samples",
+      "counter": "vram_memory_bytes",
+      "bytes": [2316210176,2396372992,80162816]
+    },
+    {
+      "baseline": "A1-cold",
+      "candidate": "B1-cold",
+      "phase": "running_streaming",
+      "scope": "including_boundary_samples",
+      "counter": "vram_memory_bytes",
+      "bytes": [2316214272,2396372992,80158720]
+    },
+    {
+      "baseline": "A1-cold",
+      "candidate": "B1-cold",
+      "phase": "running_streaming",
+      "scope": "certain_samples",
+      "counter": "vram_total_bytes",
+      "bytes": [2316210176,2396372992,80162816]
+    },
+    {
+      "baseline": "A1-cold",
+      "candidate": "B1-cold",
+      "phase": "running_streaming",
+      "scope": "including_boundary_samples",
+      "counter": "vram_total_bytes",
+      "bytes": [2316214272,2396372992,80158720]
+    },
+    {
+      "baseline": "A1-cold",
+      "candidate": "B1-cold",
+      "phase": "capture_shutdown",
+      "scope": "including_boundary_samples",
+      "counter": "vram_resident_bytes",
+      "bytes": [2316214272,2396372992,80158720]
+    },
+    {
+      "baseline": "A1-cold",
+      "candidate": "B1-cold",
+      "phase": "capture_shutdown",
+      "scope": "including_boundary_samples",
+      "counter": "vram_memory_bytes",
+      "bytes": [2316214272,2396372992,80158720]
+    },
+    {
+      "baseline": "A1-cold",
+      "candidate": "B1-cold",
+      "phase": "capture_shutdown",
+      "scope": "including_boundary_samples",
+      "counter": "vram_total_bytes",
+      "bytes": [2316214272,2396372992,80158720]
+    },
+    {
+      "baseline": "A1-warm",
+      "candidate": "B1-warm",
+      "phase": "whole_process",
+      "scope": "observed_1hz_maximum",
+      "counter": "vram_resident_bytes",
+      "bytes": [2284703744,2445008896,160305152]
+    },
+    {
+      "baseline": "A1-warm",
+      "candidate": "B1-warm",
+      "phase": "whole_process",
+      "scope": "observed_1hz_maximum",
+      "counter": "vram_memory_bytes",
+      "bytes": [2284703744,2445008896,160305152]
+    },
+    {
+      "baseline": "A1-warm",
+      "candidate": "B1-warm",
+      "phase": "whole_process",
+      "scope": "observed_1hz_maximum",
+      "counter": "vram_total_bytes",
+      "bytes": [2284703744,2445008896,160305152]
+    },
+    {
+      "baseline": "A1-warm",
+      "candidate": "B1-warm",
+      "phase": "preparation",
+      "scope": "certain_samples",
+      "counter": "vram_resident_bytes",
+      "bytes": [1987084288,2032427008,45342720]
+    },
+    {
+      "baseline": "A1-warm",
+      "candidate": "B1-warm",
+      "phase": "preparation",
+      "scope": "including_boundary_samples",
+      "counter": "vram_resident_bytes",
+      "bytes": [1987084288,2101104640,114020352]
+    },
+    {
+      "baseline": "A1-warm",
+      "candidate": "B1-warm",
+      "phase": "preparation",
+      "scope": "certain_samples",
+      "counter": "vram_memory_bytes",
+      "bytes": [1987084288,2032427008,45342720]
+    },
+    {
+      "baseline": "A1-warm",
+      "candidate": "B1-warm",
+      "phase": "preparation",
+      "scope": "including_boundary_samples",
+      "counter": "vram_memory_bytes",
+      "bytes": [1987084288,2101104640,114020352]
+    },
+    {
+      "baseline": "A1-warm",
+      "candidate": "B1-warm",
+      "phase": "preparation",
+      "scope": "certain_samples",
+      "counter": "vram_total_bytes",
+      "bytes": [1987084288,2032427008,45342720]
+    },
+    {
+      "baseline": "A1-warm",
+      "candidate": "B1-warm",
+      "phase": "preparation",
+      "scope": "including_boundary_samples",
+      "counter": "vram_total_bytes",
+      "bytes": [1987084288,2101104640,114020352]
+    },
+    {
+      "baseline": "A1-warm",
+      "candidate": "B1-warm",
+      "phase": "running_streaming",
+      "scope": "certain_samples",
+      "counter": "vram_resident_bytes",
+      "bytes": [2284699648,2445008896,160309248]
+    },
+    {
+      "baseline": "A1-warm",
+      "candidate": "B1-warm",
+      "phase": "running_streaming",
+      "scope": "including_boundary_samples",
+      "counter": "vram_resident_bytes",
+      "bytes": [2284699648,2445008896,160309248]
+    },
+    {
+      "baseline": "A1-warm",
+      "candidate": "B1-warm",
+      "phase": "running_streaming",
+      "scope": "certain_samples",
+      "counter": "vram_memory_bytes",
+      "bytes": [2284699648,2445008896,160309248]
+    },
+    {
+      "baseline": "A1-warm",
+      "candidate": "B1-warm",
+      "phase": "running_streaming",
+      "scope": "including_boundary_samples",
+      "counter": "vram_memory_bytes",
+      "bytes": [2284699648,2445008896,160309248]
+    },
+    {
+      "baseline": "A1-warm",
+      "candidate": "B1-warm",
+      "phase": "running_streaming",
+      "scope": "certain_samples",
+      "counter": "vram_total_bytes",
+      "bytes": [2284699648,2445008896,160309248]
+    },
+    {
+      "baseline": "A1-warm",
+      "candidate": "B1-warm",
+      "phase": "running_streaming",
+      "scope": "including_boundary_samples",
+      "counter": "vram_total_bytes",
+      "bytes": [2284699648,2445008896,160309248]
+    },
+    {
+      "baseline": "A2-cold",
+      "candidate": "B2-cold",
+      "phase": "whole_process",
+      "scope": "observed_1hz_maximum",
+      "counter": "vram_resident_bytes",
+      "bytes": [2288316416,2396893184,108576768]
+    },
+    {
+      "baseline": "A2-cold",
+      "candidate": "B2-cold",
+      "phase": "whole_process",
+      "scope": "observed_1hz_maximum",
+      "counter": "vram_memory_bytes",
+      "bytes": [2288316416,2396893184,108576768]
+    },
+    {
+      "baseline": "A2-cold",
+      "candidate": "B2-cold",
+      "phase": "whole_process",
+      "scope": "observed_1hz_maximum",
+      "counter": "vram_total_bytes",
+      "bytes": [2288316416,2396893184,108576768]
+    },
+    {
+      "baseline": "A2-cold",
+      "candidate": "B2-cold",
+      "phase": "running_streaming",
+      "scope": "certain_samples",
+      "counter": "vram_resident_bytes",
+      "bytes": [2288312320,2396893184,108580864]
+    },
+    {
+      "baseline": "A2-cold",
+      "candidate": "B2-cold",
+      "phase": "running_streaming",
+      "scope": "including_boundary_samples",
+      "counter": "vram_resident_bytes",
+      "bytes": [2288312320,2396893184,108580864]
+    },
+    {
+      "baseline": "A2-cold",
+      "candidate": "B2-cold",
+      "phase": "running_streaming",
+      "scope": "certain_samples",
+      "counter": "vram_memory_bytes",
+      "bytes": [2288312320,2396893184,108580864]
+    },
+    {
+      "baseline": "A2-cold",
+      "candidate": "B2-cold",
+      "phase": "running_streaming",
+      "scope": "including_boundary_samples",
+      "counter": "vram_memory_bytes",
+      "bytes": [2288312320,2396893184,108580864]
+    },
+    {
+      "baseline": "A2-cold",
+      "candidate": "B2-cold",
+      "phase": "running_streaming",
+      "scope": "certain_samples",
+      "counter": "vram_total_bytes",
+      "bytes": [2288312320,2396893184,108580864]
+    },
+    {
+      "baseline": "A2-cold",
+      "candidate": "B2-cold",
+      "phase": "running_streaming",
+      "scope": "including_boundary_samples",
+      "counter": "vram_total_bytes",
+      "bytes": [2288312320,2396893184,108580864]
+    },
+    {
+      "baseline": "A2-warm",
+      "candidate": "B2-warm",
+      "phase": "whole_process",
+      "scope": "observed_1hz_maximum",
+      "counter": "vram_resident_bytes",
+      "bytes": [2332901376,2396549120,63647744]
+    },
+    {
+      "baseline": "A2-warm",
+      "candidate": "B2-warm",
+      "phase": "whole_process",
+      "scope": "observed_1hz_maximum",
+      "counter": "vram_memory_bytes",
+      "bytes": [2332901376,2396549120,63647744]
+    },
+    {
+      "baseline": "A2-warm",
+      "candidate": "B2-warm",
+      "phase": "whole_process",
+      "scope": "observed_1hz_maximum",
+      "counter": "vram_total_bytes",
+      "bytes": [2332901376,2396549120,63647744]
+    },
+    {
+      "baseline": "A2-warm",
+      "candidate": "B2-warm",
+      "phase": "preparation",
+      "scope": "including_boundary_samples",
+      "counter": "vram_resident_bytes",
+      "bytes": [2033389568,2052419584,19030016]
+    },
+    {
+      "baseline": "A2-warm",
+      "candidate": "B2-warm",
+      "phase": "preparation",
+      "scope": "including_boundary_samples",
+      "counter": "vram_memory_bytes",
+      "bytes": [2033389568,2052419584,19030016]
+    },
+    {
+      "baseline": "A2-warm",
+      "candidate": "B2-warm",
+      "phase": "preparation",
+      "scope": "including_boundary_samples",
+      "counter": "vram_total_bytes",
+      "bytes": [2033389568,2052419584,19030016]
+    },
+    {
+      "baseline": "A2-warm",
+      "candidate": "B2-warm",
+      "phase": "running_streaming",
+      "scope": "certain_samples",
+      "counter": "vram_resident_bytes",
+      "bytes": [2332897280,2396549120,63651840]
+    },
+    {
+      "baseline": "A2-warm",
+      "candidate": "B2-warm",
+      "phase": "running_streaming",
+      "scope": "including_boundary_samples",
+      "counter": "vram_resident_bytes",
+      "bytes": [2332897280,2396549120,63651840]
+    },
+    {
+      "baseline": "A2-warm",
+      "candidate": "B2-warm",
+      "phase": "running_streaming",
+      "scope": "certain_samples",
+      "counter": "vram_memory_bytes",
+      "bytes": [2332897280,2396549120,63651840]
+    },
+    {
+      "baseline": "A2-warm",
+      "candidate": "B2-warm",
+      "phase": "running_streaming",
+      "scope": "including_boundary_samples",
+      "counter": "vram_memory_bytes",
+      "bytes": [2332897280,2396549120,63651840]
+    },
+    {
+      "baseline": "A2-warm",
+      "candidate": "B2-warm",
+      "phase": "running_streaming",
+      "scope": "certain_samples",
+      "counter": "vram_total_bytes",
+      "bytes": [2332897280,2396549120,63651840]
+    },
+    {
+      "baseline": "A2-warm",
+      "candidate": "B2-warm",
+      "phase": "running_streaming",
+      "scope": "including_boundary_samples",
+      "counter": "vram_total_bytes",
+      "bytes": [2332897280,2396549120,63651840]
+    }
+  ],
+  "higher_observed_memory_counter_count": 48,
+  "comparison_policy": {
+    "source": "Symmetric external /proc PID/start_ticks + per-PCI DRM fdinfo observations in the actual eight ABBA launches.",
+    "deduplication": "Unique (PCI, DRM client id); alias FD records remain raw but are not added twice. Other adapters are retained raw and never summed into PCI03.",
+    "counter_semantics": "RSS and VRAM/GTT resident, memory and total remain seven separate fields. Missing components, incomplete fdinfo and unavailable devices remain null, never zero or fallback to another counter.",
+    "phase_classification": "Exact static observer inequalities: before bootstrap.lower = preparation; bootstrap.lower through bootstrap.upper inclusive = preparation/running ambiguity; after bootstrap.upper and before capture.lower = running; capture.lower through capture.upper inclusive = running/capture ambiguity; after capture.upper = capture_shutdown. No fixed extra margin. These are observed log brackets, never physical peak bounds. All certain/possible counts and maxima were independently recalculated without importing or executing the observer.",
+    "internal_legacy_graphics_memory": "Excluded from every comparison; D9 internal adapter-aggregated memory is not homogeneous with39 active-device reporting.",
+    "interpretation": "Observed maxima at1Hz are not all physical peaks or memory-reduction acceptance. Kernel VmHWM stays separate. GPU worksets differ; each phase retains available sample counts."
+  },
+  "limits": [
+    "Read-only analysis of completed actual observations, not a new launch or test; original files are unchanged.",
+    "Higher VRAM counters remain visible with their phase/counter/sampling scopes even where RSS/GTT is lower; no blanket saving claim.",
+    "Final residency is baseline8/candidate11 GPU tiles with different WORLD submissions/entities, not an identical-workset allocation microbenchmark."
+  ],
+  "all_phase_audits_passed": true
+}
