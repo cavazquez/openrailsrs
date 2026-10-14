@@ -1,0 +1,2406 @@
+{
+  "schema": 1,
+  "candidate": 37,
+  "status": "90_named_passes_in_separately_identified_executions",
+  "counts": {
+    "required_distinct_named_tests": 90,
+    "criterion_references": 230,
+    "named_pass_check37_rust": 73,
+    "named_pass_new_directed_python37": 17,
+    "check37_python_names_absent": 17,
+    "missing_named_execution_after_directed_run": 0
+  },
+  "private_audit": {
+    "file": "<private-qa>/named-test-execution37-audit.json",
+    "sha256": "4be897723a6a3ee2ad497f1a27cfb4f19365bed5afacb5e935359e764d4c4abd",
+    "bytes": 226563
+  },
+  "matrix": {
+    "file": "<private-qa>/acceptance-recovery/criteria-matrix.json",
+    "sha256": "fd1e8f6502db31a3c1d61419917ea369bddcbe025d827076e39ed56fe65bbd6e",
+    "bytes": 514406
+  },
+  "check37": {
+    "receipt": {
+      "file": "<private-qa>/check37-receipt.json",
+      "sha256": "d69360113c341f09d8d08b431a65f11001a2780d10afc247698ae127fb12df83",
+      "bytes": 1039
+    },
+    "stdout": {
+      "file": "<private-qa>/check37.log",
+      "sha256": "c72299ec3c2c72381ef0ada5f471147fa94c3cc0b3bdbcf0d9df341e6c325be7",
+      "bytes": 240220
+    },
+    "rust": {
+      "passed": 2070,
+      "failed": 0,
+      "ignored": 49,
+      "summaries": 152
+    },
+    "python": {
+      "tests": 127,
+      "summaries": 25
+    },
+    "public_receipt": "docs/validation/FIFTH40_PHASE37_RESTORE_AND_CHECK.json",
+    "public_receipt_pointer": "/complete_check"
+  },
+  "directed_python37": {
+    "receipt": {
+      "file": "<private-qa>/python-named-directed37/receipt.json",
+      "sha256": "065dd6f818d3f3e536873f1d0f7720d3c530f79085f2bfa0e6cad039e44e6484",
+      "bytes": 13856
+    },
+    "stdout": {
+      "file": "<private-qa>/python-named-directed37/verbose.log",
+      "sha256": "762e0d9f25184978b4d8928a26af833a14739d7b7d02675a9919d4222da89de7",
+      "bytes": 2895
+    },
+    "counts": {
+      "run": 17,
+      "passed": 17,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "start_utc": "2026-10-14T18:02:33.655539+00:00",
+    "source_files_unchanged": true,
+    "six_traces_unchanged": true,
+    "external_actions": [],
+    "additional_dependency_not_in_old_manifest": {
+      "snap/local/display-launch.py": {
+        "sha256": "e12fd8ef95e3144e82e3d5aaaf750de857f8514c005176f977d962a6650fc2a3",
+        "bytes": 3656
+      }
+    }
+  },
+  "source_manifests": {
+    "runtime": {
+      "file": "<private-qa>/phase37-inputs-after.json",
+      "sha256": "9397e55550becf116c503a13ac1bda32dc4a428d8138f861d3cc1562b6d036ee",
+      "bytes": 120900
+    },
+    "check37": {
+      "file": "<private-qa>/check37-inputs-before.json",
+      "sha256": "371cb46b3f281e400843ad390468c2916dd34465fc9eb409760f89bc55a9b7e5",
+      "bytes": 5028620
+    }
+  },
+  "source_files": {
+    "crates/openrailsrs-audio/src/native.rs": {
+      "sha256": "9e70e1534d4b5b2cd97c46b3acd812fb08ca94f13a892573cd8c60260593343f",
+      "check37_input_pointer": "/crates~1openrailsrs-audio~1src~1native.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-audio~1src~1native.rs/sha256"
+    },
+    "crates/openrailsrs-bevy-scenery/src/atmosphere.rs": {
+      "sha256": "c21f7cb22218f8dfe3e336953cdfdfb99c098a7530feb84ff26c2e62120298b4",
+      "check37_input_pointer": "/crates~1openrailsrs-bevy-scenery~1src~1atmosphere.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-bevy-scenery~1src~1atmosphere.rs/sha256"
+    },
+    "crates/openrailsrs-bevy-scenery/src/shapes/material.rs": {
+      "sha256": "67e3493433f918e8eeee4791fa5c89ac7759c9182e39b83181efcc2a3f56bf4d",
+      "check37_input_pointer": "/crates~1openrailsrs-bevy-scenery~1src~1shapes~1material.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-bevy-scenery~1src~1shapes~1material.rs/sha256"
+    },
+    "crates/openrailsrs-content/src/source_cache.rs": {
+      "sha256": "002116b71f600fb6e123f77b6537bd9e087c19a5b6f2c0e217362be6d387c6e4",
+      "check37_input_pointer": "/crates~1openrailsrs-content~1src~1source_cache.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-content~1src~1source_cache.rs/sha256"
+    },
+    "crates/openrailsrs-sim/src/refill.rs": {
+      "sha256": "bfce8d95a42b2469a20d96d1edd6ed6255ff0331e44707ecc88edb88fca00343",
+      "check37_input_pointer": "/crates~1openrailsrs-sim~1src~1refill.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-sim~1src~1refill.rs/sha256"
+    },
+    "crates/openrailsrs-sim/tests/articulated_train.rs": {
+      "sha256": "392036182985ffc1194670e1159c4a27cb380c0072b9dda18b95996211ee0ac4",
+      "check37_input_pointer": "/crates~1openrailsrs-sim~1tests~1articulated_train.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-sim~1tests~1articulated_train.rs/sha256"
+    },
+    "crates/openrailsrs-sim/tests/parallel_traffic.rs": {
+      "sha256": "98cf1d718eca2a18ab48aca47d47c7d48c4e476f7c8690731cc7b3603e38e8eb",
+      "check37_input_pointer": "/crates~1openrailsrs-sim~1tests~1parallel_traffic.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-sim~1tests~1parallel_traffic.rs/sha256"
+    },
+    "crates/openrailsrs-sim/tests/passing_services.rs": {
+      "sha256": "cdc8249d06095c481bf1467b8989ac8e215cb75bd156c172048ae2602536ee24",
+      "check37_input_pointer": "/crates~1openrailsrs-sim~1tests~1passing_services.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-sim~1tests~1passing_services.rs/sha256"
+    },
+    "crates/openrailsrs-sim/tests/shunt_authority.rs": {
+      "sha256": "744a9bb61622affb1dca83cf5b85618bd88e722298719f2e54d6ecd2f176f009",
+      "check37_input_pointer": "/crates~1openrailsrs-sim~1tests~1shunt_authority.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-sim~1tests~1shunt_authority.rs/sha256"
+    },
+    "crates/openrailsrs-sim/tests/vehicle_doors.rs": {
+      "sha256": "549cf8b392f80f07b51c9822fab96775483237a3b8d57b1fc75956c1a82f4e0a",
+      "check37_input_pointer": "/crates~1openrailsrs-sim~1tests~1vehicle_doors.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-sim~1tests~1vehicle_doors.rs/sha256"
+    },
+    "crates/openrailsrs-sim/tests/world_operations.rs": {
+      "sha256": "9781ee96cad98b6917b1e886b36dfe5725cf516e403578afcf17bba78e8b48e5",
+      "check37_input_pointer": "/crates~1openrailsrs-sim~1tests~1world_operations.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-sim~1tests~1world_operations.rs/sha256"
+    },
+    "crates/openrailsrs-sim/tests/yard_operations.rs": {
+      "sha256": "d2cdb48084ef1101d6fa56584bc3049957dc2f8256abd231b8ea20dce7f6a14a",
+      "check37_input_pointer": "/crates~1openrailsrs-sim~1tests~1yard_operations.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-sim~1tests~1yard_operations.rs/sha256"
+    },
+    "crates/openrailsrs-train/src/consist_audit.rs": {
+      "sha256": "2effddf56cf6eee77edf87553427abe3c66efcd1de23e90d7936c7411dce6262",
+      "check37_input_pointer": "/crates~1openrailsrs-train~1src~1consist_audit.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-train~1src~1consist_audit.rs/sha256"
+    },
+    "crates/openrailsrs-viewer3d/src/camera.rs": {
+      "sha256": "52ee791f3a9a824570a46bf2c6a8b2a39695afde02761f26b97ce98fee29bae1",
+      "check37_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1camera.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1camera.rs/sha256"
+    },
+    "crates/openrailsrs-viewer3d/src/camera_collision.rs": {
+      "sha256": "b0fb75d4bb97c7530e069c0f7e394bd463f105ff9c3d02b66839a4b90f7fcbc2",
+      "check37_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1camera_collision.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1camera_collision.rs/sha256"
+    },
+    "crates/openrailsrs-viewer3d/src/campaign_play.rs": {
+      "sha256": "ba5a2e94c4f8f19d3336253c9b0ac7b681a9cd2d3d0797e64545333235b4f3ee",
+      "check37_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1campaign_play.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1campaign_play.rs/sha256"
+    },
+    "crates/openrailsrs-viewer3d/src/content_validation.rs": {
+      "sha256": "0b16315809b26a1396d0e05e8223caaf4a96f9c8739daab3ded1ed254d0e349e",
+      "check37_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1content_validation.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1content_validation.rs/sha256"
+    },
+    "crates/openrailsrs-viewer3d/src/official_content.rs": {
+      "sha256": "26574d83d7feadb73e532ba780f602cf95ef7cfab1aa2a0d645684078a9f526f",
+      "check37_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1official_content.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1official_content.rs/sha256"
+    },
+    "crates/openrailsrs-viewer3d/src/platform_people.rs": {
+      "sha256": "07616c93d6053a1bd2438cdaa6c1f34c7523e941285760c8ac8e896b3c1f31e3",
+      "check37_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1platform_people.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1platform_people.rs/sha256"
+    },
+    "crates/openrailsrs-viewer3d/src/player_ui.rs": {
+      "sha256": "79516299357befbf93de4b90ec5c4338fb89b759100fd5c90a84fe4661600055",
+      "check37_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1player_ui.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1player_ui.rs/sha256"
+    },
+    "crates/openrailsrs-viewer3d/src/prepared_geometry.rs": {
+      "sha256": "1b99073e4061e43af671205f968092f1ee57a59b66d68bba22b6d254641c538b",
+      "check37_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1prepared_geometry.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1prepared_geometry.rs/sha256"
+    },
+    "crates/openrailsrs-viewer3d/src/road_cars.rs": {
+      "sha256": "fea513284fa0f46f46be70b148851fb5437d73a0453639a3c987d45a32e80f83",
+      "check37_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1road_cars.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1road_cars.rs/sha256"
+    },
+    "crates/openrailsrs-viewer3d/src/saved_game.rs": {
+      "sha256": "212ed80b6ef747e572cbcb3210f53079b4fe64eb57e88420245796391366239e",
+      "check37_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1saved_game.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1saved_game.rs/sha256"
+    },
+    "crates/openrailsrs-viewer3d/src/scene.rs": {
+      "sha256": "eee0aa5f9f6790b2426edcfab78ee33225c4fdf36df1cc0cb98178cf05406470",
+      "check37_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1scene.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1scene.rs/sha256"
+    },
+    "crates/openrailsrs-viewer3d/src/service_builder.rs": {
+      "sha256": "71d6e3d6b610c32c856dcddfc368c0eaec253d0efedb36a9acff48470d321921",
+      "check37_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1service_builder.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1service_builder.rs/sha256"
+    },
+    "crates/openrailsrs-viewer3d/src/snow_tracks.rs": {
+      "sha256": "1b9409c8c19da65aade6c5f2637dd0f195369a5acd0187de6ef1764f2fd974e7",
+      "check37_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1snow_tracks.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1snow_tracks.rs/sha256"
+    },
+    "crates/openrailsrs-viewer3d/src/streaming_forecast.rs": {
+      "sha256": "3c23887225372b3ca4c5058be3a8048bf30aeb8c1fd3a71f0c0a2f1f9276fb3a",
+      "check37_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1streaming_forecast.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1streaming_forecast.rs/sha256"
+    },
+    "crates/openrailsrs-viewer3d/src/train_connections.rs": {
+      "sha256": "b1994f3e1bccdf11662698b1c2f148f2dc54620dfcf21eef165a938c5eee64eb",
+      "check37_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1train_connections.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1train_connections.rs/sha256"
+    },
+    "crates/openrailsrs-viewer3d/src/world.rs": {
+      "sha256": "3ea21dc91cc98e398b5d83c37128dc387cabe3bd0f6fd80d03b4f448f64e0245",
+      "check37_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1world.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1world.rs/sha256"
+    },
+    "crates/openrailsrs-viewer3d/src/world_instancing.rs": {
+      "sha256": "8a0f9df59c20a1e071554bd66bc760868f8377d25fa4bc38f38c492fc88472b2",
+      "check37_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1world_instancing.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1world_instancing.rs/sha256"
+    },
+    "crates/openrailsrs-viewer3d/src/world_operations.rs": {
+      "sha256": "e7a7c46703d5f2606c84b0736a90719b37830e2d434d9d93dea21df7bbdd6aef",
+      "check37_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1world_operations.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1world_operations.rs/sha256"
+    },
+    "crates/openrailsrs-viewer3d/src/world_stream_tests.rs": {
+      "sha256": "ab49f7c90d9266b43f1b20f7357ccb1460cef1ff4f5e0c58d9db0ec7013399cf",
+      "check37_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1world_stream_tests.rs/sha256",
+      "runtime_input_pointer": "/crates~1openrailsrs-viewer3d~1src~1world_stream_tests.rs/sha256"
+    },
+    "scripts/test_content_url.py": {
+      "sha256": "0676dba7716f06e6e27e1cd6110b9c09a9512ef00cdb3751047c63dc0e0b95df",
+      "check37_input_pointer": "/scripts~1test_content_url.py/sha256"
+    },
+    "scripts/test_coupling_reference.py": {
+      "sha256": "8ac46c4a423477a3b2c7f735363f707ca72f677637d7669e1ae78d10f7b76b42",
+      "check37_input_pointer": "/scripts~1test_coupling_reference.py/sha256"
+    },
+    "scripts/test_official_content.py": {
+      "sha256": "ed6a04410e1a94626a68ad87516b5cd5856f62f7bc12e304b1801780bc70c998",
+      "check37_input_pointer": "/scripts~1test_official_content.py/sha256"
+    },
+    "scripts/test_packaging.py": {
+      "sha256": "46ebd688c5326871a067ddeb4b362a36a8806140db64858e3058ffbc8368faeb",
+      "check37_input_pointer": "/scripts~1test_packaging.py/sha256"
+    }
+  },
+  "tests": [
+    {
+      "source": "crates/openrailsrs-audio/src/native.rs",
+      "test": "cab_passenger_and_exterior_switch_without_restarting_loops",
+      "line": 2452,
+      "criteria": [
+        [
+          314,
+          2
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        49,
+        49
+      ],
+      "private_audit_pointer": "/tests/0"
+    },
+    {
+      "source": "crates/openrailsrs-audio/src/native.rs",
+      "test": "decoded_pool_reuses_shared_samples_and_evicts_idle_entries_without_breaking_active_loops",
+      "line": 2733,
+      "criteria": [
+        [
+          314,
+          2
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        47,
+        47
+      ],
+      "private_audit_pointer": "/tests/1"
+    },
+    {
+      "source": "crates/openrailsrs-audio/src/native.rs",
+      "test": "shared_sound_resolves_without_a_local_sound_folder",
+      "line": 2396,
+      "criteria": [
+        [
+          412,
+          1
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        69,
+        69
+      ],
+      "private_audit_pointer": "/tests/2"
+    },
+    {
+      "source": "crates/openrailsrs-bevy-scenery/src/atmosphere.rs",
+      "test": "sky_dome_does_not_cast_or_receive_scene_shadows",
+      "line": 101,
+      "criteria": [
+        [
+          276,
+          1
+        ],
+        [
+          276,
+          2
+        ],
+        [
+          276,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        108,
+        108
+      ],
+      "private_audit_pointer": "/tests/3"
+    },
+    {
+      "source": "crates/openrailsrs-bevy-scenery/src/shapes/material.rs",
+      "test": "addatex_is_additive_without_opaque_prepass",
+      "line": 810,
+      "criteria": [
+        [
+          277,
+          1
+        ],
+        [
+          277,
+          2
+        ],
+        [
+          277,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        154,
+        154
+      ],
+      "private_audit_pointer": "/tests/4"
+    },
+    {
+      "source": "crates/openrailsrs-bevy-scenery/src/shapes/material.rs",
+      "test": "blend_atex_diff_dual_pass_when_ace_alpha_bits_gt_1",
+      "line": 786,
+      "criteria": [
+        [
+          277,
+          1
+        ],
+        [
+          277,
+          2
+        ],
+        [
+          277,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        157,
+        157
+      ],
+      "private_audit_pointer": "/tests/5"
+    },
+    {
+      "source": "crates/openrailsrs-bevy-scenery/src/shapes/material.rs",
+      "test": "texdiff_stays_single_opaque_pass",
+      "line": 802,
+      "criteria": [
+        [
+          277,
+          1
+        ],
+        [
+          277,
+          2
+        ],
+        [
+          277,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        163,
+        163
+      ],
+      "private_audit_pointer": "/tests/6"
+    },
+    {
+      "source": "crates/openrailsrs-content/src/source_cache.rs",
+      "test": "changed_includes_namespace_parser_and_corruption_invalidate_the_result",
+      "line": 263,
+      "criteria": [
+        [
+          384,
+          1
+        ],
+        [
+          384,
+          2
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        505,
+        505
+      ],
+      "private_audit_pointer": "/tests/7"
+    },
+    {
+      "source": "crates/openrailsrs-sim/src/refill.rs",
+      "test": "filling_is_partition_independent_and_stops_if_train_moves",
+      "line": 334,
+      "criteria": [
+        [
+          285,
+          1
+        ],
+        [
+          285,
+          2
+        ],
+        [
+          285,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        1291,
+        1291
+      ],
+      "private_audit_pointer": "/tests/8"
+    },
+    {
+      "source": "crates/openrailsrs-sim/src/refill.rs",
+      "test": "finite_diesel_supply_waits_for_connection_and_preserves_consumption_and_save",
+      "line": 307,
+      "criteria": [
+        [
+          285,
+          1
+        ],
+        [
+          285,
+          2
+        ],
+        [
+          285,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        1292,
+        1292
+      ],
+      "private_audit_pointer": "/tests/9"
+    },
+    {
+      "source": "crates/openrailsrs-sim/src/refill.rs",
+      "test": "rejects_bad_profile_distance_missing_intake_and_full_tank_without_mutation",
+      "line": 376,
+      "criteria": [
+        [
+          285,
+          1
+        ],
+        [
+          285,
+          2
+        ],
+        [
+          285,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        1293,
+        1293
+      ],
+      "private_audit_pointer": "/tests/10"
+    },
+    {
+      "source": "crates/openrailsrs-sim/src/refill.rs",
+      "test": "water_fills_only_tender_without_repairing_boiler_and_cancel_does_not_transfer",
+      "line": 354,
+      "criteria": [
+        [
+          285,
+          1
+        ],
+        [
+          285,
+          2
+        ],
+        [
+          285,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        1294,
+        1294
+      ],
+      "private_audit_pointer": "/tests/11"
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/articulated_train.rs",
+      "test": "shared_bogie_constraints_conserve_articulated_train_during_drive_braking_restore_and_reverse",
+      "line": 4,
+      "criteria": [
+        [
+          253,
+          1
+        ],
+        [
+          253,
+          2
+        ],
+        [
+          253,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        1337,
+        1337
+      ],
+      "private_audit_pointer": "/tests/12"
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/parallel_traffic.rs",
+      "test": "driver_transfers_to_stopped_service_preserves_resources_and_restore_reconstructs_roles",
+      "line": 66,
+      "criteria": [
+        [
+          341,
+          1
+        ],
+        [
+          341,
+          2
+        ],
+        [
+          341,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        1566,
+        1566
+      ],
+      "private_audit_pointer": "/tests/13"
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/parallel_traffic.rs",
+      "test": "one_and_eight_workers_produce_identical_moving_trains_and_restore",
+      "line": 33,
+      "criteria": [
+        [
+          393,
+          1
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        1567,
+        1567
+      ],
+      "private_audit_pointer": "/tests/14"
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/parallel_traffic.rs",
+      "test": "parked_services_have_real_handbrakes_and_remain_stationary_until_the_driver_takes_over",
+      "line": 123,
+      "criteria": [
+        [
+          341,
+          1
+        ],
+        [
+          341,
+          2
+        ],
+        [
+          341,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        1568,
+        1568
+      ],
+      "private_audit_pointer": "/tests/15"
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/parallel_traffic.rs",
+      "test": "preexisting_native_ai_is_simulated_before_the_activity_and_restores_without_resetting_reserves",
+      "line": 98,
+      "criteria": [
+        [
+          333,
+          1
+        ],
+        [
+          333,
+          2
+        ],
+        [
+          333,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        1569,
+        1569
+      ],
+      "private_audit_pointer": "/tests/16"
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/parallel_traffic.rs",
+      "test": "repeated_driver_swaps_restore_the_whole_role_permutation",
+      "line": 152,
+      "criteria": [
+        [
+          341,
+          1
+        ],
+        [
+          341,
+          2
+        ],
+        [
+          341,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        1570,
+        1570
+      ],
+      "private_audit_pointer": "/tests/17"
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/passing_services.rs",
+      "test": "dispatcher_selects_a_siding_before_the_meet_and_releases_only_after_the_other_tail_clears",
+      "line": 67,
+      "criteria": [
+        [
+          335,
+          1
+        ],
+        [
+          335,
+          2
+        ],
+        [
+          335,
+          3
+        ],
+        [
+          339,
+          1
+        ],
+        [
+          339,
+          2
+        ],
+        [
+          339,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        1577,
+        1577
+      ],
+      "private_audit_pointer": "/tests/18"
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/passing_services.rs",
+      "test": "shipped_overtake_and_meet_examples_complete_both_real_services_without_missing_the_local_stop",
+      "line": 175,
+      "criteria": [
+        [
+          335,
+          1
+        ],
+        [
+          335,
+          2
+        ],
+        [
+          335,
+          3
+        ],
+        [
+          339,
+          1
+        ],
+        [
+          339,
+          2
+        ],
+        [
+          339,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        1578,
+        1578
+      ],
+      "private_audit_pointer": "/tests/19"
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/passing_services.rs",
+      "test": "too_short_siding_is_rejected_with_a_diagnostic_and_no_position_change",
+      "line": 155,
+      "criteria": [
+        [
+          335,
+          1
+        ],
+        [
+          335,
+          2
+        ],
+        [
+          335,
+          3
+        ],
+        [
+          339,
+          1
+        ],
+        [
+          339,
+          2
+        ],
+        [
+          339,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        1579,
+        1579
+      ],
+      "private_audit_pointer": "/tests/20"
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/shunt_authority.rs",
+      "test": "another_train_invalid_distance_expiration_and_reversing_reject_or_revoke_authority",
+      "line": 51,
+      "criteria": [
+        [
+          340,
+          1
+        ],
+        [
+          340,
+          2
+        ],
+        [
+          340,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        1645,
+        1645
+      ],
+      "private_audit_pointer": "/tests/21"
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/shunt_authority.rs",
+      "test": "own_wheels_before_signal_do_not_block_a_bounded_authority_and_restore_preserves_it",
+      "line": 26,
+      "criteria": [
+        [
+          340,
+          1
+        ],
+        [
+          340,
+          2
+        ],
+        [
+          340,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        1646,
+        1646
+      ],
+      "private_audit_pointer": "/tests/22"
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/vehicle_doors.rs",
+      "test": "closing_finishes_only_the_current_passenger_and_survives_pause_restore",
+      "line": 45,
+      "criteria": [
+        [
+          254,
+          1
+        ],
+        [
+          254,
+          2
+        ],
+        [
+          254,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        1755,
+        1755
+      ],
+      "private_audit_pointer": "/tests/23"
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/vehicle_doors.rs",
+      "test": "independent_vehicle_and_sides_have_real_interlocks_and_survive_midstroke_save",
+      "line": 107,
+      "criteria": [
+        [
+          254,
+          1
+        ],
+        [
+          254,
+          2
+        ],
+        [
+          254,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        1756,
+        1756
+      ],
+      "private_audit_pointer": "/tests/24"
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/vehicle_doors.rs",
+      "test": "reopening_cancels_queued_closure_and_waiting_passengers_do_not_delay_it",
+      "line": 86,
+      "criteria": [
+        [
+          254,
+          1
+        ],
+        [
+          254,
+          2
+        ],
+        [
+          254,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        1759,
+        1759
+      ],
+      "private_audit_pointer": "/tests/25"
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/world_operations.rs",
+      "test": "crossing_observes_approach_full_tail_multiple_services_and_saved_opening",
+      "line": 24,
+      "criteria": [
+        [
+          282,
+          1
+        ],
+        [
+          282,
+          2
+        ],
+        [
+          282,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        1782,
+        1782
+      ],
+      "private_audit_pointer": "/tests/26"
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/world_operations.rs",
+      "test": "parked_cut_protects_crossing_after_the_locomotive_leaves",
+      "line": 67,
+      "criteria": [
+        [
+          282,
+          1
+        ],
+        [
+          282,
+          2
+        ],
+        [
+          282,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        1783,
+        1783
+      ],
+      "private_audit_pointer": "/tests/27"
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/world_operations.rs",
+      "test": "reversing_approach_uses_the_leading_rear_and_survives_restore",
+      "line": 89,
+      "criteria": [
+        [
+          282,
+          1
+        ],
+        [
+          282,
+          2
+        ],
+        [
+          282,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        1785,
+        1785
+      ],
+      "private_audit_pointer": "/tests/28"
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/yard_operations.rs",
+      "test": "coupling_an_unstarted_parked_donor_produces_an_immediately_valid_supply_snapshot",
+      "line": 216,
+      "criteria": [
+        [
+          342,
+          1
+        ],
+        [
+          342,
+          2
+        ],
+        [
+          342,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        1792,
+        1792
+      ],
+      "private_audit_pointer": "/tests/29"
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/yard_operations.rs",
+      "test": "delivery_requires_exact_wagons_full_siding_and_secured_detachment_then_pickup_removes_acceptance",
+      "line": 12,
+      "criteria": [
+        [
+          343,
+          1
+        ],
+        [
+          343,
+          2
+        ],
+        [
+          343,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        1793,
+        1793
+      ],
+      "private_audit_pointer": "/tests/30"
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/yard_operations.rs",
+      "test": "depot_transfers_finite_oil_and_coolant_without_resetting_fuel_or_temperature",
+      "line": 125,
+      "criteria": [
+        [
+          347,
+          1
+        ],
+        [
+          347,
+          2
+        ],
+        [
+          347,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        1794,
+        1794
+      ],
+      "private_audit_pointer": "/tests/31"
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/yard_operations.rs",
+      "test": "independent_contact_moves_vehicles_once_preserves_pressure_fuel_and_can_reconstruct_a_save",
+      "line": 30,
+      "criteria": [
+        [
+          342,
+          1
+        ],
+        [
+          342,
+          2
+        ],
+        [
+          342,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        1795,
+        1795
+      ],
+      "private_audit_pointer": "/tests/32"
+    },
+    {
+      "source": "crates/openrailsrs-sim/tests/yard_operations.rs",
+      "test": "two_crews_deliver_distinct_wagon_lots_and_foreign_wagons_make_a_siding_invalid",
+      "line": 185,
+      "criteria": [
+        [
+          343,
+          1
+        ],
+        [
+          343,
+          2
+        ],
+        [
+          343,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        1796,
+        1796
+      ],
+      "private_audit_pointer": "/tests/33"
+    },
+    {
+      "source": "crates/openrailsrs-train/src/consist_audit.rs",
+      "test": "every_missing_texture_and_cab_graphic_has_its_original_destinations",
+      "line": 1249,
+      "criteria": [
+        [
+          412,
+          4
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        1856,
+        1856
+      ],
+      "private_audit_pointer": "/tests/34"
+    },
+    {
+      "source": "crates/openrailsrs-train/src/consist_audit.rs",
+      "test": "native_3d_cab_pairs_shared_controls_and_keeps_genuine_resource_failures",
+      "line": 1398,
+      "criteria": [
+        [
+          412,
+          1
+        ],
+        [
+          412,
+          9
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        1859,
+        1859
+      ],
+      "private_audit_pointer": "/tests/35"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/camera.rs",
+      "test": "viewer_camera_has_no_mesh_and_is_explicitly_not_a_shadow_caster",
+      "line": 2105,
+      "criteria": [
+        [
+          276,
+          1
+        ],
+        [
+          276,
+          2
+        ],
+        [
+          276,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2341,
+        2341
+      ],
+      "private_audit_pointer": "/tests/36"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/camera_collision.rs",
+      "test": "consecutive_zoom_and_corner_motion_stay_clear_without_repeated_jumps",
+      "line": 164,
+      "criteria": [
+        [
+          291,
+          1
+        ],
+        [
+          291,
+          2
+        ],
+        [
+          291,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2343,
+        2343
+      ],
+      "private_audit_pointer": "/tests/37"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/camera_collision.rs",
+      "test": "eye_cannot_tunnel_through_a_wall_but_slides_along_it",
+      "line": 154,
+      "criteria": [
+        [
+          291,
+          1
+        ],
+        [
+          291,
+          2
+        ],
+        [
+          291,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2344,
+        2344
+      ],
+      "private_audit_pointer": "/tests/38"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/camera_collision.rs",
+      "test": "initial_stream_overlap_exits_the_volume_and_never_exits_below_the_floor",
+      "line": 198,
+      "criteria": [
+        [
+          291,
+          1
+        ],
+        [
+          291,
+          2
+        ],
+        [
+          291,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2345,
+        2345
+      ],
+      "private_audit_pointer": "/tests/39"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/campaign_play.rs",
+      "test": "campaign_progress_and_real_material_continue_without_cli_and_resume_keeps_context",
+      "line": 536,
+      "criteria": [
+        [
+          350,
+          1
+        ],
+        [
+          350,
+          2
+        ],
+        [
+          350,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2347,
+        2347
+      ],
+      "private_audit_pointer": "/tests/40"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/campaign_play.rs",
+      "test": "two_complete_driven_jornadas_keep_material_and_resume_mid_service",
+      "line": 457,
+      "criteria": [
+        [
+          350,
+          1
+        ],
+        [
+          350,
+          2
+        ],
+        [
+          350,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2348,
+        2348
+      ],
+      "private_audit_pointer": "/tests/41"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/content_validation.rs",
+      "test": "records_name_only_profiles_present_in_the_original_capture",
+      "line": 130,
+      "criteria": [
+        [
+          412,
+          6
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2358,
+        2358
+      ],
+      "private_audit_pointer": "/tests/42"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/official_content.rs",
+      "test": "discovery_rejects_parent_traversal_in_every_prepared_path",
+      "line": 1424,
+      "criteria": [
+        [
+          412,
+          9
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2510,
+        2510
+      ],
+      "private_audit_pointer": "/tests/43"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/official_content.rs",
+      "test": "repository_search_uses_catalogue_origin_and_only_the_missing_basename",
+      "line": 1540,
+      "criteria": [
+        [
+          412,
+          2
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2514,
+        2514
+      ],
+      "private_audit_pointer": "/tests/44"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/official_content.rs",
+      "test": "stock_only_author_archive_can_supply_trainset_and_consists_at_its_root",
+      "line": 1382,
+      "criteria": [
+        [
+          413,
+          2
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2516,
+        2516
+      ],
+      "private_audit_pointer": "/tests/45"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/official_content.rs",
+      "test": "train_only_package_audits_author_formations_as_well_as_standalone_choices",
+      "line": 1342,
+      "criteria": [
+        [
+          413,
+          2
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2517,
+        2517
+      ],
+      "private_audit_pointer": "/tests/46"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/official_content.rs",
+      "test": "unlisted_origins_and_mismatched_packages_offer_no_download",
+      "line": 1580,
+      "criteria": [
+        [
+          412,
+          2
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2519,
+        2519
+      ],
+      "private_audit_pointer": "/tests/47"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/platform_people.rs",
+      "test": "doorway_corridor_rejects_a_wall_between_safe_endpoints",
+      "line": 248,
+      "criteria": [
+        [
+          284,
+          1
+        ],
+        [
+          284,
+          2
+        ],
+        [
+          284,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2558,
+        2558
+      ],
+      "private_audit_pointer": "/tests/48"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/platform_people.rs",
+      "test": "mixed_transfer_prefixes_follow_the_boarding_and_alighting_counts",
+      "line": 279,
+      "criteria": [
+        [
+          254,
+          1
+        ],
+        [
+          254,
+          2
+        ],
+        [
+          254,
+          3
+        ],
+        [
+          284,
+          1
+        ],
+        [
+          284,
+          2
+        ],
+        [
+          284,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2557,
+        2557
+      ],
+      "private_audit_pointer": "/tests/49"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/player_ui.rs",
+      "test": "incomplete_or_pending_train_cannot_start_from_any_step",
+      "line": 5117,
+      "criteria": [
+        [
+          412,
+          6
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2591,
+        2591
+      ],
+      "private_audit_pointer": "/tests/50"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/prepared_geometry.rs",
+      "test": "cached_geometry_matches_fresh_and_source_descriptor_or_damage_invalidates_it",
+      "line": 387,
+      "criteria": [
+        [
+          383,
+          1
+        ],
+        [
+          383,
+          2
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2611,
+        2611
+      ],
+      "private_audit_pointer": "/tests/51"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/road_cars.rs",
+      "test": "queues_follow_the_rdb_curve_wait_before_closed_crossings_then_clear_without_overlap",
+      "line": 670,
+      "criteria": [
+        [
+          283,
+          1
+        ],
+        [
+          283,
+          2
+        ],
+        [
+          283,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2622,
+        2622
+      ],
+      "private_audit_pointer": "/tests/52"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/road_cars.rs",
+      "test": "rdb_spawner_follows_connected_vectors_and_keeps_the_surface_height_datum",
+      "line": 716,
+      "criteria": [
+        [
+          283,
+          1
+        ],
+        [
+          283,
+          2
+        ],
+        [
+          283,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2623,
+        2623
+      ],
+      "private_audit_pointer": "/tests/53"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/road_cars.rs",
+      "test": "road_car_motion_keeps_world_position_after_multiple_origin_shifts",
+      "line": 598,
+      "criteria": [
+        [
+          283,
+          1
+        ],
+        [
+          283,
+          2
+        ],
+        [
+          283,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2624,
+        2624
+      ],
+      "private_audit_pointer": "/tests/54"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/road_cars.rs",
+      "test": "simultaneous_exit_cars_cannot_claim_the_same_entry",
+      "line": 703,
+      "criteria": [
+        [
+          283,
+          1
+        ],
+        [
+          283,
+          2
+        ],
+        [
+          283,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2626,
+        2626
+      ],
+      "private_audit_pointer": "/tests/55"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/saved_game.rs",
+      "test": "different_formation_driver_transfer_and_coupling_are_atomic_and_survive_saved_game",
+      "line": 607,
+      "criteria": [
+        [
+          341,
+          1
+        ],
+        [
+          341,
+          2
+        ],
+        [
+          341,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2669,
+        2669
+      ],
+      "private_audit_pointer": "/tests/56"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/scene.rs",
+      "test": "default_shadow_budget_is_200_m_with_three_cascades",
+      "line": 287,
+      "criteria": [
+        [
+          276,
+          1
+        ],
+        [
+          276,
+          2
+        ],
+        [
+          276,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2672,
+        2672
+      ],
+      "private_audit_pointer": "/tests/57"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/service_builder.rs",
+      "test": "graphical_itinerary_validates_all_legs_reversal_wait_undo_and_separate_save",
+      "line": 724,
+      "criteria": [
+        [
+          396,
+          1
+        ],
+        [
+          396,
+          2
+        ],
+        [
+          396,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2695,
+        2695
+      ],
+      "private_audit_pointer": "/tests/58"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/snow_tracks.rs",
+      "test": "paused_wheels_and_teleport_do_not_clear_new_snow",
+      "line": 163,
+      "criteria": [
+        [
+          297,
+          1
+        ],
+        [
+          297,
+          2
+        ],
+        [
+          297,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2796,
+        2796
+      ],
+      "private_audit_pointer": "/tests/59"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/snow_tracks.rs",
+      "test": "stationary_frame_does_not_mark_identical_gpu_segments_as_modified",
+      "line": 152,
+      "criteria": [
+        [
+          297,
+          1
+        ],
+        [
+          297,
+          2
+        ],
+        [
+          297,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2797,
+        2797
+      ],
+      "private_audit_pointer": "/tests/60"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/snow_tracks.rs",
+      "test": "tracks_follow_actual_motion_are_bounded_and_rebase_without_moving",
+      "line": 182,
+      "criteria": [
+        [
+          297,
+          1
+        ],
+        [
+          297,
+          2
+        ],
+        [
+          297,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2798,
+        2798
+      ],
+      "private_audit_pointer": "/tests/61"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/streaming_forecast.rs",
+      "test": "forecast_residency_is_bounded_even_after_repeated_requests_and_a_distant_camera",
+      "line": 155,
+      "criteria": [
+        [
+          380,
+          1
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2811,
+        2811
+      ],
+      "private_audit_pointer": "/tests/62"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/streaming_forecast.rs",
+      "test": "pressure_preserves_the_bounded_requested_set_without_reload_churn",
+      "line": 203,
+      "criteria": [
+        [
+          380,
+          1
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2812,
+        2812
+      ],
+      "private_audit_pointer": "/tests/63"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/streaming_forecast.rs",
+      "test": "shape_priority_uses_world_coordinates_after_a_remote_native_focus",
+      "line": 180,
+      "criteria": [
+        [
+          381,
+          1
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2813,
+        2813
+      ],
+      "private_audit_pointer": "/tests/64"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/train_connections.rs",
+      "test": "authored_endpoints_follow_curve_slack_and_reversal_without_changing_the_near_end",
+      "line": 429,
+      "criteria": [
+        [
+          243,
+          1
+        ],
+        [
+          243,
+          2
+        ],
+        [
+          243,
+          3
+        ],
+        [
+          244,
+          1
+        ],
+        [
+          244,
+          2
+        ],
+        [
+          244,
+          3
+        ],
+        [
+          245,
+          1
+        ],
+        [
+          245,
+          2
+        ],
+        [
+          245,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2939,
+        2939
+      ],
+      "private_audit_pointer": "/tests/65"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/train_connections.rs",
+      "test": "bogie_part_queries_are_disjoint_from_car_and_train_root_transforms",
+      "line": 272,
+      "criteria": [
+        [
+          253,
+          1
+        ],
+        [
+          253,
+          2
+        ],
+        [
+          253,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2940,
+        2940
+      ],
+      "private_audit_pointer": "/tests/66"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/train_connections.rs",
+      "test": "lod_rebind_keeps_authored_topology_and_sources_immutable_through_pause_cut_and_restore",
+      "line": 279,
+      "criteria": [
+        [
+          243,
+          1
+        ],
+        [
+          243,
+          2
+        ],
+        [
+          243,
+          3
+        ],
+        [
+          244,
+          1
+        ],
+        [
+          244,
+          2
+        ],
+        [
+          244,
+          3
+        ],
+        [
+          245,
+          1
+        ],
+        [
+          245,
+          2
+        ],
+        [
+          245,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        2941,
+        2941
+      ],
+      "private_audit_pointer": "/tests/67"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/world.rs",
+      "test": "exhausted_publication_budget_still_finishes_instanced_queue",
+      "line": 6198,
+      "criteria": [
+        [
+          381,
+          2
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        3079,
+        3083
+      ],
+      "private_audit_pointer": "/tests/68"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/world_instancing.rs",
+      "test": "instancing_shader_casts_directional_shadows",
+      "line": 1907,
+      "criteria": [
+        [
+          276,
+          1
+        ],
+        [
+          276,
+          2
+        ],
+        [
+          276,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        3136,
+        3136
+      ],
+      "private_audit_pointer": "/tests/69"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/world_instancing.rs",
+      "test": "instancing_shader_receives_directional_shadows",
+      "line": 1893,
+      "criteria": [
+        [
+          276,
+          1
+        ],
+        [
+          276,
+          2
+        ],
+        [
+          276,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        3137,
+        3137
+      ],
+      "private_audit_pointer": "/tests/70"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/world_operations.rs",
+      "test": "pickup_uses_original_animation_frames_and_zero_speed_stays_instantaneous",
+      "line": 158,
+      "criteria": [
+        [
+          285,
+          1
+        ],
+        [
+          285,
+          2
+        ],
+        [
+          285,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        3150,
+        3150
+      ],
+      "private_audit_pointer": "/tests/71"
+    },
+    {
+      "source": "crates/openrailsrs-viewer3d/src/world_stream_tests.rs",
+      "test": "streaming_revisits_loaded_tiles_rebases_queued_meshes_and_releases_gpu_tiles",
+      "line": 45,
+      "criteria": [
+        [
+          273,
+          1
+        ],
+        [
+          273,
+          2
+        ],
+        [
+          273,
+          3
+        ]
+      ],
+      "execution": "check37_stdout",
+      "stdout_lines": [
+        3015,
+        3063
+      ],
+      "private_audit_pointer": "/tests/72"
+    },
+    {
+      "source": "scripts/test_content_url.py",
+      "test": "test_cli_inspection_reports_connection_failure_without_traceback",
+      "line": 51,
+      "criteria": [
+        [
+          413,
+          3
+        ]
+      ],
+      "execution": "new_directed_python37_stdout",
+      "stdout_lines": [
+        1,
+        1
+      ],
+      "private_audit_pointer": "/tests/73"
+    },
+    {
+      "source": "scripts/test_content_url.py",
+      "test": "test_credentials_local_addresses_and_landing_pages_are_rejected",
+      "line": 41,
+      "criteria": [
+        [
+          413,
+          3
+        ]
+      ],
+      "execution": "new_directed_python37_stdout",
+      "stdout_lines": [
+        2,
+        2
+      ],
+      "private_audit_pointer": "/tests/74"
+    },
+    {
+      "source": "scripts/test_content_url.py",
+      "test": "test_inspection_resolves_revision_without_fetching_the_archive",
+      "line": 84,
+      "criteria": [
+        [
+          413,
+          1
+        ]
+      ],
+      "execution": "new_directed_python37_stdout",
+      "stdout_lines": [
+        3,
+        3
+      ],
+      "private_audit_pointer": "/tests/75"
+    },
+    {
+      "source": "scripts/test_content_url.py",
+      "test": "test_low_space_does_not_start_a_download",
+      "line": 153,
+      "criteria": [
+        [
+          373,
+          2
+        ],
+        [
+          413,
+          5
+        ]
+      ],
+      "execution": "new_directed_python37_stdout",
+      "stdout_lines": [
+        4,
+        4
+      ],
+      "private_audit_pointer": "/tests/76"
+    },
+    {
+      "source": "scripts/test_content_url.py",
+      "test": "test_mid_download_failure_and_cancel_leave_previous_version_untouched",
+      "line": 114,
+      "criteria": [
+        [
+          412,
+          8
+        ],
+        [
+          413,
+          5
+        ]
+      ],
+      "execution": "new_directed_python37_stdout",
+      "stdout_lines": [
+        5,
+        5
+      ],
+      "private_audit_pointer": "/tests/77"
+    },
+    {
+      "source": "scripts/test_content_url.py",
+      "test": "test_new_author_requires_explicit_origin_confirmation",
+      "line": 21,
+      "criteria": [
+        [
+          413,
+          3
+        ]
+      ],
+      "execution": "new_directed_python37_stdout",
+      "stdout_lines": [
+        6,
+        6
+      ],
+      "private_audit_pointer": "/tests/78"
+    },
+    {
+      "source": "scripts/test_content_url.py",
+      "test": "test_redirects_cannot_switch_author_or_repository_before_download",
+      "line": 96,
+      "criteria": [
+        [
+          413,
+          4
+        ]
+      ],
+      "execution": "new_directed_python37_stdout",
+      "stdout_lines": [
+        7,
+        7
+      ],
+      "private_audit_pointer": "/tests/79"
+    },
+    {
+      "source": "scripts/test_coupling_reference.py",
+      "test": "test_depot_control_preserves_nondefault_states_and_finite_supply",
+      "line": 61,
+      "criteria": [
+        [
+          347,
+          1
+        ],
+        [
+          347,
+          2
+        ],
+        [
+          347,
+          3
+        ]
+      ],
+      "execution": "new_directed_python37_stdout",
+      "stdout_lines": [
+        8,
+        8
+      ],
+      "private_audit_pointer": "/tests/80"
+    },
+    {
+      "source": "scripts/test_official_content.py",
+      "test": "test_chiltern_v4_has_a_distinct_original_source_and_preserves_v2",
+      "line": 88,
+      "criteria": [
+        [
+          412,
+          3
+        ]
+      ],
+      "execution": "new_directed_python37_stdout",
+      "stdout_lines": [
+        9,
+        9
+      ],
+      "private_audit_pointer": "/tests/81"
+    },
+    {
+      "source": "scripts/test_official_content.py",
+      "test": "test_complete_package_is_atomic_and_has_origin_and_digest",
+      "line": 39,
+      "criteria": [
+        [
+          413,
+          7
+        ]
+      ],
+      "execution": "new_directed_python37_stdout",
+      "stdout_lines": [
+        10,
+        10
+      ],
+      "private_audit_pointer": "/tests/82"
+    },
+    {
+      "source": "scripts/test_official_content.py",
+      "test": "test_corrupt_or_executable_only_package_does_not_publish",
+      "line": 226,
+      "criteria": [
+        [
+          413,
+          4
+        ],
+        [
+          413,
+          5
+        ]
+      ],
+      "execution": "new_directed_python37_stdout",
+      "stdout_lines": [
+        11,
+        11
+      ],
+      "private_audit_pointer": "/tests/83"
+    },
+    {
+      "source": "scripts/test_official_content.py",
+      "test": "test_default_storage_is_user_owned_and_snap_revision_independent",
+      "line": 83,
+      "criteria": [
+        [
+          412,
+          3
+        ]
+      ],
+      "execution": "new_directed_python37_stdout",
+      "stdout_lines": [
+        12,
+        12
+      ],
+      "private_audit_pointer": "/tests/84"
+    },
+    {
+      "source": "scripts/test_official_content.py",
+      "test": "test_redirect_is_rejected_before_contacting_another_host_or_http",
+      "line": 250,
+      "criteria": [
+        [
+          413,
+          4
+        ]
+      ],
+      "execution": "new_directed_python37_stdout",
+      "stdout_lines": [
+        13,
+        13
+      ],
+      "private_audit_pointer": "/tests/85"
+    },
+    {
+      "source": "scripts/test_official_content.py",
+      "test": "test_symlinks_and_oversized_install_are_rejected",
+      "line": 178,
+      "criteria": [
+        [
+          413,
+          4
+        ]
+      ],
+      "execution": "new_directed_python37_stdout",
+      "stdout_lines": [
+        14,
+        14
+      ],
+      "private_audit_pointer": "/tests/86"
+    },
+    {
+      "source": "scripts/test_official_content.py",
+      "test": "test_traversal_and_ambiguous_case_are_rejected_before_any_extraction",
+      "line": 170,
+      "criteria": [
+        [
+          413,
+          4
+        ]
+      ],
+      "execution": "new_directed_python37_stdout",
+      "stdout_lines": [
+        15,
+        15
+      ],
+      "private_audit_pointer": "/tests/87"
+    },
+    {
+      "source": "scripts/test_official_content.py",
+      "test": "test_zip_entity_change_preserves_previous_copy_and_same_entity_skips_body",
+      "line": 69,
+      "criteria": [
+        [
+          413,
+          7
+        ]
+      ],
+      "execution": "new_directed_python37_stdout",
+      "stdout_lines": [
+        16,
+        16
+      ],
+      "private_audit_pointer": "/tests/88"
+    },
+    {
+      "source": "scripts/test_packaging.py",
+      "test": "test_runtime_resources_exclude_generated_manifests_and_player_data",
+      "line": 22,
+      "criteria": [
+        [
+          412,
+          3
+        ]
+      ],
+      "execution": "new_directed_python37_stdout",
+      "stdout_lines": [
+        17,
+        17
+      ],
+      "private_audit_pointer": "/tests/89"
+    }
+  ],
+  "historical_audit36": {
+    "file": "<private-qa>/named-test-execution36-audit.json",
+    "sha256": "3a83338d3457f7c865160e46c9224f0c12cb72d73a6490f100b9f03ef256a4fd",
+    "bytes": 441
+  },
+  "failed_original36": {
+    "phase": 36,
+    "status": "failed",
+    "stdout": {
+      "file": "<private-qa>/lifetime-short36-rx/samples.jsonl",
+      "sha256": "a0800c8bcf9887b9a91ea394d64d5c82a72a6f45de09de58269ff23e5085b119",
+      "bytes": 71178
+    },
+    "line": 1,
+    "field_pointers": {
+      "error": "/disk_save_last_error",
+      "attempts": "/disk_save_attempts",
+      "restores": "/disk_save_restore_cycles",
+      "failures": "/disk_save_failures"
+    },
+    "wall_s": 92.300692793,
+    "attempts": 1,
+    "restores": 0,
+    "failures": 1,
+    "error": "Enclavamientos incompatibles en n5667"
+  },
+  "earlier_verbose37": {
+    "receipt": {
+      "file": "<private-qa>/python-named-execution37.json",
+      "sha256": "821ff444d37242663c04bdfc25e4b70d73183d0185dd0b3e794a631a151261c5",
+      "bytes": 304
+    },
+    "status": "failed",
+    "successful_named_lines": 126,
+    "returncode": 1,
+    "not_relabelled": true
+  },
+  "limits": [
+    "This audit maps actual named stdout, not test definitions as execution proof.",
+    "Check37 names73 required Rust tests. It reports127 passing Python tests only as aggregates; the17 required Python names are proven by a separate new directed execution, not retroactively inserted into check37.",
+    "The two Rust tests with interleaved application logs bind the initial test label to the following standalone ok before the next test.",
+    "A passed unit/integration test does not certify visual/manual/audio/GPU/endurance/Snap acceptance or full Open Rails physical parity.",
+    "No issues were closed and no acceptance/closure matrices were modified.",
+    "The phase36 audit, earlier126-pass/one-failure verbose output, and the original36 SavedGame rejection remain separate historical evidence.",
+    "snap/local/display-launch.py was absent from the check37 input manifest. Its import is hashed for the new directed execution only."
+  ],
+  "issues_closed": false,
+  "closure_matrix_modified": false
+}

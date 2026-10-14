@@ -1,0 +1,2290 @@
+{
+  "schema": 1,
+  "candidate": "phase37",
+  "commit_containing_runtime_sources": "c4615ec01aa75b8b94522074f7faa686b85c3c2f",
+  "viewer_sha256": "35f4e5ce719e5d7e67c040cab96aabf2acc909dd7cdcb99df4a0f9bcc5472639",
+  "created_utc": "2026-10-14T18:05:32.674105+00:00",
+  "status": "bounded_subcriteria_pass_pending_endurance_exclusive_performance_and_package",
+  "issue_subcriteria": [
+    {
+      "issue": 296,
+      "criterion": 3
+    },
+    {
+      "issue": 341,
+      "criterion": 3
+    }
+  ],
+  "snow": {
+    "snow-driver": {
+      "scope": "Hardware GPU, owned synthetic fixture; pause/restore, camera changes and a real500m rebase; snow quality explicitly high/low.",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "source_report": {
+        "private_name": "snow-quality37/report.json",
+        "sha256": "b565051057781a659d00cd3ad75d597980d01b103e6d073ada045ec96c953320",
+        "bytes": 178219
+      },
+      "raw_stream": {
+        "private_name": "snow-quality37/snow-driver.stream.json",
+        "sha256": "a01d6f0e33b85b079658bd7a4f8a9d11d847f9f2269b24f689448a611d0d3b08",
+        "bytes": 54196
+      },
+      "log": {
+        "private_name": "snow-quality37/snow-driver.log",
+        "sha256": "f09555ba00cf90f4092a3828d99f0258313704941d210bc77c8c6ba099f0c129",
+        "bytes": 44640
+      },
+      "capture": {
+        "private_name": "snow-quality37/snow-driver.png",
+        "sha256": "da6c1905e331ef71d8aaf4fd71ee65f4c99ea2d49ab262e8324d265479068b27",
+        "bytes": 813627,
+        "published_path": "docs/validation/images/fifth40-phase37/snow-quality37-snow-driver.png"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "native_signal_errors": {},
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 38.0,
+        "fov_y_rad": 0.9599310755729675,
+        "indirect_drawing": false,
+        "pitch_rad": 0.25,
+        "position_world": [
+          131.8366241455078,
+          3.0999999046325684,
+          2.863178014755249
+        ],
+        "rotation_xyzw": [
+          -0.012517633847892284,
+          -0.7797285318374634,
+          -0.01559664960950613,
+          0.6257983446121216
+        ],
+        "target_world": [
+          134.76551818847656,
+          0.30000001192092896,
+          3.5124969482421875
+        ],
+        "yaw_rad": -0.21816617250442505
+      },
+      "floating_origin_shift": [
+        -25.2344970703125,
+        0.0,
+        42.162498474121094
+      ],
+      "equipment_actions": [
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          "index": 0,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 1.950000000000001
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          "index": 1,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 1.950000000000001
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          "index": 2,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 1.950000000000001
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Fly",
+          "door_fractions": [
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          "index": 3,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 2.9499999999999975
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          "index": 4,
+          "origin_m": [
+            500.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 6.949999999999983
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          "index": 5,
+          "origin_m": [
+            -25.2344970703125,
+            0.0,
+            42.162498474121094
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 8.899999999999991
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          "index": 6,
+          "origin_m": [
+            -25.2344970703125,
+            0.0,
+            42.162498474121094
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 11.900000000000034
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          "index": 7,
+          "origin_m": [
+            -25.2344970703125,
+            0.0,
+            42.162498474121094
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 14.900000000000077
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          "index": 8,
+          "origin_m": [
+            -25.2344970703125,
+            0.0,
+            42.162498474121094
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 16.900000000000105
+        }
+      ],
+      "performance_observed_not_benchmark": {
+        "elapsed_s": 29.998979890000015,
+        "frame_p50_ms": 33,
+        "frame_p95_ms": 33,
+        "frame_p99_ms": 33,
+        "frames": 897,
+        "gameplay_frame_p50_ms": 33,
+        "gameplay_frame_p95_ms": 33,
+        "gameplay_frame_p99_ms": 33,
+        "gameplay_frames": 881,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 33.384791,
+        "hitches_over_100_ms": 1,
+        "loading_frames": 16,
+        "longest_frame_ms": 112.240773,
+        "peak_rss_mib": 449.34765625,
+        "rss_mib": 449.34765625,
+        "startup_longest_frame_ms": 112.240773
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 2,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 2048,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 2048,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 4096,
+        "shelter_image_ids": [
+          "AssetId<bevy_image::image::Image>{uuid: 657c23a8-ea46-4ae2-8ab6-4c5197fc8798}",
+          "AssetId<bevy_image::image::Image>{uuid: f6f315f9-73b9-4aa2-8e35-de2770929985}"
+        ],
+        "shelter_refreshes": 62,
+        "snow_fraction": 1.0
+      },
+      "snow_cover": 1.0,
+      "snow_tracks": {
+        "gpu_changes": 2,
+        "gpu_segments": 0.0,
+        "material_uploads": 2,
+        "maximum_depth_m": 0.08,
+        "sectors": 0,
+        "segments": 0
+      },
+      "weather_state": {
+        "advection": {
+          "clock_s": 16.900000000000105,
+          "offset_m": [
+            59.57653812170068,
+            22.10250712335121
+          ],
+          "velocity_mps": [
+            3.1929430961608887,
+            0.9570225477218628
+          ]
+        },
+        "atmosphere": {
+          "cloud_cover": 0.8799999952316284,
+          "flake_size": 1.350000023841858,
+          "fog_density": 0.0007999999797903001,
+          "overcast": 0.699999988079071,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 1.0,
+          "snow_cover": 1.0,
+          "storm": 0.0,
+          "temperature_c": -1.0,
+          "visibility_m": 500.0,
+          "wind_mps": [
+            3.1929430961608887,
+            0.0,
+            0.9570225477218628
+          ]
+        },
+        "elapsed_s": 16.900000000000105,
+        "journey": {
+          "pace": "normal",
+          "winter": false
+        },
+        "live": false,
+        "profile": "heavy_snow",
+        "seed": 42
+      },
+      "render_assets": null,
+      "system_stages": {
+        "camera_collision": {
+          "calls": 896,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 37,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 1229
+        },
+        "effect_obstacles": {
+          "calls": 896,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 81,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 14274
+        },
+        "flexible_connections": {
+          "calls": 896,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 28,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 3470
+        },
+        "horizon": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 73,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 2503
+        },
+        "jacobs_bogie": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 13,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 2078
+        },
+        "level_crossing_register": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 1,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 1
+        },
+        "live_drive": {
+          "calls": 1776,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 83,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 22393
+        },
+        "mirrors": {
+          "calls": 896,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 46,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4275
+        },
+        "platform_people": {
+          "calls": 896,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 15,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4242
+        },
+        "road_cars": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 7,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 941
+        },
+        "snow_materials": {
+          "calls": 896,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 44,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4440
+        },
+        "snow_roof_markers": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 3,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 3
+        },
+        "snow_tracks": {
+          "calls": 896,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 13,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4851
+        },
+        "streaming_forecast.update": {
+          "calls": 896,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 31,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 735
+        },
+        "terrain_spawn.terrain_tile_bundle_materialize_system": {
+          "calls": 896,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 6,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 16
+        },
+        "terrain_spawn.terrain_tile_spawn_stream_system": {
+          "calls": 896,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 5,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 37
+        },
+        "terrain_spawn.terrain_tile_stream_system": {
+          "calls": 896,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 173,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 27108
+        },
+        "terrain_spawn.terrain_tile_unload_system": {
+          "calls": 896,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 30,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4698
+        },
+        "wet_surfaces": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 53,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4061
+        },
+        "world.progressive_world_spawn_system": {
+          "calls": 896,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 321,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 801
+        },
+        "world.update_world_scenery_lod": {
+          "calls": 896,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 56,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 7956
+        },
+        "world.world_stream_scenery_system": {
+          "calls": 896,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 198,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 210
+        },
+        "world.world_tile_bundle_materialize_system": {
+          "calls": 896,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 2,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 23
+        },
+        "world.world_tile_stream_system": {
+          "calls": 896,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 978,
+          "p50_ms": 0.6,
+          "p99_ms": 0.9,
+          "total_us": 521217
+        },
+        "world.world_tile_unload_system": {
+          "calls": 896,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 37,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4613
+        }
+      }
+    },
+    "snow-exterior": {
+      "scope": "Hardware GPU, owned synthetic fixture; pause/restore, camera changes and a real500m rebase; snow quality explicitly high/low.",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "source_report": {
+        "private_name": "snow-quality37/report.json",
+        "sha256": "b565051057781a659d00cd3ad75d597980d01b103e6d073ada045ec96c953320",
+        "bytes": 178219
+      },
+      "raw_stream": {
+        "private_name": "snow-quality37/snow-exterior.stream.json",
+        "sha256": "21547caf3f038aa88145ca910cae53d5fd902123b642f431df75f9fe299eab73",
+        "bytes": 54591
+      },
+      "log": {
+        "private_name": "snow-quality37/snow-exterior.log",
+        "sha256": "3704b0195519a2e5d449c0db4c05312ea4a737afb709f88b01079c009d47c708",
+        "bytes": 44387
+      },
+      "capture": {
+        "private_name": "snow-quality37/snow-exterior.png",
+        "sha256": "06ab17c1083671d41b68c512da6ebd577b0ddb2adc382bdd35a11f3d6d22a004",
+        "bytes": 531145,
+        "published_path": "docs/validation/images/fifth40-phase37/snow-quality37-snow-exterior.png"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "native_signal_errors": {},
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 38.0,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.25,
+        "position_world": [
+          116.929443359375,
+          9.668651580810547,
+          37.89961624145508
+        ],
+        "rotation_xyzw": [
+          -0.12393372505903244,
+          -0.1080174595117569,
+          -0.013572949916124344,
+          0.9863004088401794
+        ],
+        "target_world": [
+          124.8984603881836,
+          0.26730048656463623,
+          1.9536919593811035
+        ],
+        "yaw_rad": -0.21816617250442505
+      },
+      "floating_origin_shift": [
+        -25.2344970703125,
+        0.0,
+        42.162498474121094
+      ],
+      "equipment_actions": [
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          "index": 0,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 1.900000000000001
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          "index": 1,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 1.900000000000001
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          "index": 2,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 1.900000000000001
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Fly",
+          "door_fractions": [
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          "index": 3,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 2.8999999999999977
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          "index": 4,
+          "origin_m": [
+            500.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 6.8999999999999835
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          "index": 5,
+          "origin_m": [
+            -25.2344970703125,
+            0.0,
+            42.162498474121094
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 8.899999999999991
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          "index": 6,
+          "origin_m": [
+            -25.2344970703125,
+            0.0,
+            42.162498474121094
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 11.950000000000035
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          "index": 7,
+          "origin_m": [
+            -25.2344970703125,
+            0.0,
+            42.162498474121094
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 14.950000000000077
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          "index": 8,
+          "origin_m": [
+            -25.2344970703125,
+            0.0,
+            42.162498474121094
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 16.950000000000106
+        }
+      ],
+      "performance_observed_not_benchmark": {
+        "elapsed_s": 30.01965079000003,
+        "frame_p50_ms": 33,
+        "frame_p95_ms": 33,
+        "frame_p99_ms": 34,
+        "frames": 898,
+        "gameplay_frame_p50_ms": 33,
+        "gameplay_frame_p95_ms": 33,
+        "gameplay_frame_p99_ms": 33,
+        "gameplay_frames": 884,
+        "gameplay_hitches_over_100_ms": 1,
+        "gameplay_longest_frame_ms": 120.853905,
+        "hitches_over_100_ms": 1,
+        "loading_frames": 14,
+        "longest_frame_ms": 120.853905,
+        "peak_rss_mib": 447.73046875,
+        "rss_mib": 447.73046875,
+        "startup_longest_frame_ms": 51.031386999999995
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 2,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 2048,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 2048,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 0,
+        "requested": "gpu",
+        "seed_upload_capacity": 4096,
+        "shelter_image_ids": [
+          "AssetId<bevy_image::image::Image>{uuid: 657c23a8-ea46-4ae2-8ab6-4c5197fc8798}",
+          "AssetId<bevy_image::image::Image>{uuid: f6f315f9-73b9-4aa2-8e35-de2770929985}"
+        ],
+        "shelter_refreshes": 62,
+        "snow_fraction": 1.0
+      },
+      "snow_cover": 1.0,
+      "snow_tracks": {
+        "gpu_changes": 2,
+        "gpu_segments": 0.0,
+        "material_uploads": 2,
+        "maximum_depth_m": 0.08,
+        "sectors": 0,
+        "segments": 0
+      },
+      "weather_state": {
+        "advection": {
+          "clock_s": 16.950000000000106,
+          "offset_m": [
+            59.73596614599268,
+            22.15059294998657
+          ],
+          "velocity_mps": [
+            3.186042547225952,
+            0.9541921615600586
+          ]
+        },
+        "atmosphere": {
+          "cloud_cover": 0.8799999952316284,
+          "flake_size": 1.350000023841858,
+          "fog_density": 0.0007999999797903001,
+          "overcast": 0.699999988079071,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 1.0,
+          "snow_cover": 1.0,
+          "storm": 0.0,
+          "temperature_c": -1.0,
+          "visibility_m": 500.0,
+          "wind_mps": [
+            3.186042547225952,
+            0.0,
+            0.9541921615600586
+          ]
+        },
+        "elapsed_s": 16.950000000000106,
+        "journey": {
+          "pace": "normal",
+          "winter": false
+        },
+        "live": false,
+        "profile": "heavy_snow",
+        "seed": 42
+      },
+      "render_assets": null,
+      "system_stages": {
+        "camera_collision": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 31,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 1619
+        },
+        "effect_obstacles": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 66,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 14777
+        },
+        "flexible_connections": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 26,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 3577
+        },
+        "horizon": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 81,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 2681
+        },
+        "jacobs_bogie": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 17,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 2188
+        },
+        "level_crossing_register": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 1,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 1
+        },
+        "live_drive": {
+          "calls": 1782,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 139,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 23390
+        },
+        "mirrors": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 34,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4034
+        },
+        "platform_people": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 12,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4638
+        },
+        "road_cars": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 5,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 963
+        },
+        "snow_materials": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 44,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4402
+        },
+        "snow_roof_markers": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 2,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 2
+        },
+        "snow_tracks": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 11,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 5342
+        },
+        "streaming_forecast.update": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 27,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 549
+        },
+        "terrain_spawn.terrain_tile_bundle_materialize_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 33,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 52
+        },
+        "terrain_spawn.terrain_tile_spawn_stream_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 25,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 59
+        },
+        "terrain_spawn.terrain_tile_stream_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 402,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 26930
+        },
+        "terrain_spawn.terrain_tile_unload_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 48,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4986
+        },
+        "wet_surfaces": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 45,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4188
+        },
+        "world.progressive_world_spawn_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 437,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 959
+        },
+        "world.update_world_scenery_lod": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 39,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 8036
+        },
+        "world.world_stream_scenery_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 267,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 276
+        },
+        "world.world_tile_bundle_materialize_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 2,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 5
+        },
+        "world.world_tile_stream_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 1056,
+          "p50_ms": 0.7,
+          "p99_ms": 1.0,
+          "total_us": 563569
+        },
+        "world.world_tile_unload_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 64,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4774
+        }
+      }
+    },
+    "snow-low-quality": {
+      "scope": "Hardware GPU, owned synthetic fixture; pause/restore, camera changes and a real500m rebase; snow quality explicitly high/low.",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "source_report": {
+        "private_name": "snow-quality37/report.json",
+        "sha256": "b565051057781a659d00cd3ad75d597980d01b103e6d073ada045ec96c953320",
+        "bytes": 178219
+      },
+      "raw_stream": {
+        "private_name": "snow-quality37/snow-low-quality.stream.json",
+        "sha256": "da8c050fe5b9806acbccde662ab86567bd368e7b2c330fde3b3a28e029a3bd05",
+        "bytes": 53922
+      },
+      "log": {
+        "private_name": "snow-quality37/snow-low-quality.log",
+        "sha256": "294a551f5902aed97141bbe1c5d3cf9e2ae1d4ab949dba0bdfc786d96c4afa63",
+        "bytes": 43934
+      },
+      "capture": {
+        "private_name": "snow-quality37/snow-low-quality.png",
+        "sha256": "d8a945d9df2a49a42d68742480508c7b956dd2147ac8afc3062d258cda257125",
+        "bytes": 531142,
+        "published_path": "docs/validation/images/fifth40-phase37/snow-quality37-snow-low-quality.png"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "native_signal_errors": {},
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 38.0,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.25,
+        "position_world": [
+          116.929443359375,
+          9.668651580810547,
+          37.89961624145508
+        ],
+        "rotation_xyzw": [
+          -0.12393372505903244,
+          -0.1080174595117569,
+          -0.013572949916124344,
+          0.9863004088401794
+        ],
+        "target_world": [
+          124.8984603881836,
+          0.26730045676231384,
+          1.9536919593811035
+        ],
+        "yaw_rad": -0.21816617250442505
+      },
+      "floating_origin_shift": [
+        -25.2344970703125,
+        0.0,
+        42.162498474121094
+      ],
+      "equipment_actions": [
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          "index": 0,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 1.950000000000001
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          "index": 1,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 1.950000000000001
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          "index": 2,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 1.950000000000001
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Fly",
+          "door_fractions": [
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          "index": 3,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 2.9499999999999975
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          "index": 4,
+          "origin_m": [
+            500.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 6.949999999999983
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          "index": 5,
+          "origin_m": [
+            -25.2344970703125,
+            0.0,
+            42.162498474121094
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 8.899999999999991
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          "index": 6,
+          "origin_m": [
+            -25.2344970703125,
+            0.0,
+            42.162498474121094
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 11.950000000000035
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          "index": 7,
+          "origin_m": [
+            -25.2344970703125,
+            0.0,
+            42.162498474121094
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 14.950000000000077
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          "index": 8,
+          "origin_m": [
+            -25.2344970703125,
+            0.0,
+            42.162498474121094
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 16.950000000000106
+        }
+      ],
+      "performance_observed_not_benchmark": {
+        "elapsed_s": 29.998574250000004,
+        "frame_p50_ms": 33,
+        "frame_p95_ms": 33,
+        "frame_p99_ms": 33,
+        "frames": 898,
+        "gameplay_frame_p50_ms": 33,
+        "gameplay_frame_p95_ms": 33,
+        "gameplay_frame_p99_ms": 33,
+        "gameplay_frames": 884,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 82.659169,
+        "hitches_over_100_ms": 0,
+        "loading_frames": 14,
+        "longest_frame_ms": 82.659169,
+        "peak_rss_mib": 476.1015625,
+        "rss_mib": 476.1015625,
+        "startup_longest_frame_ms": 72.868522
+      },
+      "weather_particles": {
+        "cpu_mesh_updates": 2,
+        "cpu_particles": 0,
+        "execution": "gpu",
+        "gpu_backend": "bevy_hanabi 0.19.0",
+        "gpu_capacity": 2048,
+        "gpu_mesh_updates": 0,
+        "gpu_particles": 2048,
+        "gpu_seed_initializations": 1,
+        "gpu_simulation_delta_s": 0.0,
+        "quality_level": 2,
+        "requested": "gpu",
+        "seed_upload_capacity": 4096,
+        "shelter_image_ids": [
+          "AssetId<bevy_image::image::Image>{uuid: 657c23a8-ea46-4ae2-8ab6-4c5197fc8798}",
+          "AssetId<bevy_image::image::Image>{uuid: f6f315f9-73b9-4aa2-8e35-de2770929985}"
+        ],
+        "shelter_refreshes": 62,
+        "snow_fraction": 1.0
+      },
+      "snow_cover": 1.0,
+      "snow_tracks": {
+        "gpu_changes": 2,
+        "gpu_segments": 0.0,
+        "material_uploads": 2,
+        "maximum_depth_m": 0.08,
+        "sectors": 0,
+        "segments": 0
+      },
+      "weather_state": {
+        "advection": {
+          "clock_s": 16.950000000000106,
+          "offset_m": [
+            59.73611085414926,
+            22.1504360407592
+          ],
+          "velocity_mps": [
+            3.186042547225952,
+            0.9541921615600586
+          ]
+        },
+        "atmosphere": {
+          "cloud_cover": 0.8799999952316284,
+          "flake_size": 1.350000023841858,
+          "fog_density": 0.0007999999797903001,
+          "overcast": 0.699999988079071,
+          "phase": "calm",
+          "rain": 0.0,
+          "snow": 1.0,
+          "snow_cover": 1.0,
+          "storm": 0.0,
+          "temperature_c": -1.0,
+          "visibility_m": 500.0,
+          "wind_mps": [
+            3.186042547225952,
+            0.0,
+            0.9541921615600586
+          ]
+        },
+        "elapsed_s": 16.950000000000106,
+        "journey": {
+          "pace": "normal",
+          "winter": false
+        },
+        "live": false,
+        "profile": "heavy_snow",
+        "seed": 42
+      },
+      "render_assets": null,
+      "system_stages": {
+        "camera_collision": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 27,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 1425
+        },
+        "effect_obstacles": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 50,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 12415
+        },
+        "flexible_connections": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 31,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 3100
+        },
+        "horizon": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 71,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 2127
+        },
+        "jacobs_bogie": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 56,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 2003
+        },
+        "level_crossing_register": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 0,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 0
+        },
+        "live_drive": {
+          "calls": 1779,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 196,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 20224
+        },
+        "mirrors": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 14,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 3680
+        },
+        "platform_people": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 15,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 3860
+        },
+        "road_cars": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 2,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 900
+        },
+        "snow_materials": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 32,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 3760
+        },
+        "snow_roof_markers": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 1,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 1
+        },
+        "snow_tracks": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 14,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4453
+        },
+        "streaming_forecast.update": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 20,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 466
+        },
+        "terrain_spawn.terrain_tile_bundle_materialize_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 3,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 9
+        },
+        "terrain_spawn.terrain_tile_spawn_stream_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 5,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 58
+        },
+        "terrain_spawn.terrain_tile_stream_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 249,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 23580
+        },
+        "terrain_spawn.terrain_tile_unload_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 29,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 4492
+        },
+        "wet_surfaces": {
+          "calls": 898,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 33,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 3507
+        },
+        "world.progressive_world_spawn_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 372,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 873
+        },
+        "world.update_world_scenery_lod": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 52,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 7251
+        },
+        "world.world_stream_scenery_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 256,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 263
+        },
+        "world.world_tile_bundle_materialize_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 2,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 5
+        },
+        "world.world_tile_stream_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 971,
+          "p50_ms": 0.6,
+          "p99_ms": 0.8,
+          "total_us": 506244
+        },
+        "world.world_tile_unload_system": {
+          "calls": 897,
+          "histogram_ceiling_ms": 204.8,
+          "histogram_width_ms": 0.1,
+          "maximum_us": 40,
+          "p50_ms": 0.1,
+          "p99_ms": 0.1,
+          "total_us": 3983
+        }
+      }
+    }
+  },
+  "driver_transfer": {
+    "gpu": {
+      "scope": "Hardware render verifies the actual3car ECS roots after production SavedGame reload. Pause panel covers the train in this PNG; it does not prove unobscured visual geometry.",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "source_report": {
+        "private_name": "control-gpu37/report.json",
+        "sha256": "e2c2668b28aae4a3c02957eee17291dcf82e58a1782284993b9d04e0354b4aff",
+        "bytes": 58826
+      },
+      "raw_stream": {
+        "private_name": "control-gpu37/control.stream.json",
+        "sha256": "b2495c8ad55b7f1095ceefb19184c53034e0c44a846a40c1eeeedcbe7c80641d",
+        "bytes": 53327
+      },
+      "log": {
+        "private_name": "control-gpu37/control.log",
+        "sha256": "d36ef68112aa7d661772035553a651f643e4d91dda5ddd2930a8efe9f1efc042",
+        "bytes": 47200
+      },
+      "capture": {
+        "private_name": "control-gpu37/control.png",
+        "sha256": "a3fe061dd45dde944a5ee73af18d4ffa0e62d725e45b118a1e316a8a3d28b093",
+        "bytes": 103450
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "native_signal_errors": {},
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 42.0,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [
+          7540.34716796875,
+          11.906937599182129,
+          -49.678619384765625
+        ],
+        "rotation_xyzw": [
+          -0.09722062200307846,
+          0.7103374600410461,
+          0.10010210424661636,
+          0.6898901462554932
+        ],
+        "target_world": [
+          7500.0,
+          0.30000004172325134,
+          -48.5
+        ],
+        "yaw_rad": 1.600000023841858
+      },
+      "floating_origin_shift": [
+        7340.0,
+        0.0,
+        -20.349998474121094
+      ],
+      "equipment_actions": [
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          "index": 0,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 0.9500000000000003
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [],
+          "index": 1,
+          "origin_m": [
+            7340.0,
+            0.0,
+            -20.349998474121094
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 0.9000000000000002
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [],
+          "index": 2,
+          "origin_m": [
+            7340.0,
+            0.0,
+            -20.349998474121094
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 0.9000000000000002
+        }
+      ],
+      "performance_observed_not_benchmark": {
+        "elapsed_s": 48.60281018800002,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 25,
+        "frames": 1933,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 25,
+        "gameplay_frames": 1926,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 25.562356,
+        "hitches_over_100_ms": 0,
+        "loading_frames": 7,
+        "longest_frame_ms": 25.562356,
+        "peak_rss_mib": 439.328125,
+        "rss_mib": 439.328125,
+        "startup_longest_frame_ms": 25.24363
+      },
+      "formation_validation": {
+        "cars": 3,
+        "maximum_spacing_error_m": 0.9999990463256836,
+        "tolerance_m": 2.0,
+        "scope": "car centres versus path offsets; includes curve chord shortening"
+      },
+      "train_formation": [
+        {
+          "centre_spacing_m": null,
+          "index": 0,
+          "offset_m": -10.0,
+          "path_spacing_m": null,
+          "position_render_m": [
+            0.0,
+            0.30000004172325134,
+            10.499999046325684
+          ],
+          "rotation_xyzw": [
+            0.0,
+            5.960465188081798e-08,
+            0.0,
+            1.0
+          ],
+          "supports_m": [
+            6.0,
+            -6.0
+          ]
+        },
+        {
+          "centre_spacing_m": 21.0,
+          "index": 1,
+          "offset_m": -30.0,
+          "path_spacing_m": 20.0,
+          "position_render_m": [
+            1.1368683772161603e-13,
+            0.30000004172325134,
+            31.499998092651367
+          ],
+          "rotation_xyzw": [
+            0.0,
+            5.960465188081798e-08,
+            0.0,
+            1.0
+          ],
+          "supports_m": [
+            6.0,
+            -6.0
+          ]
+        },
+        {
+          "centre_spacing_m": 20.999998092651367,
+          "index": 2,
+          "offset_m": -50.0,
+          "path_spacing_m": 20.0,
+          "position_render_m": [
+            2.2737367544323206e-13,
+            0.30000004172325134,
+            52.499996185302734
+          ],
+          "rotation_xyzw": [
+            0.0,
+            5.960465188081798e-08,
+            0.0,
+            1.0
+          ],
+          "supports_m": [
+            6.0,
+            -6.0
+          ]
+        }
+      ],
+      "traffic_operations": {
+        "cars": 3,
+        "control_history": [
+          "other"
+        ],
+        "coupled": 3,
+        "coupling_receipts": 0,
+        "other_services": [
+          {
+            "cars": 2,
+            "departed": true,
+            "head_m": 80.0,
+            "id": "Jugador",
+            "speed_mps": 0.0
+          }
+        ],
+        "passing": null,
+        "player_service": "other",
+        "yard_deliveries": []
+      },
+      "pause_panel_visible": true,
+      "scene_cleanup": {
+        "cycles": 2,
+        "retired_assets": 95,
+        "retired_entities": 155,
+        "scene_elapsed_s": 48.603217027
+      }
+    },
+    "software_ui": {
+      "scope": "Independent functional UI run on Xvfb/lavapipe; actual Continue click resumes the restored service and shows all3car roots. No hardware or frame-rate claim.",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "Cpu",
+        "hardware": false,
+        "name": "llvmpipe (LLVM 21.1.8, 256 bits)"
+      },
+      "source_report": {
+        "private_name": "control-visible37-software4/report.json",
+        "sha256": "77ed8923d4b9e1526fbd942846a95c0849330182b3f4bb683478b7ee141dbe46",
+        "bytes": 149806
+      },
+      "raw_stream": {
+        "private_name": "control-visible37-software4/control.stream.json",
+        "sha256": "c256782344bb0660950584b8be258f747335c08a88f95e4071851fedb934bf2a",
+        "bytes": 138609
+      },
+      "log": {
+        "private_name": "control-visible37-software4/control.log",
+        "sha256": "4b209236e66cb2f722b0f8142e7d0046d661bff8361ad26ae78ee6ff566d968a",
+        "bytes": 105749
+      },
+      "capture": {
+        "private_name": "control-visible37-software4/control.png",
+        "sha256": "6e6a085b299627a93bfdeb923d00aa161a47023b1b192151d1f04cf610c901c7",
+        "bytes": 101691,
+        "published_path": "docs/validation/images/fifth40-phase37/control-visible37-software4-control.png"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "native_signal_errors": {},
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 110.0,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.2800000011920929,
+        "position_world": [
+          7605.6708984375,
+          30.699121475219727,
+          -51.58686065673828
+        ],
+        "rotation_xyzw": [
+          -0.09722062945365906,
+          0.7103374600410461,
+          0.10010211169719696,
+          0.6898901462554932
+        ],
+        "target_world": [
+          7500.0,
+          0.30000004172325134,
+          -48.5
+        ],
+        "yaw_rad": 1.600000023841858
+      },
+      "floating_origin_shift": [
+        7340.0,
+        0.0,
+        -20.349998474121094
+      ],
+      "equipment_actions": [
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [
+            [
+              0.0,
+              0.0
+            ]
+          ],
+          "index": 0,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 0.7000000000000001
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [],
+          "index": 1,
+          "origin_m": [
+            7340.0,
+            0.0,
+            -20.349998474121094
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 0.65
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "door_fractions": [],
+          "index": 2,
+          "origin_m": [
+            7340.0,
+            0.0,
+            -20.349998474121094
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "time_s": 0.65
+        }
+      ],
+      "performance_observed_not_benchmark": {
+        "elapsed_s": 47.640012006000056,
+        "frame_p50_ms": 65,
+        "frame_p95_ms": 84,
+        "frame_p99_ms": 95,
+        "frames": 719,
+        "gameplay_frame_p50_ms": 64,
+        "gameplay_frame_p95_ms": 83,
+        "gameplay_frame_p99_ms": 94,
+        "gameplay_frames": 712,
+        "gameplay_hitches_over_100_ms": 2,
+        "gameplay_longest_frame_ms": 170.369846,
+        "hitches_over_100_ms": 3,
+        "loading_frames": 7,
+        "longest_frame_ms": 170.369846,
+        "peak_rss_mib": 885.5625,
+        "rss_mib": 885.28515625,
+        "startup_longest_frame_ms": 150.965066
+      },
+      "formation_validation": {
+        "cars": 3,
+        "maximum_spacing_error_m": 0.9999990463256836,
+        "tolerance_m": 2.0,
+        "scope": "car centres versus path offsets; includes curve chord shortening"
+      },
+      "train_formation": [
+        {
+          "centre_spacing_m": null,
+          "index": 0,
+          "offset_m": -10.0,
+          "path_spacing_m": null,
+          "position_render_m": [
+            0.0,
+            0.30000004172325134,
+            10.499999046325684
+          ],
+          "rotation_xyzw": [
+            0.0,
+            5.960465188081798e-08,
+            0.0,
+            1.0
+          ],
+          "supports_m": [
+            6.0,
+            -6.0
+          ]
+        },
+        {
+          "centre_spacing_m": 21.0,
+          "index": 1,
+          "offset_m": -30.0,
+          "path_spacing_m": 20.0,
+          "position_render_m": [
+            1.1368683772161603e-13,
+            0.30000004172325134,
+            31.499998092651367
+          ],
+          "rotation_xyzw": [
+            0.0,
+            5.960465188081798e-08,
+            0.0,
+            1.0
+          ],
+          "supports_m": [
+            6.0,
+            -6.0
+          ]
+        },
+        {
+          "centre_spacing_m": 20.999998092651367,
+          "index": 2,
+          "offset_m": -50.0,
+          "path_spacing_m": 20.0,
+          "position_render_m": [
+            2.2737367544323206e-13,
+            0.30000004172325134,
+            52.499996185302734
+          ],
+          "rotation_xyzw": [
+            0.0,
+            5.960465188081798e-08,
+            0.0,
+            1.0
+          ],
+          "supports_m": [
+            6.0,
+            -6.0
+          ]
+        }
+      ],
+      "traffic_operations": {
+        "cars": 3,
+        "control_history": [
+          "other"
+        ],
+        "coupled": 3,
+        "coupling_receipts": 0,
+        "other_services": [
+          {
+            "cars": 2,
+            "departed": true,
+            "head_m": 321.4829411968067,
+            "id": "Jugador",
+            "speed_mps": 17.61957871285179
+          }
+        ],
+        "passing": null,
+        "player_service": "other",
+        "yard_deliveries": []
+      },
+      "pause_panel_visible": false,
+      "scene_cleanup": {
+        "cycles": 2,
+        "retired_assets": 94,
+        "retired_entities": 151,
+        "scene_elapsed_s": 47.64064469
+      },
+      "actual_input": [
+        {
+          "pid": 113593,
+          "display": ":2",
+          "window": 4194306,
+          "title": "openrailsrs-viewer3d",
+          "input": "Continue button press/release",
+          "client_offset": [
+            0,
+            0
+          ],
+          "client_target": [
+            640,
+            170
+          ],
+          "root_target": [
+            640,
+            170
+          ],
+          "wall_utc_ns": 1792000986864281049,
+          "actual_x_test": true
+        }
+      ],
+      "actual_input_artifact": {
+        "private_name": "control-visible37-software4/actual-input.json",
+        "sha256": "6a47551ab4aa042ce15152aad0631f4157fbffb2161de5d432af26797194522c",
+        "bytes": 371
+      },
+      "ui_clock_time_s": 43225.1,
+      "wrapper": {
+        "private_name": "control-visible37-software4.py",
+        "sha256": "96c6e88ff35e24e85aa3edc7a7b72f7f0dc8e10db9dbec39ae4ea35139ad3e43",
+        "bytes": 4097
+      }
+    }
+  },
+  "limits": [
+    "Owned synthetic laboratory models and copied private QA settings; these images are not a visual comparison with Open Rails or original rolling stock.",
+    "Explicit2048particle override is identical at both quality levels. These captures validate actual levels0/2 and bounded materials; they do not establish a reduction in particle count or GPU cost.",
+    "Full frame distributions include concurrent QA/build activity; only per-effect recorded counters are used here. Exclusive performance measurement remains pending.",
+    "Hardware Xwayland attempts v1/v2/v3 did not close the pause panel. Their input/PNG/log artifacts remain preserved privately; actual UI acceptance is the independent Xvfb/CPU run.",
+    "Software3 captured/resumed correctly but the hardware-only validator rejected the CPU renderer. Software4 explicitly declared functional CPU scope before launch and exited0.",
+    "Earlier phase36 numeric quality strings were invalid enum values and fell back to high; this receipt uses actual high/low settings. Earlier evidence is retained unchanged."
+  ],
+  "does_not_close_any_issue": true,
+  "does_not_mark_batch_complete": true
+}
