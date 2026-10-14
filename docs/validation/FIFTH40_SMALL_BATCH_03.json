@@ -1,0 +1,313 @@
+{
+  "schema": 1,
+  "created_utc": "2026-10-14T23:20:19.122880+00:00",
+  "scope": "Third sequential batch of five functional issues. All fifteen original criteria are retained. Existing original-content and owned-fixture executions keep their version and limitations; no new full check, build or GPU run was needed.",
+  "runtime_commit": "a1b59e14bea6db433c0746dd0f1f2644dc5bc4dd",
+  "issues": [
+    {
+      "number": 282,
+      "title": "Plan 072: Implementar pasos a nivel operativos",
+      "criteria": [
+        {
+          "text": "Coordinar barreras y señales con aproximación y despeje de la formación completa.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "El caso original de Park Royal conserva las dos barreras y sus enlaces: cerradas con demanda y abiertas después de despejar la cola completa a 380,9085 m; las tres regresiones operativas pasaron en check39."
+        },
+        {
+          "text": "Mantener protección para varios trenes y estado al guardar.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La prueba nominal conserva protección ante varios servicios, un corte estacionado sobre el cruce y aproximación en reversa; guardar/restaurar durante la apertura mantiene el estado."
+        },
+        {
+          "text": "Capturar cabina/exterior o vistas relevantes con condiciones reproducibles; comprobar pausa, cambios de cámara, origen flotante y coste del efecto.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Las capturas preservadas identifican binarios, escena, reloj, origen y ambas barreras; hay 38 autos, 27 puntos de espera resueltos y coste de registro del cruce. Pausa/restauración y reversa están cubiertas por las regresiones actuales."
+        }
+      ],
+      "scope": "Cruces LevelCr con enlaces originales TDB/RDB válidos; Park Royal es un itinerario de QA sobre el grafo del autor, no una actividad original inventada ni certificación de todas las normas regionales.",
+      "evidence": [
+        "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/crossing-closed",
+        "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/crossing-released",
+        "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/level_crossing_register",
+        "test:crossing_observes_approach_full_tail_multiple_services_and_saved_opening",
+        "test:parked_cut_protects_crossing_after_the_locomotive_leaves",
+        "test:reversing_approach_uses_the_leading_rear_and_survives_restore"
+      ]
+    },
+    {
+      "number": 283,
+      "title": "Plan 073: Coordinar tránsito vial y colas en pasos a nivel",
+      "criteria": [
+        {
+          "text": "Detener vehículos ante barreras y liberar colas al despejar.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Las capturas originales registran espera antes de dos barreras protegidas y liberación posterior; la regresión de colas actual confirma separación y avance al despejar."
+        },
+        {
+          "text": "Mantener seguimiento de RDB y evitar cruces con trenes o acumulación ilimitada.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Las cuatro regresiones nominales actuales siguen la curva y altura RDB, separan filas y reservan entradas para evitar solapamientos. Dos regresiones suplementarias prueban publicación/cancelación del trabajador al descargar y reutilización de modelos."
+        },
+        {
+          "text": "Capturar cabina/exterior o vistas relevantes con condiciones reproducibles; comprobar pausa, cambios de cámara, origen flotante y coste del efecto.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Los casos preservados mantienen geometría, origen, cámara y coste observado. La prueba actual road_car_motion conserva posición absoluta tras varios rebases y la de colas comprueba pausa sin avanzar vehículos."
+        }
+      ],
+      "scope": "Tráfico definido por CarSpawner y RDB del autor. No se inventan coches en carreteras sin enlaces o spawners; el número de autos depende de la edición y escena.",
+      "evidence": [
+        "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/crossing-closed",
+        "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/crossing-released",
+        "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/road_cars",
+        "test:queues_follow_the_rdb_curve_wait_before_closed_crossings_then_clear_without_overlap",
+        "test:simultaneous_exit_cars_cannot_claim_the_same_entry",
+        "test:road_car_motion_keeps_world_position_after_multiple_origin_shifts",
+        "test:rdb_spawner_follows_connected_vectors_and_keeps_the_surface_height_datum",
+        "supplementary_test:unloading_and_reset_drop_receivers_before_an_old_worker_can_publish",
+        "supplementary_test:worker_preparation_publishes_original_parts_without_source_reads_and_reuses_models"
+      ]
+    },
+    {
+      "number": 284,
+      "title": "Plan 074: Agregar peatones en estaciones y espacios habilitados",
+      "criteria": [
+        {
+          "text": "Definir recorridos seguros sobre andenes y accesos con densidad acotada.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "El sistema acota la representación a 64 figuras y usa accesos/corredores declarados; la regresión actual rechaza una pared entre extremos que individualmente eran seguros."
+        },
+        {
+          "text": "Sincronizar pasajeros de embarque sin atravesar vías u objetos sólidos.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La regresión de prefijos mixtos y los casos de subida/bajada preservados siguen los conteos reales del servicio y el lado habilitado; el corredor completo debe estar libre de obstáculos."
+        },
+        {
+          "text": "Capturar cabina/exterior o vistas relevantes con condiciones reproducibles; comprobar pausa, cambios de cámara, origen flotante y coste del efecto.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "boarding-restore y boarding-rebase conservan progreso, puertas y cantidades durante pausa/restauración y un cambio de origen de 500 m; alighting registra bajada real. Se conserva el coste observado de platform_people."
+        }
+      ],
+      "scope": "Accesos y corredores seguros declarados; hasta 64 figuras representan grupos. No añade navegación libre de peatones a cualquier estación descargada.",
+      "evidence": [
+        "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/boarding-restore",
+        "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/boarding-rebase",
+        "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/alighting",
+        "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/platform_people",
+        "test:doorway_corridor_rejects_a_wall_between_safe_endpoints",
+        "test:mixed_transfer_prefixes_follow_the_boarding_and_alighting_counts"
+      ]
+    },
+    {
+      "number": 285,
+      "title": "Plan 075: Animar instalaciones industriales y equipos de carga",
+      "criteria": [
+        {
+          "text": "Vincular equipos compatibles a operaciones reales de carga.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La animación del Pickup usa fotogramas originales y el estado de una operación real de abastecimiento. Cuatro regresiones físicas actuales validan combustible/agua, suministro finito, condiciones de toma y cancelación; otra comprueba los fotogramas."
+        },
+        {
+          "text": "Conservar estados y límites del modelo con pausa y guardado.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La captura preservada conserva apertura del 25 % durante pausa/restauración. Las pruebas físicas PASS comprueban cantidad transferida, consumo previo, guardado, independencia del paso y detención si se mueve el tren."
+        },
+        {
+          "text": "Capturar cabina/exterior o vistas relevantes con condiciones reproducibles; comprobar pausa, cambios de cámara, origen flotante y coste del efecto.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Se conservan captura, acciones de equipo y perfil del sistema con su identidad original. La imagen refill-restore muestra apertura y cero transferencia: la entrega efectiva se acredita por las pruebas físicas, no por esa imagen."
+        }
+      ],
+      "scope": "Pickup e IntakePoint compatibles y operación de abastecimiento modelada. La captura de apertura no prueba transferencia; no acredita grúas o terminales arbitrarias.",
+      "evidence": [
+        "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/refill-restore",
+        "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/world.progressive_world_spawn_system",
+        "test:finite_diesel_supply_waits_for_connection_and_preserves_consumption_and_save",
+        "test:water_fills_only_tender_without_repairing_boiler_and_cancel_does_not_transfer",
+        "test:filling_is_partition_independent_and_stops_if_train_moves",
+        "test:rejects_bad_profile_distance_missing_intake_and_full_tank_without_mutation",
+        "test:pickup_uses_original_animation_frames_and_zero_speed_stays_instantaneous"
+      ]
+    },
+    {
+      "number": 296,
+      "title": "Plan 086: Dar espesor visual a nieve acumulada",
+      "criteria": [
+        {
+          "text": "Aplicar espesor irregular sólo en superficies superiores apropiadas.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Los shaders conservados desplazan sólo superficies superiores compatibles con variación irregular: hasta 8 cm en terreno y 5 cm en superficies marcadas; roofs-snow y snow-curve conservan el resultado original."
+        },
+        {
+          "text": "Conservar fachadas, cristales y geometría de vía utilizable con límites de calidad.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Las fachadas y cristales conservan materiales del autor y la vía sigue utilizable. La réplica37 usa calidades efectivas high/low (niveles 0/2), el mismo material y tres imágenes públicas con SHA verificado."
+        },
+        {
+          "text": "Capturar cabina/exterior o vistas relevantes con condiciones reproducibles; comprobar pausa, cambios de cámara, origen flotante y coste del efecto.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La secuencia gráfica37 aporta cabina/exterior, pausa/restauración, cambio de cámara y rebase real de 500 m con costes por sistema. Se mantiene su viewer 35f4e5ce y la limitación de que el override idéntico de 2048 partículas no mide reducción de coste entre calidades."
+        }
+      ],
+      "scope": "Extensión visual propia con normales y superficies compatibles; no sustituye fachadas por texturas blancas. Las imágenes de laboratorio no prueban igualdad con Open Rails ni un ahorro de FPS.",
+      "evidence": [
+        "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/roofs-snow",
+        "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json#/cases/snow-curve",
+        "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/snow_roof_markers",
+        "docs/validation/FIFTH40_PHASE37_SNOW_AND_DRIVER_TRANSFER.json#/snow/snow-driver",
+        "docs/validation/FIFTH40_PHASE37_SNOW_AND_DRIVER_TRANSFER.json#/snow/snow-exterior",
+        "docs/validation/FIFTH40_PHASE37_SNOW_AND_DRIVER_TRANSFER.json#/snow/snow-low-quality"
+      ]
+    }
+  ],
+  "current_regression_execution": {
+    "shared_check_and_ci_context": "docs/validation/FIFTH40_SMALL_BATCH_01.json#/current_regression_execution",
+    "named_tests": {
+      "crossing_observes_approach_full_tail_multiple_services_and_saved_opening": {
+        "source": "crates/openrailsrs-sim/tests/world_operations.rs",
+        "result": "passed",
+        "check39_log_line": 1865
+      },
+      "parked_cut_protects_crossing_after_the_locomotive_leaves": {
+        "source": "crates/openrailsrs-sim/tests/world_operations.rs",
+        "result": "passed",
+        "check39_log_line": 1866
+      },
+      "reversing_approach_uses_the_leading_rear_and_survives_restore": {
+        "source": "crates/openrailsrs-sim/tests/world_operations.rs",
+        "result": "passed",
+        "check39_log_line": 1868
+      },
+      "queues_follow_the_rdb_curve_wait_before_closed_crossings_then_clear_without_overlap": {
+        "source": "crates/openrailsrs-viewer3d/src/road_cars.rs",
+        "result": "passed",
+        "check39_log_line": 2714
+      },
+      "simultaneous_exit_cars_cannot_claim_the_same_entry": {
+        "source": "crates/openrailsrs-viewer3d/src/road_cars.rs",
+        "result": "passed",
+        "check39_log_line": 2718
+      },
+      "road_car_motion_keeps_world_position_after_multiple_origin_shifts": {
+        "source": "crates/openrailsrs-viewer3d/src/road_cars.rs",
+        "result": "passed",
+        "check39_log_line": 2716
+      },
+      "rdb_spawner_follows_connected_vectors_and_keeps_the_surface_height_datum": {
+        "source": "crates/openrailsrs-viewer3d/src/road_cars.rs",
+        "result": "passed",
+        "check39_log_line": 2715
+      },
+      "doorway_corridor_rejects_a_wall_between_safe_endpoints": {
+        "source": "crates/openrailsrs-viewer3d/src/platform_people.rs",
+        "result": "passed",
+        "check39_log_line": 2644
+      },
+      "mixed_transfer_prefixes_follow_the_boarding_and_alighting_counts": {
+        "source": "crates/openrailsrs-viewer3d/src/platform_people.rs",
+        "result": "passed",
+        "check39_log_line": 2643
+      },
+      "finite_diesel_supply_waits_for_connection_and_preserves_consumption_and_save": {
+        "source": "crates/openrailsrs-sim/src/refill.rs",
+        "result": "passed",
+        "check39_log_line": 1375
+      },
+      "water_fills_only_tender_without_repairing_boiler_and_cancel_does_not_transfer": {
+        "source": "crates/openrailsrs-sim/src/refill.rs",
+        "result": "passed",
+        "check39_log_line": 1377
+      },
+      "filling_is_partition_independent_and_stops_if_train_moves": {
+        "source": "crates/openrailsrs-sim/src/refill.rs",
+        "result": "passed",
+        "check39_log_line": 1374
+      },
+      "rejects_bad_profile_distance_missing_intake_and_full_tank_without_mutation": {
+        "source": "crates/openrailsrs-sim/src/refill.rs",
+        "result": "passed",
+        "check39_log_line": 1376
+      },
+      "pickup_uses_original_animation_frames_and_zero_speed_stays_instantaneous": {
+        "source": "crates/openrailsrs-viewer3d/src/world_operations.rs",
+        "result": "passed",
+        "check39_log_line": 3246
+      }
+    },
+    "supplementary_named_tests": {
+      "unloading_and_reset_drop_receivers_before_an_old_worker_can_publish": {
+        "source": "crates/openrailsrs-viewer3d/src/road_cars.rs",
+        "result": "passed",
+        "check39_log_line": 2719
+      },
+      "worker_preparation_publishes_original_parts_without_source_reads_and_reuses_models": {
+        "source": "crates/openrailsrs-viewer3d/src/road_cars.rs",
+        "result": "passed",
+        "check39_log_line": 2720
+      }
+    },
+    "counts": {
+      "required_named_passes": 14,
+      "supplementary_named_passes": 2
+    },
+    "scope": "The two supplementary road-worker tests remain separate from the original ninety required test identities."
+  },
+  "current_sources_matching_preserved_scope": {
+    "crates/openrailsrs-sim/tests/world_operations.rs": "9781ee96cad98b6917b1e886b36dfe5725cf516e403578afcf17bba78e8b48e5",
+    "crates/openrailsrs-viewer3d/src/road_cars.rs": "18100d313efdf31ffe074f6ce0642bed8b38a2d9ecc59a4e966ddb260216240d",
+    "crates/openrailsrs-viewer3d/src/platform_people.rs": "07616c93d6053a1bd2438cdaa6c1f34c7523e941285760c8ac8e896b3c1f31e3",
+    "crates/openrailsrs-sim/src/refill.rs": "bfce8d95a42b2469a20d96d1edd6ed6255ff0331e44707ecc88edb88fca00343",
+    "crates/openrailsrs-viewer3d/src/world_operations.rs": "e7a7c46703d5f2606c84b0736a90719b37830e2d434d9d93dea21df7bbdd6aef",
+    "crates/openrailsrs-bevy-scenery/assets/shaders/snow_vertex.wgsl": "fbb424e07ce9105008ab225e68795b520466c81f41d3ee41e62d54ba8a8c03eb"
+  },
+  "preserved_evidence": [
+    {
+      "path": "docs/validation/FIFTH40_VISUAL_ACCEPTANCE.json",
+      "sha256": "24dce75393004319388c28a2912fd8d62dad4cfc470f63b3864b664f5b6985a6",
+      "json_pointers": [
+        "/cases/crossing-closed",
+        "/cases/crossing-released",
+        "/cases/boarding-restore",
+        "/cases/boarding-rebase",
+        "/cases/alighting",
+        "/cases/refill-restore",
+        "/cases/roofs-snow",
+        "/cases/snow-curve"
+      ]
+    },
+    {
+      "path": "docs/fixtures/compatibility/fifth40-20261013/performance.json",
+      "sha256": "1f0dbaf0b2f85421818053862f0739ed43e1f27e730708892ee3fd368f4c3bc0",
+      "json_pointers": [
+        "/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/level_crossing_register",
+        "/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/road_cars",
+        "/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/platform_people",
+        "/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/world.progressive_world_spawn_system",
+        "/within_batch_repair/versions/candidate/cases/downpour-cold/system_stages/snow_roof_markers"
+      ]
+    },
+    {
+      "path": "docs/validation/FIFTH40_PHASE37_SNOW_AND_DRIVER_TRANSFER.json",
+      "sha256": "a069c53a733fc12f555a3b581c680c070102500379c1b98023fafd41b8c036b1",
+      "json_pointers": [
+        "/snow/snow-driver",
+        "/snow/snow-exterior",
+        "/snow/snow-low-quality"
+      ]
+    }
+  ],
+  "preserved_shader_and_fixture_identity": {
+    "receipt": "docs/validation/FIFTH40_PHASE36_SUBCRITERIA.json#/identity",
+    "shaders_compared": 23,
+    "fixtures_compared": 49,
+    "sha256_changes": []
+  },
+  "manual": "docs/MANUAL_FIFTH40.md",
+  "limits": [
+    "Original Park Royal, laboratory passengers/refilling and snow frames retain their actual original binaries and asset sets. This batch creates no new captures or performance samples.",
+    "Fourteen required and two separately listed supplementary Rust regressions have PASS in check39; matching runtime CI passed. No redundant full check was run.",
+    "The snow37 replica validates actual quality levels 0/2, pause, camera, restore and origin changes. Its identical 2048-particle override does not establish reduced particle count or GPU cost.",
+    "A preserved refill opening image reports zero delivered quantity. Effective transfer, finite reserve and correct restoration are established by the separate physical regression tests.",
+    "No generic third-party crane, pedestrian navigation, nationwide crossing compliance, full OR visual parity, endurance, final Snap or Store acceptance is claimed."
+  ],
+  "preserved_execution_policy": "All preserved pointers retain their original binary, assets, renderer, frame hash and scope in the referenced receipt. Nothing is rerun or relabelled as phase39."
+}
