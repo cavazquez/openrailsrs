@@ -1051,6 +1051,7 @@ dependencies = [
  "thiserror 2.0.21",
  "tracing",
  "wgpu-types",
+ "zstd",
 ]
 
 [[package]]
@@ -3970,6 +3971,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981"
 
 [[package]]
+name = "libmimalloc-sys3"
+version = "0.1.53"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fc56f97339f49291116b9a64a70402a7afcd988fbe966a3e23a92df5bcb0a158"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "libredox"
 version = "0.1.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4119,6 +4129,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "488016bfae457b036d996092f6cb448677611ce4449e970ceaf42695203f218a"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "mimalloc3"
+version = "0.1.56"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "df11d7ceff2baf48d979d6dd1fae23b3ae7243c058fa406a8c83201cacbb2e05"
+dependencies = [
+ "libmimalloc-sys3",
 ]
 
 [[package]]
@@ -5151,6 +5170,8 @@ dependencies = [
  "csv",
  "image",
  "libc",
+ "libmimalloc-sys3",
+ "mimalloc3",
  "openrailsrs-ace",
  "openrailsrs-audio",
  "openrailsrs-bevy-scenery",
@@ -6080,9 +6101,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.45"
+version = "0.23.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d41d731c7d2f962d1ccc364cec258de3c0e93b38c2fb3ba97ac74513048d634"
+checksum = "48e13bd8c0e9365c43cfa5c9e8f9ad49d3c8444926c9aac819e0e4dc503c8fdf"
 dependencies = [
  "log",
  "once_cell",
@@ -6754,7 +6775,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.3",
+ "getrandom 0.3.4",
  "once_cell",
  "rustix 1.1.5",
  "windows-sys 0.61.2",

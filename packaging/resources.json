@@ -44,6 +44,8 @@
   "crates/openrailsrs-viewer3d/assets/fonts/LICENSE.txt",
   "docs/licenses/Bevy-LICENSE-APACHE",
   "docs/licenses/Bevy-LICENSE-MIT",
+  "docs/licenses/mimalloc-LICENSE-MIT",
+  "docs/licenses/mimalloc-rust-LICENSE-MIT",
   "examples/chiltern/README.md",
   "examples/chiltern/consists/birmingham_pullman.con",
   "examples/chiltern/rpm_sweep.sh",

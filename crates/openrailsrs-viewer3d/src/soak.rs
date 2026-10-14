@@ -291,6 +291,8 @@ fn sample(world: &mut World) {
         "font_atlases":world.resource::<bevy::text::FontAtlasSet>().values().flatten().count(),
         "shaders":world.resource::<Assets<bevy::shader::Shader>>().len(),
         "effect_assets":world.resource::<Assets<bevy_hanabi::EffectAsset>>().len(),
+        "train_effects":world.get_resource::<crate::train_effects::TrainEffects>().map(|effects|effects.report()),
+        "weather_particles":world.get_resource::<crate::weather_particles::WeatherParticles>().map(|particles|particles.report()),
         "render_resources":world.resource::<crate::performance::ScenePipelineStatus>().render_resources(),
         "native_audio":world.resource::<crate::native_audio::NativeAudio>().engine.as_ref().map(|e|e.report()),
         "graphics_memory":world.resource::<crate::gpu_memory::GraphicsMemory>().0,

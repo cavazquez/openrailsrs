@@ -60,7 +60,7 @@ bevy = { version = "0.19.1", default-features = false, features = [
     "bevy_ui",
     "default_font",
     "tonemapping_luts",
-    "zstd_rust",
+    "zstd_c",
     "dds",
     "ktx2",
     "basis-universal",

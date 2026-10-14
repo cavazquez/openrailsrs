@@ -64,6 +64,9 @@ image = { workspace = true, features = ["png", "bmp"] }
 
 [target.'cfg(all(target_os = "linux", target_env = "gnu"))'.dependencies]
 libc = "0.2.189"
+mimalloc3 = { version = "=0.1.56", default-features = false, features = ["no_thp"] }
+# Pin the sys package too, preserving the verified Microsoft 3.5.3 native source.
+libmimalloc-sys3 = { version = "=0.1.53", default-features = false }
 
 [dev-dependencies]
 openrailsrs-core = { path = "../openrailsrs-core" }

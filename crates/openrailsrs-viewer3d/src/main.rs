@@ -315,7 +315,20 @@ fn parse_cli_from(args: impl IntoIterator<Item = String>) -> CliArgs {
     }
 }
 
+// Large route imports and SavedGame restores can retain large libc arenas.
+// C dependencies retain their own allocator and matching free.
+#[cfg(all(target_os = "linux", target_env = "gnu"))]
+#[global_allocator]
+static VIEWER_ALLOCATOR: mimalloc3::MiMalloc = mimalloc3::MiMalloc;
+
 fn main() {
+    openrailsrs_viewer3d::performance::register_rust_global_allocator(
+        if cfg!(all(target_os = "linux", target_env = "gnu")) {
+            "mimalloc (Rust allocations only)"
+        } else {
+            "platform system allocator"
+        },
+    );
     init_viewer_log();
     let mut cli = parse_cli();
     // AssetServer resolves relative paths under its asset directory, while CLI

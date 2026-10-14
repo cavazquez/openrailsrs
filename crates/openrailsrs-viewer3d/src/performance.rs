@@ -375,10 +375,18 @@ fn material_owner_counts(
 
 /// Optional 30-second endurance statistics, never a HUD/frame allocator probe.
 /// mallinfo2 accounts for libc allocations, not all process PSS or GPU mappings.
+static RUST_GLOBAL_ALLOCATOR: std::sync::OnceLock<&'static str> = std::sync::OnceLock::new();
+
+/// The executable owns the global allocator; library users may select another.
+pub fn register_rust_global_allocator(name: &'static str) {
+    let _ = RUST_GLOBAL_ALLOCATOR.set(name);
+}
+
 #[derive(Clone, Debug, Serialize)]
 pub struct CpuHeapAllocatorReport {
     pub available: bool,
     pub allocator: &'static str,
+    pub rust_global_allocator: Option<&'static str>,
     pub arena: Option<u64>,
     pub uordblks: Option<u64>,
     pub fordblks: Option<u64>,
@@ -395,11 +403,12 @@ pub fn heap_allocator_report() -> CpuHeapAllocatorReport {
         CpuHeapAllocatorReport {
             available: true,
             allocator: "glibc mallinfo2",
+            rust_global_allocator: RUST_GLOBAL_ALLOCATOR.get().copied(),
             arena: Some(info.arena as u64),
             uordblks: Some(info.uordblks as u64),
             fordblks: Some(info.fordblks as u64),
             hblkhd: Some(info.hblkhd as u64),
-            scope: "Raw bytes: arena includes libc heap capacity; uordblks/fordblks describe arena use/free space, hblkhd separate mmap allocation space. These statistics do not equal total PSS, Rust live-object bytes or all driver allocations. No malloc_trim is called.",
+            scope: "Raw libc bytes: arena includes libc heap capacity; uordblks/fordblks describe arena use/free space, hblkhd separate mmap allocation space. A different Rust global allocator is excluded from these libc counters. They do not equal total PSS, Rust live-object bytes or all driver allocations. No malloc_trim is called.",
         }
     }
     #[cfg(not(all(target_os = "linux", target_env = "gnu")))]
@@ -407,6 +416,7 @@ pub fn heap_allocator_report() -> CpuHeapAllocatorReport {
         CpuHeapAllocatorReport {
             available: false,
             allocator: "unsupported platform",
+            rust_global_allocator: RUST_GLOBAL_ALLOCATOR.get().copied(),
             arena: None,
             uordblks: None,
             fordblks: None,
