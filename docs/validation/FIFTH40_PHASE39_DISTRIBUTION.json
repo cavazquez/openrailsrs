@@ -1,0 +1,1194 @@
+{
+  "schema": 1,
+  "phase": 39,
+  "created_utc": "2026-10-15T00:25:36.675185+00:00",
+  "status": "PACKAGE_FUNCTIONAL_SCOPE_ACCEPTED_BY_ROOT",
+  "intended_public_path": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+  "publication": {
+    "written_to_public_docs": true,
+    "issues_changed": false,
+    "store_upload": false,
+    "scope": "Actual private evidence copied to public validation JSON and seven unchanged existing PNGs after Root visual review. This snapshot does not mark issues closed or authorize another test; future closure and Store actions have separate records."
+  },
+  "issues": [
+    373,
+    412,
+    413
+  ],
+  "artifact": {
+    "name": "openrailsrs",
+    "version": "0.1.0-alpha.6",
+    "base": "core24",
+    "confinement": "strict",
+    "grade": "devel",
+    "local_qa_revision": "x3",
+    "snap_sha256": "efd4726a4ca0dda3a7825a8ce36deffdeebe651ad3bb2f0132543cc2f6ac57e3",
+    "snap_bytes": 165646336,
+    "build": {
+      "source_commit": "a1b59e14bea6db433c0746dd0f1f2644dc5bc4dd",
+      "source_dirty": false,
+      "source_snapshot_sha256": "4e98b3f5de524be0692597367039e7d69fd6ab5127c036bdbb1845254fb0b9a3",
+      "architecture": "x86_64",
+      "build_libc": [
+        "glibc",
+        "2.39"
+      ],
+      "required_glibc": "2.39",
+      "downloaded_content_included": false,
+      "binary_sha256": {
+        "openrailsrs": "468f2686c3391c1ce7d4298aa5eea7e1602ac07fb6837f142985295ae2a70cc3",
+        "openrailsrs-viewer3d": "384141dc7de564d116dd52e8308b30a6339657325f897d4931fa626db10e55fa",
+        "openrailsrs-prepare-content": "e9af934d9fa6f6802c7e334233db854f87d1cd6b3e0515b43668943d292e1aa9"
+      }
+    },
+    "validated_git_export_files": 1705,
+    "compiled_inputs": 751,
+    "snapcraft_returncode": 0,
+    "actual_source_files_verified_after": 1705,
+    "build_receipt": {
+      "path": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/build.json",
+      "sha256": "e3982efe2fce2ca77d0e1d9b662da9a8ddec1f5afefd10243d43cf4e93e36320",
+      "json_pointer": ""
+    },
+    "source_dirty_scope": "Only the validated exact Git export. The host checkout retains its six pre-existing player traces; those working copies were not included.",
+    "downloaded_author_assets_packaged": false
+  },
+  "manifest_and_privacy": {
+    "application_files_verified": 351,
+    "licenses_verified": {
+      "docs/licenses/mimalloc-LICENSE-MIT": "82ade5d7d9b029044b5fbbc326207fc47c2d44ee4dd71e8a559c36d728217de9",
+      "docs/licenses/mimalloc-rust-LICENSE-MIT": "a08554fab028af3af047e8588d32d019662c1b1bf07959a195a2f75fe340726b"
+    },
+    "literal_full_scanner_returncode": 1,
+    "application_findings": 0,
+    "known_platform_matches": 4,
+    "platform_scope": "The unchanged literal scanner returns1 for four exact Ubuntu platform bytes. All four match the preserved authenticated APT-package proof. They are not application files; the351applicationmanifest hashes and application scan pass. This is not a claim of zero full-scanner matches.",
+    "exact_platform_proof_sha256": "927ead754dc2424c0b43751af7078b59fb75b7709bee33be1584e16c1b5c9a2c",
+    "installation_receipt": {
+      "path": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/installation-qa/installation.json",
+      "sha256": "043c267d755f41f8b8175aa2c7fbb9bed680850b3c2b2d988e7e37bd4e74ae4c",
+      "json_pointer": ""
+    }
+  },
+  "upgrade": {
+    "before_revision": "x2",
+    "after_revision": "x3",
+    "previous_source_commit": "656ae35f05000e1b1e13e93d35a4c45615e4ed96",
+    "new_source_commit": "a1b59e14bea6db433c0746dd0f1f2644dc5bc4dd",
+    "five_current_files_equal_after_upgrade_and_all_qa": true,
+    "roles": [
+      "settings_and_controls",
+      "current_content_location",
+      "original_chiltern_manifest",
+      "original_tgv_manifest",
+      "custom_formation"
+    ],
+    "before": {
+      "path": "tmp/fifth40-continued-20261014/distribution-prep/pre-upgrade-source39-five-files.json",
+      "sha256": "3ce094d95fdbde77e62b7d01e294152384c396fb840d4b472191439efc061385",
+      "json_pointer": ""
+    },
+    "after": {
+      "path": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/five-current-files-after-graphical39.json",
+      "sha256": "5b77925af67a1dd1dc2e9b6593403367b496da14d7af978cc704ea2901a64dfd",
+      "json_pointer": ""
+    },
+    "scope": "Current UID2003 baseline was read immediately before the upgrade. Its content-location already reflected an intentional earlier UI change. No reset or silent migration. Fresh-profile folder selection changes only the separate UID2004 profile."
+  },
+  "fresh_profile_and_prepare": {
+    "private_uid": 2004,
+    "settings_or_controls_seeded": false,
+    "snapshot_from_existing_verified_original": true,
+    "new_network_download": false,
+    "copied_file_count": 66678,
+    "copied_bytes": 9211545796,
+    "all_copied_bytes_equal_at_copy": true,
+    "hardlinks_used": false,
+    "original_manifest_sha256": "1bdfc0ec4753572e142aba21783af926db14d854c94622557c015b5736d009b2",
+    "copy_receipt": {
+      "path": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/fresh-profile/receipt.json",
+      "sha256": "6860e7d69b0a87973f73e830d85d5e8960907ce486a5cb38fbd75073b7f7f330",
+      "json_pointer": ""
+    },
+    "initial_state": "Copied derived indexes still pointed at UID2003 and were correctly rejected as outside the new package. Jugar stayed disabled. This initial image is preserved, not accepted as a playable result.",
+    "prepare_action": "Actual new strictSnap39 openrailsrs-prepare-content rebuilt only derived imports/audits for the copied package; author manifest and original assets unchanged.",
+    "prepare_returncode": 0,
+    "prepared_author_routes": 1,
+    "prepared_author_activities": 34,
+    "author_formations_player_ready": 153,
+    "author_formations_total": 188,
+    "prepare_receipt": {
+      "path": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/fresh-profile/prepare-derived39/receipt.json",
+      "sha256": "0fba30f6e8b726163b6b76a456ac366860c5545bf42f3829ecb7c58e64e227d7",
+      "json_pointer": ""
+    },
+    "ready_definition": "No mandatory resource error, at least one vehicle and one powered vehicle. Optional cab is not required for player_ready. This does not certify188formations, their systems, scripts, audio or physics.",
+    "download_and_copy_dates": "The original manifest retains its actual original publication/download dates. New private copy and preparation have their own observed timestamps; neither is a new author upload or download.",
+    "environment_scope": "Fresh UID2004 player profile in the same disposable Ubuntu24QA container used for prior upgrades; not a newly provisioned OS. Actual strictSnapx3 package identity is checked separately; old UID2003 data remains intact."
+  },
+  "actual_play": {
+    "status": "ACCEPTED_FUNCTIONAL_BY_ROOT",
+    "source_commit": "a1b59e14bea6db433c0746dd0f1f2644dc5bc4dd",
+    "snap_sha256": "efd4726a4ca0dda3a7825a8ce36deffdeebe651ad3bb2f0132543cc2f6ac57e3",
+    "command": [
+      "snap",
+      "run",
+      "openrailsrs"
+    ],
+    "same_viewer_pid": 21951,
+    "compositor_pid": 21939,
+    "actual_client_geometry": {
+      "X": 227,
+      "Y": 273,
+      "WIDTH": 1280,
+      "HEIGHT": 720
+    },
+    "qa_compositor_canvas": [
+      1600,
+      1000
+    ],
+    "actual_game_window": [
+      1280,
+      720
+    ],
+    "production_viewing_distance_m": 2000,
+    "same_service": "Chiltern extendido: Northolt Park → Gerrards Cross",
+    "route_stops": 6,
+    "player_cars": 8,
+    "other_services": 2,
+    "other_service_car_counts": [
+      8,
+      8
+    ],
+    "gameplay_started_by": "Actual Home → ReinoUnido → Chiltern → extended service → Jugar mouse sequence, with verified client-relative OS coordinates. No initial-page, consist or player-dir hook, manually authored descriptor, native-root CLI or silent author-activity substitution.",
+    "generated_launch": {
+      "path": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/one-play-transition39-attempt2/actual-play-transition39-attempt2/actual-menu-generated-launch.toml",
+      "sha256": "d319745ddfc2af6ad3b088f50b45ee5afa98b3eed425a374c17349dc9228c016",
+      "json_pointer": ""
+    },
+    "generated_launch_scope": "Prepared graph remains the packaged Chiltern extended graph; log explicitly uses external original Chiltern scenery root. Packaged primary and both AI consist references resolve against the verified original/shared stock.",
+    "production_log_bindings": [
+      "using external route root .../ROUTES/Chiltern (graph from /snap/openrailsrs/x3/share/openrailsrs/examples/chiltern_extended)",
+      "Original RF_Blue_Pullman/Cabview3d/PULLMAN_GR.cvf:13controls,17matrixbindings.",
+      "Original Cabview3d/PULLMAN_GR.s:69parts,69textured,69ORshader,lead-attached."
+    ],
+    "log": {
+      "path": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/one-play-transition39-attempt2/actual-play-transition39-attempt2/viewer.pty.log",
+      "sha256": "f7876318a2eabbabcdaf207dba11b45a6aa815502da330f135016dc599fa6427",
+      "json_pointer": ""
+    },
+    "cab_to_exterior": "Actual private virtual-seat OS XTEST key2 on the same verified PID/window after production bootstrap readiness.",
+    "early_image": {
+      "same_viewer_pid": 21951,
+      "same_window": "4194306",
+      "request_wall_s": 56.33549982099794,
+      "completed_wall_s": 56.34499838699776,
+      "request_age_after_keyup_s": 0.7500698799995007,
+      "completion_age_after_keyup_s": 0.7595684459993208,
+      "raw_xwd_sha256": "cfd4355e7ca326fc79ab25e69e1e87a8cb15df6bda93877f4a09571ada364549"
+    },
+    "final_readiness": {
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      }
+    },
+    "final_cab_view": null,
+    "renderer": {
+      "backend": "Vulkan",
+      "device_type": "DiscreteGpu",
+      "hardware": true,
+      "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+    },
+    "viewer_drm": [
+      {
+        "fd": "8",
+        "device": "/dev/dri/renderD128",
+        "pci_slot": "0000:03:00.0",
+        "pci_id": "1002:7480",
+        "driver": "amdgpu"
+      },
+      {
+        "fd": "9",
+        "device": "/dev/dri/renderD128",
+        "pci_slot": "0000:03:00.0",
+        "pci_id": "1002:7480",
+        "driver": "amdgpu"
+      }
+    ],
+    "compositor_drm": [
+      {
+        "fd": "10",
+        "device": "/dev/dri/renderD128",
+        "pci_slot": "0000:03:00.0",
+        "pci_id": "1002:7480",
+        "driver": "amdgpu"
+      },
+      {
+        "fd": "11",
+        "device": "/dev/dri/renderD128",
+        "pci_slot": "0000:03:00.0",
+        "pci_id": "1002:7480",
+        "driver": "amdgpu"
+      },
+      {
+        "fd": "12",
+        "device": "/dev/dri/renderD128",
+        "pci_slot": "0000:03:00.0",
+        "pci_id": "1002:7480",
+        "driver": "amdgpu"
+      }
+    ],
+    "hardware_scope": "Actual Vulkan AdapterInfo and GLWeston renderer logs identify RX7600; external per-PID DRM descriptors bind both to PCI03:00.0/1002:7480. Environment selection alone is not the evidence.",
+    "graphics_memory_internal": {
+      "active_device_pci": null,
+      "device_total_mib": null,
+      "device_used_mib": null,
+      "devices": [],
+      "peak_process_vram_mib": null,
+      "process_gtt_mib": null,
+      "process_vram_mib": null,
+      "source": null
+    },
+    "graphics_memory_scope": "All internal values are null/devices[] under Snap confinement: unavailable, not zero. No numeric Snap RSS/VRAM claim.",
+    "external_global_rx_peak_mib": 2567.2890625,
+    "external_global_rx_total_mib": 8176.0,
+    "external_memory_scope": "Read-only external globalRX usage includes compositor/user desktop/other allocations; this is not per-Snap VRAM or RSS. Used only for the unchanged90%stop guard.",
+    "exit_code": 0,
+    "elapsed_s": 120.55321922699659,
+    "timing_scope": "Fixed120s capture run, not a startup/FPS benchmark or physical input-latency bound.",
+    "receipt": {
+      "path": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/one-play-transition39-attempt2/actual-play-transition39-attempt2/receipt.json",
+      "sha256": "efe68c78cfccb93ba6d5377b896b90b5e2d0e60656f847e4502d02c157891adc",
+      "json_pointer": ""
+    },
+    "visual_review": {
+      "path": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/one-play-transition39-attempt2/actual-play-transition39-attempt2/visual-review.json",
+      "sha256": "f39912e8920c4f786172de5c425af9785dd99c18497c566a9e1e6d467603faaf",
+      "json_pointer": ""
+    },
+    "root_review": {
+      "path": "tmp/fifth40-continued-20261014/native-snap39-root-review.json",
+      "sha256": "949a6d650aef59ca56c4d32d96ab40f2293c7c9bb0c26d73b043fcb1302f23b5",
+      "json_pointer": ""
+    },
+    "root_acceptance": "Root visually reviewed all four images and explicitly accepted the functional case.",
+    "images": [
+      {
+        "private_source": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/one-play-transition39-attempt2/actual-play-transition39-attempt2/menu-ready-before-play.png",
+        "public_target": "docs/validation/images/fifth40-phase39-snap/menu-ready-before-play.png",
+        "sha256": "aafdc31d505d29a31f9c45df2ade4d8420dde7e2c76b62c496b2009a694cf075",
+        "scope": "Actual source39 single viewer; first three lossless XWD decode, final application capture."
+      },
+      {
+        "private_source": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/one-play-transition39-attempt2/actual-play-transition39-attempt2/cab-before-key2.png",
+        "public_target": "docs/validation/images/fifth40-phase39-snap/cab-before-key2.png",
+        "sha256": "bdcd0efa6c73c2d405882e45be1ec3d15460729091910b518317d0260d4f6e72",
+        "scope": "Actual source39 single viewer; first three lossless XWD decode, final application capture."
+      },
+      {
+        "private_source": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/one-play-transition39-attempt2/actual-play-transition39-attempt2/exterior-early-after-key2.png",
+        "public_target": "docs/validation/images/fifth40-phase39-snap/exterior-early-after-key2.png",
+        "sha256": "7e7815294fae8653815c764a157c97e8aad7b95d8a6fa1af40ce9028395dad64",
+        "scope": "Actual source39 single viewer; first three lossless XWD decode, final application capture."
+      },
+      {
+        "private_source": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/one-play-transition39-attempt2/actual-play-transition39-attempt2/exterior-final.png",
+        "public_target": "docs/validation/images/fifth40-phase39-snap/exterior-final.png",
+        "sha256": "7bdc8e4ff257528a17e4543a0be9071eceaba26840c7722ca55aed4425c8138c",
+        "scope": "Actual source39 single viewer; first three lossless XWD decode, final application capture."
+      }
+    ],
+    "limits": [
+      "Default chase view shows train roof and nearby stock; it does not show all eight car bodies at once.",
+      "The cyan sphere is the intentional station stop marker from gameplay.rs, not a missing texture; images were not edited.",
+      "No full journey, Open Rails physics/pixel parity, native Wayland input parity, sound-listening or long-run memory certification."
+    ]
+  },
+  "storage": {
+    "status": "CPU_UI_FOLDER_SELECTION_AND_RESTART_VERIFIED",
+    "current_preferences": [
+      {
+        "kind": "fresh_snap",
+        "effective_uid": 2004,
+        "preference_file": "/home/openrailsrs-clean39/snap/openrailsrs/common/openrailsrs/content-location.json",
+        "preference_uid": 2004,
+        "sha256": "a4b79b063c0509e1e1e1c7624b1876c6214ecd91ad167a8877fa169efdbd8d55",
+        "preference": {
+          "current": "/home/openrailsrs-clean39/qa39/snap-disk/openrailsrs-content",
+          "previous": [
+            "/home/openrailsrs-clean39/snap/openrailsrs/common/openrailsrs/official-content"
+          ]
+        },
+        "current_exists": true,
+        "user_write_probe_removed": true,
+        "scope": "Actual user read/write probe after separate actual UI selection/restart. FreshSnap probe runs under strictSnap shell; portable probe is ordinary user, noSnap environment."
+      },
+      {
+        "kind": "moved_portable",
+        "effective_uid": 2003,
+        "preference_file": "/home/openrailsrs-content-test/.local/share/openrailsrs/content-location.json",
+        "preference_uid": 2003,
+        "sha256": "23620550c5cea89920c714cd786255a79a8c8426d37e08561e3d89ff03de9cd1",
+        "preference": {
+          "current": "/home/openrailsrs-content-test/qa39/portable-disk/openrailsrs-content",
+          "previous": [
+            "/home/openrailsrs-content-test/.local/share/openrailsrs/official-content",
+            "/home/openrailsrs-content-test/qa38/portable-disk/openrailsrs-content",
+            "/home/openrailsrs-content-test/qa-disk/openrailsrs-content",
+            "/home/openrailsrs-content-test/snap/openrailsrs/common/openrailsrs/official-content",
+            "/home/openrailsrs-content-test/content-disk/openrailsrs-content"
+          ]
+        },
+        "current_exists": true,
+        "user_write_probe_removed": true,
+        "scope": "Actual user read/write probe after separate actual UI selection/restart. FreshSnap probe runs under strictSnap shell; portable probe is ordinary user, noSnap environment."
+      }
+    ],
+    "five_old_common_files_unchanged": true,
+    "receipt": {
+      "path": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/cpu-storage39.json",
+      "sha256": "ec9827c4fead4fab647721053b8fc90f9811a1038bd3a9d31ef59032d644b89a",
+      "json_pointer": ""
+    },
+    "actual_cpu_cases": [
+      {
+        "case": "snap_select",
+        "receipt": {
+          "path": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/fresh-profile/menu-captures/fresh-folder-choose39-attempt2/fresh-folder-choose39-attempt2-receipt.json",
+          "sha256": "cbe04d22f9f091e35df64f4096ab4fe1b302069195945b582f55551ff3e27206",
+          "json_pointer": ""
+        }
+      },
+      {
+        "case": "snap_restart",
+        "receipt": {
+          "path": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/fresh-profile/menu-captures/fresh-folder-restart39-after-attempt2/fresh-folder-restart39-after-attempt2-receipt.json",
+          "sha256": "141256753ca19bd5a239147356075a6b143c0bb2dc471f09aeccbacf2746e19f",
+          "json_pointer": ""
+        }
+      },
+      {
+        "case": "portable_select",
+        "receipt": {
+          "path": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/portable/menu-captures/portable-menu/portable-folder-choose39-receipt.json",
+          "sha256": "7163b2d52e1e8f938fb3b5c441807250b63b1d8a596d790872c93483a5469520",
+          "json_pointer": ""
+        }
+      },
+      {
+        "case": "portable_restart",
+        "receipt": {
+          "path": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/portable/menu-captures/portable-menu/portable-folder-restart39-receipt.json",
+          "sha256": "e188b7d7de1e380fb3357ec04801bbd69450819d108931eaf90dc84f22009eb1",
+          "json_pointer": ""
+        }
+      }
+    ],
+    "scope": "Actual CPU/Xvfb UI selection followed by restart. Fresh Snap user probe runs under strictSnap shell; moved portable uses normal private XDG data with Snap environment removed. Existing libraries remain visible. Lower backup/version rows require scrolling; no claim about every scroll state.",
+    "images": [
+      {
+        "private_source": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/fresh-profile/menu-captures/fresh-folder-restart39-after-attempt2/fresh-folder-restart39-after-attempt2.png",
+        "public_target": "docs/validation/images/fifth40-phase39-snap/snap-folder-restart39.png",
+        "sha256": "461ce8c4ebeb44b7a1f6f7c294ef270ebf51c79eae7293baf81916be9d23c0f2",
+        "scope": "Actual CPU/Xvfb image; no GPU/FPS claim."
+      },
+      {
+        "private_source": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/portable/menu-captures/portable-menu/portable-folder-restart39.png",
+        "public_target": "docs/validation/images/fifth40-phase39-snap/portable-folder-restart39.png",
+        "sha256": "2682bac686a2d5f02ffdd77f12dd11c63887c31b98fd8c82c15a2b50957cb83b",
+        "scope": "Actual CPU/Xvfb image; no GPU/FPS claim."
+      }
+    ]
+  },
+  "portable": {
+    "archive_sha256": "41d311c7ed6a383b6db076910082a9a9613f78be26dd9a6ebbade0a6100ecb25",
+    "archive_bytes": 74720677,
+    "manifest_files_verified": 351,
+    "build_and_three_bins_equal_snap": true,
+    "path_has_spaces": true,
+    "outside_git_checkout": true,
+    "toolchain_or_git_required": false,
+    "snap_environment_removed": true,
+    "player_data": "Normal private ~/.local/share/openrailsrs; earlier explicit QA seeds/shared library do not imply automatic migration.",
+    "assembly": {
+      "path": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/portable/assembly.json",
+      "sha256": "dc835a49e4197dc1076e7bb400e98741f3d7bf7be8ec4a2132ac58732e75fd38",
+      "json_pointer": ""
+    },
+    "moved_runtime": {
+      "path": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/portable/portable-probe/receipt.json",
+      "sha256": "aca64aed95a140fd62d2d2c7ea71bd4f6a33851ae9ea813a4469ffdfe7f577a2",
+      "json_pointer": ""
+    },
+    "commands": [
+      {
+        "command": "Jugar.sh --check",
+        "returncode": 0
+      },
+      {
+        "command": "bin/openrailsrs content --list",
+        "returncode": 0
+      }
+    ],
+    "scope": "CLI/self-check and folder UI/restart on the actual new moved package. No portable hardware-gameplay/FPS or allLinuxdistribution certification."
+  },
+  "failed_attempts_preserved": [
+    {
+      "case": "fresh_snap_folder_input1",
+      "status": "REJECTED_INPUT_TRANSPORT",
+      "evidence": {
+        "path": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/fresh-profile/folder-first-attempt-diagnosis.json",
+        "sha256": "9ebe942cb262a6f315e0ef65ad3a23fab86055e94bea6de3279de32218be4868",
+        "json_pointer": ""
+      },
+      "reason": "SyntheticCtrl+A inserted a literal a into an empty field; nonexistent a/home path was correctly rejected and no preference changed. New CPU selection types the exact path without that chord."
+    },
+    {
+      "case": "gpu_actual_play1",
+      "status": "REJECTED_NO_GAMEPLAY",
+      "evidence": {
+        "path": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/one-play-transition39/static-input-diagnosis.json",
+        "sha256": "c261f076d14e520789959a5685844bf297c089184960bc97f9e2a9127594ceaf",
+        "json_pointer": ""
+      },
+      "receipt": {
+        "path": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/one-play-transition39/actual-play-transition39/receipt.json",
+        "sha256": "657ad4edd4b452d80b24d6d74203c51ae649473ddbdff074b389d1ee6456c062",
+        "json_pointer": ""
+      },
+      "reason": "Global coordinates ignored Weston window origin38,91; wrong country/test service, clipped1242x629pixels, no launch file or route load. Bootstrap110s guard failed. Retry changed only external canvas/coordinate transport; game1280x720/default2km/120s/quality/resources unchanged."
+    }
+  ],
+  "historical_reuse": {
+    "scope": "Historical records keep exact source/date/binary identities. They are not new39downloads, negative UI cases or system-parity claims. No repeat multiGB download was performed.",
+    "functional_identity_proof": {
+      "path": "tmp/fifth40-continued-20261014/distribution-prep/candidate39-preparation/minimum-373-412-413/unchanged-functional-sources-and-existing-tests.json",
+      "sha256": "ca5fe2783ca9a13f1e9a1e4c075bcdf2e15d64146c778c5b0a2dace3ee7be52f",
+      "json_pointer": ""
+    },
+    "unchanged_38_to_39_files": [
+      {
+        "path": "crates/openrailsrs-audio/src/native.rs",
+        "sha256": "9e70e1534d4b5b2cd97c46b3acd812fb08ca94f13a892573cd8c60260593343f"
+      },
+      {
+        "path": "crates/openrailsrs-train/src/consist_audit.rs",
+        "sha256": "2effddf56cf6eee77edf87553427abe3c66efcd1de23e90d7936c7411dce6262"
+      },
+      {
+        "path": "crates/openrailsrs-viewer3d/src/camera.rs",
+        "sha256": "52ee791f3a9a824570a46bf2c6a8b2a39695afde02761f26b97ce98fee29bae1"
+      },
+      {
+        "path": "crates/openrailsrs-viewer3d/src/content_management.rs",
+        "sha256": "138bc32a22f13208e7027d964cc26bd4ca6193e3ce00aab867ab2e393428724f"
+      },
+      {
+        "path": "crates/openrailsrs-viewer3d/src/content_validation.rs",
+        "sha256": "0b16315809b26a1396d0e05e8223caaf4a96f9c8739daab3ded1ed254d0e349e"
+      },
+      {
+        "path": "crates/openrailsrs-viewer3d/src/official_content.rs",
+        "sha256": "0f27fed2200e041191f16eef13bc88538fee374af46ff6fd54566071950dc63d"
+      },
+      {
+        "path": "crates/openrailsrs-viewer3d/src/player_launch.rs",
+        "sha256": "9cc87ce769b95ce56e4851d386b79c41b3aa554e57a1729a04722451273508f8"
+      },
+      {
+        "path": "crates/openrailsrs-viewer3d/src/player_settings.rs",
+        "sha256": "7c54bef48121ec08e5e9e49ac7076510cce0eef55eaeb0236f36fa9c700a751e"
+      },
+      {
+        "path": "crates/openrailsrs-viewer3d/src/player_ui.rs",
+        "sha256": "79516299357befbf93de4b90ec5c4338fb89b759100fd5c90a84fe4661600055"
+      },
+      {
+        "path": "docs/OFFICIAL_CONTENT.md",
+        "sha256": "858b46f6b2442b08f6666f8cd997adffbfeee677e540dfc0e07a73cbf634ed25"
+      },
+      {
+        "path": "scripts/download_official_content.py",
+        "sha256": "2cb134348d64f4bcfade8f28dad5aaaffa3b9e6e851d5edbc1b2273a0ef55408"
+      },
+      {
+        "path": "scripts/package_linux.py",
+        "sha256": "a68227d11c46afb1eb5828c39d9a791f15685a42b4f19d38988592a3cac44c29"
+      },
+      {
+        "path": "scripts/test_content_url.py",
+        "sha256": "0676dba7716f06e6e27e1cd6110b9c09a9512ef00cdb3751047c63dc0e0b95df"
+      },
+      {
+        "path": "scripts/test_official_content.py",
+        "sha256": "ed6a04410e1a94626a68ad87516b5cd5856f62f7bc12e304b1801780bc70c998"
+      },
+      {
+        "path": "scripts/test_packaging.py",
+        "sha256": "46ebd688c5326871a067ddeb4b362a36a8806140db64858e3058ffbc8368faeb"
+      },
+      {
+        "path": "snap/snapcraft.yaml",
+        "sha256": "7e034ffdcdc9a21331553c295f61a0566ef8dff4d753647cbff8c6b9789e71f7"
+      }
+    ],
+    "public_original_url_and_install_cases": {
+      "path": "docs/fixtures/compatibility/content-runtime-20261013/receipt.json",
+      "sha256": "f4d5cb489cc0662a107c42b285bc4e017f7a53c5b8d23265324e9836eae26302",
+      "json_pointer": ""
+    },
+    "public_runtime_source": {
+      "source_commit": "d9dba7af1f531183de594af3201373d3b1b20590",
+      "source_dirty": true,
+      "source_snapshot_sha256": "70a4f47e091c8a2d70a0ee56d2bbd2d8b3de722934798b436c2ad01da6cd323f",
+      "architecture": "x86_64",
+      "build_libc": [
+        "glibc",
+        "2.39"
+      ],
+      "required_glibc": "2.39",
+      "downloaded_content_included": false,
+      "binary_sha256": {
+        "openrailsrs": "501df6c4c74ec79e3a6b809f92a2931f27f8d4b51d78e339102d956ae9c189a4",
+        "openrailsrs-viewer3d": "e8ad11edd9b7f6669501d98b9631b84c714842a517a021ecb0e53fb5a90436c9",
+        "openrailsrs-prepare-content": "961edf1083f74ff45b841deb12fb0c4886c97a22869f43836ecb650a7da31bf9"
+      }
+    },
+    "public_checks": {
+      "snap_folder_paste_browse_select": true,
+      "snap_folder_readonly_preserves_previous_choice": true,
+      "snap_restart_preserves_folder": true,
+      "snap_updates_preserve_manifest_and_library": true,
+      "snap_zip_url_reuses_original_demo": true,
+      "snap_original_repository_url_paste_preview_confirm_install_audit": true,
+      "snap_train_only_original_consists_visible_and_selectable": true,
+      "snap_partial_train_update_not_marked_playable": true,
+      "snap_original_route_readonly_prepare": true,
+      "portable_moved_binary_check": true,
+      "portable_folder_gui_select_and_preserve_old": true,
+      "portable_original_repository_download_prepare_and_reuse": true,
+      "portable_restart_train_selector": true,
+      "invalid_local_urls_pages_and_unconfirmed_sources_rejected": true,
+      "low_disk_real_download_aborted_without_partial_registration": true,
+      "snap_completed_gameplay_cab_and_exterior": false
+    },
+    "packages": [
+      {
+        "package": "Demo Model 1",
+        "advertised_url": "https://static.openrails.org/files/DemoModel1.zip",
+        "download_url": "https://static.openrails.org/files/DemoModel1.zip",
+        "revision": null,
+        "download_sha256": "5e4a64e1cd44e23ee7833230348b6b76c43fc555060b152f6c6547e832a5189b",
+        "download_bytes": 272422379,
+        "install_bytes": 329994809,
+        "source_date": "2025-07-25T18:22:57+00:00",
+        "source_date_kind": "last-modified",
+        "route_count": 1,
+        "stock_file_count": 0,
+        "audited_formations": 0
+      },
+      {
+        "package": "Chiltern v4",
+        "advertised_url": "https://github.com/DocMartin7644/Chiltern-Route-v4.git",
+        "download_url": "https://codeload.github.com/DocMartin7644/Chiltern-Route-v4/zip/8236df20ed9f596b8cf15720c43bfbdd0c43125d",
+        "revision": {
+          "repository": "DocMartin7644/Chiltern-Route-v4",
+          "commit": "8236df20ed9f596b8cf15720c43bfbdd0c43125d",
+          "published_at": "2026-09-09T15:48:33Z",
+          "commit_date": "2026-09-09T13:14:08Z"
+        },
+        "download_sha256": "2fc79dd1c7f0eebc28ab008d6422c127dada14f39902c5de179b459977ec78a7",
+        "download_bytes": 7846564602,
+        "install_bytes": 9134514214,
+        "source_date": "2026-09-09T15:48:33Z",
+        "source_date_kind": "repository",
+        "route_count": 1,
+        "stock_file_count": 0,
+        "audited_formations": 188
+      },
+      {
+        "package": "Jeanprisca/MAJ",
+        "advertised_url": "https://github.com/Jeanprisca/MAJ.git",
+        "original_url": "https://github.com/Jeanprisca/MAJ",
+        "download_url": "https://codeload.github.com/Jeanprisca/MAJ/zip/6d02a4009f8397bbe997e541686e807bbdeeeff4",
+        "final_download_url": "https://codeload.github.com/Jeanprisca/MAJ/zip/6d02a4009f8397bbe997e541686e807bbdeeeff4",
+        "revision": {
+          "repository": "Jeanprisca/MAJ",
+          "commit": "6d02a4009f8397bbe997e541686e807bbdeeeff4",
+          "published_at": "2023-04-28T23:53:16Z",
+          "commit_date": "2023-04-28T23:53:10Z"
+        },
+        "download_sha256": "5f55a26978bb63552581ffdcafa14c767db784957fa4ba191fe161726b8b2364",
+        "download_bytes": 52913183,
+        "install_bytes": 74377484,
+        "source_date": "2023-04-28T23:53:16Z",
+        "source_date_kind": "repository",
+        "origin_verification": "player_confirmed",
+        "route_count": 0,
+        "stock_file_count": 179,
+        "audited_formations": 198
+      }
+    ],
+    "train_only_original": {
+      "path": "docs/fixtures/compatibility/fifth40-20261013/train-only-original.json",
+      "sha256": "7455df24c65ece21c9872fdf61db11570e1ef7c53762f986661cdf8fd4097735",
+      "json_pointer": "/original"
+    },
+    "train_only_scope": "Historical baseTGV author20CON/232stock/0routes and later audits/selections retain their recorded scope; two complete author CONs,0/12 systems and62warnings for selected12-carTGV do not mean all20formations or a French route are validated. EarlierMAJcoexistence remains historical; lost files were not recreated as new persistence proof.",
+    "permissions_and_low_space": [
+      {
+        "path": "docs/validation/FIFTH40_SNAP_PHASE32_CONTENT_FOLDER.json",
+        "sha256": "ab8a2aad5036d2ca38eb14625ea32fbf9716a7a6a46163377c2dff5b0c8fe474",
+        "json_pointer": "/cases/1"
+      },
+      {
+        "path": "docs/validation/FIFTH40_SNAP_PHASE32_CONTENT_FOLDER.json",
+        "sha256": "ab8a2aad5036d2ca38eb14625ea32fbf9716a7a6a46163377c2dff5b0c8fe474",
+        "json_pointer": "/space_evidence_separate"
+      },
+      {
+        "path": "docs/validation/FIFTH40_PORTABLE_PHASE32_CONTENT_FOLDER.json",
+        "sha256": "96fc5714875240264d6ec70598da714d406907d5dfba8d923e3ba1cf2dce9692",
+        "json_pointer": "/cases"
+      }
+    ],
+    "source38_folder_and_network_cases": [
+      {
+        "name": "snap_folder_choose",
+        "status": "PASS_WITH_STATED_SCOPE",
+        "case": "folder-choose-snap38",
+        "receipt": "menu-captures/final-menu/folder-choose-snap38-receipt.json",
+        "receipt_sha256": "1c97a4582a915f5d802ef039e68c56e84ba9e04098d2da8aa156aa7edfe27ea7",
+        "metadata_sha256": "462969e92e656ee0fbeafd64db9c1a11f385c7bc2692f847cb3888e616cc45c4",
+        "png_sha256": "0f58d58598565b5c55068945aa396bc766c10b55e4d8416cd541b3c3e46e8f40",
+        "actual_input_event_count": 7,
+        "visible_and_metadata_checks": [
+          "Descargas nuevas en /home/openrailsrs-content-test/qa38/snap-disk/openrailsrs-content"
+        ]
+      },
+      {
+        "name": "snap_folder_persist_restart",
+        "status": "PASS_WITH_STATED_SCOPE",
+        "case": "folder-restart-snap38",
+        "receipt": "menu-captures/final-menu/folder-restart-snap38-receipt.json",
+        "receipt_sha256": "210d387beabfd122aaf6508dadbb74c2f74cf9f11e50a8e2c71786eb4cbcdf39",
+        "metadata_sha256": "dbcec2a26da04ee8ba35dd327306443aa9becd3d26714402a09a3507fd383817",
+        "png_sha256": "8c4f221536d21327faba1fac469c234e217c3c294af627c355d07760a785ff64",
+        "actual_input_event_count": 2,
+        "visible_and_metadata_checks": [
+          "/home/openrailsrs-content-test/qa38/snap-disk/openrailsrs-content",
+          "SNCF-TGV-Atlantique · origen 2023-04-28",
+          "Chiltern v4 · origen 2026-09-09"
+        ]
+      },
+      {
+        "name": "snap_reject_readonly_snap",
+        "status": "PASS_WITH_STATED_SCOPE",
+        "case": "folder-reject-snap-readonly38-attempt2",
+        "receipt": "menu-captures/final-menu/folder-reject-snap-readonly38-attempt2-receipt.json",
+        "receipt_sha256": "eb38aa063f774bede21d87ef0275410bfba55b5f4533f0935ecaba9aef99becd",
+        "metadata_sha256": "9688ea54e3f6ddc83459713444dda36048f4f5736e6fc7a97e2dc7dc9ed7ca0e",
+        "png_sha256": "60505213a3398943d9d349c7409c96291e9d3a784a6bb530793ee29262c46232",
+        "actual_input_event_count": 7,
+        "visible_and_metadata_checks": [
+          "Elegí una carpeta absoluta escribible fuera de /snap"
+        ]
+      },
+      {
+        "name": "snap_reject_private_permissions",
+        "status": "PASS_WITH_STATED_SCOPE",
+        "case": "folder-reject-private-permissions38",
+        "receipt": "menu-captures/final-menu/folder-reject-private-permissions38-receipt.json",
+        "receipt_sha256": "7eb42537f45d7085871d6c1c2c582440e0cc10c16937ff1044bba2b3150b096e",
+        "metadata_sha256": "8543220c8c02b0504c4246cfd298fe65940bbd24ee376e43f96d512212ad5a89",
+        "png_sha256": "f74441d7b0f91c2f9d8ad37e10aee10f9dab568633690f1fed69f4f9db6a133d",
+        "actual_input_event_count": 7,
+        "visible_and_metadata_checks": [
+          "Sin permiso para usar esta carpeta: Permission denied"
+        ]
+      },
+      {
+        "name": "snap_visible_download_failure",
+        "status": "PASS_WITH_STATED_SCOPE",
+        "case": "download-refused-snap-ui38",
+        "receipt": "menu-captures/final-menu/download-refused-snap-ui38-receipt.json",
+        "receipt_sha256": "4d3218027779ec85b6e70eccd7868a729e789e9f2c9afc8db942deb352eaa7af",
+        "metadata_sha256": "59482a21161e125de52d6e2806f9e479ae3dd35c5975b2ef7d5946138996e61d",
+        "png_sha256": "cb7c20da52cafcc7b3a7f21663f99b0e71ae327445993aced3fdf3b9ac66799e",
+        "actual_input_event_count": 4,
+        "visible_and_metadata_checks": [
+          "Connection refused",
+          "Demo Model 1: Falló · 0.0 MiB"
+        ]
+      },
+      {
+        "name": "portable_home_without_snap_launcher",
+        "status": "PASS_WITH_STATED_SCOPE",
+        "case": "portable-home-real",
+        "receipt": "portable/menu-captures/portable-menu/portable-home-real-receipt.json",
+        "receipt_sha256": "c10404581343049dfed4b329e0d12e70b8376aa103f9507f20410a8e10b93ce2",
+        "metadata_sha256": "88c9bcac66626ae56a6462d6c66820ffa5ef1779cc9faa0881415478a35552cd",
+        "png_sha256": "77ec3e3a2a743ab57bcc9201ca804beb7705fa36357ec5b8e8aeac4a5c9fa40d",
+        "actual_input_event_count": 0,
+        "visible_and_metadata_checks": [
+          "Elegí tu próximo viaje",
+          "Nueva partida",
+          "Biblioteca"
+        ]
+      },
+      {
+        "name": "portable_folder_choose",
+        "status": "PASS_WITH_STATED_SCOPE",
+        "case": "portable-folder-choose38",
+        "receipt": "portable/menu-captures/portable-menu/portable-folder-choose38-receipt.json",
+        "receipt_sha256": "a5cc843d3dc45843d3f7aa3860c79a0beee6d74db2857da38730542b256054a6",
+        "metadata_sha256": "7a9c8ef5f140ffe59cff6756b49a2411abc984c6609cdce262acd5d70ed71e5a",
+        "png_sha256": "251d441efc493e7f45576c95242e273903c12aacde7c43fd91a41708e0485bdd",
+        "actual_input_event_count": 6,
+        "visible_and_metadata_checks": [
+          "Descargas nuevas en /home/openrailsrs-content-test/qa38/portable-disk/openrailsrs-content"
+        ]
+      },
+      {
+        "name": "portable_folder_persist_restart",
+        "status": "PASS_WITH_STATED_SCOPE",
+        "case": "portable-folder-restart38",
+        "receipt": "portable/menu-captures/portable-menu/portable-folder-restart38-receipt.json",
+        "receipt_sha256": "cc3fe230736f6547ac14fa217954630395ce97610c89493a95eb60cad95c53de",
+        "metadata_sha256": "60b128830089175149aaaa56e879f246191993815ef9302fa98b326719971243",
+        "png_sha256": "f8e03efbbbdbcb130fc5f7332f890f567702e39b20b59e9e71175fc1327a4781",
+        "actual_input_event_count": 2,
+        "visible_and_metadata_checks": [
+          "/home/openrailsrs-content-test/qa38/portable-disk/openrailsrs-content",
+          "SNCF-TGV-Atlantique · origen 2023-04-28",
+          "Chiltern v4 · origen 2026-09-09"
+        ]
+      },
+      {
+        "name": "portable_reject_private_permissions",
+        "status": "PASS_WITH_STATED_SCOPE",
+        "case": "portable-folder-reject-permissions38-attempt2",
+        "receipt": "portable/menu-captures/portable-menu/portable-folder-reject-permissions38-attempt2-receipt.json",
+        "receipt_sha256": "56a18b8aaa0069e9aa9dcc99f7777174eed73f9186f6264e213f603bd4b7c38d",
+        "metadata_sha256": "818d75ce7e4370cba14259236e4dbaa28906ccfb26b44d5d60b9e110340f7310",
+        "png_sha256": "853214358b3c81abe6e63683ff308ad3498d86af5e0ee6b41f4b17b49197132d",
+        "actual_input_event_count": 7,
+        "visible_and_metadata_checks": [
+          "Sin permiso para usar esta carpeta: Permission denied"
+        ]
+      },
+      {
+        "name": "portable_visible_download_failure",
+        "status": "PASS_WITH_STATED_SCOPE",
+        "case": "download-refused-portable-ui38",
+        "receipt": "portable/menu-captures/portable-menu/download-refused-portable-ui38-receipt.json",
+        "receipt_sha256": "41db289cfcb62c3105d78b2a9336855b0f1065cba1f533c2395369507ade5a9a",
+        "metadata_sha256": "1adb6ed05faf68c7ce009a1f51c0609a41d95d0c89300da37d545e68395cd221",
+        "png_sha256": "baca60a6ad0895aa357ebaa5c2841ffad06a7418f21bf8af50a9afe7d99e7541",
+        "actual_input_event_count": 4,
+        "visible_and_metadata_checks": [
+          "Connection refused",
+          "Demo Model 1: Falló · 0.0 MiB"
+        ]
+      }
+    ],
+    "source38_failure_scope": "Actual connection-refused UI cases transferred0bytes and did not register a valid partial manifest or lose previous copies. A6-byte.cancel sentinel remained; the directory was not empty. These source38functional cases are independent from the failed source38lifetime gate.",
+    "guide": {
+      "path": "docs/OFFICIAL_CONTENT.md",
+      "sha256": "858b46f6b2442b08f6666f8cd997adffbfeee677e540dfc0e07a73cbf634ed25",
+      "json_pointer": ""
+    },
+    "source38_consolidation": {
+      "path": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-656ae35f0500/FIFTH40_PHASE38_DISTRIBUTION.private.json",
+      "sha256": "738ad74693b30995beb1a5511c5888f7b83c70f5f2c34a23da10f049a725c35a",
+      "json_pointer": "/portable_and_storage",
+      "scope": "Exact source38Snap/portable functional cases only. The same source38candidate failed its separate lifetime memory gate and was not published."
+    },
+    "source38_artifact_identity": {
+      "source_commit": "656ae35f05000e1b1e13e93d35a4c45615e4ed96",
+      "source_manifest_inputs": 751,
+      "git_export_files": 1697,
+      "source_dirty": false,
+      "source_dirty_scope": "Exact Git export only, not the host checkout.",
+      "source_snapshot_sha256": "a594c4a4d146f76002150745bd7a884a7c3cd621084e7b6bdd7e025cc1e07b21",
+      "snap_sha256": "b05335b3004e973ec1baa27ab0d23a76b799d637b5946863e2e5ff4bec5c9608",
+      "snap_bytes": 165609472,
+      "build_metadata": {
+        "source_commit": "656ae35f05000e1b1e13e93d35a4c45615e4ed96",
+        "source_dirty": false,
+        "source_snapshot_sha256": "a594c4a4d146f76002150745bd7a884a7c3cd621084e7b6bdd7e025cc1e07b21",
+        "architecture": "x86_64",
+        "build_libc": [
+          "glibc",
+          "2.39"
+        ],
+        "required_glibc": "2.39",
+        "downloaded_content_included": false,
+        "binary_sha256": {
+          "openrailsrs": "e743d81d61c7ec857d61a466900ee95aa7a40a94aa825109fd5aae6163983bbe",
+          "openrailsrs-viewer3d": "b87b285e3da4a3405c4983a4959ed61d4983fbce3dafd65be9e4f7ba3ce7eec3",
+          "openrailsrs-prepare-content": "1ae07a251999966d9b35a9e72f0e6148b69a1119ba75f56b735ce3c8d25afcba"
+        }
+      },
+      "builder_returncode": 0,
+      "build_receipt": {
+        "path": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-656ae35f0500/build.json",
+        "sha256": "19d1866260e042abafa7cc1e12b4f5fd2bca1c0bdc42f0f1bfa891cd595fcd70",
+        "json_pointer": ""
+      },
+      "export_receipt": {
+        "path": "tmp/fifth40-continued-20261014/distribution-prep/source38-656ae35f0500-export.json",
+        "sha256": "0cb68585b65c22f41246f0163fa148072c3eff422f021094da56068db34c621a",
+        "json_pointer": ""
+      },
+      "authorization": {
+        "path": "tmp/fifth40-continued-20261014/distribution-prep/build-authorization38.json",
+        "sha256": "909a0aed776cb487fd90e0b459d018b97f52d98854e4f32e3074f80a24e1abc0",
+        "json_pointer": ""
+      },
+      "limit": "This is the exact clean Git export. Six dirty player traces and author downloads were excluded; the entire developer checkout is not claimed clean. No host Cargo/Snapcraft build was invoked."
+    }
+  },
+  "named_regressions": {
+    "completed_check39_receipt": {
+      "path": "tmp/fifth40-continued-20261014/check39/check39-receipt.json",
+      "sha256": "f32f167e1e6ac0d9876c60e1b33b27ac6324209f649aadba4da766da891fdc78",
+      "json_pointer": ""
+    },
+    "completed_check39_log_sha256": "00c0184998e1ccdf90fabbbd69691ae8883e0ef73b52626e9f8c0ca940f2393c",
+    "runtime_compiled_inputs": 751,
+    "rust_passed": 2083,
+    "python_passed": 127,
+    "ignored": 49,
+    "failed": 0,
+    "tests": [
+      {
+        "source": "crates/openrailsrs-audio/src/native.rs",
+        "test": "shared_sound_resolves_without_a_local_sound_folder",
+        "source39_sha256": "9e70e1534d4b5b2cd97c46b3acd812fb08ca94f13a892573cd8c60260593343f",
+        "source38_equal": true,
+        "check39_log_pass_lines": [
+          152
+        ],
+        "execution_scope": "Exact named Rust PASS line in existing check39 transcript."
+      },
+      {
+        "source": "crates/openrailsrs-train/src/consist_audit.rs",
+        "test": "every_missing_texture_and_cab_graphic_has_its_original_destinations",
+        "source39_sha256": "2effddf56cf6eee77edf87553427abe3c66efcd1de23e90d7936c7411dce6262",
+        "source38_equal": true,
+        "check39_log_pass_lines": [
+          1939
+        ],
+        "execution_scope": "Exact named Rust PASS line in existing check39 transcript."
+      },
+      {
+        "source": "crates/openrailsrs-train/src/consist_audit.rs",
+        "test": "native_3d_cab_pairs_shared_controls_and_keeps_genuine_resource_failures",
+        "source39_sha256": "2effddf56cf6eee77edf87553427abe3c66efcd1de23e90d7936c7411dce6262",
+        "source38_equal": true,
+        "check39_log_pass_lines": [
+          1942
+        ],
+        "execution_scope": "Exact named Rust PASS line in existing check39 transcript."
+      },
+      {
+        "source": "crates/openrailsrs-viewer3d/src/content_validation.rs",
+        "test": "records_name_only_profiles_present_in_the_original_capture",
+        "source39_sha256": "0b16315809b26a1396d0e05e8223caaf4a96f9c8739daab3ded1ed254d0e349e",
+        "source38_equal": true,
+        "check39_log_pass_lines": [
+          2441
+        ],
+        "execution_scope": "Exact named Rust PASS line in existing check39 transcript."
+      },
+      {
+        "source": "crates/openrailsrs-viewer3d/src/official_content.rs",
+        "test": "discovery_rejects_parent_traversal_in_every_prepared_path",
+        "source39_sha256": "0f27fed2200e041191f16eef13bc88538fee374af46ff6fd54566071950dc63d",
+        "source38_equal": true,
+        "check39_log_pass_lines": [
+          2593
+        ],
+        "execution_scope": "Exact named Rust PASS line in existing check39 transcript."
+      },
+      {
+        "source": "crates/openrailsrs-viewer3d/src/official_content.rs",
+        "test": "repository_search_uses_catalogue_origin_and_only_the_missing_basename",
+        "source39_sha256": "0f27fed2200e041191f16eef13bc88538fee374af46ff6fd54566071950dc63d",
+        "source38_equal": true,
+        "check39_log_pass_lines": [
+          2598
+        ],
+        "execution_scope": "Exact named Rust PASS line in existing check39 transcript."
+      },
+      {
+        "source": "crates/openrailsrs-viewer3d/src/official_content.rs",
+        "test": "stock_only_author_archive_can_supply_trainset_and_consists_at_its_root",
+        "source39_sha256": "0f27fed2200e041191f16eef13bc88538fee374af46ff6fd54566071950dc63d",
+        "source38_equal": true,
+        "check39_log_pass_lines": [
+          2600
+        ],
+        "execution_scope": "Exact named Rust PASS line in existing check39 transcript."
+      },
+      {
+        "source": "crates/openrailsrs-viewer3d/src/official_content.rs",
+        "test": "train_only_package_audits_author_formations_as_well_as_standalone_choices",
+        "source39_sha256": "0f27fed2200e041191f16eef13bc88538fee374af46ff6fd54566071950dc63d",
+        "source38_equal": true,
+        "check39_log_pass_lines": [
+          2601
+        ],
+        "execution_scope": "Exact named Rust PASS line in existing check39 transcript."
+      },
+      {
+        "source": "crates/openrailsrs-viewer3d/src/official_content.rs",
+        "test": "unlisted_origins_and_mismatched_packages_offer_no_download",
+        "source39_sha256": "0f27fed2200e041191f16eef13bc88538fee374af46ff6fd54566071950dc63d",
+        "source38_equal": true,
+        "check39_log_pass_lines": [
+          2604
+        ],
+        "execution_scope": "Exact named Rust PASS line in existing check39 transcript."
+      },
+      {
+        "source": "crates/openrailsrs-viewer3d/src/player_ui.rs",
+        "test": "incomplete_or_pending_train_cannot_start_from_any_step",
+        "source39_sha256": "79516299357befbf93de4b90ec5c4338fb89b759100fd5c90a84fe4661600055",
+        "source38_equal": true,
+        "check39_log_pass_lines": [
+          2677
+        ],
+        "execution_scope": "Exact named Rust PASS line in existing check39 transcript."
+      },
+      {
+        "source": "scripts/test_content_url.py",
+        "test": "test_cli_inspection_reports_connection_failure_without_traceback",
+        "source39_sha256": "0676dba7716f06e6e27e1cd6110b9c09a9512ef00cdb3751047c63dc0e0b95df",
+        "source38_equal": true,
+        "check39_log_pass_lines": [],
+        "execution_scope": "Named Python test exists in unchanged test module; check39 ran unittest discovery for that module. Individual Python names were not printed, so no per-test stdout is claimed."
+      },
+      {
+        "source": "scripts/test_content_url.py",
+        "test": "test_credentials_local_addresses_and_landing_pages_are_rejected",
+        "source39_sha256": "0676dba7716f06e6e27e1cd6110b9c09a9512ef00cdb3751047c63dc0e0b95df",
+        "source38_equal": true,
+        "check39_log_pass_lines": [],
+        "execution_scope": "Named Python test exists in unchanged test module; check39 ran unittest discovery for that module. Individual Python names were not printed, so no per-test stdout is claimed."
+      },
+      {
+        "source": "scripts/test_content_url.py",
+        "test": "test_inspection_resolves_revision_without_fetching_the_archive",
+        "source39_sha256": "0676dba7716f06e6e27e1cd6110b9c09a9512ef00cdb3751047c63dc0e0b95df",
+        "source38_equal": true,
+        "check39_log_pass_lines": [],
+        "execution_scope": "Named Python test exists in unchanged test module; check39 ran unittest discovery for that module. Individual Python names were not printed, so no per-test stdout is claimed."
+      },
+      {
+        "source": "scripts/test_content_url.py",
+        "test": "test_low_space_does_not_start_a_download",
+        "source39_sha256": "0676dba7716f06e6e27e1cd6110b9c09a9512ef00cdb3751047c63dc0e0b95df",
+        "source38_equal": true,
+        "check39_log_pass_lines": [],
+        "execution_scope": "Named Python test exists in unchanged test module; check39 ran unittest discovery for that module. Individual Python names were not printed, so no per-test stdout is claimed."
+      },
+      {
+        "source": "scripts/test_content_url.py",
+        "test": "test_mid_download_failure_and_cancel_leave_previous_version_untouched",
+        "source39_sha256": "0676dba7716f06e6e27e1cd6110b9c09a9512ef00cdb3751047c63dc0e0b95df",
+        "source38_equal": true,
+        "check39_log_pass_lines": [],
+        "execution_scope": "Named Python test exists in unchanged test module; check39 ran unittest discovery for that module. Individual Python names were not printed, so no per-test stdout is claimed."
+      },
+      {
+        "source": "scripts/test_content_url.py",
+        "test": "test_new_author_requires_explicit_origin_confirmation",
+        "source39_sha256": "0676dba7716f06e6e27e1cd6110b9c09a9512ef00cdb3751047c63dc0e0b95df",
+        "source38_equal": true,
+        "check39_log_pass_lines": [],
+        "execution_scope": "Named Python test exists in unchanged test module; check39 ran unittest discovery for that module. Individual Python names were not printed, so no per-test stdout is claimed."
+      },
+      {
+        "source": "scripts/test_content_url.py",
+        "test": "test_redirects_cannot_switch_author_or_repository_before_download",
+        "source39_sha256": "0676dba7716f06e6e27e1cd6110b9c09a9512ef00cdb3751047c63dc0e0b95df",
+        "source38_equal": true,
+        "check39_log_pass_lines": [],
+        "execution_scope": "Named Python test exists in unchanged test module; check39 ran unittest discovery for that module. Individual Python names were not printed, so no per-test stdout is claimed."
+      },
+      {
+        "source": "scripts/test_official_content.py",
+        "test": "test_chiltern_v4_has_a_distinct_original_source_and_preserves_v2",
+        "source39_sha256": "ed6a04410e1a94626a68ad87516b5cd5856f62f7bc12e304b1801780bc70c998",
+        "source38_equal": true,
+        "check39_log_pass_lines": [],
+        "execution_scope": "Named Python test exists in unchanged test module; check39 ran unittest discovery for that module. Individual Python names were not printed, so no per-test stdout is claimed."
+      },
+      {
+        "source": "scripts/test_official_content.py",
+        "test": "test_complete_package_is_atomic_and_has_origin_and_digest",
+        "source39_sha256": "ed6a04410e1a94626a68ad87516b5cd5856f62f7bc12e304b1801780bc70c998",
+        "source38_equal": true,
+        "check39_log_pass_lines": [],
+        "execution_scope": "Named Python test exists in unchanged test module; check39 ran unittest discovery for that module. Individual Python names were not printed, so no per-test stdout is claimed."
+      },
+      {
+        "source": "scripts/test_official_content.py",
+        "test": "test_corrupt_or_executable_only_package_does_not_publish",
+        "source39_sha256": "ed6a04410e1a94626a68ad87516b5cd5856f62f7bc12e304b1801780bc70c998",
+        "source38_equal": true,
+        "check39_log_pass_lines": [],
+        "execution_scope": "Named Python test exists in unchanged test module; check39 ran unittest discovery for that module. Individual Python names were not printed, so no per-test stdout is claimed."
+      },
+      {
+        "source": "scripts/test_official_content.py",
+        "test": "test_default_storage_is_user_owned_and_snap_revision_independent",
+        "source39_sha256": "ed6a04410e1a94626a68ad87516b5cd5856f62f7bc12e304b1801780bc70c998",
+        "source38_equal": true,
+        "check39_log_pass_lines": [],
+        "execution_scope": "Named Python test exists in unchanged test module; check39 ran unittest discovery for that module. Individual Python names were not printed, so no per-test stdout is claimed."
+      },
+      {
+        "source": "scripts/test_official_content.py",
+        "test": "test_redirect_is_rejected_before_contacting_another_host_or_http",
+        "source39_sha256": "ed6a04410e1a94626a68ad87516b5cd5856f62f7bc12e304b1801780bc70c998",
+        "source38_equal": true,
+        "check39_log_pass_lines": [],
+        "execution_scope": "Named Python test exists in unchanged test module; check39 ran unittest discovery for that module. Individual Python names were not printed, so no per-test stdout is claimed."
+      },
+      {
+        "source": "scripts/test_official_content.py",
+        "test": "test_symlinks_and_oversized_install_are_rejected",
+        "source39_sha256": "ed6a04410e1a94626a68ad87516b5cd5856f62f7bc12e304b1801780bc70c998",
+        "source38_equal": true,
+        "check39_log_pass_lines": [],
+        "execution_scope": "Named Python test exists in unchanged test module; check39 ran unittest discovery for that module. Individual Python names were not printed, so no per-test stdout is claimed."
+      },
+      {
+        "source": "scripts/test_official_content.py",
+        "test": "test_traversal_and_ambiguous_case_are_rejected_before_any_extraction",
+        "source39_sha256": "ed6a04410e1a94626a68ad87516b5cd5856f62f7bc12e304b1801780bc70c998",
+        "source38_equal": true,
+        "check39_log_pass_lines": [],
+        "execution_scope": "Named Python test exists in unchanged test module; check39 ran unittest discovery for that module. Individual Python names were not printed, so no per-test stdout is claimed."
+      },
+      {
+        "source": "scripts/test_official_content.py",
+        "test": "test_zip_entity_change_preserves_previous_copy_and_same_entity_skips_body",
+        "source39_sha256": "ed6a04410e1a94626a68ad87516b5cd5856f62f7bc12e304b1801780bc70c998",
+        "source38_equal": true,
+        "check39_log_pass_lines": [],
+        "execution_scope": "Named Python test exists in unchanged test module; check39 ran unittest discovery for that module. Individual Python names were not printed, so no per-test stdout is claimed."
+      },
+      {
+        "source": "scripts/test_packaging.py",
+        "test": "test_runtime_resources_exclude_generated_manifests_and_player_data",
+        "source39_sha256": "46ebd688c5326871a067ddeb4b362a36a8806140db64858e3058ffbc8368faeb",
+        "source38_equal": true,
+        "check39_log_pass_lines": [],
+        "execution_scope": "Named Python test exists in unchanged test module; check39 ran unittest discovery for that module. Individual Python names were not printed, so no per-test stdout is claimed."
+      },
+      {
+        "source": "crates/openrailsrs-viewer3d/src/player_launch.rs",
+        "test": "extended_and_traffic_examples_keep_native_chiltern_scenery",
+        "source39_sha256": "9cc87ce769b95ce56e4851d386b79c41b3aa554e57a1729a04722451273508f8",
+        "check39_log_pass_lines": [
+          2651
+        ],
+        "execution_scope": "Actual named Rust PASS in existing completedcheck39; no new test."
+      }
+    ],
+    "scope": "Rust rows cite actual named PASS lines. Python rows identify mandatory test functions in byte-identical modules executed by unittest discovery; the transcript reports suite totals, not individualPythonstdout. No tests were rerun during final package documentation."
+  },
+  "process_release": {
+    "final_gpu_client_release": {
+      "path": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/one-play-transition39-attempt2/release.json",
+      "sha256": "037384ba568b1e61e2a0179769f8b6f0001e77f60485ff07748afcd2a2b0e996",
+      "json_pointer": ""
+    },
+    "owned_host_sids_all_empty": {
+      "path": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/final-owned-host-sids-release39.json",
+      "sha256": "097ca22171b3d2b22c7c23e8a43d1c12363cd9c4817026cacbd3753b502f4def",
+      "json_pointer": ""
+    },
+    "containers_frozen": {
+      "path": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/qa-frozen-after-final-collection39.json",
+      "sha256": "7da85c72655940127b8448977862c9866bed4fc79ecab9b0402b3191f903ab51",
+      "json_pointer": ""
+    },
+    "source_or_user_data_mutation_after_freeze": false
+  },
+  "ui_resource_and_compatibility_scope": {
+    "mandatory_resources": "Jugar enabled only after required resources are complete. Initial unavailable copiedderived paths remain a preserved gray state; afterpreparegreen state and actualPlay are separate proofs.",
+    "unknown_metadata": "Initial unprepared route shows unknown track gauge/electrification rather than invented0mm/0V; later native metadata appears only after original route preparation.",
+    "oracles": "Resource completeness is separate from compatibility warnings and systems/oracle coverage. This run is not new0/8→8/8 system validation.",
+    "initial_gray_image": {
+      "private_source": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/fresh-profile/menu-captures/fresh-service-readiness39/fresh-service-readiness39.png",
+      "public_target": "docs/validation/images/fifth40-phase39-snap/initial-copied-indexes-not-ready.png",
+      "sha256": "d4e48034c8e76cf772631d23625f31b1b58e06156e7714d79e3d7356f642aab2",
+      "scope": "Actual CPU/Xvfb image; no GPU/FPS claim."
+    }
+  },
+  "publication_assets": [
+    {
+      "private_source": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/one-play-transition39-attempt2/actual-play-transition39-attempt2/menu-ready-before-play.png",
+      "public_target": "docs/validation/images/fifth40-phase39-snap/menu-ready-before-play.png",
+      "sha256": "aafdc31d505d29a31f9c45df2ade4d8420dde7e2c76b62c496b2009a694cf075",
+      "scope": "Actual source39 single viewer; first three lossless XWD decode, final application capture."
+    },
+    {
+      "private_source": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/one-play-transition39-attempt2/actual-play-transition39-attempt2/cab-before-key2.png",
+      "public_target": "docs/validation/images/fifth40-phase39-snap/cab-before-key2.png",
+      "sha256": "bdcd0efa6c73c2d405882e45be1ec3d15460729091910b518317d0260d4f6e72",
+      "scope": "Actual source39 single viewer; first three lossless XWD decode, final application capture."
+    },
+    {
+      "private_source": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/one-play-transition39-attempt2/actual-play-transition39-attempt2/exterior-early-after-key2.png",
+      "public_target": "docs/validation/images/fifth40-phase39-snap/exterior-early-after-key2.png",
+      "sha256": "7e7815294fae8653815c764a157c97e8aad7b95d8a6fa1af40ce9028395dad64",
+      "scope": "Actual source39 single viewer; first three lossless XWD decode, final application capture."
+    },
+    {
+      "private_source": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/one-play-transition39-attempt2/actual-play-transition39-attempt2/exterior-final.png",
+      "public_target": "docs/validation/images/fifth40-phase39-snap/exterior-final.png",
+      "sha256": "7bdc8e4ff257528a17e4543a0be9071eceaba26840c7722ca55aed4425c8138c",
+      "scope": "Actual source39 single viewer; first three lossless XWD decode, final application capture."
+    },
+    {
+      "private_source": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/fresh-profile/menu-captures/fresh-service-readiness39/fresh-service-readiness39.png",
+      "public_target": "docs/validation/images/fifth40-phase39-snap/initial-copied-indexes-not-ready.png",
+      "sha256": "d4e48034c8e76cf772631d23625f31b1b58e06156e7714d79e3d7356f642aab2",
+      "scope": "Actual CPU/Xvfb image; no GPU/FPS claim."
+    },
+    {
+      "private_source": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/fresh-profile/menu-captures/fresh-folder-restart39-after-attempt2/fresh-folder-restart39-after-attempt2.png",
+      "public_target": "docs/validation/images/fifth40-phase39-snap/snap-folder-restart39.png",
+      "sha256": "461ce8c4ebeb44b7a1f6f7c294ef270ebf51c79eae7293baf81916be9d23c0f2",
+      "scope": "Actual CPU/Xvfb image; no GPU/FPS claim."
+    },
+    {
+      "private_source": "tmp/fifth40-continued-20261014/distribution-prep/final-snap-a1b59e14bea6/portable/menu-captures/portable-menu/portable-folder-restart39.png",
+      "public_target": "docs/validation/images/fifth40-phase39-snap/portable-folder-restart39.png",
+      "sha256": "2682bac686a2d5f02ffdd77f12dd11c63887c31b98fd8c82c15a2b50957cb83b",
+      "scope": "Actual CPU/Xvfb image; no GPU/FPS claim."
+    }
+  ],
+  "global_limits": [
+    "Package functionality is accepted; the separate final7200s memory test was started by Root and has its own plan/telemetry/results. This receipt does not certify that gate or authorize Store.",
+    "No code/assets from author packages were executed; only our application/importer parsed content.",
+    "No downloaded author content, account credentials or Store identity is embedded in this receipt or application package. Source39freshprofile directory is private QA, not the user actual library."
+  ],
+  "root_publication_review": {
+    "reviewed_utc": "2026-10-15T00:28:18.105328+00:00",
+    "private_source_sha256": "f2b16af3955289785e8ad168e04a62df2b56ec91e7345bfa864ff7d5d0ec7933",
+    "native_snap_root_review_sha256": "949a6d650aef59ca56c4d32d96ab40f2293c7c9bb0c26d73b043fcb1302f23b5",
+    "all_seven_existing_images_visually_reviewed": true,
+    "scope": "Root viewed initial not-ready state, same-window Play/menu/cab/early/final, and both storage-restart images. Only actual documented package functional scope accepted; no7200 or numericalSnapVRAM acceptance."
+  }
+}

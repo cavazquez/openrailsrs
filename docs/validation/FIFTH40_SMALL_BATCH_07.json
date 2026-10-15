@@ -1,0 +1,798 @@
+{
+  "schema": 1,
+  "created_utc": "2026-10-14T23:31:08.708347+00:00",
+  "status": "ready_for_issue_closure_in_documented_scope",
+  "publishable": true,
+  "scope": "Only batch07: five issues and fifteen unchanged original criteria. Existing check39 functional tests, completed eight-run ABBA39 and its process-memory accounting retain their actual identities. The actual installed strict Snap39 Jugar/cab/key2/exterior transition is now visually accepted by Root. Closure remains a separate Root action.",
+  "runtime_commit": "a1b59e14bea6db433c0746dd0f1f2644dc5bc4dd",
+  "compiled_input_manifest_sha256": "8dfa16a31a08b48a33776a9041b4f90ef24d6d3b70f6385303d4de8b0589b6a3",
+  "issues": [
+    {
+      "number": 240,
+      "title": "Plan 030: Reducir tirones restantes al preparar objetos grandes",
+      "ready_for_closure": true,
+      "criteria": [
+        {
+          "text": "Identificar picos por lectura, preparación, publicación y liberación de formas individuales.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "El perfil preservado distingue lectura, preparación CPU/LOD, publicación y retiros de formas. La regresión actual de correlación de intervalos pasa en check39; performance.rs cambió en39 y se vincula a su hash39, sin trasladar mediciones38.",
+          "pending_evidence": []
+        },
+        {
+          "text": "Medir mejora de P99 y máximos en el mismo recorrido sin ocultar tirones de carga inicial.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La campaña39 completa aprueba los cuatro pares estrictos: P99 41 → 40, 41 → 39, 40 → 37 y 41 → 38 ms; máximos de conducción 80,732 → 58,583; 71,647 → 66,854; 80,619 → 49,777 y 92,857 → 50,053 ms. El arranque íntegro y 36 regresiones secundarias calculadas quedan visibles, incluidos P95/GPU; no se afirma mejora general.",
+          "pending_evidence": []
+        },
+        {
+          "text": "Medir antes/después con el mismo binario de referencia, ruta, formación, cámara, semilla y hardware; separar carga inicial de conducción.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Ocho procesos de referencia/candidato de la campaña 39 terminados, frío/caliente y orden ABBA, referencia/candidato por SHA, escenario/formación/cámara/semilla/hardware y calidad constantes. Arranque y conducción se informan separados; Root y el agente revisaron capturas reales. El inventario efectivo de 8/11 sectores y entidades/draws distintos impide atribución aislada de la ganancia.",
+          "pending_evidence": []
+        }
+      ],
+      "evidence": [
+        "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-cold/shape_stages",
+        "docs/fixtures/compatibility/fifth40-20261013/performance.json#/residency/final_confirmation32",
+        "docs/validation/FIFTH40_PHASE38_ABBA.json#/pairs",
+        "docs/validation/FIFTH40_PHASE38_ABBA.json#/secondary_regressions",
+        "supplementary_test:frame_context_correlates_true_overlaps_preserves_longest_and_reports_truncation",
+        "supplementary_test:worker_preparation_publishes_original_parts_without_source_reads_and_reuses_models",
+        "supplementary_test:missing_texture_results_expire_with_generation_and_capacity_falls_back_to_resolution",
+        "supplementary_test:worker_texture_resolution_preserves_directory_flags_and_environment_precedence",
+        "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair",
+        "docs/fixtures/compatibility/fifth40-20261013/performance.json#/final_global_reference32",
+        "docs/fixtures/compatibility/fifth40-20261013/performance.json#/final_global_reference32/configuration",
+        "docs/fixtures/compatibility/fifth40-20261013/performance.json#/final_global_reference32/versions",
+        "docs/validation/FIFTH40_PHASE38_ABBA.json#/limits",
+        "docs/validation/FIFTH40_PHASE39_ABBA.json#/pairs",
+        "docs/validation/FIFTH40_PHASE39_ABBA.json#/secondary_regressions",
+        "docs/validation/FIFTH40_PHASE39_ABBA.json#/runs",
+        "docs/validation/FIFTH40_PHASE39_PROCESS_MEMORY.json#/runs",
+        "docs/validation/FIFTH40_PHASE39_PROCESS_MEMORY.json#/higher_observed_memory_counters"
+      ],
+      "scope": "Picos y preparación de formas bajo un recorrido y contrato concretos; no asegura mejores tiempos de arranque, GPU o FPS en cualquier contenido.",
+      "criteria_complete": true
+    },
+    {
+      "number": 380,
+      "title": "Plan 170: Precargar recorrido según velocidad e itinerario",
+      "ready_for_closure": true,
+      "criteria": [
+        {
+          "text": "Predecir sectores próximos de cabecera, cola y cámaras activas.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Las dos regresiones nominales actuales verifican pronóstico acotado para cabecera, cola, itinerario y cámara lejana, conservando el conjunto solicitado bajo presión sin recargas repetidas.",
+          "pending_evidence": []
+        },
+        {
+          "text": "Medir objetos pendientes y picos conservando límites de memoria y descargando sectores antiguos.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La residencia de la fase 32 preservada recorrió ocho kilómetros y retiró mallas/formas; las regresiones actuales mantienen un conjunto solicitado acotado. Los ocho lanzamientos de la campaña 39 terminan sin formas próximas, terreno ni transferencias pendientes y conservan picos/colas. 777 muestras externas del PID real mantienen RSS/VRAM/GTT separados por fase; no certifican ahorro global ni todos los picos físicos.",
+          "pending_evidence": []
+        },
+        {
+          "text": "Medir antes/después con el mismo binario de referencia, ruta, formación, cámara, semilla y hardware; separar carga inicial de conducción.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La campaña39 mide el antes/después con fases inicial/conducción separadas y cuatro pares primarios aprobados, conservando todos los secundarios y el inventario efectivo distinto. La prueba histórica de retiro conserva su versión; la mejora del conjunto no se atribuye sólo al pronóstico.",
+          "pending_evidence": []
+        }
+      ],
+      "evidence": [
+        "test:forecast_residency_is_bounded_even_after_repeated_requests_and_a_distant_camera",
+        "test:pressure_preserves_the_bounded_requested_set_without_reload_churn",
+        "docs/fixtures/compatibility/fifth40-20261013/performance.json#/residency/final_confirmation32",
+        "docs/fixtures/compatibility/fifth40-20261013/performance.json#/final_global_reference32",
+        "docs/validation/FIFTH40_PHASE38_ABBA.json#/pairs",
+        "docs/validation/FIFTH40_PHASE38_ABBA.json#/limits",
+        "docs/validation/FIFTH40_PHASE39_ABBA.json#/pairs",
+        "docs/validation/FIFTH40_PHASE39_ABBA.json#/secondary_regressions",
+        "docs/validation/FIFTH40_PHASE39_ABBA.json#/runs",
+        "docs/validation/FIFTH40_PHASE39_PROCESS_MEMORY.json#/runs",
+        "docs/validation/FIFTH40_PHASE39_PROCESS_MEMORY.json#/higher_observed_memory_counters"
+      ],
+      "scope": "Pronóstico y residencia acotados al recorrido y cámaras activas; no carga todo el mapa ni acredita por sí solo una mejora de P99 o ahorro de memoria.",
+      "criteria_complete": true
+    },
+    {
+      "number": 381,
+      "title": "Plan 171: Priorizar sectores visibles y próximos al tren",
+      "ready_for_closure": true,
+      "criteria": [
+        {
+          "text": "Asignar prioridad por visibilidad y tiempo estimado de llegada.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La prioridad usa posición mundial y tiempo de llegada; la regresión tras foco nativo remoto pasa en check39 con la fuente sin cambios.",
+          "pending_evidence": []
+        },
+        {
+          "text": "Evitar hambre de trabajos y comprobar acceso rápido al exterior después de cabina.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Las regresiones actuales de prioridad y progreso pasan en check39. En el Snap estricto 39, Jugar, cabina y tecla 2/exterior ocurrieron en el mismo proceso y ventana, con ocho coches, seis paradas y dos servicios AI. Root revisó menú, cabina, exterior temprano y final: escenario cercano visible y sin pantalla de carga. Las colas y compilaciones pendientes de la telemetría final son cero.",
+          "pending_evidence": []
+        },
+        {
+          "text": "Medir antes/después con el mismo binario de referencia, ruta, formación, cámara, semilla y hardware; separar carga inicial de conducción.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "ABBA39 conserva cuatro pares aprobados y todos los secundarios bajo su propio contrato. La transición nativa compartida del Snap añade una ejecución real de 120,553 s y salida 0. La captura temprana se solicitó 0,75006988s tras keyup y terminó 0,75956845s después; son tiempos de solicitud y finalización de captura, no latencia física ni momento del primer cuadro presentado. Host y Snap comparten fuente limpia a1b59e14, con binarios distintos identificados por SHA.",
+          "pending_evidence": []
+        }
+      ],
+      "evidence": [
+        "test:shape_priority_uses_world_coordinates_after_a_remote_native_focus",
+        "test:exhausted_publication_budget_still_finishes_instanced_queue",
+        "docs/fixtures/compatibility/fifth40-20261013/performance.json#/residency/final_confirmation32",
+        "docs/fixtures/compatibility/fifth40-20261013/performance.json#/final_global_reference32",
+        "docs/validation/FIFTH40_PHASE38_ABBA.json#/pairs",
+        "docs/validation/FIFTH40_PHASE38_ABBA.json#/limits",
+        "docs/validation/FIFTH40_PHASE39_ABBA.json#/pairs",
+        "docs/validation/FIFTH40_PHASE39_ABBA.json#/secondary_regressions",
+        "docs/validation/FIFTH40_PHASE39_ABBA.json#/runs",
+        "docs/validation/FIFTH40_PHASE39_PROCESS_MEMORY.json#/runs",
+        "docs/validation/FIFTH40_PHASE39_PROCESS_MEMORY.json#/higher_observed_memory_counters",
+        "docs/validation/FIFTH40_SMALL_BATCH_07.json#/native_camera_transition39"
+      ],
+      "scope": "Prioridad y progreso de los trabajos restantes, con transición real cabina/exterior aceptada en un mismo Snap39. La captura temprana acredita el exterior visible en ese instante; no mide la latencia física ni sustituye el contrato comparativo de ABBA39.",
+      "criteria_complete": true
+    },
+    {
+      "number": 383,
+      "title": "Plan 173: Guardar geometría preparada en caché persistente",
+      "ready_for_closure": true,
+      "criteria": [
+        {
+          "text": "Cachear resultados con versión de formato, fuente y parámetros gráficos.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La caché CPU preparada y sus LOD identifican formato, fuente, descriptor y parámetros. La regresión de equivalencia frente a preparación fresca pasa en check39; no se guardan handles GPU.",
+          "pending_evidence": []
+        },
+        {
+          "text": "Invalidar cambios y archivos dañados manteniendo contenido original intacto.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Las pruebas actuales invalidan fuente/descriptor/corrupción y rechazan entradas excesivas, truncadas o inconsistentes. Publicación completa, concurrencia, cuota, LRU y migración conservan el original y la última entrada admitida.",
+          "pending_evidence": []
+        },
+        {
+          "text": "Medir antes/después con el mismo binario de referencia, ruta, formación, cámara, semilla y hardware; separar carga inicial de conducción.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La campaña39 conserva frío/caliente: candidatos fríos: 0 aciertos, 1301 fallos y 1296 escrituras y calientes: 1296/1295 aciertos, 5 fallos y 0 escrituras. Formato 2 / Zstd 1 conserva cuota y cinco admission_skips por caso. Los 23.797.509 bytes fríos y el disk_bytes=0 caliente con inventario no recorrido se distinguen de tamaño real de caché. Cuatro pares primarios pasan; todos los secundarios permanecen y no se atribuye toda la mejora a compresión.",
+          "pending_evidence": []
+        }
+      ],
+      "evidence": [
+        "test:cached_geometry_matches_fresh_and_source_descriptor_or_damage_invalidates_it",
+        "docs/validation/FIFTH40_PHASE38_ABBA.json#/runs",
+        "supplementary_test:concurrent_workers_publish_only_complete_entries_and_never_exceed_the_reserved_budget",
+        "supplementary_test:legacy_geometry_retains_semantic_validation_and_migrates_only_after_publication",
+        "supplementary_test:lru_hits_and_external_writers_refresh_the_shared_inventory_without_rescanning_each_write",
+        "supplementary_test:quota_counts_legacy_and_temporaries_and_keeps_a_previous_entry_on_failed_admission",
+        "supplementary_test:worker_texture_resolution_preserves_directory_flags_and_environment_precedence",
+        "supplementary_test:bounded_file_reads_reject_large_and_non_regular_inputs",
+        "supplementary_test:compressed_envelope_rejects_damage_truncation_bombs_and_inconsistent_lengths",
+        "supplementary_test:missing_texture_results_expire_with_generation_and_capacity_falls_back_to_resolution",
+        "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-cold/geometry_cache",
+        "docs/fixtures/compatibility/fifth40-20261013/performance.json#/within_batch_repair/versions/candidate/cases/downpour-warm/geometry_cache",
+        "docs/validation/FIFTH40_PHASE38_ABBA.json#/pairs",
+        "docs/validation/FIFTH40_PHASE38_ABBA.json#/limits",
+        "docs/validation/FIFTH40_PHASE39_ABBA.json#/pairs",
+        "docs/validation/FIFTH40_PHASE39_ABBA.json#/secondary_regressions",
+        "docs/validation/FIFTH40_PHASE39_ABBA.json#/runs",
+        "docs/validation/FIFTH40_PHASE39_PROCESS_MEMORY.json#/runs",
+        "docs/validation/FIFTH40_PHASE39_PROCESS_MEMORY.json#/higher_observed_memory_counters"
+      ],
+      "scope": "Derivados CPU/LOD con formato2/Zstd y cuota; las pruebas de corrección no sustituyen mediciones frías/calientes39 ni certifican recursos GPU completos.",
+      "criteria_complete": true
+    },
+    {
+      "number": 390,
+      "title": "Plan 180: Compartir presupuesto de sombras, vegetación, luces y partículas",
+      "ready_for_closure": true,
+      "criteria": [
+        {
+          "text": "Asignar presupuesto global por coste y prioridad visual.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "RenderBudget comparte luces, partículas, vegetación, sombras y transferencias, reservando prioridad para faros. La prueba actual caps_share_one_budget_and_preserve_priority_under_pressure pasa en check39 y la fuente conserva su identidad.",
+          "pending_evidence": []
+        },
+        {
+          "text": "Exponer ajustes y comprobar clima intenso sin monopolizar tiempo de cuadro.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "F10 conserva los ajustes y la prueba histórica normal/reducido/normal en lluvia intensa mantiene su identidad. La comparación39 fija lluvia intensa/high, 2048 partículas meteorológicas, límite 512 del tren y nivel 0, sin cambios adaptativos; todos los cuadros finales tienen vecindad completa. El P95 empeora y se informa: no se presenta como una nueva validación de adaptación automática.",
+          "pending_evidence": []
+        },
+        {
+          "text": "Medir antes/después con el mismo binario de referencia, ruta, formación, cámara, semilla y hardware; separar carga inicial de conducción.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La campaña39 completa compara ocho procesos con la misma configuración y calidad, sin degradación adaptativa oculta y separando arranque/conducción. Aprueban cuatro pares primarios; se conservan 36 aumentos de métricas secundarias, cuatro aumentos de utilización CPU y 48 comparaciones de memoria mayores por contador/fase, con el trabajo visual efectivo distinto explícito.",
+          "pending_evidence": []
+        }
+      ],
+      "evidence": [
+        "docs/fixtures/compatibility/fifth40-20261013/performance.json#/quality_aba/final_confirmation32",
+        "docs/fixtures/compatibility/fifth40-20261013/performance.json#/quality_aba/final_confirmation32/cases",
+        "docs/fixtures/compatibility/fifth40-20261013/performance.json#/quality_aba/final_confirmation32/configuration",
+        "docs/fixtures/compatibility/fifth40-20261013/performance.json#/quality_aba/final_confirmation32/concurrent_workloads",
+        "docs/validation/FIFTH40_PHASE38_ABBA.json#/pairs",
+        "docs/validation/FIFTH40_PHASE38_ABBA.json#/limits",
+        "supplementary_test:caps_share_one_budget_and_preserve_priority_under_pressure",
+        "docs/validation/FIFTH40_PHASE39_ABBA.json#/pairs",
+        "docs/validation/FIFTH40_PHASE39_ABBA.json#/secondary_regressions",
+        "docs/validation/FIFTH40_PHASE39_ABBA.json#/runs",
+        "docs/validation/FIFTH40_PHASE39_PROCESS_MEMORY.json#/runs",
+        "docs/validation/FIFTH40_PHASE39_PROCESS_MEMORY.json#/higher_observed_memory_counters"
+      ],
+      "scope": "Presupuesto cosmético compartido con faros prioritarios. Menos partículas no implica más FPS; la comparación a calidad fija y la adaptación se documentan por separado.",
+      "criteria_complete": true
+    }
+  ],
+  "current_regression_execution": {
+    "shared_check_and_ci_context": "docs/validation/FIFTH40_SMALL_BATCH_01.json#/current_regression_execution",
+    "named_tests": {
+      "forecast_residency_is_bounded_even_after_repeated_requests_and_a_distant_camera": {
+        "source": "crates/openrailsrs-viewer3d/src/streaming_forecast.rs",
+        "result": "passed",
+        "check39_log_line": 2907
+      },
+      "pressure_preserves_the_bounded_requested_set_without_reload_churn": {
+        "source": "crates/openrailsrs-viewer3d/src/streaming_forecast.rs",
+        "result": "passed",
+        "check39_log_line": 2908
+      },
+      "shape_priority_uses_world_coordinates_after_a_remote_native_focus": {
+        "source": "crates/openrailsrs-viewer3d/src/streaming_forecast.rs",
+        "result": "passed",
+        "check39_log_line": 2909
+      },
+      "exhausted_publication_budget_still_finishes_instanced_queue": {
+        "source": "crates/openrailsrs-viewer3d/src/world.rs",
+        "result": "passed",
+        "check39_log_line": 3175,
+        "check39_end_line": 3179
+      },
+      "cached_geometry_matches_fresh_and_source_descriptor_or_damage_invalidates_it": {
+        "source": "crates/openrailsrs-viewer3d/src/prepared_geometry.rs",
+        "result": "passed",
+        "check39_log_line": 2698
+      }
+    },
+    "supplementary_named_tests": {
+      "frame_context_correlates_true_overlaps_preserves_longest_and_reports_truncation": {
+        "source": "crates/openrailsrs-viewer3d/src/performance.rs",
+        "result": "passed",
+        "check39_log_line": 2625
+      },
+      "worker_preparation_publishes_original_parts_without_source_reads_and_reuses_models": {
+        "source": "crates/openrailsrs-viewer3d/src/road_cars.rs",
+        "result": "passed",
+        "check39_log_line": 2720
+      },
+      "missing_texture_results_expire_with_generation_and_capacity_falls_back_to_resolution": {
+        "source": "crates/openrailsrs-viewer3d/src/shapes.rs",
+        "result": "passed",
+        "check39_log_line": 2821
+      },
+      "worker_texture_resolution_preserves_directory_flags_and_environment_precedence": {
+        "source": "crates/openrailsrs-viewer3d/src/shapes.rs",
+        "result": "passed",
+        "check39_log_line": 2869
+      },
+      "concurrent_workers_publish_only_complete_entries_and_never_exceed_the_reserved_budget": {
+        "source": "crates/openrailsrs-viewer3d/src/prepared_geometry.rs",
+        "result": "passed",
+        "check39_log_line": 2700
+      },
+      "legacy_geometry_retains_semantic_validation_and_migrates_only_after_publication": {
+        "source": "crates/openrailsrs-viewer3d/src/prepared_geometry.rs",
+        "result": "passed",
+        "check39_log_line": 2701
+      },
+      "lru_hits_and_external_writers_refresh_the_shared_inventory_without_rescanning_each_write": {
+        "source": "crates/openrailsrs-viewer3d/src/prepared_geometry.rs",
+        "result": "passed",
+        "check39_log_line": 2702
+      },
+      "quota_counts_legacy_and_temporaries_and_keeps_a_previous_entry_on_failed_admission": {
+        "source": "crates/openrailsrs-viewer3d/src/prepared_geometry.rs",
+        "result": "passed",
+        "check39_log_line": 2703
+      },
+      "bounded_file_reads_reject_large_and_non_regular_inputs": {
+        "source": "crates/openrailsrs-viewer3d/src/prepared_geometry.rs",
+        "result": "passed",
+        "check39_log_line": 2697
+      },
+      "compressed_envelope_rejects_damage_truncation_bombs_and_inconsistent_lengths": {
+        "source": "crates/openrailsrs-viewer3d/src/prepared_geometry.rs",
+        "result": "passed",
+        "check39_log_line": 2699
+      },
+      "caps_share_one_budget_and_preserve_priority_under_pressure": {
+        "source": "crates/openrailsrs-viewer3d/src/render_budget.rs",
+        "result": "passed",
+        "check39_log_line": 2704
+      }
+    },
+    "counts": {
+      "original_required_named_passes": 5,
+      "supplementary_named_passes": 11
+    },
+    "scope": "These are existing actual check39 PASS records, not new test executions. Supplementary tests do not enlarge the original ninety required names."
+  },
+  "current_source_bindings": {
+    "crates/openrailsrs-viewer3d/src/performance.rs": {
+      "sha256": "08d1b210364c6170859889fea52fedf886e119825f5363e40be676d712b280d3",
+      "matches_phase39_compiled_manifest": true,
+      "same_as_phase38": false,
+      "phase38_sha256": "b7ff00e3f45bce03d81fc53716e618fdc4d8db655172f446ca20b8c04baacba1"
+    },
+    "crates/openrailsrs-viewer3d/src/road_cars.rs": {
+      "sha256": "18100d313efdf31ffe074f6ce0642bed8b38a2d9ecc59a4e966ddb260216240d",
+      "matches_phase39_compiled_manifest": true,
+      "same_as_phase38": true
+    },
+    "crates/openrailsrs-viewer3d/src/shapes.rs": {
+      "sha256": "f9926772bd283f53c5c6ed55dffc2845e8fc5dac62e342255be21e46e65a87f1",
+      "matches_phase39_compiled_manifest": true,
+      "same_as_phase38": true
+    },
+    "crates/openrailsrs-viewer3d/src/streaming_forecast.rs": {
+      "sha256": "3c23887225372b3ca4c5058be3a8048bf30aeb8c1fd3a71f0c0a2f1f9276fb3a",
+      "matches_phase39_compiled_manifest": true,
+      "same_as_phase38": true
+    },
+    "crates/openrailsrs-viewer3d/src/world.rs": {
+      "sha256": "ce47c95abe753b7122772fc433893327198b3677e6c71b215752aa8507f944c5",
+      "matches_phase39_compiled_manifest": true,
+      "same_as_phase38": true
+    },
+    "crates/openrailsrs-viewer3d/src/prepared_geometry.rs": {
+      "sha256": "4e4eb4193aa01d73c7f3949e9574a9cc8c59b78ee804d74db6f687055323e5f9",
+      "matches_phase39_compiled_manifest": true,
+      "same_as_phase38": true
+    },
+    "crates/openrailsrs-viewer3d/src/render_budget.rs": {
+      "sha256": "a5bbf1b33ecb09f762fc3256d125fd69dbe980857476afda79b66ef92a69024c",
+      "matches_phase39_compiled_manifest": true,
+      "same_as_phase38": true
+    },
+    "crates/openrailsrs-viewer3d/src/gpu_memory.rs": {
+      "sha256": "eb4dcc4294acba0d118aa024caa166be66d9c40a0a79ec5e67d8c27eb822f6fb",
+      "matches_phase39_compiled_manifest": true,
+      "same_as_phase38": true
+    },
+    "crates/openrailsrs-viewer3d/src/player_settings.rs": {
+      "sha256": "7c54bef48121ec08e5e9e49ac7076510cce0eef55eaeb0236f36fa9c700a751e",
+      "matches_phase39_compiled_manifest": true,
+      "same_as_phase38": true
+    }
+  },
+  "preserved_evidence": [
+    {
+      "path": "docs/fixtures/compatibility/fifth40-20261013/performance.json",
+      "sha256": "1f0dbaf0b2f85421818053862f0739ed43e1f27e730708892ee3fd368f4c3bc0",
+      "json_pointers": [
+        "/within_batch_repair/versions/candidate/cases/downpour-cold/shape_stages",
+        "/residency/final_confirmation32",
+        "/within_batch_repair",
+        "/final_global_reference32",
+        "/final_global_reference32/configuration",
+        "/final_global_reference32/versions",
+        "/within_batch_repair/versions/candidate/cases/downpour-cold/geometry_cache",
+        "/within_batch_repair/versions/candidate/cases/downpour-warm/geometry_cache",
+        "/quality_aba/final_confirmation32",
+        "/quality_aba/final_confirmation32/cases",
+        "/quality_aba/final_confirmation32/configuration",
+        "/quality_aba/final_confirmation32/concurrent_workloads"
+      ]
+    },
+    {
+      "path": "docs/validation/FIFTH40_PHASE38_ABBA.json",
+      "sha256": "8efd600f93db6937ac7f2b8a2dad4f70b96cec5d276ae9feb0295f8516c53bdc",
+      "json_pointers": [
+        "/pairs",
+        "/secondary_regressions",
+        "/limits",
+        "/runs",
+        "/capture_review"
+      ]
+    },
+    {
+      "path": "docs/validation/FIFTH40_PHASE37_ABBA_REJECTED.json",
+      "sha256": "992002a1e2f2e0772cce791e9b9c03f8e12f423d62c1765f7686c98ecc32dd3c",
+      "json_pointers": [
+        ""
+      ]
+    },
+    {
+      "path": "docs/validation/FIFTH40_PHASE39_ABBA.json",
+      "sha256": "66234eeb7d37aa732d00969c376f4986028124c4a01d492659c30193abf226f2",
+      "json_pointers": [
+        "/pairs",
+        "/runs",
+        "/secondary_regressions",
+        "/capture_review",
+        "/external_process_memory",
+        "/limits"
+      ]
+    },
+    {
+      "path": "docs/validation/FIFTH40_PHASE39_PROCESS_MEMORY.json",
+      "sha256": "1ead6cc7bc28a4acfbd53ee8409b4211384126cbb81434694622c03448ba3b70",
+      "json_pointers": [
+        "/runs",
+        "/paired_comparisons",
+        "/higher_observed_memory_counters",
+        "/comparison_policy"
+      ]
+    }
+  ],
+  "historical_comparison_limits": {
+    "phase38_candidate_sha256": "5be5da7de14db73321303af2b310da7c8ca635b3dcd9c304fbe631ae0d8fd47d",
+    "phase38_baseline_sha256": "531ec4d91cfa3391f1f24a8d62d8abef026603609528462efacbb8ae7a096e08",
+    "phase38_secondary_regressions_preserved": 13,
+    "phase38_primary_pairs": "4/4 passed only for the historical phase38 candidate; not phase39 acceptance.",
+    "phase38_effective_gpu_tiles": {
+      "baseline": [
+        8
+      ],
+      "candidate": [
+        11
+      ]
+    },
+    "scope": "Keep every secondary result/regression in the immutable referenced receipt: P95 worsened in all four pairs; GPU-span P99 worsened in all four; startup maximum worsened in three; RSS regressed in two. The 8/11-tile workset and heterogeneous historical memory accounting prohibit general GPU/memory savings or isolated-component attribution."
+  },
+  "pending_evidence": {},
+  "manual": "docs/MANUAL_FIFTH40.md",
+  "limits": [
+    "ABBA39 is the actual completed and reviewed eight-process comparison with four strict pairs passed. All36 secondary timing regressions, four higher CPU-utilization observations and48 higher memory-counter comparisons remain explicit in the frozen public receipts.",
+    "The Snap39 proof is one actual Jugar/cab/key2/exterior execution in the same PID and window, accepted by Root. It shares the clean source commit with host ABBA39 but has its own different binary/artifact identities.",
+    "The comparison holds route, formation, camera, seed, hardware and configured quality constant. Its effective workset differs:30 CPU tiles in all cases, GPU tiles8(reference)/11(candidate) and15929–15976/21022–21078 GPU entities; this prohibits identical-workset or isolated-component attribution.",
+    "Historical receipts retain their original binary, asset, renderer, phase and scope; rejected37 and all38 secondary results remain preserved. Historical thirteen regressions are not substituted for the newly computed thirty-six in39.",
+    "performance.rs differs from38 but matches the actual compiled39 manifest and its existing check39 regression passed. Other bound sources are identified individually rather than assumed equal.",
+    "Snap internal graphics memory readings remain null, not zero or inferred PCI/counter values. Host external per-PID/PCI/fase memory measurements are a separate proof and do not supply Snap memory numbers.",
+    "Observed post-keyup capture request/completion timings do not measure physical input/display latency or the earliest exterior-ready time. One functional transition establishes no full-route or two-hour stability claim.",
+    "No source, user trace, historical proof, plan, runner, original image, or in-progress benchmark was changed. This finalization only reads existing artifacts and writes the requested receipt and private comments; it runs no tests/builds/Cargo/GPU/Git/GitHub operations.",
+    "No global two-hour/ABBA/Snap gate is invented for other functional issues. This batch retains its own actual before/after and native-camera requirements."
+  ],
+  "updated_utc": "2026-10-15T00:27:17.786754+00:00",
+  "completed_comparative_evidence": {
+    "receipt": "docs/validation/FIFTH40_PHASE39_ABBA.json",
+    "sha256": "66234eeb7d37aa732d00969c376f4986028124c4a01d492659c30193abf226f2",
+    "memory_receipt": "docs/validation/FIFTH40_PHASE39_PROCESS_MEMORY.json",
+    "memory_sha256": "1ead6cc7bc28a4acfbd53ee8409b4211384126cbb81434694622c03448ba3b70",
+    "strict_pairs_passed": 4,
+    "actual_runs": 8,
+    "root_visual_review_passed": true,
+    "secondary_regressions": 36,
+    "higher_cpu_utilization_observations": 4,
+    "higher_memory_counter_comparisons": 48
+  },
+  "batch_waits_for": [],
+  "finalized_utc": "2026-10-15T00:27:17.786754+00:00",
+  "native_camera_transition39": {
+    "status": "passed_actual_native_snap39_root_visual_review",
+    "source_commit": "a1b59e14bea6db433c0746dd0f1f2644dc5bc4dd",
+    "source_dirty": false,
+    "source_snapshot_sha256": "4e98b3f5de524be0692597367039e7d69fd6ab5127c036bdbb1845254fb0b9a3",
+    "compiled_input_manifest_sha256": "8dfa16a31a08b48a33776a9041b4f90ef24d6d3b70f6385303d4de8b0589b6a3",
+    "snap_sha256": "efd4726a4ca0dda3a7825a8ce36deffdeebe651ad3bb2f0132543cc2f6ac57e3",
+    "viewer_sha256": "384141dc7de564d116dd52e8308b30a6339657325f897d4931fa626db10e55fa",
+    "installed_revision": "x3",
+    "revision_scope": "x3 identifies this locally installed strict Snap, not a Snap Store release or upload.",
+    "host_abba_viewer_sha256": "f1138d03ea6978baaab8e5fe8b4e8995c626a6df319a690bb7a92955512c0239",
+    "binary_scope": "The host ABBA39 binary and the core24 Snap binary are different builds of the same clean runtime source commit; neither binary hash is substituted for the other.",
+    "private_immutable_artifacts": {
+      "case_receipt": {
+        "name": "one-play-transition39-attempt2/actual-play-transition39-attempt2/receipt.json",
+        "sha256": "efe68c78cfccb93ba6d5377b896b90b5e2d0e60656f847e4502d02c157891adc",
+        "producer_status": "CAPTURED_ONE_ACTUAL_PLAY_AND_TRANSITION_PENDING_VISUAL_REVIEW"
+      },
+      "release": {
+        "name": "one-play-transition39-attempt2/release.json",
+        "sha256": "037384ba568b1e61e2a0179769f8b6f0001e77f60485ff07748afcd2a2b0e996",
+        "all_private_uids_empty": true
+      },
+      "root_review": {
+        "name": "native-snap39-root-review.json",
+        "sha256": "949a6d650aef59ca56c4d32d96ab40f2293c7c9bb0c26d73b043fcb1302f23b5",
+        "status": "passed_actual_native_snap39_root_visual_review",
+        "reviewed_utc": "2026-10-15T00:22:09.220127+00:00"
+      },
+      "authorization": {
+        "name": "one-play-transition39-attempt2/authorization.json",
+        "sha256": "2dfaf7ed529e8c119e9f301c98689e158f7a4dc254f1b62fd58f42a7bcd40aed"
+      },
+      "plan_sha256": "8e8465b4cb4d8705244414236fd112a97abc062cede10ca368756bc3f72f791c",
+      "harness_sha256": "fa129b02d95ae785d49c8f8654f608fadaffd224dace8979f7993fd56a5c7862",
+      "original_author_asset_manifest_sha256": "1bdfc0ec4753572e142aba21783af926db14d854c94622557c015b5736d009b2",
+      "actual_menu_launch_sha256": "d319745ddfc2af6ad3b088f50b45ee5afa98b3eed425a374c17349dc9228c016",
+      "final_stream_sha256": "fe0ee17bb083fdd9d0020b46ed45517012b3e03e038c1bf20f56d92dd59f818c"
+    },
+    "started_utc": "2026-10-15T00:16:24.074855+00:00",
+    "finished_utc": "2026-10-15T00:18:24.750626+00:00",
+    "elapsed_s": 120.55321922699659,
+    "exit_code": 0,
+    "command": [
+      "snap",
+      "run",
+      "openrailsrs"
+    ],
+    "scenario": {
+      "route": "Chiltern",
+      "service": "Chiltern extended: Northolt Park to Gerrards Cross",
+      "formation": "birmingham_pullman",
+      "player_cars": 8,
+      "route_stops": 6,
+      "traffic_services": 2,
+      "production_viewing_distance_m": 2000,
+      "downloaded_content_included_in_snap": false
+    },
+    "actual_window": {
+      "xid": "4194306",
+      "viewer_pid": 21951
+    },
+    "pid_scope": "Viewer PID21951 is in this isolated Snap environment; it is not a host ABBA PID.",
+    "actual_client_geometry": {
+      "X": 227,
+      "Y": 273,
+      "WIDTH": 1280,
+      "HEIGHT": 720
+    },
+    "compositor_canvas_only": {
+      "width": 1600,
+      "height": 1000,
+      "game_window_unchanged": [
+        1280,
+        720
+      ],
+      "reason": "Fit unchanged client and use actual window-relative pointer coordinates; preserves failed global-coordinate attempt."
+    },
+    "settings_absent_before": true,
+    "settings_still_absent": true,
+    "cache_or_distance_overrides": false,
+    "graphics_overrides": {
+      "DRI_PRIME": "pci-0000_03_00_0",
+      "MESA_VK_DEVICE_SELECT": "1002:7480!",
+      "VK_DRIVER_FILES": "/snap/openrailsrs/x3/usr/share/vulkan/icd.d/radeon_icd.json",
+      "OPENRAILSRS_RENDERER": "gpu",
+      "OPENRAILSRS_FOLLOW": "driver"
+    },
+    "input_events": [
+      {
+        "kind": "OS_mouse_click",
+        "planned_at_s": 5,
+        "point": [
+          640,
+          207
+        ],
+        "wall_s": 5.247445899000013,
+        "play": false,
+        "coordinate_space": "verified client XID",
+        "computed_root_point": [
+          867,
+          480
+        ]
+      },
+      {
+        "kind": "OS_mouse_click",
+        "planned_at_s": 8,
+        "point": [
+          914,
+          312
+        ],
+        "wall_s": 8.266652921000059,
+        "play": false,
+        "coordinate_space": "verified client XID",
+        "computed_root_point": [
+          1141,
+          585
+        ]
+      },
+      {
+        "kind": "OS_mouse_click",
+        "planned_at_s": 11,
+        "point": [
+          363,
+          435
+        ],
+        "wall_s": 11.286978537998948,
+        "play": false,
+        "coordinate_space": "verified client XID",
+        "computed_root_point": [
+          590,
+          708
+        ]
+      },
+      {
+        "kind": "OS_mouse_click",
+        "planned_at_s": 14,
+        "point": [
+          363,
+          285
+        ],
+        "wall_s": 14.206230174997472,
+        "play": false,
+        "coordinate_space": "verified client XID",
+        "computed_root_point": [
+          590,
+          558
+        ]
+      },
+      {
+        "kind": "OS_mouse_click",
+        "planned_at_s": 17,
+        "point": [
+          363,
+          435
+        ],
+        "wall_s": 17.224521634998382,
+        "play": false,
+        "coordinate_space": "verified client XID",
+        "computed_root_point": [
+          590,
+          708
+        ]
+      },
+      {
+        "kind": "OS_mouse_click",
+        "planned_at_s": 22,
+        "point": [
+          290,
+          635
+        ],
+        "wall_s": 22.25965933599946,
+        "play": true,
+        "coordinate_space": "verified client XID",
+        "computed_root_point": [
+          517,
+          908
+        ]
+      },
+      {
+        "kind": "private_virtual_seat_XI2_focused_OS_XTEST_key2",
+        "window": "4194306",
+        "viewer_pid": 21951,
+        "keydown_wall_s": 55.3584304779979,
+        "keyup_wall_s": 55.58542994099844
+      }
+    ],
+    "pre_play_wall_s": 22.158150218998344,
+    "production_bootstrap_marker_wall_s": 52.62800413199875,
+    "cab_before_key2_wall_s": 55.358429175998026,
+    "early_image": {
+      "same_viewer_pid": 21951,
+      "same_window": "4194306",
+      "request_wall_s": 56.33549982099794,
+      "completed_wall_s": 56.34499838699776,
+      "request_age_after_keyup_s": 0.7500698799995007,
+      "completion_age_after_keyup_s": 0.7595684459993208,
+      "raw_xwd_sha256": "cfd4355e7ca326fc79ab25e69e1e87a8cb15df6bda93877f4a09571ada364549"
+    },
+    "physical_input_to_presented_frame_latency_s": null,
+    "earliest_exterior_ready_time_s": null,
+    "capture_timing_scope": "Request and completion ages are observed after key release. No measurement exports physical input/display latency or the earliest ready exterior frame. The early image and final telemetry refer to different instants.",
+    "final_near_readiness": {
+      "pending_gpu_uploads": 0,
+      "pending_terrain_tiles": 0,
+      "unactivated_near_shapes": 0,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      }
+    },
+    "final_cab_view": null,
+    "final_camera": {
+      "aspect_ratio": 1.7777777910232544,
+      "distance_m": 28.367904663085938,
+      "fov_y_rad": 0.7853981852531433,
+      "indirect_drawing": false,
+      "pitch_rad": 0.28358280658721924,
+      "position_world": [
+        -12463398.0,
+        68.96881103515625,
+        -30571424.0
+      ],
+      "rotation_xyzw": [
+        -0.075382761657238,
+        0.8373548984527588,
+        0.11953184753656387,
+        0.5280779004096985
+      ],
+      "target_world": [
+        -12463423.0,
+        61.03155517578125,
+        -30571412.0
+      ],
+      "yaw_rad": 2.0162887573242188
+    },
+    "root_visual_review_passed": true,
+    "reviewed_images": {
+      "menu-ready-before-play.png": "aafdc31d505d29a31f9c45df2ade4d8420dde7e2c76b62c496b2009a694cf075",
+      "cab-before-key2.png": "bdcd0efa6c73c2d405882e45be1ec3d15460729091910b518317d0260d4f6e72",
+      "exterior-early-after-key2.png": "7e7815294fae8653815c764a157c97e8aad7b95d8a6fa1af40ce9028395dad64",
+      "exterior-final.png": "7bdc8e4ff257528a17e4543a0be9071eceaba26840c7722ca55aed4425c8138c"
+    },
+    "visual_observation": "Same actual menu-selected Chiltern extended service, textured cab, station/rails/nearby houses/trees/fences/lamps and train roof visible in early exterior and final; no loading overlay. Cyan sphere is the intentional next-stop marker in gameplay.rs. Eight-car/6-stop/2AI identities come from actual metadata, not all8 bodies visible in the frame.",
+    "hardware_actual": {
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "external_viewer_drm": [
+        {
+          "fd": "8",
+          "device": "/dev/dri/renderD128",
+          "pci_slot": "0000:03:00.0",
+          "pci_id": "1002:7480",
+          "driver": "amdgpu"
+        },
+        {
+          "fd": "9",
+          "device": "/dev/dri/renderD128",
+          "pci_slot": "0000:03:00.0",
+          "pci_id": "1002:7480",
+          "driver": "amdgpu"
+        }
+      ],
+      "external_compositor_drm": [
+        {
+          "fd": "10",
+          "device": "/dev/dri/renderD128",
+          "pci_slot": "0000:03:00.0",
+          "pci_id": "1002:7480",
+          "driver": "amdgpu"
+        },
+        {
+          "fd": "11",
+          "device": "/dev/dri/renderD128",
+          "pci_slot": "0000:03:00.0",
+          "pci_id": "1002:7480",
+          "driver": "amdgpu"
+        },
+        {
+          "fd": "12",
+          "device": "/dev/dri/renderD128",
+          "pci_slot": "0000:03:00.0",
+          "pci_id": "1002:7480",
+          "driver": "amdgpu"
+        }
+      ],
+      "internal_graphics_memory_raw": {
+        "active_device_pci": null,
+        "device_total_mib": null,
+        "device_used_mib": null,
+        "devices": [],
+        "peak_process_vram_mib": null,
+        "process_gtt_mib": null,
+        "process_vram_mib": null,
+        "source": null
+      },
+      "scope": "AdapterInfo log and actual same-PID external DRM verify RX7600 PCI03. Internal Snap graphics counters remain unavailable null; never replaced with inferred numbers."
+    },
+    "preserved_failed_first_attempt": {
+      "receipt": {
+        "name": "one-play-transition39/actual-play-transition39/receipt.json",
+        "sha256": "657ad4edd4b452d80b24d6d74203c51ae649473ddbdff074b389d1ee6456c062",
+        "producer_status": "FAILED_PRESERVED"
+      },
+      "diagnosis": {
+        "name": "one-play-transition39/static-input-diagnosis.json",
+        "sha256": "c261f076d14e520789959a5685844bf297c089184960bc97f9e2a9127594ceaf",
+        "status": "FAILED_MENU_COORDINATE_TRANSPORT_PRESERVED"
+      },
+      "cause": "Global pointer coordinates selected the wrong controls after Weston placed the unchanged game window at a nonzero origin; the small outer canvas clipped the window. No intended route launch occurred.",
+      "retry_change": "Only actual window-relative pointer transport and the external1600x1000 compositor canvas changed. Game viewport1280x720, default2000m, settings, resources, timing and tolerances were unchanged.",
+      "scope": "The failed attempt remains immutable. It is neither a successful startup measurement nor evidence of a route loading defect."
+    },
+    "limits": [
+      "One real installed strict-Snap functional transition; not a full journey, FPS comparison, physical input latency or Open Rails parity certification.",
+      "The four images were reviewed by Root. Eight player cars, six stops and two traffic services are identified by metadata; all eight car bodies need not be visible in the exterior frame.",
+      "The cyan sphere is the intentional next-stop marker; images were not retouched or cropped to hide it.",
+      "Final readiness counters are final telemetry; zeros are not retroactively assigned to the early screenshot.",
+      "Internal Snap GPU memory counters stay unavailable null, with devices[]; AdapterInfo plus external same-PID DRM identify the hardware. No numerical Snap VRAM, process-memory saving or two-hour Snap stability claim is made.",
+      "No new author content was downloaded for this retry or added to Git. No Store upload is implied."
+    ]
+  }
+}
