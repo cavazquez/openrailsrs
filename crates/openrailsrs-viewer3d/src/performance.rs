@@ -249,12 +249,14 @@ pub struct RenderResourceReport {
     pub material_slabs: usize,
     pub material_slab_bytes: u64,
     pub bindless_material_allocations: u64,
-    /// Upstream may overcount duplicate bindings within one material; not live owners.
+    /// Raw bindless slot count after the local alias fix; distinct from material owners.
     pub bindless_material_allocations_scope: &'static str,
     pub material_owners: MaterialOwnershipReport,
     pub oit_node_capacity: Option<usize>,
     pub oit_head_capacity: Option<usize>,
     pub pipelines: usize,
+    /// Published OIT resolve variants, including queued/failed entries.
+    pub oit_resolve_pipelines: usize,
     /// Backend-dependent, opt-in. None means unsupported or disabled, never zero usage.
     pub allocator: Option<GpuAllocatorReport>,
     pub bin_unpacking_lifetime: Option<BinGroupCleanupStats>,
@@ -778,7 +780,7 @@ pub fn update_pipeline_status(
                 .values()
                 .map(|a| a.allocations())
                 .sum(),
-            bindless_material_allocations_scope: "Raw upstream allocated_resource_count may overcount repeated bindings within a material; use material_owners for actual map ownership.",
+            bindless_material_allocations_scope: "Raw PBR allocated_resource_count with the local 0.19.1 aliased-binding fix; occupied slots are distinct from material owner maps and GPU bytes.",
             material_owners: MaterialOwnershipReport {
                 bindings: material_owner_counts(
                     material_owners.0.as_ref().map(|m| m.keys().copied()),
@@ -793,6 +795,11 @@ pub fn update_pipeline_status(
             oit_node_capacity: oit.as_ref().map(|o| o.nodes.capacity()),
             oit_head_capacity: oit.as_ref().map(|o| o.heads.capacity()),
             pipelines: cache.pipelines().count(),
+            oit_resolve_pipelines: cache.pipelines().filter(|pipeline| {
+                matches!(&pipeline.descriptor,
+                    bevy::render::render_resource::PipelineDescriptor::RenderPipelineDescriptor(descriptor)
+                    if descriptor.label.as_deref() == Some("oit_resolve_pipeline"))
+            }).count(),
             allocator: allocator_report.1.clone(),
             bin_unpacking_lifetime: bin_group_cleanup.as_deref().cloned(),
         });

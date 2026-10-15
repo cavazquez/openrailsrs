@@ -1,5 +1,7 @@
 [workspace]
 resolver = "2"
+# Pinned upstream backports are dependencies, not workspace feature targets.
+exclude = ["vendor/bevy_pbr", "vendor/bevy_core_pipeline"]
 members = [
     "crates/openrailsrs-core",
     "crates/openrailsrs-content",
@@ -67,3 +69,9 @@ bevy = { version = "0.19.1", default-features = false, features = [
 ] }
 bytemuck = { version = "1", features = ["derive"] }
 image = { version = "0.25", default-features = false, features = ["dds"] }
+
+# Keep Bevy/Hanabi versions pinned while fixing measured lifecycle defects.
+# Sources, licenses and the small patches are documented inside each crate.
+[patch.crates-io]
+bevy_pbr = { path = "vendor/bevy_pbr" }
+bevy_core_pipeline = { path = "vendor/bevy_core_pipeline" }

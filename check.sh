@@ -70,8 +70,12 @@ cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
 
 echo "==> tests"
 # Serial: several suites share process-global counters and environment variables.
-# All focused regressions are already included here; keep one Bevy feature set.
+# Project regressions share one Bevy feature set.
 cargo test --locked --workspace --all-features -- --test-threads=1
+
+# Excluded vendor crates retain their own features; select only CPU regression modules.
+echo "==> pinned Bevy lifecycle regressions (no GPU)"
+cargo test --locked -p bevy_pbr -p bevy_core_pipeline --lib regressions -- --test-threads=1
 
 echo "==> native service capture integrity and replay regressions"
 python3 -m unittest discover -s scripts -p test_service_capture.py

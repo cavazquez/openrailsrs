@@ -2,6 +2,12 @@
 
 Presentación 3D separada del núcleo headless. Versión **Bevy 0.19.1** (`Cargo.lock`), con Rust mínimo 1.95 por el requisito de Bevy.
 
+Las dependencias `bevy_core_pipeline` y `bevy_pbr` conservan la versión 0.19.1
+con dos correcciones locales en [`vendor`](../vendor/README.md): reutilización
+de pipelines de transparencias al volver a una cámara/configuración anterior,
+y cómputo correcto de recursos compartidos entre bindings de un material.
+Se conservan el código fuente y ambas licencias de Bevy junto a cada corrección.
+
 La compatibilidad conserva el contenido, los controles y el comportamiento
 ferroviario de la referencia. Las mejoras de Bevy se mantienen cuando benefician
 la partida: iluminación física, tonemapping, instancias GPU, origen flotante y
