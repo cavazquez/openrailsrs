@@ -1,0 +1,585 @@
+{
+  "schema": 1,
+  "created_utc": "2026-10-15T19:17:31.508223+00:00",
+  "status": "ready_for_issue_closure_in_documented_scope",
+  "publishable": true,
+  "scope": "Tres issues funcionales ya completados y20criterios originales exactos, separados de los dos de memoria pendientes. Transcripción y revisión de evidencia existente; no se ejecutaron pruebas, compilaciones, descargas ni nuevos juegos.",
+  "runtime_commit": "a1b59e14bea6db433c0746dd0f1f2644dc5bc4dd",
+  "compiled_input_manifest_sha256": "8dfa16a31a08b48a33776a9041b4f90ef24d6d3b70f6385303d4de8b0589b6a3",
+  "intended_public_path": "docs/validation/FIFTH40_PACKAGE_373_412_413.json",
+  "source_draft": {
+    "path": "tmp/fifth40-continued-20261014/B08/FIFTH40_SMALL_BATCH_08.draft.json",
+    "sha256": "852287135fe20fda8fb9f80d5b2b981c1ad296a0ad91dda8f2a9534c0674d7d0",
+    "unchanged": true
+  },
+  "original_issue_snapshot": {
+    "path": "tmp/fifth40-continued-20261014/small-batch39-issues-current.json",
+    "sha256": "f03e84af39036baf5f72204f7d3da6c58944df0b51576203b1e6ec871f690f1a"
+  },
+  "public_functional_evidence": {
+    "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+    "sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+    "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+  },
+  "artifact": {
+    "snap_version": "0.1.0-alpha.6",
+    "snap_sha256": "efd4726a4ca0dda3a7825a8ce36deffdeebe651ad3bb2f0132543cc2f6ac57e3",
+    "snap_bytes": 165646336,
+    "local_qa_revision": "x3",
+    "store_publication_status": "Not asserted by this proof; Root handles actual publication independently."
+  },
+  "issues": [
+    {
+      "number": 373,
+      "title": "Plan 163: Elegir carpeta de contenido desde la interfaz",
+      "ready_for_closure": true,
+      "criteria": [
+        {
+          "text": "Seleccionar almacenamiento permitido y persistir preferencia.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La selección real de carpeta en Biblioteca quedó persistida y se leyó tras reiniciar tanto el Snap estricto como el portátil; se mantuvo la ubicación anterior en el historial.",
+          "evidence": [
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/storage",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/upgrade",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            }
+          ],
+          "scope": "Artefacto39 funcional y ensayos históricos explícitamente identificados; sin nuevas pruebas durante esta preparación."
+        },
+        {
+          "text": "Validar permisos y espacio en binario y Snap conservando instalaciones existentes.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La fuente39 conserva los ensayos identificados de permisos, destinos de sólo lectura y poco espacio, y sus regresiones actuales. La selección y sondeo de escritura del paquete39 se hicieron con el usuario efectivo; cinco archivos existentes permanecieron idénticos en la actualización local x2→x3. Los fallos de permisos/espacio mantienen la fecha y binario históricos.",
+          "evidence": [
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/storage",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/historical_reuse/permissions_and_low_space",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/named_regressions",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            }
+          ],
+          "scope": "Artefacto39 funcional y ensayos históricos explícitamente identificados; sin nuevas pruebas durante esta preparación."
+        },
+        {
+          "text": "Probar el artefacto construido en un entorno limpio y conservar su hash, versión y resultados; no extrapolar éxito del checkout al paquete.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "El artefacto alpha.6 exacto fue instalado y ejecutado bajo confinamiento, con perfil de usuario nuevo en el contenedor QA existente; el portátil se movió fuera del checkout a una ruta con espacios y conserva los mismos tres binarios. No se afirma un sistema operativo recién instalado ni una prueba nueva de Store.",
+          "evidence": [
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/artifact",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/manifest_and_privacy",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/portable",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/actual_play",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            }
+          ],
+          "scope": "Artefacto39 funcional y ensayos históricos explícitamente identificados; sin nuevas pruebas durante esta preparación."
+        }
+      ],
+      "scope": "Criterios funcionales del paquete, con las identidades y los límites de los ensayos existentes. Cierre independiente de #391/#403; no declara aprobación de memoria prolongada ni publicación en Store.",
+      "criteria_complete": true,
+      "original_issue_body_sha256": "bfa2723ab4c9abe655e4e84167adce41e7082bfcc79386656e23217b1f40c52f",
+      "evidence": [
+        {
+          "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+          "sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+          "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+        }
+      ]
+    },
+    {
+      "number": 412,
+      "title": "Snap: Chiltern extendido no resuelve Blue Pullman y recomienda copiar recursos dentro de /snap",
+      "ready_for_closure": true,
+      "criteria": [
+        {
+          "text": "Resolver los recursos compartidos ya incluidos sin duplicarlos ni exigir una descarga innecesaria. Mantener coherencia entre auditor, carga de la partida y renderer.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "El inicio real del servicio preparado bajo Snap39 resolvió el material original y la cabina texturada. Las regresiones nombradas del resolver cubren el uso de modelos compartidos y conservan los recursos genuinamente faltantes; no se presenta descargar contenido como solución para un modelo ya compartido.",
+          "evidence": [
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/actual_play",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/named_regressions",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/historical_reuse",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            }
+          ],
+          "scope": "Artefacto39 funcional y ensayos históricos explícitamente identificados; sin nuevas pruebas durante esta preparación."
+        },
+        {
+          "text": "Asociar el ejemplo a su origen verificado. Si se necesita contenido adicional, ofrecer usar una instalación existente o descargar el paquete original con sus dependencias completas; mostrar tamaño y progreso. No usar espejos ni repositorios de terceros.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La procedencia está vinculada al autor verificado. Se preserva la instalación histórica del repositorio original Chiltern v4 y el paquete original; el perfil nuevo39 utilizó una copia íntegra ya verificada y volvió a preparar sus índices dentro del Snap. Esta copia no se declara como otra descarga.",
+          "evidence": [
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/fresh_profile_and_prepare",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/historical_reuse/public_original_url_and_install_cases",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/named_regressions",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            }
+          ],
+          "scope": "Artefacto39 funcional y ensayos históricos explícitamente identificados; sin nuevas pruebas durante esta preparación."
+        },
+        {
+          "text": "Guardar descargas fuera de Git y del paquete: `$SNAP_USER_COMMON/openrailsrs/official-content` en Snap, normalmente `~/snap/openrailsrs/common/openrailsrs/official-content`. Conservar procedencia, revisión, licencias y versiones anteriores.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "El paquete39 no incluye descargas del autor. Los manifiestos y sus fechas originales permanecieron fuera de Git y del Snap; la ubicación predeterminada es independiente de revisión y cinco archivos de biblioteca/preferencias/formación permanecieron idénticos al actualizar x2→x3.",
+          "evidence": [
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/artifact",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/upgrade",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/fresh_profile_and_prepare",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            }
+          ],
+          "scope": "Artefacto39 funcional y ensayos históricos explícitamente identificados; sin nuevas pruebas durante esta preparación."
+        },
+        {
+          "text": "Mostrar destinos escribibles reales para instalaciones manuales. Nunca recomendar copiar dentro de `/snap` ni usar privilegios de administrador para modificar el paquete.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La interfaz39 eligió y conservó un destino escribible fuera de /snap. Los rechazos históricos de /snap y permisos se conservan con sus identidades y son coherentes con las regresiones nombradas; no se solicitan privilegios para modificar el paquete.",
+          "evidence": [
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/storage",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/historical_reuse/permissions_and_low_space",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/named_regressions",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            }
+          ],
+          "scope": "Artefacto39 funcional y ensayos históricos explícitamente identificados; sin nuevas pruebas durante esta preparación."
+        },
+        {
+          "text": "Conectar explícitamente recursos del tren y escenario al servicio preparado, incluidos sus trenes de tráfico. No sustituir silenciosamente el servicio elegido por otra actividad del autor.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "El TOML de lanzamiento generado por el menú mantuvo el gráfico Chiltern extendido, ocho coches, seis paradas y dos servicios de tráfico. El log de producción enlaza el escenario y la cabina externos originales; no sustituyó el servicio por una actividad distinta.",
+          "evidence": [
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/actual_play/generated_launch",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/actual_play/production_log_bindings",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            }
+          ],
+          "scope": "Artefacto39 funcional y ensayos históricos explícitamente identificados; sin nuevas pruebas durante esta preparación."
+        },
+        {
+          "text": "Separar en la UI recursos ausentes, advertencias de compatibilidad y cobertura de oráculos. Mostrar metadatos desconocidos como desconocidos.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La pantalla inicial preservada mantiene Jugar deshabilitado por índices derivados que apuntaban a otro usuario. Tras preparar se habilitó sólo con recursos obligatorios resueltos. Los datos desconocidos siguen desconocidos y la cobertura de sistemas/oráculos permanece separada de la integridad de recursos.",
+          "evidence": [
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/ui_resource_and_compatibility_scope",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/fresh_profile_and_prepare/ready_definition",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            }
+          ],
+          "scope": "Artefacto39 funcional y ensayos históricos explícitamente identificados; sin nuevas pruebas durante esta preparación."
+        },
+        {
+          "text": "Probar una instalación Snap limpia: reproducir el caso, resolver modelos compartidos, instalar contenido original cuando corresponda, reauditar y habilitar **Jugar** sólo cuando estén todos los recursos obligatorios.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "En el perfil nuevo del contenedor QA, el Snap39 rechazó los índices copiados no válidos, regeneró los derivados con su propio preparador confinado y conservó activos/manifiesto originales. Se capturó Jugar habilitado y se inició ese mismo servicio; no se acredita validación de las188formaciones ni un SO nuevo.",
+          "evidence": [
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/fresh_profile_and_prepare",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/actual_play/images/0",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/failed_attempts_preserved",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            }
+          ],
+          "scope": "Artefacto39 funcional y ensayos históricos explícitamente identificados; sin nuevas pruebas durante esta preparación."
+        },
+        {
+          "text": "Iniciar el mismo servicio dentro del Snap y verificar cabina y exterior con modelos/texturas correctos. Probar actualización/reinicio del Snap conservando biblioteca, y fallo de descarga sin dejar una instalación incompleta como válida.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "En una misma ventana/PID se pulsó Jugar y se capturaron cabina y exterior originales tras la tecla2. La actualización/reinicio conservó la biblioteca; los casos históricos de fallo/cancelación no registraron instalación parcial válida ni perdieron la copia anterior. Se declara expresamente su centinela .cancel de6bytes.",
+          "evidence": [
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/actual_play",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/upgrade",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/historical_reuse/source38_failure_scope",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            }
+          ],
+          "scope": "Artefacto39 funcional y ensayos históricos explícitamente identificados; sin nuevas pruebas durante esta preparación."
+        },
+        {
+          "text": "Añadir regresiones del resolver y de las instrucciones para destinos de sólo lectura. La prueba de apertura del menú o de ejemplos sintéticos no cubre este caso.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "El recibo público identifica regresiones concretas de resolver, modelos/cabina compartidos, procedencia, instrucciones de destino y bloqueo de Jugar. Las filas Rust conservan sus líneas PASS de check39 y las Python su ejecución real por suite; no se reemplaza la apertura de partida por una prueba sintética de menú.",
+          "evidence": [
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/named_regressions",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/historical_reuse/functional_identity_proof",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            }
+          ],
+          "scope": "Artefacto39 funcional y ensayos históricos explícitamente identificados; sin nuevas pruebas durante esta preparación."
+        }
+      ],
+      "scope": "Criterios funcionales del paquete, con las identidades y los límites de los ensayos existentes. Cierre independiente de #391/#403; no declara aprobación de memoria prolongada ni publicación en Store.",
+      "criteria_complete": true,
+      "original_issue_body_sha256": "47e457bb52dd53dd45fac361615d09065fbd7be0264218c834cb5bc74be1ec1b",
+      "evidence": [
+        {
+          "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+          "sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+          "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+        }
+      ]
+    },
+    {
+      "number": 413,
+      "title": "Biblioteca: instalar rutas y trenes pegando una URL del origen original",
+      "ready_for_closure": true,
+      "criteria": [
+        {
+          "text": "Campo de URL accesible en Biblioteca, con pegar, mensajes claros y resumen previo a instalar.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Biblioteca→Instalar desde URL y la CLI comparten resolución, inspección previa y cola por etapas. Los ensayos históricos identificados conservaron pegado de repositorio original, previsualización/confirmación e instalación; no se dicen repetidos con el binario39.",
+          "evidence": [
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/historical_reuse/public_original_url_and_install_cases",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/historical_reuse/public_checks",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/named_regressions",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            }
+          ],
+          "scope": "Artefacto39 funcional y ensayos históricos explícitamente identificados; sin nuevas pruebas durante esta preparación."
+        },
+        {
+          "text": "Instalación completa de un repositorio original, un ZIP directo y un paquete de trenes sin ruta; recursos visibles en los selectores y auditoría coherente con la carga de la partida.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Se conservan las instalaciones completas registradas del repositorio original Chiltern v4, ZIP directo Demo Model1 y paquetes sólo de trenes. Sus URLs, fechas, revisión y hashes están identificados; la auditoría/preparación de39 culminó en una carga real del servicio de Chiltern. Las formaciones de trenes sin ruta y sus avisos mantienen el alcance histórico descrito.",
+          "evidence": [
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/historical_reuse/packages",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/historical_reuse/train_only_original",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/historical_reuse/train_only_scope",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/actual_play",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            }
+          ],
+          "scope": "Artefacto39 funcional y ensayos históricos explícitamente identificados; sin nuevas pruebas durante esta preparación."
+        },
+        {
+          "text": "Enlaces inválidos, páginas sin descarga directa y proveedores no verificados producen un diagnóstico accionable.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Los casos conservados y las regresiones actuales distinguen URL inválida, página sin descarga, origen no confirmado y conexión fallida; se informa el motivo y no se declara oficial un repositorio por estar alojado en GitHub.",
+          "evidence": [
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/named_regressions",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/historical_reuse/public_checks",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            }
+          ],
+          "scope": "Artefacto39 funcional y ensayos históricos explícitamente identificados; sin nuevas pruebas durante esta preparación."
+        },
+        {
+          "text": "Validar URLs y redirecciones; rechazar esquemas peligrosos y destinos locales/internos. Conservar las protecciones de extracción contra escapes de directorio, enlaces y archivos desproporcionados. No ejecutar instaladores ni código del paquete durante la instalación.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Las regresiones nombradas cubren credenciales, esquemas/destinos internos, cambios de autor/repositorio durante redirecciones, escapes de directorio, enlaces y tamaños desproporcionados. El importador sólo analiza recursos y no ejecuta instaladores ni código del autor; los ensayos mantienen su alcance de ejecución documentado.",
+          "evidence": [
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/named_regressions",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/historical_reuse/public_checks",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            }
+          ],
+          "scope": "Artefacto39 funcional y ensayos históricos explícitamente identificados; sin nuevas pruebas durante esta preparación."
+        },
+        {
+          "text": "Comprobar cancelación, falta de espacio, caída de red y archivos corruptos, sin registrar una instalación parcial como válida ni perder la copia anterior.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "Los casos históricos identificados de caída de red, poco espacio, cancelación, archivo corrupto y reutilización mantuvieron la copia anterior y no publicaron una instalación parcial válida. El residuo histórico .cancel de6bytes se declara; no se informa una carpeta vacía.",
+          "evidence": [
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/historical_reuse/source38_failure_scope",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/historical_reuse/permissions_and_low_space",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/named_regressions",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            }
+          ],
+          "scope": "Artefacto39 funcional y ensayos históricos explícitamente identificados; sin nuevas pruebas durante esta preparación."
+        },
+        {
+          "text": "Probar Snap con confinamiento estricto y binario portátil: destinos escribibles, persistencia tras actualización y ninguna instrucción para copiar dentro de `/snap`.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "En39 se eligió y persistió carpeta desde la UI real tanto bajo Snap estricto como en el portátil movido fuera del checkout. La actualización local x2→x3 mantuvo cinco archivos existentes; los rechazos históricos de /snap conservan su identidad.",
+          "evidence": [
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/upgrade",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/storage",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/portable",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            }
+          ],
+          "scope": "Artefacto39 funcional y ensayos históricos explícitamente identificados; sin nuevas pruebas durante esta preparación."
+        },
+        {
+          "text": "Añadir pruebas automatizadas del reconocimiento de enlaces, procedencia, instalación y reutilización, más una prueba manual de extremo a extremo.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "El recibo identifica las regresiones existentes de reconocimiento, origen, descarga, extracción, instalación y reutilización, con alcance real Rust/Python. Se preserva el extremo a extremo histórico desde URL y el nuevo extremo a extremo39 desde preparación válida/Jugar hasta cabina/exterior; no se presentan descargas históricas como nuevas.",
+          "evidence": [
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/named_regressions",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/historical_reuse/public_original_url_and_install_cases",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            },
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/actual_play",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            }
+          ],
+          "scope": "Artefacto39 funcional y ensayos históricos explícitamente identificados; sin nuevas pruebas durante esta preparación."
+        },
+        {
+          "text": "Actualizar la guía de contenido con el flujo y los formatos admitidos.",
+          "status": "satisfied_in_documented_scope",
+          "assessment": "La guía de contenido documenta Biblioteca→Instalar desde URL, repositorios GitHub y ZIP directos, procedencia explícita, resumen previo, instalación por etapas, cancelación, ubicación escribible y las limitaciones de compatibilidad.",
+          "evidence": [
+            {
+              "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+              "json_pointer": "/historical_reuse/guide",
+              "receipt_sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+              "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+            }
+          ],
+          "scope": "Artefacto39 funcional y ensayos históricos explícitamente identificados; sin nuevas pruebas durante esta preparación."
+        }
+      ],
+      "scope": "Criterios funcionales del paquete, con las identidades y los límites de los ensayos existentes. Cierre independiente de #391/#403; no declara aprobación de memoria prolongada ni publicación en Store.",
+      "criteria_complete": true,
+      "original_issue_body_sha256": "cafb8c2cd233cd163d21ab923f8ff9446cff553a39b6725084d9173ea3fd4675",
+      "evidence": [
+        {
+          "receipt": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+          "sha256": "33cfa4bf82cb9b22102029328194f858ad3103931472a5be4f59180f7873a67c",
+          "published_commit": "2daa64d73ab2013186956366464c47cd1d935dee"
+        }
+      ]
+    }
+  ],
+  "criteria_count": 20,
+  "pending_evidence": [],
+  "excluded_pending_issues": [
+    391,
+    403
+  ],
+  "historical_comparison_limits": [
+    "Los ensayos originales de URL y casos negativos conservan las fechas y fuentes registradas; la igualdad de16archivos funcionales38→39 y las regresiones39 justifican su reutilización, no que se hayan repetido.",
+    "El Snap38 falló su gate de memoria y no fue publicado; sus casos funcionales de contenido no equivalen a aprobación de estabilidad.",
+    "El perfil limpio fue un usuario nuevo del contenedor QA existente, no un SO nuevo. La copia original de Chiltern preservó66678archivos sin enlaces duros; no fue una descarga nueva.",
+    "La selección de carpeta del portátil y comprobaciones de CLI no certifican FPS/jugada3D en todas las distribuciones Linux.",
+    "La telemetría interna GPU del Snap permaneció no disponible. No se infiere VRAM por proceso de mediciones globales.",
+    "El escaneo literal completo devolvió1 por4coincidencias exactas de plataforma Ubuntu; hubo0hallazgos en los351archivos de la aplicación. No se declara un escaneo literal completo con código0.",
+    "No se acredita que las188formaciones estén completas ni que recursos resueltos impliquen paridad de sistemas, sonido o física con Open Rails.",
+    "No autoriza un cierre de391/403 ni interpreta la prueba prolongada interrumpida como aprobada."
+  ],
+  "root_reviewed_utc": "2026-10-15T19:18:37.533027+00:00"
+}

@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "status": "released",
+  "observed_utc": "2026-10-15T19:18:37.618151+00:00",
+  "snap_name": "openrailsrs",
+  "version": "0.1.0-alpha.6",
+  "store_revision": 7,
+  "channel": "latest/edge",
+  "runtime_commit": "a1b59e14bea6db433c0746dd0f1f2644dc5bc4dd",
+  "artifact_sha256": "efd4726a4ca0dda3a7825a8ce36deffdeebe651ad3bb2f0132543cc2f6ac57e3",
+  "artifact_bytes": 165646336,
+  "upload_returncode": 0,
+  "store_message": "Revision 7 created for 'openrailsrs' and released to 'edge'",
+  "user_instruction": "Publish the already built Snap first without additional tests, then finish the five pending issues.",
+  "new_tests_before_publication": false,
+  "existing_functional_evidence": "docs/validation/FIFTH40_PHASE39_DISTRIBUTION.json",
+  "limits": "Publication is not acceptance of the unfinished memory/endurance issues #391 and #403. No runtime code changed for this upload."
+}
