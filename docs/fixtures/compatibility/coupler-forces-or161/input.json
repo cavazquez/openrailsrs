@@ -1,0 +1,143 @@
+{
+  "schema": 1,
+  "reference_version": "Open Rails 1.6.1",
+  "profiles": [
+    {
+      "id": "legacy_metric",
+      "text": "Wagon ( QA_legacy_metric Coupling ( Type ( Automatic ) Spring ( Stiffness ( 1000000N/m 2000000N/m ) R0 ( 0m 0.06m ) Break ( 400kN 900kN ) ) ) )",
+      "flipped": false
+    },
+    {
+      "id": "legacy_imperial",
+      "text": "Wagon ( QA_legacy_imperial Coupling ( Type ( Chain ) Spring ( Stiffness ( 1000000N/m 2000000N/m ) R0 ( 0m 2in ) Break ( 100000lbf 200000lbf ) ) ) )",
+      "flipped": false
+    },
+    {
+      "id": "advanced_metric",
+      "text": "Wagon ( QA_advanced_metric Coupling ( Type ( Automatic ) Spring ( ORTSTensionStiffness ( 100kN 300kN ) ORTSCompressionStiffness ( 150kN 500kN ) ORTSTensionR0 ( 0m 0.01m ) ORTSCompressionR0 ( 0m 0.005m ) ORTSTensionSlack ( 0.02m 0.04m ) ORTSCompressionSlack ( 0.015m 0.03m ) ORTSBreak ( 600kN 800kN ) ) ) )",
+      "flipped": false
+    },
+    {
+      "id": "rigid_advanced",
+      "text": "Wagon ( QA_rigid_advanced Coupling ( Type ( Automatic ) CouplingHasRigidConnection ( 1 ) Spring ( ORTSTensionStiffness ( 100kN 300kN ) ORTSCompressionStiffness ( 150kN 500kN ) ORTSTensionR0 ( 0m 0.01m ) ORTSCompressionR0 ( 0m 0.005m ) ORTSTensionSlack ( 0.02m 0.04m ) ORTSCompressionSlack ( 0.015m 0.03m ) ORTSBreak ( 600kN 800kN ) ) ) )",
+      "flipped": false
+    },
+    {
+      "id": "two_ends",
+      "text": "Wagon ( QA_two_ends Coupling ( Type ( Automatic ) Spring ( Stiffness ( 1000000N/m 2000000N/m ) R0 ( 0m 0.06m ) Break ( 400kN 900kN ) ) ) Coupling ( Type ( Automatic ) Spring ( Stiffness ( 1000000N/m 2000000N/m ) R0 ( 0m 0.045m ) Break ( 500kN 1000kN ) ) ) )",
+      "flipped": false
+    },
+    {
+      "id": "two_ends_flipped",
+      "text": "Wagon ( QA_two_ends_flipped Coupling ( Type ( Automatic ) Spring ( Stiffness ( 1000000N/m 2000000N/m ) R0 ( 0m 0.06m ) Break ( 400kN 900kN ) ) ) Coupling ( Type ( Automatic ) Spring ( Stiffness ( 1000000N/m 2000000N/m ) R0 ( 0m 0.045m ) Break ( 500kN 1000kN ) ) ) )",
+      "flipped": true
+    }
+  ],
+  "forces": [
+    {
+      "id": "slack_start",
+      "leading_mass_kg": 40000.0,
+      "trailing_mass_kg": 60000.0,
+      "slack_m": 0.0,
+      "leading_force_n": 120000.0,
+      "trailing_force_n": 0.0
+    },
+    {
+      "id": "traction_tension",
+      "leading_mass_kg": 40000.0,
+      "trailing_mass_kg": 60000.0,
+      "slack_m": 0.025,
+      "leading_force_n": 120000.0,
+      "trailing_force_n": 0.0
+    },
+    {
+      "id": "coast_balanced",
+      "leading_mass_kg": 40000.0,
+      "trailing_mass_kg": 60000.0,
+      "slack_m": 0.025,
+      "leading_force_n": -4000.0,
+      "trailing_force_n": -6000.0
+    },
+    {
+      "id": "braking_compression",
+      "leading_mass_kg": 40000.0,
+      "trailing_mass_kg": 60000.0,
+      "slack_m": -0.025,
+      "leading_force_n": -180000.0,
+      "trailing_force_n": -30000.0
+    },
+    {
+      "id": "reversal_compression",
+      "leading_mass_kg": 40000.0,
+      "trailing_mass_kg": 60000.0,
+      "slack_m": -0.025,
+      "leading_force_n": -120000.0,
+      "trailing_force_n": 0.0
+    },
+    {
+      "id": "wrong_contact_face",
+      "leading_mass_kg": 40000.0,
+      "trailing_mass_kg": 60000.0,
+      "slack_m": -0.025,
+      "leading_force_n": 120000.0,
+      "trailing_force_n": 0.0
+    }
+  ],
+  "impacts": [
+    {
+      "id": "stationary_contact",
+      "leading_mass_kg": 40000.0,
+      "trailing_mass_kg": 60000.0,
+      "slack_m": -0.035,
+      "leading_velocity_mps": 0.0,
+      "trailing_velocity_mps": 0.0
+    },
+    {
+      "id": "low_speed_compression",
+      "leading_mass_kg": 40000.0,
+      "trailing_mass_kg": 60000.0,
+      "slack_m": -0.035,
+      "leading_velocity_mps": 0.0,
+      "trailing_velocity_mps": 0.2
+    },
+    {
+      "id": "high_energy_compression",
+      "leading_mass_kg": 40000.0,
+      "trailing_mass_kg": 60000.0,
+      "slack_m": -0.035,
+      "leading_velocity_mps": 0.0,
+      "trailing_velocity_mps": 5.0
+    },
+    {
+      "id": "tension_stop",
+      "leading_mass_kg": 40000.0,
+      "trailing_mass_kg": 60000.0,
+      "slack_m": 0.035,
+      "leading_velocity_mps": 0.3,
+      "trailing_velocity_mps": 0.0
+    }
+  ],
+  "tolerances_predeclared": {
+    "distance_abs_m": 1e-06,
+    "force_abs_n": 0.05,
+    "force_relative": 3e-06,
+    "impulse_abs_ns": 0.05,
+    "velocity_abs_mps": 1e-06
+  },
+  "native_methods": [
+    "MSTSWagon.Parse(STFReader)",
+    "MSTSWagon.Get*Coupler*",
+    "Train.ComputeCouplerForces",
+    "Train.AddCouplerImpulseForces"
+  ],
+  "phase_scope": [
+    "gap before traction",
+    "active tension",
+    "balanced coast",
+    "braking/reversal compression",
+    "wrong face release",
+    "low/high energy stroke contact",
+    "front/rear orientation"
+  ],
+  "own_extension_scope": "Series combination, passive return-point hysteresis and explicit stored/absorbed/out-of-range energy accounting are Rust tests, not values fabricated as OR output."
+}

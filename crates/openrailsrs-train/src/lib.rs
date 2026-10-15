@@ -2,6 +2,7 @@
 
 pub mod auto_friction;
 pub mod consist_audit;
+pub mod coupler_profile;
 pub mod davis_est;
 pub mod diesel;
 pub mod error;

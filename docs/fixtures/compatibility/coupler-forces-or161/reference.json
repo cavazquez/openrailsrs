@@ -1,0 +1,278 @@
+{
+  "reference": "Open Rails 1.6.1 unmodified assemblies",
+  "scope": "Native STF coupler normalization and prescribed two-body ComputeCouplerForces/AddCouplerImpulseForces; not an OR driven journey or Rust hysteresis/energy reference",
+  "profiles": [
+    {
+      "id": "legacy_metric",
+      "flipped": false,
+      "count": 1,
+      "advanced": false,
+      "rigid": false,
+      "zero_length_m": 0.0,
+      "simple_stiffness_npm": 2.1E+07,
+      "simple_slack_m": 0.02,
+      "simple_stroke_m": 0.035,
+      "warning_force_n": 400000.0,
+      "break_force_n": 900000.0,
+      "tension_zones_m": [
+        0.0,
+        0.0,
+        0.1
+      ],
+      "compression_zones_m": [
+        0.0,
+        0.0,
+        0.1
+      ],
+      "tension_forces_n": [
+        1E+07,
+        2E+07
+      ],
+      "compression_forces_n": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "legacy_imperial",
+      "flipped": false,
+      "count": 1,
+      "advanced": false,
+      "rigid": false,
+      "zero_length_m": 0.0,
+      "simple_stiffness_npm": 2.1E+07,
+      "simple_slack_m": 0.0169333331,
+      "simple_stroke_m": 0.035,
+      "warning_force_n": 444822.156,
+      "break_force_n": 889644.3,
+      "tension_zones_m": [
+        0.0,
+        0.0,
+        0.1
+      ],
+      "compression_zones_m": [
+        0.0,
+        0.0,
+        0.1
+      ],
+      "tension_forces_n": [
+        1E+07,
+        2E+07
+      ],
+      "compression_forces_n": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "advanced_metric",
+      "flipped": false,
+      "count": 1,
+      "advanced": true,
+      "rigid": false,
+      "zero_length_m": 0.0,
+      "simple_stiffness_npm": 2.1E+08,
+      "simple_slack_m": 0.012,
+      "simple_stroke_m": 0.035,
+      "warning_force_n": 600000.0,
+      "break_force_n": 800000.0,
+      "tension_zones_m": [
+        0.01,
+        0.03,
+        0.07
+      ],
+      "compression_zones_m": [
+        0.005,
+        0.02,
+        0.049999997
+      ],
+      "tension_forces_n": [
+        100000.0,
+        300000.0
+      ],
+      "compression_forces_n": [
+        150000.0,
+        500000.0
+      ]
+    },
+    {
+      "id": "rigid_advanced",
+      "flipped": false,
+      "count": 1,
+      "advanced": true,
+      "rigid": true,
+      "zero_length_m": 0.0,
+      "simple_stiffness_npm": 2.1E+08,
+      "simple_slack_m": 0.0001,
+      "simple_stroke_m": 0.0002,
+      "warning_force_n": 600000.0,
+      "break_force_n": 800000.0,
+      "tension_zones_m": [
+        1E-05,
+        0.0001,
+        0.0002
+      ],
+      "compression_zones_m": [
+        5E-05,
+        0.0001,
+        0.0002
+      ],
+      "tension_forces_n": [
+        1000000.0,
+        3000000.0
+      ],
+      "compression_forces_n": [
+        1500000.0,
+        5000000.0
+      ]
+    },
+    {
+      "id": "two_ends",
+      "flipped": false,
+      "count": 2,
+      "advanced": false,
+      "rigid": false,
+      "zero_length_m": 0.0,
+      "simple_stiffness_npm": 2.1E+07,
+      "simple_slack_m": 0.02,
+      "simple_stroke_m": 0.035,
+      "warning_force_n": 400000.0,
+      "break_force_n": 900000.0,
+      "tension_zones_m": [
+        0.0,
+        0.0,
+        0.1
+      ],
+      "compression_zones_m": [
+        0.0,
+        0.0,
+        0.1
+      ],
+      "tension_forces_n": [
+        1E+07,
+        2E+07
+      ],
+      "compression_forces_n": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "two_ends_flipped",
+      "flipped": true,
+      "count": 2,
+      "advanced": false,
+      "rigid": false,
+      "zero_length_m": 0.0,
+      "simple_stiffness_npm": 2.1E+07,
+      "simple_slack_m": 0.015,
+      "simple_stroke_m": 0.035,
+      "warning_force_n": 500000.0,
+      "break_force_n": 1000000.0,
+      "tension_zones_m": [
+        0.0,
+        0.0,
+        0.1
+      ],
+      "compression_zones_m": [
+        0.0,
+        0.0,
+        0.1
+      ],
+      "tension_forces_n": [
+        1E+07,
+        2E+07
+      ],
+      "compression_forces_n": [
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "forces": [
+    {
+      "id": "slack_start",
+      "native_coupler_force_u_n": 0.0,
+      "tension_positive_force_n": 0.0,
+      "leading_total_force_n": 120000.0,
+      "trailing_total_force_n": 0.0,
+      "slack_m": 0.0,
+      "dynamic_slack_limit_m": 0.035
+    },
+    {
+      "id": "traction_tension",
+      "native_coupler_force_u_n": -72000.0,
+      "tension_positive_force_n": 72000.0,
+      "leading_total_force_n": 48000.0,
+      "trailing_total_force_n": 72000.0,
+      "slack_m": 0.025,
+      "dynamic_slack_limit_m": 0.025
+    },
+    {
+      "id": "coast_balanced",
+      "native_coupler_force_u_n": 0.0,
+      "tension_positive_force_n": 0.0,
+      "leading_total_force_n": -4000.0,
+      "trailing_total_force_n": -6000.0,
+      "slack_m": 0.025,
+      "dynamic_slack_limit_m": 0.035
+    },
+    {
+      "id": "braking_compression",
+      "native_coupler_force_u_n": 96000.0,
+      "tension_positive_force_n": -96000.0,
+      "leading_total_force_n": -84000.0,
+      "trailing_total_force_n": -126000.0,
+      "slack_m": -0.025,
+      "dynamic_slack_limit_m": 0.025
+    },
+    {
+      "id": "reversal_compression",
+      "native_coupler_force_u_n": 72000.0,
+      "tension_positive_force_n": -72000.0,
+      "leading_total_force_n": -48000.0,
+      "trailing_total_force_n": -72000.0,
+      "slack_m": -0.025,
+      "dynamic_slack_limit_m": 0.025
+    },
+    {
+      "id": "wrong_contact_face",
+      "native_coupler_force_u_n": 0.0,
+      "tension_positive_force_n": 0.0,
+      "leading_total_force_n": 120000.0,
+      "trailing_total_force_n": 0.0,
+      "slack_m": -0.025,
+      "dynamic_slack_limit_m": 0.035
+    }
+  ],
+  "impacts": [
+    {
+      "id": "stationary_contact",
+      "leading_velocity_mps": 0.0,
+      "trailing_velocity_mps": 0.0,
+      "native_impulse_u_ns": 0.0,
+      "tension_positive_impulse_ns": 0.0
+    },
+    {
+      "id": "low_speed_compression",
+      "leading_velocity_mps": 0.12,
+      "trailing_velocity_mps": 0.120000005,
+      "native_impulse_u_ns": 4800.0,
+      "tension_positive_impulse_ns": -4800.0
+    },
+    {
+      "id": "high_energy_compression",
+      "leading_velocity_mps": 3.0,
+      "trailing_velocity_mps": 3.0,
+      "native_impulse_u_ns": 120000.0,
+      "tension_positive_impulse_ns": -120000.0
+    },
+    {
+      "id": "tension_stop",
+      "leading_velocity_mps": 0.120000005,
+      "trailing_velocity_mps": 0.120000005,
+      "native_impulse_u_ns": -7200.00049,
+      "tension_positive_impulse_ns": 7200.00049
+    }
+  ]
+}

@@ -7,7 +7,7 @@ pub mod sigscript;
 
 pub use error::TrackError;
 pub use graph::{
-    Edge, EdgePhysicsProfile, Node, NodeKind, PositionCurve, PositionGrade, PositionPlatform,
-    PositionSpeedLimit, SwitchPosition, TrackGraph,
+    Edge, EdgePhysicsProfile, Node, NodeKind, PositionCurve, PositionGrade, PositionPhysicalCant,
+    PositionPlatform, PositionSpeedLimit, SwitchPosition, TrackGraph,
 };
 pub use signal::{SignalAspect, SignalScript, TrackSignal};

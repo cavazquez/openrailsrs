@@ -1,0 +1,23 @@
+{
+  "reference": "Open Rails 1.6.1",
+  "kind": "native_route_simulation",
+  "method": "Simulator.Update",
+  "time_s": 300.0,
+  "final_speed_mps": 0.0,
+  "odometer_m": 5320.91064,
+  "fuel_l": 1882.70471,
+  "integrated_native_flow_l": 9.8879303248365353,
+  "control_mode": "EXPLORER",
+  "out_of_control_reason": "UNDEFINED",
+  "front": {
+    "node": 1024,
+    "offset_m": 1444.2959,
+    "direction": "Forward",
+    "tile_x": -6114,
+    "tile_z": 15145,
+    "x": -135.475555,
+    "y": 55.5477,
+    "z": -312.014862
+  },
+  "scope": "Single original Class 101 diesel: native acceleration, four manually commanded gears, coast, full vacuum brake and fuel consumption. Deterministic open-loop controls; no substituted speed, engine or force equations."
+}

@@ -3,7 +3,7 @@ use super::TrackVectorPath;
 use bevy::math::DVec3;
 use openrailsrs_formats::typed::cant_speeds::CantSpeedLimit;
 use openrailsrs_formats::{TSectionCatalog, TrItemKind, TrackDbFile, TrackNodeKind};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 pub struct NativeCantSpeedIndex {
     signs: HashMap<u32, Vec<CantSpeedLimit>>,
@@ -75,6 +75,7 @@ impl NativeCantSpeedIndex {
         }
     }
 
+    #[cfg(test)]
     fn backing_speed(
         &self,
         tdb: &TrackDbFile,
@@ -82,66 +83,14 @@ impl NativeCantSpeedIndex {
         direction: i8,
         passenger: bool,
     ) -> Option<f32> {
-        let mut visited = HashSet::new();
-        let (mut node_id, mut travel) = (first, direction);
-        let mut previous = None;
-        for _ in 0..4096 {
-            if !visited.insert(node_id) {
-                return None;
-            }
-            let node = tdb.node_by_id(node_id)?;
-            match &node.kind {
-                TrackNodeKind::End => return None,
-                TrackNodeKind::Junction { pins } => {
-                    // OR ScanRoute uses the authored TrackShape.MainRoute at
-                    // junctions. From a branch, return to the common pin.
-                    let next = if previous == pins.first().map(|p| p.node_id) {
-                        pins.get(1 + self.default_branches.get(&node_id).copied().unwrap_or(0))
-                    } else {
-                        pins.first()
-                    }?;
-                    previous = Some(node_id);
-                    node_id = next.node_id;
-                }
-                TrackNodeKind::Vector { pins, .. } => {
-                    if let Some(previous) = previous {
-                        travel = if pins.1 == previous {
-                            1
-                        } else if pins.0 == previous {
-                            -1
-                        } else {
-                            return None;
-                        };
-                        let values = self
-                            .signs
-                            .get(&node_id)
-                            .into_iter()
-                            .flatten()
-                            .filter(|s| s.direction == 0 || s.direction == travel)
-                            .filter_map(|s| {
-                                (if passenger {
-                                    s.passenger_mps
-                                } else {
-                                    s.freight_mps
-                                })
-                                .map(|v| (s.position_m, v))
-                            });
-                        let value = if travel > 0 {
-                            values.max_by(|a, b| a.0.total_cmp(&b.0))
-                        } else {
-                            values.min_by(|a, b| a.0.total_cmp(&b.0))
-                        };
-                        if let Some((_, speed)) = value {
-                            return Some(speed);
-                        }
-                    }
-                    let next = if travel > 0 { pins.0 } else { pins.1 };
-                    previous = Some(node_id);
-                    node_id = next;
-                }
-            }
-        }
-        None
+        openrailsrs_formats::typed::cant_speeds::backing_speed(
+            tdb,
+            &self.signs,
+            &self.default_branches,
+            first,
+            direction,
+            passenger,
+        )
     }
     pub fn limits_for_node(
         &self,
@@ -149,24 +98,13 @@ impl NativeCantSpeedIndex {
         node: u32,
         length_m: f64,
     ) -> Vec<CantSpeedLimit> {
-        let mut result = self.signs.get(&node).cloned().unwrap_or_default();
-        for direction in [1, -1] {
-            let passenger = self.backing_speed(tdb, node, direction, true);
-            let freight = self.backing_speed(tdb, node, direction, false);
-            if passenger.is_some() || freight.is_some() {
-                result.push(CantSpeedLimit {
-                    position_m: if direction > 0 {
-                        -0.001
-                    } else {
-                        length_m + 0.001
-                    },
-                    direction,
-                    passenger_mps: passenger,
-                    freight_mps: freight,
-                });
-            }
-        }
-        result
+        openrailsrs_formats::typed::cant_speeds::limits_for_node(
+            tdb,
+            &self.signs,
+            &self.default_branches,
+            node,
+            length_m,
+        )
     }
 }
 fn native_reverse(heading: f32, angle: f32) -> bool {

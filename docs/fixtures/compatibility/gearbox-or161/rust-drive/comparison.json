@@ -1,0 +1,144 @@
+{
+  "diagnostic_column_scope": "Sampled resistance/gravity use final tick geometry/speed; velocity, odometer, RPM, clutch, flow and fuel are production session state. No diagnostic force is applied to the simulation.",
+  "fuel_error_l": -0.0013758334169811093,
+  "max_distance_error_m": 0.940694988290943,
+  "max_shift_time_error_s": 0.0,
+  "max_speed_error_mps": 0.04742050523437502,
+  "native_integrated_flow_l": 9.887930325874967,
+  "native_shifts": [
+    {
+      "from": -1,
+      "time_s": 20.05,
+      "to": 0
+    },
+    {
+      "from": 0,
+      "time_s": 63.050000000000004,
+      "to": 1
+    },
+    {
+      "from": 1,
+      "time_s": 113.05000000000001,
+      "to": 2
+    },
+    {
+      "from": 2,
+      "time_s": 163.05,
+      "to": 3
+    },
+    {
+      "from": 3,
+      "time_s": 280.05,
+      "to": -1
+    }
+  ],
+  "original_content_unmodified": true,
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "reference_trace_sha256": "11729fc7c9ec3caa029f10976d5f217f3885fcfa972f3825dc6a75f802746433",
+  "reference_version": "1.6.1",
+  "rms_speed_error_mps": 0.011416633328085865,
+  "rows": 6001,
+  "rust_consumed_l": 9.886554492457986,
+  "rust_distance_m": 5321.307690754096,
+  "rust_final_speed_mps": 0.0,
+  "rust_shifts": [
+    {
+      "from": -1,
+      "time_s": 20.05,
+      "to": 0
+    },
+    {
+      "from": 0,
+      "time_s": 63.050000000000004,
+      "to": 1
+    },
+    {
+      "from": 1,
+      "time_s": 113.05000000000001,
+      "to": 2
+    },
+    {
+      "from": 2,
+      "time_s": 163.05,
+      "to": 3
+    },
+    {
+      "from": 3,
+      "time_s": 280.05,
+      "to": -1
+    }
+  ],
+  "rust_trace_sha256": "2f8b765ae0c92bd4f5c11c626abe5cd4886c0e3a950696e693ccc9416791f32a",
+  "same_gear_sequence": true,
+  "schema_version": 1,
+  "scope": "LiveDriveSession loaded original author ENG/PAT/SCE and independently evolved motion, forces, engine, brakes and fuel; only authored controls prescribed.",
+  "status": "passed",
+  "tolerances": {
+    "distance_m_abs": 3,
+    "fuel_l_abs": 0.05,
+    "manual_shift_time_s_abs": 0.1,
+    "speed_mps_abs": 0.1
+  },
+  "tolerances_sha256": "74648bc45c1c3affabdc9c8341f423f5cf66a743c0980b66709a2f33b3d617ed",
+  "worst_speed_sample": {
+    "distance_error_m": 0.0030712256817650996,
+    "native_row": [
+      "614",
+      "30.700000000000003",
+      "1",
+      "0",
+      "1",
+      "4.43802261",
+      "24.2043324",
+      "1051.14233",
+      "1257.8573",
+      "100",
+      "154800.328",
+      "0",
+      "0",
+      "1257.4928",
+      "-20.0082531",
+      "1",
+      "0.0183135178",
+      "1892.40417",
+      "0",
+      "0",
+      "846.288452",
+      "0",
+      "4.189535",
+      "10.3142376",
+      "384",
+      "48.03973"
+    ],
+    "rust_row": [
+      614.0,
+      30.700000000000003,
+      1.0,
+      0.0,
+      1.0,
+      4.485443115234375,
+      24.207403625681764,
+      1051.1656494140625,
+      1257.5791015625,
+      100.0,
+      154803.67669935306,
+      0.0,
+      0.0,
+      1270.9290771484375,
+      -19.979042053222656,
+      1.0,
+      0.018314035390518284,
+      1892.3210575750404,
+      34878.83290275417,
+      0.0,
+      847.5666038147065,
+      -0.0,
+      4.189535456460371,
+      10.314238543539629,
+      384.0,
+      48.04324697921442
+    ],
+    "tick": 614,
+    "velocity_error_mps": 0.04742050523437502
+  }
+}

@@ -544,6 +544,14 @@ pub fn dial_control_value(
         ControlType::Generic(name) if name.to_ascii_uppercase().contains("RPM") => {
             tel.diesel_rpm.unwrap_or(0.0)
         }
+        ControlType::Generic(name)
+            if matches!(
+                name.to_ascii_uppercase().as_str(),
+                "GEARS" | "GEARS_DISPLAY"
+            ) =>
+        {
+            tel.gear_indication.unwrap_or(0.)
+        }
         ControlType::Generic(name) if name.eq_ignore_ascii_case("FUEL_GAUGE") => {
             if let Some(b) = &tel.steam {
                 b.coal_kg
@@ -1263,6 +1271,7 @@ mod tests {
             brake_cyl_bar: 1.0,
             brake_force_kn: 80.0,
             diesel_rpm: Some(900.0),
+            gear_indication: None,
             boiler_bar: None,
             max_current_a: None,
             native_axles: true,

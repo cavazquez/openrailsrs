@@ -233,6 +233,11 @@ fn layout_to_graph(layout: RouteLayoutFile) -> Result<TrackGraph, RouteError> {
                 || !(0.0..=edge.length_m).contains(&p.position_m)
                 || !p.grade_percent.is_finite()
                 || p.grade_percent.abs() > 25.0
+        }) || profile.physical_cant.iter().any(|p| {
+            !p.position_m.is_finite()
+                || !(0.0..=edge.length_m).contains(&p.position_m)
+                || !p.cant_m.is_finite()
+                || p.cant_m < 0.
         }) {
             return Err(RouteError::Msg(format!(
                 "Invalid speed/grade profile for {id}"

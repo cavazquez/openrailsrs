@@ -1,0 +1,76 @@
+{
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "helper_sha256": "9467e7d9ba31193b38021290f85ca80dc4dee86a486f34075a9a1d0ed9cf6a61",
+  "script_sha256": "ff61a44135dee5fc8b9869ce762513237afeb68bcde701e34aff02d9304661c4",
+  "input_sha256": "80ea4131fd91172c277e80e9d314a8f2535d266fb4ba44b44893e5e25ec7cf75",
+  "tolerances_sha256": "74648bc45c1c3affabdc9c8341f423f5cf66a743c0980b66709a2f33b3d617ed",
+  "drive_config_sha256": "80a8d09b82cc3ec1ea140a28649406e64119822be4b6bcbf60cda5df6029326e",
+  "source_vehicle": {
+    "path": "/home/cristian/Documentos/Open Rails/Content/Demo Model 1/TRAINS/trainset/MT_DB_Class101_BlueGrey/MT_DB_Cl101_BlGr_DMBS_SC51451.eng",
+    "sha256": "560b9e7531a4b71f65f0014fbb88722f095c1bac6f6106bf8d90550f467bfdd3"
+  },
+  "source_path": {
+    "path": "/home/cristian/Documentos/Open Rails/Content/Demo Model 1/ROUTES/SCE/PATHS/MT_MT_0930 Edinburgh-Glasgow Queen Street(player).PAT",
+    "sha256": "01edba267c6fdf02f884d210c9dc2b5823afd07d2523470239c2a1e7e4e22997"
+  },
+  "phase": "before_wine_capture_and_before_rust_comparison",
+  "schema_version": 1,
+  "capture_kind": "original_dll_calls_and_optional_native_route_simulation",
+  "methods": [
+    "MSTSDieselLocomotive.Parse",
+    "MSTSGearBoxParams.Parse",
+    "DieselEngine.InitFromMSTS",
+    "DieselEngine.InitDieselRailPowers",
+    "GearBox.Initialize",
+    "GearBox.Update",
+    "DieselEngine.Update",
+    "GearBox.ShaftRPM",
+    "GearBox.ClutchPercent",
+    "GearBox.IsClutchOn",
+    "GearBox.TractiveForceN",
+    "GearBox.IsOverspeedWarning",
+    "GearBox.IsOverspeedError"
+  ],
+  "families": [
+    "diesel_legacy_manual_gearbox",
+    "diesel_legacy_automatic_subsystem",
+    "vacuum_twin_pipe_native_drive"
+  ],
+  "phases": [
+    "parse_units",
+    "initialize_ratios",
+    "neutral",
+    "clutch_shift_boundaries",
+    "forward_reverse",
+    "manual_up_down",
+    "automatic_up_down",
+    "overspeed",
+    "power_limit",
+    "geared_rpm_and_fuel_flow"
+  ],
+  "native_drive_captured": true,
+  "sha256": {
+    "RunActivity.exe": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2",
+    "Orts.Simulation.dll": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679",
+    "Orts.Settings.dll": "fe0d8d81149f480f3972c80e64ffaf6012c7599e32c26c8e4d46510e3edbb2e7",
+    "Orts.Common.dll": "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212",
+    "Orts.Formats.Msts.dll": "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465",
+    "Orts.Parsers.Msts.dll": "8e0781c9f861ed95b4467d1bf948ea7aca896d634f21ac5952f97a9f630d0b36",
+    "MonoGame.Framework.dll": "c6a16c29705a4c847e0e4a2647bf432604cd9320cbc5d4125ab01ae7bb7e6542",
+    "Newtonsoft.Json.dll": "9af2e1c672afd67a291b8f2031a341a3788d4d9f683eaddc6ceab3a3a74c546e"
+  },
+  "files": {
+    "inputs.json": "80ea4131fd91172c277e80e9d314a8f2535d266fb4ba44b44893e5e25ec7cf75",
+    "tolerances.json": "74648bc45c1c3affabdc9c8341f423f5cf66a743c0980b66709a2f33b3d617ed",
+    "registration.json": "73be02c67f798b4d72a571a07d15e35b78f005282d78016aa29af9cd4ea64508",
+    "reference.json": "3e942d1fe335ec771b2543a81a969b169a255ceaed1c66d6367ff6e094e7d143",
+    "drive-config.json": "80a8d09b82cc3ec1ea140a28649406e64119822be4b6bcbf60cda5df6029326e",
+    "content/TRAINS/CONSISTS/openrailsrs_gearbox_class101.con": "62965e6a99990621b3089304e4d4347fbaac4cc787949a4dfd1d07da6dd6796b",
+    "native-drive/initial.json": "4d42053251311ee0efa67ce73f891dda4b2f1d90d09211a432e6b09589c85c94",
+    "native-drive/outcome.json": "44ef1cc6fc7f6b5f391a3226adcf1b5a1a839b3773cd9bda3558bbde8774df9d",
+    "native-drive/trace.csv": "11729fc7c9ec3caa029f10976d5f217f3885fcfa972f3825dc6a75f802746433"
+  },
+  "scope": "Real OR 1.6.1 DLL results. Synthetic unit/coasting variants are labeled author-derived. Subsystem speed/RPM/power are prescribed; native-drive uses Simulator.Update with control commands only. No complete steam/electric or multi-engine certification claim.",
+  "baseline_policy": "New capture only; previously approved baselines were verified and not regenerated."
+}

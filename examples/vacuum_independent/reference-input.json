@@ -1,0 +1,402 @@
+{
+  "schema": 1,
+  "reference_version": "1.6.1",
+  "tolerances_declared_before_capture": {
+    "pressure_psi_abs": 0.002,
+    "shoe_force_n_abs": 50.0
+  },
+  "scope": "Native vacuum pipe 3, engine/tender valve and reserve interaction with actual recorded propagated pipe 1 inputs. Controller definitions are owned fixtures; brake hardware parameters come from hashed installed original stock. Not a full route or automatic train pipe propagation parity claim.",
+  "cases": [
+    {
+      "name": "steam_continuous_tender_coach",
+      "steam": true,
+      "max_vacuum": "25InHg",
+      "controller_fields": {
+        "EngineBrakesControllerMaxApplicationRate": "0.8psi/s",
+        "EngineBrakesControllerMaxReleaseRate": "1.2psi/s",
+        "EngineBrakesControllerEmergencyApplicationRate": "3psi/s",
+        "Brake_Engine": "0 1 0.05 0 NumNotches ( 1 Notch ( 0 1 EngineBrakesControllerVacuumContinuousServiceStart ) )",
+        "Brake_Train": "0 1 0.05 0 NumNotches ( 1 Notch ( 0 1 EngineBrakesControllerVacuumContinuousServiceStart ) )"
+      },
+      "vehicles": [
+        {
+          "fixture": "vehicles/hall_engine.eng",
+          "source_original": "4994DowntonHall/OpenRails/4994E.eng",
+          "source_original_sha256": "756564ed1c832dc80e24d2dcb83297fa36dabe7d9648137969975b558ab28545",
+          "role": "engine",
+          "tender": false,
+          "length_m": 11.33,
+          "fields": {
+            "Mass": "75.8t-uk",
+            "Size": "2.835m 4.000m 11.330m",
+            "MaxBrakeForce": "189kN",
+            "BrakeSystemType": "Vacuum_single_pipe",
+            "BrakeEquipmentType": "Vacuum_brake, Auxilary_reservoir",
+            "MaxApplicationRate": "2.0InHg/s",
+            "MaxReleaseRate": "2.5InHg/s",
+            "BrakeCylinderPressureForMaxBrakeBrakeForce": "25InHg",
+            "ORTSNumberBrakeCylinders": "2",
+            "BrakePipeVolume": "0.93ft^3",
+            "ORTSBrakeCylinderSize": "30in",
+            "ORTSAuxilaryResCapacity": "8.25ft^3"
+          }
+        },
+        {
+          "fixture": "vehicles/hall_tender.wag",
+          "source_original": "4994DowntonHall/OpenRails/BR_HallT_Late.wag",
+          "source_original_sha256": "58beb9bbae373bf01ee665c4398c24a82480a4111de523faf6e01382ba7d439e",
+          "role": "tender",
+          "tender": true,
+          "length_m": 7.468,
+          "fields": {
+            "Mass": "46.7t-uk",
+            "Size": "2.700m 3.627m 7.468m",
+            "MaxBrakeForce": "154kN",
+            "BrakeSystemType": "Vacuum_single_pipe",
+            "BrakeEquipmentType": "Handbrake, Vacuum_brake, Auxilary_reservoir",
+            "MaxApplicationRate": "2.5InHg/s",
+            "MaxReleaseRate": "2.0InHg/s",
+            "BrakeCylinderPressureForMaxBrakeBrakeForce": "25InHg",
+            "ORTSNumberBrakeCylinders": "2",
+            "BrakePipeVolume": "0.62ft^3",
+            "ORTSBrakeCylinderSize": "30in",
+            "ORTSAuxilaryResCapacity": "8.25ft^3"
+          }
+        },
+        {
+          "fixture": "vehicles/trailer.wag",
+          "source_original": "4994DowntonHall/OpenRails/BR_HallT_Late.wag",
+          "source_original_sha256": "58beb9bbae373bf01ee665c4398c24a82480a4111de523faf6e01382ba7d439e",
+          "role": "coach",
+          "tender": false,
+          "length_m": 7.468,
+          "fields": {
+            "Mass": "46.7t-uk",
+            "Size": "2.700m 3.627m 7.468m",
+            "MaxBrakeForce": "154kN",
+            "BrakeSystemType": "Vacuum_single_pipe",
+            "BrakeEquipmentType": "Handbrake, Vacuum_brake, Auxilary_reservoir",
+            "MaxApplicationRate": "2.5InHg/s",
+            "MaxReleaseRate": "2.0InHg/s",
+            "BrakeCylinderPressureForMaxBrakeBrakeForce": "25InHg",
+            "ORTSNumberBrakeCylinders": "2",
+            "BrakePipeVolume": "0.62ft^3",
+            "ORTSBrakeCylinderSize": "30in",
+            "ORTSAuxilaryResCapacity": "8.25ft^3"
+          }
+        }
+      ],
+      "initial_reservoir_psi": 5.5,
+      "phases": [
+        {
+          "name": "released",
+          "train": 0,
+          "independent": 0,
+          "pipe_input": "charged",
+          "ticks": 60
+        },
+        {
+          "name": "independent_apply",
+          "train": 0,
+          "independent": 0.6,
+          "pipe_input": "charged",
+          "ticks": 60
+        },
+        {
+          "name": "independent_hold",
+          "train": 0,
+          "independent": 0.6,
+          "pipe_input": "charged",
+          "ticks": 60
+        },
+        {
+          "name": "partial_train",
+          "train": 0.5,
+          "independent": 0.6,
+          "pipe_input": "9psi",
+          "ticks": 60
+        },
+        {
+          "name": "independent_release_under_train",
+          "train": 0.5,
+          "independent": 0,
+          "pipe_input": "9psi",
+          "ticks": 60
+        },
+        {
+          "name": "train_release_with_independent",
+          "train": 0,
+          "independent": 0.6,
+          "pipe_input": "charged",
+          "ticks": 60
+        },
+        {
+          "name": "full_train",
+          "train": 1,
+          "independent": 0.6,
+          "pipe_input": "14.503774psi",
+          "ticks": 60
+        },
+        {
+          "name": "train_release",
+          "train": 0,
+          "independent": 0,
+          "pipe_input": "charged",
+          "ticks": 60
+        }
+      ]
+    },
+    {
+      "name": "steam_notched_tender_coach",
+      "steam": true,
+      "max_vacuum": "25InHg",
+      "controller_fields": {
+        "EngineBrakesControllerMaxApplicationRate": "0.8psi/s",
+        "EngineBrakesControllerMaxReleaseRate": "1.2psi/s",
+        "EngineBrakesControllerEmergencyApplicationRate": "3psi/s",
+        "Brake_Engine": "0 1 0.05 0 NumNotches ( 5 Notch ( 0 0 EngineBrakesControllerReleaseStart ) Notch ( 0.2 0 EngineBrakesControllerHoldLappedStart ) Notch ( 0.4 1 EngineBrakesControllerApplyStart ) Notch ( 0.8 0 EngineBrakesControllerBrakeNotchStart ) Notch ( 1 0 EngineBrakesControllerEmergencyStart ) )",
+        "Brake_Train": "0 1 0.05 0 NumNotches ( 1 Notch ( 0 1 EngineBrakesControllerVacuumContinuousServiceStart ) )"
+      },
+      "vehicles": [
+        {
+          "fixture": "vehicles/hall_notched.eng",
+          "source_original": "4994DowntonHall/OpenRails/4994E.eng",
+          "source_original_sha256": "756564ed1c832dc80e24d2dcb83297fa36dabe7d9648137969975b558ab28545",
+          "role": "engine",
+          "tender": false,
+          "length_m": 11.33,
+          "fields": {
+            "Mass": "75.8t-uk",
+            "Size": "2.835m 4.000m 11.330m",
+            "MaxBrakeForce": "189kN",
+            "BrakeSystemType": "Vacuum_single_pipe",
+            "BrakeEquipmentType": "Vacuum_brake, Auxilary_reservoir",
+            "MaxApplicationRate": "2.0InHg/s",
+            "MaxReleaseRate": "2.5InHg/s",
+            "BrakeCylinderPressureForMaxBrakeBrakeForce": "25InHg",
+            "ORTSNumberBrakeCylinders": "2",
+            "BrakePipeVolume": "0.93ft^3",
+            "ORTSBrakeCylinderSize": "30in",
+            "ORTSAuxilaryResCapacity": "8.25ft^3"
+          }
+        },
+        {
+          "fixture": "vehicles/hall_tender.wag",
+          "source_original": "4994DowntonHall/OpenRails/BR_HallT_Late.wag",
+          "source_original_sha256": "58beb9bbae373bf01ee665c4398c24a82480a4111de523faf6e01382ba7d439e",
+          "role": "tender",
+          "tender": true,
+          "length_m": 7.468,
+          "fields": {
+            "Mass": "46.7t-uk",
+            "Size": "2.700m 3.627m 7.468m",
+            "MaxBrakeForce": "154kN",
+            "BrakeSystemType": "Vacuum_single_pipe",
+            "BrakeEquipmentType": "Handbrake, Vacuum_brake, Auxilary_reservoir",
+            "MaxApplicationRate": "2.5InHg/s",
+            "MaxReleaseRate": "2.0InHg/s",
+            "BrakeCylinderPressureForMaxBrakeBrakeForce": "25InHg",
+            "ORTSNumberBrakeCylinders": "2",
+            "BrakePipeVolume": "0.62ft^3",
+            "ORTSBrakeCylinderSize": "30in",
+            "ORTSAuxilaryResCapacity": "8.25ft^3"
+          }
+        },
+        {
+          "fixture": "vehicles/trailer.wag",
+          "source_original": "4994DowntonHall/OpenRails/BR_HallT_Late.wag",
+          "source_original_sha256": "58beb9bbae373bf01ee665c4398c24a82480a4111de523faf6e01382ba7d439e",
+          "role": "coach",
+          "tender": false,
+          "length_m": 7.468,
+          "fields": {
+            "Mass": "46.7t-uk",
+            "Size": "2.700m 3.627m 7.468m",
+            "MaxBrakeForce": "154kN",
+            "BrakeSystemType": "Vacuum_single_pipe",
+            "BrakeEquipmentType": "Handbrake, Vacuum_brake, Auxilary_reservoir",
+            "MaxApplicationRate": "2.5InHg/s",
+            "MaxReleaseRate": "2.0InHg/s",
+            "BrakeCylinderPressureForMaxBrakeBrakeForce": "25InHg",
+            "ORTSNumberBrakeCylinders": "2",
+            "BrakePipeVolume": "0.62ft^3",
+            "ORTSBrakeCylinderSize": "30in",
+            "ORTSAuxilaryResCapacity": "8.25ft^3"
+          }
+        }
+      ],
+      "initial_reservoir_psi": 5.5,
+      "phases": [
+        {
+          "name": "released",
+          "train": 0,
+          "independent": 0,
+          "pipe_input": "charged",
+          "ticks": 60
+        },
+        {
+          "name": "apply",
+          "train": 0,
+          "independent": 0.5,
+          "pipe_input": "charged",
+          "ticks": 60
+        },
+        {
+          "name": "lap",
+          "train": 0,
+          "independent": 0.2,
+          "pipe_input": "charged",
+          "ticks": 60
+        },
+        {
+          "name": "partial_train_with_lap",
+          "train": 0.5,
+          "independent": 0.2,
+          "pipe_input": "9psi",
+          "ticks": 60
+        },
+        {
+          "name": "release_under_train",
+          "train": 0.5,
+          "independent": 0,
+          "pipe_input": "9psi",
+          "ticks": 60
+        },
+        {
+          "name": "brake_notch",
+          "train": 0,
+          "independent": 0.8,
+          "pipe_input": "charged",
+          "ticks": 60
+        },
+        {
+          "name": "emergency",
+          "train": 0,
+          "independent": 1,
+          "pipe_input": "charged",
+          "ticks": 60
+        },
+        {
+          "name": "release",
+          "train": 0,
+          "independent": 0,
+          "pipe_input": "charged",
+          "ticks": 60
+        }
+      ]
+    },
+    {
+      "name": "diesel_continuous_coach",
+      "steam": false,
+      "max_vacuum": "10.5psi",
+      "controller_fields": {
+        "EngineBrakesControllerMaxApplicationRate": "0.8psi/s",
+        "EngineBrakesControllerMaxReleaseRate": "1.2psi/s",
+        "EngineBrakesControllerEmergencyApplicationRate": "3psi/s",
+        "Brake_Engine": "0 1 0.05 0 NumNotches ( 1 Notch ( 0 1 EngineBrakesControllerVacuumContinuousServiceStart ) )",
+        "Brake_Train": "0 1 0.05 0 NumNotches ( 1 Notch ( 0 1 EngineBrakesControllerVacuumContinuousServiceStart ) )"
+      },
+      "vehicles": [
+        {
+          "fixture": "vehicles/diesel_vacuum.eng",
+          "source_original": "RF_Class121/RF_Class121_DMBS.eng",
+          "source_original_sha256": "4e7fac1905163a557d80034b71d37bfcd618274540bdf2e1429bdf546d4af01f",
+          "role": "engine",
+          "tender": false,
+          "length_m": 20.3,
+          "fields": {
+            "Mass": "37t",
+            "Size": "2.86085m 3.87124m 20.30m",
+            "MaxBrakeForce": "30kN",
+            "BrakeSystemType": "\"Vacuum_twin_pipe\"",
+            "BrakeEquipmentType": "\"Vacuum_brake, Handbrake\"",
+            "MaxApplicationRate": "5",
+            "MaxReleaseRate": "5",
+            "BrakeCylinderPressureForMaxBrakeBrakeForce": "21"
+          }
+        },
+        {
+          "fixture": "vehicles/trailer.wag",
+          "source_original": "4994DowntonHall/OpenRails/BR_HallT_Late.wag",
+          "source_original_sha256": "58beb9bbae373bf01ee665c4398c24a82480a4111de523faf6e01382ba7d439e",
+          "role": "coach",
+          "tender": false,
+          "length_m": 7.468,
+          "fields": {
+            "Mass": "46.7t-uk",
+            "Size": "2.700m 3.627m 7.468m",
+            "MaxBrakeForce": "154kN",
+            "BrakeSystemType": "Vacuum_single_pipe",
+            "BrakeEquipmentType": "Handbrake, Vacuum_brake, Auxilary_reservoir",
+            "MaxApplicationRate": "2.5InHg/s",
+            "MaxReleaseRate": "2.0InHg/s",
+            "BrakeCylinderPressureForMaxBrakeBrakeForce": "25InHg",
+            "ORTSNumberBrakeCylinders": "2",
+            "BrakePipeVolume": "0.62ft^3",
+            "ORTSBrakeCylinderSize": "30in",
+            "ORTSAuxilaryResCapacity": "8.25ft^3"
+          }
+        }
+      ],
+      "initial_reservoir_psi": 6.0,
+      "phases": [
+        {
+          "name": "released",
+          "train": 0,
+          "independent": 0,
+          "pipe_input": "charged",
+          "ticks": 60
+        },
+        {
+          "name": "independent_apply",
+          "train": 0,
+          "independent": 0.6,
+          "pipe_input": "charged",
+          "ticks": 60
+        },
+        {
+          "name": "independent_hold",
+          "train": 0,
+          "independent": 0.6,
+          "pipe_input": "charged",
+          "ticks": 60
+        },
+        {
+          "name": "partial_train",
+          "train": 0.5,
+          "independent": 0.6,
+          "pipe_input": "9psi",
+          "ticks": 60
+        },
+        {
+          "name": "independent_release_under_train",
+          "train": 0.5,
+          "independent": 0,
+          "pipe_input": "9psi",
+          "ticks": 60
+        },
+        {
+          "name": "train_release_with_independent",
+          "train": 0,
+          "independent": 0.6,
+          "pipe_input": "charged",
+          "ticks": 60
+        },
+        {
+          "name": "full_train",
+          "train": 1,
+          "independent": 0.6,
+          "pipe_input": "14.503774psi",
+          "ticks": 60
+        },
+        {
+          "name": "train_release",
+          "train": 0,
+          "independent": 0,
+          "pipe_input": "charged",
+          "ticks": 60
+        }
+      ]
+    }
+  ]
+}

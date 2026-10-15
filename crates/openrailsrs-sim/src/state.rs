@@ -204,6 +204,26 @@ impl TrainSimState {
             .collect();
     }
 
+    /// Replace a scenario preset only where an attached vehicle authored its
+    /// draft gear. With multi-body disabled there is no elastic joint to bind.
+    pub fn configure_authored_couplers(
+        &mut self,
+        profiles: &[openrailsrs_train::coupler_profile::VehicleCouplerProfile],
+    ) -> Result<(), String> {
+        if self.vehicles.is_empty() {
+            return Ok(());
+        }
+        if profiles.len() != self.vehicles.len() {
+            return Err("Authored couplers do not match formation vehicle count".into());
+        }
+        for (joint, pair) in self.couplers.iter_mut().zip(profiles.windows(2)) {
+            if let Some(authored) = CouplerState::from_vehicle_ends(&pair[0], &pair[1]) {
+                *joint = authored;
+            }
+        }
+        Ok(())
+    }
+
     pub fn current_edge(&self) -> Option<&str> {
         self.path_edges.get(self.edge_index).map(String::as_str)
     }

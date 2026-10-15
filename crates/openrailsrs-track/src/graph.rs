@@ -58,6 +58,9 @@ pub struct Edge {
 pub struct EdgePhysicsProfile {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub curves: Vec<PositionCurve>,
+    /// Native PhysElevTable samples, independent of visual signed roll.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub physical_cant: Vec<PositionPhysicalCant>,
     #[serde(default)]
     pub speed_posts: Vec<PositionSpeedLimit>,
     #[serde(default)]
@@ -65,6 +68,12 @@ pub struct EdgePhysicsProfile {
     /// Original reciprocal TDB platforms, in directed edge metres.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub platforms: Vec<PositionPlatform>,
+}
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct PositionPhysicalCant {
+    pub position_m: f64,
+    /// Outer rail elevation magnitude in metres, equal in either direction.
+    pub cant_m: f64,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PositionCurve {
@@ -107,6 +116,9 @@ pub struct TrackGraph {
 
 impl TrackGraph {
     pub fn set_physics_profile(&mut self, edge: &str, mut profile: EdgePhysicsProfile) {
+        profile
+            .physical_cant
+            .sort_by(|a, b| a.position_m.total_cmp(&b.position_m));
         profile
             .curves
             .sort_by(|a, b| a.position_m.total_cmp(&b.position_m));

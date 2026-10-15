@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "kind": "native_route_simulation",
+  "step_s": 0.05,
+  "ticks": 6000,
+  "settle_ticks": 400,
+  "control_units": {
+    "throttle": "fraction",
+    "brake": "native_handle_fraction",
+    "gear": "0=neutral,1..4=gear"
+  },
+  "commands": [
+    {
+      "tick": 0,
+      "throttle": 0,
+      "brake": 1,
+      "gear": 0
+    },
+    {
+      "tick": 200,
+      "throttle": 0,
+      "brake": 0,
+      "gear": 0
+    },
+    {
+      "tick": 400,
+      "throttle": 1,
+      "brake": 0,
+      "gear": 1
+    },
+    {
+      "tick": 1200,
+      "throttle": 0,
+      "brake": 0,
+      "gear": 1
+    },
+    {
+      "tick": 1260,
+      "throttle": 1,
+      "brake": 0,
+      "gear": 2
+    },
+    {
+      "tick": 2200,
+      "throttle": 0,
+      "brake": 0,
+      "gear": 2
+    },
+    {
+      "tick": 2260,
+      "throttle": 1,
+      "brake": 0,
+      "gear": 3
+    },
+    {
+      "tick": 3200,
+      "throttle": 0,
+      "brake": 0,
+      "gear": 3
+    },
+    {
+      "tick": 3260,
+      "throttle": 1,
+      "brake": 0,
+      "gear": 4
+    },
+    {
+      "tick": 4300,
+      "throttle": 0,
+      "brake": 0,
+      "gear": 4
+    },
+    {
+      "tick": 4900,
+      "throttle": 0,
+      "brake": 1,
+      "gear": 4
+    },
+    {
+      "tick": 5600,
+      "throttle": 0,
+      "brake": 1,
+      "gear": 0
+    }
+  ]
+}

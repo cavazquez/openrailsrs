@@ -1,0 +1,21 @@
+(Wagon
+  (Comment "Original test vehicle: longer travel and lower restoring force.")
+  (Name "Vagón: acoplador de mayor recorrido")
+  (Type Freight)
+  (Mass 20000)
+  (Size 3 3.5 15)
+  (MaxBrakeForce 30000)
+  (BrakeSystemType Air_single_pipe)
+  (Coupling
+    (Type Automatic)
+    (Spring
+      (ORTSTensionStiffness 40kN 200kN)
+      (ORTSCompressionStiffness 60kN 250kN)
+      (ORTSTensionR0 0m 0.015m)
+      (ORTSCompressionR0 0m 0.008m)
+      (ORTSTensionSlack 0.03m 0.05m)
+      (ORTSCompressionSlack 0.025m 0.045m)
+      (ORTSBreak 300kN 500kN)
+    )
+  )
+)

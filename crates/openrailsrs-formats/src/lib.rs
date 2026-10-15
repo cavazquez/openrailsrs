@@ -19,11 +19,14 @@ pub mod shape_binary_reader;
 pub mod tile_paths;
 pub mod typed;
 pub mod vehicle_include;
+pub use typed::gearbox::{
+    GearboxClutch, GearboxKind, GearboxOperation, NativeGearboxProfile, parse_native_gearbox,
+};
 pub use typed::native_physics::{NativeVehiclePhysics, parse_native_vehicle_physics};
 pub use typed::vehicle_runtime::{
     LegacyEpBrakeProfile, NativeAirBrakeProfile, NativeAirController, NativeEpBrakeProfile,
-    NativeVacuumBrakeProfile, VehicleBrakeProfile, VehicleEmitter, parse_vehicle_brake_profile,
-    parse_vehicle_emitters,
+    NativeVacuumBrakeProfile, NativeVacuumController, VehicleBrakeProfile, VehicleEmitter,
+    parse_vehicle_brake_profile, parse_vehicle_emitters,
 };
 pub use typed::{
     CurveComfort, ScriptSystem, VehicleContentMetadata, VehicleCurveParameters,

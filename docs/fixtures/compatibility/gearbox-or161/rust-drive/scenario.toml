@@ -1,0 +1,205 @@
+extra_trains = []
+
+[scenario]
+name = "Original Class 101: closed-loop native comparison"
+description = ""
+start_time_s = 34140.0
+
+[route]
+path = "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/next-five-20261015/gearbox/rust-drive10/route"
+start = "n330"
+destination = "n100"
+start_offset_m = 23.83584335353266
+stops = []
+waypoints = [
+    "n330",
+    "n217",
+    "n210",
+    "n350",
+    "n360",
+    "n356",
+    "n362",
+    "n209",
+    "n364",
+    "n211",
+    "n171",
+    "n191",
+    "n192",
+    "n160",
+    "n175",
+    "n161",
+    "n162",
+    "n156",
+    "n1061",
+    "n1060",
+    "n114",
+    "n117",
+    "n136",
+    "n126",
+    "n107",
+    "n986",
+    "n1093",
+    "n86",
+    "n100",
+]
+assume_signals_clear = true
+
+[[route.switches]]
+node = "n217"
+position = "straight"
+
+[[route.switches]]
+node = "n210"
+position = "straight"
+
+[[route.switches]]
+node = "n350"
+position = "diverging"
+
+[[route.switches]]
+node = "n360"
+position = "straight"
+
+[[route.switches]]
+node = "n356"
+position = "diverging"
+
+[[route.switches]]
+node = "n362"
+position = "straight"
+
+[[route.switches]]
+node = "n209"
+position = "straight"
+
+[[route.switches]]
+node = "n364"
+position = "straight"
+
+[[route.switches]]
+node = "n211"
+position = "straight"
+
+[[route.switches]]
+node = "n171"
+position = "diverging"
+
+[[route.switches]]
+node = "n191"
+position = "diverging"
+
+[[route.switches]]
+node = "n192"
+position = "diverging"
+
+[[route.switches]]
+node = "n160"
+position = "straight"
+
+[[route.switches]]
+node = "n175"
+position = "straight"
+
+[[route.switches]]
+node = "n161"
+position = "straight"
+
+[[route.switches]]
+node = "n162"
+position = "straight"
+
+[[route.switches]]
+node = "n156"
+position = "straight"
+
+[[route.switches]]
+node = "n1061"
+position = "straight"
+
+[[route.switches]]
+node = "n1060"
+position = "diverging"
+
+[[route.switches]]
+node = "n114"
+position = "diverging"
+
+[[route.switches]]
+node = "n117"
+position = "diverging"
+
+[[route.switches]]
+node = "n136"
+position = "straight"
+
+[[route.switches]]
+node = "n126"
+position = "straight"
+
+[[route.switches]]
+node = "n107"
+position = "diverging"
+
+[[route.switches]]
+node = "n986"
+position = "straight"
+
+[[route.switches]]
+node = "n1093"
+position = "diverging"
+
+[[route.switches]]
+node = "n86"
+position = "straight"
+
+[train]
+consist = "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/next-five-20261015/gearbox/rust-drive10/physics/consists/class101.con"
+
+[train.announcements]
+root = ""
+author = ""
+license = ""
+source = ""
+events = []
+
+[train.power_load]
+auxiliary_w = 0.0
+continuous_w = 0.0
+heating_w = 0.0
+cooling_w = 0.0
+
+[gameplay]
+objective = "arrive_on_time"
+difficulty = "normal"
+penalty_per_second_late = 0.0
+
+[simulation]
+duration = 300.0
+time_step = 0.05
+seed = 0
+legacy_power_cap = false
+train_air_lap_hold = true
+train_air_full_release_s = 3.0
+brake_shoe_speed_factor = false
+brake_skid_limit = false
+multi_body = false
+coupler_kind = ""
+orts_inherit_partial_run_up = false
+
+[simulation.rail_operations]
+passing_plans = []
+yard_deliveries = []
+depots = []
+connections = []
+works = []
+incidents = []
+
+[simulation.native_physics]
+ambient_c = 20.0
+adhesion_factor = 1.0
+simple_control_physics = true
+paused_weather = true
+
+[output]
+csv = "run.csv"
+metadata = "run.json"

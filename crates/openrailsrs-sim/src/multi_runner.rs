@@ -304,6 +304,16 @@ pub fn run_scenario_multi_train(
                 scenario.simulation.multi_body,
                 CouplerKind::parse(&scenario.simulation.coupler_kind),
             );
+            if scenario.simulation.multi_body {
+                state
+                    .configure_authored_couplers(
+                        &openrailsrs_train::coupler_profile::load_consist_coupler_profiles(
+                            &consist_path,
+                            consist_root(&consist_path),
+                        )?,
+                    )
+                    .map_err(SimError::Msg)?;
+            }
         }
         // Primary train starts at t=0; shift its internal clock to 0.
         state.time = openrailsrs_core::SimTime(0.0);
@@ -424,6 +434,16 @@ pub fn run_scenario_multi_train(
                 scenario.simulation.multi_body,
                 CouplerKind::parse(&scenario.simulation.coupler_kind),
             );
+            if scenario.simulation.multi_body {
+                state
+                    .configure_authored_couplers(
+                        &openrailsrs_train::coupler_profile::load_consist_coupler_profiles(
+                            &consist_path,
+                            consist_root(&consist_path),
+                        )?,
+                    )
+                    .map_err(SimError::Msg)?;
+            }
         }
         state.time = openrailsrs_core::SimTime(entry.start_time_s);
         let csv_path = scenario_dir.join(&entry.output_csv);

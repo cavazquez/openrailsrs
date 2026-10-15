@@ -3134,6 +3134,8 @@ mod tests {
     #[test]
     fn driving_keys_do_not_move_orbit_or_fly_cameras() {
         for key in [
+            KeyCode::KeyE,
+            KeyCode::KeyZ,
             KeyCode::KeyQ,
             KeyCode::KeyW,
             KeyCode::KeyS,

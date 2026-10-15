@@ -646,6 +646,7 @@ mod tests {
                     consumed_l: 0.,
                     refilled_l: 0.,
                     flow_lps: 0.,
+                    gearbox: None,
                 },
             )
             .collect();

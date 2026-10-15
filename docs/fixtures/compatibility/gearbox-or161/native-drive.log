@@ -1,0 +1,6 @@
+GearboxReference.exe Information: 0 : No route track gauge given in TRK, using default setting: 4.708 ft
+GearboxReference.exe Information: 0 : Platform split by junction at Calton North Tunnel (397 Yards)
+GearboxReference.exe Information: 0 : Cannot locate TCSection for platform 1276
+GearboxReference.exe Information: 0 : Platform split by junction at Queen Street High Level Tunnel (990 Yards)
+GearboxReference.exe Information: 0 : Platform split by junction at Greenhill Lower Junction
+GearboxReference.exe Warning: 0 : Z:\home\cristian\repos\propios\ProyectoOpenRails\openrailsrs\tmp\next-five-20261015\gearbox\capture05\content\trains\trainset\MT_DB_Class101_BlueGrey\MT_DB_Cl101_BlGr_DMBS_SC51451.eng locomotive's CabView references non-existent ..\..\MT_Common.cabs\Railwaves\117Cab\wsr_117_cab.cvf

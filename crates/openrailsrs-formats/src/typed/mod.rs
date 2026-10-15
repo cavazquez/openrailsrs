@@ -11,6 +11,7 @@ mod consist;
 mod cvf;
 mod electric;
 mod engine;
+pub mod gearbox;
 mod traction_operation;
 pub use electric::parse_electric_vehicle;
 pub use traction_operation::{DieselOperatingParams, DieselThermalParams, SteamOperatingParams};

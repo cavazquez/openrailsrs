@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "completed_at_utc": "2026-10-15T22:17:18.977339+00:00",
+  "status": "pass",
+  "cargo_invoked": false,
+  "wine_invoked": false,
+  "runtime_modified_by_capture": false,
+  "original_assets_versioned": false,
+  "source_inputs_unchanged_during_helper_build_and_capture": true,
+  "verified_source_file_count": 177,
+  "source_snapshot_sha256_before": "674788947f64d5c018c4f061d9cb3e150fe51265d237f0bd968e8e9ac2dc54c0",
+  "source_snapshot_sha256_after": "674788947f64d5c018c4f061d9cb3e150fe51265d237f0bd968e8e9ac2dc54c0",
+  "libraries_unchanged_during_helper_build_and_capture": true,
+  "coupling_runner_sha256": "cbd94a2d84adac8557684e93f0c6626f299bbd794f7d8e25eece14cefa57f813",
+  "depot_runner_sha256": "c938ce5253518a39a55d14a48d5a4d4152093e7857823c73906690a9b1327223",
+  "coupling_helper_sha256": "a22f8dd37498a542502cce122cd5f46e205684a02b56265a1cf6bdae988d7d9a",
+  "depot_helper_sha256": "ded13d0c477c2e4dda9796ed689885cf0c81d3a55343d1885f8646332c07db7f",
+  "capture_script_sha256": "d18d69efc3d96ed1e83619b89f27dea85c6e2b10a18b406bd71c63742e1ce9bc",
+  "comparison": {
+    "status": "pass",
+    "reference": "Open Rails 1.6.1",
+    "transferred_original_vehicles": 8,
+    "force_cases": 3,
+    "maximum_force_error_n": 0.00038474577013403177,
+    "driving_after_restore_m": 15.958283321226588,
+    "limits": [
+      "Stationary manual rear-to-front joining only in Rust",
+      "OR automatically requires signed movement; zero-speed scan is retained separately",
+      "Different simple rigid / elastic transient and slack laws are not declared equivalent",
+      "Original stock is driven on owned synthetic track; native route/signal/full-physics parity not certified"
+    ]
+  },
+  "rust_output_byte_identical_to_historical32": false,
+  "depot_observed_identical_to_historical32": true,
+  "depot_output_byte_identical_to_previous_replay": true,
+  "differences_from_historical32": [
+    {
+      "json_pointer": "/moving_after_restore/distance_m",
+      "historical": 15.569013531968608,
+      "current": 15.958283321226588
+    }
+  ],
+  "reproduction": {
+    "command": [
+      "python3",
+      "scripts/capture_coupling_comparison.py",
+      "--stock",
+      "<original RF_Blue_Pullman trainset>",
+      "--deps-dir",
+      "<coherent already-built dependencies>",
+      "--out-dir",
+      "<fresh private ignored directory>"
+    ],
+    "dependencies_selected_by": "Cargo fingerprint values match the sim library dependencies, using private symlinks; no library bytes or mtimes modified",
+    "library_profile": "Existing current target/debug all-features gate artifacts; Rust helper binaries compiled directly with rustc",
+    "private_output_dir": "tmp/next-five-20261015/legacy-coupling-replay"
+  },
+  "scope": "New Rust execution only. Original Open Rails DLL capture, tolerances and historical Rust output are unchanged. Coupling is stationary manual rear/front contact and three prescribed static equilibria; this does not certify moving-impact or full-route parity. DepotStateCompare emitted its unchanged historical source_scope string; the new execution identity is recorded here rather than rewriting raw helper output."
+}

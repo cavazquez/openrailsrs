@@ -1,0 +1,16 @@
+// Owned numeric test fixture, not an original stock asset.
+Wagon ( "Vacuum test trailer"
+  Mass ( 46.7t-uk )
+  Size ( 2.700m 3.627m 7.468m )
+  MaxBrakeForce ( 154kN )
+  BrakeSystemType ( Vacuum_single_pipe )
+  BrakeEquipmentType ( Handbrake, Vacuum_brake, Auxilary_reservoir )
+  MaxApplicationRate ( 2.5InHg/s )
+  MaxReleaseRate ( 2.0InHg/s )
+  BrakeCylinderPressureForMaxBrakeBrakeForce ( 25InHg )
+  ORTSNumberBrakeCylinders ( 2 )
+  BrakePipeVolume ( 0.62ft^3 )
+  ORTSBrakeCylinderSize ( 30in )
+  ORTSAuxilaryResCapacity ( 8.25ft^3 )
+  Type ( Passenger )
+)

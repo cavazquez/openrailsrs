@@ -1,0 +1,180 @@
+{
+  "schema_version": 1,
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "fixture": "docs/fixtures/compatibility/gearbox-or161",
+  "helper": "tools/openrails-reference/GearboxReference.cs",
+  "source_api": "../openrails/Source/Orts.Simulation/Simulation/RollingStocks/SubSystems/PowerTransmissions/GearBox.cs",
+  "input_file": "inputs.json",
+  "output_file": "reference.json",
+  "profiles": {
+    "authored_id": "class101_legacy_author",
+    "author_derived_variant_id": "class101_units_variant",
+    "input": "profiles[].fields is an ordered array of {token,raw}; token is the exact native lowercase MSTSDieselLocomotive.Parse token such as engine(gearboxnumberofgears. Every raw value remains a native STF block payload.",
+    "output": "profiles[].parameters contains native parsed SI values and native-generated engine tables. profiles[].gears contains GearBox.Initialize outputs for each 0-based gear.",
+    "transmission": "The original ENG is Legacy; DieselEngineType(hydraulic) does not imply ORTSDieselTransmissionType(Mechanic). No mechanical-transmission certification is claimed.",
+    "force_per_engine": "Native GearBox.Initialize divides authored per-vehicle force by DieselEngines.Count. Captured engine_count is 1.",
+    "tables": "consumption_lph,torque_nm,diesel_power_w,throttle_rpm,reverse_throttle_rpm are native Interpolator X/Y pairs, including extrapolation endpoints."
+  },
+  "state": {
+    "initial_current_gear_index": -1,
+    "initial_next_gear_index": -1,
+    "initial_clutch_pct": 0,
+    "initial_clutch_on": false,
+    "initial_geared_up": false,
+    "initial_geared_down": false,
+    "initial_engine_state": "Running",
+    "initial_engine_rpm": 500,
+    "gear_index": "-1 is neutral; 0..3 are gears 1..4. command_gear in native-drive CSV uses 0 neutral and 1..4 gears.",
+    "minimum_persisted_legacy_state": [
+      "current_gear_index",
+      "next_gear_index",
+      "clutch_pct",
+      "clutch_on",
+      "geared_up",
+      "geared_down"
+    ],
+    "other_native_saved_state": [
+      "manual_down",
+      "manual_up",
+      "manual_change",
+      "manual_timer_s"
+    ],
+    "native_serialization": "GearBox.Save writes current,next,geared_up,geared_down,clutch_on,clutch_fraction,manual_down,manual_up,manual_change,manual_timer_s, in that order."
+  },
+  "scenario_tick": {
+    "match": "Join inputs.json.scenarios[] and reference.json.scenarios[] by id; join each input to checkpoint by tick. step_s=.05.",
+    "order": [
+      "Set LocalThrottlePercent from throttle_pct",
+      "Set train Direction from direction",
+      "Set SpeedMpS,AbsSpeedMpS and AbsWheelSpeedMpS from speed_mps",
+      "If present set RealRPM and DemandedRPM from rpm",
+      "Set DemandedThrottlePercent from throttle_pct",
+      "If present set CurrentDieselOutputPowerW from output_power_w",
+      "If present set native ClutchPercent from clutch_pct (native setter clamps)",
+      "If present set NextGear via Gears[next_gear_index] or null; mirror native controller and gearbox command",
+      "Invoke the selected native method once",
+      "Read the ordered native getters"
+    ],
+    "methods": {
+      "GearBox.Update": "Speed, RPM, clutch and power are prescribed. Only gearbox state/getters are the oracle; flow_lps remains the un-updated engine field and is not an engine prediction.",
+      "DieselEngine.Update": "Speed and traction_force_n are prescribed. RPM, demanded RPM, clutch, fuel flow and gearbox changes are original engine results. No speed integration is claimed by this subsystem scenario."
+    },
+    "getter_order": [
+      "ShaftRPM",
+      "ClutchPercent",
+      "IsClutchOn only while CurrentGear exists",
+      "TractiveForceN",
+      "IsOverspeedWarning",
+      "IsOverspeedError",
+      "GearIndication",
+      "GearedUp",
+      "GearedDown"
+    ],
+    "getter_side_effects": "IsClutchOn stores a latch. Preserve order and state across samples. TractiveForceN is also a native property, not a replacement harness equation.",
+    "output_fields": [
+      "tick",
+      "current_gear_index",
+      "next_gear_index",
+      "shaft_rpm",
+      "clutch_pct",
+      "clutch_on",
+      "tractive_force_n",
+      "overspeed_warning",
+      "overspeed_error",
+      "indication",
+      "geared_up",
+      "geared_down",
+      "rpm",
+      "demanded_rpm",
+      "flow_lps",
+      "state"
+    ],
+    "phases": [
+      {
+        "id": "manual_force_and_overspeed_grid",
+        "points": 449
+      },
+      {
+        "id": "manual_clutch_shift_and_neutral",
+        "points": 14
+      },
+      {
+        "id": "automatic_up_down_and_neutral",
+        "points": 19
+      },
+      {
+        "id": "explicit_units_coasting_and_clutch_clamp",
+        "points": 11
+      },
+      {
+        "id": "native_geared_engine_prescribed_speed",
+        "points": 800
+      }
+    ]
+  },
+  "observed_legacy_quirks": [
+    "GearBox.Update commits a previously requested gear before choosing the next automatic target; the capture includes this one-tick delay.",
+    "Manual legacy upshift is inhibited at intermediate clutch percentages; downshift has a different boundary. Automatic commands use native geared_up/down latches.",
+    "IsOverspeedWarning/Error test engine RPM, not shaft RPM, and use strict greater-than boundaries.",
+    "All four native IsDirectDriveGear flags are true for this original configuration because the original initialization compares authored direct gear to total gear count. Preserve the captured behavior when claiming exact equivalence.",
+    "At RPM beyond the final torque table endpoint the original interpolator can yield negative tractive force. Captures retain that value.",
+    "The authored Vacuum_twin_pipe vehicle is represented by the original VacuumSinglePipe implementation. The class name alone does not define authored equipment."
+  ],
+  "native_drive": {
+    "files": [
+      "drive-config.json",
+      "native-drive/initial.json",
+      "native-drive/trace.csv",
+      "native-drive/outcome.json"
+    ],
+    "method": "Simulator.Update",
+    "kind": "native_route_simulation",
+    "input": "Only throttle, native train-brake handle and manual gear command are prescribed; direction remains forward. Native engine, gearbox, train, route forces, motion and consumption evolve together.",
+    "timing": "Rows at tick k record the result of controls for input tick k-1. Row 0 is after 400 settling ticks under full brake. See config commands for exact keyframes.",
+    "points": 6001,
+    "time_step_s": 0.05,
+    "duration_s": 300,
+    "csv_columns": [
+      "tick",
+      "time_s",
+      "throttle",
+      "brake",
+      "command_gear",
+      "velocity_mps",
+      "odometer_m",
+      "rpm",
+      "demanded_rpm",
+      "demanded_throttle_pct",
+      "output_power_w",
+      "current_gear_index",
+      "next_gear_index",
+      "shaft_rpm",
+      "clutch_pct",
+      "clutch_on",
+      "flow_lps",
+      "fuel_l",
+      "motive_force_n",
+      "brake_force_n",
+      "friction_force_n",
+      "gravity_force_n",
+      "pipe_psi",
+      "cylinder_psi",
+      "node",
+      "offset_m"
+    ],
+    "observation": "Native drive observes gearbox.clutchOn field after the full update; it does not invoke IsClutchOn again while sampling. shaft_rpm and clutch_pct are native getters.",
+    "fuel": "Compare native flow integral or allow authored native tank batching. The tank is decremented in native batches; its difference is not an exact per-tick flow integral.",
+    "settings": "SimpleControlPhysics=true, UseAdvancedAdhesion=false, deterministic adhesion factor100/change0; full exact settings are in initial.json.",
+    "outcome": {
+      "max_speed_mps": 32.76622,
+      "distance_m": 5320.91064,
+      "final_speed_mps": 0,
+      "integrated_flow_l": 9.887930324836535,
+      "control_mode": "EXPLORER"
+    },
+    "scope_limit": "This certifies the recorded original drive and allows a Rust comparison. A Rust trace using prescribed native speed or resistance must label those inputs; it does not become a complete independently simulated route."
+  },
+  "prior_tolerances": "tolerances.json was registered before Wine and before Rust comparison; SHA-256 74648bc45c1c3affabdc9c8341f423f5cf66a743c0980b66709a2f33b3d617ed",
+  "reproducibility": "Two real captures are recorded by manifest.json,replica-manifest.json,reproducibility.json. reference.json,trace.csv,outcome.json are byte-identical; initial state differs only in the temporary facade source_vehicle path."
+}

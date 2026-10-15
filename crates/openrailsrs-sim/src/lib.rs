@@ -14,6 +14,7 @@ pub mod electric;
 pub mod error;
 pub mod etcs;
 pub mod exterior;
+pub mod gearbox;
 pub mod learning;
 mod legacy_ep_brake;
 pub mod live_drive;

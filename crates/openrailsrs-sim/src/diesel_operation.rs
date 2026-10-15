@@ -81,6 +81,8 @@ pub struct DieselCarState {
     #[serde(default)]
     pub refilled_l: f64,
     pub flow_lps: f64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gearbox: Option<crate::gearbox::GearboxState>,
 }
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct DieselTrainState {
@@ -113,6 +115,7 @@ impl DieselTrainState {
                     consumed_l: 0.,
                     refilled_l: 0.,
                     flow_lps: 0.,
+                    gearbox: c.params.gearbox.as_ref().map(|_| Default::default()),
                 }
             })
             .collect();
@@ -147,8 +150,13 @@ impl DieselTrainState {
                     && s.temperature_c.is_finite()
                     && (40.0..=600.0).contains(&s.temperature_c)
                     && s.fuel_l <= c.params.capacity_l
-                    && s.rpm <= c.governor.max_rpm * 1.5
-                    && s.demanded_rpm <= c.governor.max_rpm * 1.5
+                    && (c.params.gearbox.is_some() || s.rpm <= c.governor.max_rpm * 1.5)
+                    && (c.params.gearbox.is_some() || s.demanded_rpm <= c.governor.max_rpm * 1.5)
+                    && match (&s.gearbox, &c.params.gearbox) {
+                        (Some(gear), Some(profile)) => gear.valid_for(profile),
+                        (None, None) => true,
+                        _ => false,
+                    }
                     && (s.fuel_l + s.consumed_l - c.params.capacity_l - s.refilled_l).abs() < 1e-5
                     && (s.phase != EnginePhase::Stopped || s.rpm == 0.)
                     && (s.phase != EnginePhase::Running || s.fuel_l > 0.)
@@ -209,6 +217,22 @@ pub fn advance_with_vehicle_throttles(
     supply: &crate::power_supply::PowerTrainState,
     throttles: &std::collections::BTreeMap<usize, f64>,
 ) -> f64 {
+    advance_at_speed(state, config, throttle, dt, native, supply, throttles, 0.)
+}
+
+/// Engine RPM, native clutch feedback and fuel share the same pre-integration
+/// vehicle speed. Legacy callers without a speed keep their original API.
+#[allow(clippy::too_many_arguments)]
+pub fn advance_at_speed(
+    state: &mut DieselTrainState,
+    config: &DieselTrainConfig,
+    throttle: f64,
+    dt: f64,
+    native: bool,
+    supply: &crate::power_supply::PowerTrainState,
+    throttles: &std::collections::BTreeMap<usize, f64>,
+    speed_mps: f64,
+) -> f64 {
     state.initialize(config);
     if !dt.is_finite() || dt < 0. || !throttle.is_finite() {
         return 0.;
@@ -240,7 +264,24 @@ pub fn advance_with_vehicle_throttles(
                 .map_or(0., |c| c.supply.minimum_diesel_rpm)
                 .min(car.governor.max_rpm);
             s.demanded_rpm = car.governor.target_rpm(throttle).max(minimum_rpm);
-            s.rpm = if minimum_rpm > car.governor.target_rpm(throttle) {
+            if let (Some(gearbox), Some(profile)) = (&mut s.gearbox, &car.params.gearbox) {
+                s.demanded_rpm = gearbox.engine_demand(
+                    profile,
+                    car.governor.max_rpm,
+                    car.params.starting_rpm,
+                    crate::gearbox::GearboxInput {
+                        speed_mps,
+                        throttle,
+                        rpm: s.rpm,
+                        output_power_w: car.governor.power_at_rpm(s.rpm),
+                        running: true,
+                    },
+                    s.demanded_rpm,
+                );
+            }
+            s.rpm = if native && s.gearbox.is_some() {
+                advance_geared_native_rpm(&car.governor, s.rpm, s.demanded_rpm, dt)
+            } else if s.gearbox.is_some() || minimum_rpm > car.governor.target_rpm(throttle) {
                 car.governor
                     .advance_native_target_rpm(s.rpm, s.demanded_rpm, dt)
             } else if native {
@@ -262,6 +303,25 @@ pub fn advance_with_vehicle_throttles(
             }
         } else if s.rpm == 0. {
             s.phase = EnginePhase::Stopped;
+        }
+        if let (Some(gearbox), Some(profile)) = (&mut s.gearbox, &car.params.gearbox) {
+            let throttle = if car.connected {
+                throttles.get(&car.vehicle).copied().unwrap_or(throttle)
+            } else {
+                0.
+            };
+            gearbox.update(
+                profile,
+                car.governor.max_rpm,
+                crate::gearbox::GearboxInput {
+                    speed_mps,
+                    throttle,
+                    rpm: s.rpm,
+                    output_power_w: car.governor.power_at_rpm(s.rpm),
+                    running: s.phase == EnginePhase::Running,
+                },
+                dt,
+            );
         }
         let burning = s.phase == EnginePhase::Running
             || (matches!(s.phase, EnginePhase::Starting | EnginePhase::Stopping)
@@ -293,6 +353,24 @@ pub fn advance_with_vehicle_throttles(
 
 fn initial_temperature() -> f64 {
     40.0
+}
+
+/// Native Single arithmetic is part of the legacy clutch feedback loop. Keep
+/// it local to geared engines; other accepted governor traces retain their API.
+fn advance_geared_native_rpm(p: &DieselEngineParams, current: f64, target: f64, dt: f64) -> f64 {
+    let current = current as f32;
+    let delta = target as f32 - current;
+    let rate = if delta > 0. {
+        let square = 2. * p.rate_of_change_up_rpm_pss as f32 * delta;
+        let rate = (square as f64).sqrt().min(p.change_up_rpm_ps) as f32;
+        if rate > 1. { rate } else { 0. }
+    } else if delta < 0. {
+        let square = 2. * p.rate_of_change_down_rpm_pss as f32 * -delta;
+        (-(square as f64).sqrt()).min(-p.change_down_rpm_ps) as f32
+    } else {
+        0.
+    };
+    (current + rate * dt as f32).max(0.) as f64
 }
 
 /// Native DieselEngine.Update temperature branches, using current delivered

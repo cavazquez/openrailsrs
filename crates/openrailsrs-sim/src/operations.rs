@@ -511,6 +511,29 @@ impl LiveDriveSession {
         {
             return Err("El circuito guardado no coincide con el equipo original".into());
         }
+        let expected_vacuum = crate::brake::BrakeSystem::from_vehicle_specs(
+            &crate::brake::vehicle_specs_from_consist(&self.consist, false, false),
+            200.,
+            false,
+            3.,
+        );
+        let saved_cylinders: Vec<_> = saved
+            .state
+            .brake_system
+            .cylinders
+            .iter()
+            .chain(&saved.formation.parked_brakes)
+            .collect();
+        if saved_cylinders.len() != expected_vacuum.cylinders.len()
+            || saved_cylinders
+                .iter()
+                .zip(&expected_vacuum.cylinders)
+                .any(|(c, expected)| {
+                    !c.independent_state_valid() || !c.vacuum_hardware_compatible(expected)
+                })
+        {
+            return Err("El freno de vacío guardado no coincide con el equipo original".into());
+        }
         if saved.state.refill_used_kg.len() > 10000
             || saved
                 .state
@@ -595,6 +618,22 @@ impl LiveDriveSession {
             || saved.gameplay.stop_targets.len() != self.gameplay.stop_targets.len()
         {
             return Err("La partida tiene una formación o un servicio inválidos".into());
+        }
+        let saved_couplers = saved
+            .state
+            .couplers
+            .iter()
+            .chain(&saved.formation.parked_couplers)
+            .collect::<Vec<_>>();
+        if saved_couplers.len() != self.original_couplers.len()
+            || saved_couplers
+                .iter()
+                .zip(&self.original_couplers)
+                .any(|(actual, expected)| !actual.valid_for(expected))
+        {
+            return Err(
+                "Los acopladores o su historial guardado no corresponden a la formación".into(),
+            );
         }
         if let Some(dynamics) = &saved.state.native_dynamics {
             let engines = self
@@ -1162,12 +1201,22 @@ impl LiveDriveSession {
             .cylinders
             .append(&mut self.formation.parked_brakes);
         if !self.state.vehicles.is_empty() {
+            let target = self.state.vehicles.last().map_or(0., |car| car.position_m);
+            let shift = target
+                - self
+                    .formation
+                    .parked_vehicles
+                    .first()
+                    .map_or(0., |car| car.position_m);
             for vehicle in &mut self.formation.parked_vehicles {
                 vehicle.velocity_mps = 0.0;
-                vehicle.position_m = self.state.odometer_m;
+                vehicle.position_m += shift;
             }
-            for coupler in &mut self.formation.parked_couplers {
+            // Only this first joint was opened. The parked section's internal
+            // gears retain their deflection, stored energy and turning points.
+            if let Some(coupler) = self.formation.parked_couplers.first_mut() {
                 coupler.extension_m = 0.0;
+                coupler.memory = Default::default();
             }
             self.state
                 .vehicles

@@ -387,6 +387,10 @@ pub struct SoundRegionDef {
 pub struct NativePhysicsEnvironment {
     pub ambient_c: f64,
     pub adhesion_factor: f64,
+    /// Match OR's simple physics capture without disabling native resistance,
+    /// controls or brakes. Normal gameplay keeps the Pacha axle model.
+    #[serde(default)]
+    pub simple_control_physics: bool,
     #[serde(default)]
     pub first_slippery_spot: Option<[f64; 2]>,
     #[serde(default)]
@@ -397,6 +401,7 @@ impl Default for NativePhysicsEnvironment {
         Self {
             ambient_c: 20.,
             adhesion_factor: 1.,
+            simple_control_physics: false,
             first_slippery_spot: None,
             paused_weather: false,
         }

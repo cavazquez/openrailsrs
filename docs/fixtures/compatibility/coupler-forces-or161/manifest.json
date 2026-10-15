@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "protocol_sha256": "f0cb323e47023e3130fbde3f97f5910ad2bfd1025e181a9cb4987de8ac3f69a7",
+  "input_sha256": "0f0d992e6ed66d4646cd149242f05f48ffcef3ad11c71a5cf1e01c8c79bb1ee1",
+  "helper_sha256": "3699312a7e3dd42cc99c8623c9287adea068af8d89f38f2702e5b5f0822dc955",
+  "capture_script_sha256": "3f3447c9c947dfad0fe8fc4e6a1479b5ca5a4d4e5fb9689f095435a5c8e88d6e",
+  "assemblies": {
+    "RunActivity.exe": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2",
+    "Orts.Simulation.dll": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679",
+    "Orts.Common.dll": "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212",
+    "Orts.Settings.dll": "fe0d8d81149f480f3972c80e64ffaf6012c7599e32c26c8e4d46510e3edbb2e7",
+    "Orts.Formats.Msts.dll": "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465",
+    "Orts.Parsers.Msts.dll": "8e0781c9f861ed95b4467d1bf948ea7aca896d634f21ac5952f97a9f630d0b36",
+    "MonoGame.Framework.dll": "c6a16c29705a4c847e0e4a2647bf432604cd9320cbc5d4125ab01ae7bb7e6542",
+    "Newtonsoft.Json.dll": "9af2e1c672afd67a291b8f2031a341a3788d4d9f683eaddc6ceab3a3a74c546e"
+  },
+  "source_files": {
+    "Source/Orts.Simulation/Simulation/Physics/Train.cs": "c4bc5b5822f8d154ea723c5bcb0390ccd54c675b65ec4d12d2e3e2acf92cf2cf",
+    "Source/Orts.Simulation/Simulation/RollingStocks/TrainCar.cs": "f1020ef9aedfd0d502383920a94abfc6a93ed3627ab8f8874862579176fb2348",
+    "Source/Orts.Simulation/Simulation/RollingStocks/MSTSWagon.cs": "583542dfee3d4b6e427a3fe4dbe73b04f02df13c998a174ff5c324dfc708e663",
+    "Source/Orts.Parsers.Msts/STFReader.cs": "2ce3c74bbd1328bad09d3cb1f90459a505cd7419741b533db42590e1bbcdcefb"
+  },
+  "output_sha256": "e262d769422b1345f9e99a50682462ca517c1057b29335486acdc4841c488861",
+  "reference_source_and_dlls_unmodified": true,
+  "wine_isolation_helper_sha256": "4e87773fd3fe535f5660a427ea12b8b6a716266ebf9161e433aa66fc86e9f590",
+  "wine_isolation_release_sha256": "4dd1033301364f3c2696340992de568c7bcff294440b8ada1b12426c166de327",
+  "native_methods": [
+    "MSTSWagon.Parse(STFReader)",
+    "MSTSWagon.Get*Coupler*",
+    "Train.ComputeCouplerForces",
+    "Train.AddCouplerImpulseForces"
+  ],
+  "families": [
+    "legacy_metric",
+    "legacy_imperial",
+    "advanced_metric",
+    "rigid_advanced",
+    "two_ends",
+    "two_ends_flipped"
+  ],
+  "phases": [
+    "gap before traction",
+    "active tension",
+    "balanced coast",
+    "braking/reversal compression",
+    "wrong face release",
+    "low/high energy stroke contact",
+    "front/rear orientation"
+  ],
+  "tolerances_predeclared": {
+    "distance_abs_m": 1e-06,
+    "force_abs_n": 0.05,
+    "force_relative": 3e-06,
+    "impulse_abs_ns": 0.05,
+    "velocity_abs_mps": 1e-06
+  },
+  "scope": "Native coupler parameters and prescribed two-body force/contact; Rust energy and return-point hysteresis are separate extensions, not native OR trace values"
+}

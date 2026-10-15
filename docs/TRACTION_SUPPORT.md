@@ -43,6 +43,11 @@ motores múltiples dentro de un ENG, suministro auxiliar ni variación de masa
 por combustible. Los `Pickup` nativos de diésel y las tomas `IntakePoint`
 permiten abastecer desde el panel B; el consumo acumulado no se reinicia al llenar.
 
+Las cajas heredadas ya cuentan con marchas solicitadas/engranadas, embrague,
+RPM de eje y lectura de velocidades/esfuerzos originales. `E`/`Z` cambian marcha;
+`B` muestra el estado. Los ensayos de Class 101 y sus límites se describen en
+[frenos, cambios y acopladores](ROLLING_STOCK_DYNAMICS.md#caja-de-cambios-diésel).
+
 ## Vapor
 
 Hay caldera, presión, demanda de cilindros, consumo, animación y sonidos de

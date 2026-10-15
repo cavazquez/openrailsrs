@@ -22,6 +22,8 @@ use openrailsrs_formats::{
 use serde::Serialize;
 
 use crate::error::MstsError;
+#[path = "native_cant_import.rs"]
+mod native_cant_import;
 #[path = "native_signal_import.rs"]
 mod native_signal_import;
 
@@ -153,6 +155,7 @@ fn cached_import(
         native.as_ref(),
         Some(&catalog),
     )?;
+    let text = native_cant_import::bind(route_dir, &tdb, &catalog, &text)?;
     let text = bind_electric_supply(route_dir, &text)?;
     let text = native_signal_import::bind(
         route_dir,

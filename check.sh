@@ -80,6 +80,7 @@ cargo test --locked -p bevy_pbr -p bevy_core_pipeline --lib regressions -- --tes
 echo "==> native service capture integrity and replay regressions"
 python3 -m unittest discover -s scripts -p test_service_capture.py
 python3 -m unittest discover -s scripts -p test_brake_supply_reference.py
+python3 -m unittest discover -s scripts -p test_rolling_stock_oracles.py
 python3 -m unittest discover -s scripts -p test_coupling_reference.py
 python3 -m unittest discover -s scripts -p test_signal_reference.py
 python3 -m unittest discover -s scripts -p test_cab_reference.py

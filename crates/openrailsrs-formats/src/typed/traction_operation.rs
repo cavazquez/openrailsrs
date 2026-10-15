@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DieselOperatingParams {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gearbox: Option<super::gearbox::NativeGearboxProfile>,
     pub thermal: DieselThermalParams,
     pub capacity_l: f64,
     pub starting_rpm: f64,
@@ -212,6 +214,7 @@ pub(super) fn parse_diesel(
         return Err(invalid("diesel thermal parameters"));
     }
     Ok(Some(DieselOperatingParams {
+        gearbox: super::gearbox::parse_native_gearbox(ast, idle, max)?,
         thermal: DieselThermalParams {
             maximum_c,
             time_constant_s,

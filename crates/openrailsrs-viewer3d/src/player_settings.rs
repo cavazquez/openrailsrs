@@ -58,6 +58,8 @@ pub enum PlayerAction {
     Pantograph,
     CircuitBreaker,
     DieselEngine,
+    GearUp,
+    GearDown,
     Sander,
     TractionControls,
     Doors,
@@ -89,7 +91,7 @@ pub enum PlayerAction {
 }
 
 impl PlayerAction {
-    pub const ALL: [Self; 42] = [
+    pub const ALL: [Self; 44] = [
         Self::ThrottleUp,
         Self::ThrottleDown,
         Self::BrakeUp,
@@ -104,6 +106,8 @@ impl PlayerAction {
         Self::Pantograph,
         Self::CircuitBreaker,
         Self::DieselEngine,
+        Self::GearUp,
+        Self::GearDown,
         Self::Sander,
         Self::TractionControls,
         Self::Doors,
@@ -149,6 +153,8 @@ impl PlayerAction {
             Self::Pantograph => "Subir / bajar pantógrafo",
             Self::CircuitBreaker => "Abrir / cerrar disyuntor",
             Self::DieselEngine => "Arrancar / detener motor diésel",
+            Self::GearUp => "Subir marcha de la caja",
+            Self::GearDown => "Bajar marcha / neutro de la caja",
             Self::Sander => "Activar / desactivar arenado",
             Self::TractionControls => "Controles de vapor y diésel",
             Self::Doors => "Puertas",
@@ -195,6 +201,8 @@ impl PlayerAction {
             Self::Pantograph => KeyCode::KeyO,
             Self::CircuitBreaker => KeyCode::KeyJ,
             Self::DieselEngine => KeyCode::KeyK,
+            Self::GearUp => KeyCode::KeyE,
+            Self::GearDown => KeyCode::KeyZ,
             Self::Sander => KeyCode::KeyX,
             Self::TractionControls => KeyCode::KeyB,
             Self::Doors => KeyCode::KeyQ,
@@ -731,7 +739,8 @@ mod tests {
         s.validate().unwrap();
         assert!(s.rebind(PlayerAction::Doors, KeyCode::KeyW).is_err());
         assert!(s.rebind(PlayerAction::Doors, KeyCode::ArrowUp).is_err());
-        s.rebind(PlayerAction::Doors, KeyCode::KeyZ).unwrap();
+        assert!(s.rebind(PlayerAction::Doors, KeyCode::KeyZ).is_err());
+        s.rebind(PlayerAction::Doors, KeyCode::KeyY).unwrap();
         let tmp = tempfile::tempdir().unwrap();
         let path = tmp.path().join("settings.json");
         s.save(&path).unwrap();
@@ -739,8 +748,25 @@ mod tests {
             PlayerSettings::load(&path)
                 .unwrap()
                 .key(PlayerAction::Doors),
-            KeyCode::KeyZ
+            KeyCode::KeyY
         );
+    }
+    #[test]
+    fn new_gear_commands_preserve_old_custom_keys_without_collisions() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("settings.json");
+        let mut old = PlayerSettings::default();
+        old.keys.remove(&PlayerAction::GearUp);
+        old.keys.remove(&PlayerAction::GearDown);
+        old.keys.insert(PlayerAction::Doors, "KeyZ".into());
+        old.keys.insert(PlayerAction::Horn, "KeyE".into());
+        std::fs::write(&path, serde_json::to_vec(&old).unwrap()).unwrap();
+        let loaded = PlayerSettings::load(&path).unwrap();
+        loaded.validate().unwrap();
+        assert_eq!(loaded.key(PlayerAction::Doors), KeyCode::KeyZ);
+        assert_eq!(loaded.key(PlayerAction::Horn), KeyCode::KeyE);
+        assert_ne!(loaded.key(PlayerAction::GearDown), KeyCode::KeyZ);
+        assert_ne!(loaded.key(PlayerAction::GearUp), KeyCode::KeyE);
     }
     #[test]
     fn plume_execution_upgrades_old_settings_and_saves_separately_from_weather() {

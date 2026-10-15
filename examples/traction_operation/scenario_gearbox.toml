@@ -1,0 +1,26 @@
+[scenario]
+name = "Diésel: caja manual de cuatro marchas"
+description = "Ejercicio propio: E sube marcha, Z baja hasta neutro. B muestra marcha solicitada, embrague y RPM. No es un modelo del autor ni un ensayo de paridad de ruta."
+
+[route]
+path = "route"
+start = "a"
+destination = "b"
+assume_signals_clear = true
+
+[train]
+consist = "consists/diesel_gearbox.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+
+[simulation]
+duration = 240.0
+time_step = 0.05
+seed = 42
+legacy_power_cap = false
+
+[output]
+csv = "run_gearbox.csv"
+metadata = "run_gearbox.json"

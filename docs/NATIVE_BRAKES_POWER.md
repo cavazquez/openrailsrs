@@ -14,6 +14,12 @@ Se selecciona `OpenRails/<nombre>.eng|.wag` cuando existe, respetando mayúscula
 
 El vacío almacena presión absoluta de tubería, cilindro y depósito. Admitir aire aplica el freno; evacuarlo lo libera. Una manguera abierta destruye el vacío y una llave cerrada aísla el cilindro. El mando llega después de la propagación por la tubería. Un vehículo air_piped o vacuum_piped transporta el mando pero no genera un freno de servicio propio; conserva el freno de mano.
 
+El independiente de vacío conserva las muescas y velocidades del controlador
+original y actúa sobre locomotora/ténder. Se acciona con `]`/`[` o desde `B`.
+La compensación del depósito incluye el volumen desplazado por el pistón.
+El ejemplo conducible, las referencias y el procedimiento de prueba están en
+[frenos, cambios y acopladores](ROLLING_STOCK_DYNAMICS.md#freno-independiente-de-vacío).
+
 ## Alimentación
 
 Cada motor tiene alimentación principal, auxiliar, batería, cabina y salida para pasajeros independientes. El motor diésel detenido o sin combustible no entrega tracción. El eléctrico pierde su fuente cuando pierde contacto o tensión y espera los retardos al reconectar. Las auxiliares diésel pueden seguir funcionando con el contactor de tracción abierto. En vapor, la alimentación mecánica no depende de la batería; sus luces e instrumentos eléctricos sí.

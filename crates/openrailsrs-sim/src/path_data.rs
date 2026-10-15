@@ -49,6 +49,36 @@ pub struct PathData {
 }
 
 impl PathData {
+    /// Original physical cant magnitude. Absence preserves older/manual graphs;
+    /// an imported straight or ineligible section explicitly records zero.
+    pub fn physical_cant_at_chainage(&self, chainage: f64) -> Option<f64> {
+        let mut before = 0.;
+        for (i, edge) in self.edges.iter().enumerate() {
+            if chainage <= before + edge.length_m || i + 1 == self.edges.len() {
+                let position = (chainage - before).clamp(0., edge.length_m);
+                let points = &edge.profile.physical_cant;
+                let first = points.first()?;
+                let j = points.partition_point(|p| p.position_m <= position);
+                if j == 0 {
+                    return Some(first.cant_m);
+                }
+                let a = &points[j - 1];
+                return Some(
+                    points
+                        .get(j)
+                        .filter(|b| b.position_m > a.position_m)
+                        .map_or(a.cant_m, |b| {
+                            a.cant_m
+                                + (b.cant_m - a.cant_m)
+                                    * ((position - a.position_m) / (b.position_m - a.position_m))
+                                        .clamp(0., 1.)
+                        }),
+                );
+            }
+            before += edge.length_m;
+        }
+        None
+    }
     pub fn curve_at_chainage(&self, chainage: f64) -> (f64, f64) {
         let mut before = 0.;
         let location = self.edges.iter().enumerate().find_map(|(i, e)| {
@@ -308,6 +338,7 @@ mod tests {
             "e1",
             EdgePhysicsProfile {
                 curves: vec![],
+                physical_cant: vec![],
                 platforms: vec![],
                 speed_posts: vec![
                     PositionSpeedLimit {
@@ -359,5 +390,43 @@ mod tests {
         let pd = PathData::from_path(&["e1".into(), "e2".into()], &g);
         assert_eq!(pd.edges[0].speed_limit_at(1.0), 10.0);
         assert_eq!(pd.edges[1].speed_limit_at(1.0), 20.0);
+    }
+
+    #[test]
+    fn physical_cant_interpolates_its_own_metre_channel_and_keeps_missing_distinct() {
+        use openrailsrs_track::{EdgePhysicsProfile, PositionCurve, PositionPhysicalCant};
+        let mut graph = two_edge_graph();
+        graph.set_physics_profile(
+            "e1",
+            EdgePhysicsProfile {
+                curves: vec![PositionCurve {
+                    position_m: 0.,
+                    curvature_m_inv: -0.002,
+                    cant_rad: -0.25,
+                    heading_rad: 0.,
+                }],
+                physical_cant: vec![
+                    PositionPhysicalCant {
+                        position_m: 0.,
+                        cant_m: 0.,
+                    },
+                    PositionPhysicalCant {
+                        position_m: 50.,
+                        cant_m: 0.1,
+                    },
+                    PositionPhysicalCant {
+                        position_m: 100.,
+                        cant_m: 0.,
+                    },
+                ],
+                ..Default::default()
+            },
+        );
+        let path = PathData::from_path(&["e1".into(), "e2".into()], &graph);
+        assert_eq!(path.physical_cant_at_chainage(25.), Some(0.05));
+        assert_eq!(path.physical_cant_at_chainage(50.), Some(0.1));
+        assert_eq!(path.physical_cant_at_chainage(100.), Some(0.));
+        assert_eq!(path.physical_cant_at_chainage(101.), None);
+        assert_eq!(path.curve_at_chainage(25.).1, -0.25);
     }
 }

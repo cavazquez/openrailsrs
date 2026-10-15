@@ -127,6 +127,44 @@ física del servicio nativo de tres estaciones no certifica todos los horarios.
 La sección 33 de [las pruebas manuales](PLAYER_MANUAL_TESTS.md) y la última
 ampliación de [QA](PLAYER_POLISH_QA.md) documentan las mejoras y sus evidencias.
 
+## Vacío independiente, cajas y uniones por vehículo
+
+La ampliación de los issues #222, #225, #322, #323 y #398 se documenta en
+[Dinámica del material rodante](ROLLING_STOCK_DYNAMICS.md), con ejemplos propios
+y pasos para probar cada mando. `oracles/rolling-stock-families.json` identifica
+las capturas, sus hashes, los métodos nativos ejecutados y las tolerancias
+registradas antes de comparar. `check.sh` verifica esos archivos sin iniciar
+Wine ni necesitar los recursos originales descargados.
+
+El freno independiente de vacío se contrasta en tres casos: vapor con mando
+continuo, vapor con muescas y diésel. Las 1.440 muestras distinguen locomotora,
+ténder y coches; comparan tubería independiente, cilindro, reserva, desplazamiento
+del pistón y fuerza con límites de 0,002 PSI y 50 N. La tubería de tren de cada
+instante es una entrada nativa registrada. Esto certifica el subsistema y su
+interacción, no la propagación automática de vacío de cualquier formación.
+
+La caja heredada de la Class 101 original aporta 1.293 puntos de subsistema y
+un ensayo nativo de 300 s/6.001 muestras sobre SCE. La sesión Rust recibe sólo
+los mandos y calcula aceleración, cuatro marchas, deriva, frenado y combustible.
+Los límites previos del recorrido son 0,1 m/s, 3 m, 0,05 L y 0,1 s para los
+cambios. El informe y ambas trazas permiten recalcular la comparación. La caja
+mecánica avanzada A–D necesita capturas propias antes de extenderle esta
+certificación.
+
+Los seis perfiles de acopladores cubren unidades métricas e imperiales,
+curvas tradicionales y avanzadas, rigidez y orientación de ambos extremos.
+Dieciséis observaciones nativas comparan parámetros, holgura, esfuerzos e
+impulsos de contacto. Las pruebas de conducción comprueban tracción, deriva,
+compresión al frenar y retroceder, guardado y reacople. La descarga pasiva por
+puntos de retorno y el registro explícito de energía son extensiones Rust;
+se verifican con conservación y disipación, sin atribuirlas al solver de OR.
+
+Las referencias históricas aprobadas permanecen intactas. La ampliación suma
+8.750 puntos nativos seleccionados; la termodinámica completa de vapor, las
+protecciones eléctricas específicas y la física completa de LIRR siguen
+identificadas como pendientes, sin convertir una captura parcial en aceptación
+universal del material rodante.
+
 ## Escenario y oráculos gráficos
 
 Se conserva la fidelidad del contenido y de la conducción junto con las mejoras

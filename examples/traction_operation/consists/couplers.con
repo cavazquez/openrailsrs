@@ -1,0 +1,6 @@
+(Train
+  (Comment "Original openrailsrs exercise: no downloaded content is redistributed.")
+  (Engine "vehicles/coupler_diesel.eng")
+  (Wagon "vehicles/coupler_freight.wag")
+  (Wagon "vehicles/coupler_soft.wag")
+)

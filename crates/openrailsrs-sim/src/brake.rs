@@ -180,6 +180,8 @@ pub fn vehicle_specs_from_consist(
                 );
             }
             if let Some(vacuum) = profile.native_vacuum.as_mut() {
+                vacuum.engine = matches!(v, Vehicle::Loco(_));
+                vacuum.steam = matches!(v, Vehicle::Loco(l) if l.steam.is_some());
                 vacuum.pipe_volume_m3.get_or_insert(
                     0.05f64.powi(2) * std::f64::consts::PI / 4. * (length_m + 1.).max(5.),
                 );
@@ -317,6 +319,29 @@ impl BrakeCylinder {
             && self
                 .automatic_pipe_bar
                 .is_none_or(|pressure| pressure.is_finite() && (0.0..=10.0).contains(&pressure))
+            && self
+                .native_vacuum
+                .as_ref()
+                .is_none_or(NativeVacuumState::valid)
+    }
+
+    /// Native hardware and pipe capacity are fixed by the loaded formation.
+    /// A save may preserve pressure, but cannot replace its brake equipment.
+    pub(crate) fn vacuum_hardware_compatible(&self, expected: &Self) -> bool {
+        match (&self.native_vacuum, &expected.native_vacuum) {
+            (None, None) => true,
+            (Some(saved), Some(expected)) => {
+                // Older saves predate role metadata. Roles only select pipe 3
+                // at construction; the resolved controller is checked below.
+                let mut profile = saved.profile.clone();
+                profile.engine = expected.profile.engine;
+                profile.steam = expected.profile.steam;
+                profile.tender = expected.profile.tender;
+                profile == expected.profile
+                    && (saved.pipe_volume_m3 - expected.pipe_volume_m3).abs() < 1e-9
+            }
+            _ => false,
+        }
     }
     fn service_pressure_bar(&self) -> f64 {
         if let Some(ep) = &self.legacy_ep {
@@ -392,9 +417,39 @@ impl BrakeSystem {
         train_air_lap_hold: bool,
         train_air_full_release_s: f64,
     ) -> Self {
+        let lead_vacuum = vehicles
+            .first()
+            .and_then(|v| v.profile.native_vacuum.as_ref());
+        let mut independent_last = 0;
+        if let Some(lead) = lead_vacuum.filter(|p| p.engine && p.independent.is_some()) {
+            while vehicles
+                .get(independent_last + 1)
+                .is_some_and(|v| v.profile.native_vacuum.as_ref().is_some_and(|p| p.engine))
+            {
+                independent_last += 1;
+            }
+            if lead.steam {
+                if independent_last > 0
+                    && vehicles[independent_last]
+                        .profile
+                        .native_vacuum
+                        .as_ref()
+                        .is_some_and(|p| p.steam)
+                {
+                    independent_last = 0;
+                } else if independent_last == 0
+                    && vehicles
+                        .get(1)
+                        .is_some_and(|v| v.profile.native_vacuum.as_ref().is_some_and(|p| p.tender))
+                {
+                    independent_last = 1;
+                }
+            }
+        }
         let cylinders = vehicles
             .iter()
-            .map(|v| {
+            .enumerate()
+            .map(|(index, v)| {
                 let mut cylinder = BrakeCylinder::new(
                     v.position_m,
                     v.max_force_n,
@@ -412,12 +467,16 @@ impl BrakeSystem {
                     LegacyEpState::new(p, 15.)
                 });
                 cylinder.native_vacuum = v.profile.native_vacuum.clone().map(|mut profile| {
-                    if let Some(lead) = vehicles
-                        .first()
-                        .and_then(|v| v.profile.native_vacuum.as_ref())
-                    {
+                    if let Some(lead) = lead_vacuum {
                         profile.charged_vacuum_psi = lead.charged_vacuum_psi;
                     }
+                    profile.independent = (index <= independent_last)
+                        .then(|| {
+                            lead_vacuum
+                                .filter(|p| p.engine)
+                                .and_then(|p| p.independent.clone())
+                        })
+                        .flatten();
                     NativeVacuumState::new(profile, 15.)
                 });
                 cylinder.transfer_only = v.profile.system.as_ref().is_some_and(|s| {
@@ -471,6 +530,15 @@ impl BrakeSystem {
                 .first()
                 .is_some_and(|v| v.profile.native_ep.is_some() || v.profile.legacy_ep.is_some()),
         }
+    }
+
+    pub fn has_independent_brake(&self) -> bool {
+        !self.circuits.is_empty()
+            || self.cylinders.iter().any(|c| {
+                c.native_vacuum
+                    .as_ref()
+                    .is_some_and(|v| v.profile.independent.is_some())
+            })
     }
 
     /// Backward-compatible builder (identity μ(v) curve).
@@ -543,6 +611,7 @@ impl BrakeSystem {
             self.prev_command = command;
         }
 
+        let mut lead_vacuum_pipe = None;
         for cyl in &mut self.cylinders {
             if cyl.native_air.is_none() && cyl.native_vacuum.is_none() && !cyl.air_isolated {
                 let old = cyl.automatic_pipe_bar.unwrap_or(5.0);
@@ -566,8 +635,25 @@ impl BrakeSystem {
             }
             if let Some(vacuum) = cyl.native_vacuum.as_mut() {
                 if !cyl.air_isolated {
+                    vacuum.prepare_pipe();
                     cyl.time_pending_s = (cyl.time_pending_s - dt).max(0.);
-                    if cyl.time_pending_s == 0. || cyl.air_vented {
+                    if vacuum.profile.independent.is_some() {
+                        vacuum.step_independent_pipe(
+                            self.independent_command,
+                            dt,
+                            lead_vacuum_pipe,
+                        );
+                        lead_vacuum_pipe = lead_vacuum_pipe.or(vacuum.independent_pipe_psi);
+                        if cyl.time_pending_s == 0. || cyl.air_vented {
+                            vacuum.pipe_psi = if cyl.air_vented {
+                                crate::native_vacuum_brake::ATMOSPHERE_PSI
+                            } else {
+                                crate::native_vacuum_brake::ATMOSPHERE_PSI
+                                    - vacuum.profile.charged_vacuum_psi * (1. - command)
+                            };
+                        }
+                        vacuum.step_pipe_independent(command, self.independent_command, dt);
+                    } else if cyl.time_pending_s == 0. || cyl.air_vented {
                         vacuum.step(command, dt, cyl.air_vented);
                     } else {
                         vacuum.step_pipe(dt, false);
@@ -755,6 +841,7 @@ impl BrakeSystem {
             }
             if let Some(vacuum) = cyl.native_vacuum.as_mut() {
                 vacuum.precharge(command);
+                vacuum.prepare_pipe();
                 cyl.current_force_n = vacuum.shoe_force_n(cyl.max_force_n);
                 cyl.time_pending_s = 0.;
                 cyl.state = if command > 0. {
@@ -831,6 +918,37 @@ impl Default for BrakeSystem {
 mod tests {
     use super::*;
     use openrailsrs_formats::BrakeShoeFrictionCurve;
+
+    #[test]
+    fn vacuum_independent_never_authorizes_a_coach_controller() {
+        let ast = openrailsrs_formats::parse_vehicle_text(include_str!(
+            "../../../examples/vacuum_independent/vehicles/diesel_vacuum.eng"
+        ))
+        .unwrap();
+        let mut profile = openrailsrs_formats::parse_vehicle_brake_profile(&ast);
+        // A hauled coach cannot become a locomotive by declaring Brake_Engine.
+        profile.native_vacuum.as_mut().unwrap().engine = false;
+        let mut system = BrakeSystem::from_vehicle_specs(
+            &[BrakeVehicleSpec {
+                profile,
+                position_m: 0.,
+                max_force_n: 30_000.,
+                ep_instant: false,
+                shoe_friction: BrakeShoeFrictionCurve::identity(),
+                mass_kg: 37_000.,
+                skid_adhesion_mu: 0.,
+            }],
+            200.,
+            false,
+            3.,
+        );
+        assert!(!system.has_independent_brake());
+        system.independent_command = 1.;
+        for _ in 0..200 {
+            system.step(0., 0.05);
+        }
+        assert!(system.cylinder_forces_n(0.).iter().all(|f| *f < 1.));
+    }
 
     #[test]
     fn skid_limit_caps_brake_at_mass_times_adhesion() {

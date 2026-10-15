@@ -15,6 +15,60 @@ pub struct NativeTrainPhysics {
     pub control_vehicle_index: usize,
 }
 impl NativeTrainPhysics {
+    /// TrainCar.UpdateCurvePhys samples both bogies. An infinite radius at one
+    /// bogie makes the average radius infinite (the native straight condition).
+    pub fn curve_resistance_n(
+        &self,
+        index: usize,
+        path: &crate::path_data::PathData,
+        center_m: f64,
+        length_m: f64,
+        mass_kg: f64,
+        speed_mps: f64,
+    ) -> f64 {
+        let Some(p) = self.vehicles.get(index) else {
+            return 0.;
+        };
+        let face = p.coupler_face_length_m.unwrap_or(length_m);
+        let span = p.pitch_span_m.unwrap_or({
+            if face >= 4.3 {
+                face - 4.3
+            } else {
+                length_m * 0.65
+            }
+        });
+        let (a, ca) = path.curve_at_chainage(center_m - span / 2.);
+        let (b, cb) = path.curve_at_chainage(center_m + span / 2.);
+        if a.abs() < 1e-12 || b.abs() < 1e-12 {
+            return 0.;
+        }
+        let radius = (0.5 * (a.abs().recip() + b.abs().recip())) as f32;
+        let gauge = p.curve_gauge_m as f32;
+        if radius <= 0. || gauge <= 0. {
+            return 0.;
+        }
+        let physical_cant = path
+            .physical_cant_at_chainage(center_m - span / 2.)
+            .zip(path.physical_cant_at_chainage(center_m + span / 2.))
+            .map(|(a, b)| 0.5 * (a.abs() + b.abs()))
+            .unwrap_or((ca.sin().abs() + cb.sin().abs()) * 0.5 * p.curve_gauge_m);
+        let cant = physical_cant.min(p.curve_gauge_m) as f32;
+        let speed = speed_mps.abs() as f32;
+        let mass = mass_kg as f32;
+        // MSTSLocomotive.UpdateAdhesion's wagon Curtius-Kniffler coefficient.
+        // The supplied factor is fixed for reference captures and evolves with
+        // the normal weather/adhesion state elsewhere in the simulation.
+        let weather_factor = self.environment.adhesion_factor.clamp(0.5, 1.) as f32;
+        let friction = (7.5 / (speed * 3.6 + 44.) + 0.161) * weather_factor;
+        let base =
+            9.80665 * mass * friction * (gauge + p.curve_rigid_wheelbase_m as f32) / (2. * radius);
+        let variable = 9.80665
+            * (mass / 1000.)
+            * 1.5
+            * (speed * speed / radius - 9.80665 * cant / gauge).abs();
+        (base + variable) as f64
+    }
+
     pub fn load(
         path: &Path,
         base: &Path,

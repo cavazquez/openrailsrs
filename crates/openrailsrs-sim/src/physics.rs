@@ -3,7 +3,7 @@ use openrailsrs_train::{DavisCoefficients, DieselTractionModel, SteamParams, Tra
 use openrailsrs_validate::BrakeCommandMapping;
 
 use crate::coupler::{
-    mass_weighted_mean_velocity, multi_body_step_distributed, multi_body_substep_count,
+    mass_weighted_mean_velocity, multi_body_step_distributed_oriented, multi_body_substep_count,
     multi_body_substep_count_for_vehicles,
 };
 use crate::path_data::PathData;
@@ -169,7 +169,21 @@ pub fn step(
     crate::tilting::advance(state, path_data, &train.vehicle_lengths_m, dt);
     crate::electric::advance(state, path_data, &train.electric, dt);
     let speed_cap = edge_data.speed_limit_at(state.pos_on_edge_m);
-    let brake_frac = train.brake_mapping.command_to_sim_fraction(state.brake);
+    let brake_command = if train.native.is_some() {
+        state
+            .diesel
+            .car(state.active_cab_vehicle.unwrap_or(0))
+            .and_then(|c| c.gearbox.as_ref())
+            .map_or(state.brake, |gear| gear.previous_brake)
+    } else {
+        state.brake
+    };
+    let brake_frac = train.brake_mapping.command_to_sim_fraction(brake_command);
+    for car in &mut state.diesel.cars {
+        if let Some(gear) = &mut car.gearbox {
+            gear.previous_brake = state.brake;
+        }
+    }
 
     if let Some(native) = &train.native {
         if state.native_dynamics.as_ref().is_none_or(|d| {
@@ -275,7 +289,7 @@ pub fn step(
         .cloned()
         .collect::<Vec<_>>();
     state.diesel.cars.retain(|c| !declared.contains(&c.vehicle));
-    let vehicle_throttles = diesel_config
+    let vehicle_throttles: std::collections::BTreeMap<usize, f64> = diesel_config
         .cars
         .iter()
         .map(|c| {
@@ -285,15 +299,36 @@ pub fn step(
             )
         })
         .collect();
-    state.fuel_consumption_g += crate::diesel_operation::advance_with_vehicle_throttles(
+    let engine_throttles = vehicle_throttles
+        .iter()
+        .map(|(&index, &command)| {
+            let lagged = if train.native.is_some() {
+                state
+                    .diesel
+                    .car(index)
+                    .and_then(|car| car.gearbox.as_ref())
+                    .map_or(command, |gear| gear.previous_throttle)
+            } else {
+                command
+            };
+            (index, lagged)
+        })
+        .collect();
+    state.fuel_consumption_g += crate::diesel_operation::advance_at_speed(
         &mut state.diesel,
         &diesel_config,
         physical_throttle,
         dt,
         train.native.is_some(),
         &state.power_supply,
-        &vehicle_throttles,
+        &engine_throttles,
+        v,
     );
+    for car in &mut state.diesel.cars {
+        if let Some(gear) = &mut car.gearbox {
+            gear.previous_throttle = vehicle_throttles.get(&car.vehicle).copied().unwrap_or(0.);
+        }
+    }
     state.diesel.cars.extend(retained);
     state.diesel.cars.sort_by_key(|c| c.vehicle);
     crate::traction_energy::prepare(state, train.vehicle_lengths_m.len());
@@ -468,7 +503,58 @@ pub fn step(
                 let power_reduction = DieselTractionModel::power_reduction_from_heat(new_heat);
                 let legacy = train.legacy_power_cap;
 
-                let mut force_n = if curve_throttle <= 0.0 {
+                let geared_force = state.diesel.car(vehicle_index).and_then(|s| {
+                    let gear = s.gearbox.as_ref()?;
+                    let config = train
+                        .diesel
+                        .cars
+                        .iter()
+                        .find(|c| c.vehicle == vehicle_index)?;
+                    let profile = config.params.gearbox.as_ref()?;
+                    if !profile.mechanical
+                        && train
+                            .native
+                            .as_ref()
+                            .and_then(|n| n.vehicles.get(vehicle_index))
+                            .is_some_and(|p| p.authored_force_curves)
+                    {
+                        return None; // Native ORTS force tables take precedence over legacy gearing.
+                    }
+                    let force = gear.force_n(
+                        profile,
+                        config.governor.idle_rpm,
+                        config.governor.max_rpm,
+                        crate::gearbox::GearboxInput {
+                            speed_mps: v,
+                            throttle: engine_throttles
+                                .get(&vehicle_index)
+                                .copied()
+                                .unwrap_or(curve_throttle),
+                            rpm: new_rpm,
+                            output_power_w: crate::gearbox::interpolate_extrapolated(
+                                &config.governor.power_tab,
+                                new_rpm,
+                            )
+                            .max(0.),
+                            running: s.phase == crate::diesel_operation::EnginePhase::Running,
+                        },
+                    );
+                    // Legacy DieselEngines.TractiveForceN applies the same
+                    // per-engine demanded throttle, including controller lag,
+                    // a second time outside GearBox.TractiveForceN.
+                    Some(if profile.mechanical {
+                        force
+                    } else {
+                        force
+                            * engine_throttles
+                                .get(&vehicle_index)
+                                .copied()
+                                .unwrap_or(curve_throttle)
+                    })
+                });
+                let mut force_n = if let Some(force) = geared_force {
+                    force
+                } else if curve_throttle <= 0.0 {
                     0.0
                 } else {
                     let wheel_speed = state
@@ -517,11 +603,16 @@ pub fn step(
                     engine.update_force_with_ramp(current, dt, target, max_force_limit, v, prev_v)
                 };
 
-                force_n = engine.apply_continuous_force_limit(
-                    force_n,
-                    state.diesel_average_force_n.get(i).copied().unwrap_or(0.0),
-                    power_reduction,
-                );
+                // MSTSDieselLocomotive.UpdateTractionForce returns immediately
+                // for a gearbox; the electric motor continuous-force model is
+                // only reached by the non-geared base locomotive path.
+                if geared_force.is_none() {
+                    force_n = engine.apply_continuous_force_limit(
+                        force_n,
+                        state.diesel_average_force_n.get(i).copied().unwrap_or(0.0),
+                        power_reduction,
+                    );
+                }
                 force_n *= crate::diesel_operation::available_fraction(
                     &state.diesel,
                     &train.diesel,
@@ -590,19 +681,24 @@ pub fn step(
                         .vehicles
                         .get(vehicle_index)
                         .map_or(v, |vehicle| vehicle.velocity_mps);
-                    let force = dynamics.axles[i].step(
-                        profile,
-                        mass,
-                        engine.adhesion_mass_kg * mass / base_mass.max(1.0),
-                        speed,
-                        force_n,
-                        native_brake_forces
-                            .get(vehicle_index)
-                            .copied()
-                            .unwrap_or(0.),
-                        grip,
-                        dt,
-                    );
+                    let force = if native.environment.simple_control_physics {
+                        dynamics.axles[i].speed_mps = speed;
+                        force_n
+                    } else {
+                        dynamics.axles[i].step(
+                            profile,
+                            mass,
+                            engine.adhesion_mass_kg * mass / base_mass.max(1.0),
+                            speed,
+                            force_n,
+                            native_brake_forces
+                                .get(vehicle_index)
+                                .copied()
+                                .unwrap_or(0.),
+                            grip,
+                            dt,
+                        )
+                    };
                     let wheel_speed = dynamics.axles[i].speed_mps;
                     crate::adhesion::record(
                         state,
@@ -844,6 +940,7 @@ pub fn step(
     let f_grade = effective_mass * G * grade_fraction;
     let head = path_data.chainage_at_edge_position(state.edge_index, state.pos_on_edge_m);
     let mut front = head;
+    let mut vehicle_centers = Vec::with_capacity(train.vehicle_lengths_m.len());
     let vehicle_grades: Vec<_> = train
         .vehicle_lengths_m
         .iter()
@@ -860,8 +957,18 @@ pub fn step(
                 .native
                 .as_ref()
                 .and_then(|n| n.vehicles.get(i))
-                .and_then(|p| p.pitch_span_m)
+                .map(|p| {
+                    p.pitch_span_m.unwrap_or_else(|| {
+                        let face = p.coupler_face_length_m.unwrap_or(*length);
+                        if face >= 4.3 {
+                            face - 4.3
+                        } else {
+                            *length * 0.65
+                        }
+                    })
+                })
                 .unwrap_or(*length);
+            vehicle_centers.push(center);
             let grade =
                 path_data.average_grade_between(center - span / 2., center + span / 2.) / 100.0;
             front -= length;
@@ -871,6 +978,14 @@ pub fn step(
     let resistance = |i: usize, mass: f64, davis: &DavisCoefficients, speed: f64| {
         if let (Some(native), Some(dynamics)) = (&train.native, &state.native_dynamics) {
             native.resistance(i, mass, davis, speed, dynamics)
+                + native.curve_resistance_n(
+                    i,
+                    path_data,
+                    vehicle_centers[i],
+                    train.vehicle_lengths_m[i],
+                    mass,
+                    speed,
+                )
         } else {
             davis.resistance_n(speed)
         }
@@ -879,13 +994,27 @@ pub fn step(
     // When the state has per-vehicle data (initialised by the runner), delegate
     // to the spring-damper solver.  The resulting mean velocity is used for
     // position integration and energy accounting below.
+    let coupler_orientation = if state.driver_reverser <= 0.25 {
+        -1.
+    } else if state.driver_reverser >= 0.75 {
+        1.
+    } else {
+        state
+            .couplers
+            .first()
+            .and_then(|c| c.memory.position_orientation)
+            .unwrap_or(1.)
+    };
     let rigid_native = train.native.as_ref().is_some_and(|n| {
         n.vehicles.len() > 1
             && n.vehicles
                 .iter()
                 .take(n.vehicles.len() - 1)
                 .all(|v| v.rigid_connection)
-    });
+    }) && state
+        .couplers
+        .iter()
+        .all(|c| !c.broken && c.native_profile.as_ref().is_none_or(|p| p.rigid));
     let v_new = if rigid_native && !state.vehicles.is_empty() {
         // Native CouplingHasRigidConnection constrains linked vehicles to one
         // longitudinal velocity. Summing their forces conserves momentum and
@@ -903,6 +1032,58 @@ pub fn step(
             .sum();
         let new_speed =
             (v + dt * (f_motor - f_brake - resist - grade) / effective_mass.max(1.)).max(0.);
+        if state.couplers.iter().any(|c| c.native_profile.is_some()) {
+            let acceleration = if dt > 0. { (new_speed - v) / dt } else { 0. };
+            let requested = if equipped_brakes {
+                equipment_brake_forces.clone()
+            } else {
+                state.brake_system.cylinder_forces_n(v)
+            };
+            let requested_total = requested.iter().sum::<f64>();
+            // A brake is a static reaction once the train has stopped. It
+            // cannot supply the unused portion of a backwards acceleration.
+            let actual_brake = if new_speed == 0. {
+                (f_motor - resist - grade - effective_mass * acceleration)
+                    .max(0.)
+                    .min(f_brake)
+            } else {
+                f_brake
+            };
+            let raw_motor = state.rail_force_n.iter().sum::<f64>();
+            let mut joint_force = 0.;
+            for i in 0..state.couplers.len() {
+                let mass = effective_vehicle_masses[i];
+                let motor = if raw_motor.abs() > 1e-9 {
+                    state.rail_force_n.get(i).copied().unwrap_or(0.) * f_motor / raw_motor
+                } else if i == 0 {
+                    f_motor
+                } else {
+                    0.
+                };
+                let brake = if requested_total > 0. {
+                    requested.get(i).copied().unwrap_or(0.) * actual_brake / requested_total
+                } else {
+                    actual_brake * mass / effective_mass.max(1.)
+                };
+                let drag = resistance(i, mass, &train.vehicle_davis[i], v);
+                joint_force +=
+                    motor - brake - drag - mass * G * vehicle_grades[i] - mass * acceleration;
+                let coupler = &mut state.couplers[i];
+                if let Some(profile) = &coupler.native_profile {
+                    let physical_force = coupler_orientation * joint_force;
+                    coupler.memory.constraint_force_n = physical_force;
+                    coupler.memory.position_orientation = Some(coupler_orientation);
+                    coupler.memory.previous_force_n = physical_force.clamp(
+                        -profile.compression.max_force_n(),
+                        profile.tension.max_force_n(),
+                    );
+                    coupler.memory.warning_exceeded = joint_force.abs() > profile.warning_force_n;
+                    if coupler.break_force_n > 0. && joint_force.abs() > coupler.break_force_n {
+                        coupler.broken = true;
+                    }
+                }
+            }
+        }
         for vehicle in &mut state.vehicles {
             vehicle.velocity_mps = new_speed;
             vehicle.position_m += 0.5 * (v + new_speed) * dt;
@@ -916,7 +1097,8 @@ pub fn step(
         let masses = effective_vehicle_masses;
         let scalar_coast = train
             .multi_body_scalar_coast_below_v_mps
-            .is_some_and(|threshold| state.throttle <= 0.0 && f_motor <= 1.0 && v < threshold);
+            .is_some_and(|threshold| state.throttle <= 0.0 && f_motor <= 1.0 && v < threshold)
+            && state.couplers.iter().all(|c| c.native_profile.is_none());
         if scalar_coast {
             let f_brake_coast = if !equipped_brakes
                 && !state.brake_system.cylinders.is_empty()
@@ -995,6 +1177,7 @@ pub fn step(
                 if let Some(config) = &train.rail_adhesion {
                     crate::adhesion::cap_brakes(state, config, &mut brake_forces);
                 }
+                let authored_joints = state.couplers.iter().any(|c| c.native_profile.is_some());
                 let grade_resist: Vec<f64> = if train.vehicle_davis.len() == state.vehicles.len() {
                     state
                         .vehicles
@@ -1003,10 +1186,17 @@ pub fn step(
                         .zip(masses.iter())
                         .enumerate()
                         .map(|(i, ((veh, davis), mass))| {
-                            resistance(i, *mass, davis, veh.velocity_mps)
-                                + mass
-                                    * G
-                                    * vehicle_grades.get(i).copied().unwrap_or(grade_fraction)
+                            let drag = resistance(i, *mass, davis, veh.velocity_mps.abs());
+                            let gravity =
+                                mass * G * vehicle_grades.get(i).copied().unwrap_or(grade_fraction);
+                            if authored_joints {
+                                // Dissipative forces oppose each car's motion;
+                                // gravity retains its sign through a rebound.
+                                brake_forces[i] += drag;
+                                gravity
+                            } else {
+                                drag + gravity
+                            }
                         })
                         .collect()
                 } else {
@@ -1015,7 +1205,7 @@ pub fn step(
                         .map(|m| (f_resist + f_grade) * m / total_mass)
                         .collect()
                 };
-                mean_v = multi_body_step_distributed(
+                mean_v = multi_body_step_distributed_oriented(
                     &mut state.vehicles,
                     &mut state.couplers,
                     &motor_forces,
@@ -1024,6 +1214,7 @@ pub fn step(
                     &masses,
                     sub_dt,
                     1.0,
+                    coupler_orientation,
                 )
                 .max(0.0);
                 if !state.articulated_joints.is_empty() {
@@ -1074,8 +1265,22 @@ pub fn step(
         (v + accel * dt).max(0.0)
     };
 
+    let simple_native = train
+        .native
+        .as_ref()
+        .is_some_and(|n| n.environment.simple_control_physics);
+    let v_new = if simple_native {
+        v_new as f32 as f64
+    } else {
+        v_new
+    };
     let v_avg = 0.5 * (v + v_new);
-    let travel_max = v_avg * dt;
+    let travel_max = if simple_native {
+        // Train.Update's distanceM uses the final Single speed of the tick.
+        (v_new as f32 * dt as f32) as f64
+    } else {
+        v_avg * dt
+    };
     let mut travel = travel_max;
     let mut traveled = 0.0;
     let mut arrived = false;

@@ -620,6 +620,14 @@ pub fn live_driver_input(
             ui.notice = message;
         }
     }
+    if (pressed(A::GearUp) || pressed(A::GearDown))
+        && let Err(message) = live
+            .session
+            .shift_gear(if pressed(A::GearUp) { 1 } else { -1 })
+        && let Some(ui) = ui.as_mut()
+    {
+        ui.notice = message;
+    }
     if pressed(A::EmergencyReset)
         && let Err(message) = live.session.reset_emergency()
         && let Some(ui) = ui.as_mut()
@@ -1718,7 +1726,7 @@ mod tests {
         );
         app.world_mut()
             .resource_mut::<PlayerSettings>()
-            .rebind(PlayerAction::Sander, KeyCode::KeyZ)
+            .rebind(PlayerAction::Sander, KeyCode::KeyY)
             .unwrap();
         app.world_mut()
             .resource_mut::<ButtonInput<KeyCode>>()
@@ -1742,7 +1750,7 @@ mod tests {
             .reset_all();
         app.world_mut()
             .resource_mut::<ButtonInput<KeyCode>>()
-            .press(KeyCode::KeyZ);
+            .press(KeyCode::KeyY);
         app.world_mut().run_system_once(live_driver_input).unwrap();
         assert!(
             !app.world()

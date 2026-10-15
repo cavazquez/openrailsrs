@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "helper_sha256": "4e87773fd3fe535f5660a427ea12b8b6a716266ebf9161e433aa66fc86e9f590",
+  "prefix": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/next-five-20261015/vacuum/wine-prefix",
+  "original_prefix_touched": false,
+  "environment": {
+    "DISPLAY": null,
+    "WAYLAND_DISPLAY": "oracle-no-display",
+    "XDG_RUNTIME_DIR": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/next-five-20261015/vacuum/wine-prefix/oracle-private-runtime",
+    "XAUTHORITY": null,
+    "DBUS_SESSION_BUS_ADDRESS": null,
+    "WINEDLLOVERRIDES": "winex11.drv,winewayland.drv,winemenubuilder.exe,winepulse.drv,winealsa.drv=d"
+  },
+  "show_crash_dialog": 0,
+  "graphics_driver": "null",
+  "wineserver": "/usr/lib/x86_64-linux-gnu/wine/wineserver",
+  "registry_verified": true
+}

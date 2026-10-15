@@ -155,3 +155,31 @@ pub fn brake(state: &crate::TrainSimState, index: usize) -> f64 {
         .find(|c| c.definition.vehicle == index && c.definition.multiple_unit.is_some())
         .map_or(state.electric_brake_command, |c| c.mu.dynamic_brake)
 }
+
+/// A gearbox command follows the same declared MU protocol as traction. Old
+/// stock without a protocol declaration retains its connected legacy control.
+pub fn accepts_gear_command(state: &crate::TrainSimState, index: usize) -> bool {
+    let master = state.active_cab_vehicle.unwrap_or(0);
+    if master == index {
+        return true;
+    }
+    let remote = state
+        .vehicle_systems
+        .iter()
+        .find(|c| c.definition.vehicle == index)
+        .and_then(|c| c.definition.multiple_unit.as_ref());
+    let Some(remote) = remote else {
+        return true;
+    };
+    let leader = state
+        .vehicle_systems
+        .iter()
+        .find(|c| c.definition.vehicle == master)
+        .and_then(|c| c.definition.multiple_unit.as_ref());
+    remote.throttle
+        && leader.is_some_and(|leader| {
+            leader.protocol == remote.protocol
+                || (leader.compatible_protocols.contains(&remote.protocol)
+                    && remote.compatible_protocols.contains(&leader.protocol))
+        })
+}

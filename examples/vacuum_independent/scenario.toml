@@ -1,0 +1,32 @@
+[scenario]
+name = "Freno independiente de vacío"
+description = "Ejemplo propio: freno de locomotora y freno de tren separados. Los coches sólo responden al freno de tren."
+
+[route]
+path = "../traction_operation/route"
+start = "a"
+destination = "b"
+assume_signals_clear = true
+
+[[route.stops]]
+node = "b"
+arrive_s = 180.0
+depart_s = 180.0
+dwell_s = 0.0
+
+[train]
+consist = "consists/diesel_vacuum.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+
+[simulation]
+duration = 180.0
+time_step = 0.05
+seed = 42
+legacy_power_cap = false
+
+[output]
+csv = "run.csv"
+metadata = "run.json"

@@ -1,0 +1,21 @@
+(Wagon
+  (Comment "Original test vehicle with a different loading curve and warning limit.")
+  (Name "Vagón: acoplador intermedio")
+  (Type Freight)
+  (Mass 30000)
+  (Size 3 3.5 15)
+  (MaxBrakeForce 45000)
+  (BrakeSystemType Air_single_pipe)
+  (Coupling
+    (Type Automatic)
+    (Spring
+      (ORTSTensionStiffness 75kN 350kN)
+      (ORTSCompressionStiffness 120kN 400kN)
+      (ORTSTensionR0 0m 0.012m)
+      (ORTSCompressionR0 0m 0.006m)
+      (ORTSTensionSlack 0.025m 0.045m)
+      (ORTSCompressionSlack 0.018m 0.035m)
+      (ORTSBreak 450kN 700kN)
+    )
+  )
+)

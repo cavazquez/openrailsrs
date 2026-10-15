@@ -167,6 +167,8 @@ pub struct LiveDriveSession {
     pub traffic_brake_assistance: bool,
     pub(crate) consist: openrailsrs_train::Consist,
     pub(crate) original_physics: TrainPhysics,
+    pub(crate) original_couplers: Vec<crate::CouplerState>,
+    pub(crate) authored_couplers: Vec<openrailsrs_train::coupler_profile::VehicleCouplerProfile>,
     pub(crate) original_cab_equipment: Vec<openrailsrs_scenarios::cab_equipment::CabEquipmentDef>,
     pub(crate) original_vehicle_systems:
         Vec<openrailsrs_scenarios::vehicle_systems::VehicleSystemsDef>,
@@ -369,6 +371,73 @@ impl LiveDriveSession {
         Ok(())
     }
 
+    /// Request a gear on the active cab and connected, compatible MU engines.
+    pub fn shift_gear(&mut self, delta: i32) -> Result<(), String> {
+        let index = self.cab_vehicle();
+        let config = self
+            .physics
+            .diesel
+            .cars
+            .iter()
+            .find(|c| c.vehicle == index)
+            .ok_or("Este puesto no tiene caja de cambios diésel")?;
+        let profile = config
+            .params
+            .gearbox
+            .as_ref()
+            .ok_or("Este tren no tiene caja de cambios")?;
+        let state = self
+            .state
+            .diesel
+            .cars
+            .iter()
+            .find(|c| c.vehicle == index)
+            .and_then(|c| c.gearbox.as_ref())
+            .ok_or("Caja de cambios no inicializada")?;
+        let requested = (state.next_gear_index + delta.signum())
+            .clamp(-1, profile.max_speeds_mps.len() as i32 - 1);
+        // Validate every receiving engine before changing any gear. A mixed
+        // group can contain a clutch that requires a closed regulator.
+        let mut updates = Vec::new();
+        for config in &self.physics.diesel.cars {
+            if (!config.connected && config.vehicle != index)
+                || !crate::multiple_unit::accepts_gear_command(&self.state, config.vehicle)
+            {
+                continue;
+            }
+            let Some(other) = config.params.gearbox.as_ref() else {
+                continue;
+            };
+            if other.operation != profile.operation
+                || other.max_speeds_mps.len() != profile.max_speeds_mps.len()
+            {
+                continue;
+            }
+            if let Some(gear) = self
+                .state
+                .diesel
+                .cars
+                .iter()
+                .find(|c| c.vehicle == config.vehicle)
+                .and_then(|c| c.gearbox.as_ref())
+            {
+                let mut gear = gear.clone();
+                gear.request(other, requested, self.driver_throttle)?;
+                updates.push((config.vehicle, gear));
+            }
+        }
+        for (index, gear) in updates {
+            self.state
+                .diesel
+                .cars
+                .iter_mut()
+                .find(|c| c.vehicle == index)
+                .unwrap()
+                .gearbox = Some(gear);
+        }
+        Ok(())
+    }
+
     pub fn traction_status(&self) -> Option<String> {
         if let Some(b) = &self.state.boiler_state {
             Some(format!(
@@ -380,14 +449,22 @@ impl LiveDriveSession {
         } else {
             self.state.diesel.cars.first().map(|c| {
                 format!(
-                    "Diésel {} · {:.1} L{}",
+                    "Diésel {} · {:.1} L{}{}",
                     c.phase.label(),
                     c.fuel_l,
                     if c.fuel_l <= 0. {
                         " · tanque vacío"
                     } else {
                         ""
-                    }
+                    },
+                    c.gearbox.as_ref().map_or(String::new(), |g| format!(
+                        " · caja {}",
+                        if g.current_gear_index < 0 {
+                            "N".into()
+                        } else {
+                            (g.current_gear_index + 1).to_string()
+                        }
+                    ))
                 )
             })
         }
@@ -421,6 +498,28 @@ impl LiveDriveSession {
                     "Vehículo {vehicle}: motor {}; revisá batería y arranque en B",
                     c.phase.label().to_lowercase()
                 );
+            }
+            if let Some(gear) = &c.gearbox {
+                if gear.current_gear_index < 0 {
+                    return format!(
+                        "Vehículo {vehicle}: caja en neutro; elegí una marcha con E/Z o desde B"
+                    );
+                }
+                if let Some(profile) = self
+                    .physics
+                    .diesel
+                    .cars
+                    .iter()
+                    .find(|p| p.vehicle == index)
+                    .and_then(|p| p.params.gearbox.as_ref())
+                    && let Some(config) =
+                        self.physics.diesel.cars.iter().find(|p| p.vehicle == index)
+                    && gear.overspeed(profile, c.rpm, config.governor.max_rpm).0
+                {
+                    return format!(
+                        "Vehículo {vehicle}: RPM por encima del régimen nominal; subí marcha o bajá velocidad"
+                    );
+                }
             }
             let available = crate::diesel_operation::available_fraction(
                 &self.state.diesel,
@@ -755,6 +854,17 @@ impl LiveDriveSession {
             scenario.simulation.multi_body,
             CouplerKind::parse(&scenario.simulation.coupler_kind),
         );
+        let authored_couplers = if scenario.simulation.multi_body {
+            openrailsrs_train::coupler_profile::load_consist_coupler_profiles(
+                &consist_path,
+                consist_root(&consist_path),
+            )?
+        } else {
+            vec![]
+        };
+        state
+            .configure_authored_couplers(&authored_couplers)
+            .map_err(SimError::Msg)?;
 
         let assume_signals_clear = scenario.route.assume_signals_clear;
         let signal_runtime = init_signal_runtime(&graph, assume_signals_clear);
@@ -874,6 +984,11 @@ impl LiveDriveSession {
                 ));
             }
         }
+        for car in &mut state.diesel.cars {
+            if let Some(gear) = &mut car.gearbox {
+                gear.previous_brake = state.brake;
+            }
+        }
         let mut session = Self {
             scenario_name: scenario.scenario.name.clone(),
             formation: crate::FormationState::new(&consist),
@@ -888,6 +1003,8 @@ impl LiveDriveSession {
             own_track_reservations: vec![],
             external_track_reservations: vec![],
             original_physics: physics.clone(),
+            original_couplers: state.couplers.clone(),
+            authored_couplers,
             original_cab_equipment: state
                 .cab_equipment
                 .iter()
@@ -957,8 +1074,8 @@ impl LiveDriveSession {
     }
 
     pub fn set_independent_brake(&mut self, command: f64) -> Result<(), String> {
-        if self.state.brake_system.circuits.is_empty() {
-            return Err("Esta formación no tiene freno independiente neumático".into());
+        if !self.state.brake_system.has_independent_brake() {
+            return Err("Esta formación no tiene freno independiente".into());
         }
         if !command.is_finite() {
             return Err("Mando de freno independiente inválido".into());
@@ -1773,6 +1890,19 @@ impl LiveDriveSession {
                 None
             },
             diesel: diesel_telemetry,
+            gear_indication: self.state.diesel.car(vehicle).and_then(|c| {
+                let state = c.gearbox.as_ref()?;
+                let profile = self
+                    .physics
+                    .diesel
+                    .cars
+                    .iter()
+                    .find(|c| c.vehicle == vehicle)?
+                    .params
+                    .gearbox
+                    .as_ref()?;
+                Some(state.indication(profile) as f64)
+            }),
             pantograph_fraction: self
                 .state
                 .electric
@@ -1925,6 +2055,7 @@ pub struct CabTelemetry {
     pub sander_on: bool,
     pub steam: Option<crate::steam::BoilerState>,
     pub diesel: Option<crate::diesel_operation::DieselCarState>,
+    pub gear_indication: Option<f64>,
     pub pantograph_fraction: f64,
     pub line_voltage_v: f64,
     pub circuit_breaker_state: u8,

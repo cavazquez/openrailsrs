@@ -1,0 +1,40 @@
+{
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "captures": [
+    "manifest.json",
+    "replica-manifest.json"
+  ],
+  "byte_identical_outputs": [
+    {
+      "file": "reference.json",
+      "sha256": "3e942d1fe335ec771b2543a81a969b169a255ceaed1c66d6367ff6e094e7d143",
+      "first_capture": "tmp/next-five-20261015/gearbox/capture05/reference.json",
+      "second_capture": "tmp/next-five-20261015/gearbox/capture06/reference.json"
+    },
+    {
+      "file": "native-drive/trace.csv",
+      "sha256": "11729fc7c9ec3caa029f10976d5f217f3885fcfa972f3825dc6a75f802746433",
+      "first_capture": "tmp/next-five-20261015/gearbox/capture05/native-drive/trace.csv",
+      "second_capture": "tmp/next-five-20261015/gearbox/capture06/native-drive/trace.csv"
+    },
+    {
+      "file": "native-drive/outcome.json",
+      "sha256": "44ef1cc6fc7f6b5f391a3226adcf1b5a1a839b3773cd9bda3558bbde8774df9d",
+      "first_capture": "tmp/next-five-20261015/gearbox/capture05/native-drive/outcome.json",
+      "second_capture": "tmp/next-five-20261015/gearbox/capture06/native-drive/outcome.json"
+    }
+  ],
+  "initial_state_comparison": {
+    "identical_after_omitting": [
+      "source_vehicle"
+    ],
+    "reason": "The facade path includes a fresh output directory; all native parameters and physics state are identical.",
+    "first": "native-drive/initial.json",
+    "second": "replica-native-drive-initial.json"
+  },
+  "tolerances_unchanged": true,
+  "inputs_unchanged": true,
+  "source_vehicle_unchanged": true,
+  "source_path_unchanged": true
+}

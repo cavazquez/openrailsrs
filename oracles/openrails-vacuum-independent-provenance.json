@@ -1,0 +1,89 @@
+{
+  "input_sha256": "3e6bcfb218e0051d53a3aced997c991dd38f66c869150e2b19723b1e988fde8a",
+  "helper_sha256": "e0d0001cf7d45c22b95855278b227b2f52e72a85de62dc61a5042f7dbbeb8367",
+  "wine_isolation_helper_sha256": "4e87773fd3fe535f5660a427ea12b8b6a716266ebf9161e433aa66fc86e9f590",
+  "tolerances_declared_before_capture": {
+    "pressure_psi_abs": 0.002,
+    "shoe_force_n_abs": 50.0
+  },
+  "fixture_sha256": {
+    "examples/vacuum_independent/vehicles/hall_engine.eng": "67ef1eeafa7aa008d565b68b8375c81419848d71ae556bf525d4805a4dac5ca4",
+    "examples/vacuum_independent/vehicles/hall_tender.wag": "30744c4d1f4edd5337d9e6f78455f03e844fb9d2c8b1616ba6745de85fb0827d",
+    "examples/vacuum_independent/vehicles/trailer.wag": "c9b2b7f137809203466320f38f802f004b0766bab662b4db69d700213d6a947a",
+    "examples/vacuum_independent/vehicles/hall_notched.eng": "f7e55ac06c6adeb647f9aa9bee5a50dcd3c16f6c75e04039ab6c1009cfda577b",
+    "examples/vacuum_independent/vehicles/diesel_vacuum.eng": "150a92c2232eacbe3210072d1794b266a8e7c95f4fef514378c06662871369cd"
+  },
+  "original_content_sha256": {
+    "4994DowntonHall/OpenRails/4994E.eng": "756564ed1c832dc80e24d2dcb83297fa36dabe7d9648137969975b558ab28545",
+    "4994DowntonHall/OpenRails/BR_HallT_Late.wag": "58beb9bbae373bf01ee665c4398c24a82480a4111de523faf6e01382ba7d439e",
+    "RF_Class121/RF_Class121_DMBS.eng": "4e7fac1905163a557d80034b71d37bfcd618274540bdf2e1429bdf546d4af01f"
+  },
+  "schema": 1,
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "assemblies": {
+    "RunActivity.exe": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2",
+    "Orts.Simulation.dll": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679",
+    "Orts.Settings.dll": "fe0d8d81149f480f3972c80e64ffaf6012c7599e32c26c8e4d46510e3edbb2e7",
+    "Orts.Common.dll": "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212",
+    "Orts.Formats.Msts.dll": "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465",
+    "Orts.Parsers.Msts.dll": "8e0781c9f861ed95b4467d1bf948ea7aca896d634f21ac5952f97a9f630d0b36",
+    "MonoGame.Framework.dll": "c6a16c29705a4c847e0e4a2647bf432604cd9320cbc5d4125ab01ae7bb7e6542",
+    "Newtonsoft.Json.dll": "9af2e1c672afd67a291b8f2031a341a3788d4d9f683eaddc6ceab3a3a74c546e",
+    "GNU.Gettext.dll": "f1421ebbc4d70214324414c7c33abf7e536e225f833080ab9d79a572452e024b"
+  },
+  "original_or_source_sha256": {
+    "Source/Orts.Simulation/Simulation/RollingStocks/SubSystems/Brakes/MSTS/VacuumSinglePipe.cs": "0ed9d006f8ed0aa24a50c6e26f452028a111427643d9da069acf68c91af8fba4",
+    "Source/Orts.Simulation/Simulation/RollingStocks/SubSystems/Controllers/BrakeController.cs": "0c8c60762fad78ad6a4c657f08c41f56c2da1e148b488b36aec52d21d63c5d5a",
+    "Source/Orts.Simulation/Simulation/RollingStocks/SubSystems/Controllers/MSTSNotchController.cs": "24fd7db2bd6bbaf2cad6bbe1ed89c71ee4cf1b56d95b002eb11f038e70f451e0"
+  },
+  "capture_script_sha256": "7f4561becd9c6621c090e65fac6cb523490919fd192bfc69f918ce790658b032",
+  "output_sha256": "88c058606b0fb635c113a27e4a2ff78ce0c9b85e3125b309e5a06c93460e40b4",
+  "wine_isolation_release_sha256": "1155321de8df7c0c4406dac7d881c4792489e6abf81a0ef1edebc9daa9fb0411",
+  "families": [
+    "steam_continuous_tender_coach",
+    "steam_notched_tender_coach",
+    "diesel_continuous_coach"
+  ],
+  "phases": {
+    "steam_continuous_tender_coach": [
+      "released",
+      "independent_apply",
+      "independent_hold",
+      "partial_train",
+      "independent_release_under_train",
+      "train_release_with_independent",
+      "full_train",
+      "train_release"
+    ],
+    "steam_notched_tender_coach": [
+      "released",
+      "apply",
+      "lap",
+      "partial_train_with_lap",
+      "release_under_train",
+      "brake_notch",
+      "emergency",
+      "release"
+    ],
+    "diesel_continuous_coach": [
+      "released",
+      "independent_apply",
+      "independent_hold",
+      "partial_train",
+      "independent_release_under_train",
+      "train_release_with_independent",
+      "full_train",
+      "train_release"
+    ]
+  },
+  "called_native_methods": [
+    "ScriptedBrakeController.Parse/Initialize/SetValue/Update",
+    "VacuumSinglePipe.GetVacResPressurePSI",
+    "VacuumSinglePipe.Initialize",
+    "VacuumSinglePipe.PropagateBrakePressure",
+    "VacuumSinglePipe.Update"
+  ],
+  "original_content_and_dlls_unmodified": true,
+  "scope": "Native vacuum pipe 3, engine/tender valve and reserve interaction with actual recorded propagated pipe 1 inputs. Controller definitions are owned fixtures; brake hardware parameters come from hashed installed original stock. Not a full route or automatic train pipe propagation parity claim."
+}

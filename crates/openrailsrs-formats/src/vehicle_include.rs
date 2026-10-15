@@ -336,7 +336,12 @@ mod tests {
         std::fs::write(root.join("Stock/openrails/POWER.ENG"),"Wagon ( power Include ( common.inc ) BrakeSystemType ( Vacuum_single_pipe ) MaxApplicationRate ( 2InHg/s ) )").unwrap();
         let p = crate::parse_vehicle_brake_profile(&read_vehicle_ast(&engine).unwrap());
         assert_eq!(p.system.as_deref(), Some("Vacuum_single_pipe"));
-        assert!((p.native_vacuum.unwrap().application_psi_s - 2. * 0.491154152).abs() < 1e-8);
+        // OR 1.6.1 capture: steam_continuous_tender_coach.hardware[0],
+        // 2 InHg/s is emitted as 0.9823084 PSI/s from its Single field.
+        assert_eq!(
+            p.native_vacuum.unwrap().application_psi_s,
+            f64::from(0.982_308_4_f32)
+        );
     }
     #[cfg(unix)]
     #[test]

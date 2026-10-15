@@ -454,3 +454,233 @@ sha256 = "f1035fb0e89288ff04b06fe1f778e343500f060b53d83ef077acaa823f656eaa"
 [[files]]
 path = "examples/brake_supply_native/vehicles/f9b2e5c4f49d.wag"
 sha256 = "8eaccaff343bd383acc7c33a61c4494572ab67da899ea50563312619bef06a94"
+
+# Additional native rolling-stock families: original captures, prior limits and Rust replay.
+
+[[files]]
+path = "docs/fixtures/compatibility/coupler-forces-or161/input.json"
+sha256 = "0f0d992e6ed66d4646cd149242f05f48ffcef3ad11c71a5cf1e01c8c79bb1ee1"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupler-forces-or161/manifest.json"
+sha256 = "c05c4d829a110c3071d7d4b18f6343c5d5b90544d5fc9858648f02901826b868"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupler-forces-or161/protocol.json"
+sha256 = "f0cb323e47023e3130fbde3f97f5910ad2bfd1025e181a9cb4987de8ac3f69a7"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupler-forces-or161/reference.json"
+sha256 = "e262d769422b1345f9e99a50682462ca517c1057b29335486acdc4841c488861"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupler-forces-or161/wine-isolation/isolation.json"
+sha256 = "5b484c0a971d222d2d7e0ce40292de1a13e33b495683720c90566ee810150cfd"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupler-forces-or161/wine-isolation/release.json"
+sha256 = "4dd1033301364f3c2696340992de568c7bcff294440b8ada1b12426c166de327"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-replay-20261015/depot.json"
+sha256 = "21d93ccb7eb98d81bd377a30715f83b980df2db4498fef4835f4075f4b934239"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-replay-20261015/execution.json"
+sha256 = "9dac409a0890328f9ea1c0e30fb9373e69e60dd649e34bb93e2bc06f6064ac60"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-replay-20261015/receipt.json"
+sha256 = "0288c775f43635ef20164912d125c2e3347899693e8f033c918c2f1c500ae062"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-replay-20261015/source-inputs.json"
+sha256 = "dc97b66283198fdddbb6dfe87cdabb4e40aa5b06fa887bef943fb82fa409d9a0"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/capture-script.py"
+sha256 = "ff61a44135dee5fc8b9869ce762513237afeb68bcde701e34aff02d9304661c4"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/capture.log"
+sha256 = "7882c1c540efd5753dac7b13cf88fa25c83870eb19df9d25cc94f86d1d0e84f2"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/compile.log"
+sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/content/TRAINS/CONSISTS/openrailsrs_gearbox_class101.con"
+sha256 = "62965e6a99990621b3089304e4d4347fbaac4cc787949a4dfd1d07da6dd6796b"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/drive-config.json"
+sha256 = "80a8d09b82cc3ec1ea140a28649406e64119822be4b6bcbf60cda5df6029326e"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/inputs.json"
+sha256 = "80ea4131fd91172c277e80e9d314a8f2535d266fb4ba44b44893e5e25ec7cf75"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/manifest.json"
+sha256 = "521224427bad6c4db232c8424c7f6490856ddb4463042760a95cb0209c5fae28"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/native-drive.log"
+sha256 = "abef0e6779555e649480f05169b99a52cad2f060b60b2585f3e8d343aee6cfa1"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/native-drive/initial.json"
+sha256 = "07037d94f79cf13b8b545690fe754ada12bd100cb5aa9911dfeb25535a6d6c3c"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/native-drive/outcome.json"
+sha256 = "44ef1cc6fc7f6b5f391a3226adcf1b5a1a839b3773cd9bda3558bbde8774df9d"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/native-drive/trace.csv"
+sha256 = "11729fc7c9ec3caa029f10976d5f217f3885fcfa972f3825dc6a75f802746433"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/recapture-preparation.json"
+sha256 = "d47afd3c3eb4485b44ab16bc1a69f9f679c54e336a4f6ebb9601e066d860fb53"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/reference.json"
+sha256 = "3e942d1fe335ec771b2543a81a969b169a255ceaed1c66d6367ff6e094e7d143"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/registration.json"
+sha256 = "73be02c67f798b4d72a571a07d15e35b78f005282d78016aa29af9cd4ea64508"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/replica-manifest.json"
+sha256 = "70eaa19a9ae9f9e743698be96c607f4eda4b1ce5a28cb31d7c118ee2b20dbcb7"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/replica-native-drive-initial.json"
+sha256 = "4d42053251311ee0efa67ce73f891dda4b2f1d90d09211a432e6b09589c85c94"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/reproducibility.json"
+sha256 = "61069a1a4ed07b98c35ef9b900ea0f9746838bbe5ed30573bec5f9b9f90bcc29"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/rust-drive/comparison.json"
+sha256 = "e0812a9ab1c4b34a21bd7b54e7b72fd3d985340f1537ed49ff7924d40b8c09ec"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/rust-drive/initial.json"
+sha256 = "5927c71778db01fa52300d460206c4193567a17836324bf1109d291e19ea385e"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/rust-drive/receipt.json"
+sha256 = "da985eb88f6aa138eda12f6a4dd81502201a9a27a5b2402fc76387f9a6660380"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/rust-drive/scenario.toml"
+sha256 = "8e7285a206043cfddd2ea46f99013f055619a9b0d5a5148e5ae4e585ee13f7d9"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/rust-drive/source-diff.patch.gz"
+sha256 = "94e861d8a26960bb078c473688dba2a166d289720d2ebddbf7f8c776620e63ed"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/rust-drive/trace.csv.gz"
+sha256 = "b5b2b504d871ba3979d110b1d930316f11aeeaf2abeb2598a51a5a4fec1cf2d9"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/tolerances.json"
+sha256 = "74648bc45c1c3affabdc9c8341f423f5cf66a743c0980b66709a2f33b3d617ed"
+
+[[files]]
+path = "docs/fixtures/compatibility/vacuum-independent-or161/wine-isolation/isolation.json"
+sha256 = "6f4c0f61285a57662fa55827257649b9ba3877e7cb026cd2b2a05ff35b1b9659"
+
+[[files]]
+path = "docs/fixtures/compatibility/vacuum-independent-or161/wine-isolation/release.json"
+sha256 = "1155321de8df7c0c4406dac7d881c4792489e6abf81a0ef1edebc9daa9fb0411"
+
+[[files]]
+path = "examples/vacuum_independent/reference-input.json"
+sha256 = "3e6bcfb218e0051d53a3aced997c991dd38f66c869150e2b19723b1e988fde8a"
+
+[[files]]
+path = "examples/vacuum_independent/vehicles/diesel_vacuum.eng"
+sha256 = "150a92c2232eacbe3210072d1794b266a8e7c95f4fef514378c06662871369cd"
+
+[[files]]
+path = "examples/vacuum_independent/vehicles/hall_engine.eng"
+sha256 = "67ef1eeafa7aa008d565b68b8375c81419848d71ae556bf525d4805a4dac5ca4"
+
+[[files]]
+path = "examples/vacuum_independent/vehicles/hall_notched.eng"
+sha256 = "f7e55ac06c6adeb647f9aa9bee5a50dcd3c16f6c75e04039ab6c1009cfda577b"
+
+[[files]]
+path = "examples/vacuum_independent/vehicles/hall_tender.wag"
+sha256 = "30744c4d1f4edd5337d9e6f78455f03e844fb9d2c8b1616ba6745de85fb0827d"
+
+[[files]]
+path = "examples/vacuum_independent/vehicles/trailer.wag"
+sha256 = "c9b2b7f137809203466320f38f802f004b0766bab662b4db69d700213d6a947a"
+
+[[files]]
+path = "oracles/coupling-reference-provenance.json"
+sha256 = "ec6909807f27c262500ea2482767223097ccb5b05ecd09fd799840591877ee90"
+
+[[files]]
+path = "oracles/coupling-reference.json"
+sha256 = "856bfa60d0be9fac22c6e05a8d05f3cf510a4bd7cebc253f87b0015329d195a4"
+
+[[files]]
+path = "oracles/coupling-rust-next-five-20261015.json"
+sha256 = "6d1ef06391ad3237ad4941bb4362e8106d41e0ea275e1ecb995e3b4b4f2768a3"
+
+[[files]]
+path = "oracles/coupling-rust32.json"
+sha256 = "2eeb73e081d6e32a94ab14f6c14c633890ca882f0266ce6621493a90fa778927"
+
+[[files]]
+path = "oracles/openrails-vacuum-independent-provenance.json"
+sha256 = "6f680f83b86e7e0b4fce2fb6c621d2ffcbc7625ac7dbf6ec332ef5fe45eec5dc"
+
+[[files]]
+path = "oracles/openrails-vacuum-independent.json"
+sha256 = "88c058606b0fb635c113a27e4a2ff78ce0c9b85e3125b309e5a06c93460e40b4"
+
+[[files]]
+path = "oracles/rolling-stock-families.json"
+sha256 = "f4fe0dc0f338e198af9a402466d2fda647e6a783d1569627106dfce40fef501b"
+
+[[files]]
+path = "scripts/capture_coupler_forces_reference.py"
+sha256 = "3f3447c9c947dfad0fe8fc4e6a1479b5ca5a4d4e5fb9689f095435a5c8e88d6e"
+
+[[files]]
+path = "scripts/capture_gearbox_reference.py"
+sha256 = "9766e685652b73a2dbbbdee8350c1f36a4ae5824aedb8bb19a58a5963a44a569"
+
+[[files]]
+path = "scripts/capture_vacuum_independent_reference.py"
+sha256 = "7f4561becd9c6621c090e65fac6cb523490919fd192bfc69f918ce790658b032"
+
+[[files]]
+path = "scripts/oracle_wine.py"
+sha256 = "4e87773fd3fe535f5660a427ea12b8b6a716266ebf9161e433aa66fc86e9f590"
+
+[[files]]
+path = "tools/openrails-reference/CouplerForcesReference.cs"
+sha256 = "3699312a7e3dd42cc99c8623c9287adea068af8d89f38f2702e5b5f0822dc955"
+
+[[files]]
+path = "tools/openrails-reference/GearboxReference.cs"
+sha256 = "9467e7d9ba31193b38021290f85ca80dc4dee86a486f34075a9a1d0ed9cf6a61"
+
+[[files]]
+path = "tools/openrails-reference/VacuumIndependentReference.cs"
+sha256 = "e0d0001cf7d45c22b95855278b227b2f52e72a85de62dc61a5042f7dbbeb8367"
+
+[[files]]
+path = "tools/openrails-reference/gearbox-protocol.json"
+sha256 = "38fd571d931b4c8bd0cc5701dc471628352443eb503cafcdeb5eb59448a6184d"

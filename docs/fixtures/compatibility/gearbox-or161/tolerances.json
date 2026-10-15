@@ -1,0 +1,18 @@
+{
+  "declared_before_capture_and_rust_comparison": true,
+  "gear_ratio_abs": 1e-06,
+  "speed_mps_abs": 1e-05,
+  "shaft_rpm_abs": 0.02,
+  "rpm_abs": 0.02,
+  "force_n_abs": 0.1,
+  "clutch_pct_abs": 0.002,
+  "flow_lps_abs": 1e-06,
+  "state_and_gear": "exact",
+  "native_drive": {
+    "speed_mps_abs": 0.1,
+    "distance_m_abs": 3,
+    "fuel_l_abs": 0.05,
+    "manual_shift_time_s_abs": 0.1
+  },
+  "scope": "Subsystem tolerances compare equivalent native calculations; route tolerances are preregistered for a full native trace comparison, not an assertion that one has passed."
+}

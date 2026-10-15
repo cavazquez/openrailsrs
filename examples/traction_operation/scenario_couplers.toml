@@ -1,0 +1,29 @@
+[scenario]
+name = "Acopladores: holgura, frenado y topes"
+description = "Ejercicio propio con tres vehículos y dos conjuntos de acopladores distintos. F8, página 6: fuerza, recorrido, energía absorbida e impactos. Acelerar suavemente, cortar, frenar y maniobrar. No es una ruta ni un vehículo del autor de Open Rails."
+
+[route]
+path = "route"
+start = "a"
+destination = "b"
+start_offset_m = 100.0
+assume_signals_clear = true
+
+[train]
+consist = "consists/couplers.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+
+[simulation]
+duration = 240.0
+time_step = 0.05
+seed = 42
+multi_body = true
+coupler_kind = "freight"
+legacy_power_cap = false
+
+[output]
+csv = "run_couplers.csv"
+metadata = "run_couplers.json"

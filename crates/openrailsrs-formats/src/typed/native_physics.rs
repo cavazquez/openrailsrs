@@ -11,6 +11,9 @@ pub struct NativeVehiclePhysics {
     pub axle_load_kg: f64,
     pub drive_axles: f64,
     pub pitch_span_m: Option<f64>,
+    pub coupler_face_length_m: Option<f64>,
+    pub curve_gauge_m: f64,
+    pub curve_rigid_wheelbase_m: f64,
     pub throttle_notches: Vec<(f64, bool)>,
     pub traction_cutoff_bar: Option<f64>,
     pub authored_force_curves: bool,
@@ -201,6 +204,17 @@ pub fn parse_native_vehicle_physics(ast: &Ast, engine: bool, mass_kg: f64) -> Na
         },
         drive_axles,
         pitch_span_m: length("ORTSLengthBogieCentre"),
+        coupler_face_length_m: length("ORTSLengthCouplerFace"),
+        curve_gauge_m: super::parse_vehicle_curve_parameters(ast, engine)
+            .track_gauge_m
+            .unwrap_or(1.435),
+        curve_rigid_wheelbase_m: length("ORTSRigidWheelBase").unwrap_or(
+            if engine && drive_axles >= 6. {
+                3.5052
+            } else {
+                1.6764
+            },
+        ),
         throttle_notches: notches,
         traction_cutoff_bar: cutoff,
         authored_force_curves: !super::named_blocks(ast, "ORTSMaxTractiveForceCurves").is_empty(),

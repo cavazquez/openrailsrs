@@ -456,6 +456,7 @@ enum UiCommand {
     SecureTail,
     IndependentApply,
     IndependentRelease,
+    Gear(i32),
     EmergencyReset,
     HotelMode,
     Uncouple,
@@ -1461,6 +1462,7 @@ fn handle_buttons(
                 }ui.notice="Frenos de mano aplicados a la sección posterior".into();Ok(())}),
             UiCommand::IndependentApply=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|{let command=l.session.state.brake_system.independent_command+0.1;l.session.set_independent_brake(command)}),
             UiCommand::IndependentRelease=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|{let command=l.session.state.brake_system.independent_command-0.1;l.session.set_independent_brake(command)}),
+            UiCommand::Gear(delta)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.shift_gear(*delta)),
             UiCommand::EmergencyReset=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.reset_emergency()),
             UiCommand::HotelMode=>live.as_mut().ok_or("No hay partida".into()).map(|l|{l.session.state.power_supply.hotel_mode = l.session.state.power_supply.hotel_mode.next();}),
             UiCommand::Uncouple=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.uncouple_after(ui.selected_car)).map(|()|{ui.notice="Sección posterior desacoplada y estacionada".into();}),
@@ -2092,7 +2094,7 @@ fn build_traction(p: &mut ChildSpawnerCommands<'_>, s: &LiveDriveSession) {
         });
     }
     row(p, |p| {
-        if !s.state.brake_system.circuits.is_empty() {
+        if s.state.brake_system.has_independent_brake() {
             button(p, "Aplicar independiente ]", UiCommand::IndependentApply);
             button(p, "Soltar independiente [", UiCommand::IndependentRelease);
         }
@@ -2112,6 +2114,16 @@ fn build_traction(p: &mut ChildSpawnerCommands<'_>, s: &LiveDriveSession) {
         MUTED,
     );
     dynamic(p, DynamicText::Traction, 14.0);
+    if s.state
+        .diesel
+        .car(s.cab_vehicle())
+        .is_some_and(|c| c.gearbox.is_some())
+    {
+        row(p, |p| {
+            button(p, "Caja: bajar marcha / N (Z)", UiCommand::Gear(-1));
+            button(p, "Caja: subir marcha (E)", UiCommand::Gear(1));
+        });
+    }
     if s.state.boiler_state.is_some() || !s.physics.diesel.cars.is_empty() {
         row(p, |p| {
             button(
@@ -2171,6 +2183,18 @@ fn build_traction(p: &mut ChildSpawnerCommands<'_>, s: &LiveDriveSession) {
 
 fn traction_text(s: &LiveDriveSession, settings: &PlayerSettings) -> String {
     let mut out = format!("{}\n\n", s.traction_diagnosis());
+    for c in &s.state.diesel.cars {
+        if let Some(gear) = &c.gearbox {
+            let display = |index: i32| {
+                if index < 0 {
+                    "N".into()
+                } else {
+                    (index + 1).to_string()
+                }
+            };
+            out.push_str(&format!("Vehículo {} · caja {} · solicitada {}\nMotor {:.0} RPM · eje {:.0} RPM · deslizamiento embrague {:.1}% · embrague {}\n", c.vehicle + 1, display(gear.current_gear_index), display(gear.next_gear_index), c.rpm, gear.shaft_rpm, gear.clutch_pct, if gear.clutch_on { "acoplado" } else { "deslizante" }));
+        }
+    }
     for c in &s.state.vehicle_systems {
         if c.definition.electric_brake.is_some()
             || c.definition.brake_heat.is_some()
@@ -4166,6 +4190,26 @@ fn advanced_text(
                     c.extension_m,
                     if c.broken { "Roto" } else { "Conectado" }
                 );
+                if let Some(profile) = &c.native_profile {
+                    out += &format!(
+                        "  Autor: fuerza {:.1} kN · tope {:.0} / {:.0} mm\n  Energía elástica {:.2} kJ · absorbida {:.2} kJ · impactos fuera de rango {}{}\n",
+                        if profile.rigid {
+                            c.memory.constraint_force_n
+                        } else {
+                            c.memory.previous_force_n
+                        } / 1000.,
+                        (-c.extension_m).max(0.) * 1000.,
+                        profile.compression.stroke_m() * 1000.,
+                        c.memory.stored_energy_j / 1000.,
+                        c.memory.absorbed_energy_j / 1000.,
+                        c.memory.impact_out_of_range_count,
+                        if c.memory.warning_exceeded {
+                            " · límite de esfuerzo excedido"
+                        } else {
+                            ""
+                        }
+                    );
+                }
             }
         }
         7 => {

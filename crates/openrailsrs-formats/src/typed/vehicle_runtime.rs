@@ -130,7 +130,7 @@ pub struct LegacyEpBrakeProfile {
 
 /// Automatic vacuum cylinders/reservoirs from OR 1.6.1 VacuumSinglePipe.
 /// Vacuum twin-pipe stock uses the same cylinder implementation in that client.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct NativeVacuumBrakeProfile {
     pub max_force_psi: f64,
     pub application_psi_s: f64,
@@ -140,6 +140,46 @@ pub struct NativeVacuumBrakeProfile {
     pub pipe_volume_m3: Option<f64>,
     pub direct_admission: bool,
     pub charged_vacuum_psi: f64,
+    /// Native pipe 3 serves the leading locomotive group, plus a steam tender.
+    #[serde(default)]
+    pub engine: bool,
+    #[serde(default)]
+    pub steam: bool,
+    #[serde(default)]
+    pub tender: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub independent: Option<NativeVacuumController>,
+}
+
+/// OR 1.6.1 engine brake controller rates use PSI/s, including vacuum stock.
+/// Notches retain their native type; unhandled types hold pipe 3 in OR too.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct NativeVacuumController {
+    pub application_psi_s: f64,
+    pub release_psi_s: f64,
+    pub emergency_psi_s: f64,
+    /// Position, smooth flag, native state token.
+    pub notches: Vec<(f64, bool, String)>,
+}
+impl NativeVacuumController {
+    /// Same floor-notch selection as MSTSNotchController.SetValue. A discrete
+    /// notch fixes the valve position; a smooth notch retains the handle value.
+    pub fn setting(&self, requested: f64) -> (f64, &str) {
+        let requested = requested.clamp(0., 1.) as f32;
+        let Some((value, smooth, state)) = self
+            .notches
+            .iter()
+            .rev()
+            .find(|(value, _, _)| *value as f32 <= requested)
+            .or_else(|| self.notches.first())
+        else {
+            return (0., "dummy");
+        };
+        (
+            f64::from(if *smooth { requested } else { *value as f32 }),
+            state,
+        )
+    }
 }
 
 /// Authored advanced EP hardware, expressed in the native solver's PSI units.
@@ -249,20 +289,25 @@ fn parse_native_vacuum(ast: &Ast) -> Option<NativeVacuumBrakeProfile> {
     let psi = |key: &str, default: f64, vacuum_unit: bool| {
         scalar(ast, key)
             .and_then(|s| {
-                let raw = s.trim().trim_end_matches("/s").to_ascii_lowercase();
+                let raw = s.trim().to_ascii_lowercase();
+                let per_minute = raw.ends_with("/min");
+                let raw = raw.trim_end_matches("/s").trim_end_matches("/min");
                 let end = raw
                     .find(|c: char| !c.is_ascii_digit() && !matches!(c, '.' | '-' | '+' | 'e'))
                     .unwrap_or(raw.len());
                 let number: f64 = raw[..end].parse().ok()?;
                 let factor = match raw[end..].trim() {
-                    "" if vacuum_unit => 0.491154152,
+                    "" if vacuum_unit => 0.4911542,
                     "" | "psi" => 1.,
-                    "inhg" => 0.491154152,
-                    "bar" => 1. / 0.0689475729,
-                    "kpa" => 0.1450377377,
+                    "inhg" => 0.4911542,
+                    "bar" => 14.5037738,
+                    "kpa" if key.ends_with("Rate") => 0.145,
+                    "kpa" => 0.145037738,
                     _ => return None,
                 };
-                (number.is_finite() && number > 0.).then_some(number * factor)
+                let scale = if per_minute { factor / 60. } else { factor };
+                (number.is_finite() && number > 0.)
+                    .then_some(f64::from((f64::from(number as f32) * scale) as f32))
             })
             .unwrap_or(default)
     };
@@ -287,7 +332,96 @@ fn parse_native_vacuum(ast: &Ast) -> Option<NativeVacuumBrakeProfile> {
         .and_then(|s| s.parse::<u32>().ok())
         .filter(|n| *n > 0)
         .unwrap_or(2);
-    let atmosphere = 1. / 0.0689475729;
+    let direct_type = |block: &Ast| {
+        let Ast::List(items) = block else {
+            return None;
+        };
+        let is_type =
+            |a: &Ast| matches!(a, Ast::Atom(Atom::Symbol(s)) if s.eq_ignore_ascii_case("Type"));
+        let field = items
+            .windows(2)
+            .find_map(|pair| {
+                (is_type(&pair[0]) && matches!(&pair[1], Ast::List(_))).then_some(&pair[1])
+            })
+            .or_else(|| {
+                items
+                    .iter()
+                    .find(|a| matches!(a, Ast::List(values) if values.first().is_some_and(is_type)))
+            })?;
+        let Ast::List(values) = field else {
+            return None;
+        };
+        values.iter().find_map(|a| match a {
+            Ast::Atom(Atom::Symbol(s) | Atom::String(s)) if !s.eq_ignore_ascii_case("Type") => {
+                Some(s.clone())
+            }
+            _ => None,
+        })
+    };
+    // Native STF normalization retains the root body, while parenthesized
+    // fixtures also retain its keyword. Coupling(Type(Chain)) is not the
+    // vehicle's direct Type(Tender).
+    let Ast::List(items) = ast else { return None };
+    let roots: Vec<_> = if items.first().is_some_and(|a| matches!(a, Ast::Atom(_))) {
+        vec![ast]
+    } else {
+        items.iter().collect()
+    };
+    let root_types: Vec<_> = roots.into_iter().filter_map(direct_type).collect();
+    let engine = root_types.iter().any(|s| {
+        matches!(
+            s.to_ascii_lowercase().as_str(),
+            "steam" | "diesel" | "electric" | "engine"
+        )
+    }) || !named_blocks(ast, "Brake_Engine").is_empty();
+    let independent = engine
+        .then(|| {
+            let controller = named_blocks(ast, "Brake_Engine").into_iter().last()?;
+            let mut notches = Vec::new();
+            for notch in named_blocks(controller, "Notch") {
+                let Ast::List(items) = notch else { continue };
+                let atoms: Vec<_> = items
+                    .iter()
+                    .filter_map(|a| match a {
+                        Ast::Atom(Atom::String(s) | Atom::Symbol(s)) => Some(s.clone()),
+                        Ast::Atom(Atom::Number(n)) => Some(n.to_string()),
+                        Ast::Atom(Atom::Integer(n)) => Some(n.to_string()),
+                        _ => None,
+                    })
+                    .collect();
+                let first = usize::from(
+                    atoms
+                        .first()
+                        .is_some_and(|s| s.eq_ignore_ascii_case("Notch")),
+                );
+                let value = atoms.get(first)?.parse::<f64>().ok()?;
+                if !value.is_finite() || !(0.0..=1.0).contains(&value) {
+                    return None;
+                }
+                let smooth = atoms.get(first + 1)?.parse::<u32>().ok()? != 0;
+                notches.push((value, smooth, atoms.get(first + 2)?.to_ascii_lowercase()));
+            }
+            if notches.is_empty() || !notches.windows(2).all(|w| w[0].0 < w[1].0) {
+                return None;
+            }
+            Some(NativeVacuumController {
+                application_psi_s: psi("EngineBrakesControllerMaxApplicationRate", 2., false),
+                release_psi_s: psi("EngineBrakesControllerMaxReleaseRate", 5., false),
+                emergency_psi_s: psi("EngineBrakesControllerEmergencyApplicationRate", 10., false),
+                notches,
+            })
+        })
+        .flatten();
+    // MSTSLocomotive.Initialize repairs the legacy mixed units for vacuum:
+    // 21/25 mean inHg; values outside 7..13 PSI fall back to 21 inHg.
+    let requested_vacuum = psi("TrainBrakesControllerMaxSystemPressure", 90., false) as f32;
+    let charged_vacuum_psi = if requested_vacuum == 21. || requested_vacuum == 25. {
+        f64::from(requested_vacuum * 0.03386389_f32 * 14.503_774_f32)
+    } else if !(7.0..=13.0).contains(&requested_vacuum) {
+        f64::from(21_f32 * 0.03386389_f32 * 14.503_774_f32)
+    } else {
+        f64::from(requested_vacuum)
+    };
     Some(NativeVacuumBrakeProfile {
         max_force_psi: psi(
             "BrakeCylinderPressureForMaxBrakeBrakeForce",
@@ -303,12 +437,11 @@ fn parse_native_vacuum(ast: &Ast) -> Option<NativeVacuumBrakeProfile> {
             .unwrap_or(std::f64::consts::PI * 12f64.powi(2) * 16. * 0.000016387064),
         pipe_volume_m3: volume("BrakePipeVolume"),
         direct_admission: scalar(ast, "ORTSDirectAdmissionValve").is_some_and(|s| s == "1"),
-        charged_vacuum_psi: psi(
-            "TrainBrakesControllerMaxSystemPressure",
-            21. * 0.491154152,
-            false,
-        )
-        .min(atmosphere),
+        charged_vacuum_psi,
+        engine,
+        steam: engine && root_types.iter().any(|s| s.eq_ignore_ascii_case("Steam")),
+        tender: !engine && root_types.iter().any(|s| s.eq_ignore_ascii_case("Tender")),
+        independent,
     })
 }
 
@@ -568,6 +701,86 @@ pub fn parse_vehicle_emitters(ast: &Ast) -> Vec<VehicleEmitter> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn native_vacuum_independent_preserves_native_rates_notches_and_roles() {
+        let ast = crate::parse_vehicle_text("Wagon ( hall Type ( Engine ) BrakeSystemType ( Vacuum_single_pipe ) Coupling ( Type ( Chain ) ) ) Engine ( hall Type ( Steam ) EngineBrakesControllerMaxApplicationRate ( 2 ) EngineBrakesControllerMaxReleaseRate ( 1bar/s ) EngineControllers ( Brake_Engine ( 0 1 0.1 0 NumNotches ( 2 Notch ( 0 0 EngineBrakesControllerReleaseStart ) Notch ( 0.2 1 EngineBrakesControllerVacuumContinuousServiceStart ) ) ) ) )").unwrap();
+        let profile = parse_vehicle_brake_profile(&ast).native_vacuum.unwrap();
+        assert!(profile.engine && profile.steam && !profile.tender);
+        let controller = profile.independent.unwrap();
+        assert_eq!(controller.application_psi_s, 2.);
+        assert!((controller.release_psi_s - 1. / 0.0689475729).abs() < 0.000003);
+        assert_eq!(controller.emergency_psi_s, 10.);
+        assert_eq!(controller.notches.len(), 2);
+        assert_eq!(controller.notches[1].0, 0.2);
+        assert_eq!(
+            controller.notches[1].2,
+            "enginebrakescontrollervacuumcontinuousservicestart"
+        );
+        let tender = crate::parse_vehicle_text("Wagon ( tender Type ( Tender ) BrakeSystemType ( Vacuum_single_pipe ) Coupling ( Type ( Chain ) ) )").unwrap();
+        let profile = parse_vehicle_brake_profile(&tender).native_vacuum.unwrap();
+        assert!(profile.tender && !profile.engine && !profile.steam);
+        assert!(profile.independent.is_none());
+    }
+
+    #[test]
+    fn native_vacuum_independent_does_not_invent_a_controller_or_rewrite_dummy() {
+        for definition in [
+            "",
+            "EngineBrakesControllerMaxApplicationRate ( 3 )",
+            "EngineControllers ( Brake_Engine ( 0 1 0.1 0 NumNotches ( 2 Notch ( 0.5 0 Dummy ) Notch ( 0.2 0 Dummy ) ) ) )",
+        ] {
+            let ast = crate::parse_vehicle_text(&format!(
+                "Engine ( x Type ( Diesel ) BrakeSystemType ( Vacuum_single_pipe ) {definition} )"
+            ))
+            .unwrap();
+            assert!(
+                parse_vehicle_brake_profile(&ast)
+                    .native_vacuum
+                    .unwrap()
+                    .independent
+                    .is_none()
+            );
+        }
+        let ast = crate::parse_vehicle_text("Engine ( x Type ( Diesel ) BrakeSystemType ( Vacuum_single_pipe ) EngineControllers ( Brake_Engine ( 0 1 0.1 0 NumNotches ( 1 Notch ( 0 1 Dummy ) ) ) ) )").unwrap();
+        let controller = parse_vehicle_brake_profile(&ast)
+            .native_vacuum
+            .unwrap()
+            .independent
+            .unwrap();
+        assert_eq!(controller.notches, vec![(0., true, "dummy".into())]);
+    }
+
+    #[test]
+    fn native_vacuum_independent_matches_original_mixed_unit_normalization() {
+        for (field, expected) in [
+            ("", 21. * 0.491154152),
+            ("21", 21. * 0.491154152),
+            ("25", 25. * 0.491154152),
+            ("90", 21. * 0.491154152),
+            ("6psi", 21. * 0.491154152),
+            ("7psi", 7.),
+            ("13psi", 13.),
+            ("13.1psi", 21. * 0.491154152),
+            ("10.5psi", 10.5),
+            ("25InHg", 25. * 0.491154152),
+        ] {
+            let field = if field.is_empty() {
+                String::new()
+            } else {
+                format!("TrainBrakesControllerMaxSystemPressure ( {field} )")
+            };
+            let ast = crate::parse_vehicle_text(&format!(
+                "Engine ( x Type ( Diesel ) BrakeSystemType ( Vacuum_twin_pipe ) {field} )"
+            ))
+            .unwrap();
+            let p = parse_vehicle_brake_profile(&ast).native_vacuum.unwrap();
+            assert!(
+                (p.charged_vacuum_psi - expected).abs() < 0.000003,
+                "{field}"
+            );
+        }
+    }
+
     #[test]
     fn native_stf_exhaust_keeps_its_named_family_and_seven_values() {
         let ast = crate::parse_vehicle_text("SIMISA@@@@@@@@@@JINX0D0t______\nWagon ( power Mass ( 40t ) ) Engine ( power Effects ( DieselSpecialEffects ( Exhaust1 ( 0.54 3.81 4.19 0 1 0 0.24 ) ) ) )").unwrap();

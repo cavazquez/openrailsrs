@@ -6,6 +6,7 @@ fn main() {
         &[
             "src/import_route.rs",
             "src/native_signal_import.rs",
+            "src/native_cant_import.rs",
             "src/native_timetable.rs",
             "src/import_activity.rs",
             "src/path_placement.rs",
@@ -18,6 +19,9 @@ fn main() {
             "../openrailsrs-formats/src/typed/activity.rs",
             "../openrailsrs-formats/src/typed/path.rs",
             "../openrailsrs-formats/src/typed/tsection.rs",
+            "../openrailsrs-formats/src/typed/cant.rs",
+            "../openrailsrs-formats/src/typed/cant_speeds.rs",
+            "../openrailsrs-formats/src/typed/route.rs",
             "../openrailsrs-formats/src/encoding.rs",
             "../openrailsrs-formats/src/lexer.rs",
             "../openrailsrs-formats/src/parser.rs",

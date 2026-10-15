@@ -1,0 +1,411 @@
+{
+  "brake_system": {
+    "circuits": [],
+    "cylinders": [
+      {
+        "air_isolated": false,
+        "air_vented": false,
+        "apply_ramp_rate_n_per_s": 7619.047619047618,
+        "authored_response": true,
+        "automatic_pipe_bar": 5.0,
+        "current_force_n": 34326.84386342311,
+        "ep_instant": false,
+        "full_pressure_bar": 1.4478990309000002,
+        "handbrake_force_n": 0.0,
+        "independent_force_n": 0.0,
+        "latched_command": 0.0,
+        "mass_kg": 36000.0,
+        "max_force_n": 40000.0,
+        "native_air_skid": false,
+        "native_vacuum": {
+          "brake_cyl_fraction": 1.0,
+          "cylinder_psi": 14.503773779685867,
+          "pipe_psi": 14.503773779685867,
+          "pipe_volume_m3": 0.03603210424126643,
+          "profile": {
+            "application_psi_s": 1.9646167755126953,
+            "charged_vacuum_psi": 10.314238548278809,
+            "cylinder_volume_m3": 0.037529998829826904,
+            "direct_admission": false,
+            "engine": true,
+            "max_force_psi": 10.314238548278809,
+            "pipe_volume_m3": 0.03603210424126643,
+            "release_psi_s": 1.9646167755126953,
+            "reservoir_volume_m3": 0.1186133296350085,
+            "steam": false,
+            "tender": false
+          },
+          "reservoir_psi": 4.18953523140706
+        },
+        "position_m": 0.0,
+        "release_ramp_rate_n_per_s": 7619.047619047618,
+        "shoe_friction": {
+          "mu_at_zero_kph": 1.0,
+          "points_kph": [
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        "skid_adhesion_mu": 0.0,
+        "state": "Applying",
+        "time_pending_s": 0.0,
+        "transfer_only": false
+      }
+    ],
+    "emergency": false,
+    "ep_only_wire": false,
+    "independent_command": 0.0,
+    "pipe_speed_mps": 200.0,
+    "prev_command": 1.0,
+    "train_air_full_release_s": 3.0,
+    "train_air_lap_hold": true
+  },
+  "diesel": {
+    "cars": [
+      {
+        "command_running": true,
+        "consumed_l": 0.12618039280000054,
+        "cooling_on": false,
+        "demanded_rpm": 500.0,
+        "flow_lps": 0.006309019639999999,
+        "fuel_l": 1892.5797116071826,
+        "gearbox": {
+          "clutch_on": false,
+          "clutch_pct": 0.0,
+          "current_gear_index": -1,
+          "freewheel_on": false,
+          "geared_down": false,
+          "geared_up": false,
+          "manual_down": false,
+          "manual_up": false,
+          "next_gear_index": -1,
+          "previous_brake": 1.0,
+          "previous_throttle": 0.0,
+          "shaft_rpm": 500.0,
+          "shift_remaining_s": 0.0
+        },
+        "phase": "Running",
+        "refilled_l": 0.0,
+        "rpm": 500.0,
+        "temperature_c": 41.08072280883789,
+        "vehicle": 0
+      }
+    ],
+    "initialized": true
+  },
+  "initial_native_reference": {
+    "brake_type": "VacuumSinglePipe",
+    "front": {
+      "direction": "Forward",
+      "node": 384,
+      "offset_m": 23.8353939,
+      "tile_x": -6112,
+      "tile_z": 15146,
+      "x": 731.7917,
+      "y": 53.3238,
+      "z": -466.7816
+    },
+    "gears": [
+      {
+        "backload_force_n": 0.0,
+        "change_down_rpm": 0.0,
+        "change_up_rpm": 0.0,
+        "coasting_force_n": 0.0,
+        "direct_drive": true,
+        "down_gear_proportion": 0.35,
+        "force_at_max_speed_n": 28350.0,
+        "index": 0,
+        "max_force_n": 35000.0,
+        "max_speed_mps": 6.7056,
+        "overspeed_pct": 170.0,
+        "ratio": 0.003529263,
+        "up_gear_proportion": 0.85
+      },
+      {
+        "backload_force_n": 0.0,
+        "change_down_rpm": 0.0,
+        "change_up_rpm": 0.0,
+        "coasting_force_n": 0.0,
+        "direct_drive": true,
+        "down_gear_proportion": 0.35,
+        "force_at_max_speed_n": 20250.0,
+        "index": 1,
+        "max_force_n": 25000.0,
+        "max_speed_mps": 12.07008,
+        "overspeed_pct": 170.0,
+        "ratio": 0.00635267375,
+        "up_gear_proportion": 0.85
+      },
+      {
+        "backload_force_n": 0.0,
+        "change_down_rpm": 0.0,
+        "change_up_rpm": 0.0,
+        "coasting_force_n": 0.0,
+        "direct_drive": true,
+        "down_gear_proportion": 0.35,
+        "force_at_max_speed_n": 13770.0,
+        "index": 2,
+        "max_force_n": 17000.0,
+        "max_speed_mps": 18.32864,
+        "overspeed_pct": 170.0,
+        "ratio": 0.009646652,
+        "up_gear_proportion": 0.85
+      },
+      {
+        "backload_force_n": 0.0,
+        "change_down_rpm": 0.0,
+        "change_up_rpm": 0.0,
+        "coasting_force_n": 0.0,
+        "direct_drive": true,
+        "down_gear_proportion": 0.35,
+        "force_at_max_speed_n": 9720.0,
+        "index": 3,
+        "max_force_n": 12000.0,
+        "max_speed_mps": 35.7632,
+        "overspeed_pct": 170.0,
+        "ratio": 0.018822737,
+        "up_gear_proportion": 0.85
+      }
+    ],
+    "initial_fuel_l": 1892.60461,
+    "initial_odometer_m": 0.0,
+    "initial_speed_mps": 0.0,
+    "kind": "native_route_simulation",
+    "length_m": 17.351,
+    "mass_kg": 36000.0,
+    "max_force_n": 95000.0,
+    "max_power_w": 223709.969,
+    "method": "Simulator.Update",
+    "parameters": {
+      "backload_force_n": 0.0,
+      "change_down_rpm_s": 60.0,
+      "change_up_rpm_s": 60.0,
+      "clutch_type": "Unknown",
+      "coasting_force_n": 0.0,
+      "consumption_lph": [
+        [
+          500.0,
+          22.71246
+        ],
+        [
+          1900.0,
+          132.489349
+        ]
+      ],
+      "diesel_power_w": [
+        [
+          500.0,
+          4550.26074
+        ],
+        [
+          640.0,
+          20809.502
+        ],
+        [
+          780.0,
+          81940.4844
+        ],
+        [
+          920.0,
+          135917.219
+        ],
+        [
+          1060.0,
+          156075.734
+        ],
+        [
+          1200.0,
+          182088.734
+        ],
+        [
+          1340.0,
+          208101.734
+        ],
+        [
+          1480.0,
+          216685.469
+        ],
+        [
+          1620.0,
+          222407.984
+        ],
+        [
+          1760.0,
+          222407.984
+        ],
+        [
+          1900.0,
+          223709.969
+        ],
+        [
+          2850.0,
+          111854.984
+        ]
+      ],
+      "direct_drive_gear": 4,
+      "down_gear_proportion": 0.35,
+      "engine_braking": "None",
+      "engine_count": 1,
+      "force_at_max_speed_n": [],
+      "freewheel_fitted": false,
+      "gearbox_type": "Unknown",
+      "governor_rpm": 2487.1,
+      "idle_rpm": 500.0,
+      "max_force_n": [
+        35000.0,
+        25000.0,
+        17000.0,
+        12000.0
+      ],
+      "max_rpm": 1900.0,
+      "max_speed_mps": [
+        6.7056,
+        12.07008,
+        18.32864,
+        35.7632
+      ],
+      "maximum_power_w": 223709.969,
+      "number_of_gears": 4,
+      "operation": "Manual",
+      "overspeed_pct": 170.0,
+      "reverse_indication": false,
+      "reverse_throttle_rpm": [
+        [
+          500.0,
+          0.0
+        ],
+        [
+          1900.0,
+          100.0
+        ]
+      ],
+      "starting_rpm": 333.333344,
+      "throttle_rpm": [
+        [
+          0.0,
+          500.0
+        ],
+        [
+          100.0,
+          1900.0
+        ]
+      ],
+      "torque_nm": [
+        [
+          500.0,
+          277.6265
+        ],
+        [
+          640.0,
+          555.253
+        ],
+        [
+          780.0,
+          971.6927
+        ],
+        [
+          920.0,
+          1318.72583
+        ],
+        [
+          1060.0,
+          1388.13245
+        ],
+        [
+          1200.0,
+          1388.13245
+        ],
+        [
+          1340.0,
+          1360.36987
+        ],
+        [
+          1480.0,
+          1318.72583
+        ],
+        [
+          1620.0,
+          1249.31921
+        ],
+        [
+          1760.0,
+          1193.794
+        ],
+        [
+          1900.0,
+          1124.38733
+        ],
+        [
+          2850.0,
+          277.6265
+        ]
+      ],
+      "transmission": "Legacy",
+      "up_gear_proportion": 0.85,
+      "wheel_radius_m": 0.4572
+    },
+    "reference": "Open Rails 1.6.1",
+    "settings": {
+      "AdhesionFactor": 100,
+      "AdhesionFactorChange": 0,
+      "AdhesionProportionalToWeather": false,
+      "BrakePipeChargingRate": 21,
+      "BreakCouplers": false,
+      "CorrectQuestionableBrakingParams": false,
+      "CurveSpeedDependent": false,
+      "GraduatedRelease": false,
+      "SimpleControlPhysics": true,
+      "TunnelResistanceDependent": false,
+      "UseAdvancedAdhesion": false,
+      "WindResistanceDependent": false
+    },
+    "source_vehicle": "Z:\\home\\cristian\\repos\\propios\\ProyectoOpenRails\\openrailsrs\\tmp\\next-five-20261015\\gearbox\\capture05\\content\\trains\\trainset\\MT_DB_Class101_BlueGrey\\MT_DB_Cl101_BlGr_DMBS_SC51451.eng"
+  },
+  "initial_row": [
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    500.0,
+    500.0,
+    0.0,
+    4550.260616395012,
+    -1.0,
+    -1.0,
+    500.0,
+    0.0,
+    0.0,
+    0.006309019639999999,
+    1892.5797116071826,
+    0.0,
+    34326.84386342311,
+    1490.9335999999998,
+    -0.0,
+    14.503773999999998,
+    1.776356838584051e-15,
+    384.0,
+    23.83584335353266
+  ],
+  "kind": "rust_closed_loop_route_simulation",
+  "length_m": [
+    17.351
+  ],
+  "mass_kg": 36000.0,
+  "motion_or_force_prescribed": false,
+  "native_vehicle_parameters_debug": "[NativeVehiclePhysics { max_current_a: None, roller_bearing: false, legacy_friction: true, wheel_radius_m: 0.4572, axle_load_kg: 36000.0, drive_axles: 1.0, pitch_span_m: None, coupler_face_length_m: None, curve_gauge_m: 1.435, curve_rigid_wheelbase_m: 1.6764, throttle_notches: [(0.0, false), (0.25, false), (0.5, false), (0.75, false), (1.0, false)], traction_cutoff_bar: None, authored_force_curves: false, rail_power_limit_w: Some(223709.961474681), rigid_connection: true, driven_mass_kg: 36000.0, sander: NativeSanderParams { capacity_m3: 1.13267386368, forward_m3_s: 2.6743688447999998e-5, reverse_m3_s: 0.0, max_speed_mps: 30.0, effect_up_to_mps: 0.0 } }]",
+  "placement": {
+    "destination": "n100",
+    "offset_m": 23.83584335353266,
+    "start": "n330"
+  },
+  "source_path": "/home/cristian/Documentos/Open Rails/Content/Demo Model 1/ROUTES/SCE/PATHS/MT_MT_0930 Edinburgh-Glasgow Queen Street(player).PAT",
+  "source_path_sha256": "01edba267c6fdf02f884d210c9dc2b5823afd07d2523470239c2a1e7e4e22997",
+  "source_vehicle": "/home/cristian/Documentos/Open Rails/Content/Demo Model 1/TRAINS/trainset/MT_DB_Class101_BlueGrey/MT_DB_Cl101_BlGr_DMBS_SC51451.eng",
+  "source_vehicle_sha256": "560b9e7531a4b71f65f0014fbb88722f095c1bac6f6106bf8d90550f467bfdd3",
+  "track_sha256": "fc43ffb7b46f07fd25c1b64a10573eb0d8da7349d80a450aefb7c7057a8dfd76"
+}

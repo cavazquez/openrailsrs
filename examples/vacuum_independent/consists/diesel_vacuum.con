@@ -1,0 +1,1 @@
+( Train ( TrainCfg "Vacuum independent test" ( MaxVelocity 26.8 0 ) ( WagonList ( Engine "vehicles/diesel_vacuum_drive.eng" ) ( Wagon "vehicles/trailer.wag" ) ) ) )

@@ -117,7 +117,6 @@ impl LiveDriveSession {
         }
         let n = self.consist.vehicles.len();
         let length = self.formation.length_m();
-        let anchor = self.head_chainage_m();
         let p = &mut self.original_physics;
         let q = donor.original_physics;
         p.mass_kg += q.mass_kg;
@@ -199,20 +198,39 @@ impl LiveDriveSession {
         }
         if !a.vehicles.is_empty() {
             let mut joint = crate::CouplerState::passenger();
-            if let Some(original) = a.couplers.last().or(b.couplers.first()) {
+            if let Some(original) = a
+                .couplers
+                .last()
+                .or(b.couplers.first())
+                .filter(|joint| joint.native_profile.is_none())
+            {
                 joint = original.clone();
                 joint.extension_m = 0.;
                 joint.broken = false;
+                joint.memory = Default::default();
             }
+            if let (Some(leading), Some(trailing)) = (
+                self.authored_couplers.last(),
+                donor.authored_couplers.first(),
+            ) && let Some(authored) = crate::CouplerState::from_vehicle_ends(leading, trailing)
+            {
+                joint = authored;
+            }
+            self.original_couplers.push(joint.clone());
+            self.original_couplers.append(&mut donor.original_couplers);
             a.couplers.push(joint);
             a.couplers.append(&mut b.couplers);
-            // Car positions represent integrated travel, not absolute chainage.
+            // Translate the donor's travel origin without flattening its
+            // internal deflections or invalidating persistent gear references.
+            let target = a.vehicles.last().map_or(0., |car| car.position_m);
+            let shift = target - b.vehicles.first().map_or(0., |car| car.position_m);
             for car in &mut b.vehicles {
-                car.position_m = anchor;
+                car.position_m += shift;
             }
             a.vehicles.append(&mut b.vehicles);
             a.vehicle_masses.append(&mut b.vehicle_masses);
         }
+        self.authored_couplers.append(&mut donor.authored_couplers);
         a.diesel_rpm.append(&mut b.diesel_rpm);
         a.diesel_run_up.append(&mut b.diesel_run_up);
         a.diesel_motor_heat.append(&mut b.diesel_motor_heat);

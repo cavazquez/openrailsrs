@@ -376,6 +376,16 @@ pub fn run_scenario_headless_with_driver(
         scenario.simulation.multi_body,
         CouplerKind::parse(&scenario.simulation.coupler_kind),
     );
+    if scenario.simulation.multi_body {
+        state
+            .configure_authored_couplers(
+                &openrailsrs_train::coupler_profile::load_consist_coupler_profiles(
+                    &consist_path,
+                    consist_root(&consist_path),
+                )?,
+            )
+            .map_err(SimError::Msg)?;
+    }
     let dt = scenario.simulation.time_step;
     let duration = scenario.simulation.duration;
     let seed = scenario.simulation.seed;
