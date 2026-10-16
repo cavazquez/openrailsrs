@@ -21,6 +21,8 @@ y carga progresiva de mipmaps. La biblioteca suma búsqueda Unicode, navegación
 por teclado, orden por nombre/favoritos y recuperación de descargas. La
 [guía de los veinte issues](docs/NEXT_TWENTY_20261016.md) explica cómo probar
 estas mejoras y el bloque de fuzzing de archivos externos.
+Las [campañas prolongadas de fuzzing](docs/FUZZING.md) se ejecutan una por vez,
+con corpus persistente, reanudación y casos de fallo reproducibles.
 
 El inicio abre directamente **Crear partida**, con búsqueda y elección de ruta,
 servicio y tren. **Avanzadas** reúne editores, filtros y diagnósticos. Las

@@ -1,6 +1,12 @@
 name: Bounded input fuzzing
 on:
   workflow_dispatch:
+    inputs:
+      seconds_per_target:
+        description: 'Seconds for EACH target, sequentially (1800 = 3h30 total)'
+        type: choice
+        options: ['30', '300', '1800']
+        default: '1800'
   pull_request:
     paths:
       - 'fuzz/**'
@@ -10,6 +16,7 @@ on:
       - 'crates/openrailsrs-track/**'
       - 'crates/openrailsrs-game/**'
       - 'scripts/*content*.py'
+      - 'scripts/*fuzz*.py'
       - '.github/workflows/fuzz.yml'
 permissions:
   contents: read
@@ -31,6 +38,8 @@ jobs:
         run: cargo run --locked -p openrailsrs-fuzz -- --runs 128 --seed 1612026 --out tmp/fuzz-ci --export-corpus fuzz/corpus
       - name: Offline URL and ZIP mutations
         run: python3 scripts/fuzz_content.py --runs 128 --out tmp/fuzz-content-ci
+      - name: Campaign persistence, resume, findings and child cleanup
+        run: python3 -m unittest discover -s scripts -p test_fuzz_campaign.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -42,7 +51,7 @@ jobs:
   libfuzzer:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 300
     env:
       RUSTUP_TOOLCHAIN: nightly
     steps:
@@ -54,18 +63,34 @@ jobs:
         env:
           RUSTUP_TOOLCHAIN: nightly
         run: cargo install cargo-fuzz --locked
+      - name: Restore discovered synthetic inputs
+        uses: actions/cache/restore@v4
+        with:
+          path: fuzz/corpus/
+          key: ${{ runner.os }}-owned-fuzz-corpus-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ${{ runner.os }}-owned-fuzz-corpus-${{ github.ref_name }}-
       - name: Export owned corpus
         run: cargo run --locked -p openrailsrs-fuzz -- --runs 1 --out tmp/fuzz-seeds --export-corpus fuzz/corpus
       - name: Coverage-guided campaigns (bounded per target)
         env:
           RUSTUP_TOOLCHAIN: nightly
-        run: |
-          for target in stf simisa textures shapes terrain sigscript multiplayer; do
-            cargo fuzz run "$target" -- -max_total_time=30 -timeout=5 -rss_limit_mb=1024 -max_len=65536
-          done
+          FUZZ_SECONDS: ${{ inputs.seconds_per_target }}
+        run: python3 scripts/run_fuzz_campaign.py --seconds-per-target "$FUZZ_SECONDS" --out tmp/fuzz-campaign
+      - name: Retain corpus for the next campaign
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: fuzz/corpus/
+          key: ${{ runner.os }}-owned-fuzz-corpus-${{ github.ref_name }}-${{ github.run_id }}-${{ github.run_attempt }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: libfuzzer-inputs
-          path: fuzz/artifacts/
-          if-no-files-found: ignore
+          name: libfuzzer-campaign-and-inputs
+          path: |
+            tmp/fuzz-campaign/
+            tmp/fuzz-campaign-build.log*
+            fuzz/findings/
+            fuzz/corpus/
+          if-no-files-found: warn
+          retention-days: 30

@@ -1,4 +1,7 @@
 target/
 corpus/
+corpus-*/
 artifacts/
 coverage/
+findings/
+reports/

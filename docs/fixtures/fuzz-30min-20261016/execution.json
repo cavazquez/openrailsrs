@@ -1,0 +1,1296 @@
+{
+  "schema": 1,
+  "status": "pass",
+  "verified_utc": "2026-10-16T23:09:13.648046+00:00",
+  "base_commit": "0472b8f23d191aa5022a0baf3aeb2e02548e0f9e",
+  "scope": "Coverage-guided synthetic Rust reader/protocol inputs with AddressSanitizer; no route, rendering, gameplay or absence-of-bugs certification.",
+  "accounting": "1800 credited seconds per target, six completed 300-second slices, one worker at a time. STF combines two prior completed slices and four final slices with identical Rust sources and executable. Interrupted slices and preflights receive no credit.",
+  "rustc": "rustc 1.99.0-nightly (87e5904f5 2026-07-20)\nbinary: rustc\ncommit-hash: 87e5904f5eb6398af6b22eac2802c78934260c48\ncommit-date: 2026-07-20\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.0-nightly\nLLVM version: 22.1.8\n",
+  "cargo_fuzz": "cargo-fuzz 0.13.2",
+  "sanitizer": "address",
+  "timeout_seconds": 5,
+  "rss_limit_mib": 1024,
+  "max_input_bytes": 65536,
+  "sequential_workers": 1,
+  "completed_targets": 7,
+  "credited_budget_seconds": 12600,
+  "passed_slices": 42,
+  "total_executions": 411670546,
+  "findings": 0,
+  "interrupted_slices": [
+    {
+      "campaign": "campaign01",
+      "target": "stf",
+      "attempt": 2,
+      "credited_seconds": 0,
+      "elapsed_seconds": 120.019,
+      "log": "tmp/fuzz-30min-20261016/campaign01/stf/attempt-002/fuzz.log"
+    },
+    {
+      "campaign": "campaign02",
+      "target": "stf",
+      "attempt": 2,
+      "credited_seconds": 0,
+      "elapsed_seconds": 270.168,
+      "log": "tmp/fuzz-30min-20261016/campaign02/stf/attempt-002/fuzz.log.gz"
+    },
+    {
+      "campaign": "campaign04-rest",
+      "target": "textures",
+      "attempt": 5,
+      "credited_seconds": 0,
+      "elapsed_seconds": 40.027,
+      "log": "tmp/fuzz-30min-20261016/campaign04-rest/textures/attempt-005/fuzz.log.gz"
+    }
+  ],
+  "preflights": {
+    "preflight01": {
+      "status": "complete",
+      "seconds_per_target": 2,
+      "credited_to_long_campaign": false,
+      "report_sha256": "a2acbe8117aa09cac54443c20e32c7d81c7d8c89f57b61b84b2bd6d87b65cf80"
+    },
+    "preflight02": {
+      "status": "complete",
+      "seconds_per_target": 2,
+      "credited_to_long_campaign": false,
+      "report_sha256": "026b653cd8e129eafed089c501908b471bf267480c80bc9ab3a49403622955b4"
+    }
+  },
+  "rust_and_harness_sources_identical_across_all_credited_slices": true,
+  "current_sources_and_binaries_unchanged": true,
+  "passed_intervals_do_not_overlap": true,
+  "all_completed_compressed_and_raw_log_hashes_verified": true,
+  "protected_player_files_unchanged": true,
+  "generated_corpus_logs_and_findings_versioned": false,
+  "reports": {
+    "campaign01": {
+      "status": "interrupted",
+      "report_sha256": "bdc04540bc6ba8cafcb29166b20f368c33a30046a6027dc3ba25346834c1720f",
+      "runner_sha256": "7dd457a8453ce95bf357112be692f643d0e3a89647798cf1dc2d34848c96ca82"
+    },
+    "campaign02": {
+      "status": "interrupted",
+      "report_sha256": "2a0494d9bf8d598720700074856993783c698314b798a26f0157e9e9392e3e45",
+      "runner_sha256": "ab17238f20f8b8e3ff3a2ce43a533cfc2d55efeb231daee23676cb43b54b76bf"
+    },
+    "campaign03-stf": {
+      "status": "complete",
+      "report_sha256": "7a6a00d2859bb6797e487c1550cfe0b2058f77a5e3bbaed3d2f6fc0a36a114bf",
+      "runner_sha256": "88b7881c21c5316f2c23f11c71339c29004a91792ad91ff982a694c3d91534c7"
+    },
+    "campaign04-rest": {
+      "status": "complete",
+      "report_sha256": "5f2301dd3fc957a2727b569a08a968f0f2dc08e69a861b981e965a234a0888b8",
+      "runner_sha256": "88b7881c21c5316f2c23f11c71339c29004a91792ad91ff982a694c3d91534c7"
+    }
+  },
+  "targets": {
+    "stf": {
+      "completed_budget_seconds": 1800,
+      "executions": 29968833,
+      "slices": [
+        {
+          "campaign": "campaign01",
+          "attempt": 1,
+          "seed": 1619945,
+          "started_utc": "2026-10-16T19:16:25.861757+00:00",
+          "completed_utc": "2026-10-16T19:21:29.882893+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.162,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 7115165,
+            "coverage_edges": 736,
+            "features": 3930,
+            "reported_seconds": 301,
+            "peak_rss_mb": 529
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign01/stf/attempt-001/fuzz.log",
+            "sha256": "ea0b9d44cde04ea3d08d33f967e92cdd696bb2deabf0bc6ffe4e44b674e28993",
+            "bytes": 359485965,
+            "uncompressed_sha256": "ea0b9d44cde04ea3d08d33f967e92cdd696bb2deabf0bc6ffe4e44b674e28993",
+            "uncompressed_bytes": 359485965
+          }
+        },
+        {
+          "campaign": "campaign02",
+          "attempt": 1,
+          "seed": 1619945,
+          "started_utc": "2026-10-16T19:25:47.700967+00:00",
+          "completed_utc": "2026-10-16T19:30:48.864133+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.156,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 4117908,
+            "coverage_edges": 745,
+            "features": 4018,
+            "reported_seconds": 301,
+            "peak_rss_mb": 568
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign02/stf/attempt-001/fuzz.log.gz",
+            "sha256": "0bd1468b4f0402688bf00052e10a49505c44de44c40e0051e09ec59758eb29a5",
+            "bytes": 1574480,
+            "uncompressed_sha256": "6f3e809f6d70069cd136a1b2c423b7ea7a038d776ec77a4c71cf6e9aff5b63ad",
+            "uncompressed_bytes": 203522396
+          }
+        },
+        {
+          "campaign": "campaign03-stf",
+          "attempt": 1,
+          "seed": 1619945,
+          "started_utc": "2026-10-16T19:37:47.917164+00:00",
+          "completed_utc": "2026-10-16T19:42:49.073521+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.148,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 4542059,
+            "coverage_edges": 746,
+            "features": 4050,
+            "reported_seconds": 301,
+            "peak_rss_mb": 583
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign03-stf/stf/attempt-001/fuzz.log.gz",
+            "sha256": "2664411e7267b91984bc125830bc53ef914c4b7d546e4ea886306d567ec972af",
+            "bytes": 1621094,
+            "uncompressed_sha256": "1622038d8c814cbafcaecd6496f18107edfd28131c503a56371ced1f6e8db0c9",
+            "uncompressed_bytes": 222422118
+          }
+        },
+        {
+          "campaign": "campaign03-stf",
+          "attempt": 2,
+          "seed": 1627864,
+          "started_utc": "2026-10-16T19:48:51.708785+00:00",
+          "completed_utc": "2026-10-16T19:53:52.867851+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.143,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 4518913,
+            "coverage_edges": 748,
+            "features": 4061,
+            "reported_seconds": 301,
+            "peak_rss_mb": 588
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign03-stf/stf/attempt-002/fuzz.log.gz",
+            "sha256": "1df46203f3db896d3b5da7a0e6c749a702abcda1003e8b07098435f5b8437dff",
+            "bytes": 1612076,
+            "uncompressed_sha256": "efefc491c43371524f62740f4c11bb56ece59641da3dfd18af44d8ae1f7c4609",
+            "uncompressed_bytes": 222808887
+          }
+        },
+        {
+          "campaign": "campaign03-stf",
+          "attempt": 3,
+          "seed": 1635783,
+          "started_utc": "2026-10-16T19:53:55.550651+00:00",
+          "completed_utc": "2026-10-16T19:58:56.713593+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.147,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 4695672,
+            "coverage_edges": 748,
+            "features": 4067,
+            "reported_seconds": 301,
+            "peak_rss_mb": 593
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign03-stf/stf/attempt-003/fuzz.log.gz",
+            "sha256": "c5fcea554d8fb9f8c74d2679da43ca8a59601a569d982241904d389819cb46f1",
+            "bytes": 1579908,
+            "uncompressed_sha256": "c64646cd3b197633adb67b655779216e3821b6c4b8d461ad41da48a5216e9786",
+            "uncompressed_bytes": 218408437
+          }
+        },
+        {
+          "campaign": "campaign03-stf",
+          "attempt": 4,
+          "seed": 1643702,
+          "started_utc": "2026-10-16T19:59:01.761846+00:00",
+          "completed_utc": "2026-10-16T20:04:02.931975+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.154,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 4979116,
+            "coverage_edges": 751,
+            "features": 4087,
+            "reported_seconds": 301,
+            "peak_rss_mb": 608
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign03-stf/stf/attempt-004/fuzz.log.gz",
+            "sha256": "f5f8b2c5deddfdcdff9cf50797bf3bca51c8d600c3e23e9c0c768e2f25510df6",
+            "bytes": 1707508,
+            "uncompressed_sha256": "5bdd6aefeac7c5bd374d1f86249708b052ef4ef7a635349f8a921e22a5a45ee4",
+            "uncompressed_bytes": 233848438
+          }
+        }
+      ],
+      "binary_sha256": "6a26c97e5e275919cda25cef40d4d33e762ff3f2b09e2afcffebaef73a6613b1",
+      "corpus_before": {
+        "count": 1395,
+        "bytes": 139790,
+        "unique_inputs": 1395
+      },
+      "corpus_after": {
+        "count": 13475,
+        "bytes": 2321973,
+        "unique_inputs": 13475
+      },
+      "corpus_inventory_sha256": "16237aed38132084411b09271d57628c53847e3a895ed55ee0bfc58b4870e5f0"
+    },
+    "simisa": {
+      "completed_budget_seconds": 1800,
+      "executions": 22094384,
+      "slices": [
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 1,
+          "seed": 1719948,
+          "started_utc": "2026-10-16T20:04:05.788016+00:00",
+          "completed_utc": "2026-10-16T20:09:06.863243+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.072,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 4116219,
+            "coverage_edges": 1467,
+            "features": 7366,
+            "reported_seconds": 301,
+            "peak_rss_mb": 425
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/simisa/attempt-001/fuzz.log.gz",
+            "sha256": "39c107ba464a40516fc429431a6b41aa411832a490ad8082865aa3d49589d965",
+            "bytes": 75854,
+            "uncompressed_sha256": "d4869943a516286358311e837276656deec19d6d9ff63dbdd77770a5db4a1520",
+            "uncompressed_bytes": 449753
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 2,
+          "seed": 1727867,
+          "started_utc": "2026-10-16T20:09:09.970212+00:00",
+          "completed_utc": "2026-10-16T20:14:11.075250+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.1,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 3479533,
+            "coverage_edges": 1467,
+            "features": 7444,
+            "reported_seconds": 301,
+            "peak_rss_mb": 459
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/simisa/attempt-002/fuzz.log.gz",
+            "sha256": "fe3cddee4626328e46ea4a60435dc2bc5890c69828b1009664f0645a10731490",
+            "bytes": 35819,
+            "uncompressed_sha256": "bf9c0ab483b1363f5319bfce7cf9c2c3a6329e8a87fd68a4d11436742d6fed37",
+            "uncompressed_bytes": 218966
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 3,
+          "seed": 1735786,
+          "started_utc": "2026-10-16T20:14:13.897752+00:00",
+          "completed_utc": "2026-10-16T20:19:14.976892+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.075,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 3975631,
+            "coverage_edges": 1467,
+            "features": 7483,
+            "reported_seconds": 301,
+            "peak_rss_mb": 488
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/simisa/attempt-003/fuzz.log.gz",
+            "sha256": "15deb0d8e1b0b44e58ae87b79c1e12a7db82e615e5478594d9ea7cbeda2d6669",
+            "bytes": 26096,
+            "uncompressed_sha256": "8b35c9edeb421c6e2b72239cd379aa7571e44464229808b1a863ba8b81f98bd6",
+            "uncompressed_bytes": 159501
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 4,
+          "seed": 1743705,
+          "started_utc": "2026-10-16T20:19:18.448453+00:00",
+          "completed_utc": "2026-10-16T20:24:19.548311+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.095,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 3770494,
+            "coverage_edges": 1467,
+            "features": 7494,
+            "reported_seconds": 301,
+            "peak_rss_mb": 538
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/simisa/attempt-004/fuzz.log.gz",
+            "sha256": "34e31e0daaadf351adaf95d4d8a27e24de5238d4a7fa2ad87a578b93deb3e949",
+            "bytes": 18082,
+            "uncompressed_sha256": "6c3bd229895884440961cbb141a389fc75dada0b127be9512397c74a6943f6f4",
+            "uncompressed_bytes": 113071
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 5,
+          "seed": 1751624,
+          "started_utc": "2026-10-16T20:24:22.226820+00:00",
+          "completed_utc": "2026-10-16T20:29:23.330940+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.098,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 3392547,
+            "coverage_edges": 1468,
+            "features": 7510,
+            "reported_seconds": 301,
+            "peak_rss_mb": 552
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/simisa/attempt-005/fuzz.log.gz",
+            "sha256": "816f74d34a5200cf9a1fcdbf1eaf9ca37914248c8f7dbcb8a3ceebc5b9493611",
+            "bytes": 14224,
+            "uncompressed_sha256": "460a89cd1d85e81d4fb2187d5603a33bd833856766758c4868aeae39bf16d197",
+            "uncompressed_bytes": 85537
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 6,
+          "seed": 1759543,
+          "started_utc": "2026-10-16T20:29:26.137777+00:00",
+          "completed_utc": "2026-10-16T20:34:27.247170+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.104,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 3359960,
+            "coverage_edges": 1468,
+            "features": 7520,
+            "reported_seconds": 301,
+            "peak_rss_mb": 563
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/simisa/attempt-006/fuzz.log.gz",
+            "sha256": "8f988fd8eec608a657ec275f9153f9af390bab2aa5794ade71d264c530547add",
+            "bytes": 12205,
+            "uncompressed_sha256": "0f496be6b395400626fbe808cfced6a6991803d261b340337e55288d06f2ee49",
+            "uncompressed_bytes": 71410
+          }
+        }
+      ],
+      "binary_sha256": "abcd7765b58c7e9eae4ea19e5cbcdb0fe0a7ba393cd8427166d6d26f0c786b3c",
+      "corpus_before": {
+        "count": 1558,
+        "bytes": 119799,
+        "unique_inputs": 1558
+      },
+      "corpus_after": {
+        "count": 9205,
+        "bytes": 4324793,
+        "unique_inputs": 9205
+      },
+      "corpus_inventory_sha256": "e2b14b54dc2d124823bc1673ed67305aee3f6c1f1bf0d9eb691edb93c5653226"
+    },
+    "textures": {
+      "completed_budget_seconds": 1800,
+      "executions": 7621893,
+      "slices": [
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 1,
+          "seed": 1819951,
+          "started_utc": "2026-10-16T20:34:29.994596+00:00",
+          "completed_utc": "2026-10-16T20:39:31.077234+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.076,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 2508365,
+            "coverage_edges": 1135,
+            "features": 4130,
+            "reported_seconds": 301,
+            "peak_rss_mb": 474
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/textures/attempt-001/fuzz.log.gz",
+            "sha256": "4a2dd1f45912d7476b78978bb3a7a2130f7f7ac30cac391638e79c4aaff0da68",
+            "bytes": 29059,
+            "uncompressed_sha256": "351fc9618c86744b644e6669a262070dfcb8c10f7007348c761e42bf8baffb1f",
+            "uncompressed_bytes": 157786
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 2,
+          "seed": 1827870,
+          "started_utc": "2026-10-16T20:39:33.859011+00:00",
+          "completed_utc": "2026-10-16T20:44:34.920095+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.054,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 1685039,
+            "coverage_edges": 1150,
+            "features": 4219,
+            "reported_seconds": 301,
+            "peak_rss_mb": 495
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/textures/attempt-002/fuzz.log.gz",
+            "sha256": "33d96b5d6199f120a32065c6c996d6953a663f294d7c86ed9b4c4ba96e9b35f6",
+            "bytes": 13133,
+            "uncompressed_sha256": "c4b5cd6a79420e3d8293f7e62c0984ad5fa88f4eb9e74bc44f9c7f1ec6006840",
+            "uncompressed_bytes": 66971
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 3,
+          "seed": 1835789,
+          "started_utc": "2026-10-16T20:44:37.737897+00:00",
+          "completed_utc": "2026-10-16T20:49:38.847439+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.102,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 1519553,
+            "coverage_edges": 1150,
+            "features": 4226,
+            "reported_seconds": 301,
+            "peak_rss_mb": 469
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/textures/attempt-003/fuzz.log.gz",
+            "sha256": "6de8607fe983b3eec625f58816b5effb6969158df75c094d598f6c57fc2e0337",
+            "bytes": 10401,
+            "uncompressed_sha256": "ed15fdf279dd821213b4d22bbbd52be247fea2015298621436c7fd60a7d7de81",
+            "uncompressed_bytes": 55921
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 4,
+          "seed": 1843708,
+          "started_utc": "2026-10-16T20:49:42.196861+00:00",
+          "completed_utc": "2026-10-16T20:54:43.265061+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.061,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 685076,
+            "coverage_edges": 1151,
+            "features": 4253,
+            "reported_seconds": 301,
+            "peak_rss_mb": 513
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/textures/attempt-004/fuzz.log.gz",
+            "sha256": "45af6bcb3953849a6c745994a0ab0a3101fd04a3bf36af167fc9e5265fd880bd",
+            "bytes": 5138,
+            "uncompressed_sha256": "e894ed6b1253c14dd776554917cf624c6e795bd7e9022639daf16fb6ecda4519",
+            "uncompressed_bytes": 25747
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 6,
+          "seed": 1859546,
+          "started_utc": "2026-10-16T20:56:04.892576+00:00",
+          "completed_utc": "2026-10-16T21:01:05.969513+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.069,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 538776,
+            "coverage_edges": 1151,
+            "features": 4256,
+            "reported_seconds": 301,
+            "peak_rss_mb": 534
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/textures/attempt-006/fuzz.log.gz",
+            "sha256": "d0c68beab1afd8afcb570bfdda8c141f6cbb72b5e5a5814967374ecfdfc5b6cf",
+            "bytes": 3198,
+            "uncompressed_sha256": "f5cc79c3135e89ce30a5aa4a2f0847c8374a0bac650000a90a012f495ce4a8d7",
+            "uncompressed_bytes": 16020
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 7,
+          "seed": 1867465,
+          "started_utc": "2026-10-16T21:01:09.281282+00:00",
+          "completed_utc": "2026-10-16T21:06:10.363822+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.075,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 685084,
+            "coverage_edges": 1151,
+            "features": 4259,
+            "reported_seconds": 301,
+            "peak_rss_mb": 570
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/textures/attempt-007/fuzz.log.gz",
+            "sha256": "53592ad313df39508f7921a38aa060ea7f5a8a38da2bd7a27b6eb1327287991a",
+            "bytes": 3082,
+            "uncompressed_sha256": "b1e4745e7d9a7e45e7a3b9006322bbdcb623b1cbd04c0642a08aee17dffa4735",
+            "uncompressed_bytes": 15706
+          }
+        }
+      ],
+      "binary_sha256": "adc31f1e31133b46b734e4e603f5e1b3855afde809362f9863a3d7b4112f9049",
+      "corpus_before": {
+        "count": 714,
+        "bytes": 243154,
+        "unique_inputs": 714
+      },
+      "corpus_after": {
+        "count": 2773,
+        "bytes": 4718412,
+        "unique_inputs": 2773
+      },
+      "corpus_inventory_sha256": "62037fa0a9c0eefd8b54c3404ed67bd71e03bb3e1d6b40126cbef5af7903e01d"
+    },
+    "shapes": {
+      "completed_budget_seconds": 1800,
+      "executions": 9318816,
+      "slices": [
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 1,
+          "seed": 1919954,
+          "started_utc": "2026-10-16T21:06:22.092939+00:00",
+          "completed_utc": "2026-10-16T21:11:23.211654+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.109,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 3190447,
+            "coverage_edges": 2831,
+            "features": 12772,
+            "reported_seconds": 301,
+            "peak_rss_mb": 514
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/shapes/attempt-001/fuzz.log.gz",
+            "sha256": "88977f01373812d19c32ae922a75a81d7c6f90870738c28fd4bed218b30e9e9b",
+            "bytes": 119125,
+            "uncompressed_sha256": "51dc8da532dd6bfdc6d5fa9067ba4988737724ce150a23819415c53218331e1b",
+            "uncompressed_bytes": 696365
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 2,
+          "seed": 1927873,
+          "started_utc": "2026-10-16T21:11:37.601886+00:00",
+          "completed_utc": "2026-10-16T21:16:38.737312+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.124,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 1701897,
+            "coverage_edges": 2922,
+            "features": 14169,
+            "reported_seconds": 301,
+            "peak_rss_mb": 548
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/shapes/attempt-002/fuzz.log.gz",
+            "sha256": "2142f8858ff70fb8d2ac5ad3204d71ee2f5de49c1fe44c7a44719a17d98b74b6",
+            "bytes": 43352,
+            "uncompressed_sha256": "39568fdde3f978097ba6e6b3184530a910ac8d289dee75d52938ebfd302c9a71",
+            "uncompressed_bytes": 242015
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 3,
+          "seed": 1935792,
+          "started_utc": "2026-10-16T21:16:41.491077+00:00",
+          "completed_utc": "2026-10-16T21:21:42.645482+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.143,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 1322442,
+            "coverage_edges": 2982,
+            "features": 14649,
+            "reported_seconds": 301,
+            "peak_rss_mb": 669
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/shapes/attempt-003/fuzz.log.gz",
+            "sha256": "31376c0369e3285941f34f3bc9ee34eaf98e797c12e234f5b34f0a2c3736b2e3",
+            "bytes": 27067,
+            "uncompressed_sha256": "b4e97b160793ad74ec93bb03e21e8a0f65bbe27fc66c0af497fdd7818c5f997f",
+            "uncompressed_bytes": 147986
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 4,
+          "seed": 1943711,
+          "started_utc": "2026-10-16T21:21:45.777926+00:00",
+          "completed_utc": "2026-10-16T21:26:46.939287+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.149,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 1086920,
+            "coverage_edges": 3021,
+            "features": 15135,
+            "reported_seconds": 301,
+            "peak_rss_mb": 749
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/shapes/attempt-004/fuzz.log.gz",
+            "sha256": "2fa285e7114b20432e0261bb0b31a7979ce4a1b091838224ed7add81ca3fff8e",
+            "bytes": 21748,
+            "uncompressed_sha256": "967e8450b4d3b682cd7d6db75eb5a1df4a36138780d465419a0b2aa472dd7848",
+            "uncompressed_bytes": 115293
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 5,
+          "seed": 1951630,
+          "started_utc": "2026-10-16T21:26:50.180859+00:00",
+          "completed_utc": "2026-10-16T21:31:51.363969+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.171,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 1027249,
+            "coverage_edges": 3041,
+            "features": 15467,
+            "reported_seconds": 301,
+            "peak_rss_mb": 779
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/shapes/attempt-005/fuzz.log.gz",
+            "sha256": "c58179b3f55c8fe740606691c54c9a44e98274c1c1997e0a889b50adc663494e",
+            "bytes": 16106,
+            "uncompressed_sha256": "c3bf9675e913e01137b8db5ab7aa8b7c53a4959f48c4443c2cd633673eb2bbaf",
+            "uncompressed_bytes": 89102
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 6,
+          "seed": 1959549,
+          "started_utc": "2026-10-16T21:31:54.209212+00:00",
+          "completed_utc": "2026-10-16T21:36:55.399928+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.178,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 989861,
+            "coverage_edges": 3102,
+            "features": 15789,
+            "reported_seconds": 301,
+            "peak_rss_mb": 791
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/shapes/attempt-006/fuzz.log.gz",
+            "sha256": "9e8d53db242e0585c694dadf30c0788bf6815fd8aac6698f8e6db9882a5a4921",
+            "bytes": 14853,
+            "uncompressed_sha256": "01752d44b854fcb6441dffbdc6382185fdbf828fc76f25dac299e61c498dcae8",
+            "uncompressed_bytes": 79290
+          }
+        }
+      ],
+      "binary_sha256": "e36628025046ca32e0fd8eca88bd42a4abb1edf9da9d3dcbadc0e1348415b865",
+      "corpus_before": {
+        "count": 1910,
+        "bytes": 178931,
+        "unique_inputs": 1910
+      },
+      "corpus_after": {
+        "count": 9438,
+        "bytes": 8544358,
+        "unique_inputs": 9438
+      },
+      "corpus_inventory_sha256": "1e272b2aea023c24d2dae86fdc0f9ddce251cbb30acc00ea1f076ed138c6368f"
+    },
+    "terrain": {
+      "completed_budget_seconds": 1800,
+      "executions": 231590840,
+      "slices": [
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 1,
+          "seed": 2019957,
+          "started_utc": "2026-10-16T21:36:58.859277+00:00",
+          "completed_utc": "2026-10-16T21:42:00.069052+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.197,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 38327999,
+            "coverage_edges": 286,
+            "features": 430,
+            "reported_seconds": 301,
+            "peak_rss_mb": 572
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/terrain/attempt-001/fuzz.log.gz",
+            "sha256": "acd0ccd94a00f425f27117da6daa0006e0e2ecd5da7c6a7640ef93086f39e0f0",
+            "bytes": 806,
+            "uncompressed_sha256": "a98c28cc6c112d0b8c25fabe1f2af980f22e811db8438231654f60d18622df0d",
+            "uncompressed_bytes": 1939
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 2,
+          "seed": 2027876,
+          "started_utc": "2026-10-16T21:42:15.242567+00:00",
+          "completed_utc": "2026-10-16T21:47:16.443728+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.188,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 38647153,
+            "coverage_edges": 286,
+            "features": 430,
+            "reported_seconds": 301,
+            "peak_rss_mb": 572
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/terrain/attempt-002/fuzz.log.gz",
+            "sha256": "c8e08a42a1eac7cfe9b3b41ee91d67e1260ff7c252c2b1cab017ab0fe25e3670",
+            "bytes": 668,
+            "uncompressed_sha256": "fac7475abaaa21ad8577210e4e46a745943d85092fe9c964742d998ea5d76401",
+            "uncompressed_bytes": 1588
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 3,
+          "seed": 2035795,
+          "started_utc": "2026-10-16T21:47:19.356408+00:00",
+          "completed_utc": "2026-10-16T21:52:20.562241+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.193,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 38492132,
+            "coverage_edges": 286,
+            "features": 430,
+            "reported_seconds": 301,
+            "peak_rss_mb": 572
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/terrain/attempt-003/fuzz.log.gz",
+            "sha256": "99ae1a182155fd6b6e7f39168c722d1cb5407e45158f2f7ad7aeb472f3a980f6",
+            "bytes": 610,
+            "uncompressed_sha256": "6b413f2ab2188552b26b957994e22746f3b9711c3feeb5843f345307411a2ee4",
+            "uncompressed_bytes": 1476
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 4,
+          "seed": 2043714,
+          "started_utc": "2026-10-16T21:52:23.579917+00:00",
+          "completed_utc": "2026-10-16T21:57:24.780975+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.189,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 38744572,
+            "coverage_edges": 286,
+            "features": 430,
+            "reported_seconds": 301,
+            "peak_rss_mb": 572
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/terrain/attempt-004/fuzz.log.gz",
+            "sha256": "f22b2753bc149a92b8ab5b5bc85bb08af84e4e9619ec9e37b21e1d64f02e301d",
+            "bytes": 610,
+            "uncompressed_sha256": "8a420bae61c615a76b7b407baf4795a603914eb31fc8a1657e041a728d4d208a",
+            "uncompressed_bytes": 1476
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 5,
+          "seed": 2051633,
+          "started_utc": "2026-10-16T21:57:28.069873+00:00",
+          "completed_utc": "2026-10-16T22:02:29.275640+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.193,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 38713977,
+            "coverage_edges": 286,
+            "features": 430,
+            "reported_seconds": 301,
+            "peak_rss_mb": 572
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/terrain/attempt-005/fuzz.log.gz",
+            "sha256": "7ed6502abc619739e3af137c1630de1dac15a2cf932a5d7613e174f2bb845446",
+            "bytes": 613,
+            "uncompressed_sha256": "375ec3544551ed8fbe3894fb012dd1c114bf52da2a7f76a6f558ff161407d2ff",
+            "uncompressed_bytes": 1476
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 6,
+          "seed": 2059552,
+          "started_utc": "2026-10-16T22:02:31.930903+00:00",
+          "completed_utc": "2026-10-16T22:07:33.136646+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.193,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 38665007,
+            "coverage_edges": 286,
+            "features": 430,
+            "reported_seconds": 301,
+            "peak_rss_mb": 571
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/terrain/attempt-006/fuzz.log.gz",
+            "sha256": "5834a5a8d77a4b338325dd6f1f70c09106bc30157d3c63840a6927f8b8dd4a22",
+            "bytes": 615,
+            "uncompressed_sha256": "ae31470a2e684b36387b2fc7b7720be8e2a8b887ffd678eda01e5cec09b4d5b6",
+            "uncompressed_bytes": 1476
+          }
+        }
+      ],
+      "binary_sha256": "603d29fa59838effe475bd11aacd551019edc3df19134ac311792f9514ef2753",
+      "corpus_before": {
+        "count": 83,
+        "bytes": 1282,
+        "unique_inputs": 83
+      },
+      "corpus_after": {
+        "count": 86,
+        "bytes": 1319,
+        "unique_inputs": 86
+      },
+      "corpus_inventory_sha256": "28f6e74065d8c7f3b009d2b8dd9413d5ff74b9c3534e9539dc94894486dd472c"
+    },
+    "sigscript": {
+      "completed_budget_seconds": 1800,
+      "executions": 34632198,
+      "slices": [
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 1,
+          "seed": 2119960,
+          "started_utc": "2026-10-16T22:07:35.912885+00:00",
+          "completed_utc": "2026-10-16T22:12:37.152123+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.224,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 7817778,
+            "coverage_edges": 1042,
+            "features": 4947,
+            "reported_seconds": 301,
+            "peak_rss_mb": 866
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/sigscript/attempt-001/fuzz.log.gz",
+            "sha256": "3b0fb1e28a1ffe5ded349fae27472f1efb299e90e2da6e5a288941a41882f448",
+            "bytes": 118181,
+            "uncompressed_sha256": "f2bdf26b8a92760140c2a0debac6ce09a7928ab40b0c281aa58dc478f8cb4352",
+            "uncompressed_bytes": 719859
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 2,
+          "seed": 2127879,
+          "started_utc": "2026-10-16T22:12:51.350326+00:00",
+          "completed_utc": "2026-10-16T22:17:52.535543+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.167,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 5785288,
+            "coverage_edges": 1051,
+            "features": 5206,
+            "reported_seconds": 301,
+            "peak_rss_mb": 781
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/sigscript/attempt-002/fuzz.log.gz",
+            "sha256": "3ca52531bdebebb1cf2e832925bd2e85095072c8769308ac9f113ada8e35889c",
+            "bytes": 48898,
+            "uncompressed_sha256": "9778942b3247d390d6a6cbbc48f031049fd9a771296d7de551d875c2a58f6445",
+            "uncompressed_bytes": 285065
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 3,
+          "seed": 2135798,
+          "started_utc": "2026-10-16T22:17:55.344506+00:00",
+          "completed_utc": "2026-10-16T22:22:56.563074+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.198,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 4901880,
+            "coverage_edges": 1053,
+            "features": 5232,
+            "reported_seconds": 301,
+            "peak_rss_mb": 718
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/sigscript/attempt-003/fuzz.log.gz",
+            "sha256": "b5992f27e030687e1ecab260237b088e78ae12e6c61ad6876d5832d04d7ce06c",
+            "bytes": 28591,
+            "uncompressed_sha256": "c2bc22507df748a8c52db2530a00b78ed619e2181b48b40ba8e8b85dfc9ac345",
+            "uncompressed_bytes": 166529
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 4,
+          "seed": 2143717,
+          "started_utc": "2026-10-16T22:23:00.317691+00:00",
+          "completed_utc": "2026-10-16T22:28:01.514448+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.176,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 5108013,
+            "coverage_edges": 1055,
+            "features": 5343,
+            "reported_seconds": 301,
+            "peak_rss_mb": 721
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/sigscript/attempt-004/fuzz.log.gz",
+            "sha256": "b9acbf1978b27233b2f3f9c09841a87fa68cea2aa01b779366c112da60e20597",
+            "bytes": 26998,
+            "uncompressed_sha256": "7d9c5f13d7cd201d6484510a19ca8346e93764e4010495e5115470ffe5965928",
+            "uncompressed_bytes": 156104
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 5,
+          "seed": 2151636,
+          "started_utc": "2026-10-16T22:28:04.688077+00:00",
+          "completed_utc": "2026-10-16T22:33:05.889865+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.182,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 5547839,
+            "coverage_edges": 1065,
+            "features": 5370,
+            "reported_seconds": 301,
+            "peak_rss_mb": 703
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/sigscript/attempt-005/fuzz.log.gz",
+            "sha256": "4f02dab50a8de8e588204804f94550a4569314a109b3ae7304f425fc02558b05",
+            "bytes": 22749,
+            "uncompressed_sha256": "68bb23086bf457b4357a2575df8f7fc6625389cef569d892fdad5fc1dc87d117",
+            "uncompressed_bytes": 133851
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 6,
+          "seed": 2159555,
+          "started_utc": "2026-10-16T22:33:09.450207+00:00",
+          "completed_utc": "2026-10-16T22:38:10.637684+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.168,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 5471400,
+            "coverage_edges": 1066,
+            "features": 5380,
+            "reported_seconds": 301,
+            "peak_rss_mb": 726
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/sigscript/attempt-006/fuzz.log.gz",
+            "sha256": "367348735142858578415dd5c4d7a97857ce9fa2bec111aa4a54f488dfdb5a16",
+            "bytes": 21776,
+            "uncompressed_sha256": "3160bf5570b2e792af2408731615ab3cecc276b9ace6f9eeac79a86259baf8dd",
+            "uncompressed_bytes": 120817
+          }
+        }
+      ],
+      "binary_sha256": "b70f84eafd9606c77918db7507a09f7020c1af0f53fc9d3933b41ff3289e3948",
+      "corpus_before": {
+        "count": 1813,
+        "bytes": 203288,
+        "unique_inputs": 1813
+      },
+      "corpus_after": {
+        "count": 12442,
+        "bytes": 9599183,
+        "unique_inputs": 12442
+      },
+      "corpus_inventory_sha256": "97bd6328dc540eec9f4db688bc68f161083d0ca6a4771e992a5f950ee0b13969"
+    },
+    "multiplayer": {
+      "completed_budget_seconds": 1800,
+      "executions": 76443582,
+      "slices": [
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 1,
+          "seed": 2219963,
+          "started_utc": "2026-10-16T22:38:13.992448+00:00",
+          "completed_utc": "2026-10-16T22:43:15.121436+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.107,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 16624994,
+            "coverage_edges": 3195,
+            "features": 11262,
+            "reported_seconds": 301,
+            "peak_rss_mb": 521
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/multiplayer/attempt-001/fuzz.log.gz",
+            "sha256": "7a0d082f6775a294d174848f96bdabf8d0c19e822fc60463cba80f4e402d2f12",
+            "bytes": 76064,
+            "uncompressed_sha256": "ad2d1ab96048ac07bdbeb42c0ec170826f544276bede52a8c5aa9e730c8da882",
+            "uncompressed_bytes": 419563
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 2,
+          "seed": 2227882,
+          "started_utc": "2026-10-16T22:43:36.765222+00:00",
+          "completed_utc": "2026-10-16T22:48:37.934879+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.146,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 12974447,
+            "coverage_edges": 3248,
+            "features": 12477,
+            "reported_seconds": 301,
+            "peak_rss_mb": 521
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/multiplayer/attempt-002/fuzz.log.gz",
+            "sha256": "88479bfa12bd98b0abeaed00a2699bb00d4840605f7470c41f988feb88094576",
+            "bytes": 24618,
+            "uncompressed_sha256": "bfa8090e8758a49503fff5778c4c9235385331c2862d3942ade089656b7a56fa",
+            "uncompressed_bytes": 128195
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 3,
+          "seed": 2235801,
+          "started_utc": "2026-10-16T22:48:41.273040+00:00",
+          "completed_utc": "2026-10-16T22:53:42.444300+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.148,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 12898226,
+            "coverage_edges": 3274,
+            "features": 12608,
+            "reported_seconds": 301,
+            "peak_rss_mb": 529
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/multiplayer/attempt-003/fuzz.log.gz",
+            "sha256": "334738002849d9c0a827a56726b1d2eaa6d5c4e8e19059cc837a81b149d56786",
+            "bytes": 17467,
+            "uncompressed_sha256": "ef30b4bd5ceac371c816358654a02dfbc8491a6294134940c6fac5a3511de238",
+            "uncompressed_bytes": 92889
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 4,
+          "seed": 2243720,
+          "started_utc": "2026-10-16T22:53:45.913123+00:00",
+          "completed_utc": "2026-10-16T22:58:47.075670+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.137,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 11044785,
+            "coverage_edges": 3297,
+            "features": 13398,
+            "reported_seconds": 301,
+            "peak_rss_mb": 520
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/multiplayer/attempt-004/fuzz.log.gz",
+            "sha256": "a5ff3aef5171f981a831f241b0cceef17cc854f939a53cd3c82ca15ff5663b92",
+            "bytes": 15641,
+            "uncompressed_sha256": "6958ceb8ba1d6d14b2e23bbaf8a2646d7aeb3b16dfef50ea9c8ad058a0619f29",
+            "uncompressed_bytes": 79938
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 5,
+          "seed": 2251639,
+          "started_utc": "2026-10-16T22:58:49.913213+00:00",
+          "completed_utc": "2026-10-16T23:03:51.083802+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.146,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 12697723,
+            "coverage_edges": 3302,
+            "features": 13648,
+            "reported_seconds": 301,
+            "peak_rss_mb": 522
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/multiplayer/attempt-005/fuzz.log.gz",
+            "sha256": "b7a7f43a14b4ec6be055312daf918e34f4866863ed35d2f759b8aa0278f92d42",
+            "bytes": 14921,
+            "uncompressed_sha256": "098ce020d7a70a8378ebf91600ad448ddfc9f94cc15254053dbd528975a666f6",
+            "uncompressed_bytes": 79718
+          }
+        },
+        {
+          "campaign": "campaign04-rest",
+          "attempt": 6,
+          "seed": 2259558,
+          "started_utc": "2026-10-16T23:03:53.954250+00:00",
+          "completed_utc": "2026-10-16T23:08:55.092772+00:00",
+          "credited_seconds": 300,
+          "elapsed_seconds": 301.113,
+          "exit_code": 0,
+          "watchdog_timeout": false,
+          "stats": {
+            "executions": 10203407,
+            "coverage_edges": 3305,
+            "features": 14370,
+            "reported_seconds": 301,
+            "peak_rss_mb": 523
+          },
+          "log": {
+            "path": "tmp/fuzz-30min-20261016/campaign04-rest/multiplayer/attempt-006/fuzz.log.gz",
+            "sha256": "cb4ab202fb490a49d93edc1c4d2daeec8c763aeb3a58cfda6a069009bd6edbe0",
+            "bytes": 11405,
+            "uncompressed_sha256": "f9dcc4136d4a988102a03f7e8d713a663157999e641bb6670c7b52ad418ca62d",
+            "uncompressed_bytes": 57162
+          }
+        }
+      ],
+      "binary_sha256": "09ee5cfbfe1db838a9f595d8c55b8997e1d5752fdd5e39d18b43c0b71cba89f7",
+      "corpus_before": {
+        "count": 1813,
+        "bytes": 240812,
+        "unique_inputs": 1813
+      },
+      "corpus_after": {
+        "count": 6788,
+        "bytes": 1307443,
+        "unique_inputs": 6788
+      },
+      "corpus_inventory_sha256": "b4c54d26bbc8e9ecef19be745c12c991b33f4804146a2584d0707c62caf9f593"
+    }
+  },
+  "source_inputs_sha256": "7f2ac2c10c599db8642cebfa79d8d2a20e36b59579b190eaa6e0a4114762ae86",
+  "regression_tests": {
+    "command": [
+      "python3",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "scripts",
+      "-p",
+      "test_fuzz*.py"
+    ],
+    "exit_code": 0,
+    "tests_passed": 14,
+    "started_utc": "2026-10-16T23:09:33.125021+00:00",
+    "completed_utc": "2026-10-16T23:09:35.383406+00:00",
+    "log_sha256": "a84a30db2a05107437f397e9346249581607855950637cf5fee8d56500ffd4c3",
+    "workflow_yaml_valid": true,
+    "git_diff_check_exit_code": 0,
+    "source_sha256": {
+      "scripts/run_fuzz_campaign.py": "88b7881c21c5316f2c23f11c71339c29004a91792ad91ff982a694c3d91534c7",
+      "scripts/test_fuzz_campaign.py": "d9b2a6ba6b8124a0825eed623155f33869a68b0ab509d024355398c5c04fbd36",
+      "scripts/fuzz_content.py": "e3e9ccc55be1bd6ebe3604b4d112f0280b233af1553b5d4167eec9740fbe21b7",
+      "scripts/test_fuzz_content.py": "dc50125066e09a1714263ea73f879c78dc5f94a5120b44d5a340655e4e4c4fbb",
+      "scripts/download_official_content.py": "6649119f209ba73d136a472c73979f5c5f9a8f5f82f472ecd576f8e2eb71a5f7",
+      ".github/workflows/fuzz.yml": "58074741e3fd895c5bb2a34875fa04b296231ea2a5a31dce65575aac1a82dd11"
+    }
+  },
+  "owned_campaign_processes_remaining": 0,
+  "corpus_entries_after": 54207
+}
