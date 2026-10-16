@@ -1,0 +1,13 @@
+   Compiling openrailsrs-formats v0.1.0 (/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/crates/openrailsrs-formats)
+   Compiling openrailsrs-scenarios v0.1.0 (/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/crates/openrailsrs-scenarios)
+   Compiling openrailsrs-train v0.1.0 (/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/crates/openrailsrs-train)
+   Compiling openrailsrs-msts v0.1.0 (/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/crates/openrailsrs-msts)
+    Finished `test` profile [optimized] target(s) in 13.80s
+     Running unittests src/lib.rs (target/debug/deps/openrailsrs_msts-3b644b814ccb4ca7)
+
+running 2 tests
+test import_timetable::portion_tests::missing_duplicate_and_partial_foreign_services_are_explicit_errors ... ok
+test import_timetable::portion_tests::original_pickup_and_signed_forms_resolve_canonical_foreign_identity ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 29 filtered out; finished in 0.00s
+

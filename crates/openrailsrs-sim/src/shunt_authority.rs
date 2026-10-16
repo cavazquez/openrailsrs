@@ -110,16 +110,34 @@ impl crate::LiveDriveSession {
         }
     }
     fn shunt_has_parked_section(&self, distance_m: f64) -> bool {
-        self.formation.parked_head_chainage_m.is_some_and(|head| {
-            let length: f64 = self
-                .formation
-                .cars
-                .iter()
-                .skip(self.formation.coupled_count)
-                .map(|car| car.length_m)
-                .sum();
-            head >= self.head_chainage_m() && head - length <= self.head_chainage_m() + distance_m
-        })
+        // Detached portions have immutable paths. A chainage from another PAT
+        // cannot be compared directly with the current route's chainage.
+        let parked: Vec<_> = self
+            .own_track_occupancy()
+            .into_iter()
+            .filter(|span| span.owner != self.service_id)
+            .collect();
+        let head = self.head_chainage_m();
+        let limit = head + distance_m.max(0.);
+        let mut before = 0.;
+        for (id, edge) in self.state.path_edges.iter().zip(&self.path_data.edges) {
+            let base = id.strip_suffix("_r").unwrap_or(id);
+            for span in parked.iter().filter(|p| p.edge == base) {
+                let (a, b) = if id.ends_with("_r") {
+                    (edge.length_m - span.end_m, edge.length_m - span.start_m)
+                } else {
+                    (span.start_m, span.end_m)
+                };
+                if before + b >= head && before + a <= limit {
+                    return true;
+                }
+            }
+            before += edge.length_m;
+            if before > limit {
+                break;
+            }
+        }
+        false
     }
     pub fn shunting_authority_status(&self) -> Option<String> {
         self.state.shunt_authority.as_ref().map(|a| {
@@ -130,5 +148,31 @@ impl crate::LiveDriveSession {
                 (a.expires_s - self.time_s()).max(0.)
             )
         })
+    }
+}
+
+#[cfg(test)]
+mod section_authority_tests {
+    #[test]
+    fn shunting_checks_each_parked_physical_track_instead_of_foreign_chainage() {
+        let folder = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/portion_operations");
+        let definition =
+            openrailsrs_scenarios::load_scenario(folder.join("scenario.toml")).unwrap();
+        let mut s = crate::LiveDriveSession::from_scenario(&folder, &definition).unwrap();
+        for car in &mut s.formation.cars[1..] {
+            car.handbrake = true;
+        }
+        s.uncouple_after_named(2, "B").unwrap();
+        // Prescribed parked position on the adjacent siding: its chainage is
+        // numerically ahead but the current route never enters that track.
+        s.formation.sections[0].path_edges = vec!["diverge".into()];
+        s.rebuild_section_paths();
+        s.state.pos_on_edge_m = 80.;
+        assert!(!s.shunt_has_parked_section(100.));
+        s.state.pos_on_edge_m = 200.;
+        s.uncouple_after_named(0, "C").unwrap();
+        s.state.pos_on_edge_m = 80.;
+        assert!(s.shunt_has_parked_section(100.));
     }
 }

@@ -1,0 +1,134 @@
+{
+  "status": "DECLARED_BEFORE_EXECUTION",
+  "input_sha256": "74ec825cd876e966e141dfe96003fe853e9032e0d1491ef25c6da4f39791e61e",
+  "helper_sha256": "81edf27ab3155df36a654afde480e86c0fc690e3c4b9f7d6e014d75374ceea7e",
+  "capture_script_sha256": "1bb4c5ffaa3f2d49573264ee1e7e9141f281d88ed55a48c0a0b42773198986d4",
+  "input": {
+    "native_methods": [
+      "SignalObject.block_state",
+      "SignalObject.AddHead",
+      "SignalHead.route_set"
+    ],
+    "scope": "Native discrete block states and first junction link; ordinary activity route membership. Full track-circuit reservation search and timetable permission rules are not claimed.",
+    "tolerances_predeclared": {
+      "discrete_states": "exact",
+      "junction_bindings": "exact",
+      "route_set": "exact"
+    },
+    "internal_block_states": [
+      "Reserved",
+      "Reservable",
+      "OccupiedSameDirection",
+      "ReservedOther",
+      "ForcedWait",
+      "OccupiedOppositeDirection",
+      "Open",
+      "Blocked"
+    ],
+    "links": [
+      {
+        "required_vector": 0,
+        "route_vector": 0,
+        "enabled": false
+      },
+      {
+        "required_vector": 0,
+        "route_vector": 0,
+        "enabled": true
+      },
+      {
+        "required_vector": 0,
+        "route_vector": 1,
+        "enabled": false
+      },
+      {
+        "required_vector": 0,
+        "route_vector": 1,
+        "enabled": true
+      },
+      {
+        "required_vector": 0,
+        "route_vector": 2,
+        "enabled": false
+      },
+      {
+        "required_vector": 0,
+        "route_vector": 2,
+        "enabled": true
+      },
+      {
+        "required_vector": 1,
+        "route_vector": 0,
+        "enabled": false
+      },
+      {
+        "required_vector": 1,
+        "route_vector": 0,
+        "enabled": true
+      },
+      {
+        "required_vector": 1,
+        "route_vector": 1,
+        "enabled": false
+      },
+      {
+        "required_vector": 1,
+        "route_vector": 1,
+        "enabled": true
+      },
+      {
+        "required_vector": 1,
+        "route_vector": 2,
+        "enabled": false
+      },
+      {
+        "required_vector": 1,
+        "route_vector": 2,
+        "enabled": true
+      },
+      {
+        "required_vector": 2,
+        "route_vector": 0,
+        "enabled": false
+      },
+      {
+        "required_vector": 2,
+        "route_vector": 0,
+        "enabled": true
+      },
+      {
+        "required_vector": 2,
+        "route_vector": 1,
+        "enabled": false
+      },
+      {
+        "required_vector": 2,
+        "route_vector": 1,
+        "enabled": true
+      },
+      {
+        "required_vector": 2,
+        "route_vector": 2,
+        "enabled": false
+      },
+      {
+        "required_vector": 2,
+        "route_vector": 2,
+        "enabled": true
+      }
+    ]
+  },
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "assemblies": {
+    "RunActivity.exe": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2",
+    "Orts.Simulation.dll": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679",
+    "Orts.Common.dll": "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212",
+    "Orts.Settings.dll": "fe0d8d81149f480f3972c80e64ffaf6012c7599e32c26c8e4d46510e3edbb2e7",
+    "Orts.Formats.Msts.dll": "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465",
+    "Orts.Parsers.Msts.dll": "8e0781c9f861ed95b4467d1bf948ea7aca896d634f21ac5952f97a9f630d0b36",
+    "MonoGame.Framework.dll": "c6a16c29705a4c847e0e4a2647bf432604cd9320cbc5d4125ab01ae7bb7e6542",
+    "Newtonsoft.Json.dll": "9af2e1c672afd67a291b8f2031a341a3788d4d9f683eaddc6ceab3a3a74c546e"
+  },
+  "no_renderer_or_audio": true
+}

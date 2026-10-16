@@ -331,7 +331,211 @@ pub fn import_native_timetable(
     import_native_timetable_with_consist(route, timetable, service, imported, &consist)
 }
 
+/// Resolve a name in this original timetable. Foreign timetable files remain
+/// explicit errors rather than silently choosing a similarly named service.
+fn resolve_service<'a>(
+    table: &'a NativeTimetable,
+    reference: &str,
+) -> Result<&'a openrailsrs_formats::timetable::NativeTimetableService, MstsError> {
+    let name = reference
+        .split_once(':')
+        .map_or(reference, |(name, scope)| {
+            if scope.eq_ignore_ascii_case(&table.description) {
+                name
+            } else {
+                reference
+            }
+        });
+    table
+        .services
+        .iter()
+        .find(|s| s.id.eq_ignore_ascii_case(name))
+        .ok_or_else(|| error(format!("Original timetable service not found: {reference}")))
+}
+// This is the import boundary for one native row and its consist/portion state.
+#[allow(clippy::too_many_arguments)]
+fn append_service_operations(
+    operations: &mut Vec<TimetableOperation>,
+    commands: &[openrailsrs_formats::timetable::TimetableCommand],
+    chainage_m: f64,
+    reversed: bool,
+    coupled: &mut usize,
+    total: usize,
+    parked: &mut Option<String>,
+    joined: &mut HashMap<String, usize>,
+    mut resolve: impl FnMut(&str) -> Result<(String, usize), MstsError>,
+) -> Result<(), MstsError> {
+    for command in commands {
+        if command.name == "pickup"
+            && command.qualifiers.is_empty()
+            && let Some(reference) = &command.value
+            && !parked
+                .as_ref()
+                .is_some_and(|p| p.eq_ignore_ascii_case(reference))
+        {
+            let (service, count) = resolve(reference)?;
+            if joined.contains_key(&service) || *coupled + count > 256 {
+                return Err(error("Duplicate or oversized foreign timetable portion"));
+            }
+            joined.insert(service.clone(), count);
+            *coupled += count;
+            operations.push(TimetableOperation {
+                chainage_m,
+                section: service.clone(),
+                manual: false,
+                action: TimetableAction::JoinService {
+                    service,
+                    front: None,
+                },
+            });
+        } else if command.name == "detach"
+            && command.value.is_none()
+            && command.qualifiers.iter().any(|(q, _)| q == "forms")
+        {
+            if command.qualifiers.iter().any(|(q, v)| {
+                !matches!(q.as_str(), "forms" | "units" | "manual" | "auto")
+                    || matches!(q.as_str(), "manual" | "auto") && v.is_some()
+            }) {
+                return Err(error("Unsupported foreign portion detach qualifier"));
+            }
+            let value = |key: &str| {
+                command
+                    .qualifiers
+                    .iter()
+                    .find(|(q, _)| q == key)
+                    .and_then(|(_, v)| v.as_deref())
+            };
+            let reference =
+                value("forms").ok_or_else(|| error("Foreign detach requires /forms=SERVICE"))?;
+            let (service, count) = resolve(reference)?;
+            let units = value("units")
+                .and_then(|s| s.parse::<i32>().ok())
+                .ok_or_else(|| error("Foreign detach requires signed /units=N"))?;
+            if joined.get(&service) != Some(&count)
+                || units.unsigned_abs() as usize != count
+                || count >= *coupled
+                || (units > 0) != reversed
+            {
+                return Err(error(
+                    "Only a complete previously picked-up foreign end portion can form its original service; other splits require a new formed-service definition",
+                ));
+            }
+            for key in ["forms", "units"] {
+                if command.qualifiers.iter().filter(|(q, _)| q == key).count() != 1 {
+                    return Err(error("Duplicate foreign detach qualifier"));
+                }
+            }
+            joined.remove(&service);
+            *coupled -= count;
+            operations.push(TimetableOperation {
+                chainage_m,
+                section: service.clone(),
+                manual: command.qualifiers.iter().any(|(q, _)| q == "manual"),
+                action: TimetableAction::SplitService { service },
+            });
+        } else {
+            append_station_operations(
+                operations,
+                std::slice::from_ref(command),
+                chainage_m,
+                reversed,
+                coupled,
+                total,
+                parked,
+            )?;
+        }
+    }
+    Ok(())
+}
+
 pub fn import_native_timetable_with_consist(
+    route: &Path,
+    timetable: &Path,
+    service: &str,
+    imported: &Path,
+    consist: &Path,
+) -> Result<ScenarioFile, MstsError> {
+    let mut scenario =
+        import_one_native_timetable_with_consist(route, timetable, service, imported, consist)?;
+    let mut queue: std::collections::VecDeque<String> = std::collections::VecDeque::new();
+    let mut seen: HashSet<String> = scenario
+        .route
+        .legs
+        .iter()
+        .filter_map(|l| l.service_id.as_ref().map(|id| id.to_ascii_lowercase()))
+        .collect();
+    let collect = |s: &ScenarioFile| {
+        s.route
+            .legs
+            .iter()
+            .flat_map(|l| &l.operations)
+            .filter_map(|op| match &op.action {
+                TimetableAction::JoinService { service, .. }
+                | TimetableAction::SplitService { service } => Some(service.clone()),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+    };
+    queue.extend(collect(&scenario));
+    while let Some(id) = queue.pop_front() {
+        if !seen.insert(id.to_ascii_lowercase()) {
+            continue;
+        }
+        if seen.len() > 128 {
+            return Err(error("Native timetable actor graph exceeds 128 services"));
+        }
+        let stock = prepare_timetable_consist(route, timetable, &id, imported)?;
+        let actor =
+            import_one_native_timetable_with_consist(route, timetable, &id, imported, &stock)?;
+        queue.extend(collect(&actor));
+        let start_clock = actor.scenario.start_time_s.unwrap_or(0.);
+        let initial = scenario.scenario.start_time_s.unwrap_or(0.);
+        let mut signed_departure = start_clock - initial;
+        if signed_departure < -43200. {
+            signed_departure += 86400.;
+        }
+        if signed_departure > 43200. {
+            signed_departure -= 86400.;
+        }
+        let pre_roll = (-signed_departure).max(0.);
+        if pre_roll > 21600. {
+            return Err(error(
+                "Foreign timetable service needs more than six hours of pre-run",
+            ));
+        }
+        let departure = signed_departure.max(0.);
+        scenario
+            .extra_trains
+            .push(openrailsrs_scenarios::TrainEntryDef {
+                id: id.clone(),
+                consist: actor.train.consist,
+                start: actor.route.start,
+                destination: actor.route.destination,
+                start_time_s: departure,
+                start_offset_m: actor.route.start_offset_m.unwrap_or(0.),
+                relative_stop_times: true,
+                waypoints: actor.route.waypoints,
+                stops: actor.route.stops,
+                switches: actor.route.switches,
+                legs: actor.route.legs,
+                systems: actor.train.systems,
+                freight: actor.train.freight,
+                cab_equipment: actor.train.cab_equipment,
+                presentation: actor.train.presentation,
+                electric_pickups: actor.train.electric_pickups,
+                bogie_dynamics: actor.train.bogie_dynamics,
+                activity_uids: vec![],
+                pre_roll_s: pre_roll,
+                parked: false,
+                davis: actor.train.davis,
+                output_csv: format!("timetable-{}.csv", scenario.extra_trains.len()),
+            });
+    }
+    scenario.validate().map_err(|e| error(e.to_string()))?;
+    Ok(scenario)
+}
+
+fn import_one_native_timetable_with_consist(
     route: &Path,
     timetable: &Path,
     service: &str,
@@ -398,6 +602,7 @@ pub fn import_native_timetable_with_consist(
     let mut legs: Vec<RouteLeg> = vec![];
     let mut coupled_count = formation.vehicles.len();
     let mut parked_section = None;
+    let mut joined_services = HashMap::new();
     loop {
         if legs.len() >= 256 || !seen.insert(current.id.to_ascii_lowercase()) {
             return Err(error("Cyclic or oversized native timetable service chain"));
@@ -612,7 +817,7 @@ pub fn import_native_timetable_with_consist(
         records.sort_by(|a, b| a.0.total_cmp(&b.0));
         let mut operations = vec![];
         for (chainage, _, commands) in &records {
-            append_station_operations(
+            append_service_operations(
                 &mut operations,
                 commands,
                 *chainage,
@@ -620,6 +825,18 @@ pub fn import_native_timetable_with_consist(
                 &mut coupled_count,
                 formation.vehicles.len(),
                 &mut parked_section,
+                &mut joined_services,
+                |reference| {
+                    let target = resolve_service(&table, reference)?;
+                    let consist =
+                        prepare_timetable_consist(route, timetable, &target.id, imported)?;
+                    let stock = openrailsrs_train::load_consist_with_asset_root(
+                        &consist,
+                        consist.parent().unwrap(),
+                    )
+                    .map_err(|e| error(e.to_string()))?;
+                    Ok((target.id.clone(), stock.vehicles.len()))
+                },
             )?;
         }
         let activity = ActivityFile {
@@ -766,6 +983,131 @@ mod tests {
                 &mut count,
                 5,
                 &mut parked
+            )
+            .is_err()
+        );
+    }
+}
+
+#[cfg(test)]
+mod portion_tests {
+    use super::*;
+    #[test]
+    fn original_pickup_and_signed_forms_resolve_canonical_foreign_identity() {
+        let mut operations = vec![];
+        let mut count = 3;
+        let mut parked = None;
+        let mut joined = HashMap::new();
+        append_service_operations(
+            &mut operations,
+            &timetable_commands("$pickup=sUr").unwrap(),
+            240.,
+            false,
+            &mut count,
+            3,
+            &mut parked,
+            &mut joined,
+            |name| {
+                assert!(name.eq_ignore_ascii_case("sur"));
+                Ok(("Sur".into(), 3))
+            },
+        )
+        .unwrap();
+        assert_eq!(count, 6);
+        assert!(
+            matches!(&operations[0].action,TimetableAction::JoinService{service,front:None}if service=="Sur")
+        );
+        append_service_operations(
+            &mut operations,
+            &timetable_commands("$detach/units=-3/forms=sur/manual").unwrap(),
+            240.,
+            false,
+            &mut count,
+            3,
+            &mut parked,
+            &mut joined,
+            |_| Ok(("Sur".into(), 3)),
+        )
+        .unwrap();
+        assert_eq!(count, 3);
+        assert!(joined.is_empty());
+        assert!(operations[1].manual);
+        assert!(
+            matches!(&operations[1].action,TimetableAction::SplitService{service}if service=="Sur")
+        );
+    }
+    #[test]
+    fn missing_duplicate_and_partial_foreign_services_are_explicit_errors() {
+        let mut operations = vec![];
+        let mut count = 3;
+        let mut parked = None;
+        let mut joined = HashMap::new();
+        assert!(
+            append_service_operations(
+                &mut operations,
+                &timetable_commands("$pickup=missing").unwrap(),
+                240.,
+                false,
+                &mut count,
+                3,
+                &mut parked,
+                &mut joined,
+                |_| Err(error("Original service missing"))
+            )
+            .is_err()
+        );
+        let pickup = timetable_commands("$pickup=Sur").unwrap();
+        append_service_operations(
+            &mut operations,
+            &pickup,
+            240.,
+            false,
+            &mut count,
+            3,
+            &mut parked,
+            &mut joined,
+            |_| Ok(("Sur".into(), 3)),
+        )
+        .unwrap();
+        assert!(
+            append_service_operations(
+                &mut operations,
+                &pickup,
+                240.,
+                false,
+                &mut count,
+                3,
+                &mut parked,
+                &mut joined,
+                |_| Ok(("Sur".into(), 3))
+            )
+            .is_err()
+        );
+        assert!(
+            append_service_operations(
+                &mut operations,
+                &timetable_commands("$detach/units=-2/forms=Sur").unwrap(),
+                240.,
+                false,
+                &mut count,
+                3,
+                &mut parked,
+                &mut joined,
+                |_| Ok(("Sur".into(), 3))
+            )
+            .is_err()
+        );
+        assert!(
+            append_service_operations(
+                &mut operations,
+                &timetable_commands("$attach=Sur").unwrap(),
+                240.,
+                false,
+                &mut count,
+                3,
+                &mut parked,
+                &mut joined,
+                |_| Ok(("Sur".into(), 3))
             )
             .is_err()
         );

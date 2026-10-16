@@ -1,0 +1,257 @@
+{
+  "status": "DECLARED_BEFORE_EXECUTION",
+  "input_sha256": "c73ad5e3c2e8950857796b604f87d58091fb3580757680a7b0e01b826af26e0c",
+  "helper_sha256": "d3e37de90d60e1a4c80aaa037200e918f3da1cf420eb59260c1a6fb37838751b",
+  "capture_script_sha256": "0186a860e1dc1ffc269ef7e8a0bf0c897097568107f516e7d50e7fabe29e7d23",
+  "input": {
+    "schema": 1,
+    "status": "DECLARED_BEFORE_NATIVE_CAPTURE_AND_RUST_COMPARISON",
+    "reference_version": "1.6.1",
+    "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+    "native_methods": [
+      "Orts.Simulation.RollingStocks.TrainCar.UpdateTrainDerailmentRisk(Single)"
+    ],
+    "scope": "Original DLL lateral-risk branch with explicitly prescribed geometry, speed, physical cant angle, friction and coupler angle/effort. CarBehind is null, so native visual hose/coupler geometry is deliberately not evaluated. This is not a train journey, a wheel/rail contact solver or a reference for Rust lateral suspension/shared-support extensions.",
+    "native_cached_inputs": {
+      "AbsSpeedMpS": "abs(SpeedMpS), matching TrainCar.Update's cache before UpdateTrainDerailmentRisk"
+    },
+    "tolerances_predeclared": {
+      "force_n_abs": 0.25,
+      "force_rel": 3e-06,
+      "cant_m_abs": 1e-06,
+      "angle_rad_abs": 1e-07,
+      "coefficient_abs": 1e-05,
+      "distance_m_abs": 1e-05,
+      "time_s_abs": 1e-06,
+      "states": "exact"
+    },
+    "profiles": [
+      {
+        "id": "freight_four_axles",
+        "mass_kg": 40000,
+        "axles": 4,
+        "bogies": 2,
+        "gauge_m": 1.435,
+        "cog_height_m": 1.8,
+        "rigid_wheelbase_m": 1.6764,
+        "flange_angle_rad": 1.22173,
+        "flange_height_m": 0.0254
+      },
+      {
+        "id": "passenger_four_axles",
+        "mass_kg": 32000,
+        "axles": 4,
+        "bogies": 2,
+        "gauge_m": 1.435,
+        "cog_height_m": 1.6,
+        "rigid_wheelbase_m": 2.4384,
+        "flange_angle_rad": 1.22173,
+        "flange_height_m": 0.0254
+      },
+      {
+        "id": "diesel_six_axles",
+        "mass_kg": 108000,
+        "axles": 6,
+        "bogies": 2,
+        "gauge_m": 1.435,
+        "cog_height_m": 2.1,
+        "rigid_wheelbase_m": 3.5052,
+        "flange_angle_rad": 1.22173,
+        "flange_height_m": 0.0254
+      },
+      {
+        "id": "fixed_two_axles_narrow_gauge",
+        "mass_kg": 16000,
+        "axles": 2,
+        "bogies": 1,
+        "gauge_m": 1.0,
+        "cog_height_m": 1.3,
+        "rigid_wheelbase_m": 3.5052,
+        "flange_angle_rad": 1.134464,
+        "flange_height_m": 0.028
+      }
+    ],
+    "cases": [
+      {
+        "id": "straight_reset",
+        "radius_m": 0,
+        "cant_angle_rad": 0,
+        "speed_mps": 20,
+        "friction": 0.35,
+        "ahead_force_n": 0,
+        "coupler_angle_rad": 0,
+        "buff": false,
+        "ahead": true,
+        "dt_s": 0.05,
+        "seed_flags": true
+      },
+      {
+        "id": "curve_uncanted",
+        "radius_m": 300,
+        "cant_angle_rad": 0,
+        "speed_mps": 20,
+        "friction": 0.35,
+        "ahead_force_n": 0,
+        "coupler_angle_rad": 0,
+        "buff": false,
+        "ahead": true,
+        "dt_s": 0.05
+      },
+      {
+        "id": "curve_physical_cant",
+        "radius_m": 300,
+        "cant_angle_rad": 0.08,
+        "speed_mps": 20,
+        "friction": 0.35,
+        "ahead_force_n": 0,
+        "coupler_angle_rad": 0,
+        "buff": false,
+        "ahead": true,
+        "dt_s": 0.05
+      },
+      {
+        "id": "reverse_same_mechanics",
+        "radius_m": 300,
+        "cant_angle_rad": 0.08,
+        "speed_mps": -20,
+        "friction": 0.35,
+        "ahead_force_n": 0,
+        "coupler_angle_rad": 0,
+        "buff": false,
+        "ahead": true,
+        "dt_s": 0.05
+      },
+      {
+        "id": "cant_excess_low_speed",
+        "radius_m": 300,
+        "cant_angle_rad": 0.08,
+        "speed_mps": 3,
+        "friction": 0.2,
+        "ahead_force_n": 0,
+        "coupler_angle_rad": 0,
+        "buff": false,
+        "ahead": true,
+        "dt_s": 0.05
+      },
+      {
+        "id": "draft_lateral",
+        "radius_m": 220,
+        "cant_angle_rad": 0.05,
+        "speed_mps": 20,
+        "friction": 0.35,
+        "ahead_force_n": 180000,
+        "coupler_angle_rad": 0.06,
+        "buff": false,
+        "ahead": true,
+        "dt_s": 0.01
+      },
+      {
+        "id": "buff_lateral",
+        "radius_m": 220,
+        "cant_angle_rad": 0.05,
+        "speed_mps": 20,
+        "friction": 0.35,
+        "ahead_force_n": 180000,
+        "coupler_angle_rad": 0.06,
+        "buff": true,
+        "ahead": true,
+        "dt_s": 0.01
+      },
+      {
+        "id": "tight_curve_possible",
+        "radius_m": 90,
+        "cant_angle_rad": 0,
+        "speed_mps": 30,
+        "friction": 0.35,
+        "ahead_force_n": 300000,
+        "coupler_angle_rad": 0.12,
+        "buff": true,
+        "ahead": true,
+        "dt_s": 0.01
+      },
+      {
+        "id": "stationary_flags_reset",
+        "radius_m": 300,
+        "cant_angle_rad": 0.08,
+        "speed_mps": 0.001,
+        "friction": 0.35,
+        "ahead_force_n": 180000,
+        "coupler_angle_rad": 0.06,
+        "buff": true,
+        "ahead": true,
+        "dt_s": 0.01
+      },
+      {
+        "id": "lead_car_preserves_lateral_native_quirk",
+        "radius_m": 300,
+        "cant_angle_rad": 0.08,
+        "speed_mps": 20,
+        "friction": 0.35,
+        "ahead_force_n": 0,
+        "coupler_angle_rad": 0,
+        "buff": false,
+        "ahead": false,
+        "initial_lateral_n": 123,
+        "dt_s": 0.05
+      },
+      {
+        "id": "zero_counts_native_fallback",
+        "radius_m": 300,
+        "cant_angle_rad": 0.08,
+        "speed_mps": 20,
+        "friction": 0.35,
+        "ahead_force_n": 180000,
+        "coupler_angle_rad": 0.06,
+        "buff": false,
+        "ahead": true,
+        "axles_override": 0,
+        "bogies_override": 0,
+        "dt_s": 0.05
+      },
+      {
+        "id": "possible_climb_timer_starts",
+        "radius_m": 90,
+        "cant_angle_rad": 0,
+        "speed_mps": 30,
+        "friction": 0.35,
+        "ahead_force_n": 3000000,
+        "coupler_angle_rad": 0.2,
+        "buff": true,
+        "ahead": true,
+        "dt_s": 0.01
+      }
+    ],
+    "ordered_calls": [
+      "Create an independent native object per profile/case",
+      "Set all listed fields and initial lateral force/flags; elapsed derail time starts at zero",
+      "Call UpdateTrainDerailmentRisk(dt_s) exactly once",
+      "Read forces, coefficient, Nadal limit, angle of attack, climb distance, timer and flags"
+    ],
+    "outputs": [
+      "vertical_force_n",
+      "lateral_force_n",
+      "derailment_coefficient",
+      "nadal_coefficient",
+      "angle_of_attack_rad",
+      "climb_distance_m",
+      "elapsed_s",
+      "possible",
+      "expected",
+      "has_derailed",
+      "buff_force_exceeded"
+    ]
+  },
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "assemblies": {
+    "RunActivity.exe": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2",
+    "Orts.Simulation.dll": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679",
+    "Orts.Common.dll": "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212",
+    "Orts.Settings.dll": "fe0d8d81149f480f3972c80e64ffaf6012c7599e32c26c8e4d46510e3edbb2e7",
+    "Orts.Formats.Msts.dll": "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465",
+    "Orts.Parsers.Msts.dll": "8e0781c9f861ed95b4467d1bf948ea7aca896d634f21ac5952f97a9f630d0b36",
+    "MonoGame.Framework.dll": "c6a16c29705a4c847e0e4a2647bf432604cd9320cbc5d4125ab01ae7bb7e6542",
+    "Newtonsoft.Json.dll": "9af2e1c672afd67a291b8f2031a341a3788d4d9f683eaddc6ceab3a3a74c546e"
+  },
+  "no_renderer_or_audio": true
+}

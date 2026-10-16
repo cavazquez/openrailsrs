@@ -1,0 +1,157 @@
+{
+  "reference": "Open Rails 1.6.1",
+  "blocks": [
+    {
+      "internal_state": "Reserved",
+      "result": 0
+    },
+    {
+      "internal_state": "Reservable",
+      "result": 0
+    },
+    {
+      "internal_state": "OccupiedSameDirection",
+      "result": 1
+    },
+    {
+      "internal_state": "ReservedOther",
+      "result": 2
+    },
+    {
+      "internal_state": "ForcedWait",
+      "result": 2
+    },
+    {
+      "internal_state": "OccupiedOppositeDirection",
+      "result": 2
+    },
+    {
+      "internal_state": "Open",
+      "result": 2
+    },
+    {
+      "internal_state": "Blocked",
+      "result": 2
+    }
+  ],
+  "links": [
+    {
+      "required_vector": 0,
+      "route_vector": 0,
+      "enabled": false,
+      "result": 1
+    },
+    {
+      "required_vector": 0,
+      "route_vector": 0,
+      "enabled": true,
+      "result": 1
+    },
+    {
+      "required_vector": 0,
+      "route_vector": 1,
+      "enabled": false,
+      "result": 1
+    },
+    {
+      "required_vector": 0,
+      "route_vector": 1,
+      "enabled": true,
+      "result": 1
+    },
+    {
+      "required_vector": 0,
+      "route_vector": 2,
+      "enabled": false,
+      "result": 1
+    },
+    {
+      "required_vector": 0,
+      "route_vector": 2,
+      "enabled": true,
+      "result": 1
+    },
+    {
+      "required_vector": 1,
+      "route_vector": 0,
+      "enabled": false,
+      "result": 0
+    },
+    {
+      "required_vector": 1,
+      "route_vector": 0,
+      "enabled": true,
+      "result": 0
+    },
+    {
+      "required_vector": 1,
+      "route_vector": 1,
+      "enabled": false,
+      "result": 0
+    },
+    {
+      "required_vector": 1,
+      "route_vector": 1,
+      "enabled": true,
+      "result": 1
+    },
+    {
+      "required_vector": 1,
+      "route_vector": 2,
+      "enabled": false,
+      "result": 0
+    },
+    {
+      "required_vector": 1,
+      "route_vector": 2,
+      "enabled": true,
+      "result": 0
+    },
+    {
+      "required_vector": 2,
+      "route_vector": 0,
+      "enabled": false,
+      "result": 0
+    },
+    {
+      "required_vector": 2,
+      "route_vector": 0,
+      "enabled": true,
+      "result": 0
+    },
+    {
+      "required_vector": 2,
+      "route_vector": 1,
+      "enabled": false,
+      "result": 0
+    },
+    {
+      "required_vector": 2,
+      "route_vector": 1,
+      "enabled": true,
+      "result": 0
+    },
+    {
+      "required_vector": 2,
+      "route_vector": 2,
+      "enabled": false,
+      "result": 0
+    },
+    {
+      "required_vector": 2,
+      "route_vector": 2,
+      "enabled": true,
+      "result": 1
+    }
+  ],
+  "bindings": [
+    {
+      "junction_path": 0,
+      "required_vector": 2
+    },
+    {
+      "junction_path": 1,
+      "required_vector": 3
+    }
+  ]
+}

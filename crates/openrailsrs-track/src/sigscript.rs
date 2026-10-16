@@ -23,6 +23,28 @@ pub struct NativeSignalDef {
     /// Activity FailedSignals must remain restrictive after a script update.
     #[serde(default, skip_serializing_if = "is_false")]
     pub forced_stop: bool,
+    /// Original first TrSignalDir link, resolved as SignalObject.AddHead does.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub route_link: Option<NativeSignalLink>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct NativeSignalLink {
+    pub junction_node: String,
+    pub required_vector: String,
+    pub junction_path: u32,
+}
+
+/// Ordinary activity enabled-route branch membership. Unlinked heads return
+/// true natively. Search beyond the supplied route and timetable policy remain
+/// the responsibility of the dispatcher; absence cannot authorize a branch.
+pub fn linked_route_set(required_vector: Option<&str>, path: &[String], enabled: bool) -> bool {
+    required_vector.is_none_or(|required| {
+        enabled
+            && path
+                .iter()
+                .any(|edge| edge.strip_suffix("_r").unwrap_or(edge) == required)
+    })
 }
 
 /// OR returns STOP if a physical signal has no heads of the requested function.
@@ -68,6 +90,9 @@ pub struct SignalContext {
     pub enabled: bool,
     pub route_set: bool,
     pub block_clear: bool,
+    /// Reserved for another train, forced wait, opposite direction or locked points.
+    /// OR exposes these as JN_OBSTRUCTED, distinct from OCCUPIED in the same direction.
+    pub junction_obstructed: bool,
     pub next_normal: u8,
     pub distant_normal: u8,
     pub distant_info: u8,
@@ -95,6 +120,7 @@ impl Default for SignalContext {
             enabled: true,
             route_set: true,
             block_clear: true,
+            junction_obstructed: false,
             next_normal: 7,
             distant_normal: 7,
             distant_info: 0,
@@ -115,6 +141,15 @@ impl Default for SignalContext {
             this_mr: [7, 0, 0, 0, 0],
             head_flags: None,
             switch_diverging: false,
+        }
+    }
+}
+impl SignalContext {
+    pub fn native_block_state(self) -> u8 {
+        if self.junction_obstructed {
+            2
+        } else {
+            u8::from(!self.block_clear)
         }
     }
 }
@@ -444,7 +479,7 @@ fn evaluate(e: &Expr, vars: &HashMap<String, f64>, c: SignalContext) -> Result<f
                 .map(|a| evaluate(a, vars, c))
                 .collect::<Result<Vec<_>, _>>()?;
             match (name.as_str(), args.as_slice()) {
-                ("BLOCK_STATE", []) => f64::from(!c.block_clear),
+                ("BLOCK_STATE", []) => f64::from(c.native_block_state()),
                 ("ROUTE_SET", []) => f64::from(c.route_set),
                 ("NEXT_SIG_LR", [0.]) => f64::from(c.next_normal),
                 ("NEXT_SIG_LR", [1.]) => f64::from(c.next_distance),
@@ -646,7 +681,10 @@ impl SignalProgram {
             ("ENABLED".into(), f64::from(context.enabled)),
             ("STATE".into(), 0.),
             ("DRAW_STATE".into(), 0.),
-            ("BLOCK_STATE".into(), f64::from(!context.block_clear)),
+            (
+                "BLOCK_STATE".into(),
+                f64::from(context.native_block_state()),
+            ),
         ]);
         for name in &self.1 {
             vars.entry(name.clone()).or_insert(0.);

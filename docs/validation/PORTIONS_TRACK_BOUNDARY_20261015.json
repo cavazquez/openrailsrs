@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "recorded_utc": "2026-10-16T01:26:23.295280+00:00",
+  "status": "pass_by_composed_sim_suite_results_final_workspace_gate_separate",
+  "issues": [
+    215,
+    216
+  ],
+  "receipt": {
+    "path": "docs/fixtures/operations/portion-boundary-20261015/acceptance.json",
+    "sha256": "1b70a1efb70463dda61977fa1a5e46235eec46aa1ce6f89514fbed0cdb4dd6b4"
+  },
+  "composed_integration_result": {
+    "suites": 59,
+    "passed": 242,
+    "failed": 0,
+    "ignored": 0
+  },
+  "sim_unit_result": {
+    "suites": 1,
+    "passed": 130,
+    "failed": 0,
+    "ignored": 0
+  },
+  "runtime187_unchanged": true,
+  "runtime_before_after_manifest_sha256": "0a1306cbb9faef3aed1624839fa5ddfc2f872e447bb5ceefc09605cd9136964f",
+  "source_files_at_freeze_sha256": {
+    "crates/openrailsrs-sim/src/sections.rs": "766e0d64f55a2716f1d8f03911deb78e4967d76e3df1d24e7d8f065cd132c1cf",
+    "crates/openrailsrs-sim/tests/sections_and_services.rs": "75015eca6551d80ed5f9fdb0a048973477073ed497f178e7562d8c81e5e428c8",
+    "crates/openrailsrs-sim/tests/equipment_acceptance.rs": "e1e72240ff983fae76a8b8cdf4db70fe316a7eeec00413ac54290cde08ea3eba",
+    "crates/openrailsrs-sim/tests/rail_adhesion.rs": "1aa0b6c5a0c029df21cc3b69227416a1419ac4921fd9ead2502ab7ec567a7e24",
+    "examples/traction_operation/scenario_hotel.toml": "f42f03d9191630d03bd4054098f7a41632ee847351779fd1f97c364804a80076"
+  },
+  "public_files_sha256": {
+    "docs/fixtures/operations/portion-boundary-20261015/acceptance.json": "1b70a1efb70463dda61977fa1a5e46235eec46aa1ce6f89514fbed0cdb4dd6b4",
+    "docs/fixtures/operations/portion-boundary-20261015/all-integrations-attempt02.log": "ef91602e58f6f0b125ef693fffbc7e20d6b820de7688281cf638559d73abd8d9",
+    "docs/fixtures/operations/portion-boundary-20261015/rail-adhesion-final.log": "7414ef5e35e175a0a704fd691dfbb93ab37dccdc3de83dcc117cf7575d028198",
+    "docs/fixtures/operations/portion-boundary-20261015/sim-units.log": "ad1f13481404b9e9a89d3672df3bfac08d954fb11294239fdc54aa7e800856e4"
+  },
+  "final_workspace_gate": {
+    "status": "pass",
+    "log": "docs/validation/NEXT_TEN_20261015-check.log.gz",
+    "sha256": "76859044322ee6de859d7c26f0099b9acb8f9700c6f2b657e5da349298d719af"
+  },
+  "scope": "Section geometry regression and owned equipment fixtures; source validators, tolerances, native captures and original/human content were not relaxed or changed."
+}

@@ -1,5 +1,5 @@
-//! Ideal shared-bogie longitudinal constraints; detailed flange/contact physics
-//! remains in the native curve model. Projection conserves group momentum.
+//! Ideal shared-bogie longitudinal constraints. Projection conserves group
+//! momentum; lateral support states and risk indications live in bogie_dynamics.
 pub(crate) fn constrain(
     vehicles: &mut [crate::VehicleState],
     couplers: &mut [crate::CouplerState],

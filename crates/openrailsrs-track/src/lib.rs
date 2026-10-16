@@ -4,6 +4,7 @@ pub mod error;
 pub mod graph;
 pub mod signal;
 pub mod sigscript;
+pub mod track_sound;
 
 pub use error::TrackError;
 pub use graph::{

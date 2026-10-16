@@ -1,0 +1,42 @@
+[scenario]
+name = "Actividad: carga, composición y guardado"
+description = "Ejercicio propio. B/F9 permite cargar o descargar un vagón alineado; F7 muestra condiciones ACT. Este ejercicio usa una ruta sintética y no contiene paquetes de terceros."
+
+[route]
+path = "route"
+start = "a"
+destination = "b"
+start_offset_m = 100.0
+assume_signals_clear = true
+
+[train]
+consist = "consists/cargo.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+
+[simulation]
+duration = 300.0
+time_step = 0.05
+seed = 42
+legacy_power_cap = false
+
+[native_activity]
+vehicle_uids = [0, 1, 2, 3]
+
+[[native_activity.events]]
+id = 1
+name = "Formación original reunida"
+activation = 1
+reversible = false
+condition = { kind = "assemble_train", uids = [0, 1, 2, 3] }
+outcomes = { message = "Se verificaron los cuatro UID; la carga sigue siendo una operación física independiente.", activate = [2] }
+
+[[native_activity.events]]
+id = 2
+name = "Finalización explícita por tiempo de ejercicio"
+activation = 0
+reversible = false
+condition = { kind = "time", seconds = 300.0 }
+outcomes = { success = true, message = "Ejercicio terminado por su evento declarado." }

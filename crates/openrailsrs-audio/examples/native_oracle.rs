@@ -19,6 +19,7 @@ fn main() {
     }
     let spec = ConsistSoundSpec {
         vehicle_offset: 0,
+        vehicle_mapping: None,
         id: 0,
         consist: PathBuf::from(&args[0]),
         route: PathBuf::from(&args[1]),

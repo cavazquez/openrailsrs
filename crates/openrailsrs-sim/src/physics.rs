@@ -35,6 +35,7 @@ fn speed_limit_traction_factor(v: f64, speed_cap: f64) -> f64 {
 /// Fixed physical parameters for the consist, computed once before the simulation loop.
 #[derive(Clone)]
 pub struct TrainPhysics {
+    pub bogies: Vec<openrailsrs_train::bogie_geometry::VehicleBogieModel>,
     pub power_supply: crate::power_supply::PowerTrainConfig,
     pub rail_adhesion: Option<crate::adhesion::RailAdhesionConfig>,
     pub diesel: crate::diesel_operation::DieselTrainConfig,
@@ -975,6 +976,7 @@ pub fn step(
             grade
         })
         .collect();
+    crate::bogie_dynamics::advance_train(state, train, path_data, &vehicle_centers, dt);
     let resistance = |i: usize, mass: f64, davis: &DavisCoefficients, speed: f64| {
         if let (Some(native), Some(dynamics)) = (&train.native, &state.native_dynamics) {
             native.resistance(i, mass, davis, speed, dynamics)

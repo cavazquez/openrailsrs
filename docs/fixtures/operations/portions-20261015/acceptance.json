@@ -1,0 +1,511 @@
+{
+  "schema": 1,
+  "recorded_utc": "2026-10-16T00:03:45.696775+00:00",
+  "status": "directed_cpu_acceptance_passed_final_workspace_gate_separate",
+  "issues": [
+    211,
+    215,
+    216
+  ],
+  "source_base_commit": "24df59dcc94b476564671e45df900c2d7dbdf63f",
+  "reference_open_rails": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "scope": "Original ACT/PAT/CON operational acceptance in Rust plus existing native DLL-derived coupler fixtures; not a new Open Rails service capture or full steam-physics parity certification.",
+  "author_content_modified": false,
+  "author_content_in_repository": false,
+  "original_inputs_sha256": {
+    "Routes/MidEastCoast/Activities/Firsby to Spilsby Return.act": "40e9e3eb09f8f00110c214d15077b62741215d919676bc132289879b4d611180",
+    "Routes/MidEastCoast/Paths/Firsby to Spilsby Return.pat": "a3728f605396e0511b7fdba21facf5f36c575881c16eca3ab2064cbea87c82d0",
+    "Routes/MidEastCoast/Services/Firsby to Spilsby Return.srv": "e1775199c1bce1164b9642a67f6f9e863bc94ff3dfe46df57d8b4b6c6ccf5b94",
+    "Trains/CONSISTS/OR-84030-BR2MT-Tank-B-2MK1CC.con": "63b3ba2401b16568b28a8a1f9e8716246cc26734fa03ca6ce6cd0ee3edb2f021",
+    "Trains/TRAINSET/OR-84030-BR2MT-Tank-B/OR-84030T-B.eng": "6370544c93ca92c67e877e8ca0788c02ff15b0d19cb35165c3c3841e050b9f9e",
+    "Trains/TRAINSET/OR-BRMK1-BSK/BSK-Eastern-CC.wag": "ea4fdd3ceb6ac3295893b183e454deaaa747ee0e07998375db200addd3d203c8",
+    "Trains/TRAINSET/OR-BRMK1-SK/SK-Eastern-CC-T.wag": "af1d846c54ae07689218dc96eaa5af22508adda527849d9673293b2515d3bfd3",
+    "Routes/MidEastCoast/MidEastCoast.tdb": "b27799dd2f30a561c6a8bcf8c28a6fd4465ac3d5488e2d849ec6a8ead61e4b85",
+    "Routes/MidEastCoast/MidEastCoast.trk": "b82b376052eb027281413de5a579cac24b6b20b2cdb4999bbf843549bb50ccb7"
+  },
+  "tested_runtime_preflight": {
+    "created_utc": "2026-10-15T23:56:47.758224+00:00",
+    "mode": "original_native_service_with_driver_controls_no_teleports",
+    "declared_contact_projection_tolerance_m": 0.01,
+    "files": {
+      "target/debug/examples/mideast_portions_qa": "bb12f3aac5a672b3ad6d6e0fbe1f94ad2f0b4cb2a94f2baa366847d035e272d7",
+      "crates/openrailsrs-sim/examples/mideast_portions_qa.rs": "daa67fedca41026b1a79503f97a1565c987a84ca70956150823d73bab5e8722f",
+      "crates/openrailsrs-sim/src/operational_path.rs": "ec430fe1a4e03e81738b80ee4bce0d3b4bc20a847ec8dd33213228dc6cf8605c",
+      "crates/openrailsrs-sim/src/sections.rs": "13a6fe0469267dacf653f0e6689fcdaa3a4281be27746e21ec14dcf42bc4e509",
+      "crates/openrailsrs-sim/src/operations.rs": "c73aadaa87b15aee89dccb85e9b96deec3984ea12fd392da8f95e4b4a73db8c7",
+      "crates/openrailsrs-sim/src/native_signals.rs": "ae131566c1802a3458e338ac70a75fc7556f4b4db82240e68423f7f42068d181",
+      "crates/openrailsrs-sim/src/track_reservations.rs": "762b9bea3078d227f0409ca55482ffde1f15cd2d670c3e039df85364d64ec901",
+      "crates/openrailsrs-sim/src/physics.rs": "8de53de3eaef4207263f16aa7579dd4398dcfac76fa13e2af9085e9ed5d9c020",
+      "crates/openrailsrs-sim/src/independent_coupling.rs": "b9120952e516a0e509a34ac39e59c21e8d354c2dafaffb6366f775cc22ce9043",
+      "tmp/next-ten-20261015/mideast-inspect02/scenario.toml": "53634394898632f4d29ec2f4b83369102a6071c5c28b585b842cc8ca156b1859",
+      "tmp/next-ten-20261015/mideast-inspect02/track.toml": "49d10ba74fc00d75c88d2b7826fc4d44dd82d068b9cbef6b01e8c7761abe3efc"
+    }
+  },
+  "post_run_changes": {
+    "historical_preflight_preserved": true,
+    "integrator_report": "After MidEast04 completed, root applied cargo fmt and style-only Clippy fixes (derive Default Rear, support iteration, local lint allowances). Root reported no functional change; original-service driving was not rerun after formatting. The final workspace gate is recorded separately by the integrator.",
+    "changed_preflight_paths": [
+      {
+        "path": "crates/openrailsrs-sim/src/operational_path.rs",
+        "tested_sha256": "ec430fe1a4e03e81738b80ee4bce0d3b4bc20a847ec8dd33213228dc6cf8605c",
+        "after_integrator_formatting_sha256": "b6beabb0ce169e251fcc4b8ba8ad21d41c33d00ca76a8461e2801ecfab10064d"
+      },
+      {
+        "path": "crates/openrailsrs-sim/src/sections.rs",
+        "tested_sha256": "13a6fe0469267dacf653f0e6689fcdaa3a4281be27746e21ec14dcf42bc4e509",
+        "after_integrator_formatting_sha256": "ae424a885287f29143f7d6f44c8cca1638dd8631b535c56aed19ffaeda9fe009"
+      },
+      {
+        "path": "crates/openrailsrs-sim/src/operations.rs",
+        "tested_sha256": "c73aadaa87b15aee89dccb85e9b96deec3984ea12fd392da8f95e4b4a73db8c7",
+        "after_integrator_formatting_sha256": "2c2533bc7976884a9388975ccc83d28ce000be85e78da72d76c46bcc25a93f26"
+      },
+      {
+        "path": "crates/openrailsrs-sim/src/native_signals.rs",
+        "tested_sha256": "ae131566c1802a3458e338ac70a75fc7556f4b4db82240e68423f7f42068d181",
+        "after_integrator_formatting_sha256": "0241db6f922e9c68e6e718a1ff48e302137bc60e931627d641c5110c2067c073"
+      },
+      {
+        "path": "crates/openrailsrs-sim/src/track_reservations.rs",
+        "tested_sha256": "762b9bea3078d227f0409ca55482ffde1f15cd2d670c3e039df85364d64ec901",
+        "after_integrator_formatting_sha256": "fb31310b1fc877f5d80a0347ae5f7b39daeafda40e41ee2b2c748a635c837515"
+      }
+    ]
+  },
+  "original_service": {
+    "route": "MidEastCoast",
+    "activity": "Firsby to Spilsby Return",
+    "formation": "OR-84030-BR2MT-Tank-B-2MK1CC.con",
+    "passed": true,
+    "failure": null,
+    "original_PAT_legs_driven": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "simulation_time_s": 2277.0999999995183,
+    "odometer_m": 14277.700079048105,
+    "wall_time_s": 63.927575454,
+    "original_vehicle_ids": [
+      "Jugador/car/0",
+      "Jugador/car/1",
+      "Jugador/car/2"
+    ],
+    "final_vehicle_ids": [
+      "Jugador/car/1",
+      "Jugador/car/2",
+      "Jugador/car/0"
+    ],
+    "active_cab_vehicle": 2,
+    "native_ACT_successful": true,
+    "native_ACT_progress": {
+      "0": {
+        "activation": 0,
+        "disabled": false,
+        "times_triggered": 1
+      }
+    },
+    "all_six_original_stop_results": [
+      {
+        "actual_arrive_s": 0.05,
+        "actual_depart_s": 121.99999999999521,
+        "arrival_speed_mps": 0.0,
+        "delay_s": 0.05,
+        "dwell_s": 119.99999999999532,
+        "early_departure_s": 0.0,
+        "name": "Firsby",
+        "node": "n7553",
+        "position_error_m": 0.0,
+        "scheduled_arrive_s": 0.0
+      },
+      {
+        "actual_arrive_s": 658.4499999999489,
+        "actual_depart_s": 720.3999999998925,
+        "arrival_speed_mps": 0.07100104280362786,
+        "delay_s": 228.4499999999489,
+        "dwell_s": 59.99999999999873,
+        "early_departure_s": 0.0,
+        "name": "Halton Holegate",
+        "node": "n10955",
+        "position_error_m": 3.6587650006713375,
+        "scheduled_arrive_s": 430.0
+      },
+      {
+        "actual_arrive_s": 1098.2999999995488,
+        "actual_depart_s": 1200.2499999994561,
+        "arrival_speed_mps": 0.06919749170299205,
+        "delay_s": 358.29999999954885,
+        "dwell_s": 99.99999999999646,
+        "early_departure_s": 0.0,
+        "name": "Spilsby",
+        "node": "n10940",
+        "position_error_m": 3.7546531320949725,
+        "scheduled_arrive_s": 740.0
+      },
+      {
+        "actual_arrive_s": 1516.6499999991684,
+        "actual_depart_s": 1608.5999999990847,
+        "arrival_speed_mps": 0.08359583360142386,
+        "delay_s": 376.64999999916836,
+        "dwell_s": 89.99999999999703,
+        "early_departure_s": 0.0,
+        "name": "Spilsby",
+        "node": "n10940",
+        "position_error_m": 3.6702563898652443,
+        "scheduled_arrive_s": 1140.0
+      },
+      {
+        "actual_arrive_s": 1841.349999998873,
+        "actual_depart_s": 1903.2999999988167,
+        "arrival_speed_mps": 0.09802489921062905,
+        "delay_s": 341.34999999887305,
+        "dwell_s": 59.99999999999873,
+        "early_departure_s": 0.0,
+        "name": "Halton Holegate",
+        "node": "n7570",
+        "position_error_m": 4.196929228124645,
+        "scheduled_arrive_s": 1500.0
+      },
+      {
+        "actual_arrive_s": 2215.149999999293,
+        "actual_depart_s": 2277.0999999995183,
+        "arrival_speed_mps": 0.08667571593072043,
+        "delay_s": 325.14999999929296,
+        "dwell_s": 59.99999999999873,
+        "early_departure_s": 0.0,
+        "name": "Firsby",
+        "node": "n7586",
+        "position_error_m": 4.179509700916242,
+        "scheduled_arrive_s": 1890.0
+      }
+    ],
+    "missed_stops": [],
+    "parked_position_invariant": "The driver checks exact parked vehicle track positions after every 0.05 s simulation quantum during the run-around; no relocation completes a PAT leg.",
+    "contact_projection_gate_m": 0.01,
+    "maximum_contact_projection_m": 0.001181920612907561,
+    "runtime_manual_contact_bound_m": 1.0,
+    "final_boiler_state": {
+      "coal_burn_kg_s": 0.006244802020962115,
+      "coal_kg": 3023.2593699841505,
+      "controls": {
+        "automatic_fireman": true,
+        "blower": false,
+        "cutoff": 0.75,
+        "cylinder_cocks": false,
+        "damper": 0.0125,
+        "firing": 0.016543156222295064,
+        "injector1": false,
+        "injector2": false
+      },
+      "evaporation_kg_s": 0.09991683233539383,
+      "fire_capacity_kg": 300.0,
+      "fire_mass_kg": 149.8749362629897,
+      "initial_water_kg": 3822.7742899200002,
+      "injection_kg_s": 0.0,
+      "low_water_failure": false,
+      "pressure_bar": 14.4789903156528,
+      "safety_valve": true,
+      "steam_usage_kg_s": 0.09991683233529948,
+      "tender_water_kg": 6123.496995,
+      "tractive_force_n": 0.0,
+      "water_kg": 3052.1934609809578
+    },
+    "actions": [
+      {
+        "action": "detach_two_original_Mk1",
+        "boiler": {
+          "coal_burn_kg_s": 0.006244800818542614,
+          "coal_kg": 3034.143769130936,
+          "controls": {
+            "automatic_fireman": true,
+            "blower": false,
+            "cutoff": 0.75,
+            "cylinder_cocks": false,
+            "damper": 0.0125,
+            "firing": 0.01654698305836246,
+            "injector1": false,
+            "injector2": false
+          },
+          "evaporation_kg_s": 0.09991681309668182,
+          "fire_capacity_kg": 300.0,
+          "fire_mass_kg": 149.87490740498177,
+          "initial_water_kg": 3822.7742899200002,
+          "injection_kg_s": 0.0,
+          "low_water_failure": false,
+          "pressure_bar": 14.4789903156528,
+          "safety_valve": true,
+          "steam_usage_kg_s": 0.09991681309679112,
+          "tender_water_kg": 6123.496995,
+          "tractive_force_n": 0.0,
+          "water_kg": 3226.343385604954
+        },
+        "occupancy": [
+          {
+            "edge": "e10941",
+            "end_m": 69.91524865293115,
+            "owner": "Jugador · sección Spilsby-Mk1",
+            "start_m": 49.5052486529313
+          },
+          {
+            "edge": "e10941",
+            "end_m": 90.11524865293188,
+            "owner": "Jugador · sección Spilsby-Mk1",
+            "start_m": 69.91524865293115
+          }
+        ],
+        "parked": [
+          [
+            "Jugador/car/1",
+            [
+              "e10941_r",
+              208.07903023706876
+            ]
+          ],
+          [
+            "Jugador/car/2",
+            [
+              "e10941_r",
+              187.77403023706847
+            ]
+          ]
+        ],
+        "time_s": 1200.2499999994561
+      },
+      {
+        "action": "save_restore_after_detach",
+        "parked": [
+          [
+            "Jugador/car/1",
+            [
+              "e10941_r",
+              208.07903023706876
+            ]
+          ],
+          [
+            "Jugador/car/2",
+            [
+              "e10941_r",
+              187.77403023706847
+            ]
+          ]
+        ],
+        "time_s": 1200.2499999994561
+      },
+      {
+        "action": "original_PAT_leg",
+        "leg": 1,
+        "position": [
+          "e11316",
+          19.964532919144247
+        ],
+        "time_s": 1231.5999999994276
+      },
+      {
+        "action": "original_PAT_leg",
+        "leg": 2,
+        "position": [
+          "e11320_r",
+          6313.948049763185
+        ],
+        "time_s": 1298.4499999993668
+      },
+      {
+        "action": "join_geometry_check",
+        "declared_tolerance_m": 0.01,
+        "maximum_adjustment_m": 0.001181920612907561
+      },
+      {
+        "action": "front_pickup_after_driven_loop",
+        "boiler": {
+          "coal_burn_kg_s": 0.006843657114783652,
+          "coal_kg": 3031.4877134201943,
+          "controls": {
+            "automatic_fireman": true,
+            "blower": false,
+            "cutoff": 0.75,
+            "cylinder_cocks": false,
+            "damper": 0.013700613067292321,
+            "firing": 0.019308011555769035,
+            "injector1": false,
+            "injector2": false
+          },
+          "evaporation_kg_s": 0.10949851383653843,
+          "fire_capacity_kg": 300.0,
+          "fire_mass_kg": 149.85405662039818,
+          "initial_water_kg": 3822.7742899200002,
+          "injection_kg_s": 0.0,
+          "low_water_failure": false,
+          "pressure_bar": 14.4789903156528,
+          "safety_valve": true,
+          "steam_usage_kg_s": 0.10949851383640988,
+          "tender_water_kg": 6123.496995,
+          "tractive_force_n": 2444.8087907140193,
+          "water_kg": 3183.5128816788415
+        },
+        "distance_m": 0.001181920612907561,
+        "positions": [
+          [
+            "Jugador/car/0",
+            [
+              "e10941_r",
+              171.85915381645555
+            ]
+          ],
+          [
+            "Jugador/car/1",
+            [
+              "e10941_r",
+              208.07784831645586
+            ]
+          ],
+          [
+            "Jugador/car/2",
+            [
+              "e10941_r",
+              187.77284831645557
+            ]
+          ]
+        ],
+        "time_s": 1500.6999999991829,
+        "vehicles": [
+          "Jugador/car/1",
+          "Jugador/car/2",
+          "Jugador/car/0"
+        ]
+      },
+      {
+        "action": "save_restore_after_front_pickup",
+        "time_s": 1500.6999999991829
+      },
+      {
+        "action": "original_PAT_leg",
+        "leg": 3,
+        "position": [
+          "e10941",
+          37.790129289735894
+        ],
+        "time_s": 1608.5999999990847
+      }
+    ],
+    "private_full_outputs_sha256": {
+      "tmp/next-ten-20261015/mideast-drive04/report.json": "25667b8efea1df46f772ec41dcc3bb45468e20d529737bc5e156e09bd3df7e85",
+      "tmp/next-ten-20261015/mideast-drive04/drive.csv": "3222ec10e0cdd02237a92eaf9ff30ebac5775bd8ce1a48f30e3f5429f841c3de",
+      "tmp/next-ten-20261015/mideast-drive04/after-detach.json": "62996dc4685539b40a8ccc93e3a307519d2babe86f7bf7d77ec03c1d26e0135e",
+      "tmp/next-ten-20261015/mideast-drive04/after-front-pickup.json": "c5b50f06515dca513d73f387b5cc8613060924c71b131fb1532dd08fe07d519c",
+      "tmp/next-ten-20261015/mideast-drive04.preflight.json": "413f9510c72285c569f6f1a8a656ed86673865c32a6daa9eb4e37c3fa295168e",
+      "tmp/next-ten-20261015/mideast-driver-build04.log": "3648841f6824ddcc4798245393b0135c901576ea66b6155136020169f286921f",
+      "tmp/next-ten-20261015/mideast-drive04.log": "55ffff322b2eb1afbba1f3f28bfdfd2a3b5f530926d2d89c83a12149adfded8b"
+    },
+    "public_drive_csv": "docs/fixtures/operations/portions-20261015/mideast-drive.csv",
+    "public_drive_sha256": "3222ec10e0cdd02237a92eaf9ff30ebac5775bd8ce1a48f30e3f5429f841c3de",
+    "prior_attempts": [
+      {
+        "attempt": 1,
+        "accepted": false,
+        "observation": "Unselected red head overrode selected clear head. Governing NORMAL aspects were corrected by native signal group."
+      },
+      {
+        "attempt": 2,
+        "accepted": false,
+        "observation": "Locomotive rear had not cleared the headshunt. Reversal now stays pending; the driver physically inches beyond the marker before changing direction."
+      },
+      {
+        "attempt": 3,
+        "accepted_for_final_precision": false,
+        "observation": "Full activity completed, but contact projection was 0.15595658 m. The fourth run declared a 0.01 m gate before execution and achieved 0.001181920612907561 m."
+      }
+    ],
+    "manual_guide": "docs/MIDEAST_RUNAROUND.md"
+  },
+  "directed_tests": {
+    "passed": 38,
+    "failed": 0,
+    "runs": [
+      {
+        "log": "docs/fixtures/operations/portions-20261015/directed-tests.log",
+        "sha256": "924e1524937f2b22312cd2b18d7a07c38d6cde3b786a92c0adcf2de7bab08e36",
+        "passed": 35,
+        "failed": 0,
+        "tests": [
+          "unauthored_contact_does_not_inherit_an_adjacent_authored_joint",
+          "absent_advanced_compression_force_does_not_invent_an_elastic_spring",
+          "contact_impulse_is_relative_energy_not_absolute_train_speed",
+          "invalid_authored_units_are_actionable_instead_of_becoming_newtons",
+          "reversing_a_stationary_virtual_axis_preserves_physical_deflection_and_history",
+          "restore_rejects_changed_hardware_nonfinite_history_and_impossible_buffer_states",
+          "mixed_rigid_contact_reaction_checks_warning_and_break_limits",
+          "compressed_stroke_contact_conserves_momentum_and_flags_excess_energy",
+          "rigid_constraint_diagnostic_is_not_clipped_to_an_elastic_loading_envelope",
+          "sustained_brakes_cannot_accelerate_a_stationary_native_formation_backwards",
+          "native_units_separate_advanced_forces_from_legacy_stiffness_and_orient_ends",
+          "two_buffers_share_force_and_their_travel_and_energy_add_in_series",
+          "turning_points_change_unloading_force_and_survive_save_restore",
+          "original_or161_dll_profiles_forces_and_stroke_impulses_match_declared_tolerances",
+          "a_front_pickup_keeps_the_rear_cab_in_control_of_its_own_pipe_component",
+          "rejects_duplicate_section_invalid_track_and_distant_pickup_without_losing_state",
+          "joining_transfers_both_authorities_and_split_partitions_the_same_physical_grant",
+          "a_future_service_cannot_be_collected_before_its_authorized_spawn",
+          "foreign_front_pickup_and_return_preserve_both_train_positions_and_identity",
+          "moving_backwards_cannot_cut_join_or_return_a_portion",
+          "parked_native_bearings_remain_with_their_vehicle_through_cut_pickup_and_restore",
+          "oldest_section_can_be_picked_at_front_then_restore_permuted_hardware",
+          "timetable_foreign_operations_use_physical_contact_and_preserve_progress_on_restore",
+          "reformed_train_drives_after_real_pressure_release_and_save_continues_identically",
+          "foreign_portion_returns_to_service_with_schedule_brakes_identity_and_save_replay",
+          "two_named_sections_preserve_track_brakes_and_resume_collecting_recent_first",
+          "control_swaps_between_transfers_replay_in_chronological_receiver_order",
+          "own_wheels_before_signal_do_not_block_a_bounded_authority_and_restore_preserves_it",
+          "another_train_invalid_distance_expiration_and_reversing_reject_or_revoke_authority",
+          "two_trains_both_arrive",
+          "delivery_requires_exact_wagons_full_siding_and_secured_detachment_then_pickup_removes_acceptance",
+          "coupling_an_unstarted_parked_donor_produces_an_immediately_valid_supply_snapshot",
+          "depot_transfers_finite_oil_and_coolant_without_resetting_fuel_or_temperature",
+          "two_crews_deliver_distinct_wagon_lots_and_foreign_wagons_make_a_siding_invalid",
+          "independent_contact_moves_vehicles_once_preserves_pressure_fuel_and_can_reconstruct_a_save"
+        ]
+      },
+      {
+        "log": "docs/fixtures/operations/portions-20261015/native-timetable-parser-tests.log",
+        "sha256": "5a288bdcf9b0871a5659e96481b8b7985b2e423dc7224ee8b7e7e45e2924ffb3",
+        "passed": 2,
+        "failed": 0,
+        "tests": [
+          "import_timetable::portion_tests::missing_duplicate_and_partial_foreign_services_are_explicit_errors",
+          "import_timetable::portion_tests::original_pickup_and_signed_forms_resolve_canonical_foreign_identity"
+        ]
+      },
+      {
+        "log": "docs/fixtures/operations/portions-20261015/reversal-clearance-test.log",
+        "sha256": "1162458fd65ba886b45343d5527e78524e73562d490566d81e40256ad3d15927",
+        "passed": 1,
+        "failed": 0,
+        "tests": [
+          "an_uncleared_reversal_stays_pending_and_save_does_not_relocate_stock"
+        ]
+      }
+    ],
+    "viewer_ECS_portion_tests": "Parent-owned final unified workspace gate; not claimed by this directed receipt."
+  },
+  "existing_reference_files_sha256": {
+    "oracles/coupling-reference.json": "856bfa60d0be9fac22c6e05a8d05f3cf510a4bd7cebc253f87b0015329d195a4",
+    "oracles/coupling-rust32.json": "2eeb73e081d6e32a94ab14f6c14c633890ca882f0266ce6621493a90fa778927",
+    "docs/fixtures/compatibility/coupler-forces-or161/manifest.json": "c05c4d829a110c3071d7d4b18f6343c5d5b90544d5fc9858648f02901826b868",
+    "docs/fixtures/compatibility/coupler-forces-or161/input.json": "0f0d992e6ed66d4646cd149242f05f48ffcef3ad11c71a5cf1e01c8c79bb1ee1",
+    "docs/fixtures/compatibility/coupler-forces-or161/protocol.json": "f0cb323e47023e3130fbde3f97f5910ad2bfd1025e181a9cb4987de8ac3f69a7",
+    "docs/fixtures/compatibility/coupler-forces-or161/reference.json": "e262d769422b1345f9e99a50682462ca517c1057b29335486acdc4841c488861"
+  },
+  "reference_scope": {
+    "coupling": "Historical original Simulator/UncoupleBehind/CheckForCoupling and ComputeCouplerForces capture remains unchanged. A new Rust replay, if recorded by the integrator, is separate from this receipt.",
+    "coupler_forces": "The thirteen native_couplers tests include the unmodified OR 1.6.1 DLL-derived profile/force/impulse fixture. Energy, return-point hysteresis, multiple portions and front-selection semantics remain separately tested Rust extensions."
+  },
+  "limits": [
+    "Native timetable import supports same-table $pickup and returning the entire previously joined foreign portion with signed $detach/units/forms. Full $attach, pools, newly created arbitrary formed services, and cross-table references remain explicit diagnostics.",
+    "Only a complete foreign portion at a physical end can be returned; removing a middle portion without rearranging track is rejected.",
+    "The runtime contact API retains its existing 1 m bound. The 1 cm gate applies to the measured MidEast acceptance drive.",
+    "This CPU acceptance verifies operational state and source identities. It does not claim a manual visual/audio session was performed, full steam physics parity, or adherence to the original arrival times.",
+    "A C# TCS host cannot be cloned by portion transactions; normal Rust TCS is used."
+  ],
+  "final_workspace_gate": "Parent runs once after freeze and records its result separately."
+}

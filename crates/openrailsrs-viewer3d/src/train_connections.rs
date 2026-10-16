@@ -104,8 +104,7 @@ pub fn update(
         let Some(session) = live.session_for_track(track) else {
             continue;
         };
-        let connected = (index < session.formation.coupled_count)
-            == (definition.neighbor < session.formation.coupled_count)
+        let connected = session.same_physical_section(index, definition.neighbor)
             && match definition.kind {
                 ConnectionKind::AirHose => session
                     .formation

@@ -1,0 +1,214 @@
+{
+  "schema": 1,
+  "completed_at_utc": "2026-10-16T01:34:27.100931+00:00",
+  "source_base_commit": "24df59dcc94b476564671e45df900c2d7dbdf63f",
+  "source_dirty": true,
+  "reference": {
+    "version": "Open Rails 1.6.1",
+    "commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+    "existing_references_and_tolerances_unchanged": true
+  },
+  "result": {
+    "complete_issues": 9,
+    "open_issues": [
+      212
+    ],
+    "snap_published_by_this_batch": false
+  },
+  "check": {
+    "command": "./check.sh",
+    "exit_code": 0,
+    "rust_test_executions_passed": 2200,
+    "rust_test_executions_ignored": 49,
+    "rust_failed": 0,
+    "python_unittest_suites": 27,
+    "python_unittest_executions_passed": 145,
+    "check_log_file": "docs/validation/NEXT_TEN_20261015-check.log.gz",
+    "check_log_sha256": "76859044322ee6de859d7c26f0099b9acb8f9700c6f2b657e5da349298d719af",
+    "previous_attempt": {
+      "exit_code": 101,
+      "log_file": "docs/validation/NEXT_TEN_20261015-check-attempt01.log.gz",
+      "sha256": "05fa5f94ceefcecf804e0fa8932c4d30977c6441fa1b0d711592123b51c2fce1",
+      "outcome": "Four native import regressions corrected and required to pass in the accepted run; failed log retained."
+    },
+    "second_previous_attempt": {
+      "exit_code": 101,
+      "log_file": "docs/validation/NEXT_TEN_20261015-check-attempt02.log.gz",
+      "sha256": "9890b3fdd0e927baddba1307cd35c627f32e2b0e7c5bd8e75a0c63842f05bdda",
+      "outcome": "Birmingham and 129 simulation unit tests passed. An old detached-tail assertion still searched a generic owner label; updated to check the permanent section identity and physical occupancy before/after restoration, with unchanged position tolerances."
+    },
+    "third_previous_attempt": {
+      "exit_code": 101,
+      "log_file": "docs/validation/NEXT_TEN_20261015-check-attempt03.log.gz",
+      "sha256": "d800dbc491d31812271185b4b4f5beba6c8240fd70f6503584f221ffc742e1fd",
+      "outcome": "Hotel supply test exposed an uncouple transaction creating an out-of-path section from an owned scenario starting with its tail before the path origin. The accepted run must include transactional rejection and a fully on-track hotel fixture."
+    },
+    "required_regressions": [
+      "car_entities_keep_original_identity_when_front_pickup_changes_indices",
+      "service_join_and_split_reparent_existing_entities_without_duplicating_models",
+      "rolling_gap_queries_actual_travel_in_both_path_frames_with_positive_speed",
+      "full_quality_keeps_the_same_near_shadow_cascade_as_scene_startup",
+      "comparison_sun_requires_a_finite_direction_of_unit_length",
+      "model_visual_clearance_clamps_both_curve_directions_without_mechanical_input",
+      "chiltern_birmingham_import_checks_pat_placement_and_route_edition",
+      "import_activity_emits_extra_trains_from_traffic",
+      "import_activity_propagates_start_time_and_season",
+      "import_activity_with_objects_emits_route_stops",
+      "detached_tail_retains_its_track_during_reversal_save_and_rejoin",
+      "a_cut_without_track_under_the_whole_formation_rejects_without_mutation",
+      "a_cut_exactly_inside_track_keeps_every_position_and_restores_in_both_directions",
+      "hotel_bus_detachment_and_reconnection_keep_source_delays_and_save_state",
+      "detached_sandbox_is_retained_without_delivery_and_recoupling_does_not_refill_it"
+    ],
+    "build_environment": {
+      "CARGO_BUILD_JOBS": "2",
+      "CARGO_INCREMENTAL": "0",
+      "dev_test_opt_level": "1",
+      "dev_test_debug": "0",
+      "dev_test_strip": "symbols"
+    },
+    "scope": "Unified Rust format, lint, workspace tests, vendor lifecycle regressions, Python metadata/packaging/UI guards, build and pinned driving/service oracles. Ignored tests are not claimed as executed."
+  },
+  "integration_review": {
+    "kind": "Independent agent review and root integration; not a formal Security Review tool run",
+    "confirmed_findings_fixed": [
+      "Absent FullAtStart must be false rather than implicit full load.",
+      "Regional rolling sound direction uses actual driving/path orientation, since speed is a magnitude.",
+      "A second head on one physical post must not truncate the first head protected block.",
+      "An empty SIGSCR catalogue must not bypass rejection of unsupported existing C# signal scripts."
+    ],
+    "global_gate_regressions_corrected": [
+      {
+        "failure": "Unsafe static ACT resource path",
+        "cause": "Original Chiltern actors 32768,32769,32799 contain WagonData with both name and folder empty.",
+        "change": "Skip only that exact empty Wagon placeholder with diagnostic, retaining actor and every real car; reject all nonempty missing/unsafe references and symlink escapes."
+      },
+      {
+        "failure": "AI service freight_north Missing ACT consist test.con",
+        "cause": "Metadata-only import started eagerly loading original vehicle UID data.",
+        "change": "Only runnable import resolves original stock/UIDs. Metadata retains service information and no invented vehicle IDs; runnable import still errors for missing original formation."
+      },
+      {
+        "failure": "with_objects route stop n1 instead of n3",
+        "cause": "A SidingItem without SidingTrItemData was discarded, losing its original 800 m distance.",
+        "change": "Preserve native item ID and distance as Other; only a valid positional linked ID certifies Siding. Expected destination n3 unchanged."
+      },
+      {
+        "failure": "Static actor 32802 rear ambiguous",
+        "cause": "Graph degree check rejected a valid trailing move from branch3685 through common pin3687 at junction3686.",
+        "change": "Follow native TrPins/Direction and TrackShape.MainRoute as OR Traveller; validate imported edge endpoints; no actor ID special cases or coordinate changes."
+      }
+    ],
+    "uncoupling_boundary_evidence": "docs/validation/PORTIONS_TRACK_BOUNDARY_20261015.json",
+    "uncoupling_boundary_correction": "Reject an out-of-path cut before any mutation; test both directions and exact valid boundaries. The owned hotel example starts with its full train on track. Reconnection explicitly operates the train bus; the sanding-only test retains only stops ahead of its revised start and checks a live clock.",
+    "final_native_import_source_sha256": {
+      "crates/openrailsrs-msts/src/native_activity.rs": "06e53ec7aa61a85e24c1a36061e644f718b6417db1532a641db7edf68e39acf5",
+      "crates/openrailsrs-msts/src/import_activity.rs": "43535bcdf1131ddc1c975a5a22a39701f8e1c5c30652dae149e8390721f7967b",
+      "crates/openrailsrs-msts/tests/import_msts.rs": "266477ea31ed4c6dbceb85645c131409d868859ef77bb1cfb765c82aaf7cc7ba",
+      "crates/openrailsrs-formats/src/typed/track_db.rs": "2450b87c374037e88a1cd487eb135c8d2e71065ffa52d3829c4510777e82ebf5"
+    }
+  },
+  "human_traces_preserved_sha256": {
+    "examples/chiltern/run.csv": "ddba584bf99a24d18e2869e10159cbc3f6af0486f29a72d097bf71afb4ab5716",
+    "examples/chiltern/run.json": "c5696f1896bf944936bbcdbdf34b7f7a9948ed4a8c549295bb9a237c1f82c047",
+    "examples/chiltern/run_brake_coast_multi_body.csv": "3be525dca9a355c809dac4ce17c915ebbadd2c87ef0ad468037ff3cb72b09022",
+    "examples/chiltern/run_throttle100.csv": "30bd23a47ebd42c53298735ce56985d26bbac1b4f64a0a9eaa0c52468fc4f1d0",
+    "examples/chiltern/run_throttle50.csv": "46909080f32aa1c5b5d17877394014e5fffa20e81d77630cc83a57da98813b91",
+    "examples/chiltern/run_throttle75.csv": "0de294a0fd7e85f1f32fd5c54fe9d56686fcf7170fe77c45e48bcb4fd1d0ef28"
+  },
+  "issues": [
+    {
+      "issue": 211,
+      "status": "complete_within_documented_scope",
+      "summary": "Rodeo completo Firsby–Spilsby–Firsby con 84030 y dos Mk1 originales: seis paradas, dos guardados y coches estacionados inmóviles. Corrección de contacto de 1,182 mm, dentro del centímetro declarado.",
+      "doc": "MIDEAST_RUNAROUND.md",
+      "evidence": "docs/fixtures/operations/portions-20261015/acceptance.json"
+    },
+    {
+      "issue": 212,
+      "status": "open_external_original_content_blocker",
+      "summary": "Rust loading/unloading and ACT backend implemented; original Zig Zag tutorial 6 acceptance cannot run because the author distribution lacks Common_Inc_Brake/TripleValve_West_Plain.inc. No replacement or modified author stock was used.",
+      "doc": "NATIVE_ACTIVITY_OPERATIONS.md",
+      "evidence": "docs/fixtures/compatibility/zigzag-tutorial6-original-blocked.json"
+    },
+    {
+      "issue": 213,
+      "status": "complete_within_documented_scope",
+      "summary": "Se importan las seis formaciones estáticas y 27 vehículos originales de BNSF Scenic, con UID, composición, posición, ocupación y persistencia. Los objetivos ACT se evalúan por sus condiciones; terminar el PAT no los aprueba.",
+      "doc": "NATIVE_ACTIVITY_OPERATIONS.md",
+      "evidence": "docs/fixtures/compatibility/native-activity-operations-2026-10-15.json"
+    },
+    {
+      "issue": 214,
+      "status": "complete_within_documented_scope",
+      "summary": "Se distinguen esperas temporales, horas absolutas y cortes PAT 4NNSS con cabina delantera. Los códigos no admitidos quedan pendientes y explicados en F7. Guardar/reanudar no repite una operación ya ejecutada.",
+      "doc": "NATIVE_ACTIVITY_OPERATIONS.md",
+      "evidence": "docs/fixtures/compatibility/native-activity-operations-2026-10-15.json"
+    },
+    {
+      "issue": 215,
+      "status": "complete_within_documented_scope",
+      "summary": "Varias secciones propias conservan identidad, vía, frenos, equipamiento y ocupación. Se prueban dos cortes, recogida en distinto orden y por ambos extremos, conducción y guardado intermedio.",
+      "doc": "PORTIONS_AND_SERVICE_TRANSFERS.md",
+      "evidence": "docs/validation/PORTIONS_SERVICES_MIDEAST_20261015.json"
+    },
+    {
+      "issue": 216,
+      "status": "complete_within_documented_scope",
+      "summary": "Unión y devolución de porciones ajenas con identidades originales, reservas físicas, horario, frenos y objetivos propios. El historial de transferencias se restaura en orden, incluso al cambiar de servicio controlado. Se admiten $pickup y devolución completa con $detach/units/forms de la misma tabla; otros comandos mantienen diagnóstico explícito.",
+      "doc": "PORTIONS_AND_SERVICE_TRANSFERS.md",
+      "evidence": "docs/validation/PORTIONS_SERVICES_MIDEAST_20261015.json"
+    },
+    {
+      "issue": 219,
+      "status": "complete_within_documented_scope",
+      "summary": "Enlaces TDB por cabezal, selección de rama y bloque físico compartido; ocupación y reservas permanecen diferenciadas. 28 casos exactos de DLL OR 1.6.1 y auditoría de 24.489 cabezales, 8.995 enlaces y 46.848 contextos. LIRR no produjo cabezales y no se certifica. Scripts C# sin host compatible fallan con diagnóstico.",
+      "doc": "OPERATIONAL_SIGNALS.md",
+      "evidence": "docs/fixtures/compatibility/operational-signals-or161/manifest.json"
+    },
+    {
+      "issue": 238,
+      "status": "complete_within_documented_scope",
+      "summary": "Selección regional por coche y sentido, TTYPE.DAT/WORLD .ws y bancos SMS/WAV originales. 100 consultas nativas exactas; conducción Class 47 + seis Mk2 con 4.152 comprobaciones y 42 verificaciones regionales PCM, incluyendo pausa, regreso y guardado. Recursos seleccionados resueltos; faltantes de otros programas declarados. No se afirma escucha humana.",
+      "doc": "TRACK_SOUND_REGIONS.md",
+      "evidence": "docs/fixtures/compatibility/track-sound-drive/evidence.json"
+    },
+    {
+      "issue": 239,
+      "status": "complete_within_documented_scope",
+      "summary": "Doce vistas comparables de las seis estaciones de Chiltern: cabina/exterior con poses, reloj y sol comprobados. Se corrigió la cascada cercana de sombras; se conservan cielo e iluminación de Bevy. Trayectoria de cámara A–7,05 km–A con física pausada, origen flotante y carga terminada. Coste medido documentado, sin afirmar paridad visual de todas las rutas.",
+      "doc": "STATION_VISUAL_COMPARISON.md",
+      "evidence": "docs/fixtures/visual/bevy_station_views_20261015/manifest.json"
+    },
+    {
+      "issue": 326,
+      "status": "complete_within_documented_scope",
+      "summary": "Geometría y orientación visual separadas de la mecánica: cargas por raíl, suspensión lateral, límites por modelo y apoyo compartido. 48 casos originales de TrainCar.UpdateTrainDerailmentRisk, conducción sintética con peralte, reversa y guardado. La suspensión es una extensión Rust identificada por separado.",
+      "doc": "BOGIE_DYNAMICS.md",
+      "evidence": "docs/fixtures/compatibility/bogie-dynamics-or161/manifest.json"
+    }
+  ],
+  "manual": "docs/TEN_OPERATIONS_MANUAL.md",
+  "evidence_sha256": {
+    "docs/fixtures/compatibility/bogie-dynamics-or161/manifest.json": "67ecad9855fcbd4d5d994953beea38f5a6d23044bb9226aff7abc69b89c0b543",
+    "docs/fixtures/compatibility/native-activity-operations-2026-10-15.json": "d2d1d203ab50752aadefcfb1ad1e23c836fbd45f1f9092bd551eee5ef8131028",
+    "docs/fixtures/compatibility/operational-signals-or161/manifest.json": "881c3fda12c49e77090030b26cd7523f72065d114d9e8549455a275d95c58cd6",
+    "docs/fixtures/compatibility/track-sound-drive/evidence.json": "d72591b612ada4d9745a12221f56e16233f9f7ee06109664d7e46e09733d6fed",
+    "docs/fixtures/compatibility/zigzag-tutorial6-original-blocked.json": "7a06019370d9380af6b9e8096c58e0cf87c557eca8e78c2411cce3a790e7a817",
+    "docs/fixtures/operations/portion-boundary-20261015/acceptance.json": "1b70a1efb70463dda61977fa1a5e46235eec46aa1ce6f89514fbed0cdb4dd6b4",
+    "docs/fixtures/operations/portions-20261015/acceptance.json": "96b07cbff2ab684473fcebfd93efbe2a126ccf32a34b969e9b437f75bd7af2d8",
+    "docs/fixtures/visual/bevy_station_views_20261015/comparison.json": "9329efecfc48e53340c8868c3c311f02e4c0c85f30f4f69cc0facd4e4c1cfa58",
+    "docs/fixtures/visual/bevy_station_views_20261015/manifest.json": "a02d99f39c5312c18d1fc44f8321d87905e2ddd9080e8d167cd086390c0415ca",
+    "docs/fixtures/visual/bogie_dynamics_20261015/provenance.json": "944131bc7c7df5eb81fec3dfb9a033d487d685771e156db43d16ebe2e5466ab4",
+    "docs/validation/PORTIONS_SERVICES_MIDEAST_20261015.json": "dd8bf583091c5edaa576b0a613aeb2d94f0bbcf0fdd715c24db5068a90142723",
+    "docs/validation/PORTIONS_TRACK_BOUNDARY_20261015.json": "a99dc686634c6e4a545bb85354bde0399c6183b4fcb6c3ebe30f037c5dbabab1",
+    "oracles/coupling-reference-provenance.json": "0c7253bb9820e5d62aa8e786043a4e84f7459277e71e4ad5359171487902d2a6",
+    "oracles/coupling-rust-next-ten-sections-20261015.json": "6d1ef06391ad3237ad4941bb4362e8106d41e0ea275e1ecb995e3b4b4f2768a3"
+  },
+  "limits": [
+    "Each issue is closed only within its documented acceptance. Native unit oracles do not certify full-route physics or arbitrary original scripts.",
+    "The original Zig Zag acceptance remains open; the synthetic load exercise is not substituted for it.",
+    "No manual listening is claimed. Older audio issues awaiting user listening are unchanged.",
+    "Memory/endurance issues #391 and #403 and Bevy/Hanabi migration are not included."
+  ]
+}

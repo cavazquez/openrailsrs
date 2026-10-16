@@ -43,6 +43,7 @@ impl PathEdgeData {
 /// All edge data for the route a particular train will travel.
 ///
 /// Built once before the simulation loop; indexed by `state.edge_index`.
+#[derive(Clone)]
 pub struct PathData {
     pub edge_ids: Vec<String>,
     pub edges: Vec<PathEdgeData>,
@@ -337,6 +338,7 @@ mod tests {
         g.set_physics_profile(
             "e1",
             EdgePhysicsProfile {
+                track_sound_regions: vec![],
                 curves: vec![],
                 physical_cant: vec![],
                 platforms: vec![],

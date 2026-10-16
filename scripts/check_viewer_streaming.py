@@ -181,6 +181,8 @@ def run_checkpoint(args, name, target, pause):
         env["OPENRAILSRS_VISUAL_FAULT"] = args.visual_fault
     if getattr(args,"capture_or_focus",False):
         env["OPENRAILSRS_CAPTURE_OR_FOCUS"]="1"
+    if getattr(args, "capture_solar_direction", None) is not None:
+        env["OPENRAILSRS_CAPTURE_SOLAR_DIRECTION"] = ",".join(map(str, args.capture_solar_direction))
     if getattr(args, "flip_u", False):
         env["OPENRAILSRS_DEBUG_FLIP_U"] = "1"
     for attr,key in (("fog_quality","OPENRAILSRS_FOG_QUALITY"),("train_motion","OPENRAILSRS_TRAIN_MOTION"),("capture_headlights","OPENRAILSRS_CAPTURE_HEADLIGHTS")):

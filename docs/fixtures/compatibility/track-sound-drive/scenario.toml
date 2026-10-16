@@ -1,0 +1,95 @@
+extra_trains = []
+
+[scenario]
+name = "SCE original Class47: per-car rolling sound CPU acceptance"
+description = ""
+start_time_s = 34200.0
+
+[route]
+path = "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/next-ten-20261015/track-sound-drive02/route"
+start = "n190"
+destination = "n1011"
+start_offset_m = 3770.0977079069153
+stops = []
+switches = []
+assume_signals_clear = true
+
+[[route.legs]]
+start = "n190"
+destination = "n1011"
+edges = [
+    "e1025_r",
+    "e987_r",
+    "e212_r",
+    "e1008_r",
+    "e919",
+    "e231",
+    "e395",
+    "e396",
+    "e331",
+    "e1013_r",
+    "e399_r",
+    "e339",
+    "e353",
+    "e385",
+    "e414",
+    "e457",
+]
+start_offset_m = 3770.0977079069153
+end_chainage_m = 4527.29013279144
+reversed = false
+wait_s = 0.0
+stops = []
+switches = []
+
+[train]
+consist = "/home/cristian/Documentos/Open Rails/Content/Demo Model 1/TRAINS/CONSISTS/MT_MT_Class 47 & 6 mk2 PP.con"
+
+[train.announcements]
+root = ""
+author = ""
+license = ""
+source = ""
+events = []
+
+[train.power_load]
+auxiliary_w = 0.0
+continuous_w = 0.0
+heating_w = 0.0
+cooling_w = 0.0
+
+[gameplay]
+objective = "arrive_on_time"
+difficulty = "normal"
+penalty_per_second_late = 0.0
+
+[simulation]
+duration = 600.0
+time_step = 0.05
+seed = 0
+legacy_power_cap = false
+train_air_lap_hold = true
+train_air_full_release_s = 3.0
+brake_shoe_speed_factor = false
+brake_skid_limit = false
+multi_body = false
+coupler_kind = ""
+orts_inherit_partial_run_up = false
+
+[simulation.rail_operations]
+passing_plans = []
+yard_deliveries = []
+depots = []
+connections = []
+works = []
+incidents = []
+
+[simulation.native_physics]
+ambient_c = 20.0
+adhesion_factor = 1.0
+simple_control_physics = true
+paused_weather = true
+
+[output]
+csv = "run.csv"
+metadata = "run.json"

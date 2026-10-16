@@ -1,0 +1,182 @@
+{
+  "schema": 1,
+  "recorded_date": "2026-10-15",
+  "reference": "Open Rails 1.6.1 source semantics; existing original absolute-wait oracle",
+  "issue_status": {
+    "212": "open: original Zig Zag dependency absent; see zigzag-tutorial6-original-blocked.json",
+    "213": "validated within documented static actor/composition scope",
+    "214": "validated for admitted forward-retaining detach and diagnosed remaining codes"
+  },
+  "bnsf": {
+    "activity": "ACTIVITIES/4_lumberrun.act",
+    "act_sha256": "7614f7f55fdb16964e20cdddb694cb46484a9451e508d558f296a59e407adcc9",
+    "status": "passed",
+    "source_act_bytes_unchanged": true,
+    "actors": [
+      {
+        "id": "act-static-32769",
+        "vehicles": 3,
+        "uids": [
+          2147549184,
+          2147549185,
+          2147549186
+        ],
+        "length_m": 71.859,
+        "occupied_m": 71.85899999999998,
+        "occupancy_error_m": 1.4210854715202004e-14
+      },
+      {
+        "id": "act-static-32772",
+        "vehicles": 2,
+        "uids": [
+          2147745792,
+          2147745793
+        ],
+        "length_m": 37.769999999999996,
+        "occupied_m": 37.77000000000004,
+        "occupancy_error_m": 4.263256414560601e-14
+      },
+      {
+        "id": "act-static-32773",
+        "vehicles": 5,
+        "uids": [
+          2147811330,
+          2147811331,
+          2147811332,
+          2147811333,
+          2147811334
+        ],
+        "length_m": 119.765,
+        "occupied_m": 119.76500000000001,
+        "occupancy_error_m": 1.4210854715202004e-14
+      },
+      {
+        "id": "act-static-32774",
+        "vehicles": 4,
+        "uids": [
+          2147876864,
+          2147876865,
+          2147876867,
+          2147876868
+        ],
+        "length_m": 77.432,
+        "occupied_m": 77.43200000000002,
+        "occupancy_error_m": 1.4210854715202004e-14
+      },
+      {
+        "id": "act-static-32776",
+        "vehicles": 2,
+        "uids": [
+          2148007936,
+          2148007937
+        ],
+        "length_m": 37.769999999999996,
+        "occupied_m": 37.76999999999998,
+        "occupancy_error_m": 1.4210854715202004e-14
+      },
+      {
+        "id": "act-static-32777",
+        "vehicles": 11,
+        "uids": [
+          2148073472,
+          2148073473,
+          2148073476,
+          2148073475,
+          2148073474,
+          2148073477,
+          2148073478,
+          2148073479,
+          2148073480,
+          2148073481,
+          2148073482
+        ],
+        "length_m": 231.675,
+        "occupied_m": 231.67499999999973,
+        "occupancy_error_m": 2.8421709430404007e-13
+      }
+    ],
+    "controlled_condition_cases": 6,
+    "original_actor_sources_checked": 282,
+    "source_hash_mismatches": 0,
+    "original_dynamic_cargo_profiles": 0,
+    "actor_occupancy_tolerance_m": 0.01,
+    "aggregate_resume_passed": true,
+    "protocol_sha256": "03e34597705eb4223f9e1e137bf7a9ed130b21f0a7e2124a1f2166bf92dbbcef",
+    "result_sha256": "c8a107fddfa4646e360b94d05f7a9370ea43d3c2e3222d63774236512ef2cc23",
+    "source_preservation_sha256": "9760941847767a419fe8632ed92c7986b9ad10c332b5a05b93089fafb8299d9f",
+    "helper": "crates/openrailsrs-sim/examples/accept_native_composition.rs",
+    "scope": "Real original actor import, identities, full track occupancy and persistence; controlled condition inputs. No original full BNSF journey, OR DLL execution or visual parity claim."
+  },
+  "targeted_cpu": {
+    "passed": 23,
+    "failed": 0,
+    "accepted_checks": [
+      {
+        "log": "events-attempt7.log",
+        "passed": 4,
+        "log_sha256": "29c549a0c1ec18f5ec074ba9d00e48335471730aef3ae15ac106808c2a3db881"
+      },
+      {
+        "log": "freight-parser-post-review.log",
+        "passed": 3,
+        "log_sha256": "089463712df007bedc05119e97decb2596112015a9aa2a7d286b21c340ee4ac0"
+      },
+      {
+        "log": "fahrenheit-attempt7.log",
+        "passed": 1,
+        "log_sha256": "f65c89df45e7588f7c3edbf0a0d67f3687fede8a7b5e19876f8ee958246ee1bf"
+      },
+      {
+        "log": "filename-attempt4.log",
+        "passed": 1,
+        "log_sha256": "fa2862086089aeb9bcd48868b1f87c2c9741337a2e594434a302e7b38b0ea322"
+      },
+      {
+        "log": "conditions-attempt4.log",
+        "passed": 1,
+        "log_sha256": "ab13662cc8e8dccc92054e5096bd655dbfc21916a10967f5798a32ffa6933810"
+      },
+      {
+        "log": "refill-regression-attempt7.log",
+        "passed": 4,
+        "log_sha256": "01c303dfcf5974c536c01f6ac036ac34f113b4a734d7e5981bfc1c2800508797"
+      },
+      {
+        "log": "runtime-post-review.log",
+        "passed": 7,
+        "log_sha256": "07ca891f4a9e3ef69dcf7ab93fd25b77e1a63fa85071627f97eab0d9e26ef35b"
+      },
+      {
+        "log": "pat-classifier-final.log",
+        "passed": 1,
+        "log_sha256": "ed844693f893ca114f03684501ba5220b288b6c156164fc6d7e2f01d0bd39d2d"
+      },
+      {
+        "log": "pat-native-wait-final.log",
+        "passed": 1,
+        "log_sha256": "de908086adb4e62e5dffb7c80a5d15c2fff4ae58b1299f1eba5c8c7f4b2dce29"
+      }
+    ],
+    "post_review_returncode": 0,
+    "post_review_receipt_sha256": "48e279baf76d2a55df78cc610bc6fd4cd1b1205ba438616f07dab42fa1799208"
+  },
+  "pat": {
+    "admitted": [
+      "ordinary seconds",
+      "valid 3HHMM absolute waits including midnight",
+      "4NNSS on non-reversed legs preserving the active cab"
+    ],
+    "diagnosed_pending": [
+      "5NNSS rear-retaining detach",
+      "60001 attach",
+      "60002 permission",
+      "unknown and malformed codes"
+    ],
+    "unknown_is_timed_wait": false,
+    "unknown_is_completed_operation": false
+  },
+  "manual_guide": "docs/NATIVE_ACTIVITY_OPERATIONS.md",
+  "original_content_versioned": false,
+  "wine_used": false,
+  "renderer_used": false
+}

@@ -1,0 +1,33 @@
+[scenario]
+name = "Porciones de dos servicios: unir y devolver"
+description = "F9: recogé el servicio Porción-Sur, ya asegurado detrás. Mantené sus frenos de mano mientras probás guardar/restaurar. Separalo de nuevo con su identidad para recuperar su horario original, sin duplicar coches ni reservas."
+[route]
+path = "../yard_training/route"
+start = "a"
+destination = "destination"
+start_offset_m = 240.0
+assume_signals_clear = true
+[train]
+consist = "consists/three.con"
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+[simulation]
+duration = 1800.0
+time_step = 0.05
+seed = 42
+multi_body = true
+coupler_kind = "freight"
+train_air_lap_hold = true
+[output]
+csv = "services.csv"
+metadata = "services.json"
+[[extra_trains]]
+id = "Porción-Sur"
+consist = "consists/three.con"
+start = "a"
+destination = "destination"
+start_offset_m = 180.0
+start_time_s = 42.0
+parked = true
+output_csv = "south.csv"

@@ -57,6 +57,7 @@ unset OPENRAILSRS_SCENERY_PROFILE OPENRAILSRS_CAMERA_JOURNEY OPENRAILSRS_TRAIN_E
 unset OPENRAILSRS_SCENERY_QUALITY OPENRAILSRS_DEV_INSPECTOR_SELECT OPENRAILSRS_CAPTURE_WIPER
 unset OPENRAILSRS_TCS_SCRIPT OPENRAILSRS_TCS_HOST_DLL OPENRAILSRS_TCS_TYPE OPENRAILSRS_VISUAL_FAULT
 unset OPENRAILSRS_CAPTURE_OR_FOCUS OPENRAILSRS_LOOK_YAW OPENRAILSRS_LOOK_PITCH
+unset OPENRAILSRS_CAPTURE_SOLAR_DIRECTION
 unset OPENRAILSRS_CAPTURE_SANDER
 unset OPENRAILSRS_CAPTURE_EQUIPMENT OPENRAILSRS_CAPTURE_BUG_REPORT
 unset OPENRAILSRS_CAPTURE_ACTIONS OPENRAILSRS_SHADER_DIAGNOSTICS
@@ -83,6 +84,8 @@ python3 -m unittest discover -s scripts -p test_brake_supply_reference.py
 python3 -m unittest discover -s scripts -p test_rolling_stock_oracles.py
 python3 -m unittest discover -s scripts -p test_coupling_reference.py
 python3 -m unittest discover -s scripts -p test_signal_reference.py
+python3 -m unittest discover -s scripts -p test_operational_oracles.py
+python3 scripts/test_track_sound_drive_evidence.py
 python3 -m unittest discover -s scripts -p test_cab_reference.py
 python3 -m unittest discover -s scripts -p test_parser_reference.py
 python3 -m unittest discover -s scripts -p test_activity_parameters.py

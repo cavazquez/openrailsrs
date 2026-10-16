@@ -28,7 +28,7 @@ pub struct NativeSignalSnapshot {
     pub errors: Vec<(String, String)>,
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct NativeSignalRuntime {
     programs: HashMap<String, Arc<SignalProgram>>,
     pub aspects: HashMap<String, u8>,
@@ -218,23 +218,69 @@ impl NativeSignalRuntime {
     }
 }
 impl LiveDriveSession {
+    pub(crate) fn same_native_signal_group(&self, first: &str, second: &str) -> bool {
+        if first == second {
+            return true;
+        }
+        let native = |id| {
+            self.graph
+                .signal(id)
+                .and_then(|s| s.script.as_ref())
+                .and_then(|s| s.native.as_ref())
+        };
+        match (native(first), native(second)) {
+            (Some(a), Some(b)) => {
+                a.group.as_ref().is_some_and(|group| !group.is_empty()) && a.group == b.group
+            }
+            _ => false,
+        }
+    }
+
+    /// The driver's authority is OR's least restrictive NORMAL aspect of one
+    /// physical signal (this_sig_lr), not an arbitrary branch head's red.
+    /// Head aspects remain separate for meshes, scripts and saved-state checks.
+    pub(crate) fn governing_signal_aspect(
+        &self,
+        signal: &openrailsrs_track::TrackSignal,
+    ) -> SignalAspect {
+        let aspect = |head: &openrailsrs_track::TrackSignal| {
+            self.signal_aspect(&head.id).unwrap_or(head.aspect)
+        };
+        let Some(native) = signal
+            .script
+            .as_ref()
+            .and_then(|s| s.native.as_ref())
+            .filter(|n| {
+                n.function.eq_ignore_ascii_case("NORMAL")
+                    && n.group.as_ref().is_some_and(|group| !group.is_empty())
+            })
+        else {
+            return aspect(signal);
+        };
+        self.graph
+            .signals_on_edge(&signal.edge_id)
+            .filter(|head| {
+                head.script
+                    .as_ref()
+                    .and_then(|s| s.native.as_ref())
+                    .is_some_and(|n| {
+                        n.function.eq_ignore_ascii_case("NORMAL") && n.group == native.group
+                    })
+            })
+            .map(aspect)
+            .min_by_key(|a| *a as u8)
+            .unwrap_or(SignalAspect::Stop)
+    }
+
     pub fn own_track_occupancy(&self) -> Vec<TrackOccupancy> {
         let mut intervals = vec![];
         for (i, car) in self.formation.cars.iter().enumerate() {
-            let head = if i < self.formation.coupled_count {
-                self.head_chainage_m()
-            } else {
-                self.formation
-                    .parked_head_chainage_m
-                    .unwrap_or(self.head_chainage_m())
-            };
             let offset = self.formation.center_offset_m(i);
-            let center = head
-                + if i < self.formation.coupled_count {
-                    self.oriented_car_offset(offset)
-                } else {
-                    self.parked_car_offset(offset)
-                };
+            let center = if i < self.formation.coupled_count {
+                self.head_chainage_m() + self.oriented_car_offset(offset)
+            } else {
+                self.presentation_chainage_for_car(offset, offset, 0.0)
+            };
             let rear = (center - car.length_m * 0.5).max(0.0);
             let front = center + car.length_m * 0.5;
             let mut start = 0.0;
@@ -254,7 +300,10 @@ impl LiveDriveSession {
                         owner: if i < self.formation.coupled_count {
                             self.service_id.clone()
                         } else {
-                            format!("{} · estacionado", self.service_id)
+                            self.section_for_offset(offset).map_or_else(
+                                || format!("{} · estacionado", self.service_id),
+                                |s| format!("{} · sección {}", self.service_id, s.id),
+                            )
                         },
                     });
                 }
@@ -289,49 +338,61 @@ impl LiveDriveSession {
             .find(|h| h.3 && h.0 + 1.0 >= self.head_chainage_m())
             .map(|h| h.0);
         let mut footprint = self.external_track_occupancy.clone();
-        footprint.extend(self.external_track_reservations.iter().cloned());
         footprint.extend(
             self.own_track_occupancy()
                 .into_iter()
                 .filter(|i| i.owner != self.service_id),
         );
-        let occupied = |from: f64, to: f64| {
-            let mut start = 0.0;
-            for (edge, data) in self.state.path_edges.iter().zip(&self.path_data.edges) {
-                let end = start + data.length_m;
-                if end > from && start < to {
-                    let mut a = (from - start).max(0.0);
-                    let mut b = (to - start).min(data.length_m);
-                    if edge.ends_with("_r") {
-                        (a, b) = (data.length_m - b, data.length_m - a);
-                    }
-                    let base = edge.strip_suffix("_r").unwrap_or(edge);
-                    if footprint
-                        .iter()
-                        .any(|i| i.edge == base && i.end_m > a + 0.01 && i.start_m < b - 0.01)
-                    {
-                        return true;
-                    }
-                    // External callers without positional footprints still restrict authority.
-                    if !footprint.iter().any(|i| i.edge == base)
-                        && [base.to_owned(), format!("{base}_r")]
+        let intersects =
+            |from: f64, to: f64, intervals: &[TrackOccupancy], occupancy_fallback: bool| {
+                let mut start = 0.0;
+                for (edge, data) in self.state.path_edges.iter().zip(&self.path_data.edges) {
+                    let end = start + data.length_m;
+                    if end > from && start < to {
+                        let mut a = (from - start).max(0.0);
+                        let mut b = (to - start).min(data.length_m);
+                        if edge.ends_with("_r") {
+                            (a, b) = (data.length_m - b, data.length_m - a);
+                        }
+                        let base = edge.strip_suffix("_r").unwrap_or(edge);
+                        if intervals
                             .iter()
-                            .any(|e| self.external_occupancy.contains_key(e))
-                    {
-                        return true;
+                            .any(|i| i.edge == base && i.end_m > a + 0.01 && i.start_m < b - 0.01)
+                        {
+                            return true;
+                        }
+                        // External callers without positional footprints still restrict authority.
+                        if occupancy_fallback
+                            && !intervals.iter().any(|i| i.edge == base)
+                            && [base.to_owned(), format!("{base}_r")]
+                                .iter()
+                                .any(|e| self.external_occupancy.contains_key(e))
+                        {
+                            return true;
+                        }
                     }
+                    start = end;
                 }
-                start = end;
-            }
-            false
-        };
+                false
+            };
+        let occupied = |from, to| intersects(from, to, &footprint, true);
+        let reserved = |from, to| intersects(from, to, &self.external_track_reservations, false);
         let mut states = HashMap::new();
         let mut errors = HashMap::new();
         // Normal heads first, downstream to upstream. Distant heads then inspect
         // all normal heads up to the next distant, as OR's DIST_MULTI_SIG_MR does.
         for normal in [true, false] {
             for (position, index, id, is_normal) in heads.iter().rev().filter(|h| h.3 == normal) {
-                let next = heads.iter().find(|h| h.3 && h.0 > *position + 0.1);
+                let (block_position, block_index) = heads
+                    .iter()
+                    .filter(|h| self.same_native_signal_group(&h.2, id))
+                    .min_by(|a, b| a.0.total_cmp(&b.0))
+                    .map_or((*position, *index), |h| (h.0, h.1));
+                // All heads of a physical signal share its protected block.
+                // A second branch head a metre away is not the next post.
+                let next = heads.iter().find(|h| {
+                    h.3 && h.0 > block_position + 0.1 && !self.same_native_signal_group(&h.2, id)
+                });
                 let next_position = next.map_or(start, |h| h.0);
                 let next_aspect = next.and_then(|h| states.get(&h.2).copied()).unwrap_or(0);
                 let end_distant = heads
@@ -357,7 +418,7 @@ impl LiveDriveSession {
                     .find(|h| h.3 && (h.0 - position).abs() < 3.0)
                     .and_then(|h| states.get(&h.2).copied())
                     .unwrap_or(next_aspect);
-                let route_set = (*index..next.map_or(*index, |h| h.1)).all(|i| {
+                let route_set = (block_index..next.map_or(block_index, |h| h.1)).all(|i| {
                     let edge = self.graph.edge(&self.state.path_edges[i]).unwrap();
                     match self.graph.node(&edge.to.0).map(|n| &n.kind) {
                         Some(openrailsrs_track::NodeKind::Switch {
@@ -514,7 +575,7 @@ impl LiveDriveSession {
                 for (edge, data) in self.state.path_edges.iter().zip(&self.path_data.edges) {
                     if let Some(profile) = self.graph.physics_profile(edge) {
                         into_platform |= profile.platforms.iter().any(|p| {
-                            prefix + p.end_m > *position && prefix + p.start_m < next_position
+                            prefix + p.end_m > block_position && prefix + p.start_m < next_position
                         });
                     }
                     prefix += data.length_m;
@@ -523,10 +584,14 @@ impl LiveDriveSession {
                     }
                 }
                 let enabled = *position + 1.0 >= self.head_chainage_m()
-                    && !(self.dispatcher.protected_signal.as_ref() == Some(id)
+                    && !(self
+                        .dispatcher
+                        .protected_signal
+                        .as_ref()
+                        .is_some_and(|protected| self.same_native_signal_group(protected, id))
                         && !self.dispatcher.waiting_for.is_empty());
                 let first_signal =
-                    first_normal_position.is_some_and(|first| (*position - first).abs() < 3.0);
+                    first_normal_position.is_some_and(|first| (block_position - first).abs() < 3.0);
                 let switch_diverging = self.state.path_edges[*index..]
                     .iter()
                     .filter_map(|edge| self.graph.edge(edge))
@@ -548,15 +613,32 @@ impl LiveDriveSession {
                         )
                     })
                     .unwrap_or(false);
+                let junction_obstructed = !route_set
+                    || reserved(block_position, next_position)
+                    || (self
+                        .dispatcher
+                        .protected_signal
+                        .as_ref()
+                        .is_some_and(|protected| self.same_native_signal_group(protected, id))
+                        && !self.dispatcher.waiting_for.is_empty());
+                // In OR an unlinked head returns 1. A linked head tests the
+                // authored outgoing vector, not whichever next branch is nearby.
+                let linked_route_set = openrailsrs_track::sigscript::linked_route_set(
+                    native
+                        .route_link
+                        .as_ref()
+                        .map(|link| link.required_vector.as_str()),
+                    &self.state.path_edges[*index..],
+                    enabled || !*is_normal && route_set,
+                );
                 let c = SignalContext {
                     enabled,
                     draw_states: native
                         .draw_states
                         .unwrap_or(SignalContext::default().draw_states),
-                    route_set,
-                    block_clear: !occupied(*position, next_position)
-                        && !(self.dispatcher.protected_signal.as_ref() == Some(id)
-                            && !self.dispatcher.waiting_for.is_empty()),
+                    route_set: linked_route_set,
+                    block_clear: !occupied(block_position, next_position),
+                    junction_obstructed,
                     next_normal: next_function_state("NORMAL", false),
                     distant_normal: distant,
                     distant_info: heads
@@ -592,7 +674,7 @@ impl LiveDriveSession {
                     call_on: activity_call_on(
                         enabled,
                         first_signal,
-                        route_set,
+                        route_set && linked_route_set && !junction_obstructed,
                         into_platform,
                         false,
                         true,
@@ -600,7 +682,7 @@ impl LiveDriveSession {
                     call_on_restricted: activity_call_on(
                         enabled,
                         first_signal,
-                        route_set,
+                        route_set && linked_route_set && !junction_obstructed,
                         into_platform,
                         false,
                         false,
@@ -722,6 +804,99 @@ mod tests {
         session
     }
     #[test]
+    fn driver_authority_uses_one_physical_normal_group_and_dispatcher_holds_all_its_heads() {
+        let mut session = native_fixture(&[
+            ("wrong-branch", 100., "fork", "NORMAL", "state=SIGASP_STOP;"),
+            (
+                "selected-branch",
+                100.,
+                "fork",
+                "NORMAL",
+                "if (enabled) state=SIGASP_CLEAR_2; else state=SIGASP_STOP;",
+            ),
+            (
+                "independent-red",
+                200.,
+                "other",
+                "NORMAL",
+                "state=SIGASP_STOP;",
+            ),
+        ]);
+        // Leave the smoke route's generic signal at its origin behind us.
+        session.state.pos_on_edge_m = 10.;
+        assert_eq!(session.native_signal_aspect("wrong-branch"), Some(0));
+        assert_eq!(
+            session.next_signal_ahead(),
+            Some((90., SignalAspect::Clear))
+        );
+        assert_eq!(session.distance_to_red_signal_m(), Some(190.));
+        session.dispatcher.protected_signal = Some("wrong-branch".into());
+        session.dispatcher.waiting_for = vec!["other service".into()];
+        session.evaluate_native_signals();
+        assert_eq!(session.next_signal_ahead(), Some((90., SignalAspect::Stop)));
+        assert_eq!(session.distance_to_red_signal_m(), Some(90.));
+        assert_eq!(session.native_signal_aspect("selected-branch"), Some(0));
+    }
+
+    #[test]
+    fn independent_normal_signal_at_the_same_chainage_still_protects_its_block() {
+        let mut session = native_fixture(&[
+            (
+                "clear-post",
+                100.,
+                "one-post",
+                "NORMAL",
+                "state=SIGASP_CLEAR_2;",
+            ),
+            (
+                "stop-post",
+                100.,
+                "independent-post",
+                "NORMAL",
+                "state=SIGASP_STOP;",
+            ),
+        ]);
+        session.state.pos_on_edge_m = 10.;
+        assert_eq!(session.next_signal_ahead(), Some((90., SignalAspect::Stop)));
+        assert_eq!(session.distance_to_red_signal_m(), Some(90.));
+    }
+
+    #[test]
+    fn separated_heads_of_one_post_share_the_entire_occupied_or_reserved_block() {
+        let source = "if (BLOCK_STATE()==0) state=SIGASP_CLEAR_2; else state=SIGASP_STOP;";
+        let mut session = native_fixture(&[
+            ("head-a", 100., "post", "NORMAL", source),
+            ("head-b", 101., "post", "NORMAL", source),
+            ("next-post", 500., "next", "NORMAL", source),
+        ]);
+        session.state.pos_on_edge_m = 10.;
+        let interval = TrackOccupancy {
+            edge: "e1".into(),
+            start_m: 200.,
+            end_m: 250.,
+            owner: "parked cut".into(),
+        };
+        session.external_track_occupancy = vec![interval.clone()];
+        session.evaluate_native_signals();
+        for id in ["head-a", "head-b"] {
+            assert_eq!(session.native_signal_aspect(id), Some(0));
+        }
+        assert_eq!(session.next_signal_ahead(), Some((90., SignalAspect::Stop)));
+        session.external_track_occupancy.clear();
+        session.external_track_reservations = vec![interval];
+        session.evaluate_native_signals();
+        for id in ["head-a", "head-b"] {
+            assert_eq!(session.native_signal_aspect(id), Some(0));
+        }
+        session.external_track_reservations.clear();
+        session.evaluate_native_signals();
+        assert_eq!(
+            session.next_signal_ahead(),
+            Some((90., SignalAspect::Clear))
+        );
+    }
+
+    #[test]
     fn native_multi_head_most_restrictive_aspect_uses_the_physical_group() {
         let session = native_fixture(&[
             (
@@ -791,6 +966,32 @@ mod tests {
         session.dispatcher.waiting_for = vec!["Other".into()];
         session.evaluate_native_signals();
         assert_eq!(session.native_signal_aspect("first"), Some(0));
+    }
+    #[test]
+    fn foreign_reservation_is_obstruction_while_an_occupied_cut_is_occupied() {
+        let source = "if (BLOCK_STATE()==BLOCK_JN_OBSTRUCTED) state=SIGASP_STOP; else if (BLOCK_STATE()==BLOCK_OCCUPIED) state=SIGASP_RESTRICTING; else state=SIGASP_CLEAR_2;";
+        let mut session = native_fixture(&[
+            ("entry", 100., "entry", "NORMAL", source),
+            ("end", 500., "end", "NORMAL", "state=SIGASP_STOP;"),
+        ]);
+        session.external_track_occupancy = vec![TrackOccupancy {
+            edge: "e1".into(),
+            start_m: 200.,
+            end_m: 250.,
+            owner: "Cut".into(),
+        }];
+        session.evaluate_native_signals();
+        assert_eq!(session.native_signal_aspect("entry"), Some(2));
+        session.external_track_reservations = session.external_track_occupancy.clone();
+        session.external_track_occupancy.clear();
+        session.evaluate_native_signals();
+        assert_eq!(session.native_signal_aspect("entry"), Some(0));
+        session.external_track_reservations.clear();
+        session.evaluate_native_signals();
+        assert_eq!(session.native_signal_aspect("entry"), Some(7));
+        let snapshot = session.snapshot();
+        session.restore_snapshot(snapshot).unwrap();
+        assert_eq!(session.native_signal_aspect("entry"), Some(7));
     }
     use super::*;
     use std::path::Path;

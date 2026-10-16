@@ -1,0 +1,26 @@
+{
+  "native_methods": [
+    "WorldSoundFile.Read",
+    "TrackTypesFile",
+    "Traveller.Move",
+    "WorldSounds.GetTType(Train)"
+  ],
+  "scope": "Native rolling sound region selection at read-only SCE original route probes in both directions; mixer PCM and player drive use separate acceptance. No acoustic equivalence claim.",
+  "tolerances_predeclared": {
+    "track_type": "exact including native hold sentinel",
+    "probe_not_at_boundary_minimum_m": 0.5
+  },
+  "maximum_types": 7,
+  "offsets_m": [
+    -65,
+    -25,
+    -12,
+    -5,
+    -0.5,
+    0.5,
+    5,
+    12,
+    25,
+    65
+  ]
+}

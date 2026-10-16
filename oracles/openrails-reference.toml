@@ -627,7 +627,7 @@ sha256 = "c9b2b7f137809203466320f38f802f004b0766bab662b4db69d700213d6a947a"
 
 [[files]]
 path = "oracles/coupling-reference-provenance.json"
-sha256 = "ec6909807f27c262500ea2482767223097ccb5b05ecd09fd799840591877ee90"
+sha256 = "0c7253bb9820e5d62aa8e786043a4e84f7459277e71e4ad5359171487902d2a6"
 
 [[files]]
 path = "oracles/coupling-reference.json"
@@ -684,3 +684,181 @@ sha256 = "e0d0001cf7d45c22b95855278b227b2f52e72a85de62dc61a5042f7dbbeb8367"
 [[files]]
 path = "tools/openrails-reference/gearbox-protocol.json"
 sha256 = "38fd571d931b4c8bd0cc5701dc471628352443eb503cafcdeb5eb59448a6184d"
+
+# Native operational block/link, rolling-region and bogie captures (OR 1.6.1).
+
+[[files]]
+path = "docs/fixtures/compatibility/bogie-dynamics-or161/input.json"
+sha256 = "c73ad5e3c2e8950857796b604f87d58091fb3580757680a7b0e01b826af26e0c"
+
+[[files]]
+path = "docs/fixtures/compatibility/bogie-dynamics-or161/manifest.json"
+sha256 = "67ecad9855fcbd4d5d994953beea38f5a6d23044bb9226aff7abc69b89c0b543"
+
+[[files]]
+path = "docs/fixtures/compatibility/bogie-dynamics-or161/protocol.json"
+sha256 = "2c7c09667048be6cb8a6ecd75ebd20df180fcef1008e5107e62f53b04bdaa10c"
+
+[[files]]
+path = "docs/fixtures/compatibility/bogie-dynamics-or161/reference.json"
+sha256 = "a491890c45d1ec224d25dac2221550866839f15ce3295abec9b439e5ffcb9b3a"
+
+[[files]]
+path = "docs/fixtures/compatibility/bogie-dynamics-or161/wine-isolation/isolation.json"
+sha256 = "8d98910f2f5eecebb7d9ad8ca20ae2390ef0956e383eabcacd9e06b825659e6e"
+
+[[files]]
+path = "docs/fixtures/compatibility/bogie-dynamics-or161/wine-isolation/release.json"
+sha256 = "a7f7ad910d6a08ff2732b1c06b962186052bdde99eff74cda0ba2c85f5afe6ae"
+
+[[files]]
+path = "docs/fixtures/compatibility/operational-signals-or161/input.json"
+sha256 = "74ec825cd876e966e141dfe96003fe853e9032e0d1491ef25c6da4f39791e61e"
+
+[[files]]
+path = "docs/fixtures/compatibility/operational-signals-or161/manifest.json"
+sha256 = "881c3fda12c49e77090030b26cd7523f72065d114d9e8549455a275d95c58cd6"
+
+[[files]]
+path = "docs/fixtures/compatibility/operational-signals-or161/protocol.json"
+sha256 = "bd3ae702d242f0e5da88173e27f676309ff6df7dac94b2cc5b66d3cb5ab73fc5"
+
+[[files]]
+path = "docs/fixtures/compatibility/operational-signals-or161/reference.json"
+sha256 = "291e69e557d2cf24c0a282701dfb27cd9ab7f269b1fd237da7f84991003d3005"
+
+[[files]]
+path = "docs/fixtures/compatibility/operational-signals-or161/wine-isolation.json"
+sha256 = "6910fe035b5cfefe5b8a0437ac730af9df79b6a4f09afedc20b600c13befa39b"
+
+[[files]]
+path = "docs/fixtures/compatibility/operational-signals-or161/wine-release.json"
+sha256 = "500bc8ef7417c8f3fc53e7e9e3487b3d9aedf2fbe0becb9c56966148d29f4f91"
+
+[[files]]
+path = "docs/fixtures/compatibility/track-sound-or161/input.json"
+sha256 = "05513260c53364add7b76f8c020f97a88c72b94883de53c1748be89470a52f1e"
+
+[[files]]
+path = "docs/fixtures/compatibility/track-sound-or161/manifest.json"
+sha256 = "124b76a1094e7f6472e3439862cd85b11c4506809f26778912b947831fbcb5ee"
+
+[[files]]
+path = "docs/fixtures/compatibility/track-sound-or161/protocol.json"
+sha256 = "33a208a04ffc1fd94139339ab4227e15f3fa15576f5ee89bd517c0b5ac6a025f"
+
+[[files]]
+path = "docs/fixtures/compatibility/track-sound-or161/reference.json"
+sha256 = "822005282be251c55f0b727299895acc86c83116c7bc6036fa798e5dd6a3d922"
+
+[[files]]
+path = "docs/fixtures/compatibility/track-sound-or161/wine-isolation.json"
+sha256 = "5a6b2de52eaf195eb9f13f88748099c857b101157cc83a67840b4e6b8608894a"
+
+[[files]]
+path = "docs/fixtures/compatibility/track-sound-or161/wine-release.json"
+sha256 = "b1503028842fee8a98cfd95543a9eda42ae1ea0a333f9d7eaf3875c551601e8d"
+
+[[files]]
+path = "tools/openrails-reference/BogieDynamicsReference.cs"
+sha256 = "d3e37de90d60e1a4c80aaa037200e918f3da1cf420eb59260c1a6fb37838751b"
+
+[[files]]
+path = "tools/openrails-reference/OperationalSignalsReference.cs"
+sha256 = "81edf27ab3155df36a654afde480e86c0fc690e3c4b9f7d6e014d75374ceea7e"
+
+[[files]]
+path = "tools/openrails-reference/TrackSoundReference.cs"
+sha256 = "abccb6234d258601bb26fa9c9963e062133548084684f3da7d0f525ce53775f8"
+
+[[files]]
+path = "scripts/capture_bogie_dynamics_reference.py"
+sha256 = "0186a860e1dc1ffc269ef7e8a0bf0c897097568107f516e7d50e7fabe29e7d23"
+
+[[files]]
+path = "scripts/capture_operational_signals_reference.py"
+sha256 = "1bb4c5ffaa3f2d49573264ee1e7e9141f281d88ed55a48c0a0b42773198986d4"
+
+[[files]]
+path = "scripts/capture_track_sound_reference.py"
+sha256 = "161a728837f3aa46813e23f60d1dcfc42bccb4ccf18a8ca6c6441ae0e9df2840"
+
+[[files]]
+path = "oracles/coupling-rust-next-ten-20261015.json"
+sha256 = "6d1ef06391ad3237ad4941bb4362e8106d41e0ea275e1ecb995e3b4b4f2768a3"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-20261015/depot.json"
+sha256 = "21d93ccb7eb98d81bd377a30715f83b980df2db4498fef4835f4075f4b934239"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-20261015/execution.json"
+sha256 = "3b56fb194c0fc7489e2e57ef9316cf026c8de3a3c2333ef1e3659abb0e1db673"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-20261015/receipt.json"
+sha256 = "e76087239badacc7153f25c5c0538ec417b6d5c88b702272f893de50b66f0595"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-20261015/source-inputs.json"
+sha256 = "4fe935ff9cc986b5a649f4645eb0712ddc9f63232c80d93e9fcddebcdc8eb3fd"
+
+[[files]]
+path = "oracles/coupling-rust-next-ten-final-20261015.json"
+sha256 = "6d1ef06391ad3237ad4941bb4362e8106d41e0ea275e1ecb995e3b4b4f2768a3"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-final-20261015/depot.json"
+sha256 = "21d93ccb7eb98d81bd377a30715f83b980df2db4498fef4835f4075f4b934239"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-final-20261015/execution.json"
+sha256 = "e87101a35a741495021f93261bbd792123032563b140c58167e2ac4e47b90cda"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-final-20261015/receipt.json"
+sha256 = "6af169005077a8ca7565910a76c9a25be0dbd125bb822e53f43e4766893ac718"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-final-20261015/source-inputs.json"
+sha256 = "361ec573d5ed178e060d9bf87aa1e03b007f44cc8b5df8de9e9b99b6ad5f6f44"
+
+[[files]]
+path = "oracles/coupling-rust-next-ten-tail-20261015.json"
+sha256 = "6d1ef06391ad3237ad4941bb4362e8106d41e0ea275e1ecb995e3b4b4f2768a3"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-tail-20261015/depot.json"
+sha256 = "21d93ccb7eb98d81bd377a30715f83b980df2db4498fef4835f4075f4b934239"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-tail-20261015/execution.json"
+sha256 = "6ea19764ce9bc26e2529da3246db57c51d14f6ba0613d32a85c5adf08e3662d2"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-tail-20261015/receipt.json"
+sha256 = "4e38452679a1b4669b1e2267dd8cc83ac7fc25868caca219788eb921fd5acfb9"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-tail-20261015/source-inputs.json"
+sha256 = "1e2f5e452e61ffba87c6adc8df72ab62c09449e69fb265d860074a7a1cdd1f41"
+
+[[files]]
+path = "oracles/coupling-rust-next-ten-sections-20261015.json"
+sha256 = "6d1ef06391ad3237ad4941bb4362e8106d41e0ea275e1ecb995e3b4b4f2768a3"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-sections-20261015/depot.json"
+sha256 = "21d93ccb7eb98d81bd377a30715f83b980df2db4498fef4835f4075f4b934239"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-sections-20261015/execution.json"
+sha256 = "7f2a90133f1a1628888c5fc057030db545abab2b3fc7ff776878cc713b5b3f42"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-sections-20261015/receipt.json"
+sha256 = "850d31727d9bc4fdb5567eb4d0143f9c9e1d0d1578af9e68712c948ecbfb7c33"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-sections-20261015/source-inputs.json"
+sha256 = "311529789177781ae3f1d97e65e03e924e1119e45b5913896f3bc6e5b3c9edfe"

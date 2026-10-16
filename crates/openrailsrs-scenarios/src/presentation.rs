@@ -4,6 +4,9 @@ use serde::{Deserialize, Serialize};
 #[serde(default)]
 pub struct VehiclePresentation {
     pub vehicle: usize,
+    /// Shape clearance only. Mechanical angle of attack and lateral travel are
+    /// configured under train.bogie_dynamics and never use this clamp.
+    pub bogie_yaw_limit_rad: Option<f32>,
     pub suspension: Option<SuspensionDef>,
     pub horn: Option<SoundEmitterDef>,
     pub passenger_lamps: Vec<PassengerLampDef>,
@@ -124,7 +127,9 @@ pub struct PassengerLampDef {
 }
 impl VehiclePresentation {
     pub fn valid(&self) -> bool {
-        self.walk_boxes_m.len() <= 32
+        self.bogie_yaw_limit_rad
+            .is_none_or(|v| v.is_finite() && (0.001..=1.2).contains(&v))
+            && self.walk_boxes_m.len() <= 32
             && self.boarding_doors.len() <= 8
             && self
                 .boarding_doors

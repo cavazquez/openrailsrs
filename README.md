@@ -128,6 +128,14 @@ Para probar la quinta entrega, consultá las guías de [operaciones](docs/TRAIN_
 
 ### Simulación y señales
 
+- **Porciones y actividades originales**: varias secciones desacopladas con identidad, frenos, ocupación y guardado; recogida por ambos extremos y transferencias de porciones entre servicios. Eventos ACT, formaciones estáticas, códigos operativos PAT y carga finita se detallan en las guías de [porciones](docs/PORTIONS_AND_SERVICE_TRANSFERS.md) y [actividades](docs/NATIVE_ACTIVITY_OPERATIONS.md).
+- **Rodadura por coche**: regiones WORLD/TDB, catálogo `ttype.dat` y SMS/WAV originales; las transiciones siguen a cada coche en ambos sentidos y después de reagruparlo. Cien sondas nativas y una conducción de siete coches contrastan la selección. [Sonidos de vía](docs/TRACK_SOUND_REGIONS.md).
+- **Bogies y ejes**: orientación visual separada de fuerzas laterales, peralte, apoyo compartido y límites por modelo. Cuarenta y ocho casos de DLL originales y pruebas propias de suspensión, conducción y guardado. [Mecánica y alcance](docs/BOGIE_DYNAMICS.md).
+- **Señales enlazadas**: unión y vector originales de cada cabezal, estados de bloqueo libre/ocupado/obstruido y permiso del grupo físico. [28 casos nativos y auditoría de 8.995 enlaces](docs/OPERATIONAL_SIGNALS.md).
+- **Comparación visual de las seis estaciones**: doce vistas de cabina/exterior con cámara y sol equivalentes a OR 1.6.1, corrección de cascadas de sombras y prueba de cámara con física pausada. Se conservan las mejoras de iluminación de Bevy. [Capturas y procedimiento](docs/STATION_VISUAL_COMPARISON.md).
+
+Las [diez pruebas manuales del lote](docs/TEN_OPERATIONS_MANUAL.md) indican qué elegir y qué observar. El tutorial 6 de Zig Zag sigue pendiente por un Include de frenos ausente en la distribución original; el diagnóstico conserva el nombre exacto del archivo.
+
 - **Operación del tren**: freno independiente neumático, emergencia con rearme, depósito/compresor, cargas de pasajeros y auxiliares con efecto en potencia/energía, temperatura diésel con protección optativa y diagnóstico visible. Vapor comparte fase de ruedas, bielas, emboladas y escape. Enganches y suspensión conservan el apoyo de ruedas/bogies y las secciones estacionadas. Audio exterior con balance/Doppler, respetando interiores y SMS del autor. Tres ejemplos nuevos elegibles: consumo eléctrico, protección térmica y patio guiado con cinco objetivos. [Qué cambió y cómo probar los diez objetivos](docs/TRAIN_OPERATION_UPDATE.md).
 
 - Dos servicios de tráfico vivo con paradas, reloj compartido, ocupación de la formación completa y restauración de partidas.

@@ -1,0 +1,74 @@
+{
+  "schema": 1,
+  "recorded_date": "2026-10-15",
+  "issue": 212,
+  "status": "backend_implemented_original_tutorial_blocked",
+  "reference": "Open Rails 1.6.1",
+  "activity": {
+    "route": "Great Zig Zag v1.6",
+    "path": "ACTIVITIES/tutorial#6_loading.act",
+    "sha256": "c416a298445af07a91211aacadcfd44c9b9247764bb224e53a6f608ce48aa3bf",
+    "events": 11,
+    "quantity_event_declared": false,
+    "passenger_tasks": 0,
+    "empty_allstops_is_success": false
+  },
+  "blocked_acceptance": {
+    "actual_returncode": 1,
+    "error": "MissingInclude",
+    "include": "Common_Inc_Brake/TripleValve_West_Plain.inc",
+    "caller": "Trains/Trainset/AU_NSW_1905_JWW_Htype/JWW_Htype_E_animated.wag",
+    "caller_line": 43,
+    "caller_sha256": "9fd1c67f2b6f616114055c32d9c152e97350b8e4318b6de05aecba7a16d43914",
+    "original_wag_byte_identical_to_author_installer": true,
+    "quantity_transfer_reached": false,
+    "declared_quantity_tolerance_kg": 0.02,
+    "original_load_attempt_log_sha256": "456606b9a185949deb559f06e8f4841e7d9af241db3e2a7054256a257cd1f3dd"
+  },
+  "author_package": {
+    "download_url": "https://www.zigzag.coalstonewcastle.com.au/route/001/download/",
+    "bytes": 224721661,
+    "sha256": "4fb75de3f797a740203456bd69539e17ac9da1008568c21244710b96fe397bc9",
+    "catalog_files": 6328,
+    "required_include_found": false,
+    "current_author_file_catalog_matches_downloaded_package": true
+  },
+  "additional_author_catalogs": [
+    {
+      "package_sha256": "fd382a81038425a6d119dd186a3d9834c48ae42e5fbc791123a004bd13fc7722",
+      "files": 47,
+      "required_include_found": false
+    },
+    {
+      "package_sha256": "d5740a8e2e0815e009b0900ec05a6ec89491e8e0763ccee23d5719848c0b6dcb",
+      "files": 15293,
+      "required_include_found": false
+    },
+    {
+      "package_sha256": "d2a6405e1c6f4b0327c9f91caba8321fd02683087d6908475832fbed1f53db56",
+      "files": 2446,
+      "required_include_found": false
+    },
+    {
+      "package_sha256": "ea065fbb3150bcc5abbb37a25e34d0cdd543353c2d1e840fee0905e48642d336",
+      "files": 4605,
+      "required_include_found": false
+    }
+  ],
+  "author_pages_reviewed": [
+    "https://www.zigzag.coalstonewcastle.com.au/route/downloads/",
+    "https://www.zigzag.coalstonewcastle.com.au/route/route-install/",
+    "https://www.coalstonewcastle.com.au/physics/inc-files/",
+    "https://www.coalstonewcastle.com.au/stock/misc/downloads/",
+    "https://www.coalstonewcastle.com.au/physics/stock/"
+  ],
+  "full_private_findings_sha256": "ddf5fd901d11e8b4250c2fda70c8d8f45c9a234d65f8dd170ce1fd09e4bf3c06",
+  "preservation": {
+    "original_wags_modified": false,
+    "include_ignored": false,
+    "replacement_brake_file_synthesized": false,
+    "downloaded_assets_versioned": false
+  },
+  "next_step": "Obtain the exact missing dependency or corrected Htype WAG from its author, then rerun accept_zigzag_activity into a fresh directory. Keep issue 212 open until that original-content acceptance passes.",
+  "manual_guide": "docs/NATIVE_ACTIVITY_OPERATIONS.md"
+}

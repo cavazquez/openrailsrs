@@ -29,6 +29,30 @@ fn ambient_scale(direction: Vec3) -> f32 {
     0.0001 + 0.9999 * (direction.y * 2.0).clamp(0.0, 1.0)
 }
 
+/// Visual comparisons may freeze the exact vector recorded by the original
+/// renderer. Normal play retains continuous solar motion and Bevy lighting.
+pub(crate) fn capture_solar_direction() -> Option<Vec3> {
+    if !crate::capture::capture_enabled() {
+        return None;
+    }
+    parse_capture_solar_direction(
+        std::env::var("OPENRAILSRS_CAPTURE_SOLAR_DIRECTION")
+            .ok()
+            .as_deref(),
+    )
+}
+fn parse_capture_solar_direction(value: Option<&str>) -> Option<Vec3> {
+    let values = value?
+        .split(',')
+        .map(|v| v.trim().parse::<f32>().ok())
+        .collect::<Option<Vec<_>>>()?;
+    if values.len() != 3 {
+        return None;
+    }
+    let direction = Vec3::new(values[0], values[1], values[2]);
+    (direction.is_finite() && (0.9..=1.1).contains(&direction.length())).then_some(direction)
+}
+
 fn route_sun_at(live: &LiveDrive, assets: &RouteAssets, world: Vec3) -> Option<RouteSunState> {
     let tile_x = openrailsrs_formats::msts_tile_x_index_for_coord(world.x);
     let tile_z = openrailsrs_formats::msts_tile_z_index_for_coord(world.z);
@@ -78,7 +102,7 @@ pub fn prepare_route_textures(
         } else {
             sun.direction
         };
-        crate::shapes::set_scenery_sun_y(direction.y);
+        crate::shapes::set_scenery_sun_y(capture_solar_direction().unwrap_or(direction).y);
     }
 }
 
@@ -106,6 +130,10 @@ pub fn init_route_sun(
         state.direction =
             crate::environment::real_solar_direction(state.position, chrono::Utc::now());
         state.ambient_scale = ambient_scale(state.direction);
+    }
+    if let Some(direction) = capture_solar_direction() {
+        state.direction = direction;
+        state.ambient_scale = ambient_scale(direction);
     }
     crate::shapes::set_scenery_sun_y(state.direction.y);
     crate::viewer_log!(
@@ -144,7 +172,9 @@ pub fn update_route_sun(
     }
     state.last_clock_s = Some(clock);
     let ordinal = season_ordinal(&live.season, state.position.latitude);
-    let direction = if let Some(real) = real {
+    let direction = if let Some(direction) = capture_solar_direction() {
+        direction
+    } else if let Some(real) = real {
         crate::environment::real_solar_direction(
             environment
                 .location
@@ -179,6 +209,22 @@ pub fn update_route_sun(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn comparison_sun_requires_a_finite_direction_of_unit_length() {
+        let original = Vec3::new(0.732_436_06, 0.6552199, 0.184_998_18);
+        let parsed =
+            parse_capture_solar_direction(Some("0.732436061,0.6552199,0.184998184")).unwrap();
+        assert_eq!(parsed, original);
+        for invalid in [
+            None,
+            Some("NaN,0,1"),
+            Some("0,0,0"),
+            Some("1,0"),
+            Some("1,2,3,4"),
+        ] {
+            assert!(parse_capture_solar_direction(invalid).is_none());
+        }
+    }
     use crate::sky::{RailwaySkyMaterial, sky_parameters};
     use bevy::pbr::{DistanceFog, FogFalloff};
     use openrailsrs_bevy_scenery::SkyDome;

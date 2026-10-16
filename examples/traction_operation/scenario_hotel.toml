@@ -5,6 +5,7 @@ description = "B permite elegir climatización; con frío o calor cambia el cons
 path = "route"
 start = "a"
 destination = "b"
+start_offset_m = 100.0
 assume_signals_clear = true
 [train]
 consist = "consists/diesel_hotel.con"

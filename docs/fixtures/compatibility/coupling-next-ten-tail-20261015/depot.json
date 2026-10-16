@@ -1,0 +1,1302 @@
+{
+  "active_operation_error": "Hay un mantenimiento en curso",
+  "after_recovery": {
+    "brake_equipment": [
+      {
+        "cooled_j": 331942.1585697929,
+        "delay_s": 0.0,
+        "dissipated_j": 0.0,
+        "electric_force_n": 0.0,
+        "friction_force_n": 78000.0,
+        "heat_j": 2300.0,
+        "pressure_fraction": 1.0,
+        "previous_speed_mps": 0.0,
+        "ramped_force_n": 0.0,
+        "regenerative_w": 0.0,
+        "returned_j": 0.0,
+        "rheostatic_w": 0.0,
+        "sliding": false,
+        "started_s": null,
+        "temperature_c": 73.68057841430208,
+        "traction_cut": false,
+        "traction_fraction": 1.0,
+        "wheel_speed_mps": 0.0
+      }
+    ],
+    "formation": {
+      "cars": [
+        {
+          "battery_on": false,
+          "front_cock_open": true,
+          "handbrake": true,
+          "hose_connected": true,
+          "length_m": 20.0,
+          "mass_kg": 40000.0,
+          "mu_connected": true,
+          "name": "DiÃ©sel sintÃ©tico de prueba",
+          "power_on": true,
+          "powered": true,
+          "rear_cock_open": true,
+          "train_bus_connected": true,
+          "train_supply_switch_on": false
+        },
+        {
+          "battery_on": false,
+          "front_cock_open": true,
+          "handbrake": true,
+          "hose_connected": true,
+          "length_m": 20.0,
+          "mass_kg": 40000.0,
+          "mu_connected": true,
+          "name": "DiÃ©sel sintÃ©tico de prueba",
+          "power_on": true,
+          "powered": true,
+          "rear_cock_open": true,
+          "train_bus_connected": true,
+          "train_supply_switch_on": false
+        }
+      ],
+      "coupled_count": 2,
+      "parked_brakes": [],
+      "parked_couplers": [],
+      "parked_head_chainage_m": null,
+      "parked_vehicles": []
+    },
+    "head_m": 0.0,
+    "motor_fuel": [
+      {
+        "consumed_l": 31.0,
+        "fuel_l": 469.0,
+        "refilled_l": 0.0
+      },
+      {
+        "consumed_l": 31.0,
+        "fuel_l": 469.0,
+        "refilled_l": 0.0
+      }
+    ],
+    "native_fuel": {
+      "cars": [
+        {
+          "command_running": true,
+          "consumed_l": 0.0,
+          "cooling_on": false,
+          "demanded_rpm": 300.0,
+          "flow_lps": 0.0,
+          "fuel_l": 25.0,
+          "phase": "Running",
+          "refilled_l": 0.0,
+          "rpm": 300.0,
+          "temperature_c": 41.05146408081055,
+          "vehicle": 0
+        },
+        {
+          "command_running": true,
+          "consumed_l": 0.0006638358604178454,
+          "cooling_on": false,
+          "demanded_rpm": 0.0,
+          "flow_lps": 0.0,
+          "fuel_l": 24.99933616413958,
+          "phase": "Stopped",
+          "refilled_l": 0.0,
+          "rpm": 0.0,
+          "temperature_c": 41.05146408081055,
+          "vehicle": 1
+        }
+      ],
+      "initialized": true
+    },
+    "pneumatic_brakes": {
+      "circuits": [
+        {
+          "charged_bar_m3": 0.0,
+          "compressor_on": false,
+          "independent_bar": 0.0,
+          "params": {
+            "application_bar_s": 1.0,
+            "charging_bar_s": 0.0844375,
+            "maximum_bar": 8.963184477,
+            "release_bar_s": 1.0,
+            "reservoir_m3": 0.3,
+            "restart_bar": 7.584233019
+          },
+          "previous_service_bar": 2.835,
+          "reservoir_bar": 8.816184477,
+          "vehicle": 0
+        },
+        {
+          "charged_bar_m3": 0.0,
+          "compressor_on": false,
+          "independent_bar": 0.0,
+          "params": {
+            "application_bar_s": 1.0,
+            "charging_bar_s": 0.0844375,
+            "maximum_bar": 8.963184477,
+            "release_bar_s": 1.0,
+            "reservoir_m3": 0.3,
+            "restart_bar": 7.584233019
+          },
+          "previous_service_bar": 2.835,
+          "reservoir_bar": 8.816184477,
+          "vehicle": 1
+        }
+      ],
+      "cylinders": [
+        {
+          "air_isolated": false,
+          "air_vented": false,
+          "apply_ramp_rate_n_per_s": 800000.0,
+          "authored_response": false,
+          "automatic_pipe_bar": 2.795,
+          "current_force_n": 75600.0,
+          "ep_instant": true,
+          "full_pressure_bar": 4.5,
+          "handbrake_force_n": 78000.0,
+          "independent_force_n": 0.0,
+          "latched_command": 0.0,
+          "mass_kg": 40000.0,
+          "max_force_n": 120000.0,
+          "native_air_skid": false,
+          "position_m": 0.0,
+          "release_ramp_rate_n_per_s": 48000.0,
+          "shoe_friction": {
+            "mu_at_zero_kph": 1.0,
+            "points_kph": [
+              [
+                0.0,
+                1.0
+              ]
+            ]
+          },
+          "skid_adhesion_mu": 0.0,
+          "state": "Charged",
+          "time_pending_s": 0.0,
+          "transfer_only": false
+        },
+        {
+          "air_isolated": false,
+          "air_vented": false,
+          "apply_ramp_rate_n_per_s": 800000.0,
+          "authored_response": false,
+          "automatic_pipe_bar": 2.795,
+          "current_force_n": 75600.0,
+          "ep_instant": true,
+          "full_pressure_bar": 4.5,
+          "handbrake_force_n": 78000.0,
+          "independent_force_n": 0.0,
+          "latched_command": 0.0,
+          "mass_kg": 40000.0,
+          "max_force_n": 120000.0,
+          "native_air_skid": false,
+          "position_m": 20.0,
+          "release_ramp_rate_n_per_s": 48000.0,
+          "shoe_friction": {
+            "mu_at_zero_kph": 1.0,
+            "points_kph": [
+              [
+                0.0,
+                1.0
+              ]
+            ]
+          },
+          "skid_adhesion_mu": 0.0,
+          "state": "Charged",
+          "time_pending_s": 0.0,
+          "transfer_only": false
+        }
+      ],
+      "emergency": false,
+      "ep_only_wire": false,
+      "independent_command": 0.0,
+      "pipe_speed_mps": 200.0,
+      "prev_command": 0.63,
+      "train_air_full_release_s": 3.0,
+      "train_air_lap_hold": false
+    },
+    "power": {
+      "auxiliary_w": 0.0,
+      "bus_source": [
+        null,
+        null
+      ],
+      "cars": [
+        {
+          "supply": {
+            "auxiliary": false,
+            "auxiliary_started_s": null,
+            "cab": false,
+            "dynamic_brake_available": false,
+            "low_voltage": false,
+            "main": false,
+            "main_started_s": null,
+            "minimum_diesel_rpm": 0.0,
+            "relay_started_s": null,
+            "train_supply": false
+          },
+          "vehicle": 0
+        },
+        {
+          "supply": {
+            "auxiliary": false,
+            "auxiliary_started_s": null,
+            "cab": false,
+            "dynamic_brake_available": false,
+            "low_voltage": false,
+            "main": false,
+            "main_started_s": null,
+            "minimum_diesel_rpm": 0.0,
+            "relay_started_s": null,
+            "train_supply": false
+          },
+          "vehicle": 1
+        }
+      ],
+      "energy_j": 0.0,
+      "hotel_mode": "auto",
+      "hotel_w": 0.0,
+      "initialized": true,
+      "last_energy_time_s": 39.94999999999987,
+      "source_hotel_w": {}
+    },
+    "service": {
+      "accrued_penalty": 37.5,
+      "arrival": [
+        0.05,
+        0.0,
+        0.0
+      ],
+      "boarding_elapsed_s": 0.0,
+      "departure_hold": false,
+      "destination": "Terminal",
+      "destination_node": "b",
+      "failure": null,
+      "missed_stop_policy": "fail",
+      "missed_stops": [],
+      "next_stop_idx": 0,
+      "overspeed_active": false,
+      "passed_stops": [],
+      "penalty_per_second_late": 1.0,
+      "phase": "boarding",
+      "quick_station_practice": false,
+      "shunting_completed_s": [],
+      "shunting_steps": [],
+      "stop_results": [],
+      "stop_targets": [
+        {
+          "arrive_s": 0.0,
+          "cum_dist_m": 0.0,
+          "depart_s": 5.0,
+          "dwell_s": 5.0,
+          "is_terminal": false,
+          "name": "Taller",
+          "node_id": "a",
+          "passengers_off": 0,
+          "passengers_on": 0
+        },
+        {
+          "arrive_s": 90.0,
+          "cum_dist_m": 500.0,
+          "depart_s": 95.0,
+          "dwell_s": 5.0,
+          "is_terminal": false,
+          "name": "Parada intermedia",
+          "node_id": "mid",
+          "passengers_off": 0,
+          "passengers_on": 0
+        },
+        {
+          "arrive_s": 160.0,
+          "cum_dist_m": 1000.0,
+          "depart_s": 160.0,
+          "dwell_s": 5.0,
+          "is_terminal": true,
+          "name": "Terminal",
+          "node_id": "b",
+          "passengers_off": 0,
+          "passengers_on": 0
+        }
+      ]
+    },
+    "time_s": 39.999999999999865
+  },
+  "checkpoint_preserves_nondefault_state": true,
+  "circuit_fault_repaired_only_in_work": true,
+  "control_after_same_time": {
+    "brake_equipment": [
+      {
+        "cooled_j": 331942.1585697929,
+        "delay_s": 0.0,
+        "dissipated_j": 0.0,
+        "electric_force_n": 0.0,
+        "friction_force_n": 78000.0,
+        "heat_j": 2300.0,
+        "pressure_fraction": 1.0,
+        "previous_speed_mps": 0.0,
+        "ramped_force_n": 0.0,
+        "regenerative_w": 0.0,
+        "returned_j": 0.0,
+        "rheostatic_w": 0.0,
+        "sliding": false,
+        "started_s": null,
+        "temperature_c": 73.68057841430208,
+        "traction_cut": false,
+        "traction_fraction": 1.0,
+        "wheel_speed_mps": 0.0
+      }
+    ],
+    "formation": {
+      "cars": [
+        {
+          "battery_on": false,
+          "front_cock_open": true,
+          "handbrake": true,
+          "hose_connected": true,
+          "length_m": 20.0,
+          "mass_kg": 40000.0,
+          "mu_connected": true,
+          "name": "DiÃ©sel sintÃ©tico de prueba",
+          "power_on": true,
+          "powered": true,
+          "rear_cock_open": true,
+          "train_bus_connected": true,
+          "train_supply_switch_on": false
+        },
+        {
+          "battery_on": false,
+          "front_cock_open": true,
+          "handbrake": true,
+          "hose_connected": true,
+          "length_m": 20.0,
+          "mass_kg": 40000.0,
+          "mu_connected": true,
+          "name": "DiÃ©sel sintÃ©tico de prueba",
+          "power_on": true,
+          "powered": true,
+          "rear_cock_open": true,
+          "train_bus_connected": true,
+          "train_supply_switch_on": false
+        }
+      ],
+      "coupled_count": 2,
+      "parked_brakes": [],
+      "parked_couplers": [],
+      "parked_head_chainage_m": null,
+      "parked_vehicles": []
+    },
+    "head_m": 0.0,
+    "motor_fuel": [
+      {
+        "consumed_l": 31.0,
+        "fuel_l": 469.0,
+        "refilled_l": 0.0
+      },
+      {
+        "consumed_l": 31.0,
+        "fuel_l": 469.0,
+        "refilled_l": 0.0
+      }
+    ],
+    "native_fuel": {
+      "cars": [
+        {
+          "command_running": true,
+          "consumed_l": 0.0,
+          "cooling_on": false,
+          "demanded_rpm": 300.0,
+          "flow_lps": 0.0,
+          "fuel_l": 25.0,
+          "phase": "Running",
+          "refilled_l": 0.0,
+          "rpm": 300.0,
+          "temperature_c": 41.05146408081055,
+          "vehicle": 0
+        },
+        {
+          "command_running": true,
+          "consumed_l": 0.0006638358604178454,
+          "cooling_on": false,
+          "demanded_rpm": 0.0,
+          "flow_lps": 0.0,
+          "fuel_l": 24.99933616413958,
+          "phase": "Stopped",
+          "refilled_l": 0.0,
+          "rpm": 0.0,
+          "temperature_c": 41.05146408081055,
+          "vehicle": 1
+        }
+      ],
+      "initialized": true
+    },
+    "pneumatic_brakes": {
+      "circuits": [
+        {
+          "charged_bar_m3": 0.0,
+          "compressor_on": false,
+          "independent_bar": 0.0,
+          "params": {
+            "application_bar_s": 1.0,
+            "charging_bar_s": 0.0844375,
+            "maximum_bar": 8.963184477,
+            "release_bar_s": 1.0,
+            "reservoir_m3": 0.3,
+            "restart_bar": 7.584233019
+          },
+          "previous_service_bar": 2.835,
+          "reservoir_bar": 8.816184477,
+          "vehicle": 0
+        },
+        {
+          "charged_bar_m3": 0.0,
+          "compressor_on": false,
+          "independent_bar": 0.0,
+          "params": {
+            "application_bar_s": 1.0,
+            "charging_bar_s": 0.0844375,
+            "maximum_bar": 8.963184477,
+            "release_bar_s": 1.0,
+            "reservoir_m3": 0.3,
+            "restart_bar": 7.584233019
+          },
+          "previous_service_bar": 2.835,
+          "reservoir_bar": 8.816184477,
+          "vehicle": 1
+        }
+      ],
+      "cylinders": [
+        {
+          "air_isolated": false,
+          "air_vented": false,
+          "apply_ramp_rate_n_per_s": 800000.0,
+          "authored_response": false,
+          "automatic_pipe_bar": 2.795,
+          "current_force_n": 75600.0,
+          "ep_instant": true,
+          "full_pressure_bar": 4.5,
+          "handbrake_force_n": 78000.0,
+          "independent_force_n": 0.0,
+          "latched_command": 0.0,
+          "mass_kg": 40000.0,
+          "max_force_n": 120000.0,
+          "native_air_skid": false,
+          "position_m": 0.0,
+          "release_ramp_rate_n_per_s": 48000.0,
+          "shoe_friction": {
+            "mu_at_zero_kph": 1.0,
+            "points_kph": [
+              [
+                0.0,
+                1.0
+              ]
+            ]
+          },
+          "skid_adhesion_mu": 0.0,
+          "state": "Charged",
+          "time_pending_s": 0.0,
+          "transfer_only": false
+        },
+        {
+          "air_isolated": false,
+          "air_vented": false,
+          "apply_ramp_rate_n_per_s": 800000.0,
+          "authored_response": false,
+          "automatic_pipe_bar": 2.795,
+          "current_force_n": 75600.0,
+          "ep_instant": true,
+          "full_pressure_bar": 4.5,
+          "handbrake_force_n": 78000.0,
+          "independent_force_n": 0.0,
+          "latched_command": 0.0,
+          "mass_kg": 40000.0,
+          "max_force_n": 120000.0,
+          "native_air_skid": false,
+          "position_m": 20.0,
+          "release_ramp_rate_n_per_s": 48000.0,
+          "shoe_friction": {
+            "mu_at_zero_kph": 1.0,
+            "points_kph": [
+              [
+                0.0,
+                1.0
+              ]
+            ]
+          },
+          "skid_adhesion_mu": 0.0,
+          "state": "Charged",
+          "time_pending_s": 0.0,
+          "transfer_only": false
+        }
+      ],
+      "emergency": false,
+      "ep_only_wire": false,
+      "independent_command": 0.0,
+      "pipe_speed_mps": 200.0,
+      "prev_command": 0.63,
+      "train_air_full_release_s": 3.0,
+      "train_air_lap_hold": false
+    },
+    "power": {
+      "auxiliary_w": 0.0,
+      "bus_source": [
+        null,
+        null
+      ],
+      "cars": [
+        {
+          "supply": {
+            "auxiliary": false,
+            "auxiliary_started_s": null,
+            "cab": false,
+            "dynamic_brake_available": false,
+            "low_voltage": false,
+            "main": false,
+            "main_started_s": null,
+            "minimum_diesel_rpm": 0.0,
+            "relay_started_s": null,
+            "train_supply": false
+          },
+          "vehicle": 0
+        },
+        {
+          "supply": {
+            "auxiliary": false,
+            "auxiliary_started_s": null,
+            "cab": false,
+            "dynamic_brake_available": false,
+            "low_voltage": false,
+            "main": false,
+            "main_started_s": null,
+            "minimum_diesel_rpm": 0.0,
+            "relay_started_s": null,
+            "train_supply": false
+          },
+          "vehicle": 1
+        }
+      ],
+      "energy_j": 0.0,
+      "hotel_mode": "auto",
+      "hotel_w": 0.0,
+      "initialized": true,
+      "last_energy_time_s": 39.94999999999987,
+      "source_hotel_w": {}
+    },
+    "service": {
+      "accrued_penalty": 37.5,
+      "arrival": [
+        0.05,
+        0.0,
+        0.0
+      ],
+      "boarding_elapsed_s": 0.0,
+      "departure_hold": false,
+      "destination": "Terminal",
+      "destination_node": "b",
+      "failure": null,
+      "missed_stop_policy": "fail",
+      "missed_stops": [],
+      "next_stop_idx": 0,
+      "overspeed_active": false,
+      "passed_stops": [],
+      "penalty_per_second_late": 1.0,
+      "phase": "boarding",
+      "quick_station_practice": false,
+      "shunting_completed_s": [],
+      "shunting_steps": [],
+      "stop_results": [],
+      "stop_targets": [
+        {
+          "arrive_s": 0.0,
+          "cum_dist_m": 0.0,
+          "depart_s": 5.0,
+          "dwell_s": 5.0,
+          "is_terminal": false,
+          "name": "Taller",
+          "node_id": "a",
+          "passengers_off": 0,
+          "passengers_on": 0
+        },
+        {
+          "arrive_s": 90.0,
+          "cum_dist_m": 500.0,
+          "depart_s": 95.0,
+          "dwell_s": 5.0,
+          "is_terminal": false,
+          "name": "Parada intermedia",
+          "node_id": "mid",
+          "passengers_off": 0,
+          "passengers_on": 0
+        },
+        {
+          "arrive_s": 160.0,
+          "cum_dist_m": 1000.0,
+          "depart_s": 160.0,
+          "dwell_s": 5.0,
+          "is_terminal": true,
+          "name": "Terminal",
+          "node_id": "b",
+          "passengers_off": 0,
+          "passengers_on": 0
+        }
+      ]
+    },
+    "time_s": 39.999999999999865
+  },
+  "elapsed_work_s": 35.0,
+  "finite_supply": {
+    "coolant_budget_l": 1.0,
+    "faults_remain": true,
+    "oil_budget_l": 1.0,
+    "second_cycle_after_restore_creates_no_material": true,
+    "status_text": "Depósito yard-service · batería desconectada · tubería 2.79 bar · motores con avería",
+    "used_coolant_l": 1.0,
+    "used_oil_l": 1.0
+  },
+  "initial_unsafe_error": "Estacioná en el depósito, poné neutro, asegurá todos los frenos de mano y detené/enfriá los motores",
+  "invalid_resource_snapshot_error": "Mantenimiento guardado inválido",
+  "midway_before_restore": {
+    "brake_equipment": [
+      {
+        "cooled_j": 168460.4587735038,
+        "delay_s": 0.0,
+        "dissipated_j": 0.0,
+        "electric_force_n": 0.0,
+        "friction_force_n": 78000.0,
+        "heat_j": 2300.0,
+        "pressure_fraction": 1.0,
+        "previous_speed_mps": 0.0,
+        "ramped_force_n": 0.0,
+        "regenerative_w": 0.0,
+        "returned_j": 0.0,
+        "rheostatic_w": 0.0,
+        "sliding": false,
+        "started_s": null,
+        "temperature_c": 75.31539541226496,
+        "traction_cut": false,
+        "traction_fraction": 1.0,
+        "wheel_speed_mps": 0.0
+      }
+    ],
+    "formation": {
+      "cars": [
+        {
+          "battery_on": false,
+          "front_cock_open": true,
+          "handbrake": true,
+          "hose_connected": true,
+          "length_m": 20.0,
+          "mass_kg": 40000.0,
+          "mu_connected": true,
+          "name": "DiÃ©sel sintÃ©tico de prueba",
+          "power_on": true,
+          "powered": true,
+          "rear_cock_open": true,
+          "train_bus_connected": true,
+          "train_supply_switch_on": false
+        },
+        {
+          "battery_on": false,
+          "front_cock_open": true,
+          "handbrake": true,
+          "hose_connected": true,
+          "length_m": 20.0,
+          "mass_kg": 40000.0,
+          "mu_connected": true,
+          "name": "DiÃ©sel sintÃ©tico de prueba",
+          "power_on": true,
+          "powered": true,
+          "rear_cock_open": true,
+          "train_bus_connected": true,
+          "train_supply_switch_on": false
+        }
+      ],
+      "coupled_count": 2,
+      "parked_brakes": [],
+      "parked_couplers": [],
+      "parked_head_chainage_m": null,
+      "parked_vehicles": []
+    },
+    "head_m": 0.0,
+    "motor_fuel": [
+      {
+        "consumed_l": 31.0,
+        "fuel_l": 469.0,
+        "refilled_l": 0.0
+      },
+      {
+        "consumed_l": 31.0,
+        "fuel_l": 469.0,
+        "refilled_l": 0.0
+      }
+    ],
+    "native_fuel": {
+      "cars": [
+        {
+          "command_running": true,
+          "consumed_l": 0.0,
+          "cooling_on": false,
+          "demanded_rpm": 300.0,
+          "flow_lps": 0.0,
+          "fuel_l": 25.0,
+          "phase": "Running",
+          "refilled_l": 0.0,
+          "rpm": 300.0,
+          "temperature_c": 40.54033279418945,
+          "vehicle": 0
+        },
+        {
+          "command_running": true,
+          "consumed_l": 0.0006638358604178454,
+          "cooling_on": false,
+          "demanded_rpm": 0.0,
+          "flow_lps": 0.0,
+          "fuel_l": 24.99933616413958,
+          "phase": "Stopped",
+          "refilled_l": 0.0,
+          "rpm": 0.0,
+          "temperature_c": 40.54033279418945,
+          "vehicle": 1
+        }
+      ],
+      "initialized": true
+    },
+    "pneumatic_brakes": {
+      "circuits": [
+        {
+          "charged_bar_m3": 0.0,
+          "compressor_on": false,
+          "independent_bar": 0.0,
+          "params": {
+            "application_bar_s": 1.0,
+            "charging_bar_s": 0.0844375,
+            "maximum_bar": 8.963184477,
+            "release_bar_s": 1.0,
+            "reservoir_m3": 0.3,
+            "restart_bar": 7.584233019
+          },
+          "previous_service_bar": 2.835,
+          "reservoir_bar": 8.816184477,
+          "vehicle": 0
+        },
+        {
+          "charged_bar_m3": 0.0,
+          "compressor_on": false,
+          "independent_bar": 0.0,
+          "params": {
+            "application_bar_s": 1.0,
+            "charging_bar_s": 0.0844375,
+            "maximum_bar": 8.963184477,
+            "release_bar_s": 1.0,
+            "reservoir_m3": 0.3,
+            "restart_bar": 7.584233019
+          },
+          "previous_service_bar": 2.835,
+          "reservoir_bar": 8.816184477,
+          "vehicle": 1
+        }
+      ],
+      "cylinders": [
+        {
+          "air_isolated": false,
+          "air_vented": false,
+          "apply_ramp_rate_n_per_s": 800000.0,
+          "authored_response": false,
+          "automatic_pipe_bar": 2.795,
+          "current_force_n": 75600.0,
+          "ep_instant": true,
+          "full_pressure_bar": 4.5,
+          "handbrake_force_n": 78000.0,
+          "independent_force_n": 0.0,
+          "latched_command": 0.0,
+          "mass_kg": 40000.0,
+          "max_force_n": 120000.0,
+          "native_air_skid": false,
+          "position_m": 0.0,
+          "release_ramp_rate_n_per_s": 48000.0,
+          "shoe_friction": {
+            "mu_at_zero_kph": 1.0,
+            "points_kph": [
+              [
+                0.0,
+                1.0
+              ]
+            ]
+          },
+          "skid_adhesion_mu": 0.0,
+          "state": "Charged",
+          "time_pending_s": 0.0,
+          "transfer_only": false
+        },
+        {
+          "air_isolated": false,
+          "air_vented": false,
+          "apply_ramp_rate_n_per_s": 800000.0,
+          "authored_response": false,
+          "automatic_pipe_bar": 2.795,
+          "current_force_n": 75600.0,
+          "ep_instant": true,
+          "full_pressure_bar": 4.5,
+          "handbrake_force_n": 78000.0,
+          "independent_force_n": 0.0,
+          "latched_command": 0.0,
+          "mass_kg": 40000.0,
+          "max_force_n": 120000.0,
+          "native_air_skid": false,
+          "position_m": 20.0,
+          "release_ramp_rate_n_per_s": 48000.0,
+          "shoe_friction": {
+            "mu_at_zero_kph": 1.0,
+            "points_kph": [
+              [
+                0.0,
+                1.0
+              ]
+            ]
+          },
+          "skid_adhesion_mu": 0.0,
+          "state": "Charged",
+          "time_pending_s": 0.0,
+          "transfer_only": false
+        }
+      ],
+      "emergency": false,
+      "ep_only_wire": false,
+      "independent_command": 0.0,
+      "pipe_speed_mps": 200.0,
+      "prev_command": 0.63,
+      "train_air_full_release_s": 3.0,
+      "train_air_lap_hold": false
+    },
+    "power": {
+      "auxiliary_w": 0.0,
+      "bus_source": [
+        null,
+        null
+      ],
+      "cars": [
+        {
+          "supply": {
+            "auxiliary": false,
+            "auxiliary_started_s": null,
+            "cab": false,
+            "dynamic_brake_available": false,
+            "low_voltage": false,
+            "main": false,
+            "main_started_s": null,
+            "minimum_diesel_rpm": 0.0,
+            "relay_started_s": null,
+            "train_supply": false
+          },
+          "vehicle": 0
+        },
+        {
+          "supply": {
+            "auxiliary": false,
+            "auxiliary_started_s": null,
+            "cab": false,
+            "dynamic_brake_available": false,
+            "low_voltage": false,
+            "main": false,
+            "main_started_s": null,
+            "minimum_diesel_rpm": 0.0,
+            "relay_started_s": null,
+            "train_supply": false
+          },
+          "vehicle": 1
+        }
+      ],
+      "energy_j": 0.0,
+      "hotel_mode": "auto",
+      "hotel_w": 0.0,
+      "initialized": true,
+      "last_energy_time_s": 19.95000000000015,
+      "source_hotel_w": {}
+    },
+    "service": {
+      "accrued_penalty": 37.5,
+      "arrival": [
+        0.05,
+        0.0,
+        0.0
+      ],
+      "boarding_elapsed_s": 0.0,
+      "departure_hold": false,
+      "destination": "Terminal",
+      "destination_node": "b",
+      "failure": null,
+      "missed_stop_policy": "fail",
+      "missed_stops": [],
+      "next_stop_idx": 0,
+      "overspeed_active": false,
+      "passed_stops": [],
+      "penalty_per_second_late": 1.0,
+      "phase": "boarding",
+      "quick_station_practice": false,
+      "shunting_completed_s": [],
+      "shunting_steps": [],
+      "stop_results": [],
+      "stop_targets": [
+        {
+          "arrive_s": 0.0,
+          "cum_dist_m": 0.0,
+          "depart_s": 5.0,
+          "dwell_s": 5.0,
+          "is_terminal": false,
+          "name": "Taller",
+          "node_id": "a",
+          "passengers_off": 0,
+          "passengers_on": 0
+        },
+        {
+          "arrive_s": 90.0,
+          "cum_dist_m": 500.0,
+          "depart_s": 95.0,
+          "dwell_s": 5.0,
+          "is_terminal": false,
+          "name": "Parada intermedia",
+          "node_id": "mid",
+          "passengers_off": 0,
+          "passengers_on": 0
+        },
+        {
+          "arrive_s": 160.0,
+          "cum_dist_m": 1000.0,
+          "depart_s": 160.0,
+          "dwell_s": 5.0,
+          "is_terminal": true,
+          "name": "Terminal",
+          "node_id": "b",
+          "passengers_off": 0,
+          "passengers_on": 0
+        }
+      ]
+    },
+    "time_s": 20.00000000000015
+  },
+  "nondefault_initial": {
+    "brake_equipment": [
+      {
+        "cooled_j": 42590.087530911114,
+        "delay_s": 0.0,
+        "dissipated_j": 0.0,
+        "electric_force_n": 0.0,
+        "friction_force_n": 78000.0,
+        "heat_j": 2300.0,
+        "pressure_fraction": 1.0,
+        "previous_speed_mps": 0.0,
+        "ramped_force_n": 0.0,
+        "regenerative_w": 0.0,
+        "returned_j": 0.0,
+        "rheostatic_w": 0.0,
+        "sliding": false,
+        "started_s": null,
+        "temperature_c": 76.57409912469089,
+        "traction_cut": false,
+        "traction_fraction": 1.0,
+        "wheel_speed_mps": 0.0
+      }
+    ],
+    "formation": {
+      "cars": [
+        {
+          "battery_on": false,
+          "front_cock_open": true,
+          "handbrake": true,
+          "hose_connected": true,
+          "length_m": 20.0,
+          "mass_kg": 40000.0,
+          "mu_connected": true,
+          "name": "DiÃ©sel sintÃ©tico de prueba",
+          "power_on": true,
+          "powered": true,
+          "rear_cock_open": true,
+          "train_bus_connected": true,
+          "train_supply_switch_on": false
+        },
+        {
+          "battery_on": false,
+          "front_cock_open": true,
+          "handbrake": true,
+          "hose_connected": true,
+          "length_m": 20.0,
+          "mass_kg": 40000.0,
+          "mu_connected": true,
+          "name": "DiÃ©sel sintÃ©tico de prueba",
+          "power_on": true,
+          "powered": true,
+          "rear_cock_open": true,
+          "train_bus_connected": true,
+          "train_supply_switch_on": false
+        }
+      ],
+      "coupled_count": 2,
+      "parked_brakes": [],
+      "parked_couplers": [],
+      "parked_head_chainage_m": null,
+      "parked_vehicles": []
+    },
+    "head_m": 0.0,
+    "motor_fuel": [
+      {
+        "consumed_l": 31.0,
+        "fuel_l": 469.0,
+        "refilled_l": 0.0
+      },
+      {
+        "consumed_l": 31.0,
+        "fuel_l": 469.0,
+        "refilled_l": 0.0
+      }
+    ],
+    "native_fuel": {
+      "cars": [
+        {
+          "command_running": true,
+          "consumed_l": 0.0,
+          "cooling_on": false,
+          "demanded_rpm": 300.0,
+          "flow_lps": 0.0,
+          "fuel_l": 25.0,
+          "phase": "Running",
+          "refilled_l": 0.0,
+          "rpm": 300.0,
+          "temperature_c": 40.137908935546875,
+          "vehicle": 0
+        },
+        {
+          "command_running": true,
+          "consumed_l": 0.0006638358604178454,
+          "cooling_on": false,
+          "demanded_rpm": 0.0,
+          "flow_lps": 0.0,
+          "fuel_l": 24.99933616413958,
+          "phase": "Stopped",
+          "refilled_l": 0.0,
+          "rpm": 0.0,
+          "temperature_c": 40.137908935546875,
+          "vehicle": 1
+        }
+      ],
+      "initialized": true
+    },
+    "pneumatic_brakes": {
+      "circuits": [
+        {
+          "charged_bar_m3": 0.0,
+          "compressor_on": false,
+          "independent_bar": 0.0,
+          "params": {
+            "application_bar_s": 1.0,
+            "charging_bar_s": 0.0844375,
+            "maximum_bar": 8.963184477,
+            "release_bar_s": 1.0,
+            "reservoir_m3": 0.3,
+            "restart_bar": 7.584233019
+          },
+          "previous_service_bar": 2.835,
+          "reservoir_bar": 8.816184477,
+          "vehicle": 0
+        },
+        {
+          "charged_bar_m3": 0.0,
+          "compressor_on": false,
+          "independent_bar": 0.0,
+          "params": {
+            "application_bar_s": 1.0,
+            "charging_bar_s": 0.0844375,
+            "maximum_bar": 8.963184477,
+            "release_bar_s": 1.0,
+            "reservoir_m3": 0.3,
+            "restart_bar": 7.584233019
+          },
+          "previous_service_bar": 2.835,
+          "reservoir_bar": 8.816184477,
+          "vehicle": 1
+        }
+      ],
+      "cylinders": [
+        {
+          "air_isolated": false,
+          "air_vented": false,
+          "apply_ramp_rate_n_per_s": 800000.0,
+          "authored_response": false,
+          "automatic_pipe_bar": 2.795,
+          "current_force_n": 75600.0,
+          "ep_instant": true,
+          "full_pressure_bar": 4.5,
+          "handbrake_force_n": 78000.0,
+          "independent_force_n": 0.0,
+          "latched_command": 0.0,
+          "mass_kg": 40000.0,
+          "max_force_n": 120000.0,
+          "native_air_skid": false,
+          "position_m": 0.0,
+          "release_ramp_rate_n_per_s": 48000.0,
+          "shoe_friction": {
+            "mu_at_zero_kph": 1.0,
+            "points_kph": [
+              [
+                0.0,
+                1.0
+              ]
+            ]
+          },
+          "skid_adhesion_mu": 0.0,
+          "state": "Charged",
+          "time_pending_s": 0.0,
+          "transfer_only": false
+        },
+        {
+          "air_isolated": false,
+          "air_vented": false,
+          "apply_ramp_rate_n_per_s": 800000.0,
+          "authored_response": false,
+          "automatic_pipe_bar": 2.795,
+          "current_force_n": 75600.0,
+          "ep_instant": true,
+          "full_pressure_bar": 4.5,
+          "handbrake_force_n": 78000.0,
+          "independent_force_n": 0.0,
+          "latched_command": 0.0,
+          "mass_kg": 40000.0,
+          "max_force_n": 120000.0,
+          "native_air_skid": false,
+          "position_m": 20.0,
+          "release_ramp_rate_n_per_s": 48000.0,
+          "shoe_friction": {
+            "mu_at_zero_kph": 1.0,
+            "points_kph": [
+              [
+                0.0,
+                1.0
+              ]
+            ]
+          },
+          "skid_adhesion_mu": 0.0,
+          "state": "Charged",
+          "time_pending_s": 0.0,
+          "transfer_only": false
+        }
+      ],
+      "emergency": false,
+      "ep_only_wire": false,
+      "independent_command": 0.0,
+      "pipe_speed_mps": 200.0,
+      "prev_command": 0.63,
+      "train_air_full_release_s": 3.0,
+      "train_air_lap_hold": false
+    },
+    "power": {
+      "auxiliary_w": 0.0,
+      "bus_source": [
+        null,
+        null
+      ],
+      "cars": [
+        {
+          "supply": {
+            "auxiliary": false,
+            "auxiliary_started_s": null,
+            "cab": false,
+            "dynamic_brake_available": false,
+            "low_voltage": false,
+            "main": false,
+            "main_started_s": null,
+            "minimum_diesel_rpm": 0.0,
+            "relay_started_s": null,
+            "train_supply": false
+          },
+          "vehicle": 0
+        },
+        {
+          "supply": {
+            "auxiliary": false,
+            "auxiliary_started_s": null,
+            "cab": false,
+            "dynamic_brake_available": false,
+            "low_voltage": false,
+            "main": false,
+            "main_started_s": null,
+            "minimum_diesel_rpm": 0.0,
+            "relay_started_s": null,
+            "train_supply": false
+          },
+          "vehicle": 1
+        }
+      ],
+      "energy_j": 0.0,
+      "hotel_mode": "auto",
+      "hotel_w": 0.0,
+      "initialized": true,
+      "last_energy_time_s": 4.94999999999999,
+      "source_hotel_w": {}
+    },
+    "service": {
+      "accrued_penalty": 37.5,
+      "arrival": [
+        0.05,
+        0.0,
+        0.0
+      ],
+      "boarding_elapsed_s": 0.0,
+      "departure_hold": false,
+      "destination": "Terminal",
+      "destination_node": "b",
+      "failure": null,
+      "missed_stop_policy": "fail",
+      "missed_stops": [],
+      "next_stop_idx": 0,
+      "overspeed_active": false,
+      "passed_stops": [],
+      "penalty_per_second_late": 1.0,
+      "phase": "boarding",
+      "quick_station_practice": false,
+      "shunting_completed_s": [],
+      "shunting_steps": [],
+      "stop_results": [],
+      "stop_targets": [
+        {
+          "arrive_s": 0.0,
+          "cum_dist_m": 0.0,
+          "depart_s": 5.0,
+          "dwell_s": 5.0,
+          "is_terminal": false,
+          "name": "Taller",
+          "node_id": "a",
+          "passengers_off": 0,
+          "passengers_on": 0
+        },
+        {
+          "arrive_s": 90.0,
+          "cum_dist_m": 500.0,
+          "depart_s": 95.0,
+          "dwell_s": 5.0,
+          "is_terminal": false,
+          "name": "Parada intermedia",
+          "node_id": "mid",
+          "passengers_off": 0,
+          "passengers_on": 0
+        },
+        {
+          "arrive_s": 160.0,
+          "cum_dist_m": 1000.0,
+          "depart_s": 160.0,
+          "dwell_s": 5.0,
+          "is_terminal": true,
+          "name": "Terminal",
+          "node_id": "b",
+          "passengers_off": 0,
+          "passengers_on": 0
+        }
+      ]
+    },
+    "time_s": 4.99999999999999
+  },
+  "pneumatic_state_evolved": false,
+  "protected_state_matches_control_at_midway_and_finish": true,
+  "scope": "Fuel, battery, pneumatic/thermal brakes and service continuity compared against an identical-time control; physical pressure/cooling evolution is retained. Finite transfer ends a work cycle but does not imply every circuit was repaired.",
+  "source_scope": "Compiled source32, owned depot fixture; no Cargo or runtime changes",
+  "status": "pass",
+  "thermal_brake_state_evolved": true,
+  "unknown_depot_error": "Estacioná en el depósito, poné neutro, asegurá todos los frenos de mano y detené/enfriá los motores",
+  "used_coolant_l": 70.0,
+  "used_oil_l": 50.0
+}

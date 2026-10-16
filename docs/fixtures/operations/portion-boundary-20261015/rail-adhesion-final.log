@@ -1,0 +1,14 @@
+   Compiling openrailsrs-sim v0.1.0 (/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/crates/openrailsrs-sim)
+    Finished `test` profile [optimized] target(s) in 6.28s
+     Running tests/rail_adhesion.rs (target/debug/deps/rail_adhesion-e0209aaa28fae1ac)
+
+running 6 tests
+test detached_sandbox_is_retained_without_delivery_and_recoupling_does_not_refill_it ... ok
+test dry_native_contact_preserves_the_pinned_diesel_dynamics_without_double_limiting ... ok
+test native_wet_drive_and_sanding_reduce_rail_force_without_changing_driver_notch ... ok
+test steam_and_electric_fallbacks_have_physical_contact_and_keep_power_interlocks ... ok
+test steam_racing_wheels_use_power_and_steam_within_the_authors_limits ... ok
+test sandbox_phase_and_surface_survive_save_restore_and_corruption_is_atomic ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+

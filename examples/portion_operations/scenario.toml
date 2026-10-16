@@ -1,0 +1,24 @@
+[scenario]
+name = "Porciones: dos cortes con identidad"
+description = "F9: asegurá los cuatro vagones; separá detrás del coche 3 y después del coche 1. Guardá. Elegí cada sección por su nombre para recogerla desde delante o detrás; una vía distinta o un enganche distante no permiten el acople."
+[route]
+path = "../yard_training/route"
+start = "a"
+destination = "destination"
+start_offset_m = 200.0
+assume_signals_clear = true
+[train]
+consist = "consists/five.con"
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+[simulation]
+duration = 1800.0
+time_step = 0.05
+seed = 42
+multi_body = true
+coupler_kind = "freight"
+train_air_lap_hold = true
+[output]
+csv = "run.csv"
+metadata = "run.json"

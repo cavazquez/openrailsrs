@@ -74,14 +74,18 @@ pub fn shadows(
     let reach =
         (crate::scene::shadow_distance_m() / budget.vegetation_divisor.max(1) as f32).max(60.);
     for (mut cascade, mut light) in &mut lights {
-        *cascade = CascadeShadowConfigBuilder {
-            num_cascades: if budget.vegetation_divisor >= 4 { 2 } else { 3 },
-            maximum_distance: reach,
-            first_cascade_far_bound: reach.min(24.),
-            overlap_proportion: 0.2,
-            ..default()
-        }
-        .build();
+        *cascade = if budget.vegetation_divisor == 1 {
+            crate::scene::shadow_cascade_config(reach)
+        } else {
+            CascadeShadowConfigBuilder {
+                num_cascades: if budget.vegetation_divisor >= 4 { 2 } else { 3 },
+                maximum_distance: reach,
+                first_cascade_far_bound: reach.min(10.),
+                overlap_proportion: 0.2,
+                ..default()
+            }
+            .build()
+        };
         light.shadow_maps_enabled = settings.shadows;
         // Conservative biases suppress foliage acne without detaching wheel shadows.
         light.shadow_depth_bias = 0.02;
@@ -104,5 +108,25 @@ mod tests {
         let pressure = RenderBudget::allocate(40, 8192, 0, true);
         assert!(pressure.particles < regular.particles);
         assert!(pressure.station_lights < regular.station_lights);
+    }
+    #[test]
+    fn full_quality_keeps_the_same_near_shadow_cascade_as_scene_startup() {
+        let mut app = App::new();
+        app.insert_resource(RenderBudget::default())
+            .insert_resource(crate::player_settings::PlayerSettings::default())
+            .add_systems(Update, shadows);
+        let expected = crate::scene::shadow_cascade_config(crate::scene::shadow_distance_m());
+        let entity = app
+            .world_mut()
+            .spawn((
+                crate::route_lighting::RouteSunLight,
+                expected.clone(),
+                DirectionalLight::default(),
+            ))
+            .id();
+        app.update();
+        let current = app.world().get::<CascadeShadowConfig>(entity).unwrap();
+        assert_eq!(current.bounds, expected.bounds);
+        assert_eq!(current.minimum_distance, expected.minimum_distance);
     }
 }

@@ -1,0 +1,97 @@
+{
+  "schema": 1,
+  "wineserver_stop_returncode": 0,
+  "remaining_processes": [],
+  "forbidden_drivers_seen": [],
+  "observation_count": 47,
+  "commands": [
+    {
+      "args": [
+        "wine",
+        "reg",
+        "add",
+        "HKCU\\Software\\Wine\\Drivers",
+        "/v",
+        "Graphics",
+        "/t",
+        "REG_SZ",
+        "/d",
+        "null",
+        "/f"
+      ],
+      "pid": 194997,
+      "returncode": 0,
+      "elapsed_s": 1.0291056919995754,
+      "log": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/next-ten-20261015/track-sound-capture02/wine-isolation/registry-set-0.log"
+    },
+    {
+      "args": [
+        "wine",
+        "reg",
+        "add",
+        "HKCU\\Software\\Wine\\WineDbg",
+        "/v",
+        "ShowCrashDialog",
+        "/t",
+        "REG_DWORD",
+        "/d",
+        "0",
+        "/f"
+      ],
+      "pid": 195069,
+      "returncode": 0,
+      "elapsed_s": 0.1680410410008335,
+      "log": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/next-ten-20261015/track-sound-capture02/wine-isolation/registry-set-1.log"
+    },
+    {
+      "args": [
+        "wine",
+        "reg",
+        "query",
+        "HKCU\\Software\\Wine\\WineDbg",
+        "/v",
+        "ShowCrashDialog"
+      ],
+      "pid": 195072,
+      "returncode": 0,
+      "elapsed_s": 0.11432615300145699,
+      "log": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/next-ten-20261015/track-sound-capture02/wine-isolation/registry-query.log"
+    },
+    {
+      "args": [
+        "wine",
+        "C:\\windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe",
+        "/nologo",
+        "/out:TrackSoundReference.exe",
+        "/r:RunActivity.exe",
+        "/r:Orts.Simulation.dll",
+        "/r:Orts.Common.dll",
+        "/r:Orts.Settings.dll",
+        "/r:Orts.Formats.Msts.dll",
+        "/r:Orts.Parsers.Msts.dll",
+        "/r:MonoGame.Framework.dll",
+        "/r:Newtonsoft.Json.dll",
+        "Z:\\home\\cristian\\repos\\propios\\ProyectoOpenRails\\openrailsrs\\tools\\openrails-reference\\TrackSoundReference.cs"
+      ],
+      "pid": 195075,
+      "returncode": 0,
+      "elapsed_s": 0.29167171099834377,
+      "log": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/next-ten-20261015/track-sound-capture02/compile.log"
+    },
+    {
+      "args": [
+        "wine",
+        "TrackSoundReference.exe",
+        "Z:\\home\\cristian\\repos\\propios\\ProyectoOpenRails\\openrailsrs\\docs\\fixtures\\compatibility\\track-sound-or161\\input.json",
+        "Z:\\home\\cristian\\Documentos\\Open Rails\\Content\\Demo Model 1\\ROUTES\\SCE",
+        "Z:\\home\\cristian\\Documentos\\Open Rails\\Content\\Demo Model 1\\global\\TSECTION.DAT",
+        "Z:\\home\\cristian\\repos\\propios\\ProyectoOpenRails\\openrailsrs\\tmp\\next-ten-20261015\\track-sound-capture02\\reference.json"
+      ],
+      "pid": 195079,
+      "returncode": 0,
+      "elapsed_s": 1.0937479439999152,
+      "log": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/next-ten-20261015/track-sound-capture02/capture.log"
+    }
+  ],
+  "only_private_prefix": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/next-ten-20261015/track-sound-prefix02"
+}

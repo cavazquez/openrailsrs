@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "status": "DECLARED_BEFORE_FIRST_EXECUTION",
+  "scope": "Real Rust drive and offline original-sample PCM acceptance; no acoustic or full-journey OR equivalence claim",
+  "original_consist": "TRAINS/CONSISTS/MT_MT_Class 47 & 6 mk2 PP.con",
+  "original_consist_sha256": "377806c6baceef9a4d59ccb45a8f747da1a0224a86e472d1fcfe28618f7ffd8e",
+  "native_reference_sha256": "822005282be251c55f0b727299895acc86c83116c7bc6036fa798e5dd6a3d922",
+  "vehicle_count": 7,
+  "controls": {
+    "step_s": 0.05,
+    "forward_and_reverse_speed_control_target_mps": 8,
+    "throttle_below_target": 0.65,
+    "throttle_above_target": 0.05,
+    "full_service_brake_at_targets": 1,
+    "maximum_ticks": 12000
+  },
+  "acceptance": {
+    "all_cars_observe_track_types": [
+      0,
+      3,
+      7
+    ],
+    "native_type_intervals": "exact, same-valued adjacent native probes with no original boundary or ten-metre hold decision inside",
+    "native_interval_checks": "at least one per encountered type per car",
+    "moving_different_regions_under_same_formation": true,
+    "stop_before_reversing": true,
+    "pause_zero_elapsed_physics_steps": 20,
+    "save_restore_during_split_region": "exact raw type per car",
+    "pcm": "original SMS/WAV; effective-type seed at cut and 1.8 s = 10 tau held end frame for bank inspection",
+    "per_car_active_track_program": "exact TTYPE.DAT bank after crossfade; no other rolling-region bank overlay",
+    "paused_pcm_inner_interval_s": [
+      0.6,
+      0.95
+    ],
+    "paused_pcm_samples": "all zero",
+    "audio_device_opened": false,
+    "wine_or_gpu": false,
+    "active_voice_gain_threshold": 0.0001,
+    "selected_exterior_rolling_samples": "all required 0/3/7 programs have resolved original WAVs; stock events and inactive catalog gaps are recorded separately"
+  },
+  "asset_policy": "Read original route/CON/ENG/WAG/SMS/WAV without modification; record hashes and missing files; PCM and imported route remain under temporary output, not Git",
+  "revision": 2,
+  "previous_attempt": "track-sound-drive01: physics/native selection/PCM pause passed; final bank audit occurred before exponential crossfade settled"
+}

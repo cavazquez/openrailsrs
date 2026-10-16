@@ -13,6 +13,7 @@ pub mod msts_simisa;
 pub mod msts_tile_name;
 pub mod msts_units;
 pub mod parser;
+pub mod pat_operations;
 pub mod shape_binary;
 pub mod shape_binary_direct;
 pub mod shape_binary_reader;

@@ -14,6 +14,9 @@ import tomllib
 
 from run_oracles import ROOT, verify
 
+LIMITS = {"position_error_m": 3.0, "direction_error_deg": 1.0,
+          "fov_error_deg": 0.05, "aspect_error": 0.001}
+
 STATIONS = ("northolt-park", "south-ruislip", "west-ruislip",
             "denham", "denham-golf-course", "gerrards-cross")
 
@@ -40,8 +43,7 @@ def compare(native, camera):
 
 def check(report, references):
     results = {}
-    limits = {"position_error_m": 3.0, "direction_error_deg": 1.0,
-              "fov_error_deg": 0.05, "aspect_error": 0.001}
+    limits = dict(LIMITS)
     for station in STATIONS:
         for view in ("exterior", "cab"):
             key = station + ("-cab" if view == "cab" else "")

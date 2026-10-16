@@ -8,6 +8,19 @@ use crate::steam::BoilerState;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TrainSimState {
+    #[serde(default)]
+    pub freight: Vec<crate::activity_freight::FreightCar>,
+    /// Absent only in saves predating mechanical bogies. An explicit version
+    /// prevents a new save with erased states from masquerading as legacy.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bogie_state_version: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub activity: Option<crate::activity::ActivityRuntime>,
+    #[serde(default)]
+    pub bogies: Vec<crate::bogie_dynamics::VehicleBogieState>,
+    /// Operations that really executed, independent of reaching a PAT marker.
+    #[serde(default)]
+    pub pat_operations_completed: std::collections::BTreeSet<usize>,
     #[serde(default = "forward_reverser")]
     pub driver_reverser: f64,
     #[serde(default)]
@@ -112,6 +125,11 @@ pub struct TrainSimState {
 impl TrainSimState {
     pub fn new(path_edges: Vec<String>) -> Self {
         Self {
+            freight: vec![],
+            bogie_state_version: Some(1),
+            activity: None,
+            bogies: vec![],
+            pat_operations_completed: Default::default(),
             driver_reverser: 1.,
             steam_boilers: vec![],
             electric_brake_command: 0.,

@@ -1,0 +1,73 @@
+   Compiling openrailsrs-sim v0.1.0 (/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/crates/openrailsrs-sim)
+    Finished `test` profile [optimized] target(s) in 25.22s
+     Running tests/authored_coupling.rs (target/debug/deps/authored_coupling-efc3a58e3f3f3309)
+
+running 1 test
+test unauthored_contact_does_not_inherit_an_adjacent_authored_joint ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/native_couplers.rs (target/debug/deps/native_couplers-56bbd1bd119411fe)
+
+running 13 tests
+test absent_advanced_compression_force_does_not_invent_an_elastic_spring ... ok
+test contact_impulse_is_relative_energy_not_absolute_train_speed ... ok
+test invalid_authored_units_are_actionable_instead_of_becoming_newtons ... ok
+test reversing_a_stationary_virtual_axis_preserves_physical_deflection_and_history ... ok
+test restore_rejects_changed_hardware_nonfinite_history_and_impossible_buffer_states ... ok
+test mixed_rigid_contact_reaction_checks_warning_and_break_limits ... ok
+test compressed_stroke_contact_conserves_momentum_and_flags_excess_energy ... ok
+test rigid_constraint_diagnostic_is_not_clipped_to_an_elastic_loading_envelope ... ok
+test sustained_brakes_cannot_accelerate_a_stationary_native_formation_backwards ... ok
+test native_units_separate_advanced_forces_from_legacy_stiffness_and_orient_ends ... ok
+test two_buffers_share_force_and_their_travel_and_energy_add_in_series ... ok
+test turning_points_change_unloading_force_and_survive_save_restore ... ok
+test original_or161_dll_profiles_forces_and_stroke_impulses_match_declared_tolerances ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/sections_and_services.rs (target/debug/deps/sections_and_services-38785d84afbfe3d0)
+
+running 13 tests
+test a_front_pickup_keeps_the_rear_cab_in_control_of_its_own_pipe_component ... ok
+test rejects_duplicate_section_invalid_track_and_distant_pickup_without_losing_state ... ok
+test joining_transfers_both_authorities_and_split_partitions_the_same_physical_grant ... ok
+test a_future_service_cannot_be_collected_before_its_authorized_spawn ... ok
+test foreign_front_pickup_and_return_preserve_both_train_positions_and_identity ... ok
+test moving_backwards_cannot_cut_join_or_return_a_portion ... ok
+test parked_native_bearings_remain_with_their_vehicle_through_cut_pickup_and_restore ... ok
+test oldest_section_can_be_picked_at_front_then_restore_permuted_hardware ... ok
+test timetable_foreign_operations_use_physical_contact_and_preserve_progress_on_restore ... ok
+test reformed_train_drives_after_real_pressure_release_and_save_continues_identically ... ok
+test foreign_portion_returns_to_service_with_schedule_brakes_identity_and_save_replay ... ok
+test two_named_sections_preserve_track_brakes_and_resume_collecting_recent_first ... ok
+test control_swaps_between_transfers_replay_in_chronological_receiver_order ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/shunt_authority.rs (target/debug/deps/shunt_authority-812d8127a35d3250)
+
+running 2 tests
+test own_wheels_before_signal_do_not_block_a_bounded_authority_and_restore_preserves_it ... ok
+test another_train_invalid_distance_expiration_and_reversing_reject_or_revoke_authority ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/timetable_run.rs (target/debug/deps/timetable_run-fc273714f6b9feaf)
+
+running 1 test
+test two_trains_both_arrive ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/yard_operations.rs (target/debug/deps/yard_operations-f9d71ded1b70a6c7)
+
+running 5 tests
+test delivery_requires_exact_wagons_full_siding_and_secured_detachment_then_pickup_removes_acceptance ... ok
+test coupling_an_unstarted_parked_donor_produces_an_immediately_valid_supply_snapshot ... ok
+test depot_transfers_finite_oil_and_coolant_without_resetting_fuel_or_temperature ... ok
+test two_crews_deliver_distinct_wagon_lots_and_foreign_wagons_make_a_siding_invalid ... ok
+test independent_contact_moves_vehicles_once_preserves_pressure_fuel_and_can_reconstruct_a_save ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+

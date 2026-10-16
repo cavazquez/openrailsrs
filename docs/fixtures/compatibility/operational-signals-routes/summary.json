@@ -1,0 +1,97 @@
+{
+  "reference": "Open Rails 1.6.1",
+  "native_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "passed": true,
+  "route_installations": 10,
+  "installations_with_native_heads": 9,
+  "heads": 24489,
+  "links": 8995,
+  "contexts": 46848,
+  "counts": [
+    {
+      "route": "AU_Burrinjuck-2",
+      "heads": 70,
+      "links": 12,
+      "programs": 7,
+      "contexts": 672,
+      "status": "compiled_contexts_verified"
+    },
+    {
+      "route": "AU_Coal_to_Newcastle-4",
+      "heads": 1722,
+      "links": 358,
+      "programs": 36,
+      "contexts": 3456,
+      "status": "compiled_contexts_verified"
+    },
+    {
+      "route": "BNSF_Scenic-8",
+      "heads": 399,
+      "links": 229,
+      "programs": 15,
+      "contexts": 1440,
+      "status": "compiled_contexts_verified"
+    },
+    {
+      "route": "Chiltern-0",
+      "heads": 6183,
+      "links": 1896,
+      "programs": 144,
+      "contexts": 13824,
+      "status": "compiled_contexts_verified"
+    },
+    {
+      "route": "Chiltern-6",
+      "heads": 6184,
+      "links": 1898,
+      "programs": 143,
+      "contexts": 13728,
+      "status": "compiled_contexts_verified"
+    },
+    {
+      "route": "LIRR-7",
+      "heads": 0,
+      "links": 0,
+      "programs": 0,
+      "contexts": 0,
+      "status": "no_native_heads_imported_not_certified"
+    },
+    {
+      "route": "MidEastCoast-5",
+      "heads": 9117,
+      "links": 4426,
+      "programs": 96,
+      "contexts": 9216,
+      "status": "compiled_contexts_verified"
+    },
+    {
+      "route": "SCE",
+      "heads": 678,
+      "links": 146,
+      "programs": 38,
+      "contexts": 3648,
+      "status": "compiled_contexts_verified"
+    },
+    {
+      "route": "au_craven-3",
+      "heads": 11,
+      "links": 4,
+      "programs": 3,
+      "contexts": 288,
+      "status": "compiled_contexts_verified"
+    },
+    {
+      "route": "au_great_zig_zag-1",
+      "heads": 125,
+      "links": 26,
+      "programs": 6,
+      "contexts": 576,
+      "status": "compiled_contexts_verified"
+    }
+  ],
+  "artifacts_sha256": {
+    "receipt.json.gz": "1793396d59c3ae0647f832941c4ab187b7f1efef6db2fffd1d734fe2526c8afe",
+    "source-inputs.json": "50403989a4ca254cd6832aa6b6b623dda4980c0be51bd8ca5e67e493bea0d812"
+  },
+  "scope": "Authored programs evaluated with 96 contexts per program and link targets verified. Not a complete trip, dispatcher or permission certification. Chiltern old and v4 are separate content installations."
+}

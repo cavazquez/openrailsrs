@@ -1,0 +1,82 @@
+{
+  "schema": 1,
+  "status": "PASS",
+  "recorded_at_utc": "2026-10-15T23:25:20.964601+00:00",
+  "capture_directory": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/next-ten-20261015/track-sound-drive02",
+  "artifacts_sha256": {
+    "receipt.json": "a6fe93ee25b7ca72e23941aa61e5df1a9999ef967c27035c98b38e1c38d5f8e7",
+    "scenario.toml": "4fbfda097c55fd5bd81566d7b2fa2b63644da82371118a8d72c10a44d1f731c6",
+    "protocol.json": "80809226a39d9004af279147b1d77f2fc79ca59eb5797ca66cdedca1a1f101d2",
+    "drive.json.gz": "f75c2af5fd8284d6ccc8e9191f9b31c4e4051b8831324ddec2deb559e3385dff",
+    "attempt01/receipt.json.gz": "c9d96ddaa551adf2d7f9574b07750388af4725ea375d8e4aa843fbe83166526e",
+    "attempt01/protocol.json": "88844afd887f7c87027a0c16ac73864ee805043c2de39dff9a1d3209d531e692",
+    "attempt01/summary.json": "c4613398775745ff02ecd8f3e545032d9f25ba7b33743e5631c2391ca36288c3"
+  },
+  "drive_uncompressed_sha256": "f91faa8b68a66a38dd292e4ceaeeedb69a0437a1a17f8c82dda34d4df83cf8ce",
+  "native_reference": "../track-sound-or161/reference.json",
+  "native_reference_sha256": "822005282be251c55f0b727299895acc86c83116c7bc6036fa798e5dd6a3d922",
+  "tested_executable_sha256": "fb6f7efdc50ab1212c674343b6d7b6bbfb956c8e6f49f6114ed7fd56167a4096",
+  "source_example_sha256_observed_before_and_after_run": "2f2fc2d85af81b266014fc4db3b93f061584db5a895197ecca613b36b5723c8e",
+  "source_hash_scope": "Observed source bytes and tested executable identify this measurement. They do not assert that current HEAD alone contains the implementation or freeze future source formatting.",
+  "protocol_revision_scope": "Revision 1 and active gain threshold were fixed before attempt01. Revision 2 was declared before attempt02 and only extends observation to 1.8 seconds (10 tau); its retained initial status header does not claim this procedural revision preceded attempt01.",
+  "pcm_files": {
+    "transition-0.wav": {
+      "bytes": 529140,
+      "format": "PCM signed16 stereo 44100Hz",
+      "frames": 132274,
+      "nonzero_samples": 263564,
+      "peak": 20347,
+      "sha256": "32575ed9811e415e559e7e626ecb71a1c7ebc2d7408495468dc48a8607c9d48a"
+    },
+    "transition-1.wav": {
+      "bytes": 529140,
+      "format": "PCM signed16 stereo 44100Hz",
+      "frames": 132274,
+      "nonzero_samples": 263556,
+      "peak": 19890,
+      "sha256": "c86a0d1ce0e1f36a1d3977e301ea59c4c19d3218a6940889385e43be43256e33"
+    },
+    "transition-2.wav": {
+      "bytes": 529140,
+      "format": "PCM signed16 stereo 44100Hz",
+      "frames": 132274,
+      "nonzero_samples": 263572,
+      "peak": 19254,
+      "sha256": "389a790c4dd469f94bfae8de5297035e01378c4664c630a20747014e0b11425f"
+    },
+    "transition-3.wav": {
+      "bytes": 529140,
+      "format": "PCM signed16 stereo 44100Hz",
+      "frames": 132274,
+      "nonzero_samples": 263574,
+      "peak": 19081,
+      "sha256": "71d2958789b4e706decdf7b527043ad1bc73f66d0ec14b8359c300b648357713"
+    },
+    "transition-4.wav": {
+      "bytes": 529140,
+      "format": "PCM signed16 stereo 44100Hz",
+      "frames": 132274,
+      "nonzero_samples": 263576,
+      "peak": 19866,
+      "sha256": "59e205feceedfd5c89085ff078e20bc64d4d9f7330077d85dc88d8316c303137"
+    },
+    "transition-5.wav": {
+      "bytes": 529140,
+      "format": "PCM signed16 stereo 44100Hz",
+      "frames": 132274,
+      "nonzero_samples": 263554,
+      "peak": 20862,
+      "sha256": "1c539bd2375f98db7b99e9522907c1ca3fd3b88268ef5b9c4f67214aa6213662"
+    },
+    "pause-resume.wav": {
+      "bytes": 264596,
+      "format": "PCM signed16 stereo 44100Hz",
+      "frames": 66138,
+      "nonzero_samples": 87594,
+      "peak": 17212,
+      "sha256": "1622769ec42608c804a8f7bda3873fd8b63214c09536eb2bc893403562557ee9"
+    }
+  },
+  "source_assets_and_pcm_stored_in_git": false,
+  "scope": "Measured Rust drive and device-free PCM acceptance. Original native GetTType fixtures and tolerances remain unchanged; no full-journey OR, listening, or acoustic parity claim."
+}

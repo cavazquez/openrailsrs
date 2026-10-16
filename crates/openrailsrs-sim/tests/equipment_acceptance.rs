@@ -102,6 +102,15 @@ fn hotel_bus_detachment_and_reconnection_keep_source_delays_and_save_state() {
     restored.restore_snapshot(s.snapshot()).unwrap();
     s.recouple().unwrap();
     restored.recouple().unwrap();
+    // Manual coupling leaves the new train-bus connection disconnected until
+    // the crew connects it; waiting alone must not energize the hotel cars.
+    s.step_realtime(1., |_| {});
+    restored.step_realtime(1., |_| {});
+    assert_eq!(s.state.power_supply, restored.state.power_supply);
+    assert!(!s.state.power_supply.vehicle_supplied(2));
+    assert_eq!(s.state.power_supply.hotel_w, 0.);
+    s.operate_car(1, CarOperation::TrainBus).unwrap();
+    restored.operate_car(1, CarOperation::TrainBus).unwrap();
     s.step_realtime(1., |_| {});
     restored.step_realtime(1., |_| {});
     assert_eq!(s.state.power_supply, restored.state.power_supply);

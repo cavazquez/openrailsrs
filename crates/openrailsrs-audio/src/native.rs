@@ -21,6 +21,8 @@ use std::{
 #[derive(Clone, Debug)]
 pub struct ConsistSoundSpec {
     pub vehicle_offset: usize,
+    /// Optional original CON index -> current physical vehicle index.
+    pub vehicle_mapping: Option<HashMap<usize, usize>>,
     pub id: usize,
     pub consist: PathBuf,
     pub route: PathBuf,
@@ -52,6 +54,8 @@ pub struct SoundState {
     pub doors: bool,
     pub headlights: u8,
     pub curve_squeal: bool,
+    /// Native WORLD region index; None retains the previous rolling sound.
+    pub track_type: Option<u32>,
     pub coupler_contact: i8,
     pub coupler_force_n: f32,
     pub coupler_relative_speed: f32,
@@ -272,6 +276,8 @@ impl TrainSoundFrame {
 }
 #[derive(Clone, Debug, Default)]
 pub struct SoundFrame {
+    pub vehicle_layout_generation: u64,
+    pub vehicle_remapping: Arc<[SoundVehicleRemap]>,
     pub time_s: f64,
     pub cab: bool,
     pub passenger: bool,
@@ -287,6 +293,13 @@ pub struct SoundFrame {
     pub cover: f32,
     pub rain_surface: crate::weather::RainSurface,
     pub trains: Vec<TrainSoundFrame>,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct SoundVehicleRemap {
+    /// Original bank slot at engine startup, independent of later reordering.
+    pub source: (usize, usize),
+    pub current: (usize, usize),
 }
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct SoundReport {
@@ -326,6 +339,8 @@ pub struct VoiceReport {
     pub train: usize,
     pub vehicle: usize,
     pub program: String,
+    /// The original TTYPE.DAT bank, when this voice belongs to a track region.
+    pub track_type: Option<u32>,
     pub stream: usize,
     pub resource: String,
     pub trigger: String,
@@ -355,7 +370,7 @@ struct Bank {
     location: SoundLocation,
     program: SmsProgram,
     program_name: String,
-    curve_only: bool,
+    track_type: Option<u32>,
     samples: HashMap<String, Wave>,
     pending_samples: HashMap<String, PathBuf>,
     read_parse_us: u64,
@@ -383,7 +398,12 @@ impl Bank {
         }
         match self.location {
             SoundLocation::Cab | SoundLocation::Passenger => {
-                self.train == 0 && self.vehicle == listener_vehicle && self.location == listener
+                self.train == 0
+                    && self.vehicle == listener_vehicle
+                    && (self.location == listener
+                        || self.track_type.is_some()
+                            && self.location == SoundLocation::Passenger
+                            && listener == SoundLocation::Cab)
             }
             SoundLocation::Exterior => {
                 self.train != 0 || listener == SoundLocation::Exterior || !has_interior
@@ -394,6 +414,7 @@ impl Bank {
 pub struct NativeSoundBank {
     banks: Vec<Bank>,
     external_pass_through: HashMap<(usize, usize), f32>,
+    track_catalogs: HashMap<usize, (usize, Option<u32>)>,
     pub report: SoundReport,
     pool: WavePool,
 }
@@ -567,16 +588,38 @@ fn external_pass_through(ast: &openrailsrs_formats::Ast) -> Option<f32> {
     (percent.is_finite() && percent >= 0.0).then(|| percent.min(100.0) / 100.0)
 }
 
-fn curve_sound_refs(route: &Path) -> Vec<(String, SoundLocation)> {
-    let route = resolve_path_case_insensitive(route).unwrap_or_else(|| route.into());
-    let entries = std::fs::read_dir(&route)
-        .ok()
-        .into_iter()
-        .flatten()
-        .filter_map(Result::ok)
-        .map(|e| e.path());
-    let mut index = None;
-    fn find(a: &openrailsrs_formats::Ast) -> Option<usize> {
+#[derive(Default)]
+struct TrackSoundCatalog {
+    refs: Vec<(String, SoundLocation, Option<u32>)>,
+    count: usize,
+    curve: Option<u32>,
+    warnings: Vec<String>,
+}
+fn track_sound_catalog(route: &Path) -> TrackSoundCatalog {
+    let mut result = TrackSoundCatalog::default();
+    let Some(file) = resolve_path_case_insensitive(&route.join("ttype.dat")) else {
+        return result;
+    };
+    let types = match openrailsrs_formats::typed::track_sound::TrackSoundTypes::from_path(&file) {
+        Ok(types) => types,
+        Err(error) => {
+            result.warnings.push(format!("ttype.dat: {error}"));
+            return result;
+        }
+    };
+    result.count = types.types.len();
+    result.warnings = types.warnings;
+    for (index, t) in types.types.into_iter().enumerate() {
+        for (name, location) in [
+            (t.inside, SoundLocation::Passenger),
+            (t.outside, SoundLocation::Exterior),
+        ] {
+            if !name.is_empty() {
+                result.refs.push((name, location, Some(index as u32)));
+            }
+        }
+    }
+    fn find(a: &openrailsrs_formats::Ast) -> Option<u32> {
         if sms::block(a, "ORTSCurveSMSNumber") {
             return sms::items(a).get(1).and_then(sms::text)?.parse().ok();
         }
@@ -585,43 +628,48 @@ fn curve_sound_refs(route: &Path) -> Vec<(String, SoundLocation)> {
             .filter(|c| matches!(c, openrailsrs_formats::Ast::List(_)))
             .find_map(find)
     }
-    for file in entries.filter(|p| p.extension().is_some_and(|e| e.eq_ignore_ascii_case("trk"))) {
-        index = read_msts_file_to_string(&file)
-            .ok()
-            .and_then(|s| parse_named_stf(&s).ok())
-            .and_then(|a| find(&a));
-        if index.is_some() {
-            break;
-        }
-    }
-    let Some(index) = index else {
-        return vec![];
-    };
-    let Some(path) = resolve_path_case_insensitive(&route.join("ttype.dat")) else {
-        return vec![];
-    };
-    let Ok(text) = read_msts_file_to_string(&path) else {
-        return vec![];
-    };
-    let text = text
-        .lines()
-        .filter(|l| !l.starts_with("SIMISA"))
-        .collect::<Vec<_>>()
-        .join("\n");
-    let Ok(ast) = parse_named_stf(&format!("TrackTypes ( {text} )")) else {
-        return vec![];
-    };
-    let types = sms::items(&ast)
-        .iter()
-        .filter(|a| sms::block(a, "TrackType"))
-        .collect::<Vec<_>>();
-    let Some(t) = types.get(index) else {
-        return vec![];
-    };
-    [(2, SoundLocation::Passenger), (3, SoundLocation::Exterior)]
+    let mut files: Vec<_> = std::fs::read_dir(route)
+        .ok()
         .into_iter()
-        .filter_map(|(i, location)| Some((sms::items(t).get(i).and_then(sms::text)?, location)))
-        .collect()
+        .flatten()
+        .filter_map(Result::ok)
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|e| e.eq_ignore_ascii_case("trk")))
+        .collect();
+    files.sort();
+    result.curve = files
+        .iter()
+        .find_map(|p| {
+            read_msts_file_to_string(p)
+                .ok()
+                .and_then(|s| parse_named_stf(&s).ok())
+                .and_then(|a| find(&a))
+        })
+        .filter(|i| (*i as usize) < result.count);
+    result
+}
+
+fn selected_track_type(
+    state: SoundState,
+    previous: SoundState,
+    count: usize,
+    curve: Option<u32>,
+) -> u32 {
+    let previous = previous
+        .track_type
+        .filter(|i| Some(*i) != curve)
+        .unwrap_or(0);
+    let authored = state.track_type.unwrap_or(previous);
+    let authored = if (authored as usize) < count {
+        authored
+    } else {
+        0
+    };
+    if state.curve_squeal {
+        curve.unwrap_or(authored)
+    } else {
+        authored
+    }
 }
 
 fn resolve_sample(dirs: &[PathBuf], name: &str) -> Option<PathBuf> {
@@ -705,6 +753,7 @@ impl NativeSoundBank {
         let mut result = Self {
             banks: vec![],
             external_pass_through: HashMap::new(),
+            track_catalogs: HashMap::new(),
             report: SoundReport::default(),
             pool: WavePool::default(),
         };
@@ -723,11 +772,25 @@ impl NativeSoundBank {
                     continue;
                 }
             };
-            let curve_refs = curve_sound_refs(&spec.route);
+            let track_catalog = track_sound_catalog(&spec.route);
+            result
+                .report
+                .warnings
+                .extend(track_catalog.warnings.iter().cloned());
+            result
+                .track_catalogs
+                .insert(spec.id, (track_catalog.count, track_catalog.curve));
             // A program per vehicle is needed for distinct rolling sound. Share
             // decoded WAVs even when the same program serves all eight coaches.
             for (vehicle, entry) in entries.into_iter().enumerate() {
-                let vehicle = vehicle + spec.vehicle_offset;
+                let vehicle = if let Some(mapping) = &spec.vehicle_mapping {
+                    let Some(target) = mapping.get(&vehicle) else {
+                        continue;
+                    };
+                    *target
+                } else {
+                    vehicle + spec.vehicle_offset
+                };
                 let rel = match entry {
                     ConsistEntry::Engine { path, .. } | ConsistEntry::Wagon { path, .. } => path,
                 };
@@ -774,7 +837,7 @@ impl NativeSoundBank {
                 fn visit(
                     a: &openrailsrs_formats::Ast,
                     inside: SoundLocation,
-                    out: &mut Vec<(String, SoundLocation)>,
+                    out: &mut Vec<(String, SoundLocation, Option<u32>)>,
                 ) {
                     let interior = if sms::block(a, "Wagon") {
                         SoundLocation::Exterior
@@ -787,7 +850,7 @@ impl NativeSoundBank {
                     };
                     if sms::block(a, "Sound") {
                         if let Some(name) = sms::items(a).get(1).and_then(sms::text) {
-                            out.push((name, interior));
+                            out.push((name, interior, None));
                         }
                         return;
                     }
@@ -798,12 +861,15 @@ impl NativeSoundBank {
                     }
                 }
                 visit(&ast, SoundLocation::Exterior, &mut refs);
-                refs.extend(curve_refs.iter().cloned());
-                for (name, location) in refs {
-                    if !curve_refs.iter().any(|r| r.0 == name && r.1 == location)
+                refs.extend(track_catalog.refs.iter().cloned());
+                for (name, location, track_type) in refs {
+                    if track_type.is_none()
                         && location != SoundLocation::Exterior
                         && result.banks.iter().any(|b| {
-                            b.train == spec.id && b.vehicle == vehicle && b.location == location
+                            b.train == spec.id
+                                && b.vehicle == vehicle
+                                && b.location == location
+                                && b.track_type.is_none()
                         })
                     {
                         continue;
@@ -881,7 +947,7 @@ impl NativeSoundBank {
                         location,
                         program,
                         program_name: crate::mix::resource_name(&path.to_string_lossy()),
-                        curve_only: curve_refs.iter().any(|r| r.0 == name && r.1 == location),
+                        track_type,
                         samples: HashMap::new(),
                         pending_samples,
                     });
@@ -1015,6 +1081,9 @@ struct Playback {
     native_wiper_vehicles: std::collections::HashSet<usize>,
     wiper_vehicle: usize,
     update_us: u64,
+    source_vehicles: Vec<(usize, usize)>,
+    source_pass_through: HashMap<(usize, usize), f32>,
+    applied_layout_generation: u64,
 }
 impl Playback {
     fn new(bank: NativeSoundBank, mixer: &rodio::mixer::Mixer) -> Self {
@@ -1045,7 +1114,7 @@ impl Playback {
                         deadlines: vec![0.0; s.triggers.len()],
                         choices: vec![0; s.triggers.len()],
                         pan: Arc::new(AtomicU32::new(0.0_f32.to_bits())),
-                        group: if b.curve_only {
+                        group: if b.track_type.is_some() {
                             crate::mix::SoundGroup::Rolling
                         } else {
                             crate::mix::classify(s, b.location != SoundLocation::Exterior)
@@ -1060,6 +1129,9 @@ impl Playback {
             .collect();
         Self {
             active_sources: vec![false; bank.banks.len()],
+            source_vehicles: bank.banks.iter().map(|b| (b.train, b.vehicle)).collect(),
+            source_pass_through: bank.external_pass_through.clone(),
+            applied_layout_generation: 0,
             bank,
             voices,
             previous: HashMap::new(),
@@ -1075,8 +1147,59 @@ impl Playback {
             update_us: 0,
         }
     }
+    fn remap_vehicles(&mut self, frame: &SoundFrame) {
+        if frame.vehicle_layout_generation <= self.applied_layout_generation {
+            return;
+        }
+        let destinations: HashMap<_, _> = frame
+            .vehicle_remapping
+            .iter()
+            .map(|m| (m.source, m.current))
+            .collect();
+        if destinations
+            .values()
+            .copied()
+            .collect::<std::collections::HashSet<_>>()
+            .len()
+            != destinations.len()
+        {
+            return;
+        }
+        let mut old_to_new = HashMap::new();
+        for (bank, source) in self.bank.banks.iter_mut().zip(&self.source_vehicles) {
+            let current = destinations
+                .get(source)
+                .copied()
+                .unwrap_or((usize::MAX, usize::MAX));
+            old_to_new.insert((bank.train, bank.vehicle), current);
+            (bank.train, bank.vehicle) = current;
+        }
+        fn reindex<T>(
+            values: &mut HashMap<(usize, usize), T>,
+            mapping: &HashMap<(usize, usize), (usize, usize)>,
+        ) {
+            *values = std::mem::take(values)
+                .into_iter()
+                .filter_map(|(old, value)| {
+                    let &new = mapping.get(&old)?;
+                    (new.0 != usize::MAX).then_some((new, value))
+                })
+                .collect();
+        }
+        reindex(&mut self.previous, &old_to_new);
+        reindex(&mut self.brake_sounds, &old_to_new);
+        reindex(&mut self.last_coupler_impact, &old_to_new);
+        self.bank.external_pass_through = self
+            .source_pass_through
+            .iter()
+            .filter_map(|(source, gain)| destinations.get(source).map(|current| (*current, *gain)))
+            .collect();
+        self.native_wiper_vehicles=self.bank.banks.iter().filter(|b|b.train==0 && b.audible(SoundLocation::Cab,b.vehicle,true) && b.program.streams.iter().flat_map(|s|&s.triggers).any(|t|matches!(t.kind,TriggerKind::Discrete(6)) && t.commands.iter().any(|c|matches!(c,Command::Play{files,..} if files.iter().any(|f|b.samples.contains_key(f)||b.pending_samples.contains_key(f)))))).map(|b|b.vehicle).collect();
+        self.applied_layout_generation = frame.vehicle_layout_generation;
+    }
     fn update(&mut self, frame: &SoundFrame) {
         let started = std::time::Instant::now();
+        self.remap_vehicles(frame);
         if frame.time_s < self.last_time_s {
             // Restart and saved-game restore rewind the simulation clock. Keep
             // decoded samples but reset triggers, deadlines and loop releases.
@@ -1167,11 +1290,22 @@ impl Playback {
             let has_interior = self.bank.banks.iter().any(|b| {
                 b.train == 0
                     && b.vehicle == frame.listener_vehicle
-                    && b.location == listener
-                    && !b.curve_only
+                    // Interior rolling SMS replaces only its matching track
+                    // bank. It must not mute the locomotive's exterior SMS.
+                    && b.track_type == bank.track_type
+                    && (b.location == listener || b.track_type.is_some()
+                        && b.location == SoundLocation::Passenger && listener == SoundLocation::Cab)
             });
             let audible = *active
-                && (!bank.curve_only || state.curve_squeal)
+                && bank.track_type.is_none_or(|index| {
+                    let (count, curve) = self
+                        .bank
+                        .track_catalogs
+                        .get(&bank.train)
+                        .copied()
+                        .unwrap_or((usize::MAX, None));
+                    index == selected_track_type(state, previous, count, curve)
+                })
                 && bank.audible(listener, frame.listener_vehicle, has_interior);
             let external = bank
                 .program
@@ -1440,7 +1574,23 @@ impl Playback {
                 Some((
                     (bank.train, bank.vehicle),
                     (
-                        train.vehicle_state(bank.vehicle),
+                        {
+                            let mut state = train.vehicle_state(bank.vehicle);
+                            let previous = self
+                                .previous
+                                .get(&(bank.train, bank.vehicle))
+                                .map(|(s, _)| *s)
+                                .unwrap_or_default();
+                            let (count, curve) = self
+                                .bank
+                                .track_catalogs
+                                .get(&bank.train)
+                                .copied()
+                                .unwrap_or((usize::MAX, None));
+                            state.track_type =
+                                Some(selected_track_type(state, previous, count, curve));
+                            state
+                        },
                         train.vehicle_distance(bank.vehicle),
                     ),
                 ))
@@ -1560,6 +1710,7 @@ impl Playback {
                         train: b.train,
                         vehicle: b.vehicle,
                         program: b.program_name.clone(),
+                        track_type: b.track_type,
                         stream,
                         resource: v.resource.clone(),
                         trigger: v.trigger.clone(),
@@ -1575,6 +1726,7 @@ impl Playback {
                 train: 0,
                 vehicle: self.wiper_vehicle,
                 program: "limpiaparabrisas · respaldo Rust".into(),
+                track_type: None,
                 stream: 0,
                 resource: "wiper sintetizado".into(),
                 trigger: "orden y batería disponibles".into(),
@@ -1821,7 +1973,7 @@ mod tests {
             location: SoundLocation::Exterior,
             program,
             program_name: "test.sms".into(),
-            curve_only: false,
+            track_type: None,
             pending_samples: HashMap::new(),
             read_parse_us: 0,
             samples: HashMap::from([("tone.wav".into(), test_wave())]),
@@ -1838,6 +1990,7 @@ mod tests {
                 NativeSoundBank {
                     banks,
                     external_pass_through: HashMap::new(),
+                    track_catalogs: HashMap::new(),
                     report: SoundReport::default(),
                     pool: WavePool::default(),
                 },
@@ -1998,6 +2151,7 @@ mod tests {
         .unwrap();
         let bank = NativeSoundBank::load(&[ConsistSoundSpec {
             vehicle_offset: 0,
+            vehicle_mapping: None,
             id: 0,
             consist,
             route,
@@ -2361,7 +2515,7 @@ mod tests {
             location: SoundLocation::Cab,
             program,
             program_name: "test.sms".into(),
-            curve_only: false,
+            track_type: None,
             pending_samples: HashMap::new(),
             read_parse_us: 0,
             samples: HashMap::new(),
@@ -2469,7 +2623,7 @@ mod tests {
                 location,
                 program: program.clone(),
                 program_name: "test.sms".into(),
-                curve_only: false,
+                track_type: None,
                 pending_samples: HashMap::new(),
                 read_parse_us: 0,
                 samples: HashMap::from([(
@@ -2494,6 +2648,7 @@ mod tests {
             NativeSoundBank {
                 banks,
                 external_pass_through: HashMap::new(),
+                track_catalogs: HashMap::new(),
                 report: SoundReport::default(),
                 pool: WavePool::default(),
             },
@@ -2704,13 +2859,188 @@ mod tests {
         assert!(old.events(SoundState::default()).is_empty());
     }
     #[test]
+    fn section_reordering_and_service_transfer_remap_banks_without_reloading_samples() {
+        let program=SmsProgram::parse("Tr_SMS ( ScalabiltyGroup ( 5 Streams ( 1 Stream ( Triggers ( 1 Initial_Trigger ( StartLoop ( 1 File ( tone.wav -1 ) ) ) ) ) ) ) )").unwrap();
+        let mut donor = test_bank(0, program.clone());
+        donor.train = 1;
+        let (mut playback, _source) = test_playback(vec![
+            test_bank(0, program.clone()),
+            test_bank(1, program),
+            donor,
+        ]);
+        playback.source_pass_through.insert((1, 0), 0.25);
+        let mut frame = test_frame();
+        playback.update(&frame);
+        frame.vehicle_layout_generation = 1;
+        frame.vehicle_remapping = vec![
+            SoundVehicleRemap {
+                source: (0, 0),
+                current: (0, 1),
+            },
+            SoundVehicleRemap {
+                source: (0, 1),
+                current: (0, 2),
+            },
+            SoundVehicleRemap {
+                source: (1, 0),
+                current: (0, 0),
+            },
+        ]
+        .into();
+        frame.trains[0].vehicle_states = vec![SoundState::default(); 3];
+        frame.time_s = 1.;
+        playback.update(&frame);
+        assert_eq!(
+            playback
+                .bank
+                .banks
+                .iter()
+                .map(|b| (b.train, b.vehicle))
+                .collect::<Vec<_>>(),
+            [(0, 1), (0, 2), (0, 0)]
+        );
+        assert_eq!(
+            playback.bank.external_pass_through.get(&(0, 0)),
+            Some(&0.25)
+        );
+        assert_eq!(playback.bank.banks[2].samples.len(), 1);
+        frame.time_s = 2.;
+        playback.update(&frame); // a retried bounded-mailbox frame cannot permute twice
+        assert_eq!(playback.bank.banks[0].vehicle, 1);
+        frame.vehicle_layout_generation = 2;
+        frame.vehicle_remapping = vec![
+            SoundVehicleRemap {
+                source: (0, 0),
+                current: (0, 0),
+            },
+            SoundVehicleRemap {
+                source: (0, 1),
+                current: (0, 1),
+            },
+            SoundVehicleRemap {
+                source: (1, 0),
+                current: (1, 0),
+            },
+        ]
+        .into();
+        frame.time_s = 3.;
+        playback.update(&frame);
+        assert_eq!(playback.bank.banks[2].train, 1);
+        assert_eq!(
+            playback.bank.external_pass_through.get(&(1, 0)),
+            Some(&0.25)
+        );
+        assert!(playback.voices[2][0].player.is_paused()); // no donor frame yet, never aliases the player
+        frame.trains.push(TrainSoundFrame {
+            id: 1,
+            state: SoundState::default(),
+            distance_m: 10.,
+            vehicle_distances_m: vec![],
+            vehicle_states: vec![],
+            vehicle_placement: vec![],
+        });
+        frame.time_s = 4.;
+        playback.update(&frame);
+        assert!(!playback.voices[2][0].player.is_paused());
+    }
+    #[test]
+    fn track_sound_selects_each_car_without_overlay_and_survives_pause_and_reverse() {
+        let program=SmsProgram::parse("Tr_SMS ( ScalabiltyGroup ( 5 Streams ( 1 Stream ( Triggers ( 1 Initial_Trigger ( StartLoop ( 1 File ( tone.wav -1 ) ) ) ) ) ) ) )").unwrap();
+        let mut banks = vec![];
+        for car in 0..2 {
+            for index in 0..3 {
+                let mut bank = test_bank(car, program.clone());
+                bank.track_type = Some(index);
+                banks.push(bank);
+            }
+        }
+        let (mut playback, _source) = test_playback(banks);
+        playback.bank.track_catalogs.insert(0, (3, None));
+        let mut frame = test_frame();
+        frame.trains[0].vehicle_states = vec![
+            SoundState {
+                track_type: Some(1),
+                ..Default::default()
+            },
+            SoundState {
+                track_type: Some(0),
+                ..Default::default()
+            },
+        ];
+        playback.update(&frame);
+        for (i, v) in playback.voices.iter().enumerate() {
+            assert_eq!(v[0].gain > 0., i == 1 || i == 3);
+        }
+        frame.time_s = 1.;
+        frame.paused = true;
+        playback.update(&frame);
+        assert!(
+            playback
+                .voices
+                .iter()
+                .flatten()
+                .all(|v| v.player.is_paused())
+        );
+        frame.paused = false;
+        frame.time_s = 2.;
+        frame.trains[0].vehicle_states[0].track_type = Some(2);
+        frame.trains[0].vehicle_states[1].track_type = Some(1);
+        playback.update(&frame);
+        for (i, v) in playback.voices.iter().enumerate() {
+            assert_eq!(v[0].gain > 0., i == 2 || i == 4);
+        }
+        frame.time_s = 3.;
+        frame.trains[0].vehicle_states[0].track_type = None;
+        playback.update(&frame);
+        assert!(playback.voices[2][0].gain > 0.);
+        frame.time_s = 4.;
+        frame.trains[0].vehicle_states[0].track_type = Some(1);
+        frame.trains[0].vehicle_states[1].track_type = Some(0);
+        playback.update(&frame);
+        for (i, v) in playback.voices.iter().enumerate() {
+            assert_eq!(v[0].gain > 0., i == 1 || i == 3);
+        }
+    }
+    #[test]
+    fn track_sound_interior_plays_in_both_cab_and_passenger_with_exterior_silent() {
+        let program=SmsProgram::parse("Tr_SMS ( ScalabiltyGroup ( 5 Streams ( 1 Stream ( Triggers ( 1 Initial_Trigger ( StartLoop ( 1 File ( tone.wav -1 ) ) ) ) ) ) ) )").unwrap();
+        let mut inside = test_bank(0, program.clone());
+        inside.location = SoundLocation::Passenger;
+        inside.track_type = Some(0);
+        let mut outside = test_bank(0, program);
+        outside.track_type = Some(0);
+        let (mut playback, _source) = test_playback(vec![inside, outside]);
+        for (time, cab, passenger) in [(0., true, false), (1., false, true), (2., false, false)] {
+            let mut frame = test_frame();
+            frame.time_s = time;
+            frame.cab = cab;
+            frame.passenger = passenger;
+            playback.update(&frame);
+            assert_eq!(playback.voices[0][0].gain > 0., cab || passenger);
+            assert_eq!(playback.voices[1][0].gain > 0., !cab && !passenger);
+        }
+        assert_eq!(
+            selected_track_type(
+                SoundState {
+                    track_type: Some(999),
+                    ..Default::default()
+                },
+                SoundState::default(),
+                3,
+                None
+            ),
+            0
+        );
+    }
+    #[test]
     fn plan30_optional_curve_programs_do_not_mute_normal_sounds_or_play_on_straight_track() {
         let program=SmsProgram::parse("Tr_SMS ( ScalabiltyGroup ( 5 Streams ( 1 Stream ( Triggers ( 1 Initial_Trigger ( StartLoop ( 1 File ( tone.wav -1 ) ) ) ) ) ) ) )").unwrap();
         let normal = test_bank(0, program.clone());
         let mut curve = test_bank(0, program);
-        curve.curve_only = true;
+        curve.track_type = Some(1);
         curve.location = SoundLocation::Passenger;
         let (mut playback, _source) = test_playback(vec![normal, curve]);
+        playback.bank.track_catalogs.insert(0, (2, Some(1)));
         let mut frame = test_frame();
         frame.passenger = true;
         playback.update(&frame);

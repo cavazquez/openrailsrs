@@ -29,6 +29,8 @@ pub struct ConsistVehicleVisual {
 /// Loaded consists keyed by replay track label (`primary`, extra `id`, …).
 #[derive(Resource, Clone, Default)]
 pub struct TrainConsistScene {
+    /// Immutable source slots survive cuts, joins and a different pickup order.
+    pub by_vehicle_id: HashMap<String, ConsistVehicleVisual>,
     pub primary_service_id: Option<String>,
     pub active_cab_vehicle: usize,
     pub scenario_dir: Option<PathBuf>,
@@ -40,6 +42,49 @@ pub struct TrainConsistScene {
 }
 
 impl TrainConsistScene {
+    pub fn remember_vehicle_sources(&mut self) {
+        if !self.by_vehicle_id.is_empty() {
+            return;
+        }
+        for (label, cars) in &self.by_label {
+            let service = if label == "primary" {
+                self.primary_service_id.as_deref().unwrap_or("Jugador")
+            } else {
+                label.as_str()
+            };
+            for (i, car) in cars.iter().enumerate() {
+                self.by_vehicle_id
+                    .insert(format!("{service}/car/{i}"), car.clone());
+            }
+        }
+    }
+    pub fn reconcile_services(
+        &mut self,
+        player: &openrailsrs_sim::LiveDriveSession,
+        traffic: &openrailsrs_sim::LiveTraffic,
+    ) -> Result<(), String> {
+        self.remember_vehicle_sources();
+        let mut next = HashMap::new();
+        for (label, session) in std::iter::once(("primary", player))
+            .chain(traffic.services.iter().map(|s| (s.id.as_str(), &s.session)))
+        {
+            let mut before = 0.;
+            let mut cars = Vec::new();
+            for id in session.vehicle_identities() {
+                let mut car =
+                    self.by_vehicle_id.get(&id).cloned().ok_or_else(|| {
+                        format!("Modelo original del vehículo no disponible: {id}")
+                    })?;
+                car.offset_m = -before - car.length_m * 0.5;
+                before += car.length_m;
+                cars.push(car);
+            }
+            next.insert(label.to_string(), cars);
+        }
+        self.by_label = next;
+        self.active_cab_vehicle = player.cab_vehicle();
+        Ok(())
+    }
     pub fn transfer_control(&mut self, id: &str, consist: String) -> Result<(), String> {
         let target = self
             .by_label

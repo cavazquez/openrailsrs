@@ -8,3 +8,4 @@ pub mod vehicle_profile;
 
 pub use ids::{EdgeId, NodeId};
 pub use time::SimTime;
+pub mod activity;

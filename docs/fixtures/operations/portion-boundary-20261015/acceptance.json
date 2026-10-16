@@ -1,0 +1,165 @@
+{
+  "schema": 1,
+  "recorded_utc": "2026-10-16T01:26:23.295000+00:00",
+  "status": "pass_by_composed_sim_suite_results_final_workspace_gate_separate",
+  "issues": [
+    215,
+    216
+  ],
+  "regression": "A section cut at head0 in an owned three-car hotel example produced anchor−20m and rear−60m, then could not restore. The cut API must reject insufficient real track before any mutation.",
+  "implementation": {
+    "section_cut": "Before recording native state, allocating a section identity, changing controls or splitting vehicle arrays, uncouple_after_named verifies the entire active footprint, raw edge position and connected route. A cut lacking track returns an actionable error without moving/clipping any vehicle.",
+    "hotel_example": "The three owned20m vehicles now begin at100m on the1000m route, so the complete original formation is on track at scenario initialization.",
+    "saved_state_validator": "Existing saved-section validation and tolerances remain unchanged.",
+    "manual_HEP_connection": "The coupled boundary intentionally leaves the train bus disconnected. The test checks zero hotel supply while disconnected, operates CarOperation::TrainBus, then verifies resumed supply and identical saved/resumed source state. No supply delay or generation code was changed.",
+    "adhesion_fixture": "The sand-preservation fixture starts the two locomotives at100m and retains its future mid/b stops. Its already-passed origin stop is removed only in that test setup. Assertions require an advancing simulation clock and no failed activity before inspecting parked sand."
+  },
+  "new_regressions": [
+    "a_cut_without_track_under_the_whole_formation_rejects_without_mutation",
+    "a_cut_exactly_inside_track_keeps_every_position_and_restores_in_both_directions"
+  ],
+  "validation": {
+    "integration_scope": "All59 current openrailsrs-sim integration targets were run with --workspace --all-features and --no-fail-fast. The second full run retained one failing adhesion fixture; after its test-only correction, only that complete suite was rerun. This is a composed pass, not a claim that the recorded full run itself passed.",
+    "full_integration_attempt02": {
+      "result": {
+        "suites": 59,
+        "passed": 241,
+        "failed": 1,
+        "ignored": 0
+      },
+      "log": "docs/fixtures/operations/portion-boundary-20261015/all-integrations-attempt02.log",
+      "sha256": "ef91602e58f6f0b125ef693fffbc7e20d6b820de7688281cf638559d73abd8d9",
+      "accepted_suites_excluding_failed_rail_adhesion": 58,
+      "passed_cases_excluding_failed_rail_adhesion": 236,
+      "command_source": "tmp/next-ten-20261015/sim-all-integrations02.preflight.json"
+    },
+    "corrected_rail_adhesion": {
+      "result": {
+        "suites": 1,
+        "passed": 6,
+        "failed": 0,
+        "ignored": 0
+      },
+      "log": "docs/fixtures/operations/portion-boundary-20261015/rail-adhesion-final.log",
+      "sha256": "7414ef5e35e175a0a704fd691dfbb93ab37dccdc3de83dcc117cf7575d028198",
+      "command": [
+        "cargo",
+        "test",
+        "--workspace",
+        "--all-features",
+        "--test",
+        "rail_adhesion",
+        "--",
+        "--test-threads=2"
+      ]
+    },
+    "composed_integration_result": {
+      "suites": 59,
+      "passed": 242,
+      "failed": 0,
+      "ignored": 0
+    },
+    "all_sim_units": {
+      "result": {
+        "suites": 1,
+        "passed": 130,
+        "failed": 0,
+        "ignored": 0
+      },
+      "log": "docs/fixtures/operations/portion-boundary-20261015/sim-units.log",
+      "sha256": "ad1f13481404b9e9a89d3672df3bfac08d954fb11294239fdc54aa7e800856e4",
+      "preparation_command": [
+        "cargo",
+        "test",
+        "--workspace",
+        "--all-features",
+        "--lib",
+        "--no-run",
+        "--message-format=json"
+      ],
+      "executed_bin": "target/debug/deps/openrailsrs_sim-ad371369575803bf",
+      "executed_bin_sha256": "002d289460a46e0b15ef0cff9dfdc1e1e006d8b045a7dd6823b5decfd3dad8c4",
+      "args": [
+        "--test-threads=2"
+      ]
+    },
+    "runtime_inputs_before_and_after": {
+      "count": 187,
+      "unchanged": true,
+      "before": "tmp/next-ten-20261015/runtime-before-section-units.json",
+      "after": "tmp/next-ten-20261015/runtime-after-section-units.json",
+      "before_sha256": "0a1306cbb9faef3aed1624839fa5ddfc2f872e447bb5ceefc09605cd9136964f",
+      "after_sha256": "0a1306cbb9faef3aed1624839fa5ddfc2f872e447bb5ceefc09605cd9136964f"
+    },
+    "compiler_artifacts": {
+      "path": "tmp/next-ten-20261015/section-units-compiler-artifacts01.jsonl",
+      "sha256": "54b4d53354ee2580a25de39dc9906dcb3f7d10e7e4e66e7ec5136aca46e0275a",
+      "normal_rlibs": {
+        "openrailsrs_sim": [
+          {
+            "path": "target/debug/deps/libopenrailsrs_sim-8aea4f5f640cd4f3.rlib",
+            "sha256": "cea4c74755b2b697e70b9678d53923bfd965fc4118a3abe9396ca72aaa215f46"
+          }
+        ],
+        "openrailsrs_scenarios": [
+          {
+            "path": "target/debug/deps/libopenrailsrs_scenarios-9cd3e3309e3e4a46.rlib",
+            "sha256": "369d22b022d5ebe8e22ad99700b12ae74b3ea993d1e957d92cf5d609ed2ed055"
+          }
+        ],
+        "serde_json": [
+          {
+            "path": "target/debug/deps/libserde_json-87a8e1f99d134334.rlib",
+            "sha256": "688f8881d192157e337b7e1b75f77edc09de0e93cbfed0cc21457bf92d2905ef"
+          }
+        ]
+      }
+    },
+    "profile": {
+      "jobs": 2,
+      "dev_and_test_opt_level": 1,
+      "debug": 0,
+      "strip": "symbols",
+      "incremental": false
+    },
+    "final_workspace_gate": "Integrator runs the final gate after a fresh coherent legacy-coupling replay; that outcome is recorded separately."
+  },
+  "earlier_failures_preserved": [
+    {
+      "log": "tmp/next-ten-20261015/sections-boundary-focal01.log",
+      "sha256": "6f06a8143d39c890446a5fd6a8593d3f6fb0b5d93824f2c1482b203a56edcd83",
+      "observation": "Geometry/restore fixed, then the old HEP assertion exposed its missing manual train-bus connection."
+    },
+    {
+      "log": "tmp/next-ten-20261015/sim-all-integrations01.log",
+      "sha256": "017dfe9e9368a86dd7336846217be1bd5506738cd5bdc23e0d63fce7e95f58ae",
+      "observation": "All59 targets ran; the sand fixture also attempted a cut with its tail outside the route."
+    },
+    {
+      "log": "tmp/next-ten-20261015/sim-all-integrations02.log",
+      "sha256": "ef91602e58f6f0b125ef693fffbc7e20d6b820de7688281cf638559d73abd8d9",
+      "observation": "Starting that fixture at100m without adapting its origin stop failed the activity and froze the last using_sand diagnostic. The corrected focused run proves real time advances."
+    }
+  ],
+  "source_files_at_freeze_sha256": {
+    "crates/openrailsrs-sim/src/sections.rs": "766e0d64f55a2716f1d8f03911deb78e4967d76e3df1d24e7d8f065cd132c1cf",
+    "crates/openrailsrs-sim/tests/sections_and_services.rs": "75015eca6551d80ed5f9fdb0a048973477073ed497f178e7562d8c81e5e428c8",
+    "crates/openrailsrs-sim/tests/equipment_acceptance.rs": "e1e72240ff983fae76a8b8cdf4db70fe316a7eeec00413ac54290cde08ea3eba",
+    "crates/openrailsrs-sim/tests/rail_adhesion.rs": "1aa0b6c5a0c029df21cc3b69227416a1419ac4921fd9ead2502ab7ec567a7e24",
+    "examples/traction_operation/scenario_hotel.toml": "f42f03d9191630d03bd4054098f7a41632ee847351779fd1f97c364804a80076"
+  },
+  "protected_human_traces_unchanged": true,
+  "protected_human_traces_sha256": {
+    "examples/chiltern/run.csv": "ddba584bf99a24d18e2869e10159cbc3f6af0486f29a72d097bf71afb4ab5716",
+    "examples/chiltern/run.json": "c5696f1896bf944936bbcdbdf34b7f7a9948ed4a8c549295bb9a237c1f82c047",
+    "examples/chiltern/run_brake_coast_multi_body.csv": "3be525dca9a355c809dac4ce17c915ebbadd2c87ef0ad468037ff3cb72b09022",
+    "examples/chiltern/run_throttle100.csv": "30bd23a47ebd42c53298735ce56985d26bbac1b4f64a0a9eaa0c52468fc4f1d0",
+    "examples/chiltern/run_throttle50.csv": "46909080f32aa1c5b5d17877394014e5fffa20e81d77630cc83a57da98813b91",
+    "examples/chiltern/run_throttle75.csv": "0de294a0fd7e85f1f32fd5c54fe9d56686fcf7170fe77c45e48bcb4fd1d0ef28"
+  },
+  "original_assets_modified": false,
+  "OR_capture_modified": false,
+  "no_original_content_import_or_Wine_or_renderer_executed_for_this_followup": true,
+  "supplements": "docs/validation/PORTIONS_SERVICES_MIDEAST_20261015.json",
+  "original_drive_preflight_preserved": "The historical MidEast04 driving preflight remains unchanged. This follow-up adds rejection of invalid geometry and directed regression coverage; it does not relabel that historical drive as a new execution."
+}

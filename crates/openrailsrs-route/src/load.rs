@@ -238,7 +238,11 @@ fn layout_to_graph(layout: RouteLayoutFile) -> Result<TrackGraph, RouteError> {
                 || !(0.0..=edge.length_m).contains(&p.position_m)
                 || !p.cant_m.is_finite()
                 || p.cant_m < 0.
-        }) {
+        }) || profile
+            .track_sound_regions
+            .iter()
+            .any(|p| !p.position_m.is_finite() || !(0. ..=edge.length_m).contains(&p.position_m))
+        {
             return Err(RouteError::Msg(format!(
                 "Invalid speed/grade profile for {id}"
             )));

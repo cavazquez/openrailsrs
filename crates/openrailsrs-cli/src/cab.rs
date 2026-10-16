@@ -76,7 +76,12 @@ pub fn run_cab(scenario_path: &Path, speed_mul: f64) -> anyhow::Result<()> {
         raw_curve
     };
     let partial_throttle_run_up_time_s = max_partial_throttle_run_up_time_s(&diesel_engines);
-    let train_physics = TrainPhysics {
+    let mut train_physics = TrainPhysics {
+        bogies: openrailsrs_train::bogie_geometry::load_models_for_consist(
+            &consist_path,
+            asset_root,
+            &consist,
+        )?,
         power_supply: openrailsrs_sim::power_supply::PowerTrainConfig::from_consist(&consist),
         rail_adhesion: None,
         diesel: openrailsrs_sim::diesel_operation::DieselTrainConfig::from_consist(&consist),
@@ -167,6 +172,14 @@ pub fn run_cab(scenario_path: &Path, speed_mul: f64) -> anyhow::Result<()> {
 
     // ── State ────────────────────────────────────────────────────────────────
     let mut state = TrainSimState::new(path_edges.clone());
+    state.articulated_joints = openrailsrs_sim::bogie_dynamics::apply_overrides(
+        &mut train_physics.bogies,
+        &scenario.train.bogie_dynamics,
+    )
+    .map_err(anyhow::Error::msg)?;
+    state
+        .bogies
+        .resize_with(train_physics.bogies.len(), Default::default);
     state.boiler_state = consist
         .aggregate_steam_params()
         .map(|p| openrailsrs_sim::steam::BoilerState::from_params(&p));

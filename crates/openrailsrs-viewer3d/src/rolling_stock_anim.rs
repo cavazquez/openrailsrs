@@ -411,8 +411,8 @@ pub fn update_consist_car_track_poses(
                     continue;
                 }
                 if live_ref.is_some_and(|l| {
-                    (definition.vehicle < l.session.formation.coupled_count)
-                        != (joint.neighbor < l.session.formation.coupled_count)
+                    !l.session
+                        .same_physical_section(definition.vehicle, joint.neighbor)
                 }) {
                     continue;
                 }
@@ -707,7 +707,18 @@ fn coupler_relative_yaw(own: Quat, flipped: bool, other: Quat, other_flipped: bo
 
 /// Relative bogie yaw from track headings at car pivot and bogie sample (#69).
 pub fn bogie_relative_yaw(car_yaw: f32, bogie_track_yaw: f32) -> f32 {
-    wrap_angle(bogie_track_yaw - car_yaw).clamp(-BOGIE_YAW_CLAMP, BOGIE_YAW_CLAMP)
+    bogie_relative_yaw_limited(car_yaw, bogie_track_yaw, BOGIE_YAW_CLAMP)
+}
+
+/// Visual clearance for one authored model. This never writes mechanical
+/// wheelset angle of attack, lateral force or suspension state.
+pub fn bogie_relative_yaw_limited(car_yaw: f32, bogie_track_yaw: f32, limit: f32) -> f32 {
+    let limit = if limit.is_finite() && limit > 0. {
+        limit.min(1.2)
+    } else {
+        BOGIE_YAW_CLAMP
+    };
+    wrap_angle(bogie_track_yaw - car_yaw).clamp(-limit, limit)
 }
 
 fn csv_row_at(rows: &[CsvRow], t: f64) -> Option<&CsvRow> {
@@ -784,6 +795,7 @@ pub fn update_rolling_stock_part_anim(
     focus: Res<RouteFocus>,
     terrain: Option<Res<TerrainElevation>>,
     contacts: Option<Res<crate::electric_contact::ElectricContacts>>,
+    presentation: Option<Res<crate::train_presentation::TrainPresentation>>,
     mut wheels: Query<
         (
             &mut TrainWheelAnim,
@@ -889,7 +901,8 @@ pub fn update_rolling_stock_part_anim(
     let resolver_ref = tdb_resolver.as_ref();
 
     for (bogie, binding, mut tf, child_of) in &mut bogies {
-        let Ok((car_off, car_transform, supports, car_parent, _)) = cars.get(child_of.parent())
+        let Ok((car_off, car_transform, supports, car_parent, car_index)) =
+            cars.get(child_of.parent())
         else {
             // No path offset on parent (e.g. fallback cube) — leave bogie straight.
             *tf = Transform::IDENTITY;
@@ -960,7 +973,20 @@ pub fn update_rolling_stock_part_anim(
             continue;
         };
 
-        let rel = bogie_relative_yaw(car_yaw, bogie_yaw);
+        let limit = if car_off.track_index == 0 {
+            car_index.and_then(|i| {
+                presentation
+                    .as_ref()?
+                    .vehicles
+                    .iter()
+                    .find(|p| p.vehicle == i.0)?
+                    .bogie_yaw_limit_rad
+            })
+        } else {
+            None
+        }
+        .unwrap_or(BOGIE_YAW_CLAMP);
+        let rel = bogie_relative_yaw_limited(car_yaw, bogie_yaw, limit);
         let next =
             baked_part_local_rotation(&binding.shape, bogie.matrix_idx, Quat::from_rotation_y(rel));
         if next.rotation.is_finite() {
@@ -1109,9 +1135,7 @@ pub fn update_rolling_stock_part_anim(
                     .and_then(|l| l.session_for_track(service))
                     .is_some_and(|s| {
                         neighbor.is_some_and(|n| {
-                            n < s.formation.cars.len()
-                                && (n < s.formation.coupled_count)
-                                    == (index < s.formation.coupled_count)
+                            n < s.formation.cars.len() && s.same_physical_section(n, index)
                         })
                     });
                 let yaw = if connected {
@@ -1661,6 +1685,17 @@ mod tests {
     fn bogie_relative_yaw_zero_on_matching_headings() {
         let rel = bogie_relative_yaw(1.2, 1.2);
         assert!(rel.abs() < 1e-5);
+    }
+
+    #[test]
+    fn model_visual_clearance_clamps_both_curve_directions_without_mechanical_input() {
+        assert_eq!(bogie_relative_yaw_limited(0., 0.3, 0.08), 0.08);
+        assert_eq!(bogie_relative_yaw_limited(0., -0.3, 0.08), -0.08);
+        assert!((bogie_relative_yaw_limited(3.12, -3.12, 0.08) - 0.043185).abs() < 1e-5);
+        assert_eq!(
+            bogie_relative_yaw_limited(0., 0.8, f32::NAN),
+            BOGIE_YAW_CLAMP
+        );
     }
 
     #[test]

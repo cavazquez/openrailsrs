@@ -1,0 +1,46 @@
+{
+  "status": "FAIL",
+  "reason": "The final bank audit ran after 0.4s; exponential fade tails remained above the unchanged 0.0001 active voice threshold. The next attempt observes 1.8s (10 tau) without changing that threshold.",
+  "original_receipt_sha256": "0bc6a9e56c3ddd7343fe0697b58fca47ffbf4674356d9e8dece38420902e36bb",
+  "archive_sha256": "c9d96ddaa551adf2d7f9574b07750388af4725ea375d8e4aa843fbe83166526e",
+  "original_code_sha256": "a24f9067674d1e0cb19c6e6045791303b1075f8f17032228f685900ff1bc808c",
+  "original_code_preserved_at": "tmp/next-ten-20261015/track-sound-drive01/capture-example.rs",
+  "failed_checks": [
+    {
+      "clip": "transition-2.wav",
+      "active_track_programs": [
+        "europesteamtrack3ex.sms",
+        "mttrack0ex.sms"
+      ],
+      "expected_program": "europesteamtrack3ex.sms",
+      "passed": false,
+      "track_type": 3,
+      "vehicle": 4
+    },
+    {
+      "clip": "transition-4.wav",
+      "active_track_programs": [
+        "europesteamtrack3ex.sms",
+        "mttrack0ex.sms"
+      ],
+      "expected_program": "mttrack0ex.sms",
+      "passed": false,
+      "track_type": 0,
+      "vehicle": 3
+    },
+    {
+      "clip": "transition-5.wav",
+      "active_track_programs": [
+        "europesteamtrack7ex.sms",
+        "mttrack0ex.sms"
+      ],
+      "expected_program": "mttrack0ex.sms",
+      "passed": false,
+      "track_type": 0,
+      "vehicle": 4
+    }
+  ],
+  "drive_phase_completed": true,
+  "save_restore_passed": true,
+  "pause_silent": true
+}

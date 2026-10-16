@@ -382,6 +382,7 @@ enum DynamicText {
     Notebook,
     Advanced,
     Traction,
+    ActivityFreight,
     Car,
     Map,
     Help,
@@ -392,7 +393,8 @@ struct TrackMonitorRoot;
 struct TrackMonitorBody;
 #[derive(Component, Clone, Debug)]
 enum UiCommand {
-    CoupleService(usize),
+    CoupleService(usize, openrailsrs_sim::sections::CouplingEnd),
+    SplitService(String),
     LibraryFocus(usize),
     LibraryPaste(usize),
     LibraryUrlInspect,
@@ -452,6 +454,7 @@ enum UiCommand {
     Sander,
     Steam(openrailsrs_sim::steam::SteamCommand),
     BeginRefill,
+    BeginUnload,
     CancelRefill,
     SecureTail,
     IndependentApply,
@@ -461,6 +464,7 @@ enum UiCommand {
     HotelMode,
     Uncouple,
     Recouple,
+    RecoupleSection(String, openrailsrs_sim::sections::CouplingEnd),
     MapPick(MapSelection),
     DispatchSignal(Option<SignalAspect>),
     DispatchSwitch,
@@ -1215,16 +1219,24 @@ fn handle_buttons(
                 SavedGame::save(l,&content,saved,&path,weather.as_deref(),Some(&settings))?;
                 SavedGame::queue_control(&path,&id)?;launch.0=Some(SavedGame::prepare_resume(&path)?);Ok(())
             }),
-            UiCommand::CoupleService(index)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l| {
+            UiCommand::CoupleService(index,end)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l| {
                 let (orbit,_,_) = camera.cameras.single().map_err(|_|"Cámara no disponible")?;
                 let saved = SavedCamera::capture(*camera.follow,orbit,&camera.look,&camera.origin);
                 let path = crate::player_settings::player_data_dir().join("formation-transfer.json");
-                l.traffic.validate_coupling(&l.session,*index)?;
+                l.traffic.validate_coupling_at(&l.session,*index,*end)?;
                 let id=l.traffic.services[*index].id.clone();
                 SavedGame::save(l,&content,saved,&path,weather.as_deref(),Some(&settings))?;
-                SavedGame::queue_coupling(&path,&id)?;
+                SavedGame::queue_coupling_at(&path,&id,*end)?;
                 launch.0=Some(SavedGame::prepare_resume(&path)?);
                 Ok(())
+            }),
+            UiCommand::SplitService(id)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l| {
+                let (orbit,_,_) = camera.cameras.single().map_err(|_|"Cámara no disponible")?;
+                let saved=SavedCamera::capture(*camera.follow,orbit,&camera.look,&camera.origin);
+                let path=crate::player_settings::player_data_dir().join("formation-transfer.json");
+                SavedGame::save(l,&content,saved,&path,weather.as_deref(),Some(&settings))?;
+                SavedGame::queue_service_split(&path,id)?;
+                launch.0=Some(SavedGame::prepare_resume(&path)?);Ok(())
             }),
             UiCommand::ServiceUndo=>service.undo(),
             UiCommand::ServiceSave=>service.save(&player_data_dir()).map(|_|menu.refresh_installed_content()),
@@ -1452,9 +1464,13 @@ fn handle_buttons(
             UiCommand::Sander=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.toggle_sander()),
             UiCommand::Steam(command)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.steam_command(*command)),
             UiCommand::BeginRefill=>live.as_mut().ok_or("No hay partida".into()).and_then(|l| {
-                let target = refills.as_ref().and_then(|r|r.0.first()).ok_or("Alineá la toma de agua, carbón o diésel con un abastecedor compatible; no hay uno al alcance".to_string())?;
+                let target = refills.as_ref().and_then(|r|r.0.first()).ok_or("Alineá la toma del vehículo con un cargador o abastecedor compatible; no hay uno al alcance".to_string())?;
                 l.session.begin_refill(target.station.clone(), target.vehicle, target.distance_m, target.width_m)
             }).map(|()| {ui.notice="Abastecimiento iniciado; Cancelar desconecta la toma".into();}),
+            UiCommand::BeginUnload=>live.as_mut().ok_or("No hay partida".into()).and_then(|l| {
+                let target=refills.as_ref().and_then(|r|r.0.iter().find(|t|l.session.cargo_load_kg(t.vehicle).is_some())).ok_or("Alineá el vagón con un descargador compatible; no hay uno al alcance".to_string())?;
+                l.session.begin_unload(target.station.clone(),target.vehicle,target.distance_m,target.width_m)
+            }).map(|()|{ui.notice="Descarga iniciada; se respeta el retardo del vagón".into();}),
             UiCommand::CancelRefill=>live.as_mut().ok_or("No hay partida".into()).map(|l|l.session.cancel_refill()),
             UiCommand::SecureTail=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|{
                 for i in ui.selected_car+1..l.session.formation.coupled_count {
@@ -1467,6 +1483,7 @@ fn handle_buttons(
             UiCommand::HotelMode=>live.as_mut().ok_or("No hay partida".into()).map(|l|{l.session.state.power_supply.hotel_mode = l.session.state.power_supply.hotel_mode.next();}),
             UiCommand::Uncouple=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.uncouple_after(ui.selected_car)).map(|()|{ui.notice="Sección posterior desacoplada y estacionada".into();}),
             UiCommand::Recouple=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.recouple()).map(|()|{ui.notice="Enganche acoplado; reconectá la manguera, abrí las llaves y soltá los frenos de mano".into();}),
+            UiCommand::RecoupleSection(id,end)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.recouple_section(id,*end)).map(|()|{ui.notice=format!("Sección {id} recogida; reconectá frenos y soltá los frenos de mano");}),
             UiCommand::MapPick(selection)=>{ui.map_selection=Some(selection.clone());Ok(())},
             UiCommand::DispatchSignal(aspect)=>if let Some(MapSelection::Signal(id))=ui.map_selection.clone(){live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.dispatch_signal(&id,*aspect)).map(|()|{ui.notice="Orden de señal aplicada".into();})}else{Err("Seleccioná una señal en el mapa".into())},
             UiCommand::DispatchSwitch=>if let Some(MapSelection::Switch(id))=ui.map_selection.clone(){live.as_mut().ok_or("No hay partida".into()).and_then(|l|{let l=&mut **l;l.traffic.dispatch_switch(&mut l.session,&id)}).map(|()|{ui.notice="Cambio e itinerario actualizados".into();})}else{Err("Seleccioná un cambio en el mapa".into())},
@@ -1805,10 +1822,10 @@ fn build_panel(
                 },
                 PlayerPanel::Formation => {
                     if let Some(l) = live.as_ref() {
-                        build_formation(p, &ui, &l.session);
+                        build_formation(p, &ui, l);
                         for d in l.traffic.yard_inventory(&l.session) {label(p,format!("Destino {} · {} · {}",d.destination,d.id,d.reason),14.,if d.accepted {GOOD}else{CAUTION});}
                         for (index,service) in l.traffic.services.iter().enumerate(){if service.departed && !service.session.arrived {button(p,format!("Tomar control: {} · {:.0} km/h",service.id,service.session.velocity_mps()*3.6),UiCommand::TakeControl(index));}}
-                        for (index,service) in l.traffic.services.iter().enumerate(){if service.session.velocity_mps()<0.1 {button(p,format!("Recoger formación: {} · extremo trasero a delantero",service.id),UiCommand::CoupleService(index));}}
+                        for (index,service) in l.traffic.services.iter().enumerate(){if service.session.velocity_mps()<0.1 {row(p,|p|{button(p,format!("Recoger {} detrás",service.id),UiCommand::CoupleService(index,openrailsrs_sim::sections::CouplingEnd::Rear));button(p,format!("Recoger {} delante",service.id),UiCommand::CoupleService(index,openrailsrs_sim::sections::CouplingEnd::Front));});}}
                         if let Some(status)=l.session.depot_status(){label(p,status,14.,ACCENT);for d in &l.session.state.rail_operations.definition.depots {button(p,format!("Mantenimiento en {}",d.id),UiCommand::DepotWork(d.id.clone()));}}
                         if let Some(status)=l.session.shunting_authority_status(){label(p,status,14.,CAUTION);}
                     }
@@ -2082,6 +2099,7 @@ fn poll_menu_audits(mut menu: ResMut<PlayerLaunchMenu>, mut ui: ResMut<PlayerUiS
 }
 
 fn build_traction(p: &mut ChildSpawnerCommands<'_>, s: &LiveDriveSession) {
+    build_activity_freight(p, s);
     button(p, "Arenado: activar / desactivar", UiCommand::Sander);
     if s.state
         .vehicle_systems
@@ -2323,7 +2341,45 @@ fn traction_text(s: &LiveDriveSession, settings: &PlayerSettings) -> String {
     out
 }
 
-fn build_formation(p: &mut ChildSpawnerCommands<'_>, ui: &PlayerUiState, s: &LiveDriveSession) {
+fn activity_freight_text(s: &LiveDriveSession) -> String {
+    let mut text = s.native_activity_status().unwrap_or_default();
+    for c in &s.state.freight {
+        if !text.is_empty() {
+            text.push('\n');
+        }
+        text += &format!(
+            "Coche {} · carga {:.2} / {:.2} t",
+            c.vehicle + 1,
+            c.load_kg / 1000.,
+            c.profile.capacity_kg / 1000.
+        );
+    }
+    text
+}
+
+fn build_activity_freight(p: &mut ChildSpawnerCommands<'_>, s: &LiveDriveSession) {
+    if s.state.freight.is_empty() && s.native_activity_status().is_none() {
+        return;
+    }
+    dynamic(p, DynamicText::ActivityFreight, 14.);
+    if s.state.freight.is_empty() {
+        return;
+    }
+    row(p, |p| {
+        button(p, "Cargar el vagón alineado", UiCommand::BeginRefill);
+        button(p, "Descargar el vagón alineado", UiCommand::BeginUnload);
+        button(p, "Desconectar cargador", UiCommand::CancelRefill);
+    });
+    label(
+        p,
+        "Alineá cada vagón por turno y cerrá el regulador. La carga cambia la masa; la pausa y la desconexión detienen la transferencia.",
+        13.,
+        MUTED,
+    );
+}
+
+fn build_formation(p: &mut ChildSpawnerCommands<'_>, ui: &PlayerUiState, live: &LiveDrive) {
+    let s = &live.session;
     if let Some(cab) = s.cab_equipment() {
         use openrailsrs_sim::cab_equipment::CabOperation;
         row(p, |p| {
@@ -2566,6 +2622,55 @@ fn build_formation(p: &mut ChildSpawnerCommands<'_>, ui: &PlayerUiState, s: &Liv
         button(p, "Desacoplar detrás del seleccionado", UiCommand::Uncouple);
         button(p, "Acoplar sección estacionada", UiCommand::Recouple);
     });
+    for section in s.detached_sections() {
+        label(
+            p,
+            format!(
+                "{} · {} vehículos · vía {}",
+                section.id,
+                section.count,
+                section.front.as_ref().map_or("?", |p| p.0.as_str())
+            ),
+            13.,
+            ACCENT,
+        );
+        row(p, |p| {
+            button(
+                p,
+                "Recoger detrás",
+                UiCommand::RecoupleSection(
+                    section.id.clone(),
+                    openrailsrs_sim::sections::CouplingEnd::Rear,
+                ),
+            );
+            button(
+                p,
+                "Recoger delante",
+                UiCommand::RecoupleSection(
+                    section.id.clone(),
+                    openrailsrs_sim::sections::CouplingEnd::Front,
+                ),
+            );
+        });
+    }
+    build_activity_freight(p, s);
+    let mut joined = std::collections::HashSet::new();
+    for receipt in &live.traffic.couplings {
+        if receipt.kind == openrailsrs_sim::independent_coupling::TransferKind::Join
+            && !live
+                .traffic
+                .services
+                .iter()
+                .any(|service| service.id == receipt.donor)
+            && joined.insert(receipt.donor.clone())
+        {
+            button(
+                p,
+                format!("Devolver porción al servicio {}", receipt.donor),
+                UiCommand::SplitService(receipt.donor.clone()),
+            );
+        }
+    }
     label(
         p,
         "Detené el tren antes de operar. Cerrá las llaves antes de desconectar una manguera.\nPara desacoplar: asegurá la sección posterior. Para acoplar: enganches a menos de 1 m y tren detenido.\nDespués de acoplar reconectá la manguera, abrí las llaves y soltá los frenos de mano.",
@@ -3486,18 +3591,14 @@ fn build_map(p: &mut ChildSpawnerCommands<'_>, ui: &PlayerUiState, live: &LiveDr
                 );
             }
         }
-        if let Some(head) = s.formation.parked_head_chainage_m {
-            let offset = s.formation.offset_m(s.formation.coupled_count);
-            if let Some((edge, pos)) = openrailsrs_sim::path_data::PathData::position_at_odometer(
-                &s.state.path_edges,
-                &s.path_data.edges,
-                (head + offset).max(0.0),
-            ) && let Some(point) = graph_point(s, &edge, pos)
+        for section in s.detached_sections() {
+            if let Some((edge, pos)) = section.front
+                && let Some(point) = graph_point(s, &edge, pos)
             {
                 map_marker(
                     p,
                     map_project(ui, point),
-                    "■ Estacionado".into(),
+                    format!("■ {}", section.id),
                     Color::srgb(0.55, 0.32, 0.12),
                     None,
                 );
@@ -3626,6 +3727,17 @@ fn update_panel_text(
                 match kind {
                     DynamicText::Notebook => {
                         let mut text = notebook_text(l, &content, ui.notebook_tab, &settings);
+                        if let Some(activity) = &s.state.activity {
+                            for diagnostic in &activity.definition.diagnostics {
+                                text += &format!("\nACT: {diagnostic}");
+                            }
+                            for message in activity.messages.iter().rev().take(3) {
+                                text += &format!(
+                                    "\n\nMENSAJE ACT {} · {:.0} s\n{}",
+                                    message.event, message.time_s, message.text
+                                );
+                            }
+                        }
                         if !s.gameplay.shunting_steps.is_empty() {
                             text += "\n\nMANIOBRAS\n";
                             for (i, goal) in s.gameplay.shunting_steps.iter().enumerate() {
@@ -3644,6 +3756,7 @@ fn update_panel_text(
                         text
                     }
                     DynamicText::Traction => traction_text(s, &settings),
+                    DynamicText::ActivityFreight => activity_freight_text(s),
                     DynamicText::Advanced => {
                         let mut text = advanced_text(l, &content, ui.advanced_page, &settings);
                         if ui.advanced_page == 2 {
@@ -3809,6 +3922,14 @@ fn notebook_text(
 ) -> String {
     let s = &l.session;
     let g = &s.gameplay;
+    if tab == 0
+        && let Some(status) = s.native_activity_status()
+    {
+        return format!(
+            "{}\n\n{}\n\n{}\nEl final del PAT no completa los objetivos ACT. F9 muestra los UID, las secciones y las cantidades de mercancía. B permite cargar/descargar en una toma compatible.",
+            s.scenario_name, content.description, status
+        );
+    }
     match tab {
         0 => format!(
             "{}\n\n{}\n\nOBJETIVOS\nCompletar {}/{} paradas y llegar a {}.\nDetenerse a menos de 10 m del punto y por debajo de {:.2} {}.\nAbrir puertas, completar el embarque y cerrarlas para salir.\nRespetar señales y límites. La tracción se corta con puertas abiertas.\n\nPROCEDIMIENTO\n{}\n\n{}",
@@ -4010,6 +4131,16 @@ fn car_text(s: &LiveDriveSession, index: usize) -> String {
             })
             .unwrap_or("—")
     );
+    if let Some(uid) = c.activity_uid {
+        text += &format!("\nUID ACT {} - {} ({uid})", uid >> 16, uid & 65535);
+    }
+    if let Some((load, capacity)) = s.cargo_load_kg(index) {
+        text += &format!(
+            "\nMercancía: {:.3} / {:.3} t",
+            load / 1000.,
+            capacity / 1000.
+        );
+    }
     if let Some(power) = s
         .state
         .power_supply

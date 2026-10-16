@@ -10,6 +10,7 @@ pub mod error;
 pub mod import_activity;
 pub mod import_route;
 pub mod import_timetable;
+mod native_activity;
 mod native_timetable;
 pub mod operational_path;
 pub mod path_placement;

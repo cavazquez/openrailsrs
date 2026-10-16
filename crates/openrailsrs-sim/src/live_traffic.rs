@@ -311,15 +311,15 @@ impl LiveTraffic {
         Ok(())
     }
     pub fn validate_control(&self, player: &LiveDriveSession, index: usize) -> Result<(), String> {
-        if self.control_history.len() >= 128 || !self.couplings.is_empty() {
+        if self.control_history.len() >= 128 {
             return Err("Completá la maniobra actual antes de otro cambio de conductor".into());
         }
         let service = self.services.get(index).ok_or("Servicio desconocido")?;
         if !service.departed || service.session.arrived {
             return Err("El servicio tiene que estar activo".into());
         }
-        if player.velocity_mps() > 0.1
-            || service.session.velocity_mps() > 0.1
+        if player.velocity_mps().abs() > 0.1
+            || service.session.velocity_mps().abs() > 0.1
             || !(0.25..0.75).contains(&player.driver_direction)
         {
             return Err(
@@ -668,6 +668,9 @@ impl LiveTraffic {
         F: FnMut(&openrailsrs_scenarios::sound_regions::RegionTransition),
     {
         crate::rail_operations::coordinate(player, self);
+        if real_dt.is_finite() && real_dt > 0. {
+            self.tick_timetable_transfers(player, automatic.is_some());
+        }
         let timed_closures = player
             .state
             .rail_operations
@@ -676,6 +679,7 @@ impl LiveTraffic {
             .iter()
             .any(|w| w.closed);
         if self.services.is_empty() && !timed_closures {
+            self.sync_activity_context(player);
             let before = player.time_s();
             if let Some(notch) = automatic {
                 player.step_autodrive(real_dt, notch, transition);
@@ -723,6 +727,8 @@ impl LiveTraffic {
                 }
             }
             self.synchronize_occupancy(player);
+            self.sync_activity_context(player);
+            self.tick_timetable_transfers(player, automatic.is_some());
             self.update_crossings(player, dt);
             crate::rail_operations::coordinate(player, self);
             if player.arrived {
@@ -744,6 +750,11 @@ impl LiveTraffic {
 
 fn service_scenario(player: &ScenarioFile, entry: &TrainEntryDef) -> ScenarioFile {
     let mut ai = player.clone();
+    ai.native_activity =
+        (!entry.activity_uids.is_empty()).then(|| openrailsrs_core::activity::ActivityDefinition {
+            vehicle_uids: entry.activity_uids.clone(),
+            ..Default::default()
+        });
     ai.gameplay.shunting.clear();
     ai.scenario.name.clone_from(&entry.id);
     ai.extra_trains.clear();
@@ -766,6 +777,7 @@ fn service_scenario(player: &ScenarioFile, entry: &TrainEntryDef) -> ScenarioFil
     ai.train.platform_sides.clear();
     ai.train.cab_equipment.clone_from(&entry.cab_equipment);
     ai.train.presentation.clone_from(&entry.presentation);
+    ai.train.bogie_dynamics.clone_from(&entry.bogie_dynamics);
     ai.train.vehicle_profiles.clear();
     ai.train.power_load = Default::default();
     ai.train

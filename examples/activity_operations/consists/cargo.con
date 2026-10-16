@@ -1,0 +1,1 @@
+(Train (Engine "../traction_operation/vehicles/diesel.eng" (UiD 0)) (Wagon "vehicles/cargo.wag" (UiD 1)) (Wagon "vehicles/cargo.wag" (UiD 2)) (Wagon "vehicles/cargo.wag" (UiD 3)))

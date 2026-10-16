@@ -196,6 +196,7 @@ pub(crate) fn import_activity_definition(
     let sound_regions = build_sound_regions(route_dir, &activity);
 
     let mut scenario = ScenarioFile {
+        native_activity: None,
         scenario: ScenarioMeta {
             name: activity.name.clone(),
             description: format!(
@@ -228,6 +229,7 @@ pub(crate) fn import_activity_definition(
             edge_speed_limits: vec![],
         },
         train: TrainSection {
+            bogie_dynamics: vec![],
             freight: None,
             systems: vec![],
             platform_sides: vec![],
@@ -346,6 +348,14 @@ pub(crate) fn import_activity_definition(
         }
     }
 
+    crate::native_activity::apply(
+        route_dir,
+        act_path,
+        &pat_path,
+        imported_route_dir,
+        &activity,
+        &mut scenario,
+    )?;
     let mut overlay_applied = false;
     if let Some(track_dir) = imported_route_dir {
         overlay_applied =
@@ -603,6 +613,14 @@ fn build_one_extra_train(
         idx + 1
     );
     Ok(TrainEntryDef {
+        bogie_dynamics: vec![],
+        // Metadata-only imports do not load stock. A runnable import has
+        // already resolved its original CON above and must retain real UIDs.
+        activity_uids: imported
+            .and(svc.uid)
+            .map(|uid| crate::native_activity::service_uids(route_dir, &consist, uid))
+            .transpose()?
+            .unwrap_or_default(),
         legs,
         presentation: vec![],
         cab_equipment: vec![],
@@ -656,14 +674,16 @@ fn resolve_player_pat(route_dir: &Path, activity: &ActivityFile) -> std::path::P
     route_dir.to_path_buf()
 }
 
-/// Player consist path, or a sanitized `consists/<Train_Config>.con` from the service file.
+/// Player consist path, or the original `consists/<Train_Config>.con` filename.
 fn resolve_player_consist(route_dir: &Path, activity: &ActivityFile) -> String {
     let direct = sanitize_path(&activity.player_consist);
     if !direct.is_empty() {
         return direct;
     }
     if let Some(name) = train_config_from_service(route_dir, activity) {
-        return format!("consists/{}.con", sanitize_id(&name));
+        // Train_Config is an author filename, not an internal service ID.
+        // Zig Zag's tutorial#6_player_train must retain its # and spaces.
+        return format!("consists/{}.con", sanitize_path(&name));
     }
     String::new()
 }
@@ -896,4 +916,60 @@ fn build_item_to_endpoint(tdb: &TrackDbFile) -> HashMap<u32, String> {
         }
     }
     out
+}
+
+#[cfg(test)]
+mod original_filename_tests {
+    use super::*;
+
+    #[test]
+    fn metadata_only_traffic_defers_stock_but_runnable_requires_it() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/with_traffic");
+        let activity = ActivityFile::from_path(root.join("traffic.act")).unwrap();
+        let service = &activity.services[0];
+        assert!(
+            service.uid.is_some(),
+            "fixture must exercise native identities"
+        );
+        let metadata = build_one_extra_train(&root, service, "consists/test.con", 0, 28800., None)
+            .expect("metadata import does not load original stock");
+        assert!(
+            metadata.activity_uids.is_empty(),
+            "do not invent original vehicle UIDs"
+        );
+        assert_eq!(metadata.consist, "consists/test.con");
+        let cache = tempfile::tempdir().unwrap();
+        let error = build_one_extra_train(
+            &root,
+            service,
+            "consists/test.con",
+            0,
+            28800.,
+            Some(cache.path()),
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains("Missing original formation"), "{error}");
+    }
+
+    #[test]
+    fn service_formation_keeps_author_hash_and_spaces() {
+        let root = tempfile::tempdir().unwrap();
+        std::fs::create_dir(root.path().join("SERVICES")).unwrap();
+        std::fs::write(
+            root.path().join("SERVICES/tutorial#6.srv"),
+            "Service_Definition ( Train_Config ( \"Tutorial#6 Player Train\" ) )",
+        )
+        .unwrap();
+        let ast = openrailsrs_formats::parse_activity_text("Tr_Activity ( Tr_Activity_File ( Player_Service_Definition ( tutorial#6 UiD ( 0 ) ) ) )").unwrap();
+        let activity = ActivityFile::from_ast(&ast).unwrap();
+        assert_eq!(
+            resolve_player_consist(root.path(), &activity),
+            "consists/Tutorial#6 Player Train.con"
+        );
+        assert_eq!(
+            sanitize_id("Tutorial#6 Player Train"),
+            "tutorial_6_player_train"
+        );
+    }
 }

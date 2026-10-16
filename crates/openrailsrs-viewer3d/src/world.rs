@@ -1025,7 +1025,7 @@ fn try_object_from_item(
     let pickup = match item {
         WorldItem::Pickup {
             uid,
-            pickup_type: Some(kind @ 5..=7),
+            pickup_type: Some(kind @ (1..=7 | 10..=14)),
             pickup_capacity: Some([capacity, feed]),
             pickup_anim_data,
             speed_range_mps,

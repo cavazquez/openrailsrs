@@ -97,6 +97,7 @@ pub(super) fn quantity(
     let unit = unit.replace(['*', '(', ')', '^'], "");
     let scale = match (default_unit, unit.as_str()) {
         ("c", "c" | "degc") | ("s", "s") => 1.,
+        ("c", "degf") => 5. / 9.,
         ("s", "ms") => 0.001,
         ("rpm", "") => 1.,
         ("l" | "ft3", "l") | ("kg", "kg") | ("rpm", "rpm") => 1.,
@@ -132,7 +133,12 @@ pub(super) fn quantity(
         ("ft3/s", "g-us" | "g-us/s") => 3.785411784,
         _ => return Err(invalid(key)),
     };
-    let value = number.parse::<f64>().map_err(|_| invalid(key))? * scale;
+    let mut value = number.parse::<f64>().map_err(|_| invalid(key))? * scale;
+    if default_unit == "c" && unit == "degf" {
+        // STFReader.UNITS.Temperature uses an absolute Fahrenheit offset;
+        // BNSF's original diesel files declare MaxTemperature (120degF).
+        value -= 32. * scale;
+    }
     if !value.is_finite() || value < 0. {
         return Err(invalid(key));
     }
@@ -337,5 +343,19 @@ Engine ( engine Type ( Steam ) NumberOfCylinders ( 2 )
         .unwrap();
         let p = parse_diesel(&ast, 315., 1400.).unwrap().unwrap();
         assert!((p.capacity_l - 830. * 3.785411784).abs() < 1e-8);
+    }
+
+    #[test]
+    fn native_fahrenheit_maximum_uses_absolute_temperature_conversion() {
+        let ast = parse_vehicle_text(
+            "Engine ( e Type ( Diesel ) MaxTemperature ( 120 ) MaxTemperature ( 120degF ) )",
+        )
+        .unwrap();
+        let profile = parse_diesel(&ast, 315., 1400.).unwrap().unwrap();
+        assert!((profile.thermal.maximum_c - (120. - 32.) * 5. / 9.).abs() < 1e-10);
+        let invalid =
+            parse_vehicle_text("Engine ( e Type ( Diesel ) MaxTemperature ( 120kelvin-typo ) )")
+                .unwrap();
+        assert!(parse_diesel(&invalid, 315., 1400.).is_err());
     }
 }

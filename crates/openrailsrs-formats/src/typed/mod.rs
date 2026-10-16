@@ -5,6 +5,8 @@ pub use cant::{
     generate_cant_profiles_with_table,
 };
 mod activity;
+mod activity_events;
+pub use activity_events::StaticActivityTrain;
 mod brake_shoe;
 mod carspawn;
 mod consist;
@@ -16,6 +18,7 @@ mod traction_operation;
 pub use electric::parse_electric_vehicle;
 pub use traction_operation::{DieselOperatingParams, DieselThermalParams, SteamOperatingParams};
 mod environment;
+pub mod freight_load;
 mod friction;
 mod hazard;
 mod path;
@@ -24,6 +27,7 @@ mod shape;
 mod sigcfg;
 mod terrain;
 mod track_db;
+pub mod track_sound;
 mod tsection;
 mod vehicle_lights;
 mod wagon;

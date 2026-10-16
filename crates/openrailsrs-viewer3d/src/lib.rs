@@ -649,6 +649,7 @@ impl Plugin for ViewerPlugin {
                     world_operations::update_operational_animations
                         .before(openrailsrs_bevy_scenery::shapes::update_world_shape_anim),
                     openrailsrs_bevy_scenery::shapes::update_world_shape_anim,
+                    train_presentation::remap_portions,
                     rolling_stock_anim::update_consist_car_track_poses
                         .after(live::update_live_train_marker)
                         .after(traffic::update_traffic_poses)

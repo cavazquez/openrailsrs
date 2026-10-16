@@ -149,6 +149,7 @@ fn build_live_gameplay(
 
 /// Interactive session: same physics as headless `sim` / `cab`, stepped from a real-time loop.
 pub struct LiveDriveSession {
+    pub(crate) activity_external_groups: Vec<crate::activity::ActivityGroup>,
     pub scenario_name: String,
     pub formation: crate::FormationState,
     pub curve_parameters: Vec<openrailsrs_formats::VehicleCurveParameters>,
@@ -183,6 +184,7 @@ pub struct LiveDriveSession {
     pub(crate) operational_start_m: f64,
     pub(crate) operational_wait_started: Option<f64>,
     pub(crate) parked_path_data: Option<PathData>,
+    pub(crate) section_path_data: HashMap<String, PathData>,
     pub(crate) service_clock_start_s: f64,
     pub state: TrainSimState,
     pub physics: TrainPhysics,
@@ -694,6 +696,10 @@ impl LiveDriveSession {
             &consist_path,
             consist_root(&consist_path),
         )?;
+        let freight_profiles = openrailsrs_train::from_ast::load_consist_freight_profiles(
+            &consist_path,
+            consist_root(&consist_path),
+        )?;
         let davis_override = scenario
             .train
             .davis
@@ -733,7 +739,24 @@ impl LiveDriveSession {
             .iter()
             .position(|v| matches!(v, openrailsrs_train::Vehicle::Loco(_)))
             .unwrap_or(0);
+        let mut bogies = openrailsrs_train::bogie_geometry::load_consist_bogie_models(
+            &consist_path,
+            consist_root(&consist_path),
+            &consist.vehicle_lengths_m(),
+            &consist
+                .vehicles
+                .iter()
+                .map(|v| match v {
+                    openrailsrs_train::Vehicle::Loco(v) => v.mass_kg,
+                    openrailsrs_train::Vehicle::Wagon(v) => v.mass_kg,
+                })
+                .collect::<Vec<_>>(),
+        )?;
+        let articulated_joints =
+            crate::bogie_dynamics::apply_overrides(&mut bogies, &scenario.train.bogie_dynamics)
+                .map_err(SimError::Msg)?;
         let physics = TrainPhysics {
+            bogies,
             power_supply: crate::power_supply::PowerTrainConfig::from_consist_with_loads(
                 &consist,
                 &scenario.train.power_load,
@@ -778,25 +801,10 @@ impl LiveDriveSession {
         let mut path_data = PathData::from_path(&path_edges, &graph);
         crate::freight::cap(&mut path_data, scenario.train.freight.as_ref());
         let mut state = TrainSimState::new(path_edges.clone());
-        for vehicle in &scenario.train.presentation {
-            if let Some(joint) = &vehicle.jacobs {
-                if vehicle.vehicle.abs_diff(joint.neighbor) != 1
-                    || joint.neighbor >= consist.vehicles.len()
-                    || vehicle.vehicle >= consist.vehicles.len()
-                {
-                    return Err(SimError::Msg(
-                        "Un bogie Jacobs debe unir cuerpos adyacentes existentes".into(),
-                    ));
-                }
-                let pair = [
-                    vehicle.vehicle.min(joint.neighbor),
-                    vehicle.vehicle.max(joint.neighbor),
-                ];
-                if !state.articulated_joints.contains(&pair) {
-                    state.articulated_joints.push(pair);
-                }
-            }
-        }
+        state.articulated_joints = articulated_joints;
+        state
+            .bogies
+            .resize_with(consist.vehicles.len(), Default::default);
         state.weather_track = scenario.simulation.weather_track.clone();
         crate::vehicle_systems::configure(
             &mut state,
@@ -990,6 +998,7 @@ impl LiveDriveSession {
             }
         }
         let mut session = Self {
+            activity_external_groups: vec![],
             scenario_name: scenario.scenario.name.clone(),
             formation: crate::FormationState::new(&consist),
             signal_overrides: HashMap::new(),
@@ -1039,6 +1048,7 @@ impl LiveDriveSession {
             operational_start_m: start_chainage_m,
             operational_wait_started: None,
             parked_path_data: None,
+            section_path_data: HashMap::new(),
             service_clock_start_s: scenario.scenario.start_time_s.unwrap_or(0.0),
             path_data,
             graph,
@@ -1066,6 +1076,37 @@ impl LiveDriveSession {
             start_chainage_m,
             script_tcs: None,
         };
+        if let Some(definition) = &scenario.native_activity {
+            if !definition.valid() || definition.vehicle_uids.len() != session.formation.cars.len()
+            {
+                return Err(SimError::Msg(
+                    "La actividad requiere los UID y la formación original completa".into(),
+                ));
+            }
+            for (car, uid) in session
+                .formation
+                .cars
+                .iter_mut()
+                .zip(&definition.vehicle_uids)
+            {
+                car.activity_uid = Some(*uid);
+            }
+            session.state.activity =
+                Some(crate::activity::ActivityRuntime::new(definition.clone()));
+        }
+        session.state.freight = freight_profiles
+            .into_iter()
+            .enumerate()
+            .filter_map(|(index, profile)| {
+                profile.map(|p| {
+                    crate::activity_freight::FreightCar::new(
+                        index,
+                        session.formation.cars[index].mass_kg,
+                        p,
+                    )
+                })
+            })
+            .collect();
         session.evaluate_native_signals();
         // A static cab/capture needs real aspects at t=0. The traffic layer
         // supplies its positional footprints before the first physics step.
@@ -1242,13 +1283,8 @@ impl LiveDriveSession {
                     .is_none_or(|native| native.function.eq_ignore_ascii_case("NORMAL"))
             })
             .min_by(|a, b| a.position_m.total_cmp(&b.position_m));
-        let has_caution = nearest.is_some_and(|signal| {
-            self.signal_runtime
-                .get(&signal.id)
-                .copied()
-                .unwrap_or(signal.aspect)
-                == SignalAspect::Caution
-        });
+        let has_caution = nearest
+            .is_some_and(|signal| self.governing_signal_aspect(signal) == SignalAspect::Caution);
         if has_caution {
             base * CAUTION_SPEED_FACTOR
         } else {
@@ -1289,14 +1325,16 @@ impl LiveDriveSession {
                 .graph
                 .signals_on_edge(edge_id)
                 .filter(|signal| before + signal.position_m >= 0.0)
-                .min_by(|a, b| a.position_m.total_cmp(&b.position_m));
+                .min_by(|a, b| {
+                    a.position_m.total_cmp(&b.position_m).then_with(|| {
+                        (self.governing_signal_aspect(b) as u8)
+                            .cmp(&(self.governing_signal_aspect(a) as u8))
+                    })
+                });
             if let Some(signal) = nearest {
                 return Some((
                     before + signal.position_m,
-                    self.signal_runtime
-                        .get(&signal.id)
-                        .copied()
-                        .unwrap_or(signal.aspect),
+                    self.governing_signal_aspect(signal),
                 ));
             }
             before += self.path_data.edges[index].length_m;
@@ -1304,7 +1342,7 @@ impl LiveDriveSession {
         None
     }
 
-    fn distance_to_red_signal_m(&self) -> Option<f64> {
+    pub(crate) fn distance_to_red_signal_m(&self) -> Option<f64> {
         let mut before = -self.state.pos_on_edge_m;
         for (index, edge_id) in self
             .state
@@ -1318,12 +1356,7 @@ impl LiveDriveSession {
                 .signals_on_edge(edge_id)
                 .filter(|signal| {
                     before + signal.position_m >= 0.0
-                        && self
-                            .signal_runtime
-                            .get(&signal.id)
-                            .copied()
-                            .unwrap_or(signal.aspect)
-                            == SignalAspect::Stop
+                        && self.governing_signal_aspect(signal) == SignalAspect::Stop
                 })
                 .min_by(|a, b| a.position_m.total_cmp(&b.position_m));
             if let Some(signal) = nearest {
@@ -2255,7 +2288,8 @@ impl LiveDriveSession {
                     .fail("Maniobras incompletas al llegar al final");
             }
             let operational_end = self.tick_operational_path(automatic.is_some());
-            if physical_end || operational_end {
+            let native_activity = self.has_native_activity_events();
+            if (physical_end || operational_end) && !native_activity {
                 self.gameplay.finish_at_route_end(
                     self.time_s(),
                     self.gameplay_chainage_m(),
@@ -2267,7 +2301,7 @@ impl LiveDriveSession {
                 self.arrived = true;
                 break;
             }
-            if physical_end {
+            if physical_end && !native_activity {
                 self.gameplay.phase = ServicePhase::Completed;
                 self.arrived = true;
                 break;
@@ -2359,6 +2393,7 @@ impl LiveDriveSession {
         self.tick_signals(step_dt);
         self.tick_announcements();
         self.tick_gameplay(step_dt);
+        self.tick_activity();
         self.finish_pending_door_closures();
         self.update_shunt_authority();
         self.tick_depot_work(step_dt);
@@ -2458,6 +2493,9 @@ impl LiveDriveSession {
             self.state.passengers = self.state.passengers.saturating_sub(off).saturating_add(on);
             self.state.extra_mass_kg =
                 self.state.passengers as f64 * crate::runner::KG_PER_PASSENGER;
+        }
+        if self.has_native_activity_events() && self.gameplay.phase == ServicePhase::Completed {
+            self.gameplay.phase = ServicePhase::Approaching;
         }
         if let Some(mut lesson) = self.state.learning.take() {
             lesson.observe(self);

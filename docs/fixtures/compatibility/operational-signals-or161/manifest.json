@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "protocol_sha256": "bd3ae702d242f0e5da88173e27f676309ff6df7dac94b2cc5b66d3cb5ab73fc5",
+  "input_sha256": "74ec825cd876e966e141dfe96003fe853e9032e0d1491ef25c6da4f39791e61e",
+  "helper_sha256": "81edf27ab3155df36a654afde480e86c0fc690e3c4b9f7d6e014d75374ceea7e",
+  "capture_script_sha256": "1bb4c5ffaa3f2d49573264ee1e7e9141f281d88ed55a48c0a0b42773198986d4",
+  "assemblies": {
+    "RunActivity.exe": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2",
+    "Orts.Simulation.dll": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679",
+    "Orts.Common.dll": "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212",
+    "Orts.Settings.dll": "fe0d8d81149f480f3972c80e64ffaf6012c7599e32c26c8e4d46510e3edbb2e7",
+    "Orts.Formats.Msts.dll": "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465",
+    "Orts.Parsers.Msts.dll": "8e0781c9f861ed95b4467d1bf948ea7aca896d634f21ac5952f97a9f630d0b36",
+    "MonoGame.Framework.dll": "c6a16c29705a4c847e0e4a2647bf432604cd9320cbc5d4125ab01ae7bb7e6542",
+    "Newtonsoft.Json.dll": "9af2e1c672afd67a291b8f2031a341a3788d4d9f683eaddc6ceab3a3a74c546e"
+  },
+  "source_files": {
+    "Source/Orts.Simulation/Simulation/Signalling/SignalObject.cs": "170f1361b699c31156fd48c499440d9b272d305cf03352f39f256ad0073c2aed",
+    "Source/Orts.Simulation/Simulation/Signalling/SignalHead.cs": "f5f5ab085b98e6f27765523c8393653a9eee1bd2ac1b2955a69f2ace1c744a96",
+    "Source/Orts.Formats.Msts/TrackDatabaseFile.cs": "8564cee5f17a976afc393c1da3dd6a9c4312ca0061800fb4630d382234dd0729"
+  },
+  "output_sha256": "291e69e557d2cf24c0a282701dfb27cd9ab7f269b1fd237da7f84991003d3005",
+  "reference_source_and_dlls_unmodified": true,
+  "wine_isolation_helper_sha256": "4e87773fd3fe535f5660a427ea12b8b6a716266ebf9161e433aa66fc86e9f590",
+  "wine_isolation_release_sha256": "500bc8ef7417c8f3fc53e7e9e3487b3d9aedf2fbe0becb9c56966148d29f4f91",
+  "native_methods": [
+    "SignalObject.block_state",
+    "SignalObject.AddHead",
+    "SignalHead.route_set"
+  ],
+  "tolerances_predeclared": {
+    "discrete_states": "exact",
+    "junction_bindings": "exact",
+    "route_set": "exact"
+  },
+  "scope": "Native discrete block states and first junction link; ordinary activity route membership. Full track-circuit reservation search and timetable permission rules are not claimed."
+}

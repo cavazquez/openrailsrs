@@ -21,7 +21,7 @@ pub enum RegionTransition {
 }
 
 /// Tracks which sound regions are currently active for the player train.
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct RegionTracker {
     regions: Vec<SoundRegionDef>,
     active: HashSet<String>,

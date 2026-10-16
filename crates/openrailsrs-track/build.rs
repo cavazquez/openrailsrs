@@ -6,6 +6,7 @@ fn main() {
         &[
             "src/sigscript.rs",
             "src/graph.rs",
+            "src/track_sound.rs",
             "../openrailsrs-content/cache_fingerprint_build.rs",
             "Cargo.toml",
             "../../Cargo.lock",

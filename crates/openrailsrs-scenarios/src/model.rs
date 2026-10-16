@@ -4,6 +4,8 @@ use crate::ScenarioError;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ScenarioFile {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub native_activity: Option<openrailsrs_core::activity::ActivityDefinition>,
     pub scenario: ScenarioMeta,
     pub route: RouteSection,
     pub train: TrainSection,
@@ -150,8 +152,20 @@ pub struct TimetableOperation {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum TimetableAction {
-    Detach { keep: usize },
-    PickUp { count: usize },
+    Detach {
+        keep: usize,
+    },
+    PickUp {
+        count: usize,
+    },
+    JoinService {
+        service: String,
+        #[serde(default)]
+        front: Option<bool>,
+    },
+    SplitService {
+        service: String,
+    },
 }
 
 /// An authored PAT subpath; reversals keep the same vehicle reference and
@@ -195,6 +209,8 @@ pub struct DavisSection {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct TrainSection {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub bogie_dynamics: Vec<crate::bogie_dynamics::BogieDynamicsDef>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub freight: Option<crate::freight::FreightService>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -311,6 +327,10 @@ pub struct ShuntingStep {
 /// `[[extra_trains]]` with their own route, consist, and departure time.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct TrainEntryDef {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub bogie_dynamics: Vec<crate::bogie_dynamics::BogieDynamicsDef>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub activity_uids: Vec<u32>,
     /// Ordered original PAT subpaths, retaining reversal and wait points.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub legs: Vec<RouteLeg>,
@@ -485,6 +505,11 @@ impl Default for OutputSection {
 
 impl ScenarioFile {
     pub fn validate(&self) -> Result<(), ScenarioError> {
+        if self.native_activity.as_ref().is_some_and(|a| !a.valid()) {
+            return Err(ScenarioError::Validation(
+                "Definición original ACT inválida".into(),
+            ));
+        }
         if !self.train.announcements.valid() {
             return Err(ScenarioError::Validation(
                 "Paquete de anuncios sin procedencia/licencia o inválido".into(),
@@ -508,6 +533,21 @@ impl ScenarioFile {
         ) {
             return Err(ScenarioError::Validation(
                 "Equipos de vehículo o lados de andén inválidos".into(),
+            ));
+        }
+        if self.train.bogie_dynamics.len() > 256
+            || self.train.bogie_dynamics.iter().any(|v| !v.valid())
+            || self
+                .train
+                .bogie_dynamics
+                .iter()
+                .map(|v| v.vehicle)
+                .collect::<std::collections::BTreeSet<_>>()
+                .len()
+                != self.train.bogie_dynamics.len()
+        {
+            return Err(ScenarioError::Validation(
+                "Dinámica de bogies inválida".into(),
             ));
         }
         if self.train.presentation.len() > 256
@@ -565,6 +605,14 @@ impl ScenarioFile {
         if self.route.legs.len() > 256
             || self.extra_trains.iter().any(|e| {
                 e.legs.len() > 256
+                    || e.bogie_dynamics.len() > 256
+                    || e.bogie_dynamics.iter().any(|v| !v.valid())
+                    || e.bogie_dynamics
+                        .iter()
+                        .map(|v| v.vehicle)
+                        .collect::<std::collections::BTreeSet<_>>()
+                        .len()
+                        != e.bogie_dynamics.len()
                     || e.presentation.len() > 256
                     || e.presentation.iter().any(|v| !v.valid())
                     || e.cab_equipment.len() > 256
@@ -593,6 +641,12 @@ impl ScenarioFile {
                                     TimetableAction::Detach { keep } => !(1..=256).contains(&keep),
                                     TimetableAction::PickUp { count } => {
                                         !(1..=256).contains(&count)
+                                    }
+                                    TimetableAction::JoinService { ref service, .. }
+                                    | TimetableAction::SplitService { ref service } => {
+                                        service.trim().is_empty()
+                                            || service.len() > 256
+                                            || service.chars().any(char::is_control)
                                     }
                                 }
                         })

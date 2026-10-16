@@ -481,6 +481,14 @@ fn import_activity_emits_extra_trains_from_traffic() {
     assert_eq!(svc2.get("id").and_then(|v| v.as_str()), Some("express"));
     let t2 = as_f64(svc2.get("start_time_s").expect("start_time_s")).unwrap_or_default();
     assert!((t2 - 600.0).abs() < 1e-6, "expected 600s, got {t2}");
+    let scenario: openrailsrs_scenarios::ScenarioFile = toml::from_str(&toml_str).unwrap();
+    assert!(
+        scenario
+            .extra_trains
+            .iter()
+            .all(|train| train.activity_uids.is_empty()),
+        "metadata-only imports must not fabricate stock identities"
+    );
 }
 
 #[test]
@@ -879,6 +887,31 @@ fn chiltern_birmingham_import_checks_pat_placement_and_route_edition() {
         }
     }
     let (toml, _, overlay_applied) = imported.expect("import activity");
+    let scenario: openrailsrs_scenarios::ScenarioFile = toml::from_str(&toml).unwrap();
+    for object in &activity.static_trains {
+        let actor = scenario
+            .extra_trains
+            .iter()
+            .find(|train| train.id == format!("act-static-{}", object.id))
+            .expect("retain every original static actor");
+        let expected = object.entries.iter().filter(|entry| {
+            !matches!(entry, openrailsrs_formats::ConsistEntry::Wagon { path, .. } if path == "trains//.wag")
+        }).map(|entry| (object.id << 16) | entry.uid().unwrap()).collect::<Vec<_>>();
+        assert_eq!(
+            actor.activity_uids, expected,
+            "retain every nonempty original car and its order"
+        );
+    }
+    assert!(
+        scenario
+            .native_activity
+            .as_ref()
+            .unwrap()
+            .diagnostics
+            .iter()
+            .any(|message| message.contains("WagonData vacío")),
+        "diagnose original empty placeholders"
+    );
     assert!(
         toml.contains("start = \"n17361\""),
         "player_path={} service={:?} offset={offset} direct_start={} scenario:\n{}",

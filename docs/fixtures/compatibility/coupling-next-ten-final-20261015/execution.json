@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "completed_at_utc": "2026-10-16T00:47:08.605359+00:00",
+  "status": "pass",
+  "cargo_invoked": false,
+  "wine_invoked": false,
+  "runtime_modified_by_capture": false,
+  "original_assets_versioned": false,
+  "source_inputs_unchanged_during_library_build": true,
+  "source_inputs_unchanged_during_helper_build_and_capture": true,
+  "verified_source_file_count": 190,
+  "source_snapshot_sha256_before": "361ec573d5ed178e060d9bf87aa1e03b007f44cc8b5df8de9e9b99b6ad5f6f44",
+  "source_snapshot_sha256_after": "361ec573d5ed178e060d9bf87aa1e03b007f44cc8b5df8de9e9b99b6ad5f6f44",
+  "libraries_unchanged_during_helper_build_and_capture": true,
+  "library_preparation": "cargo build --locked --workspace --all-features --lib --message-format=json, before the rustc-only capture",
+  "libraries": {
+    "serde_json": {
+      "file": "libserde_json-87a8e1f99d134334.rlib",
+      "sha256": "688f8881d192157e337b7e1b75f77edc09de0e93cbfed0cc21457bf92d2905ef"
+    },
+    "openrailsrs_scenarios": {
+      "file": "libopenrailsrs_scenarios-9cd3e3309e3e4a46.rlib",
+      "sha256": "369d22b022d5ebe8e22ad99700b12ae74b3ea993d1e957d92cf5d609ed2ed055"
+    },
+    "openrailsrs_sim": {
+      "file": "libopenrailsrs_sim-8aea4f5f640cd4f3.rlib",
+      "sha256": "c5a8576bf81ed98b047d13d47b82a544cfaef3c6ff71fdb372c94f7d9e44bba1"
+    }
+  },
+  "comparison": {
+    "status": "pass",
+    "reference": "Open Rails 1.6.1",
+    "transferred_original_vehicles": 8,
+    "force_cases": 3,
+    "maximum_force_error_n": 0.00038474577013403177,
+    "driving_after_restore_m": 15.958283321226588,
+    "limits": [
+      "Stationary manual rear-to-front joining only in Rust",
+      "OR automatically requires signed movement; zero-speed scan is retained separately",
+      "Different simple rigid / elastic transient and slack laws are not declared equivalent",
+      "Original stock is driven on owned synthetic track; native route/signal/full-physics parity not certified"
+    ]
+  },
+  "rust_output_byte_identical_to_historical32": false,
+  "depot_observed_identical_to_historical32": true,
+  "scope": "New Rust execution only. Original Open Rails DLL capture, tolerances and historical Rust output are unchanged. Coupling is stationary manual rear/front contact and three prescribed static equilibria; this does not certify moving-impact or full-route parity. DepotStateCompare emitted its unchanged historical source_scope string; the new execution identity is recorded here rather than rewriting raw helper output."
+}

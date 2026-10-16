@@ -81,6 +81,8 @@ def main():
     parser.add_argument("--debug-materials", action="store_true")
     parser.add_argument("--capture-or-focus", action="store_true",
                         help="match the native reference's exterior focus on the lead vehicle centre")
+    parser.add_argument("--match-native-lighting", action="store_true",
+                        help="freeze the recorded native sun vector for equivalent shadow comparisons")
     parser.add_argument("--particle-budget", type=int)
     parser.add_argument("--clock-time-s", type=float, default=35700)
     parser.add_argument("--station", action="append", help="station slug; repeat to select views")
@@ -122,12 +124,18 @@ def main():
         station_text = args.scenario.read_text()
         station_text = re.sub(r"(?m)^start_time_s\s*=.*$", f"start_time_s = {args.clock_time_s}", station_text, count=1)
         args.scenario.write_text(station_text)
+        if args.match_native_lighting:
+            reference = json.loads((repo / "docs/fixtures/visual/or_reference/chiltern_station_views" / (name + "-exterior.json")).read_text())
+            args.capture_solar_direction = reference["solar_direction"]
         report = run_checkpoint(args, name, 0, True)
         if not report.get("camera") or not report.get("solar_direction"):
             raise RuntimeError("Viewer lacks camera / sun metadata; rebuild the workspace")
         reports[name] = report
         if args.with_cab:
             args.follow = "driver"
+            if args.match_native_lighting:
+                reference = json.loads((repo / "docs/fixtures/visual/or_reference/chiltern_station_views" / (name + "-cab.json")).read_text())
+                args.capture_solar_direction = reference["solar_direction"]
             reports[name + "-cab"] = run_checkpoint(args, name + "-cab", 0, True)
             args.follow = "orbit"
     (args.out_dir / "report.json").write_text(json.dumps(reports, indent=2) + "\n")

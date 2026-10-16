@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "protocol_sha256": "33a208a04ffc1fd94139339ab4227e15f3fa15576f5ee89bd517c0b5ac6a025f",
+  "input_sha256": "05513260c53364add7b76f8c020f97a88c72b94883de53c1748be89470a52f1e",
+  "helper_sha256": "abccb6234d258601bb26fa9c9963e062133548084684f3da7d0f525ce53775f8",
+  "capture_script_sha256": "161a728837f3aa46813e23f60d1dcfc42bccb4ccf18a8ca6c6441ae0e9df2840",
+  "assemblies": {
+    "RunActivity.exe": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2",
+    "Orts.Simulation.dll": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679",
+    "Orts.Common.dll": "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212",
+    "Orts.Settings.dll": "fe0d8d81149f480f3972c80e64ffaf6012c7599e32c26c8e4d46510e3edbb2e7",
+    "Orts.Formats.Msts.dll": "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465",
+    "Orts.Parsers.Msts.dll": "8e0781c9f861ed95b4467d1bf948ea7aca896d634f21ac5952f97a9f630d0b36",
+    "MonoGame.Framework.dll": "c6a16c29705a4c847e0e4a2647bf432604cd9320cbc5d4125ab01ae7bb7e6542",
+    "Newtonsoft.Json.dll": "9af2e1c672afd67a291b8f2031a341a3788d4d9f683eaddc6ceab3a3a74c546e"
+  },
+  "source_files": {
+    "Source/RunActivity/Viewer3D/Sound.cs": "2313575884f9c81dd12f24eb69ae5bb51aae23dd16c256d00867879f577c41d8",
+    "Source/Orts.Simulation/Simulation/Traveller.cs": "5cdd52469523420fe5f9d8e50ced3877135c042fc984dd8b1bdfcbfa2b0ec5bc",
+    "Source/Orts.Formats.Msts/WorldSoundFile.cs": "fd4b213d2a7191492cab7ed3baed426753aa1749489aa86a420d1a8133ea605c",
+    "Source/Orts.Formats.Msts/TrackTypesFile.cs": "9edb7bb8ad84374f91922880a8b1bfa8628fae7c6c642501f7b3938db7cb7caf"
+  },
+  "output_sha256": "822005282be251c55f0b727299895acc86c83116c7bc6036fa798e5dd6a3d922",
+  "reference_source_and_dlls_unmodified": true,
+  "wine_isolation_helper_sha256": "4e87773fd3fe535f5660a427ea12b8b6a716266ebf9161e433aa66fc86e9f590",
+  "wine_isolation_release_sha256": "b1503028842fee8a98cfd95543a9eda42ae1ea0a333f9d7eaf3875c551601e8d",
+  "native_methods": [
+    "WorldSoundFile.Read",
+    "TrackTypesFile",
+    "Traveller.Move",
+    "WorldSounds.GetTType(Train)"
+  ],
+  "tolerances_predeclared": {
+    "track_type": "exact including native hold sentinel",
+    "probe_not_at_boundary_minimum_m": 0.5
+  },
+  "scope": "Native rolling sound region selection at read-only SCE original route probes in both directions; mixer PCM and player drive use separate acceptance. No acoustic equivalence claim.",
+  "original_content": {
+    "SCE.tdb": "fb4a0a1c4639f28c20b3d73dbe5e790475eaf366b6840638d1d976e471981d63",
+    "TTYPE.DAT": "3008846056e8c776f24d48ea4953d8091235e564c7d9a287691ed439345bd41f",
+    "WORLD/w-006111+015146.ws": "e80474e6d030bd8704522c02fb524cda43f30393f42026144897f8d574abf6c8",
+    "WORLD/w-006112+015146.ws": "80cc800c419ffd26bdef9200754990781dbcd664648be07fcec148e4b3dd25aa",
+    "WORLD/w-006113+015145.ws": "0ad1e934f1d13ae72e3566600d64fb82d35ca11f1ce1bc527267630f585ab453",
+    "WORLD/w-006114+015145.ws": "258a42e68b35ff3a2979cff6e292844093556506567712e979c3e457eb003672",
+    "WORLD/w-006115+015144.ws": "a3928dfa5bdd4364e5d47f13e5f9bdb4b911ba13c83df23ae5bcf1c57949244d",
+    "WORLD/w-006115+015145.ws": "2dbba2e2d472bd88d7a15b8e80062c35c90f7eaf790739beff287f6d6396d2ee",
+    "WORLD/w-006116+015144.ws": "77c63fcf0b579e0f6949f0827ffc395ffeab4ad16c29bead6647049e241770dd",
+    "WORLD/w-006116+015145.ws": "4fdc707320cefba7aeb51f28645433a56ef01746bbe3f1411af7482fd48a314f",
+    "WORLD/w-006117+015145.ws": "eaaf240c41ddd0a866cfd989a17833637459c2479d3e29743d3d3d1bbabaf5d0",
+    "WORLD/w-006118+015145.ws": "85b76c14c963f41cea284997620540bfab521dae87cfad216e6343d5d41f7434",
+    "WORLD/w-006119+015145.ws": "16e5e328a466945e15760bb104af4fbe7ce2c62b312fc6daa6843cd03232843b",
+    "WORLD/w-006119+015146.ws": "8c30b8e04617962956764ae0b84868288cb89dcc8bc4e593651d55f2fe93f67b",
+    "WORLD/w-006119+015147.ws": "9b0e9949947ecacf20260349bfd6f48167ccf6156be7ed4cf5b297878afaf321",
+    "WORLD/w-006120+015146.ws": "83c1d6b69e87b896c8f76bf09ca14c87a6d5803859029061d5f012455fe41ab1",
+    "WORLD/w-006120+015147.ws": "53f175f876640f1053a3f2dc5c3f20a93e6b95624fffd58b6b53c3705d6db0a7",
+    "WORLD/w-006121+015147.ws": "2e9248ed2a81075b179af7d6bb6ed323c3667d7e4f79d3135591ef2ef3c5c401",
+    "WORLD/w-006122+015147.ws": "08f89792ed1ba928e66c70836e11a215a158484061f3de89c7d83aedd52b92b0",
+    "WORLD/w-006123+015147.ws": "11ab23d2165e5d286b709419897e17ac9734fa552951be95b9d04c030bd43215",
+    "WORLD/w-006124+015147.ws": "b79a249a9d9c58f8d5b1777d73668a79d47ade786669a82421c3f534b8f2460b",
+    "WORLD/w-006125+015147.ws": "a5c8f768f1780b183eaaebded340a521c7e57ab547cca284ae9ca07f37adc846",
+    "WORLD/w-006126+015147.ws": "04256367706e1f876c254218a26d6e0d5583b3ddb25853f0cc51d14b6e79cc80",
+    "WORLD/w-006126+015148.ws": "bd06845b0b084bd644bfbe66b04c94f1fa158ab3af42338425c0902905f030e0",
+    "WORLD/w-006127+015148.ws": "fa652932cb7e677db28a93cbb3be39000b9d41751cebdd98ee19c02c30e61492",
+    "WORLD/w-006128+015148.ws": "875b75853e300ba82108e5677bcd0ca5314838fa552de5a878984231eb292d33",
+    "WORLD/w-006129+015148.ws": "7c84fd47d5e4a6a6c1ce6fa8af4c2068c7b5cc170cf28763cade3f973eb76739",
+    "WORLD/w-006129+015149.ws": "d7d970e07b0b04dc3e59fce89de399077b6784cd36dccd724f79072c2b778aaf"
+  },
+  "tsection_sha256": "549173520f61fd9281490294969aef8f6207d08996c0d41fe5b47249a307ef14"
+}

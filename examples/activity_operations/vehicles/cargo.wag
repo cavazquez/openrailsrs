@@ -1,0 +1,12 @@
+// Owned exercise, no community vehicle assets.
+Wagon ( ActivityCargo
+  Name ( "Vagón de práctica de carga" )
+  Type ( Freight ) Mass ( 12000kg ) Size ( 3m 4m 12m )
+  MaxBrakeForce ( 70000N )
+  ORTSFreightAnims (
+    WagonEmptyWeight ( 12000kg ) UnloadingStartDelay ( 5 )
+    FreightAnimContinuous (
+      IntakePoint ( 0 6 FreightCoal ) FreightWeightWhenFull ( 2400kg ) FullAtStart ( 0 )
+    )
+  )
+)

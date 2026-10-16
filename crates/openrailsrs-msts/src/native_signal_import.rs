@@ -10,7 +10,7 @@ use openrailsrs_formats::{
 };
 use openrailsrs_track::{
     SignalScript,
-    sigscript::{NativeSignalDef, SignalProgram},
+    sigscript::{NativeSignalDef, NativeSignalLink, SignalProgram},
 };
 
 use crate::MstsError;
@@ -353,12 +353,10 @@ pub(super) fn bind(
             }
         }
     }
-    if sources.is_empty() {
-        return Ok(imported.into());
-    }
     let ast = parse_named_stf(&bounded_text(tdb, MAX_TRACK_DB_BYTES)?)?;
     let world = world_heads(route, &cfg, &ast)?;
     let mut definitions = HashMap::new();
+    let mut route_links = HashMap::new();
     for signal in blocks(&ast, "SignalItem") {
         let Some(id) = field(signal, "TrItemId").and_then(|s| s.parse::<u32>().ok()) else {
             continue;
@@ -378,6 +376,56 @@ pub(super) fn bind(
             _ => return Err(MstsError::msg("Invalid native signal direction")),
         };
         definitions.insert(id, (reverse, info[3].to_ascii_uppercase()));
+        if let Some(link) = blocks(signal, "TrSignalDir").first() {
+            let values = atoms(link);
+            let junction = values
+                .first()
+                .and_then(|n| n.parse::<u32>().ok())
+                .ok_or_else(|| {
+                    MstsError::msg(format!("Invalid TrSignalDir junction for signal {id}"))
+                })?;
+            let branch = values
+                .get(2)
+                .and_then(|n| n.parse::<u32>().ok())
+                .ok_or_else(|| {
+                    MstsError::msg(format!("Invalid TrSignalDir path for signal {id}"))
+                })?;
+            if junction != 0 {
+                let node = blocks(&ast, "TrackNode")
+                    .into_iter()
+                    .find(|n| atoms(n).first().and_then(|n| n.parse().ok()) == Some(junction))
+                    .ok_or_else(|| {
+                        MstsError::msg(format!(
+                            "TrSignalDir {id} references missing junction {junction}"
+                        ))
+                    })?;
+                let pins = blocks(node, "TrPins")
+                    .first()
+                    .copied()
+                    .ok_or_else(|| MstsError::msg("Signal junction has no TrPins"))?;
+                let inpins = atoms(pins)
+                    .first()
+                    .and_then(|n| n.parse::<usize>().ok())
+                    .ok_or_else(|| MstsError::msg("Invalid TrPins count"))?;
+                let required = blocks(pins, "TrPin")
+                    .get(inpins + usize::from(branch != 0))
+                    .and_then(|p| atoms(p).first().cloned())
+                    .and_then(|n| n.parse::<u32>().ok())
+                    .ok_or_else(|| {
+                        MstsError::msg(format!(
+                            "TrSignalDir {id} has no matching outgoing junction pin"
+                        ))
+                    })?;
+                route_links.insert(
+                    id,
+                    NativeSignalLink {
+                        junction_node: format!("n{junction}"),
+                        required_vector: format!("e{required}"),
+                        junction_path: branch,
+                    },
+                );
+            }
+        }
     }
     let mut track: toml::Value = toml::from_str(imported)?;
     let lengths: HashMap<_, _> = track["edges"]
@@ -418,25 +466,25 @@ pub(super) fn bind(
             }
             let program_name = script_aliases.get(name).unwrap_or(name);
             let basic_update = !sources.contains_key(program_name);
+            // A missing/empty SIGSCR catalogue does not authorize replacing
+            // an original C# signal with a generic or SH_update_basic policy.
+            if [name.as_str(), program_name.as_str()].iter().any(|script| {
+                [
+                    route.join("SignalScripts"),
+                    route.join("OpenRails/SignalScripts"),
+                ]
+                .iter()
+                .any(|dir| {
+                    resolve_path_case_insensitive(&dir.join(format!("{script}.cs"))).is_some()
+                })
+            }) {
+                return Err(MstsError::msg(format!(
+                    "Original C# signal {name} requires a compatible signal host"
+                )));
+            }
             let source = if let Some(source) = sources.get(program_name) {
                 source
             } else {
-                // OR tries C# before SH_update_basic. Never silently replace an
-                // existing original C# signal with the basic policy.
-                if [name.as_str(), program_name.as_str()].iter().any(|script| {
-                    [
-                        route.join("SignalScripts"),
-                        route.join("OpenRails/SignalScripts"),
-                    ]
-                    .iter()
-                    .any(|dir| {
-                        resolve_path_case_insensitive(&dir.join(format!("{script}.cs"))).is_some()
-                    })
-                }) {
-                    return Err(MstsError::msg(format!(
-                        "Original C# signal {name} requires a compatible signal host"
-                    )));
-                }
                 defaults.get(name).unwrap_or(&unknown_default)
             };
             if compiled.insert((program_name.clone(), basic_update)) {
@@ -484,6 +532,7 @@ pub(super) fn bind(
                 head_flags: world.get(&id).map(|head| head.heads),
                 group: world.get(&id).map(|head| head.group.clone()),
                 forced_stop: failed_signals.contains(&id),
+                route_link: route_links.get(&id).cloned(),
             };
             let script = toml::Value::try_from(SignalScript {
                 native: Some(native),
@@ -502,6 +551,71 @@ pub(super) fn bind(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn csharp_signal_never_falls_back_even_without_a_sigscr_catalogue() {
+        let route = tempfile::tempdir().unwrap();
+        let tdb = route.path().join("test.tdb");
+        std::fs::write(&tdb,"TrackDB ( TrItemTable ( SignalItem ( TrItemId ( 3 ) TrSignalType ( 00000000 0 1 TEST ) ) ) )").unwrap();
+        std::fs::create_dir(route.path().join("SignalScripts")).unwrap();
+        std::fs::write(
+            route.path().join("SignalScripts/TEST.cs"),
+            "original unsupported script",
+        )
+        .unwrap();
+        let original = "[[edges]]\nid='e1'\nlength_m=100.0\n[[signals]]\nid='sig3'\nedge_id='e1'\nposition_m=25.0\naspect='stop'\n";
+        for script in ["", " ScriptFiles ( ScriptFile ( sigscr.dat ) )"] {
+            std::fs::write(
+                route.path().join("sigcfg.dat"),
+                format!("SignalTypes ( SignalType ( TEST SignalFnType ( NORMAL ) ) ){script}"),
+            )
+            .unwrap();
+            std::fs::write(
+                route.path().join("sigscr.dat"),
+                "SCRIPT TEST\nstate=SIGASP_CLEAR_2;",
+            )
+            .unwrap();
+            assert!(
+                bind(route.path(), &tdb, original, &[])
+                    .unwrap_err()
+                    .to_string()
+                    .contains("C# signal TEST requires")
+            );
+        }
+    }
+
+    #[test]
+    fn native_link_uses_authored_outgoing_branch_and_rejects_missing_target() {
+        let route = tempfile::tempdir().unwrap();
+        let tdb = route.path().join("test.tdb");
+        std::fs::write(route.path().join("sigcfg.dat"), "SignalTypes ( SignalType ( TEST SignalFnType ( NORMAL ) ) ) ScriptFiles ( ScriptFile ( sigscr.dat ) )").unwrap();
+        std::fs::write(
+            route.path().join("sigscr.dat"),
+            "SCRIPT TEST\nstate=ROUTE_SET();",
+        )
+        .unwrap();
+        let original = "[[edges]]\nid='e1'\nlength_m=100.0\n[[signals]]\nid='sig3'\nedge_id='e1'\nposition_m=25.0\naspect='stop'\n";
+        for (branch, expected) in [(0, "e11"), (1, "e12")] {
+            let source = format!(
+                "TrackDB ( TrackNodes ( TrackNode ( 7 TrPins ( 1 2 TrPin ( 10 0 ) TrPin ( 11 1 ) TrPin ( 12 1 ) ) ) ) TrItemTable ( SignalItem ( TrItemId ( 3 ) TrSignalType ( 00000000 1 1 TEST ) TrSignalDirs ( 1 TrSignalDir ( 7 0 {branch} 0 ) ) ) ) )"
+            );
+            std::fs::write(&tdb, &source).unwrap();
+            let track: toml::Value =
+                toml::from_str(&bind(route.path(), &tdb, original, &[]).unwrap()).unwrap();
+            let link = &track["signals"][0]["script"]["native"]["route_link"];
+            assert_eq!(link["junction_node"].as_str(), Some("n7"));
+            assert_eq!(link["required_vector"].as_str(), Some(expected));
+            assert_eq!(link["junction_path"].as_integer(), Some(branch));
+            assert_eq!(track["signals"][0]["edge_id"].as_str(), Some("e1_r"));
+            std::fs::write(&tdb, source.replace("TrSignalDir ( 7", "TrSignalDir ( 99")).unwrap();
+            assert!(
+                bind(route.path(), &tdb, original, &[])
+                    .unwrap_err()
+                    .to_string()
+                    .contains("missing junction 99")
+            );
+        }
+    }
+
     #[test]
     fn authored_signal_types_can_share_the_original_orts_script() {
         let route = tempfile::tempdir().unwrap();

@@ -1,6 +1,7 @@
 //! Train/consist model built from MSTS-style `.eng`, `.wag`, `.con` AST.
 
 pub mod auto_friction;
+pub mod bogie_geometry;
 pub mod consist_audit;
 pub mod coupler_profile;
 pub mod davis_est;

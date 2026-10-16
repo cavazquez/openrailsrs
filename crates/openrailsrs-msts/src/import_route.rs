@@ -26,6 +26,8 @@ use crate::error::MstsError;
 mod native_cant_import;
 #[path = "native_signal_import.rs"]
 mod native_signal_import;
+#[path = "native_track_sound.rs"]
+mod native_track_sound;
 
 // ── TOML schema (mirrors openrailsrs-route/src/load.rs) ─────────────────────
 
@@ -156,6 +158,7 @@ fn cached_import(
         Some(&catalog),
     )?;
     let text = native_cant_import::bind(route_dir, &tdb, &catalog, &text)?;
+    let text = native_track_sound::bind(route_dir, &tdb, &text)?;
     let text = bind_electric_supply(route_dir, &text)?;
     let text = native_signal_import::bind(
         route_dir,

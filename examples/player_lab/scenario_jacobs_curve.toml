@@ -116,3 +116,22 @@ right=true
 open_s=2.0
 close_s=3.0
 traction_interlock=true
+
+# Mechanical shared support is separate from the original mesh binding above.
+[[train.bogie_dynamics]]
+vehicle = 0
+support_offsets_m = [10.0, -10.0]
+shared_with = 1
+[train.bogie_dynamics.lateral_suspension]
+stiffness_npm = 1000000.0
+damping_nspm = 100000.0
+travel_m = 0.03
+maximum_attack_rad = 0.04
+[[train.bogie_dynamics]]
+vehicle = 1
+support_offsets_m = [10.0, -10.0]
+[train.bogie_dynamics.lateral_suspension]
+stiffness_npm = 1000000.0
+damping_nspm = 100000.0
+travel_m = 0.03
+maximum_attack_rad = 0.04

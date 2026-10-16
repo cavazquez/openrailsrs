@@ -16,6 +16,8 @@ use crate::{
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CarOperationState {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub activity_uid: Option<u32>,
     #[serde(default = "train_bus_connected_default")]
     pub train_bus_connected: bool,
     pub name: String,
@@ -38,6 +40,14 @@ pub struct CarOperationState {
 pub struct FormationState {
     pub cars: Vec<CarOperationState>,
     pub coupled_count: usize,
+    /// Stable identities move with their complete vehicle state when portions
+    /// are collected in another order. Empty in legacy single-section saves.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub vehicle_ids: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sections: Vec<crate::sections::DetachedSection>,
+    #[serde(default, skip_serializing_if = "crate::sections::is_zero")]
+    pub section_serial: u64,
     /// Parked section uses the original head chainage and original car offsets.
     pub parked_head_chainage_m: Option<f64>,
     /// The detached portion retains the path and orientation on which it stopped.
@@ -48,6 +58,12 @@ pub struct FormationState {
     pub parked_brakes: Vec<BrakeCylinder>,
     pub parked_vehicles: Vec<crate::VehicleState>,
     pub parked_couplers: Vec<CouplerState>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub parked_bogies: Vec<crate::bogie_dynamics::VehicleBogieState>,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub native_bearing_c: HashMap<String, f64>,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub native_axles: HashMap<String, crate::native_dynamics::NativeAxleState>,
 }
 
 impl FormationState {
@@ -61,6 +77,7 @@ impl FormationState {
                     Vehicle::Wagon(w) => (w.name.clone(), w.length_m, w.mass_kg, false),
                 };
                 CarOperationState {
+                    activity_uid: None,
                     train_bus_connected: true,
                     name,
                     length_m,
@@ -80,12 +97,18 @@ impl FormationState {
         Self {
             coupled_count: cars.len(),
             cars,
+            vehicle_ids: vec![],
+            sections: vec![],
+            section_serial: 0,
             parked_head_chainage_m: None,
             parked_path_edges: vec![],
             parked_path_reversed: None,
             parked_brakes: vec![],
             parked_vehicles: vec![],
             parked_couplers: vec![],
+            parked_bogies: vec![],
+            native_bearing_c: HashMap::new(),
+            native_axles: HashMap::new(),
         }
     }
 
@@ -309,6 +332,33 @@ impl LiveDriveSession {
 
     /// Validate completely before mutating the current game.
     pub fn validate_snapshot(&self, saved: &SessionSnapshot) -> Result<(), String> {
+        self.validate_sections(&saved.formation)?;
+        let order = self.snapshot_order(saved)?;
+        if saved.formation.cars.len() != order.len()
+            || order.iter().enumerate().any(|(i, &old)| {
+                let actual = &saved.formation.cars[i];
+                let expected = &self.formation.cars[old];
+                actual.activity_uid != expected.activity_uid
+                    || actual.name != expected.name
+                    || actual.length_m != expected.length_m
+                    || actual.mass_kg != expected.mass_kg
+                    || actual.powered != expected.powered
+            })
+        {
+            return Err(
+                "La identidad o las dimensiones guardadas no pertenecen al vehículo original"
+                    .into(),
+            );
+        }
+        if order.iter().enumerate().any(|(i, old)| i != *old) {
+            let mut view = self.clone_for_sections()?;
+            view.reorder_hardware(&order)?;
+            return view.validate_snapshot_aligned(saved);
+        }
+        self.validate_snapshot_aligned(saved)
+    }
+
+    fn validate_snapshot_aligned(&self, saved: &SessionSnapshot) -> Result<(), String> {
         if let Some(native) = &saved.native_signal_cache {
             self.native_signals.validate_snapshot(
                 native,
@@ -434,6 +484,22 @@ impl LiveDriveSession {
                 "La partida pertenece a otra versión de la ruta, servicio o formación".into(),
             );
         }
+        if saved.state.freight.len() != self.state.freight.len()
+            || saved
+                .state
+                .freight
+                .iter()
+                .zip(&self.state.freight)
+                .any(|(actual, expected)| !actual.valid(expected))
+        {
+            return Err("Carga guardada incompatible con los vagones originales".into());
+        }
+        match (&saved.state.activity, &self.state.activity) {
+            (Some(actual), Some(expected))
+                if actual.valid(&expected.definition, saved.state.time.0) => {}
+            (None, None) => (),
+            _ => return Err("Eventos originales ACT guardados incompatibles".into()),
+        }
         if (!self.operational_legs.is_empty()
             && (saved.operational_leg >= self.operational_legs.len()
                 || saved.state.path_reversed
@@ -451,6 +517,22 @@ impl LiveDriveSession {
                 .is_some_and(|n| !n.is_finite() || n < 0.0 || n > saved.state.time.0)
         {
             return Err("Tramo operativo guardado inválido".into());
+        }
+        if saved.state.pat_operations_completed.iter().any(|index| {
+            *index > saved.operational_leg
+                || self.operational_legs.get(*index).is_none_or(|leg| {
+                    !matches!(
+                        openrailsrs_formats::pat_operations::PatInstruction::decode(
+                            leg.wait_s as u32
+                        ),
+                        openrailsrs_formats::pat_operations::PatInstruction::Detach {
+                            front: true,
+                            ..
+                        }
+                    ) || leg.reversed
+                })
+        }) {
+            return Err("Operaciones PAT guardadas incompatibles con el itinerario".into());
         }
         let n = saved.formation.coupled_count;
         if saved.gameplay.shunting_steps != self.gameplay.shunting_steps
@@ -618,6 +700,29 @@ impl LiveDriveSession {
             || saved.gameplay.stop_targets.len() != self.gameplay.stop_targets.len()
         {
             return Err("La partida tiene una formación o un servicio inválidos".into());
+        }
+        // Bogie hardware stays immutable; only finite mechanical states within
+        // each model's lateral clearance may be restored. Parked sections keep
+        // their own states and are compared in the aligned formation order.
+        let saved_bogies = saved
+            .state
+            .bogies
+            .iter()
+            .chain(&saved.formation.parked_bogies)
+            .collect::<Vec<_>>();
+        let legacy_bogies = saved.state.bogie_state_version.is_none() && saved_bogies.is_empty();
+        if !legacy_bogies
+            && (saved.state.bogie_state_version != Some(1)
+                || saved.state.bogies.len() != n
+                || saved.formation.parked_bogies.len()
+                    != self.original_physics.bogies.len().saturating_sub(n)
+                || saved_bogies.len() != self.original_physics.bogies.len()
+                || saved_bogies
+                    .iter()
+                    .zip(&self.original_physics.bogies)
+                    .any(|(state, model)| !state.valid_for(model)))
+        {
+            return Err("Los estados mecánicos de bogies guardados son inválidos".into());
         }
         let saved_couplers = saved
             .state
@@ -812,9 +917,25 @@ impl LiveDriveSession {
 
     pub fn restore_prepared_snapshot(
         &mut self,
-        saved: SessionSnapshot,
+        mut saved: SessionSnapshot,
         host: Option<crate::etcs::ScriptTcsHost>,
     ) -> Result<(), String> {
+        if saved.state.bogie_state_version.is_none()
+            && saved.state.bogies.is_empty()
+            && saved.formation.parked_bogies.is_empty()
+        {
+            // Legacy saves have no lateral history. Start neutral, then sample
+            // restored position/speed on the first physics tick; no impulse or
+            // longitudinal state is changed by this migration.
+            let total = self.original_physics.bogies.len();
+            let active = saved.formation.coupled_count.min(total);
+            saved.state.bogies.resize_with(active, Default::default);
+            saved
+                .formation
+                .parked_bogies
+                .resize_with(total - active, Default::default);
+            saved.state.bogie_state_version = Some(1);
+        }
         self.validate_snapshot(&saved)?;
         match (&host, &saved.script_state) {
             (Some(host), Some(state)) => host.validate_snapshot(state)?,
@@ -826,6 +947,10 @@ impl LiveDriveSession {
             graph.set_switch(id, *pos).map_err(|e| e.to_string())?;
         }
         let pd = PathData::from_path(&saved.state.path_edges, &graph);
+        let order = self.snapshot_order(&saved)?;
+        if order.iter().enumerate().any(|(i, old)| i != *old) {
+            self.reorder_hardware(&order)?;
+        }
         self.script_tcs = host;
         self.operational_leg = saved.operational_leg;
         self.operational_operation = saved.operational_operation;
@@ -889,6 +1014,7 @@ impl LiveDriveSession {
         self.refilling = saved.refilling;
         self.gameplay = saved.gameplay;
         self.formation = saved.formation;
+        self.rebuild_section_paths();
         if self.formation.parked_head_chainage_m.is_some() {
             if self.formation.parked_path_edges.is_empty() {
                 self.formation
@@ -996,7 +1122,7 @@ impl LiveDriveSession {
                 .is_some_and(|c| c.door_target[slot]);
             return self.command_doors(Some(index), side, !target);
         }
-        if self.velocity_mps() > 0.1 {
+        if self.velocity_mps().abs() > 0.1 {
             return Err("Detené el tren antes de operar la formación".into());
         }
         let parked = index >= self.formation.coupled_count;
@@ -1071,179 +1197,42 @@ impl LiveDriveSession {
         Ok(())
     }
 
-    /// Park a secured trailing section; it remains on the track at its own position.
+    /// Park a secured trailing section with an automatically allocated identity.
     pub fn uncouple_after(&mut self, index: usize) -> Result<(), String> {
-        if self
-            .state
-            .articulated_joints
-            .iter()
-            .any(|p| p[0] == index && p[1] == index + 1)
-        {
-            return Err("No se pueden separar cuerpos que comparten un bogie Jacobs".into());
-        }
-        let keep = index + 1;
-        if keep <= self.cab_vehicle() {
-            return Err(
-                "Cambiá a una cabina de la sección que vas a conservar antes de desacoplar".into(),
-            );
-        }
-        if self.velocity_mps() > 0.1 {
-            return Err("Detené el tren antes de desacoplar".into());
-        }
-        if self.formation.parked_head_chainage_m.is_some() {
-            return Err("Acoplá la sección estacionada antes de hacer otro corte".into());
-        }
-        if keep >= self.formation.coupled_count {
-            return Err("Seleccioná un coche que tenga otro detrás".into());
-        }
-        if self.formation.cars[keep..].iter().any(|c| !c.handbrake) {
-            return Err("Aplicá los frenos de mano de todos los coches que vas a separar".into());
-        }
-        self.driver_throttle = 0.0;
-        self.formation.parked_head_chainage_m = Some(self.head_chainage_m());
-        self.formation
-            .parked_path_edges
-            .clone_from(&self.state.path_edges);
-        self.formation.parked_path_reversed = Some(self.state.path_reversed);
-        self.parked_path_data = Some(PathData::from_path(&self.state.path_edges, &self.graph));
-        self.formation.coupled_count = keep;
-        if self.state.path_reversed {
-            let anchor = self.head_chainage_m()
-                - self.formation.cars[keep..]
-                    .iter()
-                    .map(|car| car.length_m)
-                    .sum::<f64>();
-            let odometer = self.state.odometer_m;
-            crate::live_drive::apply_start_offset(&mut self.state, &self.path_data, anchor);
-            self.state.odometer_m = odometer;
-            self.previous_render_chainage_m = anchor;
-        }
-        self.formation.parked_brakes = self.state.brake_system.cylinders.split_off(keep);
-        if !self.state.vehicles.is_empty() {
-            self.formation.parked_vehicles = self.state.vehicles.split_off(keep);
-            self.formation.parked_couplers = self.state.couplers.split_off(keep - 1);
-            self.state.vehicle_masses.truncate(keep);
-        }
-        self.formation.cars[index].rear_cock_open = false;
-        self.formation.cars[keep].front_cock_open = false;
-        self.formation.cars[keep].hose_connected = false;
-        self.rebuild_formation_physics();
-        self.sync_operating_brakes();
-        self.update_shunting();
-        Ok(())
+        let id = self.operational_legs.get(self.operational_leg)
+            .and_then(|leg| leg.operations.get(self.operational_operation))
+            .filter(|op| matches!(op.action, openrailsrs_scenarios::model::TimetableAction::Detach { keep } if keep == index + 1) && (op.chainage_m-self.head_chainage_m()).abs() <= 20.)
+            .map(|op| op.section.clone())
+            .unwrap_or_else(|| format!("{}/section/{}", self.service_id, self.formation.section_serial + 1));
+        self.uncouple_after_named(index, &id)
     }
 
+    /// Select by physical contact when using the legacy single-button operation.
     pub fn recouple(&mut self) -> Result<(), String> {
-        let parked = self
+        self.ensure_section_metadata();
+        let ids: Vec<_> = self
             .formation
-            .parked_head_chainage_m
-            .ok_or("No hay una sección separada")?;
-        let prefix = self.formation.length_m();
-        let full_length = self.formation.cars.iter().map(|c| c.length_m).sum::<f64>();
-        let at = self.position_at_head_offset(-prefix);
-        let (edges, pd) = self.presentation_path_for_car(-prefix);
-        let target = PathData::position_at_odometer(
-            edges,
-            &pd.edges,
-            parked + self.parked_car_offset(-prefix),
-        );
-        let normalise = |(id, position): (String, f64)| {
-            let edge = self.graph.edge(&id).unwrap();
-            (
-                base_edge(&id).to_string(),
-                if id.ends_with("_r") {
-                    edge.length_m - position
-                } else {
-                    position
-                },
-            )
-        };
-        if self.velocity_mps() > 0.1
-            || !at.zip(target).is_some_and(|(a, b)| {
-                let a = normalise(a);
-                let b = normalise(b);
-                a.0 == b.0 && (a.1 - b.1).abs() <= 1.0
-            })
-        {
-            return Err("Acercá el enganche a menos de 1 m y detené el tren para acoplar".into());
-        }
-        let anchor = self.head_chainage_m()
-            + if self.state.path_reversed {
-                full_length - prefix
-            } else {
-                0.0
-            };
-        for i in self.formation.coupled_count..self.formation.cars.len() {
-            let offset = self.formation.center_offset_m(i);
-            let old = self.presentation_position_for_car(offset, offset, 0.0);
-            let next = PathData::position_at_odometer(
-                &self.state.path_edges,
-                &self.path_data.edges,
-                anchor
-                    + if self.state.path_reversed {
-                        -full_length - offset
-                    } else {
-                        offset
-                    },
-            );
-            if !old.zip(next).is_some_and(|(a, b)| {
-                let a = normalise(a);
-                let b = normalise(b);
-                a.0 == b.0 && (a.1 - b.1).abs() <= 1.0
-            }) {
-                return Err(
-                    "La vía actual no conserva la posición de la sección estacionada".into(),
-                );
+            .sections
+            .iter()
+            .map(|s| s.id.clone())
+            .collect();
+        let mut reason = "No hay una sección separada".to_string();
+        for id in ids {
+            for end in [
+                crate::sections::CouplingEnd::Rear,
+                crate::sections::CouplingEnd::Front,
+            ] {
+                match self.recouple_section(&id, end) {
+                    Ok(()) => return Ok(()),
+                    Err(error) => reason = error,
+                }
             }
         }
-        self.state
-            .brake_system
-            .cylinders
-            .append(&mut self.formation.parked_brakes);
-        if !self.state.vehicles.is_empty() {
-            let target = self.state.vehicles.last().map_or(0., |car| car.position_m);
-            let shift = target
-                - self
-                    .formation
-                    .parked_vehicles
-                    .first()
-                    .map_or(0., |car| car.position_m);
-            for vehicle in &mut self.formation.parked_vehicles {
-                vehicle.velocity_mps = 0.0;
-                vehicle.position_m += shift;
-            }
-            // Only this first joint was opened. The parked section's internal
-            // gears retain their deflection, stored energy and turning points.
-            if let Some(coupler) = self.formation.parked_couplers.first_mut() {
-                coupler.extension_m = 0.0;
-                coupler.memory = Default::default();
-            }
-            self.state
-                .vehicles
-                .append(&mut self.formation.parked_vehicles);
-            self.state
-                .couplers
-                .append(&mut self.formation.parked_couplers);
-            self.state.vehicle_masses = self.formation.cars.iter().map(|c| c.mass_kg).collect();
-        }
-        self.formation.coupled_count = self.formation.cars.len();
-        self.formation.parked_head_chainage_m = None;
-        self.formation.parked_path_edges.clear();
-        self.formation.parked_path_reversed = None;
-        self.parked_path_data = None;
-        if self.state.path_reversed {
-            let odometer = self.state.odometer_m;
-            crate::live_drive::apply_start_offset(&mut self.state, &self.path_data, anchor);
-            self.state.odometer_m = odometer;
-            self.previous_render_chainage_m = anchor;
-        }
-        self.rebuild_formation_physics();
-        self.sync_operating_brakes();
-        self.update_shunting();
-        Ok(())
+        Err(reason)
     }
 
     pub(crate) fn rebuild_formation_physics(&mut self) {
+        self.remember_native_vehicle_states();
         let n = self.formation.coupled_count;
         let mut consist = self.consist.clone();
         consist.vehicles.truncate(n);
@@ -1318,6 +1307,7 @@ impl LiveDriveSession {
         p.max_tractive_effort_n = consist.total_max_tractive_effort_n();
         p.max_brake_n = consist.total_max_brake_n();
         p.vehicle_davis.truncate(n);
+        p.bogies.truncate(n);
         p.vehicle_lengths_m = consist.vehicle_lengths_m();
         p.diesel_vehicle_indices = consist.diesel_vehicle_indices();
         if let Some(native) = &mut p.native {
@@ -1354,19 +1344,33 @@ impl LiveDriveSession {
                 TractiveCurve::from_power_and_effort(p.max_power_w, p.max_tractive_effort_n);
         }
         if let (Some(native), Some(dynamics)) = (&p.native, &mut self.state.native_dynamics) {
-            dynamics.bearing_c.resize(n, native.environment.ambient_c);
+            let ids = if self.formation.vehicle_ids.is_empty() {
+                (0..self.formation.cars.len())
+                    .map(|i| format!("{}/car/{i}", self.service_id))
+                    .collect::<Vec<_>>()
+            } else {
+                self.formation.vehicle_ids.clone()
+            };
+            dynamics.bearing_c = ids
+                .iter()
+                .take(n)
+                .map(|id| {
+                    self.formation
+                        .native_bearing_c
+                        .get(id)
+                        .copied()
+                        .unwrap_or(native.environment.ambient_c)
+                })
+                .collect();
             dynamics.axles = p
                 .diesel_vehicle_indices
                 .iter()
-                .map(|i| {
-                    self.physics
-                        .diesel_vehicle_indices
-                        .iter()
-                        .position(|old| old == i)
-                        .and_then(|index| dynamics.axles.get(index).cloned())
-                        .unwrap_or(crate::native_dynamics::NativeAxleState {
+                .map(|&i| {
+                    self.formation.native_axles.get(&ids[i]).cloned().unwrap_or(
+                        crate::native_dynamics::NativeAxleState {
                             speed_mps: self.state.velocity_mps,
-                        })
+                        },
+                    )
                 })
                 .collect();
         }
@@ -1381,36 +1385,40 @@ impl LiveDriveSession {
     }
 
     pub(crate) fn sync_operating_brakes(&mut self) {
-        for cylinder in &mut self.state.brake_system.cylinders {
-            cylinder.air_vented = false;
-        }
-        let mut isolated = false;
-        let mut vented = false;
-        for i in 0..self.formation.coupled_count {
-            let car = &self.formation.cars[i];
-            if i > 0 {
-                let previous = &self.formation.cars[i - 1];
-                if !previous.rear_cock_open || !car.front_cock_open {
-                    isolated = true;
-                }
-                if !car.hose_connected {
-                    // A disconnected open hose vents the connected front section too.
-                    if previous.rear_cock_open {
-                        for cyl in &mut self.state.brake_system.cylinders[..i] {
-                            cyl.air_vented = true;
-                        }
-                    }
-                    vented = car.front_cock_open;
-                }
+        let count = self.formation.coupled_count;
+        let cab = self.cab_vehicle();
+        // Connected pipe components are independent of catalog order. A cab
+        // behind a picked-up portion must still control its own locomotive.
+        let mut first = 0;
+        while first < count {
+            let mut end = first + 1;
+            while end < count
+                && self.formation.cars[end].hose_connected
+                && self.formation.cars[end - 1].rear_cock_open
+                && self.formation.cars[end].front_cock_open
+            {
+                end += 1;
             }
-            let cyl = &mut self.state.brake_system.cylinders[i];
-            cyl.handbrake_force_n = if car.handbrake {
-                cyl.max_force_n * 0.65
-            } else {
-                0.0
-            };
-            cyl.air_isolated = isolated;
-            cyl.air_vented = vented;
+            let controlled = (first..end).contains(&cab);
+            let vented = first > 0
+                && !self.formation.cars[first].hose_connected
+                && self.formation.cars[first].front_cock_open
+                || end < count
+                    && !self.formation.cars[end].hose_connected
+                    && self.formation.cars[end - 1].rear_cock_open;
+            for i in first..end {
+                let cyl = &mut self.state.brake_system.cylinders[i];
+                cyl.handbrake_force_n = if self.formation.cars[i].handbrake {
+                    cyl.max_force_n * 0.65
+                } else {
+                    0.
+                };
+                // An open hose vents even an uncontrolled component; a sealed
+                // disconnected component preserves its captured pressure.
+                cyl.air_isolated = !controlled && !vented;
+                cyl.air_vented = vented;
+            }
+            first = end;
         }
     }
 
@@ -1425,6 +1433,9 @@ impl LiveDriveSession {
         car_offset: f64,
         remainder: f64,
     ) -> f64 {
+        if let Some(section) = self.section_for_offset(car_offset) {
+            return self.section_chainage(section, offset);
+        }
         let first_parked = self.formation.offset_m(self.formation.coupled_count);
         if car_offset <= first_parked + 0.001
             && let Some(head) = self.formation.parked_head_chainage_m
@@ -1436,6 +1447,11 @@ impl LiveDriveSession {
     }
 
     pub fn presentation_path_for_car(&self, car_offset: f64) -> (&[String], &PathData) {
+        if let Some(section) = self.section_for_offset(car_offset)
+            && let Some(pd) = self.section_path_data.get(&section.id)
+        {
+            return (&section.path_edges, pd);
+        }
         if self.formation.parked_head_chainage_m.is_some()
             && car_offset <= self.formation.offset_m(self.formation.coupled_count) + 0.001
             && let Some(pd) = &self.parked_path_data
@@ -1856,6 +1872,7 @@ mod tests {
             car.handbrake = true;
         }
         s.uncouple_after(0).unwrap();
+        let section_id = s.detached_sections()[0].id.clone();
         let make =
             |edges: Vec<String>, reversed, start, end| openrailsrs_scenarios::model::RouteLeg {
                 operations: vec![],
@@ -1888,15 +1905,22 @@ mod tests {
             s.presentation_position_for_car(tail, tail, 0.0).unwrap().1,
             poses[1]
         );
+        assert_eq!(s.detached_sections()[0].id, section_id);
         assert!(
-            s.own_track_occupancy()
+            s.section_track_occupancy(&section_id)
+                .unwrap()
                 .iter()
-                .any(|o| o.owner.ends_with("estacionado")
-                    && o.start_m <= poses[1]
-                    && o.end_m >= poses[1])
+                .any(|o| o.start_m <= poses[1] && o.end_m >= poses[1])
         );
         let saved = s.snapshot();
         s.restore_snapshot(saved).unwrap();
+        assert_eq!(s.detached_sections()[0].id, section_id);
+        assert!(
+            s.section_track_occupancy(&section_id)
+                .unwrap()
+                .iter()
+                .any(|o| o.start_m <= poses[1] && o.end_m >= poses[1])
+        );
         assert_eq!(
             s.presentation_position_for_car(tail, tail, 0.0).unwrap().1,
             poses[1]

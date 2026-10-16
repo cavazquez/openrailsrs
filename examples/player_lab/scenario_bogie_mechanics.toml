@@ -1,0 +1,139 @@
+[scenario]
+name = "Laboratorio de mecánica lateral y bogie compartido"
+description = "Ensayo sintético propio de fuerzas laterales, peralte físico y bogie compartido. La suspensión lateral es una extensión Rust explícita."
+[route]
+path = "bogie_curve_route"
+start = "n0"
+start_offset_m = 135.0
+destination = "n38"
+assume_signals_clear = true
+[train]
+consist = "consists/connections.con"
+[[train.cab_equipment]]
+vehicle = 0
+left_window = true
+right_window = true
+cab_door = true
+washer_capacity_l = 2.0
+washer_flow_lps = 0.02
+[simulation]
+duration = 300.0
+time_step = 0.05
+seed = 42
+multi_body = true
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+[output]
+csv = "run.csv"
+metadata = "run.json"
+
+[[train.presentation]]
+vehicle = 0
+bogie_yaw_limit_rad = 0.12
+[[train.presentation.mirrors]]
+position_m=[-1.65,2.8,-8.5]
+direction=[-0.12,-0.08,1.0]
+fov_degrees=55.0
+[[train.presentation.mirrors]]
+position_m=[1.65,2.8,-8.5]
+direction=[0.12,-0.08,1.0]
+fov_degrees=55.0
+[train.presentation.horn]
+position_m = [0.0, 3.2, -8.0]
+direction = [0.0, 0.0, -1.0]
+[train.presentation.suspension]
+empty_mass_kg = 35000.0
+stiffness_npm = 1500000.0
+travel_m = 0.10
+damping_ratio = 0.8
+[[train.presentation.connections]]
+matrix="GANGWAY"
+neighbor=1
+own_m=[0.0,2.0,9.8]
+rest_far_m=[0.0,2.0,10.2]
+other_m=[0.0,2.0,-9.8]
+kind="gangway"
+maximum_span_m=2.0
+[[train.presentation.connections]]
+matrix="AIR_HOSE"
+neighbor=1
+own_m=[0.85,0.6,9.8]
+rest_far_m=[0.85,0.6,10.2]
+other_m=[0.85,0.6,-9.8]
+kind="air_hose"
+maximum_span_m=2.0
+[[train.presentation.connections]]
+matrix="ELECTRIC_CABLE"
+neighbor=1
+own_m=[-0.85,0.7,9.8]
+rest_far_m=[-0.85,0.7,10.2]
+other_m=[-0.85,0.7,-9.8]
+kind="electric_cable"
+maximum_span_m=2.0
+[[train.presentation.connections]]
+matrix="COUPLER"
+neighbor=1
+own_m=[0.0,0.4,9.8]
+rest_far_m=[0.0,0.4,10.2]
+other_m=[0.0,0.4,-9.8]
+kind="coupler"
+maximum_span_m=2.0
+[train.presentation.jacobs]
+neighbor=1
+own_support_m=10.0
+other_support_m=-10.0
+bogie_matrix="BOGIE2"
+[[train.presentation]]
+vehicle = 1
+bogie_yaw_limit_rad = 0.20
+walk_boxes_m=[[[-0.4,1.9,-8.0],[0.4,2.1,8.0]]]
+[[train.presentation.boarding_doors]]
+position_m=[-1.52,0.55,-7.0]
+side="left"
+[[train.presentation.boarding_doors]]
+position_m=[1.52,0.55,-7.0]
+side="right"
+[train.presentation.suspension]
+empty_mass_kg = 25000.0
+stiffness_npm = 1200000.0
+travel_m = 0.10
+damping_ratio = 0.8
+[[train.presentation.passenger_lamps]]
+position_m = [1.4, 2.1, -3.0]
+direction = [1.0, -0.3, 0.0]
+lumens = 240.0
+range_m = 5.0
+[[train.presentation.passenger_lamps]]
+position_m = [-1.4, 2.1, 3.0]
+direction = [-1.0, -0.3, 0.0]
+lumens = 240.0
+range_m = 5.0
+
+[[train.systems]]
+vehicle=1
+[train.systems.doors]
+left=true
+right=true
+open_s=2.0
+close_s=3.0
+traction_interlock=true
+
+# Mechanical shared support is separate from the original mesh binding above.
+[[train.bogie_dynamics]]
+vehicle = 0
+support_offsets_m = [10.0, -10.0]
+shared_with = 1
+[train.bogie_dynamics.lateral_suspension]
+stiffness_npm = 1000000.0
+damping_nspm = 100000.0
+travel_m = 0.03
+maximum_attack_rad = 0.04
+[[train.bogie_dynamics]]
+vehicle = 1
+support_offsets_m = [10.0, -10.0]
+[train.bogie_dynamics.lateral_suspension]
+stiffness_npm = 1000000.0
+damping_nspm = 100000.0
+travel_m = 0.03
+maximum_attack_rad = 0.04

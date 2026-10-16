@@ -42,6 +42,7 @@ pub struct PlayerStationStop {
 /// `Traffic_Definition` blocks.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct TrafficServiceDef {
+    pub uid: Option<u32>,
     pub stops: Vec<PlayerStationStop>,
     /// Service name as declared in `Service_Definition "<name>"`.
     pub name: String,
@@ -99,6 +100,9 @@ pub struct ActivityObjectDef {
 /// Parsed representation of a `.act` file.
 #[derive(Clone, Debug, Default)]
 pub struct ActivityFile {
+    pub player_uid: u32,
+    pub events: Vec<openrailsrs_core::activity::ActivityEvent>,
+    pub static_trains: Vec<super::activity_events::StaticActivityTrain>,
     /// Human-readable activity name.
     pub name: String,
     /// Relative path to the player consist (`.con`).
@@ -134,12 +138,12 @@ impl ActivityFile {
         let player_consist = find_string_field(ast, &["Player_Train_Init_Cons"])
             .or_else(|| find_string_field(ast, &["Player_Consist"]))
             .unwrap_or_default();
-        let player_service_id = find_string_field(ast, &["PathID"])
+        // SRV and PAT identifiers are different native references. BNSF's
+        // LumberRun service, for example, uses the "Lumber Run" path.
+        let player_service_id = find_string_field(ast, &["Player_Service_Definition"])
+            .filter(|s| valid_service_name(s))
+            .or_else(|| find_string_field(ast, &["PathID"]))
             .or_else(|| find_header_name(ast))
-            .or_else(|| {
-                find_string_field(ast, &["Player_Service_Definition"])
-                    .filter(|s| valid_service_name(s))
-            })
             .or_else(|| {
                 if valid_service_name(&name) {
                     Some(name.clone())
@@ -149,6 +153,7 @@ impl ActivityFile {
             });
         let player_path = find_string_field(ast, &["Player_Path"])
             .filter(|s| !s.trim().is_empty())
+            .or_else(|| find_string_field(ast, &["PathID"]).map(|id| pat_path_from_service_id(&id)))
             .or_else(|| {
                 player_service_id
                     .as_ref()
@@ -167,6 +172,9 @@ impl ActivityFile {
         let player_stops = collect_player_stops(ast)?;
 
         Ok(Self {
+            player_uid: super::activity_events::player_uid(ast)?,
+            events: super::activity_events::parse_events(ast)?,
+            static_trains: super::activity_events::parse_statics(ast)?,
             name,
             player_consist,
             player_path,
@@ -597,6 +605,7 @@ fn parse_one_service(items: &[Ast]) -> Result<Option<TrafficServiceDef>, FormatE
         .unwrap_or(0.0);
     let consist = find_service_consist(items);
     Ok(Some(TrafficServiceDef {
+        uid: super::activity_events::service_uid(&Ast::List(items.to_vec()))?,
         stops: {
             let mut body = items.to_vec();
             body[0] = Ast::Atom(Atom::Symbol("Player_Traffic_Definition".into()));

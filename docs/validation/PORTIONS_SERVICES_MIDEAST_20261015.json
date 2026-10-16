@@ -1,0 +1,176 @@
+{
+  "schema": 1,
+  "recorded_utc": "2026-10-16T00:03:45.697275+00:00",
+  "reference_version": "1.6.1",
+  "source_base_commit": "24df59dcc94b476564671e45df900c2d7dbdf63f",
+  "status": "directed_acceptance_passed_pending_final_workspace_gate",
+  "issues": [
+    {
+      "number": 211,
+      "title": "Plan 001: Completar MidEast: rodear los coches, reacoplar y terminar el servicio",
+      "url": "https://github.com/cavazquez/openrailsrs/issues/211",
+      "criteria": [
+        {
+          "criterion": "Completar Firsby–Spilsby con 84030 y dos Mk1 originales.",
+          "status": "satisfied_by_directed_acceptance",
+          "evidence": [
+            "original_service",
+            "original_service.all_six_original_stop_results",
+            "original_inputs_sha256"
+          ],
+          "result": "Original live-drive report: all four native PAT legs, 84030 and both original Mk1, six original stops and ACT successful."
+        },
+        {
+          "criterion": "Rodear los coches sin trasladarlos entre vías y conservar frenos, ocupación y posición.",
+          "status": "satisfied_by_directed_acceptance",
+          "evidence": [
+            "original_service.actions",
+            "original_service.maximum_contact_projection_m",
+            "original_service.private_full_outputs_sha256"
+          ],
+          "result": "The two parked Mk1 keep exact track positions throughout the 50 ms run-around loop; front pickup projects 1.1819206 mm against a 1 cm predeclared gate. Brakes, native occupancy and steam inventories survive both restores."
+        },
+        {
+          "criterion": "Documentar una prueba manual desde el menú y un caso de aceptación reproducible; comprobar persistencia y errores relevantes para este alcance.",
+          "status": "satisfied_by_directed_acceptance",
+          "evidence": [
+            "docs/MIDEAST_RUNAROUND.md",
+            "crates/openrailsrs-sim/examples/mideast_portions_qa.rs",
+            "reversal-clearance-test.log"
+          ],
+          "result": "Menu/manual guide, repeatable CPU driver and two real save/restore checkpoints. Directed reversal clearance regression preserves a pending reversal until the whole locomotive clears the points."
+        }
+      ],
+      "manual_guide": "docs/MIDEAST_RUNAROUND.md"
+    },
+    {
+      "number": 215,
+      "title": "Plan 005: Gestionar varias secciones propias desacopladas simultáneamente",
+      "url": "https://github.com/cavazquez/openrailsrs/issues/215",
+      "criteria": [
+        {
+          "criterion": "Conservar identidad, vía, frenos y ocupación de cada sección.",
+          "status": "satisfied_by_directed_acceptance",
+          "evidence": [
+            "two_named_sections_preserve_track_brakes_and_resume_collecting_recent_first",
+            "parked_native_bearings_remain_with_their_vehicle_through_cut_pickup_and_restore",
+            "joining_transfers_both_authorities_and_split_partitions_the_same_physical_grant"
+          ],
+          "result": "Persistent vehicle/section IDs, independent physical paths and occupied edges; per-vehicle brakes, bearings, axles, bogies and freight remain attached to identity."
+        },
+        {
+          "criterion": "Desacoplar y recoger dos o más secciones en distinto orden con guardado intermedio.",
+          "status": "satisfied_by_directed_acceptance",
+          "evidence": [
+            "two_named_sections_preserve_track_brakes_and_resume_collecting_recent_first",
+            "oldest_section_can_be_picked_at_front_then_restore_permuted_hardware",
+            "control_swaps_between_transfers_replay_in_chronological_receiver_order"
+          ],
+          "result": "Two cuts are picked recent-first and oldest-first; front pickup permutes the complete immutable/mutable hardware and restores without losing a section."
+        },
+        {
+          "criterion": "Añadir ensayos representativos de fuerzas/estados y una prueba de conducción; usar oráculos OR 1.6.1 para lo equivalente y pruebas propias para extensiones.",
+          "status": "satisfied_by_directed_acceptance",
+          "evidence": [
+            "reformed_train_drives_after_real_pressure_release_and_save_continues_identically",
+            "original_or161_dll_profiles_forces_and_stroke_impulses_match_declared_tolerances",
+            "original_service"
+          ],
+          "result": "Thirty-second integrated drive after actual pipe release and restore; native force/profile/impulse fixtures from OR 1.6.1 remain unchanged, with new Rust portion invariants tested separately. MidEast supplies an additional original-content physical run-around."
+        }
+      ],
+      "manual_guide": "docs/PORTIONS_AND_SERVICE_TRANSFERS.md"
+    },
+    {
+      "number": 216,
+      "title": "Plan 006: Dividir y unir servicios de horarios con formaciones ajenas",
+      "url": "https://github.com/cavazquez/openrailsrs/issues/216",
+      "criteria": [
+        {
+          "criterion": "Resolver identidades de servicios y porciones ajenas.",
+          "status": "satisfied_by_directed_acceptance",
+          "evidence": [
+            "foreign_front_pickup_and_return_preserve_both_train_positions_and_identity",
+            "control_swaps_between_transfers_replay_in_chronological_receiver_order",
+            "original_pickup_and_signed_forms_resolve_canonical_foreign_identity"
+          ],
+          "result": "Original service names and permanent per-source vehicle identities survive front/rear collection, return and changes of the receiving driver. Same-table native pickup/forms resolve canonical identities."
+        },
+        {
+          "criterion": "Unir o dividir servicios conservando vehículos, reservas, horario y estado de frenos.",
+          "status": "satisfied_by_directed_acceptance",
+          "evidence": [
+            "joining_transfers_both_authorities_and_split_partitions_the_same_physical_grant",
+            "foreign_portion_returns_to_service_with_schedule_brakes_identity_and_save_replay",
+            "a_front_pickup_keeps_the_rear_cab_in_control_of_its_own_pipe_component"
+          ],
+          "result": "Join unions physical reservations, while return partitions authority by actual footprint. Original schedules, departure clocks, hose/cock pressure and service-specific objectives are conserved."
+        },
+        {
+          "criterion": "Documentar una prueba manual desde el menú y un caso de aceptación reproducible; comprobar persistencia y errores relevantes para este alcance.",
+          "status": "satisfied_by_directed_acceptance",
+          "evidence": [
+            "docs/PORTIONS_AND_SERVICE_TRANSFERS.md",
+            "examples/portion_operations/scenario.toml",
+            "examples/portion_operations/scenario_services.toml",
+            "timetable_foreign_operations_use_physical_contact_and_preserve_progress_on_restore",
+            "rejects_duplicate_section_invalid_track_and_distant_pickup_without_losing_state",
+            "a_future_service_cannot_be_collected_before_its_authorized_spawn"
+          ],
+          "result": "Two menu examples plus manual instructions; snapshot history replays chronological receivers and rejects invalid, distant, future or moving operations without state loss."
+        }
+      ],
+      "manual_guide": "docs/PORTIONS_AND_SERVICE_TRANSFERS.md"
+    }
+  ],
+  "acceptance": {
+    "path": "docs/fixtures/operations/portions-20261015/acceptance.json",
+    "sha256": "96b07cbff2ab684473fcebfd93efbe2a126ccf32a34b969e9b437f75bd7af2d8"
+  },
+  "public_files_sha256": {
+    "docs/fixtures/operations/portions-20261015/acceptance.json": "96b07cbff2ab684473fcebfd93efbe2a126ccf32a34b969e9b437f75bd7af2d8",
+    "docs/fixtures/operations/portions-20261015/directed-tests.log": "924e1524937f2b22312cd2b18d7a07c38d6cde3b786a92c0adcf2de7bab08e36",
+    "docs/fixtures/operations/portions-20261015/mideast-drive.csv": "3222ec10e0cdd02237a92eaf9ff30ebac5775bd8ce1a48f30e3f5429f841c3de",
+    "docs/fixtures/operations/portions-20261015/native-timetable-parser-tests.log": "5a288bdcf9b0871a5659e96481b8b7985b2e423dc7224ee8b7e7e45e2924ffb3",
+    "docs/fixtures/operations/portions-20261015/reversal-clearance-test.log": "1162458fd65ba886b45343d5527e78524e73562d490566d81e40256ad3d15927"
+  },
+  "source_files_after_integrator_formatting_sha256": {
+    "crates/openrailsrs-sim/src/sections.rs": "766e0d64f55a2716f1d8f03911deb78e4967d76e3df1d24e7d8f065cd132c1cf",
+    "crates/openrailsrs-sim/src/independent_coupling.rs": "b9120952e516a0e509a34ac39e59c21e8d354c2dafaffb6366f775cc22ce9043",
+    "crates/openrailsrs-sim/src/operations.rs": "9b3fb767109f8726a99623c4815d3aaf3053a7fdccf594a1e3ebec491fa35ebd",
+    "crates/openrailsrs-sim/src/timetable_operations.rs": "f11dc4a08123e61d4167f88f00c834bf574c9a18baf8cbb073e45d1f2b558265",
+    "crates/openrailsrs-sim/src/live_traffic.rs": "0106c49f17921d4a5e4b04e0d2778763b833732bc2065e7385131222e35705d5",
+    "crates/openrailsrs-sim/src/operational_path.rs": "b6beabb0ce169e251fcc4b8ba8ad21d41c33d00ca76a8461e2801ecfab10064d",
+    "crates/openrailsrs-sim/src/shunt_authority.rs": "a3f7d3b3403d2447233dfd60f2df7fe41101cdd752e72e8c64d9d2f3ae6f8900",
+    "crates/openrailsrs-sim/tests/sections_and_services.rs": "75015eca6551d80ed5f9fdb0a048973477073ed497f178e7562d8c81e5e428c8",
+    "crates/openrailsrs-sim/tests/native_reversal_clearance.rs": "e671fd867c854a7afdb4fb41ddb86cdbe587c145648c5a6fb417aaaab1e36051",
+    "crates/openrailsrs-sim/examples/mideast_portions_qa.rs": "daa67fedca41026b1a79503f97a1565c987a84ca70956150823d73bab5e8722f",
+    "crates/openrailsrs-msts/src/import_timetable.rs": "a23c06393d474aee9157e7529929ed43730ef5e042a46d943961c7333a92cf89",
+    "crates/openrailsrs-scenarios/src/model.rs": "ffd00a4ab4611a888ab1cfa1f69664e6275e7304c373c0402f4b772c34d97399",
+    "crates/openrailsrs-viewer3d/src/train_presentation.rs": "46e554bd232cff7495b15426181bd7ff73417f9ede870763dc4954a8e94e7f52",
+    "crates/openrailsrs-viewer3d/src/saved_game.rs": "59425d811957db9930d0cb49d2f3c3d0a843a26275d1f0e1525ffced77bb5044",
+    "docs/MIDEAST_RUNAROUND.md": "2c3e0c37fc84f20d80eb2364375119e740ed991e39c69a3e9d54e1401305c3e6",
+    "docs/PORTIONS_AND_SERVICE_TRANSFERS.md": "48ad9280cde07c2e2a0387c47f2de20f142ca8d0cdad2f2efb165290f32cd9e0"
+  },
+  "source_hash_scope": "Current source hashes are receipt metadata after root formatting. The original driving preflight inside acceptance.json records the actual tested binary/source hashes unchanged. Final formatted-workspace validation is recorded separately.",
+  "directed_result": {
+    "passed": 38,
+    "failed": 0,
+    "original_MidEast_drive_passed": true,
+    "final_global_gate": "pass: unified check.sh, see NEXT_TEN_20261015.json",
+    "viewer_ECS": "pass: both real Bevy ECS portion identity/reparenting tests in the unified gate"
+  },
+  "original_reference_and_author_bytes_unchanged": true,
+  "limits": [
+    "Native timetable import supports same-table $pickup and returning the entire previously joined foreign portion with signed $detach/units/forms. Full $attach, pools, newly created arbitrary formed services, and cross-table references remain explicit diagnostics.",
+    "Only a complete foreign portion at a physical end can be returned; removing a middle portion without rearranging track is rejected.",
+    "The runtime contact API retains its existing 1 m bound. The 1 cm gate applies to the measured MidEast acceptance drive.",
+    "This CPU acceptance verifies operational state and source identities. It does not claim a manual visual/audio session was performed, full steam physics parity, or adherence to the original arrival times.",
+    "A C# TCS host cannot be cloned by portion transactions; normal Rust TCS is used."
+  ],
+  "final_integration": {
+    "check_log": "docs/validation/NEXT_TEN_20261015-check.log.gz",
+    "check_log_sha256": "76859044322ee6de859d7c26f0099b9acb8f9700c6f2b657e5da349298d719af",
+    "source_hash_scope": "The historical MidEast drive and directed-test receipts remain unchanged. This later unified gate validates the final formatted sources separately."
+  }
+}

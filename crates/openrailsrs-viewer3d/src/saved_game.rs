@@ -82,6 +82,10 @@ pub struct SavedGame {
     #[serde(default)]
     pub pending_coupling: Option<String>,
     #[serde(default)]
+    pub pending_coupling_end: openrailsrs_sim::sections::CouplingEnd,
+    #[serde(default)]
+    pub pending_split: Option<String>,
+    #[serde(default)]
     pub independent_couplings: Vec<openrailsrs_sim::independent_coupling::CouplingReceipt>,
     #[serde(default)]
     pub controlled_service: Option<String>,
@@ -172,6 +176,8 @@ impl SavedGame {
             control_history: live.traffic.control_history.clone(),
             pending_control: None,
             pending_coupling: None,
+            pending_coupling_end: Default::default(),
+            pending_split: None,
             independent_couplings: live.traffic.couplings.clone(),
             controlled_service: (live.session.service_id != "Jugador")
                 .then(|| live.session.service_id.clone()),
@@ -216,9 +222,25 @@ impl SavedGame {
     /// Queue an operation on a disposable reconstructed world. Failure to
     /// write/load leaves the currently displayed formation untouched.
     pub fn queue_coupling(path: &Path, id: &str) -> Result<(), String> {
+        Self::queue_coupling_at(path, id, Default::default())
+    }
+    pub fn queue_coupling_at(
+        path: &Path,
+        id: &str,
+        end: openrailsrs_sim::sections::CouplingEnd,
+    ) -> Result<(), String> {
         validate_pending_id(id)?;
         let mut game = Self::read(path)?;
         game.pending_coupling = Some(id.into());
+        game.pending_coupling_end = end;
+        game.pending_split = None;
+        atomic_write(path, &game.encoded()?)
+    }
+    pub fn queue_service_split(path: &Path, id: &str) -> Result<(), String> {
+        validate_pending_id(id)?;
+        let mut game = Self::read(path)?;
+        game.pending_split = Some(id.into());
+        game.pending_coupling = None;
         atomic_write(path, &game.encoded()?)
     }
     pub fn queue_control(path: &Path, id: &str) -> Result<(), String> {
@@ -265,9 +287,14 @@ impl SavedGame {
             return Err("Servicio controlado inválido".into());
         }
         if game
-            .pending_coupling
+            .pending_split
             .as_ref()
-            .is_some_and(|id| id.is_empty() || id.len() > 256 || id.chars().any(char::is_control))
+            .is_some_and(|id| validate_pending_id(id).is_err())
+            || game.pending_split.is_some() && game.pending_coupling.is_some()
+            || game.independent_couplings.len() > 64
+            || game.pending_coupling.as_ref().is_some_and(|id| {
+                id.is_empty() || id.len() > 256 || id.chars().any(char::is_control)
+            })
         {
             return Err("Formación a recoger inválida".into());
         }
@@ -366,35 +393,14 @@ impl SavedGame {
         } else {
             self.control_history.clone()
         };
-        let mut swapped = Vec::new();
-        for id in &history {
-            let index = live
-                .traffic
-                .services
-                .iter()
-                .position(|s| &s.id == id)
-                .ok_or("El servicio controlado ya no existe")?;
-            swapped.push((
-                index,
-                live.traffic.services[index].departed,
-                live.traffic.services[index].parked,
-            ));
-            live.traffic.restore_control(&mut live.session, index)?;
-        }
+        live.traffic.reconstruct_service_history(
+            &mut live.session,
+            &history,
+            self.controlled_service.as_deref().unwrap_or("Jugador"),
+            &self.independent_couplings,
+        )?;
         live.traffic
-            .reconstruct_couplings(&mut live.session, &self.independent_couplings)?;
-        if let Err(error) =
-            live.traffic
-                .restore_shared_snapshots(&mut live.session, self.session, self.traffic)
-        {
-            for (index, departed, parked) in swapped.into_iter().rev() {
-                live.traffic.restore_control(&mut live.session, index)?;
-                live.traffic.services[index].departed = departed;
-                live.traffic.services[index].parked = parked;
-            }
-            return Err(error);
-        }
-        live.traffic.control_history = history;
+            .restore_shared_snapshots(&mut live.session, self.session, self.traffic)?;
         live.start_clock_s = self.start_clock_s;
         live.season = self.season;
         live.paused = true;

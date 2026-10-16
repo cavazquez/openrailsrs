@@ -68,6 +68,9 @@ pub struct EdgePhysicsProfile {
     /// Original reciprocal TDB platforms, in directed edge metres.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub platforms: Vec<PositionPlatform>,
+    /// Original WORLD sound boundaries bound to their TDB track items.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub track_sound_regions: Vec<crate::track_sound::TrackSoundBoundary>,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PositionPhysicalCant {
@@ -127,6 +130,9 @@ impl TrackGraph {
             .sort_by(|a, b| a.position_m.total_cmp(&b.position_m));
         profile
             .grades
+            .sort_by(|a, b| a.position_m.total_cmp(&b.position_m));
+        profile
+            .track_sound_regions
             .sort_by(|a, b| a.position_m.total_cmp(&b.position_m));
         profile
             .curves
@@ -378,6 +384,20 @@ impl TrackGraph {
         }
         for signal in service.signals() {
             graph.insert_signal(signal.clone())?;
+        }
+        // Geometry/physics metadata must survive a service overlay too. The
+        // service may narrow its speed profile without re-declaring WORLD audio.
+        for (id, profile) in &self.profiles {
+            graph.set_physics_profile(id, profile.clone());
+        }
+        for (id, profile) in &service.profiles {
+            let mut profile = profile.clone();
+            if profile.track_sound_regions.is_empty()
+                && let Some(original) = self.profiles.get(id)
+            {
+                profile.track_sound_regions = original.track_sound_regions.clone();
+            }
+            graph.set_physics_profile(id, profile);
         }
         for (id, node) in graph
             .nodes_iter()

@@ -1,5 +1,6 @@
 //! Scenario file format (`scenario.toml`) and validation.
 
+pub mod bogie_dynamics;
 pub mod cab_equipment;
 pub mod error;
 pub mod model;

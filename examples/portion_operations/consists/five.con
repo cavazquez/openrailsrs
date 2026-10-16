@@ -1,0 +1,3 @@
+(Train (Engine "../yard_training/vehicles/yard.eng")
+ (Wagon "../yard_training/vehicles/yard.wag") (Wagon "../yard_training/vehicles/yard.wag")
+ (Wagon "../yard_training/vehicles/yard.wag") (Wagon "../yard_training/vehicles/yard.wag"))

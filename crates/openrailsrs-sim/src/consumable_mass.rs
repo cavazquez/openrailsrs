@@ -17,6 +17,9 @@ pub fn vehicle_mass_kg(
     index: usize,
     base: f64,
 ) -> f64 {
+    if let Some(cargo) = state.freight.iter().find(|c| c.vehicle == index) {
+        return (base + cargo.mass_delta_kg()).max(1.);
+    }
     if let Some(c) = state
         .vehicle_systems
         .iter()
@@ -64,7 +67,13 @@ pub fn total_mass_kg(train: &TrainPhysics, state: &TrainSimState) -> f64 {
         .flat_map(|c| &c.motors)
         .map(|m| (m.refilled_l - m.consumed_l) * DIESEL_KG_PER_L)
         .sum();
-    (train.mass_kg + state.extra_mass_kg + delta + declared).max(1.0)
+    let freight = state
+        .freight
+        .iter()
+        .filter(|c| c.vehicle < train.vehicle_lengths_m.len())
+        .map(|c| c.mass_delta_kg())
+        .sum::<f64>();
+    (train.mass_kg + state.extra_mass_kg + delta + declared + freight).max(1.0)
 }
 
 #[cfg(test)]

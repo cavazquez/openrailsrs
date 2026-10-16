@@ -1,0 +1,613 @@
+   Compiling openrailsrs-sim v0.1.0 (/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/crates/openrailsrs-sim)
+    Finished `test` profile [optimized] target(s) in 6.74s
+     Running tests/active_cab.rs (target/debug/deps/active_cab-f82f4f98dd59a48f)
+
+running 2 tests
+test cab_change_rejects_motion_throttle_drive_and_trailers_without_mutation ... ok
+test selected_cab_reads_its_own_engine_pressure_and_supply_and_restores ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/activity_operations.rs (target/debug/deps/activity_operations-6781912ffe5a4db7)
+
+running 5 tests
+test actual_payload_has_finite_mass_delay_cancel_and_resume ... ok
+test loaded_wagon_uid_and_quantity_survive_section_permutation_and_resume ... ok
+test declared_native_success_is_terminal_and_survives_resume ... ok
+test native_events_preserve_activation_uids_and_do_not_succeed_at_pat_end ... ok
+test returned_act_actor_keeps_loaded_uid_and_its_own_objectives ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/articulated_train.rs (target/debug/deps/articulated_train-0e8b6bafea96ff63)
+
+running 1 test
+test shared_bogie_constraints_conserve_articulated_train_during_drive_braking_restore_and_reverse ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/authored_coupling.rs (target/debug/deps/authored_coupling-02012e94c72bb8bb)
+
+running 1 test
+test unauthored_contact_does_not_inherit_an_adjacent_authored_joint ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/bogie_drive.rs (target/debug/deps/bogie_drive-76ec32c92a1ecb7d)
+
+running 2 tests
+test visual_jacobs_alone_does_not_create_a_mechanical_constraint ... ok
+test lateral_forces_shared_supports_visual_independence_and_save_resume_during_drive ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/bogie_dynamics_oracle.rs (target/debug/deps/bogie_dynamics_oracle-6e65c957353f8f8c)
+
+running 1 test
+test original_dll_lateral_risk_matches_all_48_prescribed_states ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/brake_propagation.rs (target/debug/deps/brake_propagation-093ca7b9513e861b)
+
+running 4 tests
+test ep_rear_locomotive_applies_without_pipe_delay ... ok
+test full_release_clears_all_cylinders ... ok
+test rear_cylinder_lags_front ... ok
+test wagon_holds_brake_during_lap_release_until_driver_zero ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/cant_legacy_local_oracle.rs (target/debug/deps/cant_legacy_local_oracle-50850b51fe6d5053)
+
+running 1 test
+test native_legacy_and_class_speed_branches_match_unchanged_or161 ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/cant_profiles_oracle.rs (target/debug/deps/cant_profiles_oracle-d2f3aece43e3a40e)
+
+running 1 test
+test generated_profiles_match_unmodified_pinned_or_knots ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/chiltern_path_debug.rs (target/debug/deps/chiltern_path_debug-31603b1c0b2f38da)
+
+running 2 tests
+test chiltern_birmingham_stop_nodes_on_path ... ok
+test chiltern_path_reaches_beyond_local_switch_back ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+
+     Running tests/class47.rs (target/debug/deps/class47-47090068948f8e64)
+
+running 1 test
+test class47_supply_and_air_distributor_feed_cab_instruments ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/coupler_forces.rs (target/debug/deps/coupler_forces-492dc67b17401414)
+
+running 2 tests
+test single_vehicle_no_couplers ... ok
+test wagon_starts_later_than_locomotive ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/couplers_live_drive.rs (target/debug/deps/couplers_live_drive-97440f4b68a7fa78)
+
+running 2 tests
+test split_save_and_recouple_keep_the_correct_original_hardware ... ok
+test live_start_coast_brake_reverse_and_save_preserve_authored_joints_and_history ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/crosswind_trajectory.rs (target/debug/deps/crosswind_trajectory-5ffc640a7798f01f)
+
+running 1 test
+test lateral_wind_rotates_an_equipped_body_without_spurious_longitudinal_braking_and_restores ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/diesel_multi.rs (target/debug/deps/diesel_multi-d4cdc8fda2041a93)
+
+running 4 tests
+test orts_plus_legacy_both_contribute ... ok
+test per_engine_power_cap_limits_force_at_speed ... ok
+test two_identical_engines_double_stall_force ... ok
+test per_engine_rpm_independent ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/electric_supply.rs (target/debug/deps/electric_supply-2caeccf06f31d252)
+
+running 10 tests
+test electric_supply_also_cuts_the_curve_only_fallback ... ok
+test electric_supply_conductor_rails_need_no_pantograph_but_do_need_a_breaker ... ok
+test electric_supply_absent_incompatible_or_out_of_voltage_range_cannot_drive ... ok
+test electric_supply_matches_pinned_native_pantograph_and_main_power_oracle ... ok
+test electric_supply_headless_and_ai_use_the_same_cutoff ... ok
+test electric_supply_mixed_formation_keeps_diesel_and_other_pickups_powered ... ok
+test electric_supply_neutral_section_is_per_vehicle_and_reconnects ... ok
+test electric_supply_power_loss_coasts_and_recovers ... ok
+test electric_supply_rejects_unknown_edges_and_overlapping_sections ... ok
+test electric_supply_save_preserves_reconnection_and_rejects_invalid_state ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/equipment_acceptance.rs (target/debug/deps/equipment_acceptance-653cf59cbd5a2d86)
+
+running 12 tests
+test diesel_thermal_energy_is_conserved_and_faults_can_be_disabled_explicitly ... ok
+test continuous_mandatory_unit_ramp_keeps_a_transport_delay_instead_of_debouncing ... ok
+test finite_battery_reaches_its_reserve_then_coasts_without_unaccounted_traction ... ok
+test dual_propulsion_uses_exactly_one_active_source_and_diesel_drives_off_the_wire ... ok
+test freight_speed_remains_on_alternate_paths_after_restoring ... ok
+test hotel_bus_detachment_and_reconnection_keep_source_delays_and_save_state ... ok
+test metered_air_compressor_cannot_charge_after_its_auxiliary_battery_is_empty ... ok
+test prolonged_downhill_braking_heats_and_recovers_with_a_conserved_thermal_ledger ... ok
+test short_thermal_demo_has_a_recoverable_fault_only_in_the_uncooled_motor ... ok
+test waiting_traffic_and_player_share_freezing_and_thawing_and_restore_the_same_surface ... ok
+test wheel_slide_control_changes_real_cylinder_pressure_and_wet_stopping_distance ... ok
+test loaded_freight_completes_its_stations_and_passes_a_scheduled_service ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/equipment_physics.rs (target/debug/deps/equipment_physics-385396720aa03e55)
+
+running 10 tests
+test battery_crosses_dead_line_draws_once_and_recovers_from_line_after_restore ... ok
+test freight_payload_changes_inertia_and_service_limit_without_changing_empty_author_mass ... ok
+test hot_brakes_conserve_heat_and_recover_on_cooling_instead_of_resetting ... ok
+test independent_motors_change_actual_traction_without_burning_a_second_tank ... ok
+test multiple_unit_delays_survive_save_and_incompatible_protocols_never_drive_remote_unit ... ok
+test native_multi_motor_profiles_keep_different_governors_and_independent_shutdown ... ok
+test physical_fault_is_optional_specific_and_cannot_be_reset_before_recovery ... ok
+test regenerative_receptivity_rejection_and_rheostat_preserve_total_brake_force ... ok
+test separate_steam_boilers_and_injectors_keep_mass_and_cab_ownership_after_save ... ok
+test wheel_slide_vents_pressure_and_traction_control_recovers_smoothly ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/freeroll_davis.rs (target/debug/deps/freeroll_davis-8af9f4a9ca8158e3)
+
+running 1 test
+test chiltern_pullman_freeroll_deceleration ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/gearbox_drive.rs (target/debug/deps/gearbox_drive-a2fc1074a0f79038)
+
+running 3 tests
+test a_mixed_clutch_group_rejects_the_whole_request_without_partial_changes ... ok
+test gear_commands_follow_declared_mu_compatibility_and_isolation ... ok
+test manual_gears_drive_the_live_train_and_resume_pending_shifts_without_refilling ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/gearbox_oracle.rs (target/debug/deps/gearbox_oracle-05b9333d9388fe02)
+
+running 3 tests
+test authored_gear_units_limits_and_ratios_match_native_dll_initialization ... ok
+test native_geared_diesel_engine_rpm_clutch_fuel_and_force_at_800_prescribed_ticks ... ok
+test native_manual_automatic_clutch_neutral_overspeed_and_force_checkpoints ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/independent_pantographs.rs (target/debug/deps/independent_pantographs-9632f210dc2d860b)
+
+running 2 tests
+test two_collectors_keep_their_own_position_contact_and_command_across_a_neutral_section ... ok
+test midway_raise_and_filtered_voltage_restore_without_changing_the_other_collector ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/learning_and_mass.rs (target/debug/deps/learning_and_mass-932970b3837bccc7)
+
+running 10 tests
+test braking_coach_announces_insufficient_braking_and_has_no_advice_without_target ... ok
+test braking_coach_accounts_for_grade_grip_and_tuned_mass_without_driving ... ok
+test destination_uses_declared_service_and_actual_direction ... ok
+test consumed_and_refilled_fuel_changes_actual_inertia_and_survives_resume ... ok
+test fuel_reserve_changes_acceleration_under_the_same_controls_and_brake_force ... ok
+test electric_lesson_tracks_actual_pantograph_breaker_cut_and_recovery ... ok
+test lesson_reads_physical_doors_and_neutral_and_never_commands_train ... ok
+test prepared_emergency_requires_real_stop_rearm_and_pipe_recharge ... ok
+test report_counts_short_brake_events_and_resume_preserves_graph_and_totals ... ok
+test washer_conserves_reserve_stops_without_battery_and_resume_keeps_apertures ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/local_service.rs (target/debug/deps/local_service-f82205dc8a84dd23)
+
+running 6 tests
+test all_stations_are_served_independently_of_render_frame_rate ... ok
+test full_dispatch_network_preserves_the_complete_player_service ... ok
+test passing_a_station_or_a_red_signal_fails_without_awarding_an_arrival ... ok
+test spawn_offset_is_included_in_stops_and_neutral_or_open_doors_cut_traction ... ok
+test station_nodes_outside_the_chosen_path_are_rejected ... ok
+test six_station_extension_keeps_its_timetable_without_speed_or_stop_violations ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.10s
+
+     Running tests/multi_body_davis.rs (target/debug/deps/multi_body_davis-a6dbb04e51e40022)
+
+running 2 tests
+test per_vehicle_davis_uses_each_vehicle_speed ... ok
+test chiltern_per_vehicle_davis_sums_to_aggregate ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/multi_body_integration.rs (target/debug/deps/multi_body_integration-fc7c134e15251adb)
+
+running 3 tests
+test init_multi_body_disabled_leaves_single_mass_path ... ok
+test multi_body_dt_one_second_remains_stable_over_ten_steps ... ok
+test physics_step_wagon_lags_locomotive_with_multi_body ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/multi_train.rs (target/debug/deps/multi_train-cb8410fdc10aae23)
+
+running 5 tests
+test both_trains_reach_destination ... ok
+test graduated_penalty_greater_than_flat_for_large_delay ... ok
+test graduated_penalty_zero_within_grace ... ok
+test block_clear_emitted_for_each_wait ... ok
+test second_train_blocked_by_first ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/native_content_equipment.rs (target/debug/deps/native_content_equipment-25db9da95d72119d)
+
+running 2 tests
+test native_large_fade_knots_keep_finite_order_force_and_vehicle_reference_checks ... ok
+test native_terminal_fade_speed_and_disabled_pickup_survive_runtime_and_resume ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/native_couplers.rs (target/debug/deps/native_couplers-5acbbe2a886e77fb)
+
+running 13 tests
+test absent_advanced_compression_force_does_not_invent_an_elastic_spring ... ok
+test contact_impulse_is_relative_energy_not_absolute_train_speed ... ok
+test compressed_stroke_contact_conserves_momentum_and_flags_excess_energy ... ok
+test invalid_authored_units_are_actionable_instead_of_becoming_newtons ... ok
+test mixed_rigid_contact_reaction_checks_warning_and_break_limits ... ok
+test native_units_separate_advanced_forces_from_legacy_stiffness_and_orient_ends ... ok
+test restore_rejects_changed_hardware_nonfinite_history_and_impossible_buffer_states ... ok
+test reversing_a_stationary_virtual_axis_preserves_physical_deflection_and_history ... ok
+test original_or161_dll_profiles_forces_and_stroke_impulses_match_declared_tolerances ... ok
+test rigid_constraint_diagnostic_is_not_clipped_to_an_elastic_loading_envelope ... ok
+test sustained_brakes_cannot_accelerate_a_stationary_native_formation_backwards ... ok
+test turning_points_change_unloading_force_and_survive_save_restore ... ok
+test two_buffers_share_force_and_their_travel_and_energy_add_in_series ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/native_formations.rs (target/debug/deps/native_formations-d09d6e67780f70a2)
+
+running 2 tests
+test native_formations_vacuum_cock_isolation_holds_pressure_and_open_hose_applies_brakes ... ok
+test native_formations_brake_release_and_resume_without_losing_car_state ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/native_power_supply.rs (target/debug/deps/native_power_supply-2f909419bbaeb973)
+
+running 2 tests
+test class47_authored_train_supply_switch_preserves_auxiliaries_when_traction_is_open ... ok
+test native_default_power_states_match_unmodified_or161_dlls ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/native_reversal_clearance.rs (target/debug/deps/native_reversal_clearance-7fdecb6857693219)
+
+running 1 test
+test an_uncleared_reversal_stays_pending_and_save_does_not_relocate_stock ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/native_vehicle_dynamics.rs (target/debug/deps/native_vehicle_dynamics-f35cdd606e3e9b50)
+
+running 7 tests
+test native_notches_and_residual_pressure_control_traction_independently_of_shoes ... ok
+test bearing_temperature_and_legacy_tail_match_independent_native_static_forces ... ok
+test native_save_restores_ep_temperature_and_slip_without_divergence ... ok
+test original_formation_keeps_both_governors_axles_units_and_rigid_connections ... ok
+test uncoupling_preserves_retained_bearings_and_rebuilds_motor_indices ... ok
+test native_rigid_and_single_body_share_per_car_resistance_and_grades ... ok
+test wheel_speed_and_transmitted_force_remain_distinct_during_slip ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/parallel_traffic.rs (target/debug/deps/parallel_traffic-b5a1f13f3ac3ed86)
+
+running 5 tests
+test driver_transfers_to_stopped_service_preserves_resources_and_restore_reconstructs_roles ... ok
+test parked_services_have_real_handbrakes_and_remain_stationary_until_the_driver_takes_over ... ok
+test preexisting_native_ai_is_simulated_before_the_activity_and_restores_without_resetting_reserves ... ok
+test repeated_driver_swaps_restore_the_whole_role_permutation ... ok
+test one_and_eight_workers_produce_identical_moving_trains_and_restore ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+     Running tests/passing_services.rs (target/debug/deps/passing_services-48641c1165d868bb)
+
+running 3 tests
+test dispatcher_selects_a_siding_before_the_meet_and_releases_only_after_the_other_tail_clears ... ok
+test shipped_overtake_and_meet_examples_complete_both_real_services_without_missing_the_local_stop ... ok
+test too_short_siding_is_rejected_with_a_diagnostic_and_no_position_change ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+
+     Running tests/pat_operations.rs (target/debug/deps/pat_operations-792b48a046716c59)
+
+running 2 tests
+test native_pat_detach_executes_once_and_resumes_its_actual_remaining_wait ... ok
+test unsupported_pat_codes_never_turn_into_time_or_a_completed_manoeuvre ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/pat_route_edges.rs (target/debug/deps/pat_route_edges-28585b17e945d010)
+
+running 6 tests
+test chiltern_pat_edges_leave_platform_via_reverse ... ok
+test chiltern_pat_waypoints_build_connected_chain ... ok
+test live_drive_session_from_chiltern_scenario ... ok
+test resolve_route_edges_uses_waypoints_when_present ... ok
+test resolve_scenario_route_edges_works_on_raw_graph ... ok
+test sim_runtime_path_uses_scenario_spawn ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.95s
+
+     Running tests/physics_headless.rs (target/debug/deps/physics_headless-883f9d9a94bdeea1)
+
+running 5 tests
+test acceleration_increases_speed_on_flat_track ... ok
+test braking_reduces_speed ... ok
+test pv_fallback_and_curve_both_accelerate ... ok
+test tractive_curve_accelerates_from_rest ... ok
+test speed_limit_allows_modest_overspeed_before_cutoff ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/rail_adhesion.rs (target/debug/deps/rail_adhesion-e0209aaa28fae1ac)
+
+running 6 tests
+test detached_sandbox_is_retained_without_delivery_and_recoupling_does_not_refill_it ... FAILED
+test dry_native_contact_preserves_the_pinned_diesel_dynamics_without_double_limiting ... ok
+test native_wet_drive_and_sanding_reduce_rail_force_without_changing_driver_notch ... ok
+test steam_and_electric_fallbacks_have_physical_contact_and_keep_power_interlocks ... ok
+test steam_racing_wheels_use_power_and_steam_within_the_authors_limits ... ok
+test sandbox_phase_and_surface_survive_save_restore_and_corruption_is_atomic ... ok
+
+failures:
+
+---- detached_sandbox_is_retained_without_delivery_and_recoupling_does_not_refill_it stdout ----
+
+thread 'detached_sandbox_is_retained_without_delivery_and_recoupling_does_not_refill_it' (298769) panicked at crates/openrailsrs-sim/tests/rail_adhesion.rs:189:5:
+assertion failed: !parked.using_sand
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    detached_sandbox_is_retained_without_delivery_and_recoupling_does_not_refill_it
+
+test result: FAILED. 5 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+error: test failed, to rerun pass `-p openrailsrs-sim --test rail_adhesion`
+     Running tests/rail_operations.rs (target/debug/deps/rail_operations-ca083adfe4ded205)
+
+running 2 tests
+test temporary_limit_remains_until_tail_clears_even_after_work_schedule_ends ... ok
+test connection_timeout_and_incident_choice_survive_save_without_stopping_the_clock ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/run_smoke_example.rs (target/debug/deps/run_smoke_example-7eef9cf105d4c241)
+
+running 1 test
+test smoke_run_example_scenario_reaches_destination ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/scripted_driver.rs (target/debug/deps/scripted_driver-5cfc9b450bef5b53)
+
+running 3 tests
+test scripted_driver_hold_last_keyframes ... ok
+test decimal_capture_command_is_applied_on_its_physics_tick ... ok
+test scripted_driver_produces_different_velocity_than_auto ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/sections_and_services.rs (target/debug/deps/sections_and_services-8750fb416c02d7aa)
+
+running 15 tests
+test a_cut_without_track_under_the_whole_formation_rejects_without_mutation ... ok
+test a_front_pickup_keeps_the_rear_cab_in_control_of_its_own_pipe_component ... ok
+test a_cut_exactly_inside_track_keeps_every_position_and_restores_in_both_directions ... ok
+test a_future_service_cannot_be_collected_before_its_authorized_spawn ... ok
+test foreign_front_pickup_and_return_preserve_both_train_positions_and_identity ... ok
+test control_swaps_between_transfers_replay_in_chronological_receiver_order ... ok
+test foreign_portion_returns_to_service_with_schedule_brakes_identity_and_save_replay ... ok
+test joining_transfers_both_authorities_and_split_partitions_the_same_physical_grant ... ok
+test moving_backwards_cannot_cut_join_or_return_a_portion ... ok
+test oldest_section_can_be_picked_at_front_then_restore_permuted_hardware ... ok
+test parked_native_bearings_remain_with_their_vehicle_through_cut_pickup_and_restore ... ok
+test rejects_duplicate_section_invalid_track_and_distant_pickup_without_losing_state ... ok
+test reformed_train_drives_after_real_pressure_release_and_save_continues_identically ... ok
+test two_named_sections_preserve_track_brakes_and_resume_collecting_recent_first ... ok
+test timetable_foreign_operations_use_physical_contact_and_preserve_progress_on_restore ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/shunt_authority.rs (target/debug/deps/shunt_authority-95470d38c2397526)
+
+running 2 tests
+test own_wheels_before_signal_do_not_block_a_bounded_authority_and_restore_preserves_it ... ok
+test another_train_invalid_distance_expiration_and_reversing_reject_or_revoke_authority ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/signal_enforcement.rs (target/debug/deps/signal_enforcement-29b2f97612f74741)
+
+running 5 tests
+test duplicate_signal_id_is_rejected ... ok
+test signal_on_unknown_edge_is_rejected ... ok
+test smoke_track_toml_loads_caution_signal ... ok
+test stop_signal_halts_train_and_resumes_when_cleared ... ok
+test caution_signal_reduces_speed_on_edge ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/steam_injectors_oracle.rs (target/debug/deps/steam_injectors_oracle-4d4d77f300521dd6)
+
+running 1 test
+test six_original_injector_tables_match_unmodified_or_interpolation ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/steam_physics.rs (target/debug/deps/steam_physics-1fb9550341ee63a6)
+
+running 11 tests
+test auto_injector_prevents_empty_boiler ... ok
+test coal_decreases_over_time ... ok
+test force_scales_with_regulator ... ok
+test full_regulator_gives_max_stall_force ... ok
+test no_force_when_regulator_closed ... ok
+test load_steam_engine_toml ... ok
+test pressure_drops_under_heavy_load ... ok
+test pressure_rises_at_idle ... ok
+test stall_force_is_positive_and_reasonable ... ok
+test stall_force_matches_steam_params_method ... ok
+test water_decreases_under_load ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/superelevation_oracle.rs (target/debug/deps/superelevation_oracle-6fa4a06c567af006)
+
+running 1 test
+test comfort_speed_matches_frozen_original_csharp_float_results ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/switch_pathfinding.rs (target/debug/deps/switch_pathfinding-319f47ec6626e10d)
+
+running 6 tests
+test diverging_cannot_reach_dest_a ... ok
+test diverging_routes_to_dest_b ... ok
+test smoke_route_diverging_reaches_siding_c ... ok
+test smoke_route_with_switch_reaches_yard_b ... ok
+test straight_cannot_reach_dest_b ... ok
+test straight_routes_to_dest_a ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/ten_goals.rs (target/debug/deps/ten_goals-f0d9ca0fe00d761f)
+
+running 6 tests
+test explicit_diesel_thermal_protection_is_visible_and_optional ... ok
+test four_diesel_cooling_modes_match_200_unmodified_or161_checkpoints ... ok
+test independent_emergency_and_main_reservoir_are_physical_and_saved ... ok
+test steam_strokes_rods_and_exhaust_share_wheel_phase_in_forward_and_reverse ... ok
+test passenger_power_uses_authored_watts_reduces_traction_and_counts_energy ... ok
+test yard_mission_requires_cut_clear_points_real_pickup_and_reformed_departure ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/timetable_run.rs (target/debug/deps/timetable_run-d519bb35d6fba97e)
+
+running 1 test
+test two_trains_both_arrive ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/traction_operation.rs (target/debug/deps/traction_operation-32d0b00c31c84186)
+
+running 16 tests
+test diesel_idle_burns_authored_fuel_and_stopping_cuts_traction ... ok
+test diesel_operation_matches_the_pinned_original_dll_checkpoints ... ok
+test diesel_start_needs_closed_regulator_battery_and_fuel_and_takes_time ... ok
+test each_diesel_keeps_identity_and_fuel_when_another_motor_is_isolated ... ok
+test empty_diesel_tank_is_finite_and_cannot_be_restarted_or_reset_in_a_save ... ok
+test finite_tender_never_refills_itself_and_dry_boiler_failure_latches ... ok
+test fire_out_stops_heat_and_pressure_can_fall_below_two_bar ... ok
+test native_supply_delays_survive_save_and_battery_gates_cab_lights ... ok
+test resource_units_match_native_stf_without_changing_frozen_references ... ok
+test save_mid_start_and_manual_steam_controls_continue_deterministically ... ok
+test short_steam_fixture_exhausts_reserves_and_keeps_damage_when_restored ... ok
+test steam_cutoff_is_independent_and_reduces_effort_and_consumption ... ok
+test steam_injection_conserves_water_and_firing_conserves_coal ... ok
+test steam_mechanics_and_boiler_continue_with_battery_off ... ok
+test steam_safety_valve_releases_mass_and_injectors_cool_the_boiler ... ok
+test default_chiltern_player_formation_exposes_both_diesel_motors ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/train_power_bus.rs (target/debug/deps/train_power_bus-2c94cb2b280e1e91)
+
+running 1 test
+test passenger_loads_follow_their_connected_supplier_and_reconnect_after_save ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/vacuum_independent.rs (target/debug/deps/vacuum_independent-a4f24bf914cd822c)
+
+running 2 tests
+test vacuum_independent_controller_does_not_accept_nonfinite_inputs ... ok
+test vacuum_independent_drives_brakes_only_the_engine_and_is_saved ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/vehicle_doors.rs (target/debug/deps/vehicle_doors-352177b845600e99)
+
+running 5 tests
+test closing_finishes_only_the_current_passenger_and_survives_pause_restore ... ok
+test independent_vehicle_and_sides_have_real_interlocks_and_survive_midstroke_save ... ok
+test platform_side_motion_and_config_changes_fail_without_opening_the_wrong_door ... ok
+test legacy_coarse_doors_upgrade_to_declared_state_and_empty_equipment_does_not_change_physics ... ok
+test reopening_cancels_queued_closure_and_waiting_passengers_do_not_delay_it ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/vehicle_equipment_oracle.rs (target/debug/deps/vehicle_equipment_oracle-46ecb2c139c604b9)
+
+running 3 tests
+test native_active_tilt_matches_the_unchanged_original_in_both_curve_directions ... ok
+test rheostat_native_curve_notches_and_power_cap_match_original_available_force ... ok
+test every_authored_collector_delay_tracks_original_raise_lower_and_midstroke_reversal ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/voltage_filter_oracle.rs (target/debug/deps/voltage_filter_oracle-e02a1275d889650d)
+
+running 1 test
+test native_filter_steps_loss_and_recovery_match_the_pinned_unmodified_class ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/world_operations.rs (target/debug/deps/world_operations-5d408e8f9a26cd93)
+
+running 4 tests
+test parked_cut_protects_crossing_after_the_locomotive_leaves ... ok
+test reversed_body_order_predicts_from_the_physically_leading_end ... ok
+test crossing_observes_approach_full_tail_multiple_services_and_saved_opening ... ok
+test reversing_approach_uses_the_leading_rear_and_survives_restore ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/yard_operations.rs (target/debug/deps/yard_operations-fd918dd606439d4b)
+
+running 5 tests
+test delivery_requires_exact_wagons_full_siding_and_secured_detachment_then_pickup_removes_acceptance ... ok
+test coupling_an_unstarted_parked_donor_produces_an_immediately_valid_supply_snapshot ... ok
+test depot_transfers_finite_oil_and_coolant_without_resetting_fuel_or_temperature ... ok
+test independent_contact_moves_vehicles_once_preserves_pressure_fuel_and_can_reconstruct_a_save ... ok
+test two_crews_deliver_distinct_wagon_lots_and_foreign_wagons_make_a_siding_invalid ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+error: 1 target failed:
+    `-p openrailsrs-sim --test rail_adhesion`

@@ -2,10 +2,22 @@ use openrailsrs_sim::{LiveDriveSession, adhesion::RailWeather};
 use std::path::PathBuf;
 
 fn session(relative: &str) -> LiveDriveSession {
+    session_at(relative, None)
+}
+fn session_at(relative: &str, start_offset_m: Option<f64>) -> LiveDriveSession {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../examples")
         .join(relative);
-    let scenario = openrailsrs_scenarios::load_scenario(&path).unwrap();
+    let mut scenario = openrailsrs_scenarios::load_scenario(&path).unwrap();
+    if let Some(offset) = start_offset_m {
+        scenario.route.start_offset_m = Some(offset);
+        // This fixture begins after the origin station. Keep the still-ahead
+        // stops instead of failing its activity before the equipment advances.
+        scenario
+            .route
+            .stops
+            .retain(|stop| stop.node != scenario.route.start);
+    }
     let mut s = LiveDriveSession::from_scenario(path.parent().unwrap(), &scenario).unwrap();
     s.driver_direction = 1.;
     s.driver_brake = 0.;
@@ -166,21 +178,26 @@ fn steam_racing_wheels_use_power_and_steam_within_the_authors_limits() {
 fn detached_sandbox_is_retained_without_delivery_and_recoupling_does_not_refill_it() {
     use openrailsrs_sim::operations::CarOperation;
     let path = "traction_operation/scenario_two_diesel.toml";
-    let mut s = session(path);
+    // The entire two-locomotive consist must be on real track before cutting.
+    let mut s = session_at(path, Some(100.));
     s.driver_throttle = 0.;
     s.driver_brake = 1.;
     s.set_rail_weather(RailWeather::Snow);
     s.toggle_sander().unwrap();
     s.step_realtime(1., |_| {});
+    assert!(s.gameplay.failure.is_none(), "{:?}", s.gameplay.failure);
     let before = s.state.rail_adhesion.as_ref().unwrap().cars[1].sand_m3;
     assert!(s.state.rail_adhesion.as_ref().unwrap().cars[1].consumed_sand_m3 > 0.);
     s.operate_car(1, CarOperation::Handbrake).unwrap();
     s.uncouple_after(0).unwrap();
+    let cut_time = s.state.time.0;
     s.step_realtime(1., |_| {});
+    assert!(s.state.time.0 > cut_time + 0.9);
+    assert!(s.gameplay.failure.is_none(), "{:?}", s.gameplay.failure);
     let parked = &s.state.rail_adhesion.as_ref().unwrap().cars[1];
     assert_eq!(parked.sand_m3, before);
     assert!(!parked.using_sand);
-    let mut restored = session(path);
+    let mut restored = session_at(path, Some(100.));
     restored.restore_snapshot(s.snapshot()).unwrap();
     restored.recouple().unwrap();
     assert_eq!(

@@ -1,0 +1,115 @@
+{
+  "native_methods": [
+    "SignalObject.block_state",
+    "SignalObject.AddHead",
+    "SignalHead.route_set"
+  ],
+  "scope": "Native discrete block states and first junction link; ordinary activity route membership. Full track-circuit reservation search and timetable permission rules are not claimed.",
+  "tolerances_predeclared": {
+    "discrete_states": "exact",
+    "junction_bindings": "exact",
+    "route_set": "exact"
+  },
+  "internal_block_states": [
+    "Reserved",
+    "Reservable",
+    "OccupiedSameDirection",
+    "ReservedOther",
+    "ForcedWait",
+    "OccupiedOppositeDirection",
+    "Open",
+    "Blocked"
+  ],
+  "links": [
+    {
+      "required_vector": 0,
+      "route_vector": 0,
+      "enabled": false
+    },
+    {
+      "required_vector": 0,
+      "route_vector": 0,
+      "enabled": true
+    },
+    {
+      "required_vector": 0,
+      "route_vector": 1,
+      "enabled": false
+    },
+    {
+      "required_vector": 0,
+      "route_vector": 1,
+      "enabled": true
+    },
+    {
+      "required_vector": 0,
+      "route_vector": 2,
+      "enabled": false
+    },
+    {
+      "required_vector": 0,
+      "route_vector": 2,
+      "enabled": true
+    },
+    {
+      "required_vector": 1,
+      "route_vector": 0,
+      "enabled": false
+    },
+    {
+      "required_vector": 1,
+      "route_vector": 0,
+      "enabled": true
+    },
+    {
+      "required_vector": 1,
+      "route_vector": 1,
+      "enabled": false
+    },
+    {
+      "required_vector": 1,
+      "route_vector": 1,
+      "enabled": true
+    },
+    {
+      "required_vector": 1,
+      "route_vector": 2,
+      "enabled": false
+    },
+    {
+      "required_vector": 1,
+      "route_vector": 2,
+      "enabled": true
+    },
+    {
+      "required_vector": 2,
+      "route_vector": 0,
+      "enabled": false
+    },
+    {
+      "required_vector": 2,
+      "route_vector": 0,
+      "enabled": true
+    },
+    {
+      "required_vector": 2,
+      "route_vector": 1,
+      "enabled": false
+    },
+    {
+      "required_vector": 2,
+      "route_vector": 1,
+      "enabled": true
+    },
+    {
+      "required_vector": 2,
+      "route_vector": 2,
+      "enabled": false
+    },
+    {
+      "required_vector": 2,
+      "route_vector": 2,
+      "enabled": true
+    }
+  ]
+}

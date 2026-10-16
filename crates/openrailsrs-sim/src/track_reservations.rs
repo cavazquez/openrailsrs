@@ -143,7 +143,24 @@ impl LiveDriveSession {
             }
             total += self.path_data.edges[i].length_m;
         }
-        heads.sort_by(|a, b| a.0.total_cmp(&b.0));
+        let linked_to_path = |id: &str| {
+            self.graph
+                .signal(id)
+                .and_then(|s| s.script.as_ref())
+                .and_then(|s| s.native.as_ref())
+                .and_then(|n| n.route_link.as_ref())
+                .is_none_or(|link| {
+                    openrailsrs_track::sigscript::linked_route_set(
+                        Some(&link.required_vector),
+                        &self.state.path_edges,
+                        true,
+                    )
+                })
+        };
+        heads.sort_by(|a, b| {
+            a.0.total_cmp(&b.0)
+                .then_with(|| linked_to_path(&b.2).cmp(&linked_to_path(&a.2)))
+        });
         request.fixed_blocks = !heads.is_empty();
         let head = self.head_chainage_m();
         let horizon = (100. + self.velocity_mps().powi(2) / 1.4).max(500.);
@@ -153,7 +170,9 @@ impl LiveDriveSession {
                     return request;
                 }
                 request.signal = Some(signal.clone());
-                let end = heads.iter().find(|h| h.0 > *start + 0.1);
+                let end = heads
+                    .iter()
+                    .find(|h| h.0 > *start + 0.1 && !self.same_native_signal_group(signal, &h.2));
                 (
                     *start,
                     end.map_or(total, |h| h.0),

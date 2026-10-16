@@ -1,6 +1,9 @@
 //! Headless simulation: integrate train dynamics on a [`TrackGraph`].
 
+pub mod activity;
+pub mod activity_freight;
 pub mod adhesion;
+pub mod bogie_dynamics;
 pub mod brake;
 pub mod brake_circuit;
 pub mod cab_equipment;
@@ -25,6 +28,7 @@ pub use live_traffic::{LiveTraffic, TrafficService, TrafficSnapshot};
 pub mod multi_runner;
 mod operational_path;
 pub mod operations;
+pub mod sections;
 mod timetable_operations;
 pub use operations::{CarOperation, CarOperationState, FormationState, SessionSnapshot};
 pub mod native_dynamics;

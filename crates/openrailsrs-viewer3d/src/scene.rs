@@ -73,7 +73,7 @@ fn parse_shadow_distance_m(raw: Option<&str>) -> f32 {
         .unwrap_or(DEFAULT_SHADOW_DISTANCE_M)
 }
 
-fn shadow_cascade_config(distance_m: f32) -> CascadeShadowConfig {
+pub(crate) fn shadow_cascade_config(distance_m: f32) -> CascadeShadowConfig {
     CascadeShadowConfigBuilder {
         num_cascades: if distance_m > DEFAULT_SHADOW_DISTANCE_M {
             4

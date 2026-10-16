@@ -242,7 +242,12 @@ pub fn run_scenario_headless_with_driver(
     };
     let steam_params = consist.aggregate_steam_params();
     let partial_throttle_run_up_time_s = max_partial_throttle_run_up_time_s(&diesel_engines);
-    let train_physics = TrainPhysics {
+    let mut train_physics = TrainPhysics {
+        bogies: openrailsrs_train::bogie_geometry::load_models_for_consist(
+            &consist_path,
+            consist_root(&consist_path),
+            &consist,
+        )?,
         power_supply: crate::power_supply::PowerTrainConfig::from_consist_with_loads(
             &consist,
             &scenario.train.power_load,
@@ -322,6 +327,14 @@ pub fn run_scenario_headless_with_driver(
     let mut path_data = PathData::from_path(&path_edges, &graph);
     crate::freight::cap(&mut path_data, scenario.train.freight.as_ref());
     let mut state = TrainSimState::new(path_edges);
+    state.articulated_joints = crate::bogie_dynamics::apply_overrides(
+        &mut train_physics.bogies,
+        &scenario.train.bogie_dynamics,
+    )
+    .map_err(SimError::Msg)?;
+    state
+        .bogies
+        .resize_with(train_physics.bogies.len(), Default::default);
     state.weather_track = scenario.simulation.weather_track.clone();
     crate::vehicle_systems::configure(
         &mut state,

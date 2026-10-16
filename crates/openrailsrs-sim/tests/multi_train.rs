@@ -61,6 +61,7 @@ fn make_two_train_scenario(
     .unwrap();
 
     let scenario = ScenarioFile {
+        native_activity: None,
         scenario: ScenarioMeta {
             name: "multi test".into(),
             description: String::new(),
@@ -81,6 +82,7 @@ fn make_two_train_scenario(
             edge_speed_limits: vec![],
         },
         train: TrainSection {
+            bogie_dynamics: vec![],
             freight: None,
             systems: vec![],
             platform_sides: vec![],
@@ -125,6 +127,8 @@ fn make_two_train_scenario(
             metadata: "run_primary.toml".into(),
         },
         extra_trains: vec![TrainEntryDef {
+            bogie_dynamics: vec![],
+            activity_uids: vec![],
             legs: vec![],
             presentation: vec![],
             cab_equipment: vec![],

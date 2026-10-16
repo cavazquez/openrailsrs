@@ -98,7 +98,9 @@ pub fn run_tr_item_audit(
             }
             TrItemKind::SpeedPost { .. } => "speedpost",
             TrItemKind::SoundSource { .. } => "sound_source",
+            TrItemKind::SoundRegion => "sound_region",
             TrItemKind::Platform { .. } => "platform",
+            TrItemKind::Siding { .. } => "siding",
             TrItemKind::Other => "other",
         }
         .to_string();

@@ -15,3 +15,13 @@ oracles/openrails-signals.json -text whitespace=cr-at-eol
 oracles/openrails-lirr-parameters.json -text whitespace=cr-at-eol
 oracles/openrails-consumable-mass.json -text whitespace=cr-at-eol
 tools/openrails-reference/ConsumableMassReference.cs -text
+# Captured operational references remain identical with autocrlf on any clone.
+docs/fixtures/compatibility/*-or161/** -text whitespace=cr-at-eol
+tools/openrails-reference/BogieDynamicsReference.cs -text
+tools/openrails-reference/OperationalSignalsReference.cs -text
+tools/openrails-reference/TrackSoundReference.cs -text
+scripts/capture_bogie_dynamics_reference.py -text
+scripts/capture_operational_signals_reference.py -text
+scripts/capture_track_sound_reference.py -text
+# Raw test output keeps its terminal newline and byte hashes.
+docs/fixtures/operations/**/*.log -text whitespace=-blank-at-eof

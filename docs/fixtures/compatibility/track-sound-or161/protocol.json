@@ -1,0 +1,45 @@
+{
+  "status": "DECLARED_BEFORE_EXECUTION",
+  "input_sha256": "05513260c53364add7b76f8c020f97a88c72b94883de53c1748be89470a52f1e",
+  "helper_sha256": "abccb6234d258601bb26fa9c9963e062133548084684f3da7d0f525ce53775f8",
+  "capture_script_sha256": "161a728837f3aa46813e23f60d1dcfc42bccb4ccf18a8ca6c6441ae0e9df2840",
+  "input": {
+    "native_methods": [
+      "WorldSoundFile.Read",
+      "TrackTypesFile",
+      "Traveller.Move",
+      "WorldSounds.GetTType(Train)"
+    ],
+    "scope": "Native rolling sound region selection at read-only SCE original route probes in both directions; mixer PCM and player drive use separate acceptance. No acoustic equivalence claim.",
+    "tolerances_predeclared": {
+      "track_type": "exact including native hold sentinel",
+      "probe_not_at_boundary_minimum_m": 0.5
+    },
+    "maximum_types": 7,
+    "offsets_m": [
+      -65,
+      -25,
+      -12,
+      -5,
+      -0.5,
+      0.5,
+      5,
+      12,
+      25,
+      65
+    ]
+  },
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "assemblies": {
+    "RunActivity.exe": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2",
+    "Orts.Simulation.dll": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679",
+    "Orts.Common.dll": "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212",
+    "Orts.Settings.dll": "fe0d8d81149f480f3972c80e64ffaf6012c7599e32c26c8e4d46510e3edbb2e7",
+    "Orts.Formats.Msts.dll": "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465",
+    "Orts.Parsers.Msts.dll": "8e0781c9f861ed95b4467d1bf948ea7aca896d634f21ac5952f97a9f630d0b36",
+    "MonoGame.Framework.dll": "c6a16c29705a4c847e0e4a2647bf432604cd9320cbc5d4125ab01ae7bb7e6542",
+    "Newtonsoft.Json.dll": "9af2e1c672afd67a291b8f2031a341a3788d4d9f683eaddc6ceab3a3a74c546e"
+  },
+  "no_renderer_or_audio": true
+}

@@ -263,18 +263,30 @@ impl SignalAspectKind {
 #[derive(Clone, Debug, PartialEq)]
 pub enum TrItemKind {
     /// `SignalItem`: a wayside signal with an initial aspect.
-    Signal { aspect_initial: SignalAspectKind },
+    Signal {
+        aspect_initial: SignalAspectKind,
+    },
     /// `SoundSourceItem`: an ambient sound region anchored to a track segment.
     /// `sms_file` holds the referenced `.sms` (or `.wav`) filename when present.
-    SoundSource { sms_file: Option<String> },
+    SoundSource {
+        sms_file: Option<String>,
+    },
+    /// A rolling sound boundary. Its type and orientation are bound by WORLD/*.ws.
+    SoundRegion,
     /// `SpeedPostItem`: wayside speed limit (second field of `SpeedpostTrItemData` is mph).
-    SpeedPost { speed_mph: f64 },
+    SpeedPost {
+        speed_mph: f64,
+    },
     /// One end of a native platform; the reciprocal pair defines its extent.
     Platform {
         pair_id: u32,
         station: String,
         name: String,
         passengers_waiting: u32,
+    },
+    Siding {
+        pair_id: u32,
+        name: String,
     },
     /// Any other `TrItem` kind (siding, level crossing, etc.).
     Other,
@@ -1493,9 +1505,9 @@ fn parse_tr_item(ast: &Ast) -> Option<TrItem> {
         TrItemKind::Signal {
             aspect_initial: parse_signal_aspect(items),
         }
-    } else if tag.eq_ignore_ascii_case("SoundSourceItem")
-        || tag.eq_ignore_ascii_case("SoundRegionItem")
-    {
+    } else if tag.eq_ignore_ascii_case("SoundRegionItem") {
+        TrItemKind::SoundRegion
+    } else if tag.eq_ignore_ascii_case("SoundSourceItem") {
         TrItemKind::SoundSource {
             sms_file: parse_sound_source_file(items),
         }
@@ -1526,6 +1538,17 @@ fn parse_tr_item(ast: &Ast) -> Option<TrItem> {
             .filter(|n| n.is_finite() && *n >= 0.0 && *n <= u32::MAX as f64)
             .unwrap_or(0.0) as u32,
         }
+    } else if tag.eq_ignore_ascii_case("SidingItem") {
+        if let Some(pair_id) = find_siding_pair_id(items) {
+            TrItemKind::Siding {
+                pair_id,
+                name: super::activity::find_string_field(ast, &["SidingName"]).unwrap_or_default(),
+            }
+        } else {
+            // Preserve the item's native ID/distance for generic consumers.
+            // Missing pair metadata cannot certify an ACT siding condition.
+            TrItemKind::Other
+        }
     } else {
         TrItemKind::Other
     };
@@ -1550,6 +1573,35 @@ fn parse_tr_item(ast: &Ast) -> Option<TrItem> {
         distance_m,
         world: find_tr_item_world_pose(items),
     })
+}
+
+fn find_siding_pair_id(items: &[Ast]) -> Option<u32> {
+    for (index, item) in items.iter().enumerate() {
+        // OR reads a flags string first and the linked item ID second.
+        // Flags alone are not an endpoint, and extra fields are not the ID.
+        let pair = match item {
+            Ast::List(args)
+                if matches!(args.first(), Some(Ast::Atom(Atom::Symbol(tag)))
+                    if tag.eq_ignore_ascii_case("SidingTrItemData")) =>
+            {
+                args.get(2)
+            }
+            Ast::Atom(Atom::Symbol(tag)) if tag.eq_ignore_ascii_case("SidingTrItemData") => {
+                match items.get(index + 1) {
+                    Some(Ast::List(args)) => args.get(1),
+                    _ => items.get(index + 2),
+                }
+            }
+            _ => continue,
+        };
+        return pair
+            .and_then(scalar_from_ast)
+            .filter(|pair| {
+                pair.is_finite() && pair.fract() == 0. && (0. ..=u32::MAX as f64).contains(pair)
+            })
+            .map(|pair| pair as u32);
+    }
+    None
 }
 
 /// Resolve item world pose: prefer `TrItemRData`, else `TrItemPData` with Y=0 (#91).
@@ -1758,6 +1810,42 @@ mod tests {
 
     fn fixtures_dir() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../openrailsrs-msts/tests/fixtures")
+    }
+
+    #[test]
+    fn incomplete_siding_preserves_native_item_and_distance_without_certifying_a_pair() {
+        for pair in [
+            "",
+            "SidingTrItemData ( 0 )",
+            "SidingTrItemData ( 0 -1 )",
+            "SidingTrItemData ( 0 3.5 )",
+        ] {
+            let source = format!(
+                "( TrackDB TrItemTable ( 1 SidingItem (
+                TrItemId ( 2 ) TrItemSData ( 800 0 ) {pair}
+            ) ) )"
+            );
+            let tdb = TrackDbFile::from_ast(&parse_from_first_paren(&source).unwrap()).unwrap();
+            let item = tdb.item_by_id(2).expect("retain the source item");
+            assert_eq!(item.distance_m, 800.);
+            assert_eq!(item.kind, TrItemKind::Other);
+        }
+        for data in ["0 3", "0000000f 3", "0 3 999"] {
+            let source = format!(
+                "( TrackDB TrItemTable ( 1 SidingItem (
+                TrItemId ( 2 ) TrItemSData ( 800 0 )
+                SidingTrItemData ( {data} ) SidingName ( \"Original siding\" )
+            ) ) )"
+            );
+            let tdb = TrackDbFile::from_ast(&parse_from_first_paren(&source).unwrap()).unwrap();
+            assert_eq!(
+                tdb.item_by_id(2).unwrap().kind,
+                TrItemKind::Siding {
+                    pair_id: 3,
+                    name: "Original siding".into(),
+                }
+            );
+        }
     }
 
     #[test]

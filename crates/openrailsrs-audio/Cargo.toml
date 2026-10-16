@@ -15,3 +15,10 @@ serde_json.workspace = true
 
 [dev-dependencies]
 tempfile = "3"
+openrailsrs-sim = { path = "../openrailsrs-sim" }
+openrailsrs-msts = { path = "../openrailsrs-msts" }
+openrailsrs-scenarios = { path = "../openrailsrs-scenarios" }
+openrailsrs-route = { path = "../openrailsrs-route" }
+openrailsrs-track = { path = "../openrailsrs-track" }
+sha2 = "0.10.9"
+toml.workspace = true

@@ -13,6 +13,10 @@ pub struct RefillStation {
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct RefillOperation {
+    #[serde(default)]
+    pub unloading: bool,
+    #[serde(default)]
+    pub delay_remaining_s: f64,
     pub station: RefillStation,
     pub vehicle: usize,
     /// Fraction of the operating pose, not the full looping animation.
@@ -27,7 +31,9 @@ impl RefillOperation {
             && !s.id.is_empty()
             && s.id.len() <= 256
             && !s.id.chars().any(char::is_control)
-            && (5..=7).contains(&s.pickup_type)
+            && (1..=14).contains(&s.pickup_type)
+            && self.delay_remaining_s.is_finite()
+            && (0. ..=86400.).contains(&self.delay_remaining_s)
             && [
                 s.capacity_kg,
                 s.feed_kg_s,
@@ -49,6 +55,14 @@ impl LiveDriveSession {
     fn refill_room_kg(&self, vehicle: usize, kind: u32) -> f64 {
         if vehicle >= self.formation.coupled_count {
             return 0.;
+        }
+        if let Some(c) = self
+            .state
+            .freight
+            .iter()
+            .find(|c| c.vehicle == vehicle && c.profile.pickup_types.contains(&kind))
+        {
+            return (c.profile.capacity_kg - c.load_kg).max(0.);
         }
         match kind {
             5 | 6
@@ -114,6 +128,25 @@ impl LiveDriveSession {
         distance_m: f64,
         width_m: f64,
     ) -> Result<(), String> {
+        self.begin_transfer(station, vehicle, distance_m, width_m, false)
+    }
+    pub fn begin_unload(
+        &mut self,
+        station: RefillStation,
+        vehicle: usize,
+        distance_m: f64,
+        width_m: f64,
+    ) -> Result<(), String> {
+        self.begin_transfer(station, vehicle, distance_m, width_m, true)
+    }
+    fn begin_transfer(
+        &mut self,
+        station: RefillStation,
+        vehicle: usize,
+        distance_m: f64,
+        width_m: f64,
+        unloading: bool,
+    ) -> Result<(), String> {
         if self.refilling.is_some() {
             return Err("El abastecedor todavía está conectado o regresando".into());
         }
@@ -145,7 +178,15 @@ impl LiveDriveSession {
         if !self.refill_speed_valid(&station) || self.driver_throttle > 0.001 {
             return Err("Detené el tren y cerrá el regulador para abastecer".into());
         }
-        if self.refill_room_kg(vehicle, station.pickup_type) <= 1e-6 {
+        let cargo = self.state.freight.iter().find(|c| {
+            c.vehicle == vehicle && c.profile.pickup_types.contains(&station.pickup_type)
+        });
+        let room = if unloading {
+            cargo.map_or(0., |c| c.load_kg)
+        } else {
+            self.refill_room_kg(vehicle, station.pickup_type)
+        };
+        if room <= 1e-6 {
             return Err("El depósito está completo o no admite ese combustible".into());
         }
         if self
@@ -159,6 +200,12 @@ impl LiveDriveSession {
             return Err("El abastecedor está agotado".into());
         }
         self.refilling = Some(RefillOperation {
+            unloading,
+            delay_remaining_s: if unloading {
+                cargo.map_or(0., |c| c.profile.unloading_delay_s)
+            } else {
+                0.
+            },
             station,
             vehicle,
             opening: 0.,
@@ -208,54 +255,75 @@ impl LiveDriveSession {
                 .copied()
                 .unwrap_or(0.))
         .max(0.);
-        let room = self.refill_room_kg(op.vehicle, op.station.pickup_type);
-        let delivered = (op.station.feed_kg_s * (dt - opening_dt))
+        let cargo = self.state.freight.iter().find(|c| {
+            c.vehicle == op.vehicle && c.profile.pickup_types.contains(&op.station.pickup_type)
+        });
+        let room = if op.unloading {
+            cargo.map_or(0., |c| c.load_kg)
+        } else {
+            self.refill_room_kg(op.vehicle, op.station.pickup_type)
+        };
+        let delay_dt = op.delay_remaining_s.min(dt - opening_dt);
+        op.delay_remaining_s -= delay_dt;
+        let delivered = (op.station.feed_kg_s * (dt - opening_dt - delay_dt))
             .min(remaining)
             .min(room);
-        match op.station.pickup_type {
-            5 => {
-                if let Some(b) = &mut self.state.boiler_state {
-                    b.tender_water_kg += delivered;
-                }
+        if let Some(c) = self.state.freight.iter_mut().find(|c| {
+            c.vehicle == op.vehicle && c.profile.pickup_types.contains(&op.station.pickup_type)
+        }) {
+            if op.unloading {
+                c.load_kg -= delivered;
+                c.unloaded_kg += delivered;
+            } else {
+                c.load_kg += delivered;
+                c.received_kg += delivered;
             }
-            6 => {
-                if let Some(b) = &mut self.state.boiler_state {
-                    b.coal_kg += delivered;
+        } else {
+            match op.station.pickup_type {
+                5 => {
+                    if let Some(b) = &mut self.state.boiler_state {
+                        b.tender_water_kg += delivered;
+                    }
                 }
-            }
-            7 if self
-                .state
-                .vehicle_systems
-                .iter()
-                .any(|c| c.definition.vehicle == op.vehicle && !c.motors.is_empty()) =>
-            {
-                let car = self
+                6 => {
+                    if let Some(b) = &mut self.state.boiler_state {
+                        b.coal_kg += delivered;
+                    }
+                }
+                7 if self
                     .state
                     .vehicle_systems
-                    .iter_mut()
-                    .find(|c| c.definition.vehicle == op.vehicle)
-                    .unwrap();
-                let mut remaining = delivered / DIESEL_KG_PER_L;
-                for (s, p) in car.motors.iter_mut().zip(&car.definition.motors) {
-                    let filled = remaining.min((p.fuel_l - s.fuel_l).max(0.));
-                    s.fuel_l += filled;
-                    s.refilled_l += filled;
-                    remaining -= filled;
-                }
-            }
-            7 => {
-                if let Some(s) = self
-                    .state
-                    .diesel
-                    .cars
-                    .iter_mut()
-                    .find(|s| s.vehicle == op.vehicle)
+                    .iter()
+                    .any(|c| c.definition.vehicle == op.vehicle && !c.motors.is_empty()) =>
                 {
-                    s.fuel_l += delivered / DIESEL_KG_PER_L;
-                    s.refilled_l += delivered / DIESEL_KG_PER_L;
+                    let car = self
+                        .state
+                        .vehicle_systems
+                        .iter_mut()
+                        .find(|c| c.definition.vehicle == op.vehicle)
+                        .unwrap();
+                    let mut remaining = delivered / DIESEL_KG_PER_L;
+                    for (s, p) in car.motors.iter_mut().zip(&car.definition.motors) {
+                        let filled = remaining.min((p.fuel_l - s.fuel_l).max(0.));
+                        s.fuel_l += filled;
+                        s.refilled_l += filled;
+                        remaining -= filled;
+                    }
                 }
+                7 => {
+                    if let Some(s) = self
+                        .state
+                        .diesel
+                        .cars
+                        .iter_mut()
+                        .find(|s| s.vehicle == op.vehicle)
+                    {
+                        s.fuel_l += delivered / DIESEL_KG_PER_L;
+                        s.refilled_l += delivered / DIESEL_KG_PER_L;
+                    }
+                }
+                _ => (),
             }
-            _ => (),
         }
         if delivered > 0. {
             *self

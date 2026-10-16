@@ -17,6 +17,10 @@ pub struct NativeAudio {
     pub engine: Option<NativeAudioEngine>,
     initial_announcements: std::collections::HashSet<String>,
     last_clock: f64,
+    source_layout: std::collections::HashMap<String, (usize, usize)>,
+    current_layout: std::collections::HashMap<String, (usize, usize)>,
+    layout_generation: u64,
+    vehicle_remapping: std::sync::Arc<[openrailsrs_audio::native::SoundVehicleRemap]>,
 }
 
 pub fn start_native_audio(
@@ -25,6 +29,8 @@ pub fn start_native_audio(
     mut audio: ResMut<NativeAudio>,
 ) {
     audio.engine = None;
+    audio.layout_generation = 0;
+    audio.vehicle_remapping = Default::default();
     let Some(live) = live else { return };
     let Ok(scenario) = openrailsrs_scenarios::load_scenario(live.scenario_path()) else {
         return;
@@ -33,39 +39,24 @@ pub fn start_native_audio(
         .scenario_path()
         .parent()
         .unwrap_or(std::path::Path::new("."));
-    let source = |id: &str| {
-        scenario
-            .extra_trains
-            .iter()
-            .find(|entry| entry.id == id)
-            .map_or(&scenario.train.consist, |entry| &entry.consist)
-    };
-    let mut specs = vec![ConsistSoundSpec {
-        id: 0,
-        vehicle_offset: 0,
-        consist: directory.join(source(&live.session.service_id)),
-        route: assets.route_dir.clone(),
-    }];
-    for receipt in &live.traffic.couplings {
-        specs.push(ConsistSoundSpec {
-            id: 0,
-            vehicle_offset: receipt.before.formation.cars.len(),
-            consist: directory.join(source(&receipt.donor)),
-            route: assets.route_dir.clone(),
-        });
-    }
-    specs.extend(
-        live.traffic
-            .services
-            .iter()
-            .enumerate()
-            .map(|(i, t)| ConsistSoundSpec {
-                id: i + 1,
-                vehicle_offset: 0,
-                consist: directory.join(source(&t.id)),
-                route: assets.route_dir.clone(),
-            }),
+    audio.source_layout = vehicle_audio_layout(&live);
+    audio.current_layout = audio.source_layout.clone();
+    let mut specs = sound_specs(
+        &scenario,
+        directory,
+        &assets.route_dir,
+        0,
+        &live.session.vehicle_identities(),
     );
+    for (i, service) in live.traffic.services.iter().enumerate() {
+        specs.extend(sound_specs(
+            &scenario,
+            directory,
+            &assets.route_dir,
+            i + 1,
+            &service.session.vehicle_identities(),
+        ));
+    }
     audio.initial_announcements = live
         .session
         .state
@@ -110,6 +101,69 @@ pub fn start_native_audio(
         vec![]
     };
     audio.engine = NativeAudioEngine::start_with_announcements(specs, clips);
+}
+/// Source ownership survives front pickup, multiple cuts and a later split.
+/// Historical coupling receipts are not a list of vehicles currently present.
+fn sound_specs(
+    scenario: &openrailsrs_scenarios::ScenarioFile,
+    directory: &std::path::Path,
+    route: &std::path::Path,
+    train: usize,
+    identities: &[String],
+) -> Vec<ConsistSoundSpec> {
+    let mut sources =
+        std::collections::BTreeMap::<String, std::collections::HashMap<usize, usize>>::new();
+    for (current, identity) in identities.iter().enumerate() {
+        let Some((service, index)) = identity.rsplit_once("/car/") else {
+            continue;
+        };
+        if let Ok(index) = index.parse::<usize>() {
+            sources
+                .entry(service.into())
+                .or_default()
+                .insert(index, current);
+        }
+    }
+    sources
+        .into_iter()
+        .filter_map(|(service, mapping)| {
+            let source = if service == "Jugador" {
+                Some(&scenario.train.consist)
+            } else {
+                scenario
+                    .extra_trains
+                    .iter()
+                    .find(|t| t.id == service)
+                    .map(|t| &t.consist)
+            }?;
+            Some(ConsistSoundSpec {
+                id: train,
+                vehicle_offset: 0,
+                vehicle_mapping: Some(mapping),
+                consist: directory.join(source),
+                route: route.into(),
+            })
+        })
+        .collect()
+}
+
+fn vehicle_audio_layout(live: &LiveDrive) -> std::collections::HashMap<String, (usize, usize)> {
+    std::iter::once((0, &live.session))
+        .chain(
+            live.traffic
+                .services
+                .iter()
+                .enumerate()
+                .map(|(i, t)| (i + 1, &t.session)),
+        )
+        .flat_map(|(train, session)| {
+            session
+                .vehicle_identities()
+                .into_iter()
+                .enumerate()
+                .map(move |(vehicle, id)| (id, (train, vehicle)))
+        })
+        .collect()
 }
 pub fn stop_native_audio(mut audio: ResMut<NativeAudio>) {
     audio.engine = None;
@@ -203,7 +257,9 @@ fn state(session: &openrailsrs_sim::LiveDriveSession, vehicle: usize) -> SoundSt
                 .is_some_and(|c| c.using_sand),
         speed: velocity as f32,
         distance: if parked {
-            session.formation.parked_head_chainage_m.unwrap_or(0.0)
+            let offset =
+                session.formation.offset_m(vehicle) - car.map_or(0.0, |car| car.length_m * 0.5);
+            session.presentation_chainage_for_car(offset, offset, 0.0)
         } else {
             session.state.odometer_m
         } as f32,
@@ -271,6 +327,7 @@ fn state(session: &openrailsrs_sim::LiveDriveSession, vehicle: usize) -> SoundSt
         ),
         headlights: t.headlights,
         curve_squeal: false,
+        track_type: None,
         coupler_contact: session.state.couplers.get(vehicle).map_or(0, |c| {
             if c.broken || c.extension_m.abs() <= c.free_play_m {
                 0
@@ -312,6 +369,24 @@ fn vehicle_states(session: &openrailsrs_sim::LiveDriveSession) -> Vec<SoundState
         .collect()
 }
 
+fn moving_track_type(
+    session: &openrailsrs_sim::LiveDriveSession,
+    car_offset: f64,
+    speed: f32,
+) -> Option<u32> {
+    if speed.abs() <= 0.1 {
+        return None;
+    }
+    let (path, _) = session.presentation_path_for_car(car_offset);
+    let chainage = session.presentation_chainage_for_car(car_offset, car_offset, 0.0);
+    // Physics stores a speed magnitude. A reversed PAT changes the path's
+    // frame too, so neither a speed sign nor the reverser alone gives travel.
+    let reverse = (session.driver_direction <= 0.25) != session.state.path_reversed;
+    session
+        .graph
+        .track_sound_type_at_chainage(path, chainage, reverse)
+}
+
 pub fn update_native_audio(
     live: Option<Res<LiveDrive>>,
     mut audio: ResMut<NativeAudio>,
@@ -340,6 +415,24 @@ pub fn update_native_audio(
     let Some(live) = live else { return };
     if audio.engine.is_none() {
         return;
+    }
+    let layout = vehicle_audio_layout(&live);
+    if layout != audio.current_layout {
+        audio.layout_generation = audio.layout_generation.saturating_add(1);
+        audio.vehicle_remapping = audio
+            .source_layout
+            .iter()
+            .filter_map(|(id, source)| {
+                layout
+                    .get(id)
+                    .map(|current| openrailsrs_audio::native::SoundVehicleRemap {
+                        source: *source,
+                        current: *current,
+                    })
+            })
+            .collect::<Vec<_>>()
+            .into();
+        audio.current_layout = layout;
     }
     if live.session.time_s() < audio.last_clock {
         audio.initial_announcements = live
@@ -509,14 +602,17 @@ pub fn update_native_audio(
             f64::from(offset.offset_m),
             f64::from(offset.offset_m),
             0.0,
-        ) && let Some((radius, _, _)) = resolver
-            .as_ref()
-            .and_then(|r| r.curve_on_graph_edge(&scene.graph, &edge, position))
-            && let Some(train) = trains.iter_mut().find(|t| t.id == id)
+        ) && let Some(train) = trains.iter_mut().find(|t| t.id == id)
             && let Some(state) = train.vehicle_states.get_mut(car.0)
         {
-            state.curve_squeal =
-                radius.abs() > 0. && radius.abs() < 301. && state.speed.abs() > 0.1;
+            let car_offset = f64::from(offset.offset_m);
+            state.track_type = moving_track_type(session, car_offset, state.speed);
+            state.curve_squeal = resolver
+                .as_ref()
+                .and_then(|r| r.curve_on_graph_edge(&scene.graph, &edge, position))
+                .is_some_and(|(radius, _, _)| {
+                    radius.abs() > 0. && radius.abs() < 301. && state.speed.abs() > 0.1
+                });
         }
     }
     for train in &mut trains {
@@ -534,6 +630,8 @@ pub fn update_native_audio(
         );
     }
     engine.send(SoundFrame {
+        vehicle_layout_generation: audio.layout_generation,
+        vehicle_remapping: audio.vehicle_remapping.clone(),
         time_s: live.session.time_s(),
         cab: matches!(
             *follow,
@@ -602,6 +700,48 @@ mod tests {
             .join("../../examples/chiltern_extended/scenario.toml");
         let scenario = openrailsrs_scenarios::load_scenario(&path).unwrap();
         LiveDriveSession::from_scenario(path.parent().unwrap(), &scenario).unwrap()
+    }
+
+    #[test]
+    fn rolling_gap_queries_actual_travel_in_both_path_frames_with_positive_speed() {
+        let mut s = session();
+        let edge = s.state.path_edges[0].clone();
+        let mut profile = s.graph.physics_profile(&edge).cloned().unwrap_or_default();
+        profile.track_sound_regions = vec![
+            openrailsrs_track::track_sound::TrackSoundBoundary {
+                position_m: 5.,
+                track_type: 1,
+                faces_forward: true,
+                track_item_id: 1,
+            },
+            openrailsrs_track::track_sound::TrackSoundBoundary {
+                position_m: 45.,
+                track_type: 2,
+                faces_forward: false,
+                track_item_id: 2,
+            },
+        ];
+        s.graph.set_physics_profile(&edge, profile);
+        s.state.edge_index = 0;
+        s.state.velocity_mps = 8.;
+        for reversed in [false, true] {
+            s.state.path_reversed = reversed;
+            s.state.pos_on_edge_m = 12. + if reversed { s.formation.length_m() } else { 0. };
+            s.driver_direction = if reversed { 0. } else { 1. };
+            // Audio follows the presentation clock; initialize its previous
+            // position with a real physics step at the prescribed fixture point.
+            s.step_realtime(s.realtime_physics_dt(), |_| {});
+            assert!((s.presentation_chainage_for_car(0., 0., 0.) - 12.).abs() < 1e-6);
+            for (reverser, expected) in if reversed {
+                [(0., Some(0)), (1., None)]
+            } else {
+                [(1., Some(0)), (0., None)]
+            } {
+                s.driver_direction = reverser;
+                assert_eq!(moving_track_type(&s, 0., 8.), expected);
+                assert_eq!(moving_track_type(&s, 0., 0.), None);
+            }
+        }
     }
 
     fn cylinder(force: f64) -> BrakeCylinder {

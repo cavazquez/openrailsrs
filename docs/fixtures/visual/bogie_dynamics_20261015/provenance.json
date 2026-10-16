@@ -1,0 +1,79 @@
+{
+  "schema": 1,
+  "status": "pass_scoped_render_acceptance",
+  "viewer_sha256": "01288677cfaa2857e5cd847c8edc14247f8df617e6bdb6bf5b00e775ebf001dd",
+  "scope": "Three own synthetic shared-bogie captures at 35/75m odometer targets, including a lateral view, on real hardware and paused after real driving. Numerical force, reverse and restoration acceptance is recorded by CPU tests; this is not a native OR route comparison.",
+  "source_sha256": {
+    "examples/player_lab/scenario_bogie_mechanics.toml": "377595150ced3633ce3e0f89378d8152997a902c3beaec46c8ffbb24308c455f",
+    "crates/openrailsrs-viewer3d/src/rolling_stock_anim.rs": "d2bcb6e5bac598c5e0020c8916e78a09b9e30af48abb0e65a837fdd7f4efb766",
+    "crates/openrailsrs-sim/src/bogie_dynamics.rs": "50219a69d54e486ff82ecd354bbe97b26f4f6c720c6922eab5ba0adec8a96c5d"
+  },
+  "conditions": [
+    {
+      "name": "shared-bogie-curve",
+      "odometer_m": 35.66415651704497,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shared_mesh_joints": 1,
+      "maximum_flexible_endpoint_error_m": 0.0,
+      "centre_spacing_m": 19.966411590576172,
+      "path_spacing_m": 20.0
+    },
+    {
+      "name": "shared-bogie-next-curve",
+      "odometer_m": 75.26188291906459,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shared_mesh_joints": 1,
+      "maximum_flexible_endpoint_error_m": 0.0,
+      "centre_spacing_m": 19.965045928955078,
+      "path_spacing_m": 20.0
+    },
+    {
+      "name": "shared-bogie-side",
+      "odometer_m": 35.06876297915428,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shared_mesh_joints": 1,
+      "maximum_flexible_endpoint_error_m": 0.0,
+      "centre_spacing_m": 19.967193603515625,
+      "path_spacing_m": 20.0
+    }
+  ],
+  "visual_inspection": {
+    "performed": true,
+    "observations": [
+      "Both owned synthetic bodies follow the curved track without a discontinuity at their connection.",
+      "One BOGIE2 shared mesh binding remains and the flexible endpoint error is zero in each paused capture.",
+      "The red/blue boxes are owned diagnostic meshes, not original vehicle appearance or detailed wheel/rail contact certification."
+    ],
+    "limits": [
+      "Captures pause after real driving; they do not by themselves certify every animation frame, reversing or force parity. Numerical reverse, force and save/restore acceptance is separate.",
+      "The viewer was built before the final ACT importer corrections. Those changes do not affect the synthetic bogie scenario; the recorded render/physics source hashes remain unchanged."
+    ]
+  },
+  "unaccepted_setup_attempt": {
+    "directory": "tmp/next-ten-20261015/bogie-visual01",
+    "reason": "Capture watchdog was set to one second and exited before reaching 35m. Its report is not acceptance; the observation timeout was corrected without changing model, target or tolerances."
+  },
+  "artifacts_sha256": {
+    "shared-bogie-curve.png": "24e824bd1cb130b49d6e845ebfa6f48cb780d1ddd091939d12f14ce6b766de83",
+    "shared-bogie-curve.stream.json": "5568018aa043521c4f8a0c8eb0392b4f0414db7e58cb1a3861c978f30b4beb46",
+    "shared-bogie-next-curve.png": "cb6eec6e9109f113b3904a18a50ac2a3eb57bf0d85d685d4a352ae1587f32c97",
+    "shared-bogie-next-curve.stream.json": "3b38881773784e4fcedab37d59147327b01d147632d7c4ee37e716de76774336",
+    "shared-bogie-side.png": "dacdee85f7ae2a86ec6df81003b9e79ecf403620cd8b5fe089b1e54ee3a3ae26",
+    "shared-bogie-side.stream.json": "cb5f20058a1f045d81ff637647fdd2e2e0618a4907a5afe9184199a367f2c553"
+  }
+}

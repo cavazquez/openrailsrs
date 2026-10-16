@@ -116,6 +116,30 @@ pub fn load_consist_intake_points(
         .collect()
 }
 
+pub fn load_consist_freight_profiles(
+    consist: &Path,
+    base: &Path,
+) -> Result<Vec<Option<openrailsrs_core::activity::FreightProfile>>, TrainError> {
+    let ast = parse_vehicle_text(
+        &read_msts_file_to_string(consist).map_err(|e| TrainError::Parse(e.to_string()))?,
+    )?;
+    ConsistFile::from_ast(&ast)?
+        .entries
+        .iter()
+        .map(|entry| {
+            if matches!(entry, ConsistEntry::Engine { .. }) {
+                return Ok(None);
+            }
+            let path = resolve_consist_entry_path(base, entry.path());
+            Ok(
+                openrailsrs_formats::typed::freight_load::parse_freight_profile(
+                    &openrailsrs_formats::read_vehicle_ast(&path)?,
+                )?,
+            )
+        })
+        .collect()
+}
+
 pub fn load_consist_native_parameters(
     consist: &Path,
     base: &Path,

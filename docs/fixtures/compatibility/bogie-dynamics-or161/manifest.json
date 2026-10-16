@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "protocol_sha256": "2c7c09667048be6cb8a6ecd75ebd20df180fcef1008e5107e62f53b04bdaa10c",
+  "input_sha256": "c73ad5e3c2e8950857796b604f87d58091fb3580757680a7b0e01b826af26e0c",
+  "helper_sha256": "d3e37de90d60e1a4c80aaa037200e918f3da1cf420eb59260c1a6fb37838751b",
+  "capture_script_sha256": "0186a860e1dc1ffc269ef7e8a0bf0c897097568107f516e7d50e7fabe29e7d23",
+  "assemblies": {
+    "RunActivity.exe": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2",
+    "Orts.Simulation.dll": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679",
+    "Orts.Common.dll": "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212",
+    "Orts.Settings.dll": "fe0d8d81149f480f3972c80e64ffaf6012c7599e32c26c8e4d46510e3edbb2e7",
+    "Orts.Formats.Msts.dll": "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465",
+    "Orts.Parsers.Msts.dll": "8e0781c9f861ed95b4467d1bf948ea7aca896d634f21ac5952f97a9f630d0b36",
+    "MonoGame.Framework.dll": "c6a16c29705a4c847e0e4a2647bf432604cd9320cbc5d4125ab01ae7bb7e6542",
+    "Newtonsoft.Json.dll": "9af2e1c672afd67a291b8f2031a341a3788d4d9f683eaddc6ceab3a3a74c546e"
+  },
+  "source_files": {
+    "Source/Orts.Simulation/Simulation/RollingStocks/TrainCar.cs": "f1020ef9aedfd0d502383920a94abfc6a93ed3627ab8f8874862579176fb2348",
+    "Source/Orts.Simulation/Simulation/RollingStocks/MSTSWagon.cs": "583542dfee3d4b6e427a3fe4dbe73b04f02df13c998a174ff5c324dfc708e663",
+    "Source/Orts.Simulation/Simulation/Physics/Train.cs": "c4bc5b5822f8d154ea723c5bcb0390ccd54c675b65ec4d12d2e3e2acf92cf2cf"
+  },
+  "output_sha256": "a491890c45d1ec224d25dac2221550866839f15ce3295abec9b439e5ffcb9b3a",
+  "reference_source_and_dlls_unmodified": true,
+  "wine_isolation_helper_sha256": "4e87773fd3fe535f5660a427ea12b8b6a716266ebf9161e433aa66fc86e9f590",
+  "wine_isolation_release_sha256": "a7f7ad910d6a08ff2732b1c06b962186052bdde99eff74cda0ba2c85f5afe6ae",
+  "native_methods": [
+    "Orts.Simulation.RollingStocks.TrainCar.UpdateTrainDerailmentRisk(Single)"
+  ],
+  "tolerances_predeclared": {
+    "force_n_abs": 0.25,
+    "force_rel": 3e-06,
+    "cant_m_abs": 1e-06,
+    "angle_rad_abs": 1e-07,
+    "coefficient_abs": 1e-05,
+    "distance_m_abs": 1e-05,
+    "time_s_abs": 1e-06,
+    "states": "exact"
+  },
+  "scope": "Original DLL lateral-risk branch with explicitly prescribed geometry, speed, physical cant angle, friction and coupler angle/effort. CarBehind is null, so native visual hose/coupler geometry is deliberately not evaluated. This is not a train journey, a wheel/rail contact solver or a reference for Rust lateral suspension/shared-support extensions."
+}

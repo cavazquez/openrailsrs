@@ -1,0 +1,41 @@
+[scenario]
+name = "PAT: corte 40102 y código no admitido"
+description = "Ejercicio propio: el primer marcador conserva una locomotora, asegura tres vagones y espera 2 s. El segundo usa 60003: debe quedar pendiente con diagnóstico, nunca como una espera larga ni como servicio aprobado."
+
+[route]
+path = "route"
+start = "a"
+destination = "b"
+start_offset_m = 100.0
+assume_signals_clear = true
+
+[[route.legs]]
+start = "a"
+destination = "b"
+edges = ["e1", "e2"]
+start_offset_m = 100.0
+end_chainage_m = 100.0
+reversed = false
+wait_s = 40102
+
+[[route.legs]]
+start = "a"
+destination = "b"
+edges = ["e1", "e2"]
+start_offset_m = 100.0
+end_chainage_m = 150.0
+reversed = false
+wait_s = 60003
+
+[train]
+consist = "consists/cargo.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+
+[simulation]
+duration = 180.0
+time_step = 0.05
+seed = 42
+legacy_power_cap = false

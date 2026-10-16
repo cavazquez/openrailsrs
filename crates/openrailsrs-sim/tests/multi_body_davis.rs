@@ -83,6 +83,7 @@ fn per_vehicle_davis_uses_each_vehicle_speed() {
     };
     let vehicle_davis = consist.per_vehicle_davis(None);
     let train = TrainPhysics {
+        bogies: vec![],
         power_supply: Default::default(),
         rail_adhesion: None,
         diesel: Default::default(),

@@ -193,6 +193,7 @@ mod tests {
 
     fn minimal_scenario() -> ScenarioFile {
         ScenarioFile {
+            native_activity: None,
             scenario: ScenarioMeta {
                 name: "test".into(),
                 description: String::new(),
@@ -213,6 +214,7 @@ mod tests {
                 edge_speed_limits: vec![],
             },
             train: TrainSection {
+                bogie_dynamics: vec![],
                 freight: None,
                 systems: vec![],
                 platform_sides: vec![],

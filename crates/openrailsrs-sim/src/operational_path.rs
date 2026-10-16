@@ -1,6 +1,7 @@
 //! Ordered native subpaths. A reversal exchanges the travelling front and
 //! rear reference; the physical vehicles and their mutable systems stay put.
 use crate::{LiveDriveSession, path_data::PathData};
+use openrailsrs_formats::pat_operations::PatInstruction;
 use openrailsrs_track::SwitchPosition;
 
 /// OR Train.TestAbsDelay / CompareTimes.LatestTime, including midnight.
@@ -26,6 +27,11 @@ fn native_wait_delay(encoded: u32, clock: u32) -> f64 {
 }
 
 impl LiveDriveSession {
+    /// Zero-based native route leg currently driven. Does not clone a save.
+    pub fn operational_leg_index(&self) -> usize {
+        self.operational_leg
+    }
+
     pub fn oriented_car_offset(&self, offset: f64) -> f64 {
         if self.state.path_reversed {
             -self.formation.length_m() - offset
@@ -68,6 +74,31 @@ impl LiveDriveSession {
 
     pub fn operational_status(&self) -> Option<String> {
         let leg = self.operational_legs.get(self.operational_leg)?;
+        if self.operational_distance_m()? <= 10.0 {
+            match PatInstruction::decode(leg.wait_s as u32) {
+                PatInstruction::Detach {
+                    keep, front: true, ..
+                } if !leg.reversed => {
+                    if !self
+                        .state
+                        .pat_operations_completed
+                        .contains(&self.operational_leg)
+                    {
+                        return Some(format!(
+                            "PAT {}: detener y separar; conservar {keep} vehículos delanteros",
+                            leg.wait_s as u32
+                        ));
+                    }
+                }
+                PatInstruction::Wait(_) | PatInstruction::Until { .. } => (),
+                code => {
+                    return Some(format!(
+                        "PAT {}: instrucción {code:?} no admitida; itinerario pendiente",
+                        leg.wait_s as u32
+                    ));
+                }
+            }
+        }
         if let Some(operation) = leg.operations.get(self.operational_operation) {
             let distance = operation.chainage_m - self.head_chainage_m();
             if distance.abs() <= 50.0 {
@@ -80,6 +111,13 @@ impl LiveDriveSession {
                         "F9 · acoplar {}, conectar frenos y soltar frenos de mano",
                         operation.section
                     ),
+                    openrailsrs_scenarios::model::TimetableAction::JoinService {
+                        ref service,
+                        ..
+                    } => format!("F9 · recoger el servicio {service}, con enganches en contacto"),
+                    openrailsrs_scenarios::model::TimetableAction::SplitService { ref service } => {
+                        format!("F9 · asegurar y devolver la porción del servicio {service}")
+                    }
                 });
             }
         }
@@ -90,8 +128,12 @@ impl LiveDriveSession {
             return Some("Fin del itinerario: detener el tren".into());
         }
         if let Some(start) = self.operational_wait_started {
+            let code = match PatInstruction::decode(leg.wait_s as u32) {
+                PatInstruction::Detach { wait_s, .. } => wait_s,
+                _ => leg.wait_s as u32,
+            };
             let delay = native_wait_delay(
-                leg.wait_s as u32,
+                code,
                 ((self.service_clock_start_s + start) % 86400.0) as u32,
             );
             let remaining = (delay - (self.time_s() - start)).max(0.0);
@@ -103,6 +145,20 @@ impl LiveDriveSession {
             && time > self.time_s()
         {
             return Some(format!("Próximo servicio en {:.0} s", time - self.time_s()));
+        }
+        if let Some(next) = self.operational_legs.get(self.operational_leg + 1) {
+            let end = if next.reversed {
+                -self.formation.length_m()
+            } else {
+                0.
+            };
+            if self.position_at_head_offset(end).is_none_or(|(edge, _)| {
+                !next.edges.iter().any(|id| {
+                    id.strip_suffix("_r").unwrap_or(id) == edge.strip_suffix("_r").unwrap_or(&edge)
+                })
+            }) {
+                return Some("Avanzá despacio hasta librar el cambio con toda la locomotora antes de invertir".into());
+            }
         }
         Some("Detener el tren y seleccionar el inversor del próximo tramo".into())
     }
@@ -126,11 +182,55 @@ impl LiveDriveSession {
         ) {
             return false;
         }
+        let code = leg.wait_s as u32;
+        let instruction = PatInstruction::decode(code);
+        let delay_code = match instruction {
+            PatInstruction::Wait(s) => s,
+            PatInstruction::Until { .. } => code,
+            PatInstruction::Detach {
+                keep,
+                front: true,
+                wait_s,
+            } if !leg.reversed => {
+                if !self
+                    .state
+                    .pat_operations_completed
+                    .contains(&self.operational_leg)
+                {
+                    if keep == 0
+                        || keep >= self.formation.coupled_count
+                        || self.cab_vehicle() >= keep
+                    {
+                        return false;
+                    }
+                    // A coded native detach is an explicit crew instruction.
+                    // Secure the departing section before opening its joint.
+                    for car in &mut self.formation.cars[keep..self.formation.coupled_count] {
+                        car.handbrake = true;
+                    }
+                    if self.uncouple_after(keep - 1).is_err() {
+                        return false;
+                    }
+                    self.state
+                        .pat_operations_completed
+                        .insert(self.operational_leg);
+                    self.operational_wait_started = None;
+                }
+                wait_s
+            }
+            // Known but unimplemented attach/permission/rear-retaining codes
+            // stay pending. An arbitrary number never becomes elapsed time.
+            _ => {
+                self.driver_throttle = 0.;
+                self.driver_brake = 1.;
+                return false;
+            }
+        };
         let started = *self
             .operational_wait_started
             .get_or_insert(self.state.time.0);
         let delay = native_wait_delay(
-            leg.wait_s as u32,
+            delay_code,
             ((self.service_clock_start_s + started) % 86400.0) as u32,
         );
         if self.time_s() - started < delay {
@@ -202,9 +302,10 @@ impl LiveDriveSession {
                 .abs()
                 .total_cmp(&(b - expected_anchor).abs())
         }) else {
-            self.gameplay
-                .fail("El tramo siguiente no contiene el extremo de la formación");
-            return true;
+            // The rear can still foul points while the head is already inside
+            // the stop tolerance. Keep the operation pending so the driver can
+            // clear the junction; no train or parked stock is relocated.
+            return false;
         };
         if !(0.0..pd.total_length_m()).contains(&anchor) {
             return false;
@@ -232,11 +333,10 @@ impl LiveDriveSession {
                 let b = normalized(b);
                 a.0 == b.0 && (a.1 - b.1).abs() <= 1.0
             }) {
-                self.gameplay.fail(format!(
-                    "El tramo siguiente no conserva la posición del vehículo {}",
-                    i + 1
-                ));
-                return true;
+                // A stopped head near the marker is insufficient if a car
+                // still spans the other branch. Advance physically or detach
+                // the required portion before trying this native reversal.
+                return false;
             }
         }
         let prefix = self.gameplay_chainage_m();

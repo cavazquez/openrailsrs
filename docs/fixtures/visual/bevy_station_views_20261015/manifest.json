@@ -1,0 +1,41 @@
+{
+  "reference": "Open Rails 1.6.1",
+  "native_directory": "../or_reference/chiltern_station_views",
+  "capture_command": "python3 scripts/capture_route_views.py --route-root \"$CHILTERN_ROUTE\" --with-cab --capture-or-focus --match-native-lighting --headless-wayland --require-hardware --out-dir \"$NEW_OUTPUT_DIRECTORY\"",
+  "tested_executable_sha256": "2050504fc9b1c2f23ab4f0b8bd7e1faae4d9a6f993124dae67b7a3988c998a73",
+  "source_base_commit": "24df59dcc94b476564671e45df900c2d7dbdf63f",
+  "render_changes": [
+    "scene/render_budget full quality shadow cascades",
+    "capture-only original solar vector"
+  ],
+  "scope": "Camera and illumination equivalence, rendering readiness and visual inspection; no global pixel or full physical parity claim.40FPS frame cap is active. Continuous solar model retained in gameplay.",
+  "artifacts_sha256": {
+    "comparison.json": "9329efecfc48e53340c8868c3c311f02e4c0c85f30f4f69cc0facd4e4c1cfa58",
+    "denham-cab.png": "6516c0e82b1a3f507ae9e16dd4eb1337b49b02b086d13bace8c60815943dfe02",
+    "denham-cab.stream.json": "30f2ddfccd3d742394698c20df4cdc911a0338fe9a28f70af76cec92a5a2698e",
+    "denham-golf-course-cab.png": "343b71c8b4601e29a2669658136fa718e2c5da8c839a628c20ec5a2392927045",
+    "denham-golf-course-cab.stream.json": "a51798b5b72d339feca709e6c9713cb5c8b591bb45415efc175eb2610d94e816",
+    "denham-golf-course.png": "ed39dc0c94f80a7bf2fdb8fa529a00126c889388b7d3c31a039b4a93d9a1dfc6",
+    "denham-golf-course.stream.json": "af5cc162e1ca856136d22befcb740849c89e8aac79f3d2ad99014d0f5eda040b",
+    "denham.png": "bbf0207acdff15ad4aba97ef088b46b4912c6f50115cf7cc781e1a88e20cae45",
+    "denham.stream.json": "39fb9545b2783ea431a22e926c2fa08f452fd817a522fdbb1881e2fa726d4649",
+    "gerrards-cross-cab.png": "51527fb16d09098626dcbdb9d2251244c6a5c73d82f91729b51ec681b43d8a9f",
+    "gerrards-cross-cab.stream.json": "75bf6cdf2e3396ec94007d48882bca5c338a26ad04b28c91891f8fded5201853",
+    "gerrards-cross.png": "977910200aa0dfcbf8ca61d7e1d592f07e3021c46b4631e8fb0c0ded2debed9d",
+    "gerrards-cross.stream.json": "a6196f784b034ee7a018b3b7659095de77730f6b6722d5f30d375585182a0189",
+    "northolt-park-cab.png": "d9e16f5bbc81cbab72f2c9557f2079b3c951d11cee86bf9c1d8a961e3caa67bf",
+    "northolt-park-cab.stream.json": "8b8cec0780e947a70dd8c0b733a443107b74f1490d842fd47f8913d64eb06ece",
+    "northolt-park.png": "da1c207f942c9306daa25cfd90c44022360cf50f9d65bfcb9bd2fd234b3816c4",
+    "northolt-park.stream.json": "c9137608768ccd4c6e2cbbfc7fa16b10ecd9471e84a3b348ff1df40bdc019743",
+    "pause-and-camera.json": "17b731f263de1acfa3df5d3f0178352c80d3fbe494e3fec3c49ed123bfd4bed7",
+    "pause-and-camera.png": "cac51cef61f4efefc796af8ba783bce0fb76c4ac9f57676bb214a28331d3911e",
+    "south-ruislip-cab.png": "fc3e15e534ddf21a6aa2d298e3b2b95f6e6364b601376ff6077b8285cfdcfcb5",
+    "south-ruislip-cab.stream.json": "82866c19e73003d3aa80d163622106605a42e2a91e0c43b2b9988b2fdb3e5eaf",
+    "south-ruislip.png": "88776777e70fa46c336d1b3563983b117e812291a85aa596997a5cf98e3e3dd0",
+    "south-ruislip.stream.json": "e1fa8a1cf6d101108968b4344f3fa7be8e48721d0c9be87fee250f3c4d538b8b",
+    "west-ruislip-cab.png": "42166f60526570501c6a36a221b3ac5a8411d8d8706c5683c1d577c1918e0ea4",
+    "west-ruislip-cab.stream.json": "9cce94d1d5cc8a888f87327a52709e7f53d095dc8c03ff89254eba8743a6ffd9",
+    "west-ruislip.png": "08cf782a13efb2e7a59196373555c40c98aae8f4bee8bd603f9bc2c3f4145e25",
+    "west-ruislip.stream.json": "3c9107bbeeb6454cf36e944b7b2dd149612cd458675a3359abed280e12200b58"
+  }
+}

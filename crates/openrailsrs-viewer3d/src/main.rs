@@ -1766,7 +1766,10 @@ fn begin_player_launch(
             .and_then(|mut bundle| {
                 if let Some(path) = request.resume {
                     let saved = openrailsrs_viewer3d::saved_game::SavedGame::read(&path)?;
+                    bundle.consist.remember_vehicle_sources();
                     let pending_coupling = saved.pending_coupling.clone();
+                    let pending_coupling_end = saved.pending_coupling_end;
+                    let pending_split = saved.pending_split.clone();
                     let pending_control = saved.pending_control.clone();
                     let history = if saved.control_history.is_empty() {
                         saved.controlled_service.iter().cloned().collect::<Vec<_>>()
@@ -1786,9 +1789,6 @@ fn begin_player_launch(
                         bundle.consist.transfer_control(id, source(id))?;
                     }
 
-                    for receipt in &saved.independent_couplings {
-                        bundle.consist.append_service(&receipt.donor)?;
-                    }
                     let live = bundle
                         .live
                         .as_mut()
@@ -1813,9 +1813,18 @@ fn begin_player_launch(
                             .iter()
                             .position(|s| s.id == id)
                             .ok_or("Formación a recoger no disponible")?;
-                        live.traffic.couple_service(&mut live.session, index)?;
-                        bundle.consist.append_service(&id)?;
+                        live.traffic.couple_service_at(
+                            &mut live.session,
+                            index,
+                            pending_coupling_end,
+                        )?;
                     }
+                    if let Some(id) = pending_split {
+                        live.traffic.split_service(&mut live.session, &id)?;
+                    }
+                    bundle
+                        .consist
+                        .reconcile_services(&live.session, &live.traffic)?;
                 }
                 Ok(bundle)
             });
