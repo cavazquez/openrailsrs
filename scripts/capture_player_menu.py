@@ -15,7 +15,7 @@ import time
 
 
 PAGES = (
-    "home", "route", "route-map", "train", "weather", "weather-options", "continue",
+    "home", "country", "route", "route-map", "train", "train-options", "route-options", "weather", "weather-options", "continue",
     "library", "downloads", "settings", "weather-settings", "controls",
     "practice", "weather-editor", "vehicle-profile", "library-tools", "bug-report",
     "campaigns", "formation-editor", "service-editor",
@@ -45,21 +45,31 @@ def check_layout(report, page, width, height):
         for before, after in zip(cards, cards[1:]):
             assert before["max"][1] <= after["min"][1], cards
         inside(nodes["ui-Exit"], root)
-    elif page in ("route", "route-map", "train", "weather", "weather-options"):
+    elif page in ("country", "route", "route-map", "route-options", "train", "train-options", "weather", "weather-options"):
         footer = nodes["launch-footer"]
         inside(footer, root)
-        inside(nodes.get("ui-Start", nodes.get("launch-unavailable")), footer)
+        if page != "country":
+            inside(nodes.get("ui-Start", nodes.get("launch-unavailable")), footer)
         for name, node in nodes.items():
             if name.startswith("ui-NewGameStep("):
                 inside(node, root)
-        if page == "train":
+        if page in ("route", "route-map", "train"):
             scroll = nodes["player-scroll"]
-            choices = [node for name, node in nodes.items() if name.startswith("choice-Consist-")]
+            if page == "train":
+                for heading in ("train-ready-heading", "train-unavailable-heading"):
+                    inside(nodes[heading], scroll)
+            choices = [node for name, node in nodes.items() if name.startswith("choice-")
+                       and any(name.startswith("choice-" + kind + "-")
+                               for kind in (("Consist",) if page == "train" else ("Route", "Service")))]
             if choices:
                 # A list that exists below the fold is still unusable on entry.
                 assert any(node["min"][1] >= scroll["min"][1] - 1
                            and node["max"][1] <= scroll["max"][1] + 1
-                           for node in choices), "No complete formation choice is visible"
+                           for node in choices), "No complete content choice is visible: " + page
+        elif page == "country":
+            for name, node in nodes.items():
+                if name.startswith("ui-SelectCountry("):
+                    inside(node, nodes["player-scroll"])
     elif page in ("settings", "weather-settings", "controls"):
         inside(nodes["ui-SaveSettings"], root)
     pipelines = report.get("shader_pipelines")

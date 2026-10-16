@@ -61,6 +61,10 @@ Para una comparación se pueden desactivar funciones al iniciar el proceso:
 
 ## Biblioteca: #415–#419
 
+En el menú actual, **Avanzadas** muestra los filtros y el orden. La búsqueda
+permanece en el modo básico y las formaciones se agrupan por disponibilidad
+para la ruta elegida. [Flujo de creación de partida](VIEWER3D.md#crear-una-partida).
+
 - **#415:** buscar un nombre con tildes compuestas o combinadas y sin tildes.
   Los nombres mostrados y los archivos originales deben conservarse. Las
   distinciones de escritura japonesa se mantienen.

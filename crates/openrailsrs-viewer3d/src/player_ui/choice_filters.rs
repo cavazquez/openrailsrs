@@ -154,9 +154,7 @@ pub(in crate::player_ui) fn cycle_filter(search: &mut ChoiceSearch, filter: Choi
         ChoiceFilter::Favorites => search.favorites_only = !search.favorites_only,
         ChoiceFilter::Reset => *search = default(),
     }
-    search.page = 0;
-    search.cursor = None;
-    search.cursor_identity = None;
+    search.reset_navigation();
 }
 pub(in crate::player_ui) fn build(
     p: &mut ChildSpawnerCommands<'_>,

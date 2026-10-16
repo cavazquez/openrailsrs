@@ -718,6 +718,7 @@ impl CaptureScene<'_, '_> {
         report["ui_layout"] = serde_json::Value::Array(self.menu_nodes.iter().filter(|(name, _, _)| {
                 name.as_str().starts_with("ui-") || name.as_str().starts_with("home-")
                     || name.as_str().starts_with("choice-")
+                    || name.as_str().starts_with("train-")
                     || name.as_str().starts_with("itinerary-")
                     || matches!(name.as_str(), "player-menu" | "player-scroll" | "launch-footer" | "launch-unavailable")
             }).map(|(name, node, transform)| {

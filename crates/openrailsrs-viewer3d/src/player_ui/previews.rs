@@ -290,53 +290,12 @@ pub(super) fn railway_warning(
     audit: &openrailsrs_train::ConsistAudit,
     railway: &RailwayInfo,
 ) -> Option<String> {
-    if let crate::clearance::Assessment::Incompatible(message) =
-        crate::clearance::compare(audit, railway.clearance.as_ref())
-    {
-        return Some(message);
-    }
-    if let Some(gauge) = audit
-        .compatibility
-        .iter()
-        .filter_map(|v| v.declared.curve.track_gauge_m)
-        .find(|gauge| railway.gauge_m > 0. && (*gauge - railway.gauge_m).abs() > 0.025)
-    {
-        return Some(format!(
-            "Trocha incompatible: tren {:.0} mm · ruta {:.0} mm",
-            gauge * 1000.0,
-            railway.gauge_m * 1000.0
-        ));
-    }
-    let engines = audit
-        .compatibility
-        .iter()
-        .filter(|v| v.declared.engine_type.is_some())
-        .collect::<Vec<_>>();
-    if !engines.is_empty() && engines.iter().all(|v| v.declared.electric.is_some()) {
-        let matching = engines.iter().any(|v| {
-            v.declared.electric.as_ref().is_some_and(|engine| {
-                std::iter::once(&railway.supply)
-                    .chain(&railway.section_supplies)
-                    .any(|supply| {
-                        supply.kind == engine.pickup
-                            && supply.voltage_v >= engine.minimum_voltage_v
-                            && engine
-                                .maximum_voltage_v
-                                .is_none_or(|max| supply.voltage_v <= max)
-                    })
-            })
-        });
-        if !matching {
-            return Some(format!(
-                "Tren eléctrico sin alimentación compatible · ruta: {}",
-                railway.supply.kind.label()
-            ));
-        }
-        if railway.supply.kind == ElectricPickup::None {
-            return Some("Alimentación eléctrica sólo en algunos tramos del recorrido".into());
-        }
-    }
-    None
+    let status = super::train_selection::route_status(audit, railway);
+    status
+        .reasons
+        .into_iter()
+        .next()
+        .or_else(|| status.warnings.into_iter().next())
 }
 pub(super) fn update(
     mut commands: Commands,
@@ -352,7 +311,8 @@ pub(super) fn update(
     if !matches!(
         ui.panel,
         PlayerPanel::NewGame | PlayerPanel::FormationEditor
-    ) {
+    ) || (ui.panel == PlayerPanel::NewGame && ui.new_game_step == NewGameStep::Country)
+    {
         if previews.train_key.take().is_some() {
             previews.train_worker.cancel();
         }
@@ -701,7 +661,12 @@ mod tests {
                 .unwrap()
                 .contains("Trocha incompatible")
         );
-        assert!(railway_warning(&audit("Steam", None), &route).is_none());
+        assert!(
+            railway_warning(&audit("Steam", None), &route)
+                .unwrap()
+                .contains("faltan datos")
+        );
+        assert!(super::train_selection::route_status(&audit("Steam", None), &route).can_run());
         route.section_supplies.push(ElectricSupply {
             kind: ElectricPickup::Overhead,
             voltage_v: 25000.0,

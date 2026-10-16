@@ -1,0 +1,63 @@
+{
+  "schema": 1,
+  "status": "pass",
+  "completed_utc": "2026-10-16T18:52:42.848602+00:00",
+  "base_commit": "cdfa8ec1ea54f2e9e25d83d96ef4a523a1b590e9",
+  "coherent_build": {
+    "exit_code": 0,
+    "completed_utc": "2026-10-16T18:38:40.743754+00:00",
+    "artifacts_sha256": "c93418e5c81313da32852e854ea035b810f0231640916f2bb329c412dbd48967",
+    "source_inputs_unchanged": true
+  },
+  "clippy": {
+    "exit_code": 0,
+    "log_sha256": "4b08b3389942c29d426dc9108bbf99a17b2ec60f9081e8796b32b3bf2dcb3799",
+    "completed_utc": "2026-10-16T18:37:00.367849+00:00"
+  },
+  "check_sh": {
+    "command": [
+      "bash",
+      "check.sh"
+    ],
+    "exit_code": 0,
+    "started_utc": "2026-10-16T18:41:30.956066+00:00",
+    "completed_utc": "2026-10-16T18:47:36.783764+00:00",
+    "log_sha256": "882f169602e9dbfe506b9e9c4cff66b91acf6dae8451c5c112a67ddce5676ccc",
+    "recorded_source_inputs_unchanged": true,
+    "protected_player_traces_unchanged": true
+  },
+  "rust_test_totals": {
+    "suites": 184,
+    "passed": 2373,
+    "failed": 0,
+    "ignored": 49
+  },
+  "menu_regression_tests": 37,
+  "menu_regression_log_sha256": "203cd907f46e83a0a2ff324f2d925db4ede7865cc920d179f9a0043ed3c220a8",
+  "final_binary_sha256": "6964e9d2997b3e4c947cd02d5b4f622060116cbe0cb566cb1ef54e9563476122",
+  "final_capture_cases": 14,
+  "final_captures_after_complete_check": true,
+  "source_inputs_unchanged": true,
+  "protected_player_traces_unchanged": true,
+  "regressions_fixed": [
+    "The duplicated route selectors hid all routes at scale 1.5; compact route/service tabs now leave a complete choice visible.",
+    "The capture report initially omitted named train headings; their real bounds are now exported and checked.",
+    "Reclassification between the two lists now preserves the chosen identity and reveals its page; stale empty-list page commands preserve the current selection."
+  ],
+  "earlier_candidate_not_promoted": {
+    "exit_code": 0,
+    "completed_utc": "2026-10-16T18:35:56.361562+00:00",
+    "artifacts_sha256": "6ca5248917e26165f59d1a4dbcb17e2f14591913c0ade0715f20f84da09db5d4",
+    "source_inputs_unchanged": false
+  },
+  "scope": "Simplified game creation, advanced options and cached train availability only. Unknown infrastructure remains an explicit warning, not proof of full compatibility. Required missing assets, no traction and declared gauge/clearance/electrical conflicts block launch through the same assessment used by the lists. Existing OR 1.6.1 references and tolerances are unchanged; a fresh physical replay is registered in oracles/coupling-reference-provenance.json. Full check passed before final GUI captures. No downloaded assets or player traces are versioned.",
+  "evidence_files": {
+    "menu-layout.json": "7e3daed423c179adb819e617583ee15771f1bc91630f7e93676ecf62b078ed4f",
+    "routes-150.png": "af87e81c1d997cefce3b03e8be5a561e9b35596b18de6165e838cde66e51a90c",
+    "source-inputs.json": "2d7241ed0a7e9c7a22a2dc856e5f8b6fe84e7b7623608c3288d961128a022c8c",
+    "start-800.png": "c41c6a76c3ac5250cfd07a91dd4c4c295622193f144788446a9317b98887405c",
+    "trains-150.png": "0e3e2c6312b371d95226f365ff149eb82b4012327c872a28f557e4c097d5b69f",
+    "trains-800.png": "2f5ad9f2075ecaa956aff9cff803526e4d8400ed7fd1d77fc28efab109cf3c9f",
+    "unavailable-150.png": "545ff02984e75f7a4007e2ad3278be2563067630f31f8dcac9dc77c8d0e4c4dc"
+  }
+}

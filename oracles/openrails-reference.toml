@@ -627,7 +627,7 @@ sha256 = "c9b2b7f137809203466320f38f802f004b0766bab662b4db69d700213d6a947a"
 
 [[files]]
 path = "oracles/coupling-reference-provenance.json"
-sha256 = "4ed4d9732c122b2c3eadfd40b88f5d68e0d6240bcb7e5a3707301725fd35d509"
+sha256 = "ff05d03744a6fd1cadc30917fb53052613727c00b7bf6d7ef559aa912df90947"
 
 [[files]]
 path = "oracles/coupling-reference.json"
@@ -1876,3 +1876,23 @@ sha256 = "c14aa4f8eca7eace0e6a18500153c4c7ad99c819ce29a385c8d7bf2341cf9fcf"
 [[files]]
 path = "docs/fixtures/compatibility/coupling-visibility-inputs-final-20261016/source-inputs.json"
 sha256 = "dc8e0f92378f19626864453d01b6cb75f93611cca81ed519454cfab6d5efa286"
+
+[[files]]
+path = "oracles/coupling-rust-simple-menu-20261016.json"
+sha256 = "db7050f2cbc3e7889cb56c60263871c69ee63f2b1a753c6f0870d192b73e44bb"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-simple-menu-20261016/depot.json"
+sha256 = "a8053fa1254dbd21cd1bcc71c3eaae8d817565736adf89ca9f68168f2064a72e"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-simple-menu-20261016/execution.json"
+sha256 = "e2f96202f8466429072acac4532ad329a11e578f57d01e65349e94cae7fca803"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-simple-menu-20261016/receipt.json"
+sha256 = "c14aa4f8eca7eace0e6a18500153c4c7ad99c819ce29a385c8d7bf2341cf9fcf"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-simple-menu-20261016/source-inputs.json"
+sha256 = "a1cf4a0a027342bd1339bfb7375bd85df43df3da62d22d82476c6d42578ca07c"

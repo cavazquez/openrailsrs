@@ -30,6 +30,7 @@ mod previews;
 mod recommendations;
 mod service_editor;
 mod study;
+mod train_selection;
 mod vehicle_profiles;
 mod weather_editor;
 use choices::{ChoiceKind, ChoiceSearch, choice_keys};
@@ -438,6 +439,7 @@ enum UiCommand {
     FocusSearch(ChoiceKind),
     ClearSearch(ChoiceKind),
     ChoicePage(ChoiceKind, i32),
+    TrainChoicePage(usize, i32),
     ChoiceSort(ChoiceKind),
     ChoiceFilter(ChoiceKind, choices::ChoiceFilter),
     ToggleFavorite(ChoiceKind, usize),
@@ -771,9 +773,13 @@ fn target_screen_hud_camera(
     }
 }
 fn enter_menu(mut ui: ResMut<PlayerUiState>, mut menu: ResMut<PlayerLaunchMenu>) {
-    ui.panel = PlayerPanel::Menu;
+    // Start at the first playable choice, retaining Home as the Back target.
+    ui.panel = PlayerPanel::NewGame;
     ui.in_start_menu = true;
-    ui.navigation.clear();
+    ui.new_game_step = NewGameStep::Country;
+    ui.country_chosen = false;
+    ui.new_game_advanced = false;
+    ui.navigation = vec![PlayerPanel::Menu];
     // Deterministic screenshots use the same screen builders as normal play.
     // This override is ignored outside an explicitly armed menu capture.
     if crate::capture::capture_enabled()
@@ -1342,6 +1348,12 @@ fn handle_buttons(
                     ui.rebuild = true;
                     continue;
                 }
+                let availability = train_selection::assess(&menu, menu.consist, previews.railway.as_ref());
+                if !availability.can_run() {
+                    ui.notice = availability.reasons.join(" · ");
+                    ui.rebuild = true;
+                    continue;
+                }
                 let setup=settings.journey_setup.clone();
                 study::challenge_weather(&setup, &mut settings.weather_profile, &mut menu.weather);
                 if setup.weather_challenge(settings.weather_seed).is_some(){menu.environment.time=crate::environment::EnvironmentSource::Manual;menu.environment.weather=crate::environment::EnvironmentSource::Manual;}
@@ -1397,13 +1409,13 @@ fn handle_buttons(
             UiCommand::SelectCountry(index) => menu_country::select(&mut ui, &mut menu, *index),
             UiCommand::NewGameStep(step) => {
                 ui.new_game_step = if !ui.country_chosen {NewGameStep::Country} else if matches!(step, NewGameStep::Train|NewGameStep::Environment) && !menu_country::route_available(&ui, &menu) {NewGameStep::Route} else {*step};
-                ui.new_game_advanced = false;
                 ui.choice_focus = None;
                 ui.notice.clear();
                 Ok(())
             },
             UiCommand::NewGameAdvanced => {
                 ui.new_game_advanced = !ui.new_game_advanced;
+                ui.choice_focus = None;
                 Ok(())
             },
             UiCommand::PreviewRotate(delta) => { previews.pose.yaw += delta; Ok(()) },
@@ -1416,6 +1428,9 @@ fn handle_buttons(
                     Err("Elegí una ruta del país seleccionado, o cambiá el país.".into())
                 } else {
                 choices::select(&mut menu, *kind, *index);
+                if *kind == ChoiceKind::Consist {
+                    train_selection::reveal(&mut ui.choice_search[ChoiceKind::Consist.slot()], &menu, *index, &settings, previews.railway.as_ref());
+                }
                 ui.choice_focus = None;
                 Ok(())
                 }
@@ -1428,7 +1443,7 @@ fn handle_buttons(
             UiCommand::FocusSearch(kind) => { ui.choice_focus = Some(*kind); Ok(()) },
             UiCommand::ClearSearch(kind) => {
                 let search = &mut ui.choice_search[kind.slot()];
-                search.query.clear();search.page=0;search.cursor=None;search.cursor_identity=None;
+                search.query.clear();search.reset_navigation();
                 ui.choice_focus = Some(*kind);
                 Ok(())
             },
@@ -1441,7 +1456,7 @@ fn handle_buttons(
             UiCommand::ChoiceSort(kind) => {
                 let search = &mut ui.choice_search[kind.slot()];
                 search.favorites_first = !search.favorites_first;
-                search.page = 0; search.cursor = None; search.cursor_identity = None;
+                search.reset_navigation();
                 ui.choice_focus = None;
                 Ok(())
             },
@@ -1461,6 +1476,22 @@ fn handle_buttons(
                 search.cursor_identity = None;
                 ui.choice_focus = None;
                 Ok(())
+            },
+            UiCommand::TrainChoicePage(group, direction) => {
+                if *group >= 2 {Err("La lista de trenes ya no está disponible".into())} else {
+                    let search = &mut ui.choice_search[ChoiceKind::Consist.slot()];
+                    let railway = previews.railway.as_ref();
+                    let matches = train_selection::matches(&menu, search, &settings, railway);
+                    let entries = matches.iter().copied().filter(|&i| train_selection::assess(&menu,i,railway).group()==*group).collect::<Vec<_>>();
+                    if entries.is_empty() {Err("La lista cambió; volvé a elegir el tren.".into())} else {
+                    search.train_pages[*group] = cycle(search.train_pages[*group],entries.len().div_ceil(train_selection::PAGE_SIZE),*direction);
+                    let index = entries.get(search.train_pages[*group] * train_selection::PAGE_SIZE);
+                    search.cursor = index.and_then(|index|matches.iter().position(|i|i==index));
+                    search.cursor_identity = index.map(|&i|choices::favorite_key(&menu,ChoiceKind::Consist,i));
+                    ui.choice_focus = None;
+                    Ok(())
+                    }
+                }
             },
             UiCommand::LibraryTab(tab) => {
                 ui.library_tab = *tab;
@@ -1755,7 +1786,7 @@ fn build_panel(
                     p,
                     match panel {
                         PlayerPanel::Menu => "openrailsrs",
-                        PlayerPanel::NewGame => "Nueva partida",
+                        PlayerPanel::NewGame => "Crear partida",
                         PlayerPanel::Continue => "Continuar",
                         PlayerPanel::Content => "Biblioteca",
                         PlayerPanel::MissingResources => "Detalle de recursos",
@@ -1788,6 +1819,9 @@ fn build_panel(
                         UiCommand::Close,
                     );
                 }
+                if matches!(panel, PlayerPanel::Menu | PlayerPanel::NewGame) {
+                    button(p, if ui.new_game_advanced {"Ocultar avanzadas"} else {"Avanzadas"}, UiCommand::NewGameAdvanced);
+                }
             });
             match panel {
                 PlayerPanel::NewGame => launcher::build_steps(p, &ui),
@@ -1810,7 +1844,7 @@ fn build_panel(
                 Name::new("player-scroll"),
             ))
             .with_children(|p| match panel {
-                PlayerPanel::Menu => {launcher::build_home(p);button(p,"Multijugador · conductores y despachador",UiCommand::MultiplayerOpen);},
+                PlayerPanel::Menu => {launcher::build_home(p);if ui.new_game_advanced {button(p,"Multijugador · conductores y despachador",UiCommand::MultiplayerOpen);}},
                 PlayerPanel::Campaigns => campaigns::build(p,&campaigns),
                 PlayerPanel::NewGame => launcher::build_new_game(p, &ui, &menu, &settings, previews.as_deref()),
                 PlayerPanel::Continue => launcher::build_continue(p,&ui,&history),
@@ -1969,7 +2003,7 @@ fn build_panel(
                 PlayerPanel::None => {}
             });
             match panel {
-                PlayerPanel::NewGame => launcher::build_launch_footer(p, &ui, &menu, &settings),
+                PlayerPanel::NewGame => launcher::build_launch_footer(p, &ui, &menu, &settings, previews.as_deref().and_then(|p|p.railway.as_ref())),
                 PlayerPanel::Menu => { button(p, "Salir", UiCommand::Exit); }
                 PlayerPanel::Settings => {
                     row(p, |p| {
@@ -4999,6 +5033,230 @@ mod tests {
         );
     }
     #[test]
+    fn startup_opens_creation_and_advanced_tools_preserve_the_trip() {
+        let mut app = menu_app();
+        app.add_systems(Startup, enter_menu);
+        app.update();
+        assert_eq!(
+            app.world().resource::<PlayerUiState>().panel,
+            PlayerPanel::NewGame
+        );
+        assert_eq!(
+            app.world().resource::<PlayerUiState>().new_game_step,
+            NewGameStep::Country
+        );
+        click(&mut app, |cmd| matches!(cmd, UiCommand::SelectCountry(0)));
+        let before = {
+            let menu = app.world().resource::<PlayerLaunchMenu>();
+            (menu.route, menu.service, menu.consist, menu.start_time_s)
+        };
+        let mut query = app.world_mut().query::<&UiCommand>();
+        assert!(!query.iter(app.world()).any(|cmd| matches!(
+            cmd,
+            UiCommand::ServiceEditorStart | UiCommand::Open(PlayerPanel::Practice)
+        )));
+        click(&mut app, |cmd| matches!(cmd, UiCommand::NewGameAdvanced));
+        assert!(
+            query
+                .iter(app.world())
+                .any(|cmd| matches!(cmd, UiCommand::ServiceEditorStart))
+        );
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::NewGameStep(NewGameStep::Train))
+        });
+        assert!(app.world().resource::<PlayerUiState>().new_game_advanced);
+        assert!(
+            query
+                .iter(app.world())
+                .any(|cmd| matches!(cmd, UiCommand::FormationEditorStart))
+        );
+        click(&mut app, |cmd| matches!(cmd, UiCommand::NewGameAdvanced));
+        assert!(!query.iter(app.world()).any(|cmd| matches!(
+            cmd,
+            UiCommand::FormationEditorStart
+                | UiCommand::ChoiceFilter(_, _)
+                | UiCommand::ChoiceSort(_)
+        )));
+        let menu = app.world().resource::<PlayerLaunchMenu>();
+        assert_eq!(
+            (menu.route, menu.service, menu.consist, menu.start_time_s),
+            before
+        );
+    }
+
+    #[test]
+    fn separate_train_lists_page_independently_and_reject_launch_of_electric_stock_without_supply()
+    {
+        use openrailsrs_core::electrification::{
+            ElectricPickup, ElectricSupply, ElectricVehicleParams,
+        };
+        let mut app = menu_app();
+        app.update();
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::Open(PlayerPanel::NewGame))
+        });
+        click(&mut app, |cmd| matches!(cmd, UiCommand::SelectCountry(0)));
+        {
+            let mut menu = app.world_mut().resource_mut::<PlayerLaunchMenu>();
+            menu.consists = (0..8)
+                .map(|i| std::path::PathBuf::from(format!("/own/train_{i}.con")))
+                .collect();
+            menu.consist = 0;
+            menu.consist_audits.clear();
+            for i in 0..8 {
+                let ast = openrailsrs_formats::parse_named_stf(if i % 2 == 0 {
+                    "Engine ( Type ( Diesel ) )"
+                } else {
+                    "Engine ( Type ( Electric ) )"
+                })
+                .unwrap();
+                let mut declared = openrailsrs_formats::parse_vehicle_content_metadata(&ast, true);
+                declared.curve.track_gauge_m = Some(1.435);
+                if i % 2 == 1 {
+                    declared.electric = Some(ElectricVehicleParams::default());
+                }
+                let path = menu.consists[i].clone();
+                menu.consist_audits.insert(
+                    path,
+                    openrailsrs_train::ConsistAudit {
+                        vehicles: 1,
+                        powered_vehicles: 1,
+                        compatibility: vec![
+                            openrailsrs_train::consist_audit::VehicleCompatibility {
+                                vehicle: 0,
+                                stock_path: "own.eng".into(),
+                                source_sha256: String::new(),
+                                declared,
+                                limitations: vec![],
+                            },
+                        ],
+                        ..default()
+                    },
+                );
+            }
+        }
+        app.world_mut().resource_mut::<previews::Previews>().railway =
+            Some(previews::RailwayInfo {
+                gauge_m: 1.435,
+                supply: ElectricSupply {
+                    kind: ElectricPickup::None,
+                    voltage_v: 0.,
+                },
+                section_supplies: vec![],
+                missing: vec![],
+                clearance: None,
+            });
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::NewGameStep(NewGameStep::Train))
+        });
+        let mut query = app.world_mut().query::<(Entity, &UiCommand)>();
+        for (index, list) in [(0, "train-ready-list"), (1, "train-unavailable-list")] {
+            let mut entity = query.iter(app.world()).find(|(_,cmd)|matches!(cmd,UiCommand::SelectChoice(ChoiceKind::Consist,i) if *i==index)).unwrap().0;
+            loop {
+                if app
+                    .world()
+                    .get::<Name>(entity)
+                    .is_some_and(|name| name.as_str() == list)
+                {
+                    break;
+                }
+                entity = app
+                    .world()
+                    .get::<ChildOf>(entity)
+                    .expect("train must belong to its own list")
+                    .parent();
+            }
+        }
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::TrainChoicePage(1, 1))
+        });
+        assert_eq!(
+            app.world().resource::<PlayerUiState>().choice_search[2].train_pages,
+            [0, 1]
+        );
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::SelectChoice(ChoiceKind::Consist, 7))
+        });
+        assert_eq!(app.world().resource::<PlayerLaunchMenu>().consist, 7);
+        assert!(
+            !query
+                .iter(app.world())
+                .any(|(_, cmd)| matches!(cmd, UiCommand::Start))
+        );
+        // A stale/externally queued Start must use the same restriction as the lists.
+        let fake = app
+            .world_mut()
+            .spawn((UiCommand::Start, Interaction::None))
+            .id();
+        click(&mut app, |cmd| matches!(cmd, UiCommand::Start));
+        assert!(app.world().resource::<PlayerLaunchQueue>().0.is_none());
+        assert!(
+            app.world()
+                .resource::<PlayerUiState>()
+                .notice
+                .contains("alimentación")
+        );
+        app.world_mut().despawn(fake);
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::FocusSearch(ChoiceKind::Consist))
+        });
+        type_search(&mut app, Key::End, None);
+        {
+            let mut menu = app.world_mut().resource_mut::<PlayerLaunchMenu>();
+            let path = menu.consists[7].clone();
+            let vehicle =
+                &mut menu.consist_audits.get_mut(&path).unwrap().compatibility[0].declared;
+            vehicle.engine_type = Some("Diesel".into());
+            vehicle.electric = None;
+        }
+        // Reclassification by a completed audit must preserve keyboard identity.
+        type_search(&mut app, Key::Enter, None);
+        assert_eq!(app.world().resource::<PlayerLaunchMenu>().consist, 7);
+        assert_eq!(
+            app.world().resource::<PlayerUiState>().choice_search[2].train_pages[0],
+            1
+        );
+        assert!(
+            query
+                .iter(app.world())
+                .any(|(_, cmd)| matches!(cmd, UiCommand::Start))
+        );
+        let identity = app.world().resource::<PlayerUiState>().choice_search[2]
+            .cursor_identity
+            .clone();
+        {
+            let mut menu = app.world_mut().resource_mut::<PlayerLaunchMenu>();
+            for i in [1, 3, 5] {
+                let path = menu.consists[i].clone();
+                let vehicle =
+                    &mut menu.consist_audits.get_mut(&path).unwrap().compatibility[0].declared;
+                vehicle.engine_type = Some("Diesel".into());
+                vehicle.electric = None;
+            }
+        }
+        app.world_mut().resource_mut::<PlayerUiState>().rebuild = true;
+        app.update();
+        let stale = app
+            .world_mut()
+            .spawn((UiCommand::TrainChoicePage(1, 1), Interaction::None))
+            .id();
+        click(&mut app, |cmd| {
+            matches!(cmd, UiCommand::TrainChoicePage(1, 1))
+        });
+        assert_eq!(
+            app.world().resource::<PlayerUiState>().choice_search[2].cursor_identity,
+            identity
+        );
+        assert_eq!(app.world().resource::<PlayerLaunchMenu>().consist, 7);
+        assert!(
+            app.world()
+                .resource::<PlayerUiState>()
+                .notice
+                .contains("La lista cambió")
+        );
+        app.world_mut().despawn(stale);
+    }
+    #[test]
     fn all_unknown_and_empty_countries_keep_selection_and_launch_consistent() {
         let mut app = menu_app();
         {
@@ -5085,6 +5343,7 @@ mod tests {
             matches!(cmd, UiCommand::Open(PlayerPanel::NewGame))
         });
         click(&mut app, |cmd| matches!(cmd, UiCommand::SelectCountry(1)));
+        click(&mut app, |cmd| matches!(cmd, UiCommand::NewGameAdvanced));
         click(&mut app, |cmd| {
             matches!(
                 cmd,

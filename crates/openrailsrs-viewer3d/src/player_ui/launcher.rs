@@ -46,11 +46,11 @@ pub(super) fn card(
 }
 
 pub(super) fn build_home(p: &mut ChildSpawnerCommands<'_>) {
-    label(p, "Elegí tu próximo viaje", 28.0, TEXT);
+    label(p, "Elegí tu próximo viaje", 24.0, TEXT);
     label(
         p,
         "Conducí desde la cabina o seguí el tren desde afuera.",
-        15.0,
+        13.0,
         MUTED,
     );
     for (title, description, panel) in [
@@ -78,8 +78,19 @@ pub(super) fn build_home(p: &mut ChildSpawnerCommands<'_>) {
         p.spawn((
             Button,
             Node {
-                padding: UiRect::axes(Val::Px(20.0), Val::Px(12.0)),
-                min_height: Val::Px(70.0),
+                padding: UiRect::axes(
+                    Val::Px(20.0),
+                    Val::Px(if panel == PlayerPanel::NewGame {
+                        10.
+                    } else {
+                        7.
+                    }),
+                ),
+                min_height: Val::Px(if panel == PlayerPanel::NewGame {
+                    70.
+                } else {
+                    36.
+                }),
                 flex_shrink: 0.0,
                 min_width: Val::Px(0.0),
                 flex_direction: FlexDirection::Column,
@@ -92,8 +103,19 @@ pub(super) fn build_home(p: &mut ChildSpawnerCommands<'_>) {
             Name::new(format!("home-{title}")),
         ))
         .with_children(|p| {
-            label(p, title, 19.0, TEXT);
-            label(p, description, 13.0, MUTED);
+            label(
+                p,
+                title,
+                if panel == PlayerPanel::NewGame {
+                    19.
+                } else {
+                    15.
+                },
+                TEXT,
+            );
+            if panel == PlayerPanel::NewGame {
+                label(p, description, 13.0, MUTED);
+            }
         });
     }
 }
@@ -167,7 +189,8 @@ pub(super) fn build_new_game(
     settings: &PlayerSettings,
     previews: Option<&super::previews::Previews>,
 ) {
-    if ui.new_game_step == NewGameStep::Environment
+    if ui.new_game_advanced
+        && ui.new_game_step == NewGameStep::Environment
         && let Some(preview) = previews
     {
         if let Some(inventory) = &preview.inventory {
@@ -198,14 +221,18 @@ pub(super) fn build_new_game(
     match ui.new_game_step {
         NewGameStep::Country => menu_country::build(p, ui, menu),
         NewGameStep::Route => {
-            button(
-                p,
-                format!(
-                    "País: {} · Cambiar",
-                    menu_country::country_label(ui.choice_search[ChoiceKind::Route.slot()].country)
-                ),
-                UiCommand::NewGameStep(NewGameStep::Country),
-            );
+            if ui.new_game_advanced {
+                button(
+                    p,
+                    format!(
+                        "País: {} · Cambiar",
+                        menu_country::country_label(
+                            ui.choice_search[ChoiceKind::Route.slot()].country
+                        )
+                    ),
+                    UiCommand::NewGameStep(NewGameStep::Country),
+                );
+            }
             if !menu_country::route_available(ui, menu) {
                 label(p, "No hay rutas instaladas de este país.", 21.0, TEXT);
                 label(
@@ -217,29 +244,66 @@ pub(super) fn build_new_game(
                 button(p, "Abrir biblioteca", UiCommand::Open(PlayerPanel::Content));
                 return;
             }
-            label(p, "¿Dónde querés conducir?", 21.0, TEXT);
+            label(
+                p,
+                format!(
+                    "{} · Ruta y servicio",
+                    menu_country::country_label(ui.choice_search[ChoiceKind::Route.slot()].country)
+                ),
+                17.0,
+                TEXT,
+            );
             choice_columns(
                 p,
                 |p| {
-                    choices::selected(
-                        p,
-                        "Ruta",
-                        menu.routes
-                            .get(menu.route)
-                            .map(String::as_str)
-                            .unwrap_or("Sin rutas"),
-                        ChoiceKind::Route,
-                        ui.route_picker,
-                    );
-                    choices::selected(
-                        p,
-                        "Servicio",
-                        menu.current()
-                            .map(|s| s.name.as_str())
-                            .unwrap_or("Sin servicios"),
-                        ChoiceKind::Service,
-                        ui.route_picker,
-                    );
+                    if ui.new_game_advanced {
+                        choices::selected(
+                            p,
+                            "Ruta",
+                            menu.routes
+                                .get(menu.route)
+                                .map(String::as_str)
+                                .unwrap_or("Sin rutas"),
+                            ChoiceKind::Route,
+                            ui.route_picker,
+                        );
+                        choices::selected(
+                            p,
+                            "Servicio",
+                            menu.current()
+                                .map(|s| s.name.as_str())
+                                .unwrap_or("Sin servicios"),
+                            ChoiceKind::Service,
+                            ui.route_picker,
+                        );
+                    } else {
+                        row(p, |p| {
+                            tab(
+                                p,
+                                "Rutas",
+                                UiCommand::ShowChoices(ChoiceKind::Route),
+                                ui.route_picker == ChoiceKind::Route,
+                            );
+                            tab(
+                                p,
+                                "Servicios",
+                                UiCommand::ShowChoices(ChoiceKind::Service),
+                                ui.route_picker == ChoiceKind::Service,
+                            );
+                        });
+                        label(
+                            p,
+                            format!(
+                                "Servicio: {}",
+                                short(
+                                    menu.current().map_or("Sin servicios", |s| s.name.as_str()),
+                                    42
+                                )
+                            ),
+                            12.,
+                            MUTED,
+                        );
+                    }
                     choices::build(p, ui, menu, ui.route_picker, previews, settings);
                 },
                 |p| {
@@ -308,52 +372,46 @@ pub(super) fn build_new_game(
                             MUTED,
                         );
                     });
-                    button(
-                        p,
-                        if ui.new_game_advanced {
-                            "Ocultar recorrido alternativo"
-                        } else {
-                            "Cambiar recorrido (exploración)"
-                        },
-                        UiCommand::NewGameAdvanced,
-                    );
                     if ui.new_game_advanced {
                         selector(p, "Recorrido", menu.path_label(), MenuField::Path);
                     }
                 },
             );
-            row(p, |p| {
+            if ui.new_game_advanced {
+                row(p, |p| {
+                    button(
+                        p,
+                        "Campañas y jornadas",
+                        UiCommand::Open(PlayerPanel::Campaigns),
+                    );
+                    button(
+                        p,
+                        "Crear o editar un servicio propio",
+                        UiCommand::ServiceEditorStart,
+                    );
+                });
                 button(
                     p,
-                    "Campañas y jornadas",
-                    UiCommand::Open(PlayerPanel::Campaigns),
+                    format!(
+                        "Modo: {} · cambiar o preparar ejercicio",
+                        settings.journey_setup.mode.label()
+                    ),
+                    UiCommand::Open(PlayerPanel::Practice),
                 );
-                button(
-                    p,
-                    "Crear o editar un servicio propio",
-                    UiCommand::ServiceEditorStart,
-                );
-            });
-            button(
-                p,
-                format!(
-                    "Modo: {} · cambiar o preparar ejercicio",
-                    settings.journey_setup.mode.label()
-                ),
-                UiCommand::Open(PlayerPanel::Practice),
-            );
+            }
         }
         NewGameStep::Train => {
-            label(p, "¿Qué tren vas a llevar?", 21.0, TEXT);
-            choice_columns(
+            choices::search_controls(p, ui, menu, ChoiceKind::Consist, settings);
+            super::train_selection::build(
                 p,
-                |p| {
-                    choices::build(p, ui, menu, ChoiceKind::Consist, previews, settings);
-                    super::recommendations::build(p, menu, previews);
-                },
+                ui,
+                menu,
+                settings,
+                previews.and_then(|p| p.railway.as_ref()),
                 |p| {
                     label(p, menu.consist_label(), 17.0, TEXT);
-                    if let Some(preview) = previews
+                    if ui.new_game_advanced
+                        && let Some(preview) = previews
                         && let Some(rail) = &preview.railway
                         && let Some(audit) = menu
                             .consists
@@ -419,16 +477,10 @@ pub(super) fn build_new_game(
                                 13.0,
                                 MUTED,
                             );
-                            label(p, crate::content_validation::summary(audit), 12.0, MUTED);
-                            if let Some(warning) = previews
-                                .and_then(|p| p.railway.as_ref())
-                                .and_then(|railway| {
-                                    super::previews::railway_warning(audit, railway)
-                                })
-                            {
-                                label(p, warning, 13.0, CAUTION);
+                            if ui.new_game_advanced {
+                                label(p, crate::content_validation::summary(audit), 12.0, MUTED);
                             }
-                            if !audit.warnings.is_empty() {
+                            if ui.new_game_advanced && !audit.warnings.is_empty() {
                                 label(
                                     p,
                                     format!(
@@ -440,7 +492,19 @@ pub(super) fn build_new_game(
                                 );
                             }
                         }
-                        let (message, color, _) = readiness(menu);
+                        let availability = super::train_selection::assess(
+                            menu,
+                            menu.consist,
+                            previews.and_then(|p| p.railway.as_ref()),
+                        );
+                        for reason in &availability.reasons {
+                            label(p, reason, 13., CAUTION);
+                        }
+                        for warning in &availability.warnings {
+                            label(p, warning, 12., MUTED);
+                        }
+                        let (message, color, _) =
+                            readiness(menu, previews.and_then(|p| p.railway.as_ref()));
                         label(p, message, 13.0, color);
                         row(p, |p| {
                             button(
@@ -448,47 +512,54 @@ pub(super) fn build_new_game(
                                 "Ver detalles",
                                 UiCommand::Open(PlayerPanel::MissingResources),
                             );
-                            button(p, "Revisar archivos otra vez", UiCommand::MissingAudit);
+                            if ui.new_game_advanced || !availability.can_run() {
+                                button(p, "Revisar archivos otra vez", UiCommand::MissingAudit);
+                            }
                         });
                     });
                 },
             );
-            row(p, |p| {
-                button(
-                    p,
-                    "Armar una formación propia",
-                    UiCommand::FormationEditorStart,
-                );
-                button(
-                    p,
-                    "Ajustes propios por vehículo",
-                    UiCommand::Open(PlayerPanel::VehicleProfile),
-                );
-            });
+            if ui.new_game_advanced {
+                super::recommendations::build(p, menu, previews);
+                row(p, |p| {
+                    button(
+                        p,
+                        "Armar una formación propia",
+                        UiCommand::FormationEditorStart,
+                    );
+                    button(
+                        p,
+                        "Ajustes propios por vehículo",
+                        UiCommand::Open(PlayerPanel::VehicleProfile),
+                    );
+                });
+            }
         }
         NewGameStep::Environment => {
-            button(
-                p,
-                "Editar evolución del clima",
-                UiCommand::Open(PlayerPanel::WeatherEditor),
-            );
-            label(
-                p,
-                crate::forecast::text(
-                    menu.environment,
-                    settings.weather_profile,
-                    menu.weather,
-                    settings.weather_seed,
-                    crate::weather_journey::JourneyOptions {
-                        pace: settings.weather_pace,
-                        winter: menu.season == 3,
-                    },
-                    0.,
-                    None,
-                ),
-                12.,
-                MUTED,
-            );
+            if ui.new_game_advanced {
+                button(
+                    p,
+                    "Editar evolución del clima",
+                    UiCommand::Open(PlayerPanel::WeatherEditor),
+                );
+                label(
+                    p,
+                    crate::forecast::text(
+                        menu.environment,
+                        settings.weather_profile,
+                        menu.weather,
+                        settings.weather_seed,
+                        crate::weather_journey::JourneyOptions {
+                            pace: settings.weather_pace,
+                            winter: menu.season == 3,
+                        },
+                        0.,
+                        None,
+                    ),
+                    12.,
+                    MUTED,
+                );
+            }
             let mode = WeatherMode::selected(menu.environment, settings.weather_profile);
             label(p, "Prepará las condiciones del viaje", 21.0, TEXT);
             selector(
@@ -551,15 +622,6 @@ pub(super) fn build_new_game(
                 13.0,
                 MUTED,
             );
-            button(
-                p,
-                if ui.new_game_advanced {
-                    "Ocultar opciones de hora y clima"
-                } else {
-                    "Más opciones de hora y clima"
-                },
-                UiCommand::NewGameAdvanced,
-            );
             if ui.new_game_advanced {
                 selector(
                     p,
@@ -592,7 +654,10 @@ pub(super) fn build_new_game(
     }
 }
 
-fn readiness(menu: &PlayerLaunchMenu) -> (String, Color, bool) {
+fn readiness(
+    menu: &PlayerLaunchMenu,
+    railway: Option<&previews::RailwayInfo>,
+) -> (String, Color, bool) {
     if menu.current().is_none() {
         return (
             "Instalá una ruta desde Biblioteca para jugar.".into(),
@@ -600,45 +665,11 @@ fn readiness(menu: &PlayerLaunchMenu) -> (String, Color, bool) {
             false,
         );
     }
-    if let Some(error) = menu.audit_error() {
-        return (
-            format!("No se pudo revisar la formación: {error}"),
-            CAUTION,
-            false,
-        );
-    }
-    if menu.selected_audit_pending() {
-        return (
-            "Revisando formación… Podés seguir eligiendo.".into(),
-            MUTED,
-            false,
-        );
-    }
-    let Some(audit) = menu
-        .consists
-        .get(menu.consist)
-        .and_then(|p| menu.consist_audits.get(p))
-    else {
-        return (
-            "La formación se comprobará al importar la actividad.".into(),
-            MUTED,
-            true,
-        );
-    };
-    if audit.player_ready() {
-        ("Recursos necesarios completos".into(), GOOD, true)
-    } else if audit.powered_vehicles == 0 && audit.errors.is_empty() {
-        (
-            "Esta formación no tiene tracción. Elegí otro tren.".into(),
-            CAUTION,
-            false,
-        )
+    let availability = super::train_selection::assess(menu, menu.consist, railway);
+    if availability.can_run() {
+        ("Listo para jugar".into(), GOOD, true)
     } else {
-        (
-            "Faltan recursos o hay archivos inválidos. Ver detalles.".into(),
-            CAUTION,
-            false,
-        )
+        (availability.reasons[0].clone(), CAUTION, false)
     }
 }
 
@@ -647,6 +678,7 @@ pub(super) fn build_launch_footer(
     ui: &PlayerUiState,
     menu: &PlayerLaunchMenu,
     settings: &PlayerSettings,
+    railway: Option<&previews::RailwayInfo>,
 ) {
     let weather = match WeatherMode::selected(menu.environment, settings.weather_profile) {
         WeatherMode::Fixed if matches!(menu.weather, PlayerWeather::Rain | PlayerWeather::Snow) => {
@@ -709,7 +741,7 @@ pub(super) fn build_launch_footer(
             12.0,
             TEXT,
         );
-        let (message, color, ready) = readiness(menu);
+        let (message, color, ready) = readiness(menu, railway);
         row(p, |p| {
             match ui.new_game_step {
                 NewGameStep::Country => unreachable!("country footer returns before route actions"),
@@ -757,12 +789,12 @@ pub(super) fn build_launch_footer(
                     UiCommand::Open(PlayerPanel::MissingResources),
                 );
             }
-            label(p, message, 12.0, color);
+            label(p, short(&message, 110), 12.0, color);
         });
     });
 }
 
-fn short(value: &str, limit: usize) -> String {
+pub(super) fn short(value: &str, limit: usize) -> String {
     if value.chars().count() <= limit {
         value.into()
     } else {
@@ -1033,6 +1065,7 @@ pub(super) fn build_settings_tabs(p: &mut ChildSpawnerCommands<'_>, selected: Se
 
 pub(super) fn capture_page(ui: &mut PlayerUiState, page: &str) {
     let (panel, step, advanced) = match page {
+        "home" => (PlayerPanel::Menu, NewGameStep::Country, false),
         "country" => (PlayerPanel::NewGame, NewGameStep::Country, false),
         "vehicle-profile" => (PlayerPanel::VehicleProfile, NewGameStep::Train, false),
         "bug-report" => (PlayerPanel::IssueReport, NewGameStep::Route, false),
@@ -1048,6 +1081,8 @@ pub(super) fn capture_page(ui: &mut PlayerUiState, page: &str) {
         "driving-report" => (PlayerPanel::Report, NewGameStep::Route, false),
         "route" | "route-map" => (PlayerPanel::NewGame, NewGameStep::Route, false),
         "train" => (PlayerPanel::NewGame, NewGameStep::Train, false),
+        "train-options" => (PlayerPanel::NewGame, NewGameStep::Train, true),
+        "route-options" => (PlayerPanel::NewGame, NewGameStep::Route, true),
         "weather" => (PlayerPanel::NewGame, NewGameStep::Environment, false),
         "weather-options" => (PlayerPanel::NewGame, NewGameStep::Environment, true),
         "continue" => (PlayerPanel::Continue, NewGameStep::Route, false),

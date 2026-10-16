@@ -87,7 +87,6 @@ pub(super) fn select(
     }
     ui.country_chosen = true;
     ui.new_game_step = NewGameStep::Route;
-    ui.new_game_advanced = false;
     ui.route_picker = ChoiceKind::Route;
     ui.choice_focus = None;
     ui.notice.clear();
@@ -95,13 +94,31 @@ pub(super) fn select(
 }
 
 pub(super) fn build(p: &mut ChildSpawnerCommands<'_>, ui: &PlayerUiState, menu: &PlayerLaunchMenu) {
+    row(p, |p| {
+        button(
+            p,
+            "Continuar partida",
+            UiCommand::Open(PlayerPanel::Continue),
+        );
+        button(p, "Biblioteca", UiCommand::Open(PlayerPanel::Content));
+        button(p, "Ajustes", UiCommand::Open(PlayerPanel::Settings));
+    });
+    if ui.new_game_advanced {
+        row(p, |p| {
+            button(
+                p,
+                "Campañas y jornadas",
+                UiCommand::Open(PlayerPanel::Campaigns),
+            );
+            button(
+                p,
+                "Conducción y práctica",
+                UiCommand::Open(PlayerPanel::Practice),
+            );
+            button(p, "Multijugador", UiCommand::MultiplayerOpen);
+        });
+    }
     label(p, "¿En qué país querés conducir?", 21.0, TEXT);
-    label(
-        p,
-        "Elegí un país para ver sus rutas y servicios instalados.",
-        14.0,
-        MUTED,
-    );
     for (pair, names) in COUNTRIES.chunks(2).enumerate() {
         row(p, |p| {
             for (column, name) in names.iter().enumerate() {

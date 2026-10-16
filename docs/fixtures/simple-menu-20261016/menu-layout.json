@@ -1,0 +1,6992 @@
+{
+  "status": "pass",
+  "cases": [
+    {
+      "page": "home",
+      "condition": "ordinary selection",
+      "dimensions": [
+        800,
+        600
+      ],
+      "scale": 1.0,
+      "report_sha256": "735b6e07887923e734439c424df45b7228dcfa8e50bf46be9427f61d01c25796",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "ui_layout": [
+        {
+          "max": [
+            752.0,
+            564.0
+          ],
+          "min": [
+            48.0,
+            36.0
+          ],
+          "name": "player-menu"
+        },
+        {
+          "max": [
+            734.0,
+            498.0
+          ],
+          "min": [
+            66.0,
+            94.0
+          ],
+          "name": "player-scroll"
+        },
+        {
+          "max": [
+            734.0,
+            538.0
+          ],
+          "min": [
+            66.0,
+            506.0
+          ],
+          "name": "ui-Exit"
+        },
+        {
+          "max": [
+            315.0,
+            86.0
+          ],
+          "min": [
+            220.0,
+            54.0
+          ],
+          "name": "ui-NewGameAdvanced"
+        },
+        {
+          "max": [
+            734.0,
+            377.0
+          ],
+          "min": [
+            66.0,
+            341.0
+          ],
+          "name": "home-Ajustes"
+        },
+        {
+          "max": [
+            734.0,
+            329.0
+          ],
+          "min": [
+            66.0,
+            293.0
+          ],
+          "name": "home-Biblioteca"
+        },
+        {
+          "max": [
+            734.0,
+            281.0
+          ],
+          "min": [
+            66.0,
+            245.0
+          ],
+          "name": "home-Continuar"
+        },
+        {
+          "max": [
+            734.0,
+            233.0
+          ],
+          "min": [
+            66.0,
+            163.0
+          ],
+          "name": "home-Nueva partida"
+        }
+      ],
+      "ui_text": [
+        {
+          "size": [
+            0.0,
+            0.0
+          ],
+          "text": "FPS: ",
+          "visible": false
+        },
+        {
+          "size": [
+            668.0,
+            29.0
+          ],
+          "text": "Elegí tu próximo viaje",
+          "visible": true
+        },
+        {
+          "size": [
+            668.0,
+            16.0
+          ],
+          "text": "Conducí desde la cabina o seguí el tren desde afuera.",
+          "visible": true
+        },
+        {
+          "size": [
+            628.0,
+            23.0
+          ],
+          "text": "Nueva partida",
+          "visible": true
+        },
+        {
+          "size": [
+            628.0,
+            16.0
+          ],
+          "text": "Elegí el país, la ruta, el tren y las condiciones del viaje.",
+          "visible": true
+        },
+        {
+          "size": [
+            628.0,
+            18.0
+          ],
+          "text": "Continuar",
+          "visible": true
+        },
+        {
+          "size": [
+            628.0,
+            18.0
+          ],
+          "text": "Biblioteca",
+          "visible": true
+        },
+        {
+          "size": [
+            628.0,
+            18.0
+          ],
+          "text": "Ajustes",
+          "visible": true
+        },
+        {
+          "size": [
+            40.0,
+            16.0
+          ],
+          "text": "Salir",
+          "visible": true
+        },
+        {
+          "size": [
+            146.0,
+            27.0
+          ],
+          "text": "openrailsrs",
+          "visible": true
+        },
+        {
+          "size": [
+            71.0,
+            16.0
+          ],
+          "text": "Avanzadas",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "page": "country",
+      "condition": "ordinary selection",
+      "dimensions": [
+        800,
+        600
+      ],
+      "scale": 1.0,
+      "report_sha256": "612d7969d23e3c281be8af8781d59af0ca92076ea8077bb08df51bf39d1d4fa3",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "ui_layout": [
+        {
+          "max": [
+            153.0,
+            126.0
+          ],
+          "min": [
+            66.0,
+            94.0
+          ],
+          "name": "ui-NewGameStep(Country)"
+        },
+        {
+          "max": [
+            468.0,
+            86.0
+          ],
+          "min": [
+            373.0,
+            54.0
+          ],
+          "name": "ui-NewGameAdvanced"
+        },
+        {
+          "max": [
+            365.0,
+            86.0
+          ],
+          "min": [
+            247.0,
+            54.0
+          ],
+          "name": "ui-Close"
+        },
+        {
+          "max": [
+            734.0,
+            538.0
+          ],
+          "min": [
+            66.0,
+            513.0
+          ],
+          "name": "launch-footer"
+        },
+        {
+          "max": [
+            734.0,
+            505.0
+          ],
+          "min": [
+            66.0,
+            134.0
+          ],
+          "name": "player-scroll"
+        },
+        {
+          "max": [
+            752.0,
+            564.0
+          ],
+          "min": [
+            48.0,
+            36.0
+          ],
+          "name": "player-menu"
+        },
+        {
+          "max": [
+            734.0,
+            380.0
+          ],
+          "min": [
+            404.0,
+            348.0
+          ],
+          "name": "ui-SelectCountry(7)"
+        },
+        {
+          "max": [
+            396.0,
+            380.0
+          ],
+          "min": [
+            66.0,
+            348.0
+          ],
+          "name": "ui-SelectCountry(6)"
+        },
+        {
+          "max": [
+            734.0,
+            336.0
+          ],
+          "min": [
+            404.0,
+            304.0
+          ],
+          "name": "ui-SelectCountry(5)"
+        },
+        {
+          "max": [
+            396.0,
+            336.0
+          ],
+          "min": [
+            66.0,
+            304.0
+          ],
+          "name": "ui-SelectCountry(4)"
+        },
+        {
+          "max": [
+            734.0,
+            292.0
+          ],
+          "min": [
+            404.0,
+            260.0
+          ],
+          "name": "ui-SelectCountry(3)"
+        },
+        {
+          "max": [
+            396.0,
+            292.0
+          ],
+          "min": [
+            66.0,
+            260.0
+          ],
+          "name": "ui-SelectCountry(2)"
+        },
+        {
+          "max": [
+            734.0,
+            248.0
+          ],
+          "min": [
+            404.0,
+            216.0
+          ],
+          "name": "ui-SelectCountry(1)"
+        },
+        {
+          "max": [
+            396.0,
+            248.0
+          ],
+          "min": [
+            66.0,
+            216.0
+          ],
+          "name": "ui-SelectCountry(0)"
+        },
+        {
+          "max": [
+            422.0,
+            166.0
+          ],
+          "min": [
+            343.0,
+            134.0
+          ],
+          "name": "ui-Open(Settings)"
+        },
+        {
+          "max": [
+            335.0,
+            166.0
+          ],
+          "min": [
+            232.0,
+            134.0
+          ],
+          "name": "ui-Open(Content)"
+        },
+        {
+          "max": [
+            224.0,
+            166.0
+          ],
+          "min": [
+            66.0,
+            134.0
+          ],
+          "name": "ui-Open(Continue)"
+        }
+      ],
+      "ui_text": [
+        {
+          "size": [
+            668.0,
+            16.0
+          ],
+          "text": "Primero elegí un país. Después, la ruta y el servicio.",
+          "visible": true
+        },
+        {
+          "size": [
+            94.0,
+            16.0
+          ],
+          "text": "Volver · Esc",
+          "visible": true
+        },
+        {
+          "size": [
+            173.0,
+            27.0
+          ],
+          "text": "Crear partida",
+          "visible": true
+        },
+        {
+          "size": [
+            63.0,
+            16.0
+          ],
+          "text": "1 · País",
+          "visible": true
+        },
+        {
+          "size": [
+            71.0,
+            16.0
+          ],
+          "text": "Avanzadas",
+          "visible": true
+        },
+        {
+          "size": [
+            0.0,
+            0.0
+          ],
+          "text": "FPS: ",
+          "visible": false
+        },
+        {
+          "size": [
+            134.0,
+            16.0
+          ],
+          "text": "Continuar partida",
+          "visible": true
+        },
+        {
+          "size": [
+            79.0,
+            16.0
+          ],
+          "text": "Biblioteca",
+          "visible": true
+        },
+        {
+          "size": [
+            55.0,
+            16.0
+          ],
+          "text": "Ajustes",
+          "visible": true
+        },
+        {
+          "size": [
+            668.0,
+            26.0
+          ],
+          "text": "¿En qué país querés conducir?",
+          "visible": true
+        },
+        {
+          "size": [
+            212.0,
+            16.0
+          ],
+          "text": "Todos los países · 17 rutas",
+          "visible": true
+        },
+        {
+          "size": [
+            141.0,
+            16.0
+          ],
+          "text": "Argentina · 1 ruta",
+          "visible": true
+        },
+        {
+          "size": [
+            149.0,
+            16.0
+          ],
+          "text": "Australia · 0 rutas",
+          "visible": true
+        },
+        {
+          "size": [
+            188.0,
+            16.0
+          ],
+          "text": "Estados Unidos · 0 rutas",
+          "visible": true
+        },
+        {
+          "size": [
+            141.0,
+            16.0
+          ],
+          "text": "Portugal · 0 rutas",
+          "visible": true
+        },
+        {
+          "size": [
+            157.0,
+            16.0
+          ],
+          "text": "Reino Unido · 1 ruta",
+          "visible": true
+        },
+        {
+          "size": [
+            212.0,
+            16.0
+          ],
+          "text": "Sin dato de país · 15 rutas",
+          "visible": true
+        },
+        {
+          "size": [
+            134.0,
+            16.0
+          ],
+          "text": "Francia · 0 rutas",
+          "visible": true
+        },
+        {
+          "size": [
+            668.0,
+            15.0
+          ],
+          "text": "Los paquetes conocidos se agrupan por su origen. Los demás aparecen en Sin dato de país.",
+          "visible": true
+        },
+        {
+          "size": [
+            668.0,
+            16.0
+          ],
+          "text": "Después podés elegir trenes de cualquier país.",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "page": "route",
+      "condition": "ordinary selection",
+      "dimensions": [
+        800,
+        600
+      ],
+      "scale": 1.0,
+      "report_sha256": "9400138fae884d9fc949da48f47e20efb341cda54601edc57b18b8f554369470",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "ui_layout": [
+        {
+          "max": [
+            296.0,
+            538.0
+          ],
+          "min": [
+            232.0,
+            506.0
+          ],
+          "name": "ui-Start"
+        },
+        {
+          "max": [
+            224.0,
+            538.0
+          ],
+          "min": [
+            66.0,
+            506.0
+          ],
+          "name": "ui-NewGameStep(Train)"
+        },
+        {
+          "max": [
+            587.0,
+            126.0
+          ],
+          "min": [
+            437.0,
+            94.0
+          ],
+          "name": "ui-NewGameStep(Environment)"
+        },
+        {
+          "max": [
+            429.0,
+            126.0
+          ],
+          "min": [
+            342.0,
+            94.0
+          ],
+          "name": "ui-NewGameStep(Train)"
+        },
+        {
+          "max": [
+            334.0,
+            126.0
+          ],
+          "min": [
+            161.0,
+            94.0
+          ],
+          "name": "ui-NewGameStep(Route)"
+        },
+        {
+          "max": [
+            153.0,
+            126.0
+          ],
+          "min": [
+            66.0,
+            94.0
+          ],
+          "name": "ui-NewGameStep(Country)"
+        },
+        {
+          "max": [
+            468.0,
+            86.0
+          ],
+          "min": [
+            373.0,
+            54.0
+          ],
+          "name": "ui-NewGameAdvanced"
+        },
+        {
+          "max": [
+            365.0,
+            86.0
+          ],
+          "min": [
+            247.0,
+            54.0
+          ],
+          "name": "ui-Close"
+        },
+        {
+          "max": [
+            734.0,
+            538.0
+          ],
+          "min": [
+            66.0,
+            462.0
+          ],
+          "name": "launch-footer"
+        },
+        {
+          "max": [
+            734.0,
+            454.0
+          ],
+          "min": [
+            66.0,
+            134.0
+          ],
+          "name": "player-scroll"
+        },
+        {
+          "max": [
+            192.0,
+            617.0
+          ],
+          "min": [
+            66.0,
+            585.0
+          ],
+          "name": "ui-PreviewRouteView"
+        },
+        {
+          "max": [
+            366.0,
+            520.0
+          ],
+          "min": [
+            216.0,
+            488.0
+          ],
+          "name": "ui-ChoicePage(Route, 1)"
+        },
+        {
+          "max": [
+            208.0,
+            520.0
+          ],
+          "min": [
+            66.0,
+            488.0
+          ],
+          "name": "ui-ChoicePage(Route, -1)"
+        },
+        {
+          "max": [
+            734.0,
+            480.0
+          ],
+          "min": [
+            66.0,
+            449.0
+          ],
+          "name": "choice-Route-14"
+        },
+        {
+          "max": [
+            734.0,
+            441.0
+          ],
+          "min": [
+            66.0,
+            410.0
+          ],
+          "name": "choice-Route-15"
+        },
+        {
+          "max": [
+            734.0,
+            402.0
+          ],
+          "min": [
+            66.0,
+            371.0
+          ],
+          "name": "choice-Route-5"
+        },
+        {
+          "max": [
+            734.0,
+            363.0
+          ],
+          "min": [
+            66.0,
+            332.0
+          ],
+          "name": "choice-Route-0"
+        },
+        {
+          "max": [
+            734.0,
+            324.0
+          ],
+          "min": [
+            66.0,
+            293.0
+          ],
+          "name": "choice-Route-13"
+        },
+        {
+          "max": [
+            734.0,
+            262.0
+          ],
+          "min": [
+            66.0,
+            230.0
+          ],
+          "name": "ui-FocusSearch(Route)"
+        },
+        {
+          "max": [
+            233.0,
+            199.0
+          ],
+          "min": [
+            138.0,
+            167.0
+          ],
+          "name": "ui-ShowChoices(Service)"
+        },
+        {
+          "max": [
+            130.0,
+            199.0
+          ],
+          "min": [
+            66.0,
+            167.0
+          ],
+          "name": "ui-ShowChoices(Route)"
+        },
+        {
+          "max": [
+            752.0,
+            564.0
+          ],
+          "min": [
+            48.0,
+            36.0
+          ],
+          "name": "player-menu"
+        }
+      ],
+      "ui_text": [
+        {
+          "size": [
+            0.0,
+            0.0
+          ],
+          "text": "FPS: ",
+          "visible": false
+        },
+        {
+          "size": [
+            116.0,
+            15.0
+          ],
+          "text": "Listo para jugar",
+          "visible": true
+        },
+        {
+          "size": [
+            40.0,
+            16.0
+          ],
+          "text": "Jugar",
+          "visible": true
+        },
+        {
+          "size": [
+            134.0,
+            16.0
+          ],
+          "text": "Siguiente: tren →",
+          "visible": true
+        },
+        {
+          "size": [
+            668.0,
+            29.0
+          ],
+          "text": "Chiltern · birmingham_pullman\nSalida 09:55:00 · Despejado",
+          "visible": true
+        },
+        {
+          "size": [
+            94.0,
+            16.0
+          ],
+          "text": "Volver · Esc",
+          "visible": true
+        },
+        {
+          "size": [
+            173.0,
+            27.0
+          ],
+          "text": "Crear partida",
+          "visible": true
+        },
+        {
+          "size": [
+            126.0,
+            16.0
+          ],
+          "text": "4 · Hora y clima",
+          "visible": true
+        },
+        {
+          "size": [
+            63.0,
+            16.0
+          ],
+          "text": "3 · Tren",
+          "visible": true
+        },
+        {
+          "size": [
+            149.0,
+            16.0
+          ],
+          "text": "2 · Ruta y servicio",
+          "visible": true
+        },
+        {
+          "size": [
+            63.0,
+            16.0
+          ],
+          "text": "1 · País",
+          "visible": true
+        },
+        {
+          "size": [
+            71.0,
+            16.0
+          ],
+          "text": "Avanzadas",
+          "visible": true
+        },
+        {
+          "size": [
+            668.0,
+            21.0
+          ],
+          "text": "Todos los países · Ruta y servicio",
+          "visible": true
+        },
+        {
+          "size": [
+            40.0,
+            16.0
+          ],
+          "text": "Rutas",
+          "visible": true
+        },
+        {
+          "size": [
+            71.0,
+            16.0
+          ],
+          "text": "Servicios",
+          "visible": true
+        },
+        {
+          "size": [
+            668.0,
+            15.0
+          ],
+          "text": "Servicio: Chiltern extendido: Northolt Park → Gerra…",
+          "visible": true
+        },
+        {
+          "size": [
+            102.0,
+            16.0
+          ],
+          "text": "Buscar rutas…",
+          "visible": true
+        },
+        {
+          "size": [
+            668.0,
+            15.0
+          ],
+          "text": "17 rutas · página 1 de 4",
+          "visible": true
+        },
+        {
+          "size": [
+            645.0,
+            17.0
+          ],
+          "text": "bogie_curve_route",
+          "visible": true
+        },
+        {
+          "size": [
+            645.0,
+            17.0
+          ],
+          "text": "✓ Chiltern",
+          "visible": true
+        },
+        {
+          "size": [
+            645.0,
+            17.0
+          ],
+          "text": "class47_reference",
+          "visible": true
+        },
+        {
+          "size": [
+            645.0,
+            17.0
+          ],
+          "text": "curve_route",
+          "visible": true
+        },
+        {
+          "size": [
+            645.0,
+            17.0
+          ],
+          "text": "derailment_route",
+          "visible": true
+        },
+        {
+          "size": [
+            118.0,
+            16.0
+          ],
+          "text": "Página anterior",
+          "visible": true
+        },
+        {
+          "size": [
+            126.0,
+            16.0
+          ],
+          "text": "Página siguiente",
+          "visible": true
+        },
+        {
+          "size": [
+            668.0,
+            14.0
+          ],
+          "text": "Podés seleccionar también los elementos en gris para ver sus detalles.",
+          "visible": true
+        },
+        {
+          "size": [
+            668.0,
+            21.0
+          ],
+          "text": "Vista previa de la ruta",
+          "visible": true
+        },
+        {
+          "size": [
+            102.0,
+            16.0
+          ],
+          "text": "Imagen / Mapa",
+          "visible": true
+        },
+        {
+          "size": [
+            668.0,
+            15.0
+          ],
+          "text": "Imagen incluida por el autor",
+          "visible": true
+        },
+        {
+          "size": [
+            668.0,
+            15.0
+          ],
+          "text": "Mapa del servicio disponible · Imagen / Mapa",
+          "visible": true
+        },
+        {
+          "size": [
+            668.0,
+            15.0
+          ],
+          "text": "Trocha 1435 mm · Catenaria · 25000 V",
+          "visible": true
+        },
+        {
+          "size": [
+            640.0,
+            16.0
+          ],
+          "text": "Seis estaciones originales, pendientes, límites por posición y tráfico vivo.",
+          "visible": true
+        },
+        {
+          "size": [
+            640.0,
+            36.0
+          ],
+          "text": "Northolt Park → South Ruislip → West Ruislip → Denham → Denham Golf Course → Gerrards Cross",
+          "visible": true
+        },
+        {
+          "size": [
+            640.0,
+            16.0
+          ],
+          "text": "Horario del servicio · 35 min",
+          "visible": true
+        },
+        {
+          "size": [
+            640.0,
+            15.0
+          ],
+          "text": "Escenario de ejemplo · ver recursos para comprobar el contenido 3D",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "page": "train",
+      "condition": "ordinary selection",
+      "dimensions": [
+        800,
+        600
+      ],
+      "scale": 1.0,
+      "report_sha256": "fc65eed8a134d136b16e48f9cfb1744104c63a3e23825046115d8a1f1651744c",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "ui_layout": [
+        {
+          "max": [
+            392.0,
+            198.0
+          ],
+          "min": [
+            66.0,
+            178.0
+          ],
+          "name": "train-ready-heading"
+        },
+        {
+          "max": [
+            734.0,
+            198.0
+          ],
+          "min": [
+            408.0,
+            178.0
+          ],
+          "name": "train-unavailable-heading"
+        },
+        {
+          "max": [
+            734.0,
+            454.0
+          ],
+          "min": [
+            66.0,
+            134.0
+          ],
+          "name": "player-scroll"
+        },
+        {
+          "max": [
+            198.0,
+            730.0
+          ],
+          "min": [
+            80.0,
+            698.0
+          ],
+          "name": "ui-Open(MissingResources)"
+        },
+        {
+          "max": [
+            532.0,
+            498.0
+          ],
+          "min": [
+            500.0,
+            466.0
+          ],
+          "name": "ui-TrainChoicePage(1, 1)"
+        },
+        {
+          "max": [
+            440.0,
+            498.0
+          ],
+          "min": [
+            408.0,
+            466.0
+          ],
+          "name": "ui-TrainChoicePage(1, -1)"
+        },
+        {
+          "max": [
+            734.0,
+            459.0
+          ],
+          "min": [
+            408.0,
+            379.0
+          ],
+          "name": "choice-Consist-3"
+        },
+        {
+          "max": [
+            734.0,
+            372.0
+          ],
+          "min": [
+            408.0,
+            292.0
+          ],
+          "name": "choice-Consist-2"
+        },
+        {
+          "max": [
+            734.0,
+            285.0
+          ],
+          "min": [
+            408.0,
+            205.0
+          ],
+          "name": "choice-Consist-1"
+        },
+        {
+          "max": [
+            392.0,
+            285.0
+          ],
+          "min": [
+            66.0,
+            205.0
+          ],
+          "name": "choice-Consist-0"
+        },
+        {
+          "max": [
+            734.0,
+            166.0
+          ],
+          "min": [
+            66.0,
+            134.0
+          ],
+          "name": "ui-FocusSearch(Consist)"
+        },
+        {
+          "max": [
+            392.0,
+            285.0
+          ],
+          "min": [
+            66.0,
+            178.0
+          ],
+          "name": "train-ready-list"
+        },
+        {
+          "max": [
+            734.0,
+            498.0
+          ],
+          "min": [
+            408.0,
+            178.0
+          ],
+          "name": "train-unavailable-list"
+        },
+        {
+          "max": [
+            752.0,
+            564.0
+          ],
+          "min": [
+            48.0,
+            36.0
+          ],
+          "name": "player-menu"
+        },
+        {
+          "max": [
+            734.0,
+            538.0
+          ],
+          "min": [
+            66.0,
+            462.0
+          ],
+          "name": "launch-footer"
+        },
+        {
+          "max": [
+            351.0,
+            538.0
+          ],
+          "min": [
+            287.0,
+            506.0
+          ],
+          "name": "ui-Start"
+        },
+        {
+          "max": [
+            279.0,
+            538.0
+          ],
+          "min": [
+            145.0,
+            506.0
+          ],
+          "name": "ui-NewGameStep(Environment)"
+        },
+        {
+          "max": [
+            137.0,
+            538.0
+          ],
+          "min": [
+            66.0,
+            506.0
+          ],
+          "name": "ui-NewGameStep(Route)"
+        },
+        {
+          "max": [
+            587.0,
+            126.0
+          ],
+          "min": [
+            437.0,
+            94.0
+          ],
+          "name": "ui-NewGameStep(Environment)"
+        },
+        {
+          "max": [
+            429.0,
+            126.0
+          ],
+          "min": [
+            342.0,
+            94.0
+          ],
+          "name": "ui-NewGameStep(Train)"
+        },
+        {
+          "max": [
+            334.0,
+            126.0
+          ],
+          "min": [
+            161.0,
+            94.0
+          ],
+          "name": "ui-NewGameStep(Route)"
+        },
+        {
+          "max": [
+            153.0,
+            126.0
+          ],
+          "min": [
+            66.0,
+            94.0
+          ],
+          "name": "ui-NewGameStep(Country)"
+        },
+        {
+          "max": [
+            468.0,
+            86.0
+          ],
+          "min": [
+            373.0,
+            54.0
+          ],
+          "name": "ui-NewGameAdvanced"
+        },
+        {
+          "max": [
+            365.0,
+            86.0
+          ],
+          "min": [
+            247.0,
+            54.0
+          ],
+          "name": "ui-Close"
+        }
+      ],
+      "ui_text": [
+        {
+          "size": [
+            0.0,
+            0.0
+          ],
+          "text": "FPS: ",
+          "visible": false
+        },
+        {
+          "size": [
+            149.0,
+            16.0
+          ],
+          "text": "Buscar formaciones…",
+          "visible": true
+        },
+        {
+          "size": [
+            307.0,
+            17.0
+          ],
+          "text": "✓ birmingham_pullman",
+          "visible": true
+        },
+        {
+          "size": [
+            307.0,
+            14.0
+          ],
+          "text": "Ejemplo · Chiltern",
+          "visible": true
+        },
+        {
+          "size": [
+            307.0,
+            27.0
+          ],
+          "text": "Trocha: faltan datos para confirmar la compatibilidad",
+          "visible": true
+        },
+        {
+          "size": [
+            307.0,
+            17.0
+          ],
+          "text": "121_2car_set",
+          "visible": true
+        },
+        {
+          "size": [
+            307.0,
+            14.0
+          ],
+          "text": "Chiltern",
+          "visible": true
+        },
+        {
+          "size": [
+            307.0,
+            27.0
+          ],
+          "text": "Revisando archivos… todavía no se puede iniciar",
+          "visible": true
+        },
+        {
+          "size": [
+            307.0,
+            17.0
+          ],
+          "text": "121single",
+          "visible": true
+        },
+        {
+          "size": [
+            307.0,
+            14.0
+          ],
+          "text": "Chiltern",
+          "visible": true
+        },
+        {
+          "size": [
+            307.0,
+            27.0
+          ],
+          "text": "Revisando archivos… todavía no se puede iniciar",
+          "visible": true
+        },
+        {
+          "size": [
+            307.0,
+            17.0
+          ],
+          "text": "1960CentralWR8Car",
+          "visible": true
+        },
+        {
+          "size": [
+            307.0,
+            14.0
+          ],
+          "text": "Chiltern",
+          "visible": true
+        },
+        {
+          "size": [
+            307.0,
+            27.0
+          ],
+          "text": "Revisando archivos… todavía no se puede iniciar",
+          "visible": true
+        },
+        {
+          "size": [
+            8.0,
+            16.0
+          ],
+          "text": "←",
+          "visible": true
+        },
+        {
+          "size": [
+            44.0,
+            15.0
+          ],
+          "text": "1 / 74",
+          "visible": true
+        },
+        {
+          "size": [
+            8.0,
+            16.0
+          ],
+          "text": "→",
+          "visible": true
+        },
+        {
+          "size": [
+            668.0,
+            21.0
+          ],
+          "text": "birmingham_pullman",
+          "visible": true
+        },
+        {
+          "size": [
+            668.0,
+            15.0
+          ],
+          "text": "Sin vista previa 3D: El modelo sale de su paquete",
+          "visible": true
+        },
+        {
+          "size": [
+            640.0,
+            17.0
+          ],
+          "text": "8 vehículos (2 con tracción) · 166 m · 435 t",
+          "visible": true
+        },
+        {
+          "size": [
+            640.0,
+            16.0
+          ],
+          "text": "Cabina 2D: No · Cabina 3D: Sí",
+          "visible": true
+        },
+        {
+          "size": [
+            640.0,
+            15.0
+          ],
+          "text": "Trocha: faltan datos para confirmar la compatibilidad",
+          "visible": true
+        },
+        {
+          "size": [
+            640.0,
+            16.0
+          ],
+          "text": "Listo para jugar",
+          "visible": true
+        },
+        {
+          "size": [
+            94.0,
+            16.0
+          ],
+          "text": "Ver detalles",
+          "visible": true
+        },
+        {
+          "size": [
+            668.0,
+            27.0
+          ],
+          "text": "La disponibilidad usa los archivos y datos declarados de esta ruta. Los trenes en gris se pueden seleccionar para consultar el motivo.",
+          "visible": true
+        },
+        {
+          "size": [
+            116.0,
+            15.0
+          ],
+          "text": "Listo para jugar",
+          "visible": true
+        },
+        {
+          "size": [
+            40.0,
+            16.0
+          ],
+          "text": "Jugar",
+          "visible": true
+        },
+        {
+          "size": [
+            110.0,
+            16.0
+          ],
+          "text": "Hora y clima →",
+          "visible": true
+        },
+        {
+          "size": [
+            47.0,
+            16.0
+          ],
+          "text": "← Ruta",
+          "visible": true
+        },
+        {
+          "size": [
+            668.0,
+            29.0
+          ],
+          "text": "Chiltern · birmingham_pullman\nSalida 09:55:00 · Despejado",
+          "visible": true
+        },
+        {
+          "size": [
+            71.0,
+            16.0
+          ],
+          "text": "Avanzadas",
+          "visible": true
+        },
+        {
+          "size": [
+            94.0,
+            16.0
+          ],
+          "text": "Volver · Esc",
+          "visible": true
+        },
+        {
+          "size": [
+            173.0,
+            27.0
+          ],
+          "text": "Crear partida",
+          "visible": true
+        },
+        {
+          "size": [
+            126.0,
+            16.0
+          ],
+          "text": "4 · Hora y clima",
+          "visible": true
+        },
+        {
+          "size": [
+            63.0,
+            16.0
+          ],
+          "text": "3 · Tren",
+          "visible": true
+        },
+        {
+          "size": [
+            149.0,
+            16.0
+          ],
+          "text": "2 · Ruta y servicio",
+          "visible": true
+        },
+        {
+          "size": [
+            63.0,
+            16.0
+          ],
+          "text": "1 · País",
+          "visible": true
+        },
+        {
+          "size": [
+            326.0,
+            20.0
+          ],
+          "text": "Pueden circular (1)",
+          "visible": true
+        },
+        {
+          "size": [
+            326.0,
+            20.0
+          ],
+          "text": "No disponibles (220)",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "page": "weather",
+      "condition": "ordinary selection",
+      "dimensions": [
+        800,
+        600
+      ],
+      "scale": 1.0,
+      "report_sha256": "9f2eb4c12d3bd9b19ba421fe55d9597ab6d59ebaf2953a989f0609d7c2bc808f",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "ui_layout": [
+        {
+          "max": [
+            209.0,
+            538.0
+          ],
+          "min": [
+            145.0,
+            506.0
+          ],
+          "name": "ui-Start"
+        },
+        {
+          "max": [
+            137.0,
+            538.0
+          ],
+          "min": [
+            66.0,
+            506.0
+          ],
+          "name": "ui-NewGameStep(Train)"
+        },
+        {
+          "max": [
+            587.0,
+            126.0
+          ],
+          "min": [
+            437.0,
+            94.0
+          ],
+          "name": "ui-NewGameStep(Environment)"
+        },
+        {
+          "max": [
+            429.0,
+            126.0
+          ],
+          "min": [
+            342.0,
+            94.0
+          ],
+          "name": "ui-NewGameStep(Train)"
+        },
+        {
+          "max": [
+            334.0,
+            126.0
+          ],
+          "min": [
+            161.0,
+            94.0
+          ],
+          "name": "ui-NewGameStep(Route)"
+        },
+        {
+          "max": [
+            153.0,
+            126.0
+          ],
+          "min": [
+            66.0,
+            94.0
+          ],
+          "name": "ui-NewGameStep(Country)"
+        },
+        {
+          "max": [
+            468.0,
+            86.0
+          ],
+          "min": [
+            373.0,
+            54.0
+          ],
+          "name": "ui-NewGameAdvanced"
+        },
+        {
+          "max": [
+            365.0,
+            86.0
+          ],
+          "min": [
+            247.0,
+            54.0
+          ],
+          "name": "ui-Close"
+        },
+        {
+          "max": [
+            734.0,
+            538.0
+          ],
+          "min": [
+            66.0,
+            462.0
+          ],
+          "name": "launch-footer"
+        },
+        {
+          "max": [
+            734.0,
+            454.0
+          ],
+          "min": [
+            66.0,
+            134.0
+          ],
+          "name": "player-scroll"
+        },
+        {
+          "max": [
+            734.0,
+            336.0
+          ],
+          "min": [
+            702.0,
+            304.0
+          ],
+          "name": "ui-Cycle(Season, 1)"
+        },
+        {
+          "max": [
+            256.0,
+            336.0
+          ],
+          "min": [
+            224.0,
+            304.0
+          ],
+          "name": "ui-Cycle(Season, -1)"
+        },
+        {
+          "max": [
+            734.0,
+            292.0
+          ],
+          "min": [
+            702.0,
+            260.0
+          ],
+          "name": "ui-Cycle(Weather, 1)"
+        },
+        {
+          "max": [
+            256.0,
+            292.0
+          ],
+          "min": [
+            224.0,
+            260.0
+          ],
+          "name": "ui-Cycle(Weather, -1)"
+        },
+        {
+          "max": [
+            734.0,
+            248.0
+          ],
+          "min": [
+            702.0,
+            216.0
+          ],
+          "name": "ui-Cycle(WeatherSource, 1)"
+        },
+        {
+          "max": [
+            256.0,
+            248.0
+          ],
+          "min": [
+            224.0,
+            216.0
+          ],
+          "name": "ui-Cycle(WeatherSource, -1)"
+        },
+        {
+          "max": [
+            734.0,
+            204.0
+          ],
+          "min": [
+            702.0,
+            172.0
+          ],
+          "name": "ui-Cycle(Time, 1)"
+        },
+        {
+          "max": [
+            256.0,
+            204.0
+          ],
+          "min": [
+            224.0,
+            172.0
+          ],
+          "name": "ui-Cycle(Time, -1)"
+        },
+        {
+          "max": [
+            752.0,
+            564.0
+          ],
+          "min": [
+            48.0,
+            36.0
+          ],
+          "name": "player-menu"
+        }
+      ],
+      "ui_text": [
+        {
+          "size": [
+            0.0,
+            0.0
+          ],
+          "text": "FPS: ",
+          "visible": false
+        },
+        {
+          "size": [
+            116.0,
+            15.0
+          ],
+          "text": "Listo para jugar",
+          "visible": true
+        },
+        {
+          "size": [
+            40.0,
+            16.0
+          ],
+          "text": "Jugar",
+          "visible": true
+        },
+        {
+          "size": [
+            47.0,
+            16.0
+          ],
+          "text": "← Tren",
+          "visible": true
+        },
+        {
+          "size": [
+            668.0,
+            29.0
+          ],
+          "text": "Chiltern · birmingham_pullman\nSalida 09:55:00 · Despejado",
+          "visible": true
+        },
+        {
+          "size": [
+            63.0,
+            16.0
+          ],
+          "text": "1 · País",
+          "visible": true
+        },
+        {
+          "size": [
+            71.0,
+            16.0
+          ],
+          "text": "Avanzadas",
+          "visible": true
+        },
+        {
+          "size": [
+            94.0,
+            16.0
+          ],
+          "text": "Volver · Esc",
+          "visible": true
+        },
+        {
+          "size": [
+            173.0,
+            27.0
+          ],
+          "text": "Crear partida",
+          "visible": true
+        },
+        {
+          "size": [
+            126.0,
+            16.0
+          ],
+          "text": "4 · Hora y clima",
+          "visible": true
+        },
+        {
+          "size": [
+            63.0,
+            16.0
+          ],
+          "text": "3 · Tren",
+          "visible": true
+        },
+        {
+          "size": [
+            149.0,
+            16.0
+          ],
+          "text": "2 · Ruta y servicio",
+          "visible": true
+        },
+        {
+          "size": [
+            668.0,
+            26.0
+          ],
+          "text": "Prepará las condiciones del viaje",
+          "visible": true
+        },
+        {
+          "size": [
+            119.0,
+            17.0
+          ],
+          "text": "Hora de salida",
+          "visible": true
+        },
+        {
+          "size": [
+            8.0,
+            16.0
+          ],
+          "text": "‹",
+          "visible": true
+        },
+        {
+          "size": [
+            73.0,
+            18.0
+          ],
+          "text": "09:55:00",
+          "visible": true
+        },
+        {
+          "size": [
+            8.0,
+            16.0
+          ],
+          "text": "›",
+          "visible": true
+        },
+        {
+          "size": [
+            119.0,
+            17.0
+          ],
+          "text": "Modo del clima",
+          "visible": true
+        },
+        {
+          "size": [
+            8.0,
+            16.0
+          ],
+          "text": "‹",
+          "visible": true
+        },
+        {
+          "size": [
+            199.0,
+            18.0
+          ],
+          "text": "Fijo · elegido por vos",
+          "visible": true
+        },
+        {
+          "size": [
+            8.0,
+            16.0
+          ],
+          "text": "›",
+          "visible": true
+        },
+        {
+          "size": [
+            110.0,
+            17.0
+          ],
+          "text": "Clima elegido",
+          "visible": true
+        },
+        {
+          "size": [
+            8.0,
+            16.0
+          ],
+          "text": "‹",
+          "visible": true
+        },
+        {
+          "size": [
+            82.0,
+            18.0
+          ],
+          "text": "Despejado",
+          "visible": true
+        },
+        {
+          "size": [
+            8.0,
+            16.0
+          ],
+          "text": "›",
+          "visible": true
+        },
+        {
+          "size": [
+            135.0,
+            17.0
+          ],
+          "text": "Estación del año",
+          "visible": true
+        },
+        {
+          "size": [
+            8.0,
+            16.0
+          ],
+          "text": "‹",
+          "visible": true
+        },
+        {
+          "size": [
+            55.0,
+            18.0
+          ],
+          "text": "Verano",
+          "visible": true
+        },
+        {
+          "size": [
+            8.0,
+            16.0
+          ],
+          "text": "›",
+          "visible": true
+        },
+        {
+          "size": [
+            668.0,
+            16.0
+          ],
+          "text": "Hora visual: Elegido por el jugador",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "page": "train-options",
+      "condition": "ordinary selection",
+      "dimensions": [
+        800,
+        600
+      ],
+      "scale": 1.0,
+      "report_sha256": "f4cc7380ae6317d36566791358351496fe6fa98672d50c05a0e6f600e464b966",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "ui_layout": [
+        {
+          "max": [
+            392.0,
+            242.0
+          ],
+          "min": [
+            66.0,
+            222.0
+          ],
+          "name": "train-ready-heading"
+        },
+        {
+          "max": [
+            734.0,
+            242.0
+          ],
+          "min": [
+            408.0,
+            222.0
+          ],
+          "name": "train-unavailable-heading"
+        },
+        {
+          "max": [
+            734.0,
+            454.0
+          ],
+          "min": [
+            66.0,
+            134.0
+          ],
+          "name": "player-scroll"
+        },
+        {
+          "max": [
+            546.0,
+            1163.0
+          ],
+          "min": [
+            302.0,
+            1131.0
+          ],
+          "name": "ui-Open(VehicleProfile)"
+        },
+        {
+          "max": [
+            294.0,
+            1163.0
+          ],
+          "min": [
+            66.0,
+            1131.0
+          ],
+          "name": "ui-FormationEditorStart"
+        },
+        {
+          "max": [
+            720.0,
+            1014.0
+          ],
+          "min": [
+            80.0,
+            982.0
+          ],
+          "name": "ui-SelectChoice(Consist, 0)"
+        },
+        {
+          "max": [
+            426.0,
+            874.0
+          ],
+          "min": [
+            206.0,
+            842.0
+          ],
+          "name": "ui-MissingAudit"
+        },
+        {
+          "max": [
+            198.0,
+            874.0
+          ],
+          "min": [
+            80.0,
+            842.0
+          ],
+          "name": "ui-Open(MissingResources)"
+        },
+        {
+          "max": [
+            532.0,
+            542.0
+          ],
+          "min": [
+            500.0,
+            510.0
+          ],
+          "name": "ui-TrainChoicePage(1, 1)"
+        },
+        {
+          "max": [
+            440.0,
+            542.0
+          ],
+          "min": [
+            408.0,
+            510.0
+          ],
+          "name": "ui-TrainChoicePage(1, -1)"
+        },
+        {
+          "max": [
+            734.0,
+            503.0
+          ],
+          "min": [
+            408.0,
+            423.0
+          ],
+          "name": "choice-Consist-3"
+        },
+        {
+          "max": [
+            734.0,
+            416.0
+          ],
+          "min": [
+            408.0,
+            336.0
+          ],
+          "name": "choice-Consist-2"
+        },
+        {
+          "max": [
+            734.0,
+            329.0
+          ],
+          "min": [
+            408.0,
+            249.0
+          ],
+          "name": "choice-Consist-1"
+        },
+        {
+          "max": [
+            392.0,
+            329.0
+          ],
+          "min": [
+            66.0,
+            249.0
+          ],
+          "name": "choice-Consist-0"
+        },
+        {
+          "max": [
+            484.0,
+            210.0
+          ],
+          "min": [
+            358.0,
+            178.0
+          ],
+          "name": "ui-ChoiceSort(Consist)"
+        },
+        {
+          "max": [
+            350.0,
+            210.0
+          ],
+          "min": [
+            247.0,
+            178.0
+          ],
+          "name": "ui-ToggleFavorite(Consist, 0)"
+        },
+        {
+          "max": [
+            239.0,
+            210.0
+          ],
+          "min": [
+            66.0,
+            178.0
+          ],
+          "name": "ui-ChoiceFilter(Consist, Toggle)"
+        },
+        {
+          "max": [
+            734.0,
+            166.0
+          ],
+          "min": [
+            66.0,
+            134.0
+          ],
+          "name": "ui-FocusSearch(Consist)"
+        },
+        {
+          "max": [
+            392.0,
+            329.0
+          ],
+          "min": [
+            66.0,
+            222.0
+          ],
+          "name": "train-ready-list"
+        },
+        {
+          "max": [
+            734.0,
+            542.0
+          ],
+          "min": [
+            408.0,
+            222.0
+          ],
+          "name": "train-unavailable-list"
+        },
+        {
+          "max": [
+            752.0,
+            564.0
+          ],
+          "min": [
+            48.0,
+            36.0
+          ],
+          "name": "player-menu"
+        },
+        {
+          "max": [
+            734.0,
+            538.0
+          ],
+          "min": [
+            66.0,
+            462.0
+          ],
+          "name": "launch-footer"
+        },
+        {
+          "max": [
+            351.0,
+            538.0
+          ],
+          "min": [
+            287.0,
+            506.0
+          ],
+          "name": "ui-Start"
+        },
+        {
+          "max": [
+            279.0,
+            538.0
+          ],
+          "min": [
+            145.0,
+            506.0
+          ],
+          "name": "ui-NewGameStep(Environment)"
+        },
+        {
+          "max": [
+            137.0,
+            538.0
+          ],
+          "min": [
+            66.0,
+            506.0
+          ],
+          "name": "ui-NewGameStep(Route)"
+        },
+        {
+          "max": [
+            587.0,
+            126.0
+          ],
+          "min": [
+            437.0,
+            94.0
+          ],
+          "name": "ui-NewGameStep(Environment)"
+        },
+        {
+          "max": [
+            429.0,
+            126.0
+          ],
+          "min": [
+            342.0,
+            94.0
+          ],
+          "name": "ui-NewGameStep(Train)"
+        },
+        {
+          "max": [
+            334.0,
+            126.0
+          ],
+          "min": [
+            161.0,
+            94.0
+          ],
+          "name": "ui-NewGameStep(Route)"
+        },
+        {
+          "max": [
+            153.0,
+            126.0
+          ],
+          "min": [
+            66.0,
+            94.0
+          ],
+          "name": "ui-NewGameStep(Country)"
+        },
+        {
+          "max": [
+            531.0,
+            86.0
+          ],
+          "min": [
+            373.0,
+            54.0
+          ],
+          "name": "ui-NewGameAdvanced"
+        },
+        {
+          "max": [
+            365.0,
+            86.0
+          ],
+          "min": [
+            247.0,
+            54.0
+          ],
+          "name": "ui-Close"
+        }
+      ],
+      "ui_text": [
+        {
+          "size": [
+            0.0,
+            0.0
+          ],
+          "text": "FPS: ",
+          "visible": false
+        },
+        {
+          "size": [
+            149.0,
+            16.0
+          ],
+          "text": "Buscar formaciones…",
+          "visible": true
+        },
+        {
+          "size": [
+            149.0,
+            16.0
+          ],
+          "text": "Filtros · 0 activos",
+          "visible": true
+        },
+        {
+          "size": [
+            79.0,
+            16.0
+          ],
+          "text": "☆ Favorito",
+          "visible": true
+        },
+        {
+          "size": [
+            102.0,
+            16.0
+          ],
+          "text": "Orden: nombre",
+          "visible": true
+        },
+        {
+          "size": [
+            307.0,
+            17.0
+          ],
+          "text": "✓ birmingham_pullman",
+          "visible": true
+        },
+        {
+          "size": [
+            307.0,
+            14.0
+          ],
+          "text": "Ejemplo · Chiltern",
+          "visible": true
+        },
+        {
+          "size": [
+            307.0,
+            27.0
+          ],
+          "text": "Trocha: faltan datos para confirmar la compatibilidad",
+          "visible": true
+        },
+        {
+          "size": [
+            307.0,
+            17.0
+          ],
+          "text": "121_2car_set",
+          "visible": true
+        },
+        {
+          "size": [
+            307.0,
+            14.0
+          ],
+          "text": "Chiltern",
+          "visible": true
+        },
+        {
+          "size": [
+            307.0,
+            27.0
+          ],
+          "text": "Revisando archivos… todavía no se puede iniciar",
+          "visible": true
+        },
+        {
+          "size": [
+            307.0,
+            17.0
+          ],
+          "text": "121single",
+          "visible": true
+        },
+        {
+          "size": [
+            307.0,
+            14.0
+          ],
+          "text": "Chiltern",
+          "visible": true
+        },
+        {
+          "size": [
+            307.0,
+            27.0
+          ],
+          "text": "Revisando archivos… todavía no se puede iniciar",
+          "visible": true
+        },
+        {
+          "size": [
+            307.0,
+            17.0
+          ],
+          "text": "1960CentralWR8Car",
+          "visible": true
+        },
+        {
+          "size": [
+            307.0,
+            14.0
+          ],
+          "text": "Chiltern",
+          "visible": true
+        },
+        {
+          "size": [
+            307.0,
+            27.0
+          ],
+          "text": "Revisando archivos… todavía no se puede iniciar",
+          "visible": true
+        },
+        {
+          "size": [
+            8.0,
+            16.0
+          ],
+          "text": "←",
+          "visible": true
+        },
+        {
+          "size": [
+            44.0,
+            15.0
+          ],
+          "text": "1 / 74",
+          "visible": true
+        },
+        {
+          "size": [
+            8.0,
+            16.0
+          ],
+          "text": "→",
+          "visible": true
+        },
+        {
+          "size": [
+            668.0,
+            21.0
+          ],
+          "text": "birmingham_pullman",
+          "visible": true
+        },
+        {
+          "size": [
+            668.0,
+            16.0
+          ],
+          "text": "Gálibo de infraestructura desconocido; se conserva la selección",
+          "visible": true
+        },
+        {
+          "size": [
+            668.0,
+            15.0
+          ],
+          "text": "Sin vista previa 3D: El modelo sale de su paquete",
+          "visible": true
+        },
+        {
+          "size": [
+            640.0,
+            17.0
+          ],
+          "text": "8 vehículos (2 con tracción) · 166 m · 435 t",
+          "visible": true
+        },
+        {
+          "size": [
+            640.0,
+            16.0
+          ],
+          "text": "Cabina 2D: No · Cabina 3D: Sí",
+          "visible": true
+        },
+        {
+          "size": [
+            640.0,
+            44.0
+          ],
+          "text": "Validación de recursos: completos\nCirculación: sin ensayo registrado de esta combinación\nSistemas contrastados: 0/8 vehículos · Open Rails 1.6.1 · alcance parcial",
+          "visible": true
+        },
+        {
+          "size": [
+            640.0,
+            15.0
+          ],
+          "text": "8 avisos de compatibilidad · Ver detalles",
+          "visible": true
+        },
+        {
+          "size": [
+            640.0,
+            15.0
+          ],
+          "text": "Trocha: faltan datos para confirmar la compatibilidad",
+          "visible": true
+        },
+        {
+          "size": [
+            640.0,
+            16.0
+          ],
+          "text": "Listo para jugar",
+          "visible": true
+        },
+        {
+          "size": [
+            94.0,
+            16.0
+          ],
+          "text": "Ver detalles",
+          "visible": true
+        },
+        {
+          "size": [
+            196.0,
+            16.0
+          ],
+          "text": "Revisar archivos otra vez",
+          "visible": true
+        },
+        {
+          "size": [
+            668.0,
+            27.0
+          ],
+          "text": "La disponibilidad usa los archivos y datos declarados de esta ruta. Los trenes en gris se pueden seleccionar para consultar el motivo.",
+          "visible": true
+        },
+        {
+          "size": [
+            640.0,
+            20.0
+          ],
+          "text": "Formaciones sugeridas",
+          "visible": true
+        },
+        {
+          "size": [
+            141.0,
+            16.0
+          ],
+          "text": "birmingham_pullman",
+          "visible": true
+        },
+        {
+          "size": [
+            640.0,
+            44.0
+          ],
+          "text": "recursos y tracción disponibles · formación del servicio original · Ejemplo · Chiltern · Gálibo de infraestructura desconocido; se conserva la selección · Trocha: faltan datos para confirmar la compatibilidad · cabina disponible",
+          "visible": true
+        },
+        {
+          "size": [
+            640.0,
+            29.0
+          ],
+          "text": "La recomendación orienta la elección; no certifica todos los sistemas ni oculta opciones con avisos.",
+          "visible": true
+        },
+        {
+          "size": [
+            204.0,
+            16.0
+          ],
+          "text": "Armar una formación propia",
+          "visible": true
+        },
+        {
+          "size": [
+            220.0,
+            16.0
+          ],
+          "text": "Ajustes propios por vehículo",
+          "visible": true
+        },
+        {
+          "size": [
+            116.0,
+            15.0
+          ],
+          "text": "Listo para jugar",
+          "visible": true
+        },
+        {
+          "size": [
+            40.0,
+            16.0
+          ],
+          "text": "Jugar",
+          "visible": true
+        },
+        {
+          "size": [
+            110.0,
+            16.0
+          ],
+          "text": "Hora y clima →",
+          "visible": true
+        },
+        {
+          "size": [
+            47.0,
+            16.0
+          ],
+          "text": "← Ruta",
+          "visible": true
+        },
+        {
+          "size": [
+            668.0,
+            29.0
+          ],
+          "text": "Chiltern · birmingham_pullman\nSalida 09:55:00 · Despejado",
+          "visible": true
+        },
+        {
+          "size": [
+            94.0,
+            16.0
+          ],
+          "text": "Volver · Esc",
+          "visible": true
+        },
+        {
+          "size": [
+            173.0,
+            27.0
+          ],
+          "text": "Crear partida",
+          "visible": true
+        },
+        {
+          "size": [
+            126.0,
+            16.0
+          ],
+          "text": "4 · Hora y clima",
+          "visible": true
+        },
+        {
+          "size": [
+            63.0,
+            16.0
+          ],
+          "text": "3 · Tren",
+          "visible": true
+        },
+        {
+          "size": [
+            149.0,
+            16.0
+          ],
+          "text": "2 · Ruta y servicio",
+          "visible": true
+        },
+        {
+          "size": [
+            63.0,
+            16.0
+          ],
+          "text": "1 · País",
+          "visible": true
+        },
+        {
+          "size": [
+            134.0,
+            16.0
+          ],
+          "text": "Ocultar avanzadas",
+          "visible": true
+        },
+        {
+          "size": [
+            326.0,
+            20.0
+          ],
+          "text": "Pueden circular (1)",
+          "visible": true
+        },
+        {
+          "size": [
+            326.0,
+            20.0
+          ],
+          "text": "No disponibles (220)",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "page": "train",
+      "condition": "unpowered formation",
+      "dimensions": [
+        800,
+        600
+      ],
+      "scale": 1.0,
+      "report_sha256": "6ad540d80515187ae1d9663216c0b674805b15983897d2bb15c76bfbe0b6a8c0",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "ui_layout": [
+        {
+          "max": [
+            426.0,
+            529.0
+          ],
+          "min": [
+            206.0,
+            497.0
+          ],
+          "name": "ui-MissingAudit"
+        },
+        {
+          "max": [
+            198.0,
+            529.0
+          ],
+          "min": [
+            80.0,
+            497.0
+          ],
+          "name": "ui-Open(MissingResources)"
+        },
+        {
+          "max": [
+            734.0,
+            272.0
+          ],
+          "min": [
+            408.0,
+            205.0
+          ],
+          "name": "choice-Consist-198"
+        },
+        {
+          "max": [
+            734.0,
+            166.0
+          ],
+          "min": [
+            655.0,
+            134.0
+          ],
+          "name": "ui-ClearSearch(Consist)"
+        },
+        {
+          "max": [
+            647.0,
+            166.0
+          ],
+          "min": [
+            66.0,
+            134.0
+          ],
+          "name": "ui-FocusSearch(Consist)"
+        },
+        {
+          "max": [
+            477.0,
+            517.0
+          ],
+          "min": [
+            359.0,
+            485.0
+          ],
+          "name": "ui-Open(MissingResources)"
+        },
+        {
+          "max": [
+            279.0,
+            517.0
+          ],
+          "min": [
+            145.0,
+            485.0
+          ],
+          "name": "ui-NewGameStep(Environment)"
+        },
+        {
+          "max": [
+            137.0,
+            517.0
+          ],
+          "min": [
+            66.0,
+            485.0
+          ],
+          "name": "ui-NewGameStep(Route)"
+        },
+        {
+          "max": [
+            587.0,
+            126.0
+          ],
+          "min": [
+            437.0,
+            94.0
+          ],
+          "name": "ui-NewGameStep(Environment)"
+        },
+        {
+          "max": [
+            429.0,
+            126.0
+          ],
+          "min": [
+            342.0,
+            94.0
+          ],
+          "name": "ui-NewGameStep(Train)"
+        },
+        {
+          "max": [
+            334.0,
+            126.0
+          ],
+          "min": [
+            161.0,
+            94.0
+          ],
+          "name": "ui-NewGameStep(Route)"
+        },
+        {
+          "max": [
+            153.0,
+            126.0
+          ],
+          "min": [
+            66.0,
+            94.0
+          ],
+          "name": "ui-NewGameStep(Country)"
+        },
+        {
+          "max": [
+            468.0,
+            86.0
+          ],
+          "min": [
+            373.0,
+            54.0
+          ],
+          "name": "ui-NewGameAdvanced"
+        },
+        {
+          "max": [
+            365.0,
+            86.0
+          ],
+          "min": [
+            247.0,
+            54.0
+          ],
+          "name": "ui-Close"
+        },
+        {
+          "max": [
+            351.0,
+            517.0
+          ],
+          "min": [
+            287.0,
+            485.0
+          ],
+          "name": "launch-unavailable"
+        },
+        {
+          "max": [
+            392.0,
+            198.0
+          ],
+          "min": [
+            66.0,
+            178.0
+          ],
+          "name": "train-ready-heading"
+        },
+        {
+          "max": [
+            734.0,
+            198.0
+          ],
+          "min": [
+            408.0,
+            178.0
+          ],
+          "name": "train-unavailable-heading"
+        },
+        {
+          "max": [
+            734.0,
+            538.0
+          ],
+          "min": [
+            66.0,
+            441.0
+          ],
+          "name": "launch-footer"
+        },
+        {
+          "max": [
+            392.0,
+            234.0
+          ],
+          "min": [
+            66.0,
+            178.0
+          ],
+          "name": "train-ready-list"
+        },
+        {
+          "max": [
+            734.0,
+            272.0
+          ],
+          "min": [
+            408.0,
+            178.0
+          ],
+          "name": "train-unavailable-list"
+        },
+        {
+          "max": [
+            752.0,
+            564.0
+          ],
+          "min": [
+            48.0,
+            36.0
+          ],
+          "name": "player-menu"
+        },
+        {
+          "max": [
+            734.0,
+            433.0
+          ],
+          "min": [
+            66.0,
+            134.0
+          ],
+          "name": "player-scroll"
+        }
+      ],
+      "ui_text": [
+        {
+          "size": [
+            326.0,
+            20.0
+          ],
+          "text": "Pueden circular (0)",
+          "visible": true
+        },
+        {
+          "size": [
+            326.0,
+            20.0
+          ],
+          "text": "No disponibles (1)",
+          "visible": true
+        },
+        {
+          "size": [
+            0.0,
+            0.0
+          ],
+          "text": "FPS: ",
+          "visible": false
+        },
+        {
+          "size": [
+            275.0,
+            15.0
+          ],
+          "text": "Sin locomotora o vehículo con tracción",
+          "visible": true
+        },
+        {
+          "size": [
+            94.0,
+            16.0
+          ],
+          "text": "Ver detalles",
+          "visible": true
+        },
+        {
+          "size": [
+            40.0,
+            18.0
+          ],
+          "text": "Jugar",
+          "visible": true
+        },
+        {
+          "size": [
+            110.0,
+            16.0
+          ],
+          "text": "Hora y clima →",
+          "visible": true
+        },
+        {
+          "size": [
+            47.0,
+            16.0
+          ],
+          "text": "← Ruta",
+          "visible": true
+        },
+        {
+          "size": [
+            668.0,
+            29.0
+          ],
+          "text": "Chiltern · wagons\nSalida 09:55:00 · Despejado",
+          "visible": true
+        },
+        {
+          "size": [
+            94.0,
+            16.0
+          ],
+          "text": "Volver · Esc",
+          "visible": true
+        },
+        {
+          "size": [
+            173.0,
+            27.0
+          ],
+          "text": "Crear partida",
+          "visible": true
+        },
+        {
+          "size": [
+            126.0,
+            16.0
+          ],
+          "text": "4 · Hora y clima",
+          "visible": true
+        },
+        {
+          "size": [
+            63.0,
+            16.0
+          ],
+          "text": "3 · Tren",
+          "visible": true
+        },
+        {
+          "size": [
+            149.0,
+            16.0
+          ],
+          "text": "2 · Ruta y servicio",
+          "visible": true
+        },
+        {
+          "size": [
+            63.0,
+            16.0
+          ],
+          "text": "1 · País",
+          "visible": true
+        },
+        {
+          "size": [
+            71.0,
+            16.0
+          ],
+          "text": "Avanzadas",
+          "visible": true
+        },
+        {
+          "size": [
+            47.0,
+            16.0
+          ],
+          "text": "wagons",
+          "visible": true
+        },
+        {
+          "size": [
+            55.0,
+            16.0
+          ],
+          "text": "Limpiar",
+          "visible": true
+        },
+        {
+          "size": [
+            326.0,
+            29.0
+          ],
+          "text": "No hay trenes disponibles con esta búsqueda. Revisá la otra lista o abrí Biblioteca.",
+          "visible": true
+        },
+        {
+          "size": [
+            307.0,
+            17.0
+          ],
+          "text": "✓ wagons",
+          "visible": true
+        },
+        {
+          "size": [
+            307.0,
+            14.0
+          ],
+          "text": "Ejemplo · runaround",
+          "visible": true
+        },
+        {
+          "size": [
+            307.0,
+            14.0
+          ],
+          "text": "Sin locomotora o vehículo con tracción",
+          "visible": true
+        },
+        {
+          "size": [
+            668.0,
+            21.0
+          ],
+          "text": "wagons",
+          "visible": true
+        },
+        {
+          "size": [
+            668.0,
+            15.0
+          ],
+          "text": "Sin vista previa 3D: Falta el modelo original",
+          "visible": true
+        },
+        {
+          "size": [
+            640.0,
+            17.0
+          ],
+          "text": "2 vehículos (0 con tracción) · 30 m · 60 t",
+          "visible": true
+        },
+        {
+          "size": [
+            640.0,
+            16.0
+          ],
+          "text": "Cabina 2D: No · Cabina 3D: No",
+          "visible": true
+        },
+        {
+          "size": [
+            640.0,
+            16.0
+          ],
+          "text": "Sin locomotora o vehículo con tracción",
+          "visible": true
+        },
+        {
+          "size": [
+            640.0,
+            15.0
+          ],
+          "text": "Trocha: faltan datos para confirmar la compatibilidad",
+          "visible": true
+        },
+        {
+          "size": [
+            640.0,
+            16.0
+          ],
+          "text": "Sin locomotora o vehículo con tracción",
+          "visible": true
+        },
+        {
+          "size": [
+            94.0,
+            16.0
+          ],
+          "text": "Ver detalles",
+          "visible": true
+        },
+        {
+          "size": [
+            196.0,
+            16.0
+          ],
+          "text": "Revisar archivos otra vez",
+          "visible": true
+        },
+        {
+          "size": [
+            668.0,
+            27.0
+          ],
+          "text": "La disponibilidad usa los archivos y datos declarados de esta ruta. Los trenes en gris se pueden seleccionar para consultar el motivo.",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "page": "home",
+      "condition": "ordinary selection",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "scale": 1.5,
+      "report_sha256": "aa25529d4b80c9cfc6d5d8ef40c34c04b5d9f5bdbc7c0e100c3a054f53246e77",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "ui_layout": [
+        {
+          "max": [
+            1203.0,
+            677.0
+          ],
+          "min": [
+            77.0,
+            43.0
+          ],
+          "name": "player-menu"
+        },
+        {
+          "max": [
+            1176.0,
+            578.0
+          ],
+          "min": [
+            104.0,
+            130.0
+          ],
+          "name": "player-scroll"
+        },
+        {
+          "max": [
+            1176.0,
+            638.0
+          ],
+          "min": [
+            104.0,
+            590.0
+          ],
+          "name": "ui-Exit"
+        },
+        {
+          "max": [
+            477.0,
+            118.0
+          ],
+          "min": [
+            335.0,
+            70.0
+          ],
+          "name": "ui-NewGameAdvanced"
+        },
+        {
+          "max": [
+            1176.0,
+            555.0
+          ],
+          "min": [
+            104.0,
+            501.0
+          ],
+          "name": "home-Ajustes"
+        },
+        {
+          "max": [
+            1176.0,
+            483.0
+          ],
+          "min": [
+            104.0,
+            429.0
+          ],
+          "name": "home-Biblioteca"
+        },
+        {
+          "max": [
+            1176.0,
+            411.0
+          ],
+          "min": [
+            104.0,
+            357.0
+          ],
+          "name": "home-Continuar"
+        },
+        {
+          "max": [
+            1176.0,
+            339.0
+          ],
+          "min": [
+            104.0,
+            234.0
+          ],
+          "name": "home-Nueva partida"
+        }
+      ],
+      "ui_text": [
+        {
+          "size": [
+            0.0,
+            0.0
+          ],
+          "text": "FPS: ",
+          "visible": false
+        },
+        {
+          "size": [
+            1072.0,
+            44.0
+          ],
+          "text": "Elegí tu próximo viaje",
+          "visible": true
+        },
+        {
+          "size": [
+            1072.0,
+            24.0
+          ],
+          "text": "Conducí desde la cabina o seguí el tren desde afuera.",
+          "visible": true
+        },
+        {
+          "size": [
+            1012.0,
+            35.0
+          ],
+          "text": "Nueva partida",
+          "visible": true
+        },
+        {
+          "size": [
+            1012.0,
+            24.0
+          ],
+          "text": "Elegí el país, la ruta, el tren y las condiciones del viaje.",
+          "visible": true
+        },
+        {
+          "size": [
+            1012.0,
+            28.0
+          ],
+          "text": "Continuar",
+          "visible": true
+        },
+        {
+          "size": [
+            1012.0,
+            28.0
+          ],
+          "text": "Biblioteca",
+          "visible": true
+        },
+        {
+          "size": [
+            1012.0,
+            28.0
+          ],
+          "text": "Ajustes",
+          "visible": true
+        },
+        {
+          "size": [
+            59.0,
+            24.0
+          ],
+          "text": "Salir",
+          "visible": true
+        },
+        {
+          "size": [
+            219.0,
+            40.0
+          ],
+          "text": "openrailsrs",
+          "visible": true
+        },
+        {
+          "size": [
+            106.0,
+            24.0
+          ],
+          "text": "Avanzadas",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "page": "country",
+      "condition": "ordinary selection",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "scale": 1.5,
+      "report_sha256": "48d154a7c87b4be6495ba7b14aebdb0768cc5aeab8328020485820bc018e8cbb",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "ui_layout": [
+        {
+          "max": [
+            234.0,
+            178.0
+          ],
+          "min": [
+            104.0,
+            130.0
+          ],
+          "name": "ui-NewGameStep(Country)"
+        },
+        {
+          "max": [
+            706.0,
+            118.0
+          ],
+          "min": [
+            564.0,
+            70.0
+          ],
+          "name": "ui-NewGameAdvanced"
+        },
+        {
+          "max": [
+            552.0,
+            118.0
+          ],
+          "min": [
+            375.0,
+            70.0
+          ],
+          "name": "ui-Close"
+        },
+        {
+          "max": [
+            1176.0,
+            638.0
+          ],
+          "min": [
+            104.0,
+            600.0
+          ],
+          "name": "launch-footer"
+        },
+        {
+          "max": [
+            1176.0,
+            588.0
+          ],
+          "min": [
+            104.0,
+            190.0
+          ],
+          "name": "player-scroll"
+        },
+        {
+          "max": [
+            1203.0,
+            677.0
+          ],
+          "min": [
+            77.0,
+            43.0
+          ],
+          "name": "player-menu"
+        },
+        {
+          "max": [
+            1176.0,
+            558.0
+          ],
+          "min": [
+            646.0,
+            510.0
+          ],
+          "name": "ui-SelectCountry(7)"
+        },
+        {
+          "max": [
+            634.0,
+            558.0
+          ],
+          "min": [
+            104.0,
+            510.0
+          ],
+          "name": "ui-SelectCountry(6)"
+        },
+        {
+          "max": [
+            1176.0,
+            492.0
+          ],
+          "min": [
+            646.0,
+            444.0
+          ],
+          "name": "ui-SelectCountry(5)"
+        },
+        {
+          "max": [
+            634.0,
+            492.0
+          ],
+          "min": [
+            104.0,
+            444.0
+          ],
+          "name": "ui-SelectCountry(4)"
+        },
+        {
+          "max": [
+            1176.0,
+            426.0
+          ],
+          "min": [
+            646.0,
+            378.0
+          ],
+          "name": "ui-SelectCountry(3)"
+        },
+        {
+          "max": [
+            634.0,
+            426.0
+          ],
+          "min": [
+            104.0,
+            378.0
+          ],
+          "name": "ui-SelectCountry(2)"
+        },
+        {
+          "max": [
+            1176.0,
+            360.0
+          ],
+          "min": [
+            646.0,
+            312.0
+          ],
+          "name": "ui-SelectCountry(1)"
+        },
+        {
+          "max": [
+            634.0,
+            360.0
+          ],
+          "min": [
+            104.0,
+            312.0
+          ],
+          "name": "ui-SelectCountry(0)"
+        },
+        {
+          "max": [
+            637.0,
+            238.0
+          ],
+          "min": [
+            518.0,
+            190.0
+          ],
+          "name": "ui-Open(Settings)"
+        },
+        {
+          "max": [
+            506.0,
+            238.0
+          ],
+          "min": [
+            352.0,
+            190.0
+          ],
+          "name": "ui-Open(Content)"
+        },
+        {
+          "max": [
+            340.0,
+            238.0
+          ],
+          "min": [
+            104.0,
+            190.0
+          ],
+          "name": "ui-Open(Continue)"
+        }
+      ],
+      "ui_text": [
+        {
+          "size": [
+            1072.0,
+            24.0
+          ],
+          "text": "Primero elegí un país. Después, la ruta y el servicio.",
+          "visible": true
+        },
+        {
+          "size": [
+            141.0,
+            24.0
+          ],
+          "text": "Volver · Esc",
+          "visible": true
+        },
+        {
+          "size": [
+            259.0,
+            40.0
+          ],
+          "text": "Crear partida",
+          "visible": true
+        },
+        {
+          "size": [
+            94.0,
+            24.0
+          ],
+          "text": "1 · País",
+          "visible": true
+        },
+        {
+          "size": [
+            106.0,
+            24.0
+          ],
+          "text": "Avanzadas",
+          "visible": true
+        },
+        {
+          "size": [
+            0.0,
+            0.0
+          ],
+          "text": "FPS: ",
+          "visible": false
+        },
+        {
+          "size": [
+            200.0,
+            24.0
+          ],
+          "text": "Continuar partida",
+          "visible": true
+        },
+        {
+          "size": [
+            118.0,
+            24.0
+          ],
+          "text": "Biblioteca",
+          "visible": true
+        },
+        {
+          "size": [
+            83.0,
+            24.0
+          ],
+          "text": "Ajustes",
+          "visible": true
+        },
+        {
+          "size": [
+            1072.0,
+            38.0
+          ],
+          "text": "¿En qué país querés conducir?",
+          "visible": true
+        },
+        {
+          "size": [
+            317.0,
+            24.0
+          ],
+          "text": "Todos los países · 17 rutas",
+          "visible": true
+        },
+        {
+          "size": [
+            212.0,
+            24.0
+          ],
+          "text": "Argentina · 1 ruta",
+          "visible": true
+        },
+        {
+          "size": [
+            224.0,
+            24.0
+          ],
+          "text": "Australia · 0 rutas",
+          "visible": true
+        },
+        {
+          "size": [
+            282.0,
+            24.0
+          ],
+          "text": "Estados Unidos · 0 rutas",
+          "visible": true
+        },
+        {
+          "size": [
+            212.0,
+            24.0
+          ],
+          "text": "Portugal · 0 rutas",
+          "visible": true
+        },
+        {
+          "size": [
+            235.0,
+            24.0
+          ],
+          "text": "Reino Unido · 1 ruta",
+          "visible": true
+        },
+        {
+          "size": [
+            317.0,
+            24.0
+          ],
+          "text": "Sin dato de país · 15 rutas",
+          "visible": true
+        },
+        {
+          "size": [
+            200.0,
+            24.0
+          ],
+          "text": "Francia · 0 rutas",
+          "visible": true
+        },
+        {
+          "size": [
+            1072.0,
+            22.0
+          ],
+          "text": "Los paquetes conocidos se agrupan por su origen. Los demás aparecen en Sin dato de país.",
+          "visible": true
+        },
+        {
+          "size": [
+            1072.0,
+            24.0
+          ],
+          "text": "Después podés elegir trenes de cualquier país.",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "page": "route",
+      "condition": "ordinary selection",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "scale": 1.5,
+      "report_sha256": "f572eaf0508905eeb32431fe63d43a18fcb1d1268f3c599b3feaa811e416bb58",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "ui_layout": [
+        {
+          "max": [
+            447.0,
+            638.0
+          ],
+          "min": [
+            352.0,
+            590.0
+          ],
+          "name": "ui-Start"
+        },
+        {
+          "max": [
+            340.0,
+            638.0
+          ],
+          "min": [
+            104.0,
+            590.0
+          ],
+          "name": "ui-NewGameStep(Train)"
+        },
+        {
+          "max": [
+            884.0,
+            178.0
+          ],
+          "min": [
+            660.0,
+            130.0
+          ],
+          "name": "ui-NewGameStep(Environment)"
+        },
+        {
+          "max": [
+            648.0,
+            178.0
+          ],
+          "min": [
+            518.0,
+            130.0
+          ],
+          "name": "ui-NewGameStep(Train)"
+        },
+        {
+          "max": [
+            506.0,
+            178.0
+          ],
+          "min": [
+            246.0,
+            130.0
+          ],
+          "name": "ui-NewGameStep(Route)"
+        },
+        {
+          "max": [
+            234.0,
+            178.0
+          ],
+          "min": [
+            104.0,
+            130.0
+          ],
+          "name": "ui-NewGameStep(Country)"
+        },
+        {
+          "max": [
+            706.0,
+            118.0
+          ],
+          "min": [
+            564.0,
+            70.0
+          ],
+          "name": "ui-NewGameAdvanced"
+        },
+        {
+          "max": [
+            552.0,
+            118.0
+          ],
+          "min": [
+            375.0,
+            70.0
+          ],
+          "name": "ui-Close"
+        },
+        {
+          "max": [
+            1176.0,
+            638.0
+          ],
+          "min": [
+            104.0,
+            523.0
+          ],
+          "name": "launch-footer"
+        },
+        {
+          "max": [
+            1176.0,
+            511.0
+          ],
+          "min": [
+            104.0,
+            190.0
+          ],
+          "name": "player-scroll"
+        },
+        {
+          "max": [
+            293.0,
+            914.0
+          ],
+          "min": [
+            104.0,
+            866.0
+          ],
+          "name": "ui-PreviewRouteView"
+        },
+        {
+          "max": [
+            553.0,
+            770.0
+          ],
+          "min": [
+            329.0,
+            722.0
+          ],
+          "name": "ui-ChoicePage(Route, 1)"
+        },
+        {
+          "max": [
+            317.0,
+            770.0
+          ],
+          "min": [
+            104.0,
+            722.0
+          ],
+          "name": "ui-ChoicePage(Route, -1)"
+        },
+        {
+          "max": [
+            1176.0,
+            710.0
+          ],
+          "min": [
+            104.0,
+            663.0
+          ],
+          "name": "choice-Route-14"
+        },
+        {
+          "max": [
+            1176.0,
+            651.0
+          ],
+          "min": [
+            104.0,
+            604.0
+          ],
+          "name": "choice-Route-15"
+        },
+        {
+          "max": [
+            1176.0,
+            592.0
+          ],
+          "min": [
+            104.0,
+            545.0
+          ],
+          "name": "choice-Route-5"
+        },
+        {
+          "max": [
+            1176.0,
+            533.0
+          ],
+          "min": [
+            104.0,
+            486.0
+          ],
+          "name": "choice-Route-0"
+        },
+        {
+          "max": [
+            1176.0,
+            474.0
+          ],
+          "min": [
+            104.0,
+            427.0
+          ],
+          "name": "choice-Route-13"
+        },
+        {
+          "max": [
+            1176.0,
+            381.0
+          ],
+          "min": [
+            104.0,
+            333.0
+          ],
+          "name": "ui-FocusSearch(Route)"
+        },
+        {
+          "max": [
+            353.0,
+            287.0
+          ],
+          "min": [
+            211.0,
+            239.0
+          ],
+          "name": "ui-ShowChoices(Service)"
+        },
+        {
+          "max": [
+            199.0,
+            287.0
+          ],
+          "min": [
+            104.0,
+            239.0
+          ],
+          "name": "ui-ShowChoices(Route)"
+        },
+        {
+          "max": [
+            1203.0,
+            677.0
+          ],
+          "min": [
+            77.0,
+            43.0
+          ],
+          "name": "player-menu"
+        }
+      ],
+      "ui_text": [
+        {
+          "size": [
+            0.0,
+            0.0
+          ],
+          "text": "FPS: ",
+          "visible": false
+        },
+        {
+          "size": [
+            174.0,
+            22.0
+          ],
+          "text": "Listo para jugar",
+          "visible": true
+        },
+        {
+          "size": [
+            59.0,
+            24.0
+          ],
+          "text": "Jugar",
+          "visible": true
+        },
+        {
+          "size": [
+            200.0,
+            24.0
+          ],
+          "text": "Siguiente: tren →",
+          "visible": true
+        },
+        {
+          "size": [
+            1072.0,
+            44.0
+          ],
+          "text": "Chiltern · birmingham_pullman\nSalida 09:55:00 · Despejado",
+          "visible": true
+        },
+        {
+          "size": [
+            141.0,
+            24.0
+          ],
+          "text": "Volver · Esc",
+          "visible": true
+        },
+        {
+          "size": [
+            259.0,
+            40.0
+          ],
+          "text": "Crear partida",
+          "visible": true
+        },
+        {
+          "size": [
+            188.0,
+            24.0
+          ],
+          "text": "4 · Hora y clima",
+          "visible": true
+        },
+        {
+          "size": [
+            94.0,
+            24.0
+          ],
+          "text": "3 · Tren",
+          "visible": true
+        },
+        {
+          "size": [
+            224.0,
+            24.0
+          ],
+          "text": "2 · Ruta y servicio",
+          "visible": true
+        },
+        {
+          "size": [
+            94.0,
+            24.0
+          ],
+          "text": "1 · País",
+          "visible": true
+        },
+        {
+          "size": [
+            106.0,
+            24.0
+          ],
+          "text": "Avanzadas",
+          "visible": true
+        },
+        {
+          "size": [
+            1072.0,
+            31.0
+          ],
+          "text": "Todos los países · Ruta y servicio",
+          "visible": true
+        },
+        {
+          "size": [
+            59.0,
+            24.0
+          ],
+          "text": "Rutas",
+          "visible": true
+        },
+        {
+          "size": [
+            106.0,
+            24.0
+          ],
+          "text": "Servicios",
+          "visible": true
+        },
+        {
+          "size": [
+            1072.0,
+            22.0
+          ],
+          "text": "Servicio: Chiltern extendido: Northolt Park → Gerra…",
+          "visible": true
+        },
+        {
+          "size": [
+            153.0,
+            24.0
+          ],
+          "text": "Buscar rutas…",
+          "visible": true
+        },
+        {
+          "size": [
+            1072.0,
+            22.0
+          ],
+          "text": "17 rutas · página 1 de 4",
+          "visible": true
+        },
+        {
+          "size": [
+            1038.0,
+            26.0
+          ],
+          "text": "bogie_curve_route",
+          "visible": true
+        },
+        {
+          "size": [
+            1038.0,
+            26.0
+          ],
+          "text": "✓ Chiltern",
+          "visible": true
+        },
+        {
+          "size": [
+            1038.0,
+            26.0
+          ],
+          "text": "class47_reference",
+          "visible": true
+        },
+        {
+          "size": [
+            1038.0,
+            26.0
+          ],
+          "text": "curve_route",
+          "visible": true
+        },
+        {
+          "size": [
+            1038.0,
+            26.0
+          ],
+          "text": "derailment_route",
+          "visible": true
+        },
+        {
+          "size": [
+            177.0,
+            24.0
+          ],
+          "text": "Página anterior",
+          "visible": true
+        },
+        {
+          "size": [
+            188.0,
+            24.0
+          ],
+          "text": "Página siguiente",
+          "visible": true
+        },
+        {
+          "size": [
+            1072.0,
+            20.0
+          ],
+          "text": "Podés seleccionar también los elementos en gris para ver sus detalles.",
+          "visible": true
+        },
+        {
+          "size": [
+            1072.0,
+            31.0
+          ],
+          "text": "Vista previa de la ruta",
+          "visible": true
+        },
+        {
+          "size": [
+            153.0,
+            24.0
+          ],
+          "text": "Imagen / Mapa",
+          "visible": true
+        },
+        {
+          "size": [
+            1072.0,
+            22.0
+          ],
+          "text": "Imagen incluida por el autor",
+          "visible": true
+        },
+        {
+          "size": [
+            1072.0,
+            22.0
+          ],
+          "text": "Mapa del servicio disponible · Imagen / Mapa",
+          "visible": true
+        },
+        {
+          "size": [
+            1072.0,
+            22.0
+          ],
+          "text": "Trocha 1435 mm · Catenaria · 25000 V",
+          "visible": true
+        },
+        {
+          "size": [
+            1030.0,
+            24.0
+          ],
+          "text": "Seis estaciones originales, pendientes, límites por posición y tráfico vivo.",
+          "visible": true
+        },
+        {
+          "size": [
+            1030.0,
+            55.0
+          ],
+          "text": "Northolt Park → South Ruislip → West Ruislip → Denham → Denham Golf Course → Gerrards Cross",
+          "visible": true
+        },
+        {
+          "size": [
+            1030.0,
+            24.0
+          ],
+          "text": "Horario del servicio · 35 min",
+          "visible": true
+        },
+        {
+          "size": [
+            1030.0,
+            22.0
+          ],
+          "text": "Escenario de ejemplo · ver recursos para comprobar el contenido 3D",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "page": "train",
+      "condition": "ordinary selection",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "scale": 1.5,
+      "report_sha256": "fb6bdd81aac9e4217ebf489ded30104f5808f88b43c355e4446774677fc3932e",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "ui_layout": [
+        {
+          "max": [
+            628.0,
+            285.0
+          ],
+          "min": [
+            104.0,
+            256.0
+          ],
+          "name": "train-ready-heading"
+        },
+        {
+          "max": [
+            1176.0,
+            285.0
+          ],
+          "min": [
+            652.0,
+            256.0
+          ],
+          "name": "train-unavailable-heading"
+        },
+        {
+          "max": [
+            1176.0,
+            511.0
+          ],
+          "min": [
+            104.0,
+            190.0
+          ],
+          "name": "player-scroll"
+        },
+        {
+          "max": [
+            302.0,
+            1019.0
+          ],
+          "min": [
+            125.0,
+            971.0
+          ],
+          "name": "ui-Open(MissingResources)"
+        },
+        {
+          "max": [
+            838.0,
+            672.0
+          ],
+          "min": [
+            790.0,
+            624.0
+          ],
+          "name": "ui-TrainChoicePage(1, 1)"
+        },
+        {
+          "max": [
+            700.0,
+            672.0
+          ],
+          "min": [
+            652.0,
+            624.0
+          ],
+          "name": "ui-TrainChoicePage(1, -1)"
+        },
+        {
+          "max": [
+            1176.0,
+            614.0
+          ],
+          "min": [
+            652.0,
+            515.0
+          ],
+          "name": "choice-Consist-3"
+        },
+        {
+          "max": [
+            1176.0,
+            504.0
+          ],
+          "min": [
+            652.0,
+            405.0
+          ],
+          "name": "choice-Consist-2"
+        },
+        {
+          "max": [
+            1176.0,
+            395.0
+          ],
+          "min": [
+            652.0,
+            296.0
+          ],
+          "name": "choice-Consist-1"
+        },
+        {
+          "max": [
+            628.0,
+            415.0
+          ],
+          "min": [
+            104.0,
+            296.0
+          ],
+          "name": "choice-Consist-0"
+        },
+        {
+          "max": [
+            1176.0,
+            238.0
+          ],
+          "min": [
+            104.0,
+            190.0
+          ],
+          "name": "ui-FocusSearch(Consist)"
+        },
+        {
+          "max": [
+            628.0,
+            415.0
+          ],
+          "min": [
+            104.0,
+            256.0
+          ],
+          "name": "train-ready-list"
+        },
+        {
+          "max": [
+            1176.0,
+            672.0
+          ],
+          "min": [
+            652.0,
+            256.0
+          ],
+          "name": "train-unavailable-list"
+        },
+        {
+          "max": [
+            1203.0,
+            677.0
+          ],
+          "min": [
+            77.0,
+            43.0
+          ],
+          "name": "player-menu"
+        },
+        {
+          "max": [
+            1176.0,
+            638.0
+          ],
+          "min": [
+            104.0,
+            523.0
+          ],
+          "name": "launch-footer"
+        },
+        {
+          "max": [
+            531.0,
+            638.0
+          ],
+          "min": [
+            436.0,
+            590.0
+          ],
+          "name": "ui-Start"
+        },
+        {
+          "max": [
+            424.0,
+            638.0
+          ],
+          "min": [
+            223.0,
+            590.0
+          ],
+          "name": "ui-NewGameStep(Environment)"
+        },
+        {
+          "max": [
+            211.0,
+            638.0
+          ],
+          "min": [
+            104.0,
+            590.0
+          ],
+          "name": "ui-NewGameStep(Route)"
+        },
+        {
+          "max": [
+            884.0,
+            178.0
+          ],
+          "min": [
+            660.0,
+            130.0
+          ],
+          "name": "ui-NewGameStep(Environment)"
+        },
+        {
+          "max": [
+            648.0,
+            178.0
+          ],
+          "min": [
+            518.0,
+            130.0
+          ],
+          "name": "ui-NewGameStep(Train)"
+        },
+        {
+          "max": [
+            506.0,
+            178.0
+          ],
+          "min": [
+            246.0,
+            130.0
+          ],
+          "name": "ui-NewGameStep(Route)"
+        },
+        {
+          "max": [
+            234.0,
+            178.0
+          ],
+          "min": [
+            104.0,
+            130.0
+          ],
+          "name": "ui-NewGameStep(Country)"
+        },
+        {
+          "max": [
+            706.0,
+            118.0
+          ],
+          "min": [
+            564.0,
+            70.0
+          ],
+          "name": "ui-NewGameAdvanced"
+        },
+        {
+          "max": [
+            552.0,
+            118.0
+          ],
+          "min": [
+            375.0,
+            70.0
+          ],
+          "name": "ui-Close"
+        }
+      ],
+      "ui_text": [
+        {
+          "size": [
+            0.0,
+            0.0
+          ],
+          "text": "FPS: ",
+          "visible": false
+        },
+        {
+          "size": [
+            224.0,
+            24.0
+          ],
+          "text": "Buscar formaciones…",
+          "visible": true
+        },
+        {
+          "size": [
+            496.0,
+            26.0
+          ],
+          "text": "✓ birmingham_pullman",
+          "visible": true
+        },
+        {
+          "size": [
+            496.0,
+            20.0
+          ],
+          "text": "Ejemplo · Chiltern",
+          "visible": true
+        },
+        {
+          "size": [
+            496.0,
+            40.0
+          ],
+          "text": "Trocha: faltan datos para confirmar la compatibilidad",
+          "visible": true
+        },
+        {
+          "size": [
+            496.0,
+            26.0
+          ],
+          "text": "121_2car_set",
+          "visible": true
+        },
+        {
+          "size": [
+            496.0,
+            20.0
+          ],
+          "text": "Chiltern",
+          "visible": true
+        },
+        {
+          "size": [
+            496.0,
+            20.0
+          ],
+          "text": "Revisando archivos… todavía no se puede iniciar",
+          "visible": true
+        },
+        {
+          "size": [
+            496.0,
+            26.0
+          ],
+          "text": "121single",
+          "visible": true
+        },
+        {
+          "size": [
+            496.0,
+            20.0
+          ],
+          "text": "Chiltern",
+          "visible": true
+        },
+        {
+          "size": [
+            496.0,
+            20.0
+          ],
+          "text": "Revisando archivos… todavía no se puede iniciar",
+          "visible": true
+        },
+        {
+          "size": [
+            496.0,
+            26.0
+          ],
+          "text": "1960CentralWR8Car",
+          "visible": true
+        },
+        {
+          "size": [
+            496.0,
+            20.0
+          ],
+          "text": "Chiltern",
+          "visible": true
+        },
+        {
+          "size": [
+            496.0,
+            20.0
+          ],
+          "text": "Revisando archivos… todavía no se puede iniciar",
+          "visible": true
+        },
+        {
+          "size": [
+            12.0,
+            24.0
+          ],
+          "text": "←",
+          "visible": true
+        },
+        {
+          "size": [
+            66.0,
+            22.0
+          ],
+          "text": "1 / 74",
+          "visible": true
+        },
+        {
+          "size": [
+            12.0,
+            24.0
+          ],
+          "text": "→",
+          "visible": true
+        },
+        {
+          "size": [
+            1072.0,
+            31.0
+          ],
+          "text": "birmingham_pullman",
+          "visible": true
+        },
+        {
+          "size": [
+            1072.0,
+            22.0
+          ],
+          "text": "Sin vista previa 3D: El modelo sale de su paquete",
+          "visible": true
+        },
+        {
+          "size": [
+            1030.0,
+            26.0
+          ],
+          "text": "8 vehículos (2 con tracción) · 166 m · 435 t",
+          "visible": true
+        },
+        {
+          "size": [
+            1030.0,
+            24.0
+          ],
+          "text": "Cabina 2D: No · Cabina 3D: Sí",
+          "visible": true
+        },
+        {
+          "size": [
+            1030.0,
+            22.0
+          ],
+          "text": "Trocha: faltan datos para confirmar la compatibilidad",
+          "visible": true
+        },
+        {
+          "size": [
+            1030.0,
+            24.0
+          ],
+          "text": "Listo para jugar",
+          "visible": true
+        },
+        {
+          "size": [
+            141.0,
+            24.0
+          ],
+          "text": "Ver detalles",
+          "visible": true
+        },
+        {
+          "size": [
+            1072.0,
+            40.0
+          ],
+          "text": "La disponibilidad usa los archivos y datos declarados de esta ruta. Los trenes en gris se pueden seleccionar para consultar el motivo.",
+          "visible": true
+        },
+        {
+          "size": [
+            174.0,
+            22.0
+          ],
+          "text": "Listo para jugar",
+          "visible": true
+        },
+        {
+          "size": [
+            59.0,
+            24.0
+          ],
+          "text": "Jugar",
+          "visible": true
+        },
+        {
+          "size": [
+            165.0,
+            24.0
+          ],
+          "text": "Hora y clima →",
+          "visible": true
+        },
+        {
+          "size": [
+            71.0,
+            24.0
+          ],
+          "text": "← Ruta",
+          "visible": true
+        },
+        {
+          "size": [
+            1072.0,
+            44.0
+          ],
+          "text": "Chiltern · birmingham_pullman\nSalida 09:55:00 · Despejado",
+          "visible": true
+        },
+        {
+          "size": [
+            106.0,
+            24.0
+          ],
+          "text": "Avanzadas",
+          "visible": true
+        },
+        {
+          "size": [
+            141.0,
+            24.0
+          ],
+          "text": "Volver · Esc",
+          "visible": true
+        },
+        {
+          "size": [
+            259.0,
+            40.0
+          ],
+          "text": "Crear partida",
+          "visible": true
+        },
+        {
+          "size": [
+            188.0,
+            24.0
+          ],
+          "text": "4 · Hora y clima",
+          "visible": true
+        },
+        {
+          "size": [
+            94.0,
+            24.0
+          ],
+          "text": "3 · Tren",
+          "visible": true
+        },
+        {
+          "size": [
+            224.0,
+            24.0
+          ],
+          "text": "2 · Ruta y servicio",
+          "visible": true
+        },
+        {
+          "size": [
+            94.0,
+            24.0
+          ],
+          "text": "1 · País",
+          "visible": true
+        },
+        {
+          "size": [
+            524.0,
+            29.0
+          ],
+          "text": "Pueden circular (1)",
+          "visible": true
+        },
+        {
+          "size": [
+            524.0,
+            29.0
+          ],
+          "text": "No disponibles (220)",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "page": "weather",
+      "condition": "ordinary selection",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "scale": 1.5,
+      "report_sha256": "7290d8874aa220981331c9ab941f24771ed5464f5caa400f2f4ff5baaa4af7c1",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "ui_layout": [
+        {
+          "max": [
+            318.0,
+            638.0
+          ],
+          "min": [
+            223.0,
+            590.0
+          ],
+          "name": "ui-Start"
+        },
+        {
+          "max": [
+            211.0,
+            638.0
+          ],
+          "min": [
+            104.0,
+            590.0
+          ],
+          "name": "ui-NewGameStep(Train)"
+        },
+        {
+          "max": [
+            884.0,
+            178.0
+          ],
+          "min": [
+            660.0,
+            130.0
+          ],
+          "name": "ui-NewGameStep(Environment)"
+        },
+        {
+          "max": [
+            648.0,
+            178.0
+          ],
+          "min": [
+            518.0,
+            130.0
+          ],
+          "name": "ui-NewGameStep(Train)"
+        },
+        {
+          "max": [
+            506.0,
+            178.0
+          ],
+          "min": [
+            246.0,
+            130.0
+          ],
+          "name": "ui-NewGameStep(Route)"
+        },
+        {
+          "max": [
+            234.0,
+            178.0
+          ],
+          "min": [
+            104.0,
+            130.0
+          ],
+          "name": "ui-NewGameStep(Country)"
+        },
+        {
+          "max": [
+            706.0,
+            118.0
+          ],
+          "min": [
+            564.0,
+            70.0
+          ],
+          "name": "ui-NewGameAdvanced"
+        },
+        {
+          "max": [
+            552.0,
+            118.0
+          ],
+          "min": [
+            375.0,
+            70.0
+          ],
+          "name": "ui-Close"
+        },
+        {
+          "max": [
+            1176.0,
+            638.0
+          ],
+          "min": [
+            104.0,
+            523.0
+          ],
+          "name": "launch-footer"
+        },
+        {
+          "max": [
+            1176.0,
+            511.0
+          ],
+          "min": [
+            104.0,
+            190.0
+          ],
+          "name": "player-scroll"
+        },
+        {
+          "max": [
+            1176.0,
+            492.0
+          ],
+          "min": [
+            1128.0,
+            444.0
+          ],
+          "name": "ui-Cycle(Season, 1)"
+        },
+        {
+          "max": [
+            389.0,
+            492.0
+          ],
+          "min": [
+            341.0,
+            444.0
+          ],
+          "name": "ui-Cycle(Season, -1)"
+        },
+        {
+          "max": [
+            1176.0,
+            426.0
+          ],
+          "min": [
+            1128.0,
+            378.0
+          ],
+          "name": "ui-Cycle(Weather, 1)"
+        },
+        {
+          "max": [
+            389.0,
+            426.0
+          ],
+          "min": [
+            341.0,
+            378.0
+          ],
+          "name": "ui-Cycle(Weather, -1)"
+        },
+        {
+          "max": [
+            1176.0,
+            360.0
+          ],
+          "min": [
+            1128.0,
+            312.0
+          ],
+          "name": "ui-Cycle(WeatherSource, 1)"
+        },
+        {
+          "max": [
+            389.0,
+            360.0
+          ],
+          "min": [
+            341.0,
+            312.0
+          ],
+          "name": "ui-Cycle(WeatherSource, -1)"
+        },
+        {
+          "max": [
+            1176.0,
+            294.0
+          ],
+          "min": [
+            1128.0,
+            246.0
+          ],
+          "name": "ui-Cycle(Time, 1)"
+        },
+        {
+          "max": [
+            389.0,
+            294.0
+          ],
+          "min": [
+            341.0,
+            246.0
+          ],
+          "name": "ui-Cycle(Time, -1)"
+        },
+        {
+          "max": [
+            1203.0,
+            677.0
+          ],
+          "min": [
+            77.0,
+            43.0
+          ],
+          "name": "player-menu"
+        }
+      ],
+      "ui_text": [
+        {
+          "size": [
+            0.0,
+            0.0
+          ],
+          "text": "FPS: ",
+          "visible": false
+        },
+        {
+          "size": [
+            174.0,
+            22.0
+          ],
+          "text": "Listo para jugar",
+          "visible": true
+        },
+        {
+          "size": [
+            59.0,
+            24.0
+          ],
+          "text": "Jugar",
+          "visible": true
+        },
+        {
+          "size": [
+            71.0,
+            24.0
+          ],
+          "text": "← Tren",
+          "visible": true
+        },
+        {
+          "size": [
+            1072.0,
+            44.0
+          ],
+          "text": "Chiltern · birmingham_pullman\nSalida 09:55:00 · Despejado",
+          "visible": true
+        },
+        {
+          "size": [
+            94.0,
+            24.0
+          ],
+          "text": "1 · País",
+          "visible": true
+        },
+        {
+          "size": [
+            106.0,
+            24.0
+          ],
+          "text": "Avanzadas",
+          "visible": true
+        },
+        {
+          "size": [
+            141.0,
+            24.0
+          ],
+          "text": "Volver · Esc",
+          "visible": true
+        },
+        {
+          "size": [
+            259.0,
+            40.0
+          ],
+          "text": "Crear partida",
+          "visible": true
+        },
+        {
+          "size": [
+            188.0,
+            24.0
+          ],
+          "text": "4 · Hora y clima",
+          "visible": true
+        },
+        {
+          "size": [
+            94.0,
+            24.0
+          ],
+          "text": "3 · Tren",
+          "visible": true
+        },
+        {
+          "size": [
+            224.0,
+            24.0
+          ],
+          "text": "2 · Ruta y servicio",
+          "visible": true
+        },
+        {
+          "size": [
+            1072.0,
+            38.0
+          ],
+          "text": "Prepará las condiciones del viaje",
+          "visible": true
+        },
+        {
+          "size": [
+            178.0,
+            26.0
+          ],
+          "text": "Hora de salida",
+          "visible": true
+        },
+        {
+          "size": [
+            12.0,
+            24.0
+          ],
+          "text": "‹",
+          "visible": true
+        },
+        {
+          "size": [
+            109.0,
+            28.0
+          ],
+          "text": "09:55:00",
+          "visible": true
+        },
+        {
+          "size": [
+            12.0,
+            24.0
+          ],
+          "text": "›",
+          "visible": true
+        },
+        {
+          "size": [
+            178.0,
+            26.0
+          ],
+          "text": "Modo del clima",
+          "visible": true
+        },
+        {
+          "size": [
+            12.0,
+            24.0
+          ],
+          "text": "‹",
+          "visible": true
+        },
+        {
+          "size": [
+            299.0,
+            28.0
+          ],
+          "text": "Fijo · elegido por vos",
+          "visible": true
+        },
+        {
+          "size": [
+            12.0,
+            24.0
+          ],
+          "text": "›",
+          "visible": true
+        },
+        {
+          "size": [
+            165.0,
+            26.0
+          ],
+          "text": "Clima elegido",
+          "visible": true
+        },
+        {
+          "size": [
+            12.0,
+            24.0
+          ],
+          "text": "‹",
+          "visible": true
+        },
+        {
+          "size": [
+            122.0,
+            28.0
+          ],
+          "text": "Despejado",
+          "visible": true
+        },
+        {
+          "size": [
+            12.0,
+            24.0
+          ],
+          "text": "›",
+          "visible": true
+        },
+        {
+          "size": [
+            203.0,
+            26.0
+          ],
+          "text": "Estación del año",
+          "visible": true
+        },
+        {
+          "size": [
+            12.0,
+            24.0
+          ],
+          "text": "‹",
+          "visible": true
+        },
+        {
+          "size": [
+            82.0,
+            28.0
+          ],
+          "text": "Verano",
+          "visible": true
+        },
+        {
+          "size": [
+            12.0,
+            24.0
+          ],
+          "text": "›",
+          "visible": true
+        },
+        {
+          "size": [
+            1072.0,
+            24.0
+          ],
+          "text": "Hora visual: Elegido por el jugador",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "page": "train-options",
+      "condition": "ordinary selection",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "scale": 1.5,
+      "report_sha256": "6bf26994eb3d64204b7355db8e6ad79134a52314c27a924fd2f63a88024ff1a6",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "ui_layout": [
+        {
+          "max": [
+            628.0,
+            351.0
+          ],
+          "min": [
+            104.0,
+            322.0
+          ],
+          "name": "train-ready-heading"
+        },
+        {
+          "max": [
+            1176.0,
+            351.0
+          ],
+          "min": [
+            652.0,
+            322.0
+          ],
+          "name": "train-unavailable-heading"
+        },
+        {
+          "max": [
+            1176.0,
+            511.0
+          ],
+          "min": [
+            104.0,
+            190.0
+          ],
+          "name": "player-scroll"
+        },
+        {
+          "max": [
+            823.0,
+            1665.0
+          ],
+          "min": [
+            458.0,
+            1617.0
+          ],
+          "name": "ui-Open(VehicleProfile)"
+        },
+        {
+          "max": [
+            446.0,
+            1665.0
+          ],
+          "min": [
+            104.0,
+            1617.0
+          ],
+          "name": "ui-FormationEditorStart"
+        },
+        {
+          "max": [
+            1155.0,
+            1443.0
+          ],
+          "min": [
+            125.0,
+            1395.0
+          ],
+          "name": "ui-SelectChoice(Consist, 0)"
+        },
+        {
+          "max": [
+            644.0,
+            1234.0
+          ],
+          "min": [
+            314.0,
+            1186.0
+          ],
+          "name": "ui-MissingAudit"
+        },
+        {
+          "max": [
+            302.0,
+            1234.0
+          ],
+          "min": [
+            125.0,
+            1186.0
+          ],
+          "name": "ui-Open(MissingResources)"
+        },
+        {
+          "max": [
+            838.0,
+            738.0
+          ],
+          "min": [
+            790.0,
+            690.0
+          ],
+          "name": "ui-TrainChoicePage(1, 1)"
+        },
+        {
+          "max": [
+            700.0,
+            738.0
+          ],
+          "min": [
+            652.0,
+            690.0
+          ],
+          "name": "ui-TrainChoicePage(1, -1)"
+        },
+        {
+          "max": [
+            1176.0,
+            680.0
+          ],
+          "min": [
+            652.0,
+            581.0
+          ],
+          "name": "choice-Consist-3"
+        },
+        {
+          "max": [
+            1176.0,
+            570.0
+          ],
+          "min": [
+            652.0,
+            471.0
+          ],
+          "name": "choice-Consist-2"
+        },
+        {
+          "max": [
+            1176.0,
+            461.0
+          ],
+          "min": [
+            652.0,
+            362.0
+          ],
+          "name": "choice-Consist-1"
+        },
+        {
+          "max": [
+            628.0,
+            481.0
+          ],
+          "min": [
+            104.0,
+            362.0
+          ],
+          "name": "choice-Consist-0"
+        },
+        {
+          "max": [
+            731.0,
+            304.0
+          ],
+          "min": [
+            542.0,
+            256.0
+          ],
+          "name": "ui-ChoiceSort(Consist)"
+        },
+        {
+          "max": [
+            530.0,
+            304.0
+          ],
+          "min": [
+            376.0,
+            256.0
+          ],
+          "name": "ui-ToggleFavorite(Consist, 0)"
+        },
+        {
+          "max": [
+            364.0,
+            304.0
+          ],
+          "min": [
+            104.0,
+            256.0
+          ],
+          "name": "ui-ChoiceFilter(Consist, Toggle)"
+        },
+        {
+          "max": [
+            1176.0,
+            238.0
+          ],
+          "min": [
+            104.0,
+            190.0
+          ],
+          "name": "ui-FocusSearch(Consist)"
+        },
+        {
+          "max": [
+            628.0,
+            481.0
+          ],
+          "min": [
+            104.0,
+            322.0
+          ],
+          "name": "train-ready-list"
+        },
+        {
+          "max": [
+            1176.0,
+            738.0
+          ],
+          "min": [
+            652.0,
+            322.0
+          ],
+          "name": "train-unavailable-list"
+        },
+        {
+          "max": [
+            1203.0,
+            677.0
+          ],
+          "min": [
+            77.0,
+            43.0
+          ],
+          "name": "player-menu"
+        },
+        {
+          "max": [
+            1176.0,
+            638.0
+          ],
+          "min": [
+            104.0,
+            523.0
+          ],
+          "name": "launch-footer"
+        },
+        {
+          "max": [
+            531.0,
+            638.0
+          ],
+          "min": [
+            436.0,
+            590.0
+          ],
+          "name": "ui-Start"
+        },
+        {
+          "max": [
+            424.0,
+            638.0
+          ],
+          "min": [
+            223.0,
+            590.0
+          ],
+          "name": "ui-NewGameStep(Environment)"
+        },
+        {
+          "max": [
+            211.0,
+            638.0
+          ],
+          "min": [
+            104.0,
+            590.0
+          ],
+          "name": "ui-NewGameStep(Route)"
+        },
+        {
+          "max": [
+            884.0,
+            178.0
+          ],
+          "min": [
+            660.0,
+            130.0
+          ],
+          "name": "ui-NewGameStep(Environment)"
+        },
+        {
+          "max": [
+            648.0,
+            178.0
+          ],
+          "min": [
+            518.0,
+            130.0
+          ],
+          "name": "ui-NewGameStep(Train)"
+        },
+        {
+          "max": [
+            506.0,
+            178.0
+          ],
+          "min": [
+            246.0,
+            130.0
+          ],
+          "name": "ui-NewGameStep(Route)"
+        },
+        {
+          "max": [
+            234.0,
+            178.0
+          ],
+          "min": [
+            104.0,
+            130.0
+          ],
+          "name": "ui-NewGameStep(Country)"
+        },
+        {
+          "max": [
+            800.0,
+            118.0
+          ],
+          "min": [
+            564.0,
+            70.0
+          ],
+          "name": "ui-NewGameAdvanced"
+        },
+        {
+          "max": [
+            552.0,
+            118.0
+          ],
+          "min": [
+            375.0,
+            70.0
+          ],
+          "name": "ui-Close"
+        }
+      ],
+      "ui_text": [
+        {
+          "size": [
+            0.0,
+            0.0
+          ],
+          "text": "FPS: ",
+          "visible": false
+        },
+        {
+          "size": [
+            224.0,
+            24.0
+          ],
+          "text": "Buscar formaciones…",
+          "visible": true
+        },
+        {
+          "size": [
+            224.0,
+            24.0
+          ],
+          "text": "Filtros · 0 activos",
+          "visible": true
+        },
+        {
+          "size": [
+            118.0,
+            24.0
+          ],
+          "text": "☆ Favorito",
+          "visible": true
+        },
+        {
+          "size": [
+            153.0,
+            24.0
+          ],
+          "text": "Orden: nombre",
+          "visible": true
+        },
+        {
+          "size": [
+            496.0,
+            26.0
+          ],
+          "text": "✓ birmingham_pullman",
+          "visible": true
+        },
+        {
+          "size": [
+            496.0,
+            20.0
+          ],
+          "text": "Ejemplo · Chiltern",
+          "visible": true
+        },
+        {
+          "size": [
+            496.0,
+            40.0
+          ],
+          "text": "Trocha: faltan datos para confirmar la compatibilidad",
+          "visible": true
+        },
+        {
+          "size": [
+            496.0,
+            26.0
+          ],
+          "text": "121_2car_set",
+          "visible": true
+        },
+        {
+          "size": [
+            496.0,
+            20.0
+          ],
+          "text": "Chiltern",
+          "visible": true
+        },
+        {
+          "size": [
+            496.0,
+            20.0
+          ],
+          "text": "Revisando archivos… todavía no se puede iniciar",
+          "visible": true
+        },
+        {
+          "size": [
+            496.0,
+            26.0
+          ],
+          "text": "121single",
+          "visible": true
+        },
+        {
+          "size": [
+            496.0,
+            20.0
+          ],
+          "text": "Chiltern",
+          "visible": true
+        },
+        {
+          "size": [
+            496.0,
+            20.0
+          ],
+          "text": "Revisando archivos… todavía no se puede iniciar",
+          "visible": true
+        },
+        {
+          "size": [
+            496.0,
+            26.0
+          ],
+          "text": "1960CentralWR8Car",
+          "visible": true
+        },
+        {
+          "size": [
+            496.0,
+            20.0
+          ],
+          "text": "Chiltern",
+          "visible": true
+        },
+        {
+          "size": [
+            496.0,
+            20.0
+          ],
+          "text": "Revisando archivos… todavía no se puede iniciar",
+          "visible": true
+        },
+        {
+          "size": [
+            12.0,
+            24.0
+          ],
+          "text": "←",
+          "visible": true
+        },
+        {
+          "size": [
+            66.0,
+            22.0
+          ],
+          "text": "1 / 74",
+          "visible": true
+        },
+        {
+          "size": [
+            12.0,
+            24.0
+          ],
+          "text": "→",
+          "visible": true
+        },
+        {
+          "size": [
+            1072.0,
+            31.0
+          ],
+          "text": "birmingham_pullman",
+          "visible": true
+        },
+        {
+          "size": [
+            1072.0,
+            24.0
+          ],
+          "text": "Gálibo de infraestructura desconocido; se conserva la selección",
+          "visible": true
+        },
+        {
+          "size": [
+            1072.0,
+            22.0
+          ],
+          "text": "Sin vista previa 3D: El modelo sale de su paquete",
+          "visible": true
+        },
+        {
+          "size": [
+            1030.0,
+            26.0
+          ],
+          "text": "8 vehículos (2 con tracción) · 166 m · 435 t",
+          "visible": true
+        },
+        {
+          "size": [
+            1030.0,
+            24.0
+          ],
+          "text": "Cabina 2D: No · Cabina 3D: Sí",
+          "visible": true
+        },
+        {
+          "size": [
+            1030.0,
+            65.0
+          ],
+          "text": "Validación de recursos: completos\nCirculación: sin ensayo registrado de esta combinación\nSistemas contrastados: 0/8 vehículos · Open Rails 1.6.1 · alcance parcial",
+          "visible": true
+        },
+        {
+          "size": [
+            1030.0,
+            22.0
+          ],
+          "text": "8 avisos de compatibilidad · Ver detalles",
+          "visible": true
+        },
+        {
+          "size": [
+            1030.0,
+            22.0
+          ],
+          "text": "Trocha: faltan datos para confirmar la compatibilidad",
+          "visible": true
+        },
+        {
+          "size": [
+            1030.0,
+            24.0
+          ],
+          "text": "Listo para jugar",
+          "visible": true
+        },
+        {
+          "size": [
+            141.0,
+            24.0
+          ],
+          "text": "Ver detalles",
+          "visible": true
+        },
+        {
+          "size": [
+            294.0,
+            24.0
+          ],
+          "text": "Revisar archivos otra vez",
+          "visible": true
+        },
+        {
+          "size": [
+            1072.0,
+            40.0
+          ],
+          "text": "La disponibilidad usa los archivos y datos declarados de esta ruta. Los trenes en gris se pueden seleccionar para consultar el motivo.",
+          "visible": true
+        },
+        {
+          "size": [
+            1030.0,
+            29.0
+          ],
+          "text": "Formaciones sugeridas",
+          "visible": true
+        },
+        {
+          "size": [
+            212.0,
+            24.0
+          ],
+          "text": "birmingham_pullman",
+          "visible": true
+        },
+        {
+          "size": [
+            1030.0,
+            65.0
+          ],
+          "text": "recursos y tracción disponibles · formación del servicio original · Ejemplo · Chiltern · Gálibo de infraestructura desconocido; se conserva la selección · Trocha: faltan datos para confirmar la compatibilidad · cabina disponible",
+          "visible": true
+        },
+        {
+          "size": [
+            1030.0,
+            44.0
+          ],
+          "text": "La recomendación orienta la elección; no certifica todos los sistemas ni oculta opciones con avisos.",
+          "visible": true
+        },
+        {
+          "size": [
+            306.0,
+            24.0
+          ],
+          "text": "Armar una formación propia",
+          "visible": true
+        },
+        {
+          "size": [
+            329.0,
+            24.0
+          ],
+          "text": "Ajustes propios por vehículo",
+          "visible": true
+        },
+        {
+          "size": [
+            174.0,
+            22.0
+          ],
+          "text": "Listo para jugar",
+          "visible": true
+        },
+        {
+          "size": [
+            59.0,
+            24.0
+          ],
+          "text": "Jugar",
+          "visible": true
+        },
+        {
+          "size": [
+            165.0,
+            24.0
+          ],
+          "text": "Hora y clima →",
+          "visible": true
+        },
+        {
+          "size": [
+            71.0,
+            24.0
+          ],
+          "text": "← Ruta",
+          "visible": true
+        },
+        {
+          "size": [
+            1072.0,
+            44.0
+          ],
+          "text": "Chiltern · birmingham_pullman\nSalida 09:55:00 · Despejado",
+          "visible": true
+        },
+        {
+          "size": [
+            141.0,
+            24.0
+          ],
+          "text": "Volver · Esc",
+          "visible": true
+        },
+        {
+          "size": [
+            259.0,
+            40.0
+          ],
+          "text": "Crear partida",
+          "visible": true
+        },
+        {
+          "size": [
+            188.0,
+            24.0
+          ],
+          "text": "4 · Hora y clima",
+          "visible": true
+        },
+        {
+          "size": [
+            94.0,
+            24.0
+          ],
+          "text": "3 · Tren",
+          "visible": true
+        },
+        {
+          "size": [
+            224.0,
+            24.0
+          ],
+          "text": "2 · Ruta y servicio",
+          "visible": true
+        },
+        {
+          "size": [
+            94.0,
+            24.0
+          ],
+          "text": "1 · País",
+          "visible": true
+        },
+        {
+          "size": [
+            200.0,
+            24.0
+          ],
+          "text": "Ocultar avanzadas",
+          "visible": true
+        },
+        {
+          "size": [
+            524.0,
+            29.0
+          ],
+          "text": "Pueden circular (1)",
+          "visible": true
+        },
+        {
+          "size": [
+            524.0,
+            29.0
+          ],
+          "text": "No disponibles (220)",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "page": "train",
+      "condition": "unpowered formation",
+      "dimensions": [
+        1280,
+        720
+      ],
+      "scale": 1.5,
+      "report_sha256": "37b060592b77584d6b8ec8810e21433b131da7a1ebc0f701d0ea959a81505d07",
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "ui_layout": [
+        {
+          "max": [
+            644.0,
+            780.0
+          ],
+          "min": [
+            314.0,
+            732.0
+          ],
+          "name": "ui-MissingAudit"
+        },
+        {
+          "max": [
+            302.0,
+            780.0
+          ],
+          "min": [
+            125.0,
+            732.0
+          ],
+          "name": "ui-Open(MissingResources)"
+        },
+        {
+          "max": [
+            1176.0,
+            395.0
+          ],
+          "min": [
+            652.0,
+            296.0
+          ],
+          "name": "choice-Consist-198"
+        },
+        {
+          "max": [
+            1176.0,
+            238.0
+          ],
+          "min": [
+            1057.0,
+            190.0
+          ],
+          "name": "ui-ClearSearch(Consist)"
+        },
+        {
+          "max": [
+            1045.0,
+            238.0
+          ],
+          "min": [
+            104.0,
+            190.0
+          ],
+          "name": "ui-FocusSearch(Consist)"
+        },
+        {
+          "max": [
+            720.0,
+            638.0
+          ],
+          "min": [
+            543.0,
+            590.0
+          ],
+          "name": "ui-Open(MissingResources)"
+        },
+        {
+          "max": [
+            424.0,
+            638.0
+          ],
+          "min": [
+            223.0,
+            590.0
+          ],
+          "name": "ui-NewGameStep(Environment)"
+        },
+        {
+          "max": [
+            211.0,
+            638.0
+          ],
+          "min": [
+            104.0,
+            590.0
+          ],
+          "name": "ui-NewGameStep(Route)"
+        },
+        {
+          "max": [
+            884.0,
+            178.0
+          ],
+          "min": [
+            660.0,
+            130.0
+          ],
+          "name": "ui-NewGameStep(Environment)"
+        },
+        {
+          "max": [
+            648.0,
+            178.0
+          ],
+          "min": [
+            518.0,
+            130.0
+          ],
+          "name": "ui-NewGameStep(Train)"
+        },
+        {
+          "max": [
+            506.0,
+            178.0
+          ],
+          "min": [
+            246.0,
+            130.0
+          ],
+          "name": "ui-NewGameStep(Route)"
+        },
+        {
+          "max": [
+            234.0,
+            178.0
+          ],
+          "min": [
+            104.0,
+            130.0
+          ],
+          "name": "ui-NewGameStep(Country)"
+        },
+        {
+          "max": [
+            706.0,
+            118.0
+          ],
+          "min": [
+            564.0,
+            70.0
+          ],
+          "name": "ui-NewGameAdvanced"
+        },
+        {
+          "max": [
+            552.0,
+            118.0
+          ],
+          "min": [
+            375.0,
+            70.0
+          ],
+          "name": "ui-Close"
+        },
+        {
+          "max": [
+            531.0,
+            638.0
+          ],
+          "min": [
+            436.0,
+            590.0
+          ],
+          "name": "launch-unavailable"
+        },
+        {
+          "max": [
+            628.0,
+            285.0
+          ],
+          "min": [
+            104.0,
+            256.0
+          ],
+          "name": "train-ready-heading"
+        },
+        {
+          "max": [
+            1176.0,
+            285.0
+          ],
+          "min": [
+            652.0,
+            256.0
+          ],
+          "name": "train-unavailable-heading"
+        },
+        {
+          "max": [
+            1176.0,
+            638.0
+          ],
+          "min": [
+            104.0,
+            523.0
+          ],
+          "name": "launch-footer"
+        },
+        {
+          "max": [
+            628.0,
+            340.0
+          ],
+          "min": [
+            104.0,
+            256.0
+          ],
+          "name": "train-ready-list"
+        },
+        {
+          "max": [
+            1176.0,
+            395.0
+          ],
+          "min": [
+            652.0,
+            256.0
+          ],
+          "name": "train-unavailable-list"
+        },
+        {
+          "max": [
+            1203.0,
+            677.0
+          ],
+          "min": [
+            77.0,
+            43.0
+          ],
+          "name": "player-menu"
+        },
+        {
+          "max": [
+            1176.0,
+            511.0
+          ],
+          "min": [
+            104.0,
+            190.0
+          ],
+          "name": "player-scroll"
+        }
+      ],
+      "ui_text": [
+        {
+          "size": [
+            524.0,
+            29.0
+          ],
+          "text": "Pueden circular (0)",
+          "visible": true
+        },
+        {
+          "size": [
+            524.0,
+            29.0
+          ],
+          "text": "No disponibles (1)",
+          "visible": true
+        },
+        {
+          "size": [
+            0.0,
+            0.0
+          ],
+          "text": "FPS: ",
+          "visible": false
+        },
+        {
+          "size": [
+            412.0,
+            22.0
+          ],
+          "text": "Sin locomotora o vehículo con tracción",
+          "visible": true
+        },
+        {
+          "size": [
+            141.0,
+            24.0
+          ],
+          "text": "Ver detalles",
+          "visible": true
+        },
+        {
+          "size": [
+            59.0,
+            27.0
+          ],
+          "text": "Jugar",
+          "visible": true
+        },
+        {
+          "size": [
+            165.0,
+            24.0
+          ],
+          "text": "Hora y clima →",
+          "visible": true
+        },
+        {
+          "size": [
+            71.0,
+            24.0
+          ],
+          "text": "← Ruta",
+          "visible": true
+        },
+        {
+          "size": [
+            1072.0,
+            44.0
+          ],
+          "text": "Chiltern · wagons\nSalida 09:55:00 · Despejado",
+          "visible": true
+        },
+        {
+          "size": [
+            141.0,
+            24.0
+          ],
+          "text": "Volver · Esc",
+          "visible": true
+        },
+        {
+          "size": [
+            259.0,
+            40.0
+          ],
+          "text": "Crear partida",
+          "visible": true
+        },
+        {
+          "size": [
+            188.0,
+            24.0
+          ],
+          "text": "4 · Hora y clima",
+          "visible": true
+        },
+        {
+          "size": [
+            94.0,
+            24.0
+          ],
+          "text": "3 · Tren",
+          "visible": true
+        },
+        {
+          "size": [
+            224.0,
+            24.0
+          ],
+          "text": "2 · Ruta y servicio",
+          "visible": true
+        },
+        {
+          "size": [
+            94.0,
+            24.0
+          ],
+          "text": "1 · País",
+          "visible": true
+        },
+        {
+          "size": [
+            106.0,
+            24.0
+          ],
+          "text": "Avanzadas",
+          "visible": true
+        },
+        {
+          "size": [
+            71.0,
+            24.0
+          ],
+          "text": "wagons",
+          "visible": true
+        },
+        {
+          "size": [
+            83.0,
+            24.0
+          ],
+          "text": "Limpiar",
+          "visible": true
+        },
+        {
+          "size": [
+            524.0,
+            44.0
+          ],
+          "text": "No hay trenes disponibles con esta búsqueda. Revisá la otra lista o abrí Biblioteca.",
+          "visible": true
+        },
+        {
+          "size": [
+            496.0,
+            26.0
+          ],
+          "text": "✓ wagons",
+          "visible": true
+        },
+        {
+          "size": [
+            496.0,
+            20.0
+          ],
+          "text": "Ejemplo · runaround",
+          "visible": true
+        },
+        {
+          "size": [
+            496.0,
+            20.0
+          ],
+          "text": "Sin locomotora o vehículo con tracción",
+          "visible": true
+        },
+        {
+          "size": [
+            1072.0,
+            31.0
+          ],
+          "text": "wagons",
+          "visible": true
+        },
+        {
+          "size": [
+            1072.0,
+            22.0
+          ],
+          "text": "Sin vista previa 3D: Falta el modelo original",
+          "visible": true
+        },
+        {
+          "size": [
+            1030.0,
+            26.0
+          ],
+          "text": "2 vehículos (0 con tracción) · 30 m · 60 t",
+          "visible": true
+        },
+        {
+          "size": [
+            1030.0,
+            24.0
+          ],
+          "text": "Cabina 2D: No · Cabina 3D: No",
+          "visible": true
+        },
+        {
+          "size": [
+            1030.0,
+            24.0
+          ],
+          "text": "Sin locomotora o vehículo con tracción",
+          "visible": true
+        },
+        {
+          "size": [
+            1030.0,
+            22.0
+          ],
+          "text": "Trocha: faltan datos para confirmar la compatibilidad",
+          "visible": true
+        },
+        {
+          "size": [
+            1030.0,
+            24.0
+          ],
+          "text": "Sin locomotora o vehículo con tracción",
+          "visible": true
+        },
+        {
+          "size": [
+            141.0,
+            24.0
+          ],
+          "text": "Ver detalles",
+          "visible": true
+        },
+        {
+          "size": [
+            294.0,
+            24.0
+          ],
+          "text": "Revisar archivos otra vez",
+          "visible": true
+        },
+        {
+          "size": [
+            1072.0,
+            40.0
+          ],
+          "text": "La disponibilidad usa los archivos y datos declarados de esta ruta. Los trenes en gris se pueden seleccionar para consultar el motivo.",
+          "visible": true
+        }
+      ]
+    }
+  ],
+  "scope": "Fourteen real Bevy menu captures on a private Weston display, using one final post-check.sh viewer binary. The checker requires complete route/train choices, both train headings, all country choices and persistent launch controls at the recorded resolutions/scales. Advanced screens retain scrolling. These are layout and launch-availability checks, not startup/frame-time benchmarks or a certification of every train and route."
+}

@@ -41,6 +41,16 @@ pub(super) struct ChoiceSearch {
     pub favorites_only: bool,
     pub filters_expanded: bool,
     pub favorites_first: bool,
+    pub train_pages: [usize; 2],
+}
+
+impl ChoiceSearch {
+    pub(super) fn reset_navigation(&mut self) {
+        self.page = 0;
+        self.train_pages = [0; 2];
+        self.cursor = None;
+        self.cursor_identity = None;
+    }
 }
 
 fn normalized(text: &str) -> String {
@@ -66,7 +76,7 @@ fn normalized(text: &str) -> String {
         })
         .collect()
 }
-fn title(menu: &PlayerLaunchMenu, kind: ChoiceKind, index: usize) -> String {
+pub(super) fn title(menu: &PlayerLaunchMenu, kind: ChoiceKind, index: usize) -> String {
     match kind {
         ChoiceKind::Route => menu.routes[index].clone(),
         ChoiceKind::Service => menu.services[index].name.clone(),
@@ -96,7 +106,7 @@ pub(super) fn matching(menu: &PlayerLaunchMenu, kind: ChoiceKind, query: &str) -
         })
         .collect()
 }
-fn cursor_position(
+pub(super) fn cursor_position(
     search: &ChoiceSearch,
     menu: &PlayerLaunchMenu,
     kind: ChoiceKind,
@@ -127,7 +137,7 @@ pub(super) fn select(menu: &mut PlayerLaunchMenu, kind: ChoiceKind, index: usize
                 }
             }
         }
-        ChoiceKind::Consist if index < menu.consists.len() => {
+        ChoiceKind::Consist if index < menu.consists.len() && index != menu.consist => {
             menu.cycle_consist(index as i32 - menu.consist as i32)
         }
         _ => (),
@@ -149,12 +159,11 @@ pub(super) fn selected(
         p.commands().entity(id).insert(BorderColor::all(ACCENT));
     }
 }
-pub(super) fn build(
+pub(super) fn search_controls(
     p: &mut ChildSpawnerCommands<'_>,
     ui: &PlayerUiState,
     menu: &PlayerLaunchMenu,
     kind: ChoiceKind,
-    previews: Option<&super::previews::Previews>,
     settings: &PlayerSettings,
 ) {
     let search = &ui.choice_search[kind.slot()];
@@ -181,7 +190,40 @@ pub(super) fn build(
             button(p, "Limpiar", UiCommand::ClearSearch(kind));
         }
     });
-    filters::build(p, search, menu, kind, settings);
+    if ui.new_game_advanced {
+        filters::build(p, search, menu, kind, settings);
+    } else if search.favorites_only
+        || search.gauge != 0
+        || search.traction != 0
+        || search.resources != 0
+        || (kind == ChoiceKind::Consist && search.country != 0)
+    {
+        row(p, |p| {
+            button(
+                p,
+                "Filtros aplicados · Avanzadas",
+                UiCommand::NewGameAdvanced,
+            );
+            button(
+                p,
+                "Quitar filtros",
+                UiCommand::ChoiceFilter(kind, ChoiceFilter::Reset),
+            );
+        });
+    }
+}
+
+pub(super) fn build(
+    p: &mut ChildSpawnerCommands<'_>,
+    ui: &PlayerUiState,
+    menu: &PlayerLaunchMenu,
+    kind: ChoiceKind,
+    previews: Option<&super::previews::Previews>,
+    settings: &PlayerSettings,
+) {
+    search_controls(p, ui, menu, kind, settings);
+    let search = &ui.choice_search[kind.slot()];
+    let focused = ui.choice_focus == Some(kind);
     let matches = filtered(menu, kind, search, settings);
     let cursor_position = cursor_position(search, menu, kind, &matches);
     let pages = matches.len().div_ceil(PAGE_SIZE).max(1);
@@ -370,6 +412,7 @@ pub(super) fn choice_keys(
     mut menu: ResMut<PlayerLaunchMenu>,
     keys: Res<ButtonInput<KeyCode>>,
     settings: Res<PlayerSettings>,
+    previews: Option<Res<previews::Previews>>,
 ) {
     for input in events.read() {
         let Some(kind) = ui.choice_focus else {
@@ -382,12 +425,11 @@ pub(super) fn choice_keys(
         match input.logical_key {
             Key::Backspace => {
                 search.query.pop();
-                search.page = 0;
-                search.cursor = None;
-                search.cursor_identity = None;
+                search.reset_navigation();
             }
             Key::ArrowUp | Key::ArrowDown | Key::Home | Key::End | Key::PageUp | Key::PageDown => {
-                let matches = filtered(&menu, kind, search, &settings);
+                let matches =
+                    navigation_matches(&menu, kind, search, &settings, previews.as_deref());
                 let count = matches.len();
                 if let Some(identity) = &search.cursor_identity {
                     search.cursor = matches
@@ -397,14 +439,36 @@ pub(super) fn choice_keys(
                         search.page = 0;
                     }
                 }
-                move_cursor(search, count, &input.logical_key);
+                if kind == ChoiceKind::Consist {
+                    move_cursor_with_page_size(
+                        search,
+                        count,
+                        &input.logical_key,
+                        train_selection::PAGE_SIZE,
+                    );
+                } else {
+                    move_cursor(search, count, &input.logical_key);
+                }
                 search.cursor_identity = search
                     .cursor
                     .and_then(|p| matches.get(p))
                     .map(|&i| favorite_key(&menu, kind, i));
+                if kind == ChoiceKind::Consist
+                    && let Some(&index) = search.cursor.and_then(|i| matches.get(i))
+                {
+                    let railway = previews.as_deref().and_then(|p| p.railway.as_ref());
+                    let group = train_selection::assess(&menu, index, railway).group();
+                    let rank = matches
+                        .iter()
+                        .take(search.cursor.unwrap())
+                        .filter(|&&i| train_selection::assess(&menu, i, railway).group() == group)
+                        .count();
+                    search.train_pages[group] = rank / train_selection::PAGE_SIZE;
+                }
             }
             Key::Enter => {
-                let matches = filtered(&menu, kind, search, &settings);
+                let matches =
+                    navigation_matches(&menu, kind, search, &settings, previews.as_deref());
                 let position = if search.cursor_identity.is_none() && search.cursor.is_none() {
                     Some(search.page.saturating_mul(PAGE_SIZE))
                 } else {
@@ -413,6 +477,15 @@ pub(super) fn choice_keys(
                 let index = position.and_then(|p| matches.get(p)).copied();
                 if let Some(index) = index {
                     select(&mut menu, kind, index);
+                    if kind == ChoiceKind::Consist {
+                        train_selection::reveal(
+                            search,
+                            &menu,
+                            index,
+                            &settings,
+                            previews.as_deref().and_then(|p| p.railway.as_ref()),
+                        );
+                    }
                     ui.choice_focus = None;
                 } else if search.cursor_identity.is_some() {
                     ui.notice = "Los resultados cambiaron; volvé a elegir con las flechas.".into();
@@ -430,9 +503,7 @@ pub(super) fn choice_keys(
                             search.query.push(c);
                         }
                     }
-                    search.page = 0;
-                    search.cursor = None;
-                    search.cursor_identity = None;
+                    search.reset_navigation();
                 }
             }
         }
@@ -440,7 +511,35 @@ pub(super) fn choice_keys(
     }
 }
 
+fn navigation_matches(
+    menu: &PlayerLaunchMenu,
+    kind: ChoiceKind,
+    search: &ChoiceSearch,
+    settings: &PlayerSettings,
+    previews: Option<&previews::Previews>,
+) -> Vec<usize> {
+    if kind == ChoiceKind::Consist {
+        train_selection::matches(
+            menu,
+            search,
+            settings,
+            previews.and_then(|p| p.railway.as_ref()),
+        )
+    } else {
+        filtered(menu, kind, search, settings)
+    }
+}
+
 fn move_cursor(search: &mut ChoiceSearch, count: usize, key: &Key) {
+    move_cursor_with_page_size(search, count, key, PAGE_SIZE);
+}
+
+fn move_cursor_with_page_size(
+    search: &mut ChoiceSearch,
+    count: usize,
+    key: &Key,
+    page_size: usize,
+) {
     if count == 0 {
         search.cursor = None;
         search.page = 0;
@@ -448,18 +547,18 @@ fn move_cursor(search: &mut ChoiceSearch, count: usize, key: &Key) {
     }
     let cursor = search
         .cursor
-        .unwrap_or(search.page.saturating_mul(PAGE_SIZE))
+        .unwrap_or(search.page.saturating_mul(page_size))
         .min(count - 1);
     let next = match key {
         Key::Home => 0,
         Key::End => count - 1,
-        Key::PageUp => cursor.saturating_sub(PAGE_SIZE),
-        Key::PageDown => cursor.saturating_add(PAGE_SIZE).min(count - 1),
+        Key::PageUp => cursor.saturating_sub(page_size),
+        Key::PageDown => cursor.saturating_add(page_size).min(count - 1),
         Key::ArrowUp => cycle(cursor, count, -1),
         _ => cycle(cursor, count, 1),
     };
     search.cursor = Some(next);
-    search.page = next / PAGE_SIZE;
+    search.page = next / page_size;
 }
 
 #[cfg(test)]

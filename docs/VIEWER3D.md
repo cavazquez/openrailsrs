@@ -2,6 +2,42 @@
 
 App jugable Bevy (`openrailsrs-viewer3d`). Arquitectura: [`BEVY.md`](BEVY.md). Tests/comandos: [`VIEWER3D_TESTING.md`](VIEWER3D_TESTING.md).
 
+## Crear una partida
+
+Al abrir el visor con `--menu` aparece directamente **Crear partida**. Elegí
+país, ruta/servicio y tren; **Jugar** permanece en el pie y permite comenzar
+sin pasar por todos los ajustes de hora y clima. Desde la primera pantalla
+también se puede continuar una partida, abrir Biblioteca o cambiar Ajustes.
+La vista previa de la ruta se prepara después de elegir el país.
+
+**Avanzadas** muestra filtros y orden, recorridos de exploración, campañas,
+prácticas, editores de servicios y formaciones, perfiles por vehículo,
+diagnósticos y edición del clima. El interruptor conserva las elecciones y
+permanece activado al pasar entre los pasos. Ocultarlo no restablece los
+valores elegidos; los filtros aplicados siguen indicados y se pueden quitar.
+
+En **Tren** hay listas independientes: **Pueden circular** y **No disponibles**.
+La segunda conserva la selección en gris y explica el motivo: archivos
+necesarios faltantes, formación sin tracción, trocha o gálibo incompatible,
+o alimentación eléctrica incompatible. Los archivos aún sin revisar indican
+su estado temporal. Seleccionar un elemento en gris permite consultar sus
+detalles y reauditarlo; una incompatibilidad comprobada también deshabilita
+**Jugar**. Las listas se actualizan al cambiar la ruta o terminar una auditoría.
+Los datos de vía desconocidos y la alimentación parcial se muestran como
+avisos, sin presentarlos como compatibilidad certificada. Los recursos
+opcionales faltantes no impiden iniciar una formación válida.
+
+Para probarlo a mano: elegí un país y una ruta, cambiá entre **Rutas** y
+**Servicios**, elegí una formación disponible y comprobá que **Jugar** esté
+habilitado. Activá y ocultá **Avanzadas**: las elecciones deben conservarse.
+En **Tren**, buscá `wagons` del ejemplo de patios: debe quedar en **No
+disponibles**, indicar que no tiene tracción y permitir consultar sus detalles
+sin habilitar **Jugar**. Limpiar la búsqueda vuelve a mostrar las dos listas.
+
+La [validación de esta revisión](fixtures/simple-menu-20261016/execution.json)
+incluye `check.sh`, los oráculos fijados, 2.373 pruebas Rust aprobadas y catorce
+capturas del binario final, a 800×600 y a 1280×720 con escala 1,5.
+
 ## Pipeline (resumen OR → Bevy)
 
 1. **Datos:** `.trk` / TDB / WORLD `.w` / shapes `.s` + ACE → parsers en `formats` + `MstsRouteCatalog`.
