@@ -17,14 +17,29 @@ from sync_chiltern_assets import extract_curve_values, write_eng, write_wag
 
 
 class CurveImportTests(unittest.TestCase):
+    def test_corridor_selection_retains_native_curves_cant_and_directed_profiles(self):
+        import tomllib
+
+        curve = dict(position_m=12.5, curvature_m_inv=0.002, cant_rad=0.01, heading_rad=1.0)
+        profile = dict(curves=[curve], physical_cant=[dict(position_m=12.5, cant_m=0.08)],
+                       grades=[dict(position_m=0.0, grade_percent=0.5)],
+                       speed_posts=[dict(position_m=5.0, speed_limit_kmh=65.0)])
+        reverse = {**profile, "curves": [{**curve, "curvature_m_inv": -0.002, "cant_rad": -0.01}]}
+        graph = {"edge_profiles": {"e1": profile, "e1_r": reverse, "e2": profile}}
+        for selected in ({"e1"}, {"e1", "e1_r"}):
+            exported = tomllib.loads(extended.native.physics_profiles(graph, selected))
+            self.assertEqual(exported["edge_profiles"], {key: graph["edge_profiles"][key] for key in selected})
+        self.assertEqual(extended.native.physics_profiles(graph, {"absent"}), "")
+
     def test_export_keeps_authored_imperial_curve_values_and_does_not_invent_missing_ones(self):
-        source = "Mass ( 50t ) ORTSTrackGauge ( 4ft 8.5in ) ORTSUnbalancedSuperelevation ( 6in )"
+        source = "Mass ( 50t ) ORTSTrackGauge ( 4ft 8.5in ) ORTSRigidWheelbase ( 9ft 6in ) ORTSUnbalancedSuperelevation ( 6in )"
         with tempfile.TemporaryDirectory() as tmp:
             for name, writer in (("passenger.wag", write_wag), ("engine.eng", write_eng)):
                 target = Path(tmp) / name
                 writer(target, "vehicle", source, "")
                 exported = target.read_text()
                 self.assertIn("(ORTSTrackGauge 4ft 8.5in)", exported)
+                self.assertIn("(ORTSRigidWheelBase 9ft 6in)", exported)
                 self.assertIn("(ORTSUnbalancedSuperElevation 6in)", exported)
                 self.assertEqual(exported.count("ORTSTrackGauge"), 1)
                 self.assertEqual(exported.count("ORTSUnbalancedSuperElevation"), 1)

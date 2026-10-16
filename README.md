@@ -68,6 +68,10 @@ python3 scripts/run_oracles.py
 
 Pruebas de menús, guardado, monitor, libreta, formación, despachador, HUD, clima, sonido y ratón en cabina: [`docs/PLAYER_MANUAL_TESTS.md`](docs/PLAYER_MANUAL_TESTS.md). Cada sección indica qué hacer y qué observar en la partida.
 
+El [lote de física, patios y multijugador](docs/TWENTY_ISSUES_20261015.md) reúne veinte issues y sus criterios de validación. Los ejercicios propios de [patios](docs/OPERATIONAL_YARDS.md) y [multijugador](docs/MULTIPLAYER_VIEWER.md) se eligen desde Nueva partida. Las guías distinguen implementación, pruebas ejecutadas y límites de compatibilidad.
+
+La [validación física dirigida del 16 de octubre](docs/fixtures/compatibility/twenty-20261015/physical-final14/result.json) pasó Chiltern completo, cuatro ensayos cortos, Class 47, tres paradas jugables, LIRR y el ciclo nativo acotado de vapor. LIRR12 registra **0,03602 m/s** de error RMS y **12,355 m** de error máximo de odómetro. Vapor10 completa sus **1.600 ticks** dentro de los límites anteriores. Estos resultados no sustituyen la puerta global de `check.sh`, todavía pendiente.
+
 Guías: [`docs/CHILTERN.md`](docs/CHILTERN.md) · [`docs/VIEWER3D_TESTING.md`](docs/VIEWER3D_TESTING.md) · [`docs/BEVY.md`](docs/BEVY.md).
 
 ## Funciones implementadas
@@ -139,6 +143,10 @@ Las [diez pruebas manuales del lote](docs/TEN_OPERATIONS_MANUAL.md) indican qué
 - **Operación del tren**: freno independiente neumático, emergencia con rearme, depósito/compresor, cargas de pasajeros y auxiliares con efecto en potencia/energía, temperatura diésel con protección optativa y diagnóstico visible. Vapor comparte fase de ruedas, bielas, emboladas y escape. Enganches y suspensión conservan el apoyo de ruedas/bogies y las secciones estacionadas. Audio exterior con balance/Doppler, respetando interiores y SMS del autor. Tres ejemplos nuevos elegibles: consumo eléctrico, protección térmica y patio guiado con cinco objetivos. [Qué cambió y cómo probar los diez objetivos](docs/TRAIN_OPERATION_UPDATE.md).
 
 - Dos servicios de tráfico vivo con paradas, reloj compartido, ocupación de la formación completa y restauración de partidas.
+- [Patios operativos](docs/OPERATIONAL_YARDS.md): encuentros y porciones móviles, reservas de material en depósitos, rodeo AI, mesas giratorias, plataformas de transferencia y clasificación por gravedad. F9 reúne las órdenes de los ejercicios propios; los vehículos conservan sus identidades, frenos, consumibles y posición física.
+- [Multijugador del visor](docs/MULTIPLAYER_VIEWER.md): conductores, despachador, fogonero y espectadores en una sala TCP con autoridad del servidor, reconexión y guardado compartido. Se abre desde el menú o F10; requiere el mismo contenido y no equivale al protocolo de red de Open Rails.
+- [Equipos físicos declarados](docs/PHYSICS_SEVEN_SYSTEMS.md): convertidor hidráulico con pérdidas y temperatura, cremallera, contacto vertical sobre irregularidades y consecuencias opcionales de descarrilamiento. B muestra controles y diagnóstico; son extensiones propias con alcance explícito.
+- [Ciclo de vapor OR 1.6.1 en Rust](docs/NATIVE_STEAM161.md): perfil opcional para una locomotora tanque de carbón, simple y manual, con tablas originales, inyectores y vacío. Las capturas caliente/fría y una conducción de 80 segundos se comparan con las DLL fijadas; el alcance y las tolerancias están documentados. Las calderas independientes y el receptor compound propios conservan sus perfiles separados.
 - Los servicios nativos incorporan **SIGSCR y dirección TDB originales**, incluidos los programas de MidEast Coast, Portugal 79 y Coals to Newcastle. Admite selectores MR/LR, grupos físicos de cabezas, máscaras de aspectos básicos, señal de aguja y autorización restringida de maniobra; conserva los ocho aspectos nativos y la protección por ocupación/reserva. 419 casos de funciones y 256 máscaras se contrastan con las DLL fijadas de OR 1.6.1. Los programas se compilan una vez y comparten una caché acotada. F8 muestra esperas, bloqueos y cambios de itinerario; guardar conserva las concesiones. [Alcance y pruebas](docs/NATIVE_CONTENT_UPDATE.md).
 - Tracción, resistencia Davis, pendientes y límites por posición/sentido; un aumento de velocidad espera a que pase la cola. Frenos por vehículo, parámetros originales EP/aire, diésel, vapor básico y dinámica opcional de acopladores.
 - [Freno independiente de vacío, cajas diésel y topes](docs/ROLLING_STOCK_DYNAMICS.md): controles desde el HUD, curvas y límites por vehículo, guardado del embrague y del historial de acopladores, referencias de Open Rails 1.6.1 y ejercicios para probar cada sistema.
@@ -159,7 +167,7 @@ La compatibilidad se valida por función y contenido: **no se afirma paridad com
 
 La tracción eléctrica requiere tensión y un captador compatible: catenaria, tercer o cuarto riel. Bajar el pantógrafo, abrir el disyuntor o entrar en un sector sin tensión corta el esfuerzo; el tren sigue por inercia. Con un modelo animado compatible y altura de catenaria válida, el captador ajusta su recorrido original al hilo; puede haber un arco breve al perder o recuperar contacto bajo carga. `O` acciona el pantógrafo y `J` el disyuntor; F8 muestra cada coche motor. Los ejemplos `electric_supply` permiten comprobarlo en un recorrido corto.
 
-Los diésel tienen arranque y parada con RPM, depósitos finitos y consumo también en ralentí. `K` acciona el primer motor; `B` permite controlar cada motor. En vapor, `B` abre el fogonero automático o manual: corte, pala, tiro, dos inyectores, soplador y purgas. El ténder, la caldera y el fuego conservan reservas distintas; agotar agua o carbón tiene consecuencias. Los instrumentos, humo y eventos SMS siguen esos estados. `examples/traction_operation` contiene recorridos de 1 km y pruebas de agotamiento en segundos, disponibles desde el menú. [Cómo probarlos](docs/PLAYER_MANUAL_TESTS.md#38-vapor-y-diésel-reservas-arranque-y-fogonero). La termodinámica del vapor sigue simplificada y la cremallera no está implementada. [Estado de diésel, vapor y electricidad](docs/TRACTION_SUPPORT.md).
+Los diésel tienen arranque y parada con RPM, depósitos finitos y consumo también en ralentí. `K` acciona el primer motor; `B` permite controlar cada motor. En vapor, `B` abre el fogonero automático o manual: corte, pala, tiro, dos inyectores, soplador y purgas. El ténder, la caldera y el fuego conservan reservas distintas; agotar agua o carbón tiene consecuencias. Los instrumentos, humo y eventos SMS siguen esos estados. `examples/traction_operation` contiene recorridos de 1 km y pruebas de agotamiento en segundos, disponibles desde el menú. [Cómo probarlos](docs/PLAYER_MANUAL_TESTS.md#38-vapor-y-diésel-reservas-arranque-y-fogonero). El modelo termodinámico por caldera y el receptor compound se activan mediante perfiles declarados; no certifican paridad del ciclo completo de OR. La cremallera incorpora engrane y frenado propios en los tramos compatibles de los ejercicios `physics_lab`; es una extensión Rust. [Estado de diésel, vapor y electricidad](docs/TRACTION_SUPPORT.md).
 
 La prueba de pulido del 5 de octubre completa Chiltern con formación original,
 dos servicios de tráfico y seis paradas a horario. En RX 7600/Vulkan,
@@ -177,11 +185,12 @@ de **269 ms**. El pico RSS es **2.491 MiB** y el de VRAM **2.794 MiB**, medidos
 por separado. Es una prueba de estrés acelerado, no FPS de conducción normal.
 [Resultados, hashes y alcance](docs/fixtures/compatibility/community-routes-2026-10-11/README.md).
 
-El oráculo físico Pullman conserva RMS **0,2081 m/s**, pico **1,0921 m/s** y
-odómetro máximo **39,61 m**. El nuevo ensayo Class 47 de 250 s obtiene
-**0,2382 m/s / 1,9415 m/s / 25,79 m**. Ambos pasan **0,75 m/s / 2 m/s / 45 m**
-con referencias y tolerancias intactas. El ensayo corto de la Class 47 y los
-viajes gráficos completos tienen alcances distintos.
+El [oráculo físico Pullman actualizado](docs/fixtures/compatibility/twenty-20261015/physical-final14/chiltern-service/report.json)
+registra RMS **0,01379 m/s**, pico **0,04307 m/s** y odómetro máximo **5,803 m**,
+con los **750,1 s** completos de la referencia. El [ensayo Class 47 de 250 s](docs/fixtures/compatibility/twenty-20261015/physical-final14/class47/report.json)
+obtiene **0,13408 m/s / 0,50507 m/s / 17,911 m**. Ambos pasan los límites previos
+**0,75 m/s / 2 m/s / 45 m**, con referencias y controles intactos. Estas
+comparaciones físicas y los viajes gráficos completos tienen alcances distintos.
 
 Pruebas manuales y resultados verificables: [PLAYER_MANUAL_TESTS.md](docs/PLAYER_MANUAL_TESTS.md), [PLAYER_POLISH_QA.md](docs/PLAYER_POLISH_QA.md) y [OR_PARITY.md](docs/OR_PARITY.md). Las capturas nativas y sus poses están en [las referencias de estaciones](docs/fixtures/visual/or_reference/chiltern_station_views/README.md). No se ajustan tolerancias para hacer pasar diferencias conocidas.
 

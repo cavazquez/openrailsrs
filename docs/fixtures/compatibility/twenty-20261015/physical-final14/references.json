@@ -1,0 +1,37 @@
+{
+  "files": [
+    {
+      "path": "docs/fixtures/compatibility/twenty-20261015/lirr-native07/README.md",
+      "sha256": "9fdb649213d4dede5fd18a7e8635695bd6a4b1a8a43cc75e9f6e82162e951604"
+    },
+    {
+      "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed08/README.md",
+      "sha256": "fd69854970d077fe340d87d4ead91aeb5b5cc0aad571494db9dd823d0401129d"
+    },
+    {
+      "path": "oracles/lirr-full-service-live-protocol.json",
+      "sha256": "7f5d39ada7927a4048ab63ae6a85311f47e2769e77095d5d6893133639d381b4"
+    },
+    {
+      "path": "oracles/steam-cycle-161-protocol.json",
+      "sha256": "c62fc972d0799c3fa7d32db8e6bcd19fde852b986b8ebe652bbb96de0e7e73cb"
+    },
+    {
+      "path": "oracles/chiltern-service.toml",
+      "sha256": "d4f6be3602631261a5e591fbac01e4b30ed00cee6c3ac26ed822d2a62e1c9713"
+    },
+    {
+      "path": "docs/fixtures/compatibility/twenty-20261015/lirr-full-service-replay10/replay-script.py",
+      "sha256": "00850e74431b7cc3cb4abe3122c8ed4f247f3b277268ac71a9962dd1679f6118"
+    },
+    {
+      "path": "docs/NATIVE_STEAM161.md",
+      "sha256": "ff4d5ab56a4d85ec0bb9ba69da3d6d42cc32585d88c7e11b6b702889f2458bde"
+    },
+    {
+      "path": "docs/NATIVE_ADHESION_INPUTS.md",
+      "sha256": "29cab5fe3dc37aab9539c64a59af2f61a9b7abe63d30c4be47188c03717bfcaa"
+    }
+  ],
+  "policy": "Existing native references and earlier passes stay in their original bundles; no original assets copied here."
+}

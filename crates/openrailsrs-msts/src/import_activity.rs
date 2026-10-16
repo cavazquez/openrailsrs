@@ -229,6 +229,7 @@ pub(crate) fn import_activity_definition(
             edge_speed_limits: vec![],
         },
         train: TrainSection {
+            rack: None,
             bogie_dynamics: vec![],
             freight: None,
             systems: vec![],
@@ -251,6 +252,7 @@ pub(crate) fn import_activity_definition(
             penalty_per_second_late: 0.0,
         },
         simulation: SimulationSection {
+            yard_operations: Default::default(),
             rail_operations: Default::default(),
             weather_track: None,
             native_physics: None,
@@ -259,7 +261,9 @@ pub(crate) fn import_activity_definition(
             seed: 42,
             driver_brake_full_scale_psi: None,
             brake_cylinder_full_scale_psi: None,
-            legacy_power_cap: true,
+            // A native activity's speed posts inform the driver and TCS; they
+            // do not silently cancel motive force through the legacy guard.
+            legacy_power_cap: false,
             train_air_lap_hold: false,
             train_air_full_release_s: 3.0,
             brake_shoe_speed_factor: false,
@@ -613,6 +617,7 @@ fn build_one_extra_train(
         idx + 1
     );
     Ok(TrainEntryDef {
+        rack: None,
         bogie_dynamics: vec![],
         // Metadata-only imports do not load stock. A runnable import has
         // already resolved its original CON above and must retain real UIDs.
@@ -921,6 +926,18 @@ fn build_item_to_endpoint(tdb: &TrackDbFile) -> HashMap<u32, String> {
 #[cfg(test)]
 mod original_filename_tests {
     use super::*;
+
+    #[test]
+    fn native_activity_keeps_speed_posts_out_of_the_legacy_power_guard() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
+        let text = import_activity(&root, &root.join("minimal.act")).unwrap();
+        let scenario: ScenarioFile = toml::from_str(&text).unwrap();
+        assert!(!scenario.simulation.legacy_power_cap);
+        // The path and switches remain the author's operational constraints;
+        // only a driver/TCS command can request a speed-related power cut.
+        assert_eq!(scenario.route.start, "n1");
+        assert_eq!(scenario.route.destination, "n3");
+    }
 
     #[test]
     fn metadata_only_traffic_defers_stock_but_runnable_requires_it() {

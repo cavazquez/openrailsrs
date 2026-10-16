@@ -87,6 +87,25 @@ pub struct SteamParams {
 impl SteamParams {
     pub fn valid(&self) -> bool {
         self.cylinder_count > 0
+            && self.operation.native_or161.as_ref().is_none_or(|p| {
+                p.valid()
+                    && self.operation.thermodynamics.is_none()
+                    && self.operation.compound.is_none()
+            })
+            && self.operation.thermodynamics.as_ref().is_none_or(|p| {
+                p.valid()
+                    && p.boiler_volume_m3 * 1000. <= self.operation.boiler_water_capacity_kg + 1e-6
+            })
+            && self.operation.compound.as_ref().is_none_or(|p| {
+                p.valid()
+                    && p.hp_cylinders + p.lp_cylinders == self.cylinder_count
+                    && self.operation.thermodynamics.is_some()
+            })
+            && self
+                .operation
+                .thermodynamics
+                .as_ref()
+                .is_none_or(|_| self.working_pressure_bar <= 19.6993)
             && [
                 self.cylinder_bore_m,
                 self.piston_stroke_m,

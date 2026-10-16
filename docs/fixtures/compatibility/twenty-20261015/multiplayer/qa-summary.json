@@ -1,0 +1,240 @@
+{
+  "schema": 1,
+  "created_at_utc": "2026-10-16T02:59:45.738318+00:00",
+  "issues": [
+    407,
+    408,
+    409,
+    410
+  ],
+  "status": "multiplayer_subset_pass_with_explicit_visual_limits",
+  "scope": "Real TCP authority and restore in CPU Bevy apps, plus three authentic hardware-rendered viewer panels. Not a workspace-wide result, eight-peer stress test, WAN benchmark, OR parity claim or long soak.",
+  "versions": {
+    "bevy": "0.19.1",
+    "bevy_hanabi": "0.19.0",
+    "openrailsrs-viewer3d": "0.1.0",
+    "network_protocol": 1
+  },
+  "gpu_capture": {
+    "source_directory": "tmp/twenty-20261015/network-panel02",
+    "viewer_sha256": "4997e0dfd48427ff795b9b8592d4b2c21a961d47776162875793676bea1b7199",
+    "plan_sha256": "720754a1fc4e2831ddadf9ad563deffa963906e835b10e2d535302b4de234750",
+    "capture_script_sha256": "0cdf5ca143fe2fb5d4f5b8fdc2889f38d57d8ff7473a8b434ce00d6eb76bb843",
+    "helper_sha256": "87fab5abddb77d1703357cdc8eb3a8a7f855f9c705bbfdc0265b119c33a0c978",
+    "original_result_sha256": "ba0c77f2079184930da020e962876e0fcabadc13dd073643388ad901ef0fbabe",
+    "original_result_status": "render_capture_pass_pending_pixel_review",
+    "pixel_review_file": "pixel-review.json",
+    "pixel_review_sha256": "13dbc2285ce15f9eae7dc40381ee2015be62bf14add7d7e47a32f103f221cf42",
+    "scenario": "examples/multiplayer/scenario.toml",
+    "scenario_sha256": "9230d9fc77ffed2b649722732c68bd1288fce7188d02ef185b24c21a0db408f1",
+    "track_sha256": "ce10729397bd4823f4313780ffc1210ecc0e9132d12f070f5bb41017c454b425",
+    "resolution": [
+      1280,
+      720
+    ],
+    "launches": 3,
+    "roles_rendered": [
+      "dispatcher",
+      "driver",
+      "spectator"
+    ],
+    "maximum_simultaneous_viewers": 2,
+    "sequence": "One host dispatcher stayed open; driver and spectator clients were captured one after another.",
+    "source_binary_and_selected_source_hashes_unchanged_during_capture": true,
+    "captures": [
+      {
+        "capture": "host",
+        "role": "dispatcher",
+        "file": "host.png",
+        "sha256": "f40b666fafb033650073b2d82d7f67d359b549fd57791db8dee7042eb941aecf",
+        "source": "tmp/twenty-20261015/network-panel02/host/panel.png",
+        "received_state_frames": 347,
+        "rtt_displayed_ms": null,
+        "panel_state_to_render_clock_error_s": 0.10000000000145803,
+        "clock_time_s": 36069.4,
+        "renderer": {
+          "backend": "Vulkan",
+          "device_type": "DiscreteGpu",
+          "hardware": true,
+          "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+        },
+        "active_device_pci": "0000:03:00.0",
+        "shader_pipelines": {
+          "pending": 0,
+          "failed": 0
+        },
+        "viewer_returncode": 0,
+        "compositor_returncode": 0,
+        "owned_launch_elapsed_s": 70.96951900099884,
+        "source_report_sha256": "c78359728796c71497f2754e68e429f0ff5deee0edf770ad9d609c01bee36e58",
+        "source_process_receipt_sha256": "5c5c1dd1fcc693e0450371457efb8ed1d772cd8d423f1f22abb3050e57f8c5ec",
+        "pixel_review": {
+          "image_sha256": "f40b666fafb033650073b2d82d7f67d359b549fd57791db8dee7042eb941aecf",
+          "panel_readable": true,
+          "all_initial_role_controls_fit_1280x720": true,
+          "role_permission_display": "correct",
+          "room_key_masked": true
+        }
+      },
+      {
+        "capture": "driver",
+        "role": "driver",
+        "file": "driver.png",
+        "sha256": "e516a53d489ff10fb8e1143b9e69bd375dc5455d0df437012aa57dd2d9c344ea",
+        "source": "tmp/twenty-20261015/network-panel02/driver/panel.png",
+        "received_state_frames": 88,
+        "rtt_displayed_ms": 25.0,
+        "panel_state_to_render_clock_error_s": 0.05000000000000071,
+        "clock_time_s": 36017.75,
+        "renderer": {
+          "backend": "Vulkan",
+          "device_type": "DiscreteGpu",
+          "hardware": true,
+          "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+        },
+        "active_device_pci": "0000:03:00.0",
+        "shader_pipelines": {
+          "pending": 0,
+          "failed": 0
+        },
+        "viewer_returncode": 0,
+        "compositor_returncode": 0,
+        "owned_launch_elapsed_s": 18.678256758001226,
+        "source_report_sha256": "02579dda241963b3be6b4a14c3e7fd114a2220e2bcee94d3017f6fa3a4d91440",
+        "source_process_receipt_sha256": "ea6c939b798fce2b3e45ca1edf36038dc23eed17596b04e0fb3ca1da4ae29d11",
+        "pixel_review": {
+          "image_sha256": "e516a53d489ff10fb8e1143b9e69bd375dc5455d0df437012aa57dd2d9c344ea",
+          "panel_readable": true,
+          "all_initial_role_controls_fit_1280x720": true,
+          "role_permission_display": "correct",
+          "room_key_masked": null
+        }
+      },
+      {
+        "capture": "spectator",
+        "role": "spectator",
+        "file": "spectator.png",
+        "sha256": "a0360cfe6018a7744ad3797f67c90f1a5d52676760b4380eba3d6d92d4916b5a",
+        "source": "tmp/twenty-20261015/network-panel02/spectator/panel.png",
+        "received_state_frames": 88,
+        "rtt_displayed_ms": 25.0,
+        "panel_state_to_render_clock_error_s": 0.05000000000145377,
+        "clock_time_s": 36036.35,
+        "renderer": {
+          "backend": "Vulkan",
+          "device_type": "DiscreteGpu",
+          "hardware": true,
+          "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+        },
+        "active_device_pci": "0000:03:00.0",
+        "shader_pipelines": {
+          "pending": 0,
+          "failed": 0
+        },
+        "viewer_returncode": 0,
+        "compositor_returncode": 0,
+        "owned_launch_elapsed_s": 18.65535478399761,
+        "source_report_sha256": "2ef6be9f6dc3f802fbd899de9945f691e6e0ffe15206fad0c2bdcd17d741b1fe",
+        "source_process_receipt_sha256": "853478ad0138aca9b271613ed5ddc174cba2b6e3abff59e02143e9fe4938e6f4",
+        "pixel_review": {
+          "image_sha256": "a0360cfe6018a7744ad3797f67c90f1a5d52676760b4380eba3d6d92d4916b5a",
+          "panel_readable": true,
+          "all_initial_role_controls_fit_1280x720": true,
+          "role_permission_display": "correct",
+          "room_key_masked": null
+        }
+      }
+    ],
+    "clock_measurement": "Absolute difference between the received/displayed train time plus scenario start clock and this viewer render clock, sampled at each screenshot; not simultaneous host/client wall-clock synchronization.",
+    "latency_measurement": "Displayed application RTT over local loopback, not a WAN or latency percentile benchmark.",
+    "process_cleanup": "All three viewer and private compositor launches returned 0; exact owned player-directory scopes had no remaining PIDs at pixel review.",
+    "scroll_real_input": "not exercised; manual pending"
+  },
+  "cpu_tests": {
+    "source_log": "tmp/twenty-20261015/tests-01.log",
+    "source_log_sha256": "28aee541c36b4db651d3912126b6e0e71dd0ae85b2c1c52e5de967c9bc2ae310",
+    "excerpt_file": "cpu-tests-excerpt.txt",
+    "excerpt_sha256": "46ddc4d9e45ae7fd7bed850d9de2e52cf9b4e3e4678289aaabd16d77e7c41817",
+    "source_command": "cargo test --locked --workspace --all-features --no-fail-fast -- --test-threads=1",
+    "passed": 14,
+    "failed": 0,
+    "game_protocol_and_tcp": {
+      "passed": 7,
+      "tests": [
+        "an_oversized_wire_frame_is_closed_before_deserializing_a_body",
+        "driver_and_fireman_commands_reach_the_same_real_boiler_then_restore",
+        "malformed_commands_and_client_authoritative_snapshots_are_rejected",
+        "retries_gaps_and_reconnect_never_repeat_a_command",
+        "role_changes_are_atomic_and_checkpoint_restarts_revoke_old_epochs",
+        "tcp_transport_reconnects_and_drop_releases_the_port",
+        "two_drivers_dispatcher_and_fireman_have_separate_authority"
+      ]
+    },
+    "viewer_plugin_tcp_and_camera": {
+      "passed": 5,
+      "tests": [
+        "multiplayer::tests::cooperative_double_steam_keeps_both_thermodynamic_ledgers_in_the_server_save",
+        "multiplayer::tests::observer_cameras_follow_rendered_services_and_do_not_create_an_extra_train",
+        "multiplayer::tests::viewer_checkpoint_preserves_world_and_revokes_old_authority_on_restore",
+        "multiplayer::tests::viewer_two_drivers_dispatch_fireman_spectator_and_shutdown_use_real_tcp",
+        "multiplayer::tests::viewer_with_real_tcp_latency_receives_one_authoritative_result"
+      ]
+    },
+    "persistence": {
+      "passed": 2,
+      "tests": [
+        "multiplayer::persistence::tests::atomic_private_write_replaces_a_public_slot_with_a_private_file",
+        "multiplayer::persistence::tests::identities_are_independent_and_are_never_replaced_after_a_parse_failure"
+      ]
+    },
+    "maximum_concurrent_identities_in_covered_viewer_case": 5,
+    "identity_roles": [
+      "dispatcher",
+      "driver of Jugador",
+      "driver of vapor_2",
+      "fireman of Jugador",
+      "spectator"
+    ],
+    "protocol_identity_limit_including_host": 8,
+    "eight_concurrent_identities_tested": false,
+    "delayed_tcp": {
+      "injected_delay_ms_per_direction": 60,
+      "asserted_rtt_range_ms": {
+        "minimum_inclusive": 100,
+        "maximum_exclusive": 4000
+      },
+      "exact_observed_rtt_ms": null,
+      "exact_value_not_logged": true,
+      "delivery_timeout_s": 4,
+      "accepted_sequence_after_command": 1
+    },
+    "reconnection_timeout_s": 5,
+    "save_restore": "In a live two-driver TCP session, write private ServerSave, dispose endpoints, restore into a separately loaded world, increment epoch, reconnect the same identity and retain roles, service count, pressure, reservations, clock/timezone and seeded weather. Compare saved physical values before the next physics tick; resume only after safe stopping.",
+    "double_steam": "Real cooperative TCP plugin case saves/restores both thermodynamic boiler ledgers, receiver state and local regulators. After reconnect and explicit ResumeRegulators, both locomotive force entries are positive and the train moves.",
+    "workspace_context": {
+      "passed": 2230,
+      "failed": 14,
+      "ignored": 52,
+      "stage": "first integrated run before corrections",
+      "targets_failed": 4
+    }
+  },
+  "limits": [
+    "The protocol supports eight identities including the host, but this recorded CPU viewer case used five identities and the GPU captures used at most two viewers simultaneously.",
+    "GPU captures cover dispatcher, driver and spectator panels; the fireman role is validated by real TCP CPU tests, not an additional GPU screenshot.",
+    "The initial role controls fit and were read at 1280x720. Wheel/drag scroll input remains a manual check.",
+    "Latency tests assert bounded actual TCP delivery with a delayed proxy. The test log retains PASS, not the precise RTT sample; the 25 ms values belong to the separate loopback GPU captures.",
+    "No WAN, TLS, public matchmaking, cross-content transfer, cross-service interior cabs or frame-interpolated network presentation is claimed.",
+    "Raw rosters, credentials, private server saves, player-data folders and complete stream reports are intentionally excluded.",
+    "The first GPU attempt failed from an unavailable ICD filename; it remains preserved in tmp/twenty-20261015/network-panel01 and is not rewritten as a passing run."
+  ],
+  "privacy": {
+    "published_credentials": false,
+    "published_private_player_data": false,
+    "published_server_save": false,
+    "room_key_masked_in_host_png": true,
+    "actual_private_credentials_checked": 4,
+    "published_files_scanned": 7,
+    "secret_matches": 0
+  }
+}

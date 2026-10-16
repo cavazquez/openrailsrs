@@ -1,11 +1,13 @@
 # Full native service: fixed original control capture, environment and authored
 # formation. Thresholds and reference bytes remain unchanged.
 # The four historical short captures remain in chiltern.toml.
+# The additive environmental observation reproduces that exact native trace;
+# only its external adhesion noise and initial filter context enter Rust.
 reference_version = "1.6.1"
 
 [[cases]]
 id = "chiltern_local_native_controls"
-scenario = "examples/chiltern_local/scenario_oracle.toml"
+scenario = "examples/chiltern_local/scenario_oracle_adhesion.toml"
 driver = "examples/baselines/chiltern_local/driver.csv"
 baseline = "examples/baselines/chiltern_local/capture/trace.csv"
 phase_bounds = [0.0, 20.1, 329.0, 420.1, 691.45, 750.1]

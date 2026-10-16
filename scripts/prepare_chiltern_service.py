@@ -186,8 +186,29 @@ def shortest_path(edges, start, end):
     raise ValueError("No path between the native PAT endpoints")
 
 
+def toml_value(value):
+    if isinstance(value, dict):
+        return "{ " + ", ".join(f"{key} = {toml_value(item)}" for key, item in value.items()) + " }"
+    if isinstance(value, list):
+        return "[" + ", ".join(map(toml_value, value)) + "]"
+    return json.dumps(value, ensure_ascii=False)
+
+
 def fields(values):
-    return "\n".join(f"{key} = {json.dumps(value, ensure_ascii=False)}" for key, value in values.items()) + "\n"
+    return "\n".join(f"{key} = {toml_value(value)}" for key, value in values.items()) + "\n"
+
+
+def physics_profiles(graph, edge_ids):
+    """Retain imported TSECTION curves/cant and other directed physics data.
+
+    Filtering a route must not replace its physical sections with straight
+    chords: native curve resistance samples the radii at both bogies.
+    """
+    return "".join(
+        f"\n[edge_profiles.{edge_id}]\n" + fields(profile)
+        for edge_id, profile in sorted(graph.get("edge_profiles", {}).items())
+        if edge_id in edge_ids
+    )
 
 
 def prepare(route_root, imported_track, output):
@@ -256,6 +277,7 @@ def prepare(route_root, imported_track, output):
     for alias in graph["msts_aliases"]:
         if alias["id"] in node_ids or alias["id"] in {edge["id"].removesuffix("_r") for edge in path}:
             track += "\n[[msts_aliases]]\n" + fields(alias)
+    track += physics_profiles(graph, {edge["id"] for edge in path})
     (output / "track.toml").write_text(track)
     scenario = "[scenario]\n" + fields(dict(name="Chiltern local: Northolt Park → West Ruislip", description="Servicio local con Pullman: detenerse, abrir puertas, cumplir la parada y cerrar puertas.", start_time_s=35700, season="summer"))
     scenario += "\n[route]\n" + fields(dict(path=".", start=path[0]["from"], destination=terminal, start_offset_m=start_offset, assume_signals_clear=False,

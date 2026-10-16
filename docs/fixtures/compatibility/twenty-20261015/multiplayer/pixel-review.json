@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "status": "pass",
+  "reviewed_unix_s": 1792118807.6297786,
+  "result_sha256": "ba0c77f2079184930da020e962876e0fcabadc13dd073643388ad901ef0fbabe",
+  "viewer_sha256": "4997e0dfd48427ff795b9b8592d4b2c21a961d47776162875793676bea1b7199",
+  "method": "three authentic PNGs inspected using view_image; no edited pixels",
+  "roles": {
+    "host": {
+      "image_sha256": "f40b666fafb033650073b2d82d7f67d359b549fd57791db8dee7042eb941aecf",
+      "panel_readable": true,
+      "all_initial_role_controls_fit_1280x720": true,
+      "role_permission_display": "correct",
+      "room_key_masked": true
+    },
+    "driver": {
+      "image_sha256": "e516a53d489ff10fb8e1143b9e69bd375dc5455d0df437012aa57dd2d9c344ea",
+      "panel_readable": true,
+      "all_initial_role_controls_fit_1280x720": true,
+      "role_permission_display": "correct",
+      "room_key_masked": null
+    },
+    "spectator": {
+      "image_sha256": "a0360cfe6018a7744ad3797f67c90f1a5d52676760b4380eba3d6d92d4916b5a",
+      "panel_readable": true,
+      "all_initial_role_controls_fit_1280x720": true,
+      "role_permission_display": "correct",
+      "room_key_masked": null
+    }
+  },
+  "shareable_text_files_scanned": 12,
+  "private_credentials_checked": 4,
+  "secret_matches": [],
+  "owned_process_scope": "exact OPENRAILSRS_PLAYER_DIR values of the three private launches, including compositor descendants",
+  "owned_pids_remaining": [],
+  "scroll_real_input": "not exercised; manual pending",
+  "scope": "GPU render, role-specific panel, host clock and own process exit; CPU TCP E2E separately validates physical authority/restore"
+}

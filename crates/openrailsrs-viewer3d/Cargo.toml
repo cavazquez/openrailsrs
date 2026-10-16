@@ -30,6 +30,7 @@ dev-inspector = ["dep:bevy-inspector-egui", "bevy/mesh_picking"]
 experimental-framepace = ["dep:bevy_framepace"]
 
 [dependencies]
+openrailsrs-game = { path = "../openrailsrs-game" }
 openrailsrs-core = { path = "../openrailsrs-core" }
 openrailsrs-campaign = { path = "../openrailsrs-campaign" }
 openrailsrs-content = { path = "../openrailsrs-content" }

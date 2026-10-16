@@ -1,0 +1,103 @@
+{
+  "schema": 1,
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "activity": "01Brooklyn-Hempstead.act",
+  "activity_sha256": "c667aeedf94b2b90283e801906f865e37d4e8a4b67cd83430bab74b94ac287ab",
+  "consist": "SFexpress-500",
+  "consist_sha256": "0cfea1b99ae0165ea1ca1eb5600e433ef5a114c0fdecf6ec274726d68cb89690",
+  "vehicles": 7,
+  "original_platforms": 2,
+  "sample_period_s": 0.05,
+  "samples": 32583,
+  "native_coverage": {
+    "schema": 1,
+    "reference_version": "1.6.1",
+    "samples": 32583,
+    "step_s": 0.05,
+    "duration_s": 1629.1000000000001,
+    "distance_m": 31361.201171875,
+    "coverage": {
+      "native_reached_all_platforms": true,
+      "original_platforms": true,
+      "all_original_tasks_visited": true,
+      "original_formation": true,
+      "full_distance": true,
+      "full_duration": true,
+      "declared_duration_limit": true,
+      "native_context_matches_predeclaration": true,
+      "unpaused_every_sample": true,
+      "dry_original_weather": true,
+      "original_motor_axles_recorded": true,
+      "context_unchanged_at_end": true
+    },
+    "passed": true,
+    "comparison_pending": true,
+    "scope": "Original DLL capture only; this does not certify Rust parity."
+  },
+  "measurement_context": {
+    "contract": "live-unpaused-v1",
+    "paused": false,
+    "use_advanced_adhesion": true,
+    "simple_control_physics": false,
+    "adhesion_factor_percent": 100,
+    "adhesion_factor_change_percent": 0,
+    "adhesion_proportional_to_weather": false,
+    "initialization": "Original ACT/CON initialization unchanged; explicitly set Simulator.Paused=false before initial sample; no warmup and no observed-state injection.",
+    "force_frame": "Original local motive/gravity forces multiplied by Flipped XOR player rear-cab orientation only when summing the train; raw per-vehicle local/oriented channels retained.",
+    "controls": "Actual CurrentValue of the original controllers; requested handles are diagnostic channels.",
+    "initial_force_phase": "At t=0 raw original force fields have not yet had an Update tick; preserve them as zero where original initializes them so; do not mask this sample.",
+    "original_weather": "Clear, zero precipitation from the original ACT; no live weather or randomization.",
+    "viewer_clear_preset": {
+      "visibility_m": 20000,
+      "cloud_cover_factor": 0.05,
+      "precipitation_ppspm2": 0,
+      "precipitation_liquidity": 1,
+      "source": "OR1.6.1 Source/RunActivity/Viewer3D/Weather.cs SetInitialWeatherParameters/UpdateWeatherParameters lines174-192",
+      "reason": "The real viewer initializes these static weather inputs; Simulator alone leaves them zero. The original ACT must already declare Clear."
+    }
+  },
+  "native_trace": "../lirr-native07/reference.csv.gz",
+  "rust_initialization": "Import unchanged original ACT/CON and physical path. Runtime parses original vehicle parameters and initial controller; no observed speed, RPM, forces, pressure or position is supplied.",
+  "replay_overlay": {
+    "native_activity": null,
+    "route_stops": [],
+    "direction": 1,
+    "reason": "ACT scoring and station evaluation must not truncate a physical replay; original native driver still uses original signals/platforms/boarding."
+  },
+  "replayed_inputs": [
+    "time_s",
+    "throttle (actual CurrentValue)",
+    "brake (actual CurrentValue)",
+    "doors_open"
+  ],
+  "native_scalar_formation": true,
+  "thresholds_unchanged": {
+    "velocity_rms_mps": 0.75,
+    "maximum_odometer_error_m": 45,
+    "brake_pipe_rms_psi": 5,
+    "cylinder_rms_psi": 5,
+    "motive_force_rms_n": 5000,
+    "brake_force_rms_n": 5000
+  },
+  "captured_outputs_sha256": {
+    "rust.csv": "50514006ecc104e5666c3593acc959aba5089d7e6cb11a26fa8494fd6d8c4b1c",
+    "comparison.json": "cc8d3029601c4ab8a4d02da4d90da27b14162cdf64d3978444bccf07fa83ae11",
+    "import.log": "ae8ff525498d8ba54ffa9e739c62f7ab5a5768ddf759e10364cc162944261e5b",
+    "replay.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "imported/track.toml": "b3c9c7d815b09d8862b417776fe250b185a81b66d57d9fcf6731e53cd14c522f",
+    "imported/scenario.toml": "a6c078a7807e521b11e6f745c9356242b98c4e58c0a83276ddda9e0252b29780"
+  },
+  "imported_files_not_redistributed": [
+    "imported/track.toml",
+    "imported/scenario.toml"
+  ],
+  "scope": "Native driver uses original signals, speed limits, platforms and boarding. Rust replays exactly the same 20Hz handles, with physical path and original vehicles. Station scoring and ACT goals are outside this physics comparison and are not allowed to truncate its diagnostics.",
+  "not_certified": [
+    "All Open Rails content",
+    "ACT objectives/scoring",
+    "Traffic parity",
+    "Snow/rain/random weather",
+    "Rust elastic coupler equivalence to native slack integration"
+  ]
+}

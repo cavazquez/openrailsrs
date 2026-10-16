@@ -13,10 +13,18 @@ mod consist;
 mod cvf;
 mod electric;
 mod engine;
+pub mod native_steam;
+pub use native_steam::{
+    NativeSteamBoilerType, NativeSteamBrakeKind, NativeSteamBrakeNotch, NativeSteamParams,
+    parse_native_steam161,
+};
 pub mod gearbox;
 mod traction_operation;
 pub use electric::parse_electric_vehicle;
-pub use traction_operation::{DieselOperatingParams, DieselThermalParams, SteamOperatingParams};
+pub use traction_operation::{
+    CompoundSteamParams, ConverterPoint, DieselOperatingParams, DieselThermalParams,
+    HydraulicProfile, SteamOperatingParams, SteamStartup, SteamThermodynamicParams,
+};
 mod environment;
 pub mod freight_load;
 mod friction;
@@ -53,7 +61,7 @@ pub use friction::{
 };
 pub use hazard::{HazardFile, resolve_hazard_shape_name};
 pub use path::{PathDataPoint, PathFile};
-pub use route::{OverheadWireParams, RouteFile, RouteStart, find_trk_path};
+pub use route::{OverheadWireParams, RouteFile, RouteStart, RouteTunnelSettings, find_trk_path};
 pub use shape::{
     AnimController, AnimNode, Animation, DistanceLevel, LightModelCfg, LodControl, Matrix43,
     MstsTexAddrMode, NamedMatrix, PrimState, Primitive, ShapeFile, ShapeTextureSlot, SubObject,

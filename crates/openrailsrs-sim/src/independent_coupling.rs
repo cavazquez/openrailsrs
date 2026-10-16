@@ -56,6 +56,11 @@ fn same_position(
 }
 impl LiveDriveSession {
     pub(crate) fn can_attach_at(&self, donor: &Self, end: CouplingEnd) -> Result<f64, String> {
+        if self.yard_driving_blocked() || donor.yard_driving_blocked() {
+            return Err(
+                "No se puede unir una formación transportada por una mesa en movimiento".into(),
+            );
+        }
         let n = self.formation.coupled_count;
         let m = donor.formation.coupled_count;
         if n == 0
@@ -86,6 +91,20 @@ impl LiveDriveSession {
         {
             return Err("El acople requiere TCS Rust y modos de dinámica compatibles".into());
         }
+        if (self
+            .original_physics
+            .native
+            .as_ref()
+            .is_some_and(|n| n.has_adhesion_inputs())
+            || donor
+                .original_physics
+                .native
+                .as_ref()
+                .is_some_and(|n| n.has_adhesion_inputs()))
+            && (self.state.time_s() - donor.state.time_s()).abs() > 1e-6
+        {
+            return Err("Las formaciones con entradas ambientales deben compartir el mismo reloj antes de acoplarse".into());
+        }
         if donor.dispatcher.own_locks.iter().any(|lock| {
             self.graph.switch_position(&lock.node) != Some(lock.position)
                 || self
@@ -99,6 +118,9 @@ impl LiveDriveSession {
                     .into(),
             );
         }
+        // Check track-map compatibility before any donor or receiver mutates.
+        let mut joined_rack = self.original_physics.rack.clone();
+        joined_rack.append(&donor.original_physics.rack, self.consist.vehicles.len())?;
         let own_i = if end == CouplingEnd::Rear { n - 1 } else { 0 };
         let donor_i = if end == CouplingEnd::Rear { 0 } else { m - 1 };
         if !self.state.brake_system.cylinders[own_i]
@@ -153,9 +175,13 @@ impl LiveDriveSession {
         let mut ids = self.vehicle_ids();
         ids.extend(donor.vehicle_ids());
         let n = self.consist.vehicles.len();
+        let donor_count = donor.consist.vehicles.len();
         let length = self.formation.length_m();
         let p = &mut self.original_physics;
         let q = donor.original_physics;
+        p.rack
+            .append(&q.rack, n)
+            .expect("rack maps prevalidated before attachment");
         p.bogies.extend(q.bogies);
         p.mass_kg += q.mass_kg;
         p.max_power_w += q.max_power_w;
@@ -198,6 +224,14 @@ impl LiveDriveSession {
             .bus_connected
             .extend(q.power_supply.bus_connected);
         if let (Some(a), Some(b)) = (&mut p.native, q.native) {
+            if a.has_adhesion_inputs() || b.has_adhesion_inputs() {
+                a.adhesion_inputs.resize(a.vehicles.len(), None);
+                let mut inputs = b.adhesion_inputs;
+                inputs.resize(b.vehicles.len(), None);
+                a.adhesion_inputs.extend(inputs);
+            }
+            a.locomotive_indices
+                .extend(b.locomotive_indices.iter().map(|i| i + n));
             a.vehicles.extend(b.vehicles);
             a.vehicle_masses_kg.extend(b.vehicle_masses_kg);
         }
@@ -225,12 +259,16 @@ impl LiveDriveSession {
         self.formation
             .native_axles
             .extend(donor.formation.native_axles.clone());
+        self.formation
+            .native_adhesion
+            .extend(donor.formation.native_adhesion.clone());
         let a = &mut self.state;
         let b = &mut donor.state;
         for mut car in b.freight.drain(..) {
             car.vehicle += n;
             a.freight.push(car);
         }
+        a.rack.append(&b.rack, n);
         a.bogies.append(&mut b.bogies);
         for mut boiler in b.steam_boilers.drain(..) {
             boiler.vehicle += n;
@@ -320,6 +358,11 @@ impl LiveDriveSession {
         a.articulated_joints
             .extend(b.articulated_joints.iter().map(|p| [p[0] + n, p[1] + n]));
         if let (Some(a), Some(b)) = (&mut a.native_dynamics, &mut b.native_dynamics) {
+            if !a.adhesion_filters.is_empty() || !b.adhesion_filters.is_empty() {
+                a.adhesion_filters.resize(n, None);
+                b.adhesion_filters.resize(donor_count, None);
+                a.adhesion_filters.append(&mut b.adhesion_filters);
+            }
             a.bearing_c.append(&mut b.bearing_c);
             a.axles.append(&mut b.axles);
         }
@@ -457,6 +500,12 @@ impl LiveTraffic {
             selected.formation.native_axles = selected
                 .formation
                 .native_axles
+                .drain()
+                .filter_map(|(id, value)| rename(&id).map(|id| (id, value)))
+                .collect();
+            selected.formation.native_adhesion = selected
+                .formation
+                .native_adhesion
                 .drain()
                 .filter_map(|(id, value)| rename(&id).map(|id| (id, value)))
                 .collect();

@@ -24,6 +24,8 @@ mod formation_editor;
 mod launcher;
 mod library;
 mod menu_country;
+mod operational_yards;
+mod physical_train;
 mod previews;
 mod recommendations;
 mod service_editor;
@@ -114,7 +116,9 @@ impl Plugin for PlayerUiPlugin {
             )
             .add_systems(
                 Update,
-                crate::gamepad_controls::update.after(crate::live::live_driver_input),
+                crate::gamepad_controls::update
+                    .after(crate::live::live_driver_input)
+                    .run_if(crate::multiplayer::standalone_controls),
             )
             .init_resource::<crate::adaptive_graphics::AdaptiveGraphics>()
             .add_systems(Update, crate::adaptive_graphics::update)
@@ -226,6 +230,7 @@ pub enum PlayerPanel {
     Pause,
     Notebook,
     Formation,
+    Yard,
     Map,
     Advanced,
     Traction,
@@ -349,21 +354,26 @@ pub fn reset_scene_ui(world: &mut World) {
 }
 pub fn world_input_available(
     ui: Option<Res<PlayerUiState>>,
+    network: Option<Res<crate::multiplayer::MultiplayerState>>,
     #[cfg(feature = "dev-inspector")] inspector: Option<Res<crate::dev_inspector::InspectorState>>,
 ) -> bool {
     #[cfg(feature = "dev-inspector")]
     if inspector.is_some_and(|s| s.enabled) {
         return false;
     }
-    ui.is_none_or(|u| u.panel == PlayerPanel::None)
+    ui.is_none_or(|u| u.panel == PlayerPanel::None) && network.is_none_or(|n| !n.open)
 }
 pub fn camera_input_available(
     ui: Option<Res<PlayerUiState>>,
+    network: Option<Res<crate::multiplayer::MultiplayerState>>,
     pointer: Option<Res<UiPointerCapture>>,
     cab: Option<Res<crate::cab_mouse::CabMouseState>>,
 ) -> bool {
     let available = ui.is_none_or(|u| u.panel == PlayerPanel::None);
-    available && pointer.is_none_or(|p| !p.0) && cab.is_none_or(|c| !c.pointer_captured)
+    available
+        && network.is_none_or(|n| !n.open)
+        && pointer.is_none_or(|p| !p.0)
+        && cab.is_none_or(|c| !c.pointer_captured)
 }
 #[derive(Component)]
 struct PlayerUiCamera;
@@ -439,6 +449,8 @@ enum UiCommand {
     Advanced(usize),
     SelectCar(usize),
     Car(CarOperation),
+    Yard(openrailsrs_sim::operational_yards::YardCommand),
+    MultiplayerOpen,
     DieselEngine(usize),
     EquipmentMotor(
         usize,
@@ -453,6 +465,11 @@ enum UiCommand {
     Pantograph(usize, usize),
     Sander,
     Steam(openrailsrs_sim::steam::SteamCommand),
+    SteamVehicle(usize, openrailsrs_sim::steam::SteamCommand),
+    SteamRegulator(usize, Option<f64>),
+    RackEngage(usize, bool),
+    Derailment(bool),
+    Irregularities(bool),
     BeginRefill,
     BeginUnload,
     CancelRefill,
@@ -1001,7 +1018,13 @@ fn player_keys(
     mut settings: ResMut<PlayerSettings>,
     state: Res<State<ViewerAppState>>,
     teleport: Res<crate::teleport::TeleportDialog>,
+    network: Option<Res<crate::multiplayer::MultiplayerState>>,
 ) {
+    if network.as_ref().is_some_and(|n| n.open) {
+        return;
+    }
+    let shared = network.as_ref().is_some_and(|n| n.active());
+    let paused = live.as_ref().is_some_and(|l| l.paused);
     if teleport.open {
         return;
     }
@@ -1059,6 +1082,9 @@ fn player_keys(
         } else {
             open_panel(&mut ui, &mut live, PlayerPanel::Pause)
         }
+        if shared && let Some(live) = live.as_mut() {
+            live.paused = paused;
+        }
         return;
     }
     for (action, panel) in [
@@ -1075,6 +1101,9 @@ fn player_keys(
             || (action == PlayerAction::Pause && keys.just_pressed(KeyCode::Pause))
         {
             open_panel(&mut ui, &mut live, panel);
+            if shared && let Some(live) = live.as_mut() {
+                live.paused = paused;
+            }
             return;
         }
     }
@@ -1109,6 +1138,7 @@ struct CameraForSave<'w, 's> {
 }
 #[derive(SystemParam)]
 struct MenuOptions<'w> {
+    network: Option<ResMut<'w, crate::multiplayer::MultiplayerState>>,
     settings: ResMut<'w, PlayerSettings>,
     previews: ResMut<'w, previews::Previews>,
     history: ResMut<'w, crate::save_history::SaveHistory>,
@@ -1139,6 +1169,7 @@ fn handle_buttons(
     mut weather: Option<ResMut<crate::weather_state::WeatherState>>,
 ) {
     let MenuOptions {
+        mut network,
         mut settings,
         mut previews,
         mut history,
@@ -1154,7 +1185,22 @@ fn handle_buttons(
         if *interaction != Interaction::Pressed || !mouse.just_pressed(MouseButton::Left) {
             continue;
         }
+        if let Some(reason) = crate::multiplayer::deny_local_mutation(network.as_deref())
+            && !network_read_only_command(command)
+        {
+            ui.notice = reason.into();
+            ui.rebuild = true;
+            continue;
+        }
+        let shared = network.as_ref().is_some_and(|n| n.active());
+        let paused = live.as_ref().is_some_and(|l| l.paused);
         let result:Result<(),String>=match command {
+            UiCommand::MultiplayerOpen=>{
+                close_panel(&mut ui,&mut live);
+                ui.navigation.clear();ui.panel=if live.is_some(){PlayerPanel::None}else{PlayerPanel::Menu};
+                if let Some(live)=live.as_mut(){live.paused=ui.pause_before;}
+                if let Some(network)=network.as_mut(){network.open=true;Ok(())}else{Err("Multijugador no disponible".into())}
+            },
             UiCommand::ContentCycle(delta)=>{downloads.cycle(*delta);Ok(())},
             UiCommand::ContentFolder(index)=>{
                 let path=match index {Some(i)=>downloads.installed.get(*i).cloned(),None=>menu.current().map(|s|s.scenery_root.clone().unwrap_or_else(||s.route_dir.clone()))};
@@ -1456,6 +1502,7 @@ fn handle_buttons(
             UiCommand::NoteTab(tab)=>{ui.notebook_tab= *tab;Ok(())},UiCommand::Advanced(page)=>{ui.advanced_page= *page;Ok(())},
             UiCommand::SelectCar(car)=>{ui.selected_car= *car;Ok(())},
             UiCommand::Car(action)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.operate_car(ui.selected_car,*action)).map(|()|{ui.notice="Operación aplicada a la formación".into();}),
+            UiCommand::Yard(command)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|{let l=&mut **l;l.traffic.command_yard(&mut l.session,command.clone())}).map(|()|{ui.notice="Orden de patio aplicada; cerrá esta ventana para continuar el movimiento".into();}),
             UiCommand::Pantograph(vehicle,collector)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.toggle_collector(*vehicle,*collector)).map(|()|{ui.notice="Mando aplicado al pantógrafo seleccionado".into();}),
             UiCommand::EquipmentMotor(vehicle,motor,action)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.operate_motor(*vehicle,*motor,*action)),
             UiCommand::TractionSource(vehicle,source)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.select_traction_source(*vehicle,*source)),
@@ -1463,6 +1510,11 @@ fn handle_buttons(
             UiCommand::DieselEngine(vehicle)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.toggle_diesel_engine(*vehicle)),
             UiCommand::Sander=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.toggle_sander()),
             UiCommand::Steam(command)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.steam_command(*command)),
+            UiCommand::SteamVehicle(vehicle,command)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|openrailsrs_sim::steam_equipment::command_vehicle(&mut l.session.state,*vehicle,*command)),
+            UiCommand::SteamRegulator(vehicle,value)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|openrailsrs_sim::steam_equipment::set_local_regulator(&mut l.session.state,*vehicle,*value)),
+            UiCommand::RackEngage(vehicle,value)=>live.as_mut().ok_or("No hay partida".into()).and_then(|l|l.session.state.rack.request(*vehicle,*value)),
+            UiCommand::Derailment(value)=>live.as_mut().ok_or("No hay partida".into()).map(|l|l.session.set_derailment_enabled(*value)),
+            UiCommand::Irregularities(value)=>live.as_mut().ok_or("No hay partida".into()).map(|l|l.session.set_vertical_irregularities_enabled(*value)),
             UiCommand::BeginRefill=>live.as_mut().ok_or("No hay partida".into()).and_then(|l| {
                 let target = refills.as_ref().and_then(|r|r.0.first()).ok_or("Alineá la toma del vehículo con un cargador o abastecedor compatible; no hay uno al alcance".to_string())?;
                 l.session.begin_refill(target.station.clone(), target.vehicle, target.distance_m, target.width_m)
@@ -1570,8 +1622,41 @@ fn handle_buttons(
         if let Err(error) = result {
             ui.notice = error;
         }
+        if shared && let Some(live) = live.as_mut() {
+            live.paused = paused;
+        }
         ui.rebuild = true;
     }
+}
+fn network_read_only_command(command: &UiCommand) -> bool {
+    matches!(
+        command,
+        UiCommand::MultiplayerOpen
+            | UiCommand::Open(_)
+            | UiCommand::Close
+            | UiCommand::Exit
+            | UiCommand::ReturnMenu
+            | UiCommand::SelectCar(_)
+            | UiCommand::NoteTab(_)
+            | UiCommand::Advanced(_)
+            | UiCommand::MapPick(_)
+            | UiCommand::Zoom(_)
+            | UiCommand::Pan(_)
+            | UiCommand::FitMap
+            | UiCommand::SettingsTab(_)
+            | UiCommand::Setting(
+                SettingField::Units
+                    | SettingField::Scale
+                    | SettingField::Fov
+                    | SettingField::Audio
+                    | SettingField::Volume
+                    | SettingField::AudioGroup(_),
+                _
+            )
+            | UiCommand::SaveSettings
+            | UiCommand::Rebind(_)
+            | UiCommand::DefaultKeys
+    )
 }
 fn capture_ui_pointer(
     buttons: Query<&Interaction, With<Button>>,
@@ -1668,6 +1753,7 @@ fn build_panel(
                         PlayerPanel::Pause => "PARTIDA EN PAUSA",
                         PlayerPanel::Notebook => "LIBRETA DEL SERVICIO",
                         PlayerPanel::Formation => "OPERACIONES DE LA FORMACIÓN",
+                        PlayerPanel::Yard => "PATIO Y MANIOBRAS",
                         PlayerPanel::Map => "MAPA Y DESPACHADOR",
                         PlayerPanel::Advanced => "HUD AVANZADO",
                         PlayerPanel::Traction => "VAPOR Y DIÉSEL · CONTROLES",
@@ -1715,7 +1801,7 @@ fn build_panel(
                 Name::new("player-scroll"),
             ))
             .with_children(|p| match panel {
-                PlayerPanel::Menu => launcher::build_home(p),
+                PlayerPanel::Menu => {launcher::build_home(p);button(p,"Multijugador · conductores y despachador",UiCommand::MultiplayerOpen);},
                 PlayerPanel::Campaigns => campaigns::build(p,&campaigns),
                 PlayerPanel::NewGame => launcher::build_new_game(p, &ui, &menu, &settings, previews.as_deref()),
                 PlayerPanel::Continue => launcher::build_continue(p,&ui,&history),
@@ -1822,6 +1908,7 @@ fn build_panel(
                 },
                 PlayerPanel::Formation => {
                     if let Some(l) = live.as_ref() {
+                        button(p,"Patio, mesas y clasificación",UiCommand::Open(PlayerPanel::Yard));
                         build_formation(p, &ui, l);
                         for d in l.traffic.yard_inventory(&l.session) {label(p,format!("Destino {} · {} · {}",d.destination,d.id,d.reason),14.,if d.accepted {GOOD}else{CAUTION});}
                         for (index,service) in l.traffic.services.iter().enumerate(){if service.departed && !service.session.arrived {button(p,format!("Tomar control: {} · {:.0} km/h",service.id,service.session.velocity_mps()*3.6),UiCommand::TakeControl(index));}}
@@ -1835,6 +1922,9 @@ fn build_panel(
                         build_map(p, &ui, l);
                     }
                 }
+                PlayerPanel::Yard => {
+                    if let Some(l) = live.as_ref() { operational_yards::build(p,l); }
+                }
                 PlayerPanel::Advanced => {
                     row(p, |p| {
                         for (page, name) in ADVANCED_PAGES.iter().enumerate() {
@@ -1843,7 +1933,7 @@ fn build_panel(
                     });
                     dynamic(p, DynamicText::Advanced, 13.0);
                 }
-                PlayerPanel::Settings => build_settings(
+                PlayerPanel::Settings => {button(p,"Multijugador · sesión y roles",UiCommand::MultiplayerOpen);build_settings(
                     p,
                     ui.settings_tab,
                     &settings,
@@ -1853,7 +1943,7 @@ fn build_panel(
                         menu.environment
                     },
                     cab.cvf_path.as_deref(),
-                ),
+                );},
                 PlayerPanel::Traction => {
                     if let Some(l) = live.as_ref() { build_traction(p, &l.session); }
                 }
@@ -2100,6 +2190,7 @@ fn poll_menu_audits(mut menu: ResMut<PlayerLaunchMenu>, mut ui: ResMut<PlayerUiS
 
 fn build_traction(p: &mut ChildSpawnerCommands<'_>, s: &LiveDriveSession) {
     build_activity_freight(p, s);
+    physical_train::build_controls(p, s);
     button(p, "Arenado: activar / desactivar", UiCommand::Sander);
     if s.state
         .vehicle_systems
@@ -2158,14 +2249,18 @@ fn build_traction(p: &mut ChildSpawnerCommands<'_>, s: &LiveDriveSession) {
             MUTED,
         );
     }
-    if s.state.boiler_state.is_some() {
+    if let Some(boiler) = &s.state.boiler_state {
         use openrailsrs_sim::steam::SteamCommand as S;
         row(p, |p| {
-            button(
-                p,
-                "Fogonero automático / manual",
-                UiCommand::Steam(S::AutomaticFireman),
-            );
+            if boiler.native_or161.is_none() {
+                button(
+                    p,
+                    "Fogonero automático / manual",
+                    UiCommand::Steam(S::AutomaticFireman),
+                );
+            } else {
+                label(p, "Fogonero manual · ciclo OR 1.6.1", 14.0, MUTED);
+            }
             button(p, "Corte −", UiCommand::Steam(S::Cutoff(-0.05)));
             button(p, "Corte +", UiCommand::Steam(S::Cutoff(0.05)));
             button(p, "Cilindros: purgas", UiCommand::Steam(S::CylinderCocks));
@@ -2178,6 +2273,13 @@ fn build_traction(p: &mut ChildSpawnerCommands<'_>, s: &LiveDriveSession) {
             button(p, "Inyector 1", UiCommand::Steam(S::Injector1));
             button(p, "Inyector 2", UiCommand::Steam(S::Injector2));
             button(p, "Soplador", UiCommand::Steam(S::Blower));
+            if boiler.native_or161.is_none() {
+                button(
+                    p,
+                    "Compound: válvula de arranque",
+                    UiCommand::Steam(S::CompoundStartingValve),
+                );
+            }
         });
     }
     row(p, |p| {
@@ -2200,7 +2302,11 @@ fn build_traction(p: &mut ChildSpawnerCommands<'_>, s: &LiveDriveSession) {
 }
 
 fn traction_text(s: &LiveDriveSession, settings: &PlayerSettings) -> String {
-    let mut out = format!("{}\n\n", s.traction_diagnosis());
+    let mut out = format!(
+        "{}\n\n{}",
+        s.traction_diagnosis(),
+        physical_train::diagnostics(s)
+    );
     for c in &s.state.diesel.cars {
         if let Some(gear) = &c.gearbox {
             let display = |index: i32| {
@@ -2299,7 +2405,9 @@ fn traction_text(s: &LiveDriveSession, settings: &PlayerSettings) -> String {
             b.fire_mass_kg,
             b.evaporation_kg_s,
             b.steam_usage_kg_s,
-            if b.controls.automatic_fireman {
+            if b.native_or161.is_some() {
+                "manual (OR 1.6.1)"
+            } else if b.controls.automatic_fireman {
                 "automático"
             } else {
                 "manual"
@@ -5417,6 +5525,68 @@ mod tests {
                 .join("../../examples/chiltern_local/scenario.toml"),
         )
         .unwrap()
+    }
+    #[test]
+    fn native_steam_panels_offer_manual_fireman_without_unsupported_toggles() {
+        use openrailsrs_sim::steam::SteamCommand as S;
+        for (scenario, native) in [
+            ("physics_lab/scenario_native_steam.toml", true),
+            ("traction_operation/scenario_steam.toml", false),
+        ] {
+            let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../examples")
+                .join(scenario);
+            let live = LiveDrive::from_scenario_path(&path).unwrap();
+            assert_eq!(
+                live.session
+                    .state
+                    .boiler_state
+                    .as_ref()
+                    .unwrap()
+                    .native_or161
+                    .is_some(),
+                native
+            );
+            let mut app = menu_app();
+            app.insert_state(ViewerAppState::Playing)
+                .insert_resource(live);
+            {
+                let mut ui = app.world_mut().resource_mut::<PlayerUiState>();
+                ui.panel = PlayerPanel::Traction;
+                ui.in_start_menu = false;
+                ui.rebuild = true;
+            }
+            app.update();
+            let mut commands = app.world_mut().query::<&UiCommand>();
+            let has_auto = commands.iter(app.world()).any(|cmd| {
+                matches!(
+                    cmd,
+                    UiCommand::Steam(S::AutomaticFireman)
+                        | UiCommand::SteamVehicle(_, S::AutomaticFireman)
+                )
+            });
+            assert_eq!(has_auto, !native);
+            if native {
+                assert!(!commands.iter(app.world()).any(|cmd| {
+                    matches!(
+                        cmd,
+                        UiCommand::Steam(S::CompoundStartingValve)
+                            | UiCommand::SteamVehicle(_, S::CompoundStartingValve)
+                    )
+                }));
+                assert!(commands.iter(app.world()).any(|cmd| {
+                    matches!(
+                        cmd,
+                        UiCommand::Steam(S::Injector1) | UiCommand::SteamVehicle(_, S::Injector1)
+                    )
+                }));
+                let text = traction_text(
+                    &app.world().resource::<LiveDrive>().session,
+                    app.world().resource::<PlayerSettings>(),
+                );
+                assert!(text.contains("Fogonero manual (OR 1.6.1)"));
+            }
+        }
     }
     #[test]
     fn traction_panel_keeps_pause_and_buttons_control_the_selected_engine() {

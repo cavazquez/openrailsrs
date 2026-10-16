@@ -1,0 +1,79 @@
+{
+  "schema": 1,
+  "case": "hot_subsystem",
+  "ticks": 1600,
+  "dt_s": 0.05,
+  "kind": "prescribed_speed_subsystem",
+  "hot_start": true,
+  "paused": true,
+  "same_driver_commands_as_historic05": true,
+  "commands": [
+    {
+      "tick": 0,
+      "phase": "idle_fire",
+      "throttle": 0,
+      "brake": 1,
+      "cutoff": 0.65,
+      "damper": 0.2,
+      "firing": 0.2,
+      "injector1": false,
+      "injector2": false,
+      "speed_mps": 0.0,
+      "pipe_absolute_psi": 14.5037738
+    },
+    {
+      "tick": 200,
+      "phase": "steam_load",
+      "throttle": 0.65,
+      "brake": 0,
+      "cutoff": 0.65,
+      "damper": 0.9,
+      "firing": 0.8,
+      "injector1": false,
+      "injector2": false,
+      "speed_mps": 8.0,
+      "pipe_absolute_psi": 4.2
+    },
+    {
+      "tick": 800,
+      "phase": "injection",
+      "throttle": 0.65,
+      "brake": 0,
+      "cutoff": 0.45,
+      "damper": 0.9,
+      "firing": 0.8,
+      "injector1": true,
+      "injector2": false,
+      "speed_mps": 16.0,
+      "pipe_absolute_psi": 4.2
+    },
+    {
+      "tick": 1100,
+      "phase": "coast",
+      "throttle": 0,
+      "brake": 0,
+      "cutoff": 0.45,
+      "damper": 0.3,
+      "firing": 0.3,
+      "injector1": false,
+      "injector2": false,
+      "speed_mps": 12.0,
+      "pipe_absolute_psi": 4.2
+    },
+    {
+      "tick": 1400,
+      "phase": "braking",
+      "throttle": 0,
+      "brake": 1,
+      "cutoff": 0.45,
+      "damper": 0.3,
+      "firing": 0.3,
+      "injector1": false,
+      "injector2": false,
+      "speed_mps": 4.0,
+      "pipe_absolute_psi": 14.5037738
+    }
+  ],
+  "generator_context": "Simulator only; no steam viewer constructed; native GeneratorSteamEffects is captured explicitly",
+  "native_05_limits": "unchanged; see protocol. NativeSteam161 port is evaluated separately from the own finite vessel"
+}

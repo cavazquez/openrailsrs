@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "native04_sha256": "6c40d4863c6391d62b0468191713d42dc1597412f2e1c73b999a905614650afe",
+  "native05_sha256": "86c44d3042dbcd7f7ed398706b7cacfab4e8c441c845ef4b5aaa8c07cc0e9976",
+  "same_samples": true,
+  "samples": 33703,
+  "byte_equal_channels": {
+    "time_s": true,
+    "velocity_mps": true,
+    "odometer_m": true,
+    "brake_pipe_psi": true,
+    "cylinder_psi": true,
+    "brake_force_n": true,
+    "friction_force_n": true,
+    "allowed_speed_mps": true,
+    "doors_open": true
+  },
+  "requests_byte_equal": {
+    "throttle": true,
+    "brake": true
+  },
+  "frame_sum_maximum_absolute_error_n": {
+    "motive": 0.0,
+    "gravity": 0.0
+  },
+  "actual_controls": {
+    "throttle": [
+      0.0,
+      0.4000000059604645
+    ],
+    "brake": [
+      0.0,
+      0.36000001430511475,
+      0.5519999861717224,
+      0.699999988079071
+    ]
+  },
+  "raw_and_oriented_motive_ranges_n": {
+    "motive_force_n": [
+      -1195.0763549804688,
+      134110.921875
+    ],
+    "motive_local_sum_n": [
+      -38532.3408203125,
+      79942.28515625
+    ]
+  },
+  "scope": "Measurement coherence only; no Rust parity or extra physics threshold is claimed."
+}

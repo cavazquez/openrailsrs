@@ -604,3 +604,127 @@ fn control_swaps_between_transfers_replay_in_chronological_receiver_order() {
     );
     assert_eq!(replay.control_history, history);
 }
+
+fn delivery_definition(
+    service: &str,
+    vehicles: Vec<usize>,
+    start_m: f64,
+    end_m: f64,
+) -> openrailsrs_scenarios::rail_operations::YardDeliveryDef {
+    openrailsrs_scenarios::rail_operations::YardDeliveryDef {
+        service: Some(service.into()),
+        id: "identity-delivery".into(),
+        destination: "Same physical siding".into(),
+        edge: "approach".into(),
+        start_m,
+        end_m,
+        vehicles,
+    }
+}
+fn delivery_scene(
+    name: &str,
+    delivery: &openrailsrs_scenarios::rail_operations::YardDeliveryDef,
+) -> (LiveDriveSession, LiveTraffic) {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/portion_operations");
+    let mut scenario = openrailsrs_scenarios::load_scenario(dir.join(name)).unwrap();
+    scenario.simulation.rail_operations.yard_deliveries = vec![delivery.clone()];
+    (
+        LiveDriveSession::from_scenario(&dir, &scenario).unwrap(),
+        LiveTraffic::from_scenario(&dir, &scenario).unwrap(),
+    )
+}
+#[test]
+fn front_foreign_pickup_inventory_uses_original_ids_through_json_restore_and_delivery() {
+    let delivery = delivery_definition("Porción-Sur", vec![1, 2], 120., 160.);
+    let (mut player, mut traffic) = delivery_scene("scenario_services.toml", &delivery);
+    // Prescribed physical contact, as in the front-coupling geometry test.
+    // The test verifies identity and delivery, not a driven run-around.
+    player.state.pos_on_edge_m = 120.;
+    let own = positions(&player);
+    let foreign = positions(&traffic.services[0].session);
+    let original_ids = traffic.services[0].session.vehicle_identities();
+    traffic
+        .couple_service_at(&mut player, 0, CouplingEnd::Front)
+        .unwrap();
+    assert_eq!(&positions(&player)[..3], foreign.as_slice());
+    assert_eq!(&positions(&player)[3..], own.as_slice());
+    assert_eq!(&player.vehicle_identities()[..3], original_ids.as_slice());
+    let status = &traffic.yard_inventory(&player)[0];
+    assert_eq!(status.actual_vehicles, vec![1, 2]);
+    assert!(
+        !status.accepted,
+        "coaches are still attached to powered stock"
+    );
+    assert!(status.reason.contains("Separá"), "{}", status.reason);
+    let saved_player =
+        serde_json::from_slice(&serde_json::to_vec(&player.snapshot()).unwrap()).unwrap();
+    let saved_traffic =
+        serde_json::from_slice(&serde_json::to_vec(&traffic.snapshot()).unwrap()).unwrap();
+    let receipts: Vec<openrailsrs_sim::independent_coupling::CouplingReceipt> =
+        serde_json::from_slice(&serde_json::to_vec(&traffic.couplings).unwrap()).unwrap();
+    let (mut restored, mut others) = delivery_scene("scenario_services.toml", &delivery);
+    others
+        .reconstruct_couplings(&mut restored, &receipts)
+        .unwrap();
+    others
+        .restore_shared_snapshots(&mut restored, saved_player, saved_traffic)
+        .unwrap();
+    assert_eq!(positions(&restored), positions(&player));
+    assert_eq!(restored.vehicle_identities(), player.vehicle_identities());
+    assert!(
+        others.yard_inventory(&restored)[0]
+            .reason
+            .contains("Separá")
+    );
+    others.split_service(&mut restored, "Porción-Sur").unwrap();
+    others.services[0]
+        .session
+        .uncouple_after_named(0, "delivered-coaches")
+        .unwrap();
+    assert_eq!(positions(&others.services[0].session), foreign);
+    assert_eq!(
+        others.services[0].session.vehicle_identities(),
+        original_ids
+    );
+    assert_eq!(
+        restored.formation.cars.len() + others.services[0].session.formation.cars.len(),
+        6
+    );
+    assert!(others.yard_inventory(&restored)[0].accepted);
+}
+#[test]
+fn own_permuted_section_delivery_keeps_original_vehicle_numbers_after_restore() {
+    let delivery = delivery_definition("Jugador", vec![3, 4], 100., 140.);
+    let (mut player, traffic) = delivery_scene("scenario.toml", &delivery);
+    secure(&mut player);
+    player.uncouple_after_named(2, "B").unwrap();
+    assert!(player.yard_deliveries()[0].accepted);
+    assert!(traffic.yard_inventory(&player)[0].accepted);
+    player.uncouple_after_named(0, "C").unwrap();
+    // Prescribed front contact after a run-around; the parked stock never moves.
+    player.state.pos_on_edge_m = 100.;
+    player.recouple_section("B", CouplingEnd::Front).unwrap();
+    assert_eq!(
+        &player.vehicle_identities()[..2],
+        &["Jugador/car/3", "Jugador/car/4"]
+    );
+    for status in [
+        player.yard_deliveries().remove(0),
+        traffic.yard_inventory(&player).remove(0),
+    ] {
+        assert_eq!(status.actual_vehicles, vec![0, 1]);
+        assert!(!status.accepted);
+        assert!(status.reason.contains("Separá"), "{}", status.reason);
+    }
+    let saved = serde_json::from_slice(&serde_json::to_vec(&player.snapshot()).unwrap()).unwrap();
+    let (mut restored, others) = delivery_scene("scenario.toml", &delivery);
+    restored.restore_snapshot(saved).unwrap();
+    assert_eq!(positions(&restored), positions(&player));
+    assert_eq!(restored.vehicle_identities(), player.vehicle_identities());
+    assert!(restored.yard_deliveries()[0].reason.contains("Separá"));
+    assert!(
+        others.yard_inventory(&restored)[0]
+            .reason
+            .contains("Separá")
+    );
+}

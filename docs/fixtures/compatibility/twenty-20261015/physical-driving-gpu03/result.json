@@ -1,0 +1,252 @@
+{
+  "status": "all_selected_captures_pass_pixel_review_pending",
+  "completed": [
+    {
+      "status": "physical_and_render_report_pass_pixel_review_pending",
+      "name": "derailment-from-rest",
+      "odometer_m": 2078.6010606555756,
+      "drive_controls": {
+        "brake": 0.0,
+        "braking_intervention": "Asistencia de tráfico",
+        "direction": 1.0,
+        "missed_stops": [],
+        "paused": true,
+        "throttle": 1.0,
+        "traction_load_fraction": 0.0,
+        "traffic_brake_assistance": false
+      },
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "active_device_pci": "0000:03:00.0",
+      "actions": [
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 0,
+          "odometer_m": 0.0,
+          "origin_m": [
+            -1040.0,
+            0.0,
+            -180.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.0
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 1,
+          "odometer_m": 0.0,
+          "origin_m": [
+            -1040.0,
+            0.0,
+            -180.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.0
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 2,
+          "odometer_m": 0.0,
+          "origin_m": [
+            -1040.0,
+            0.0,
+            -180.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.0
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 1.0
+          },
+          "door_fractions": [],
+          "index": 3,
+          "odometer_m": 0.0,
+          "origin_m": [
+            -1040.0,
+            0.0,
+            -180.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.3
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 1.0
+          },
+          "door_fractions": [],
+          "index": 4,
+          "odometer_m": 1279.3860097134386,
+          "origin_m": [
+            -13.16290283203125,
+            0.0,
+            -180.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 29.34007370960672,
+          "time_s": 59.29999999999877
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 1.0
+          },
+          "door_fractions": [],
+          "index": 5,
+          "odometer_m": 2078.6010606555756,
+          "origin_m": [
+            1015.221435546875,
+            0.0,
+            -171.14434814453125
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 109.24999999999594
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 1.0
+          },
+          "door_fractions": [],
+          "index": 6,
+          "odometer_m": 2078.6010606555756,
+          "origin_m": [
+            1015.221435546875,
+            0.0,
+            -171.14434814453125
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 109.24999999999594
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 1.0
+          },
+          "door_fractions": [],
+          "index": 7,
+          "odometer_m": 2078.6010606555756,
+          "origin_m": [
+            1015.221435546875,
+            0.0,
+            -171.14434814453125
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 109.24999999999594
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 1.0
+          },
+          "door_fractions": [],
+          "index": 8,
+          "odometer_m": 2078.6010606555756,
+          "origin_m": [
+            1015.221435546875,
+            0.0,
+            -171.14434814453125
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 109.24999999999594
+        }
+      ],
+      "pixel_review": "pending original PNG inspection; text-tree visibility is insufficient",
+      "scope": "normal fixed-tick driven state and in-process JSON SessionSnapshot restore, not full disk-save menu or OR solver parity",
+      "image_sha256": "24e9b8d2e74e5cab6cf839385e9c6368eb8410340b87e4fef5c9d1ed21e28511",
+      "report_sha256": "e1a1463719a2a52a010dda251d9245a431788dc34a6fa0948ab7b71b3d97e3a2",
+      "processes_sha256": "98c1a79b7770bf3245fc4a3b96cf09b9a522c86aecbbf48c7ae8bf308034558e"
+    }
+  ],
+  "viewer_sha256": "80da4d50267917e84a75d1396887bb954b862d691b24e8d67f6b94c058f049e3",
+  "plan_sha256": "26af7b1f6712d13acd0b9f318c04ebbe5ce670ba00e6182e8f96565adab3a3a3"
+}

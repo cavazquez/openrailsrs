@@ -179,7 +179,7 @@ impl LiveDrive {
             session,
             traffic,
             audio,
-            paused: false,
+            paused: crate::capture::start_paused_for_actions(),
             start_clock_s: scenario
                 .scenario
                 .start_time_s
@@ -210,7 +210,7 @@ impl LiveDrive {
             self.session.expand_dispatch_network(network, &scenario)?;
         }
         self.traffic.initialize_pre_run_player(&mut self.session)?;
-        self.paused = false;
+        self.paused = crate::capture::start_paused_for_actions();
         self.start_clock_s = scenario
             .scenario
             .start_time_s
@@ -734,6 +734,15 @@ pub fn update_live_train_marker(
     origin: Res<FloatingOrigin>,
     mut query: Query<&mut Transform, With<LiveTrainMarker>>,
 ) {
+    if let Some(mut pose) = crate::yard_scene::car_pose(&live, 0, 0, offset.delta, &focus, &origin)
+    {
+        pose.translation -=
+            pose.rotation * Vec3::X * live.session.formation.center_offset_m(0) as f32;
+        for mut transform in &mut query {
+            *transform = pose;
+        }
+        return;
+    }
     let Some((edge, position)) = live.visual_position_at_head_offset(0.0) else {
         return;
     };
@@ -1511,10 +1520,11 @@ pub fn spawn_live_train(
                     // Keep the car root in the same unscaled native frame as
                     // original shapes. Track poses can then park and turn each
                     // car independently without erasing its visual dimensions.
+                    let geometry = Transform::from_xyz(0.0, real_height * 0.5, 0.0)
+                        .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2))
+                        .with_scale(Vec3::new(real_length, real_height, real_width));
                     car.spawn((
-                        Transform::from_xyz(0.0, real_height * 0.5, 0.0)
-                            .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2))
-                            .with_scale(Vec3::new(real_length, real_height, real_width)),
+                        geometry,
                         Visibility::default(),
                         Name::new("fallback-geometry"),
                     ))
@@ -1553,32 +1563,6 @@ pub fn spawn_live_train(
                             Visibility::default(),
                             Name::new("window"),
                         ));
-                    }
-
-                    // 4. Bogeys & Wheels
-                    for &bogey_x in &[-0.3_f32, 0.3_f32] {
-                        parent.spawn((
-                            LiveTrainBody,
-                            Mesh3d(bogey_mesh.clone()),
-                            MeshMaterial3d(metal_material.clone()),
-                            Transform::from_xyz(bogey_x, -0.4, 0.0),
-                            Visibility::default(),
-                            Name::new("bogey"),
-                        ));
-
-                        // 4 wheels per bogey aligned on 1.435m track gauge (Z = ±0.239 inside 3.0m wide car)
-                        for &wheel_z in &[-0.239_f32, 0.239_f32] {
-                            for &wheel_offset_x in &[-0.06_f32, 0.06_f32] {
-                                parent.spawn((
-                                    LiveTrainBody,
-                                    Mesh3d(wheel_mesh.clone()),
-                                    MeshMaterial3d(wheel_material.clone()),
-                                    Transform::from_xyz(bogey_x + wheel_offset_x, -0.5, wheel_z),
-                                    Visibility::default(),
-                                    Name::new("wheel"),
-                                ));
-                            }
-                        }
                     }
 
                     // 5. Locomotive features (lead)
@@ -1641,6 +1625,35 @@ pub fn spawn_live_train(
                         ));
                     }
                     });
+                    // Keep rail contacts outside the body's scaled geometry.
+                    // Suspension compensation then rotates/translates them in
+                    // the unscaled native frame without introducing shear.
+                    for &bogey_x in &[-0.3_f32, 0.3_f32] {
+                        car.spawn((
+                            LiveTrainBody,
+                            crate::rolling_stock_anim::TrainExteriorAnimPart,
+                            crate::train_motion::FallbackRunningGear,
+                            Mesh3d(bogey_mesh.clone()),
+                            MeshMaterial3d(metal_material.clone()),
+                            geometry * Transform::from_xyz(bogey_x, -0.4, 0.0),
+                            Visibility::default(),
+                            Name::new("bogey"),
+                        ));
+                        for &wheel_z in &[-0.239_f32, 0.239_f32] {
+                            for &wheel_offset_x in &[-0.06_f32, 0.06_f32] {
+                                car.spawn((
+                                    LiveTrainBody,
+                                    crate::rolling_stock_anim::TrainExteriorAnimPart,
+                                    crate::train_motion::FallbackRunningGear,
+                                    Mesh3d(wheel_mesh.clone()),
+                                    MeshMaterial3d(wheel_material.clone()),
+                                    geometry * Transform::from_xyz(bogey_x + wheel_offset_x, -0.5, wheel_z),
+                                    Visibility::default(),
+                                    Name::new("wheel"),
+                                ));
+                            }
+                        }
+                    }
                 });
             }
         });

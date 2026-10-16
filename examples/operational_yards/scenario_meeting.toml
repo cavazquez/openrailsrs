@@ -1,0 +1,69 @@
+[scenario]
+name = "Horario: encuentro con una porción móvil"
+description = "Un servicio espera a 450 m; otra locomotora avanza realmente hasta su enganche trasero. F9 muestra servicios e identidades. Guardar antes y después; la porción entrante no aparece por teletransporte."
+
+[route]
+path = "meeting"
+start = "observe"
+destination = "observe_end"
+start_offset_m = 100.0
+assume_signals_clear = true
+
+[train]
+consist = "consists/loco.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+penalty_per_second_late = 0.0
+
+[simulation]
+duration = 2400.0
+time_step = 0.05
+seed = 42
+multi_body = true
+coupler_kind = "freight"
+legacy_power_cap = false
+train_air_full_release_s = 3.0
+
+[[simulation.yard_operations.rendezvous]]
+id = "mobile-portion"
+receiver = "receiver"
+donor = "incoming"
+edge = "approach"
+position_m = 450.0
+not_before_s = 0.0
+max_wait_s = 900.0
+front = false
+
+[output]
+csv = "run_meeting.csv"
+metadata = "run_meeting.json"
+
+[[extra_trains]]
+id = "receiver"
+consist = "consists/loco.con"
+start = "start"
+destination = "end"
+start_offset_m = 450.0
+output_csv = "receiver.csv"
+[[extra_trains.legs]]
+start = "start"
+destination = "end"
+edges = ["approach", "departure"]
+start_offset_m = 450.0
+end_chainage_m = 999.0
+reversed = false
+wait_s = 0.0
+[[extra_trains.legs.operations]]
+chainage_m = 450.0
+section = "incoming"
+manual = false
+action = { kind = "join_service", service = "incoming", front = false }
+[[extra_trains]]
+id = "incoming"
+consist = "consists/loco.con"
+start = "start"
+destination = "end"
+start_offset_m = 150.0
+output_csv = "incoming.csv"

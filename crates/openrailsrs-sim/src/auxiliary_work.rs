@@ -60,7 +60,9 @@ pub fn step_circuits(state: &mut crate::TrainSimState, dt: f64) {
             circuit.reservoir_bar = (circuit.reservoir_bar - p.leak_bar_s * dt).max(0.);
         }
     }
-    state.brake_system.step_circuits(&supply, dt);
+    state
+        .brake_system
+        .step_circuits_with_diesel(&supply, &state.diesel, dt);
     for c in &mut state.vehicle_systems {
         let Some(p) = &c.definition.auxiliaries else {
             continue;
@@ -96,7 +98,12 @@ pub fn step_circuits(state: &mut crate::TrainSimState, dt: f64) {
                         .then_some(state.boiler_state.as_ref())
                         .flatten()
                 }))
-            .is_some_and(|b| b.pressure_bar > 0.5 && b.water_kg > 0.);
+            .is_some_and(|b| {
+                // The bounded native cycle accounts for its own fitted
+                // auxiliaries. A separate generic compressor is not a free
+                // steam-powered extension of that cycle.
+                b.native_or161.is_none() && b.pressure_bar > 0.5 && b.water_kg > 0.
+            });
         let delivered = if low_power || steam_powered {
             work
         } else {
@@ -140,6 +147,13 @@ pub fn steam_extras(state: &mut crate::TrainSimState, dt: f64) {
         let Some(b) = b else {
             continue;
         };
+        if b.native_or161.is_some() {
+            // Native UpdateAuxiliaries already debits its fitted ejectors,
+            // blower, generator and other native consumers. Do not withdraw
+            // again through the common display mirror or claim that these
+            // additional generic loads have been validated for this cycle.
+            continue;
+        }
         c.aux.injector_water_kg += b.injection_kg_s * dt;
         c.aux.injector_steam_kg += b.injection_kg_s * dt * p.injector_steam_kg_per_water_kg;
         let requested =
@@ -156,9 +170,79 @@ pub fn steam_extras(state: &mut crate::TrainSimState, dt: f64) {
     }
 }
 pub fn consume_steam(b: &mut crate::steam::BoilerState, requested: f64) -> f64 {
+    if b.native_or161.is_some() {
+        return 0.;
+    }
+    if b.thermodynamics.is_some() {
+        return crate::steam_thermodynamics::consume_auxiliary(b, requested);
+    }
     let used = requested.max(0.).min(b.water_kg);
     b.water_kg -= used;
     let storage = b.water_kg.max(b.initial_water_kg * 0.15) * 12600.;
     b.pressure_bar = (b.pressure_bar - used * crate::steam::STEAM_ENTHALPY_J_KG / storage).max(0.);
     used
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn native_cycle_does_not_debit_generic_auxiliaries_or_display_mirrors() {
+        let directory =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/physics_lab");
+        let scenario =
+            openrailsrs_scenarios::load_scenario(directory.join("scenario_native_steam.toml"))
+                .unwrap();
+        let mut s = crate::LiveDriveSession::from_scenario(&directory, &scenario).unwrap();
+        let definition = openrailsrs_scenarios::vehicle_systems::VehicleSystemsDef {
+            vehicle: 0,
+            auxiliaries: Some(openrailsrs_scenarios::vehicle_systems::AuxiliaryDef {
+                native_injector_mm: None,
+                leak_bar_s: 0.,
+                compressor_efficiency: 0.8,
+                compressor_idle_w: 100.,
+                battery_kwh: 0.,
+                steam_compressor_kg_j: 0.01,
+                ejector_steam_kg_s: 1.,
+                injector_steam_kg_per_water_kg: 0.1,
+                injector_max_pressure_bar: 16.,
+                feedwater_c: 20.,
+            }),
+            ..Default::default()
+        };
+        let mut generic = crate::vehicle_systems::VehicleSystemState::new(definition);
+        generic.aux.compressor_w = 1000.;
+        s.state.vehicle_systems.push(generic);
+        let original = s.state.boiler_state.clone();
+        let boilers = s.state.steam_boilers.clone();
+        steam_extras(&mut s.state, 1.);
+        assert_eq!(s.state.boiler_state, original);
+        assert_eq!(s.state.steam_boilers, boilers);
+        assert_eq!(
+            s.state.vehicle_systems.last().unwrap().aux.steam_used_kg,
+            0.
+        );
+        assert_eq!(
+            s.state
+                .vehicle_systems
+                .last()
+                .unwrap()
+                .aux
+                .injector_water_kg,
+            0.
+        );
+        assert_eq!(
+            s.state
+                .vehicle_systems
+                .last()
+                .unwrap()
+                .aux
+                .injector_steam_kg,
+            0.
+        );
+        let b = s.state.boiler_state.as_mut().unwrap();
+        assert_eq!(consume_steam(b, 100.), 0.);
+        assert_eq!(s.state.boiler_state, original);
+    }
 }

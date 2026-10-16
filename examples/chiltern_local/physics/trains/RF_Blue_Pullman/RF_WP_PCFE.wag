@@ -31,4 +31,7 @@ Wagon ( "RF_WP_PCFE"
   ORTSNumberAxles ( 4 )
   ORTSLengthBogieCentre ( 46ft 6in )
   CouplingHasRigidConnection (  )
+  (ORTSTrackGauge 4ft 8.5in)
+  (ORTSRigidWheelBase 9ft 6in)
+  (ORTSUnbalancedSuperElevation 6in)
 )

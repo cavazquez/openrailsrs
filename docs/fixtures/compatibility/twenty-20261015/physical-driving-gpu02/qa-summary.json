@@ -1,0 +1,611 @@
+{
+  "schema": 1,
+  "created_at_utc": "2026-10-16T12:20:20.491980+00:00",
+  "status": "two_pass_one_harness_failed",
+  "viewer_sha256": "80da4d50267917e84a75d1396887bb954b862d691b24e8d67f6b94c058f049e3",
+  "runner_sha256": "c70f25a6122aa95559bcd3be64ed698d6fae5ce5d484726ea2e1fecd917a11d9",
+  "proposal_sha256": "b55b612f1f1985f7f0373ec736a3df845c4e46cdd428ad45bf1f7f6fc896403a",
+  "plan_sha256": "44fb69e0d124ce34502da0354885e89f8faf10e5ce2e57ec33d8be60daa7ffaa",
+  "original_partial_result_sha256": "26a28e9902f8365c77169d5a3d18e97963cb9fcead83da9baa44525cf29cc88b",
+  "original_failure_sha256": "94889846e22062607022dcf53bcb0ab99031bd1c3d8a6df46bfb7c43eae7bef7",
+  "source_directory": "tmp/twenty-20261015/physics-driving-gpu02",
+  "previous_attempt": "../physical-driving-gpu01/README.md",
+  "execution_scope": "Normal build05, private hardware Vulkan RX7600, PCI0000:03:00.0,1280x720. Root performed CPU tests concurrently; not an isolated performance or memory measurement. No runtime/Cargo/source changes by the capture agent.",
+  "accepted_cases": [
+    "vertical-on",
+    "vertical-off"
+  ],
+  "failed_case": "derailment-from-rest",
+  "runner_returncode": 1,
+  "initial_state": "All three first actions recorded time_s=0, speed_mps=0 and odometer_m=0. Only ordinary driver controls and equipment toggles; no speed,position,pressure or cause was prescribed.",
+  "restore_scope": "In-process SessionSnapshot JSON roundtrip after actual driving; not full disk-save menu acceptance.",
+  "process_cleanup": {
+    "observed_pids": [
+      43938,
+      43912,
+      44793,
+      44767,
+      45326,
+      45291
+    ],
+    "all_observed_pids_absent": true,
+    "all_viewer_returncodes": [
+      0,
+      0,
+      0
+    ],
+    "all_compositor_returncodes": [
+      0,
+      0,
+      0
+    ]
+  },
+  "captures": [
+    {
+      "name": "vertical-on",
+      "status": "physical_render_report_pass_and_pixels_inspected",
+      "visible": [
+        "Irregularidades físicas: Sí",
+        "Suspensión 1: carga normal 0.99 · contactos perdidos 0"
+      ],
+      "limits": [
+        "The traction panel occludes most train geometry; this still image validates diagnostic readability, not the physical oscillation waveform or original-stock artwork.",
+        "Lower auxiliary lines are clipped within the scrollable area; mouse-wheel scrolling was not exercised."
+      ],
+      "image": "vertical-on.png",
+      "image_sha256": "e08005e150fc42935d2e5fcf8e2fc6fda91967501a51cf34c92b1c446a04be2d",
+      "source_report_sha256": "ef666a7c55c02635dc387b3d8cf1e7bc684ba97e77adb390d0b11242e3353ae8",
+      "source_log_sha256": "5503c159af1caaf3a92c924c1aecdfcf3c784de87b5aef9ddb73f29f9cd07520",
+      "source_process_receipt_sha256": "56593dc78a5164a0d2d347748bca4551879841b7ae0fb7ba9fe24596c7c6490f",
+      "controls": {
+        "brake": 0.0,
+        "braking_intervention": null,
+        "direction": 1.0,
+        "missed_stops": [],
+        "paused": true,
+        "throttle": 0.7,
+        "traction_load_fraction": 0.11522978287947791,
+        "traffic_brake_assistance": false
+      },
+      "odometer_m": 111.81342204593801,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "active_device_pci": "0000:03:00.0",
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "processes": {
+        "started_unix_s": 1792153024.412453,
+        "viewer_pid": 43938,
+        "viewer_returncode": 0,
+        "compositor_pid": 43912,
+        "compositor_returncode": 0,
+        "elapsed_s": 32.721617184000024
+      },
+      "owned_pids_absent_after_exit": true,
+      "actions": [
+        {
+          "index": 0,
+          "time_s": 0.0,
+          "odometer_m": 0.0,
+          "speed_mps": 0.0,
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "result": {
+            "Ok": null
+          }
+        },
+        {
+          "index": 1,
+          "time_s": 0.0,
+          "odometer_m": 0.0,
+          "speed_mps": 0.0,
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "result": {
+            "Ok": null
+          }
+        },
+        {
+          "index": 2,
+          "time_s": 0.0,
+          "odometer_m": 0.0,
+          "speed_mps": 0.0,
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "result": {
+            "Ok": null
+          }
+        },
+        {
+          "index": 3,
+          "time_s": 0.15000000000000002,
+          "odometer_m": 0.002223459344218942,
+          "speed_mps": 0.029670420261567094,
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 0.7
+          },
+          "result": {
+            "Ok": null
+          }
+        },
+        {
+          "index": 4,
+          "time_s": 19.650000000000144,
+          "odometer_m": 111.81342204593801,
+          "speed_mps": 9.902149599965163,
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 0.7
+          },
+          "result": {
+            "Ok": null
+          }
+        },
+        {
+          "index": 5,
+          "time_s": 19.650000000000144,
+          "odometer_m": 111.81342204593801,
+          "speed_mps": 9.902149599965163,
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 0.7
+          },
+          "result": {
+            "Ok": null
+          }
+        },
+        {
+          "index": 6,
+          "time_s": 19.650000000000144,
+          "odometer_m": 111.81342204593801,
+          "speed_mps": 9.902149599965163,
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 0.7
+          },
+          "result": {
+            "Ok": null
+          }
+        }
+      ],
+      "rendered_motion": {
+        "cars": 2,
+        "level": "off",
+        "max_pitch_deg": 0.0,
+        "max_roll_deg": 0.0,
+        "max_vertical_m": 0.0,
+        "physical_max_body_angle_deg": 0.03956468030810356,
+        "physical_max_body_offset_m": 0.004480377770960331,
+        "running_gear_parts": 20,
+        "wheel_bogie_pose_compensated": true
+      },
+      "vertical_enabled_override": [
+        true
+      ],
+      "active_vertical_wheel_load_range_n": [
+        108371.19820361414,
+        109241.84313155925
+      ],
+      "support_wheel_loads_n": [
+        [
+          108499.8095905314,
+          108371.19820361416
+        ],
+        [
+          109241.84313155925,
+          109029.58275269456
+        ]
+      ],
+      "derailment_events": [],
+      "unchanged_validation_sha256": "327c16b88eeefb394a0c8b4b08c1309f42b9d79f3ccefb4d56b3ae9c307e7262"
+    },
+    {
+      "name": "vertical-off",
+      "status": "physical_render_report_pass_and_pixels_inspected",
+      "visible": [
+        "Irregularidades físicas: No",
+        "Suspensión 1: carga normal 1.00 · contactos perdidos 0"
+      ],
+      "limits": [
+        "Off resets the inactive vertical solver slots to zero; these zeros are not actual zero wheel loads. Running supports retain their static loads.",
+        "Separate wall-timed runs are not an identical-phase numerical comparison; fixed-step CPU tests cover that property."
+      ],
+      "image": "vertical-off.png",
+      "image_sha256": "e38c59d0aa8adacb359f1a80da9ab02582d15f159f119cbcdc41088b2ee6e84e",
+      "source_report_sha256": "a3bcd63db7463a1147ca1cce2606a77f683536ad75cd2fbc2064ec75ee67268b",
+      "source_log_sha256": "ec31cfbae346f4c959c695bb0b09e5ac71cfd46445dea378c5d25594c2278842",
+      "source_process_receipt_sha256": "abb4e1ff9b1be94f733919f5e065d7963f8ddb703d55341022c25a93393ff7c7",
+      "controls": {
+        "brake": 0.0,
+        "braking_intervention": null,
+        "direction": 1.0,
+        "missed_stops": [],
+        "paused": true,
+        "throttle": 0.7,
+        "traction_load_fraction": 0.1152645874052137,
+        "traffic_brake_assistance": false
+      },
+      "odometer_m": 111.6390400422934,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "active_device_pci": "0000:03:00.0",
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "processes": {
+        "started_unix_s": 1792153057.2563906,
+        "viewer_pid": 44793,
+        "viewer_returncode": 0,
+        "compositor_pid": 44767,
+        "compositor_returncode": 0,
+        "elapsed_s": 32.71572648199981
+      },
+      "owned_pids_absent_after_exit": true,
+      "actions": [
+        {
+          "index": 0,
+          "time_s": 0.0,
+          "odometer_m": 0.0,
+          "speed_mps": 0.0,
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "result": {
+            "Ok": null
+          }
+        },
+        {
+          "index": 1,
+          "time_s": 0.0,
+          "odometer_m": 0.0,
+          "speed_mps": 0.0,
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "result": {
+            "Ok": null
+          }
+        },
+        {
+          "index": 2,
+          "time_s": 0.0,
+          "odometer_m": 0.0,
+          "speed_mps": 0.0,
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "result": {
+            "Ok": null
+          }
+        },
+        {
+          "index": 3,
+          "time_s": 0.15000000000000002,
+          "odometer_m": 0.0020380137101912283,
+          "speed_mps": 0.027173273272152628,
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 0.7
+          },
+          "result": {
+            "Ok": null
+          }
+        },
+        {
+          "index": 4,
+          "time_s": 19.650000000000144,
+          "odometer_m": 111.6390400422934,
+          "speed_mps": 9.89807166180217,
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 0.7
+          },
+          "result": {
+            "Ok": null
+          }
+        },
+        {
+          "index": 5,
+          "time_s": 19.650000000000144,
+          "odometer_m": 111.6390400422934,
+          "speed_mps": 9.89807166180217,
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 0.7
+          },
+          "result": {
+            "Ok": null
+          }
+        },
+        {
+          "index": 6,
+          "time_s": 19.650000000000144,
+          "odometer_m": 111.6390400422934,
+          "speed_mps": 9.89807166180217,
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 0.7
+          },
+          "result": {
+            "Ok": null
+          }
+        }
+      ],
+      "rendered_motion": {
+        "cars": 0,
+        "level": "off",
+        "max_pitch_deg": 0.0,
+        "max_roll_deg": 0.0,
+        "max_vertical_m": 0.0,
+        "physical_max_body_angle_deg": 0.0,
+        "physical_max_body_offset_m": 0.0,
+        "running_gear_parts": 0,
+        "wheel_bogie_pose_compensated": true
+      },
+      "vertical_enabled_override": [
+        false
+      ],
+      "active_vertical_wheel_load_range_n": null,
+      "support_wheel_loads_n": [
+        [
+          110324.13107705904,
+          110324.13107705904
+        ],
+        [
+          110324.13107705904,
+          110324.13107705904
+        ]
+      ],
+      "derailment_events": [],
+      "unchanged_validation_sha256": "266e8fc92f8c21739ec1f7f141ae540007a5f530f96da6e57873f80999f76698"
+    },
+    {
+      "name": "derailment-from-rest",
+      "status": "harness_failed_real_incident_observed_pixels_inspected",
+      "visible": [
+        "Consecuencias de descarrilamiento: No",
+        "DESCARRILAMIENTO 1: Descarga de rueda sostenida",
+        "t=83.60s · 2095.1m · 104.7km/h",
+        "fuerza lateral 163.5kN · carga mínima 0.0kN",
+        "Emergencia aplicada: tracción cortada",
+        "Esfuerzo pedido 0.0 kN · transmitido 0.0 kN",
+        "Freno independiente 0% · emergencia Sí"
+      ],
+      "limits": [
+        "The unchanged harness required a positive speed at an equipment-action timestamp. All such timestamps were at startup or after the incident had already stopped the train. This attempt remains failed; the positive event speed and odometer do not rewrite its declared acceptance.",
+        "The PNG establishes the cause/controls diagnostic after JSON restore and consequences Off. It does not show a collision or prove real off-rail artwork."
+      ],
+      "image": "derailment-from-rest.png",
+      "image_sha256": "f6d161e0a60a98728f915c2b7f6724d90b4877b9297bd7c612833b0845731bb1",
+      "source_report_sha256": "666afc6ade53ff976a3826a603fb22cec3cb202067e4ae996dd9376357bf978b",
+      "source_log_sha256": "e8f25fd023e289e1551febe498e20e705b7f8a1751b3cf5a953727fcf99df5e4",
+      "source_process_receipt_sha256": "833c9411bcc0110dabb280da56f19df9e7ce89e2fdbee5391b7fe148cfb6eab2",
+      "controls": {
+        "brake": 0.0,
+        "braking_intervention": "Asistencia de tráfico",
+        "direction": 1.0,
+        "missed_stops": [],
+        "paused": true,
+        "throttle": 1.0,
+        "traction_load_fraction": 0.0,
+        "traffic_brake_assistance": false
+      },
+      "odometer_m": 2078.6010606555756,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "active_device_pci": "0000:03:00.0",
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "processes": {
+        "started_unix_s": 1792153090.0896528,
+        "viewer_pid": 45326,
+        "viewer_returncode": 0,
+        "compositor_pid": 45291,
+        "compositor_returncode": 0,
+        "elapsed_s": 67.88937310799975
+      },
+      "owned_pids_absent_after_exit": true,
+      "actions": [
+        {
+          "index": 0,
+          "time_s": 0.0,
+          "odometer_m": 0.0,
+          "speed_mps": 0.0,
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "result": {
+            "Ok": null
+          }
+        },
+        {
+          "index": 1,
+          "time_s": 0.0,
+          "odometer_m": 0.0,
+          "speed_mps": 0.0,
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "result": {
+            "Ok": null
+          }
+        },
+        {
+          "index": 2,
+          "time_s": 0.0,
+          "odometer_m": 0.0,
+          "speed_mps": 0.0,
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "result": {
+            "Ok": null
+          }
+        },
+        {
+          "index": 3,
+          "time_s": 0.3,
+          "odometer_m": 0.0,
+          "speed_mps": 0.0,
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 1.0
+          },
+          "result": {
+            "Ok": null
+          }
+        },
+        {
+          "index": 4,
+          "time_s": 109.29999999999593,
+          "odometer_m": 2078.6010606555756,
+          "speed_mps": 0.0,
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 1.0
+          },
+          "result": {
+            "Ok": null
+          }
+        },
+        {
+          "index": 5,
+          "time_s": 109.29999999999593,
+          "odometer_m": 2078.6010606555756,
+          "speed_mps": 0.0,
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 1.0
+          },
+          "result": {
+            "Ok": null
+          }
+        },
+        {
+          "index": 6,
+          "time_s": 109.29999999999593,
+          "odometer_m": 2078.6010606555756,
+          "speed_mps": 0.0,
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 1.0
+          },
+          "result": {
+            "Ok": null
+          }
+        },
+        {
+          "index": 7,
+          "time_s": 109.29999999999593,
+          "odometer_m": 2078.6010606555756,
+          "speed_mps": 0.0,
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 1.0
+          },
+          "result": {
+            "Ok": null
+          }
+        }
+      ],
+      "rendered_motion": {
+        "cars": 0,
+        "level": "off",
+        "max_pitch_deg": 0.0,
+        "max_roll_deg": 0.0,
+        "max_vertical_m": 0.0,
+        "physical_max_body_angle_deg": 0.0,
+        "physical_max_body_offset_m": 0.0,
+        "running_gear_parts": 0,
+        "wheel_bogie_pose_compensated": true
+      },
+      "vertical_enabled_override": [],
+      "active_vertical_wheel_load_range_n": null,
+      "support_wheel_loads_n": [
+        [
+          226970.02119208535,
+          165256.76552697975
+        ],
+        [
+          226970.02119208535,
+          165256.76552697975
+        ]
+      ],
+      "derailment_events": [
+        {
+          "cause": "WheelUnloading",
+          "enabled_override": false,
+          "event_chainage_m": 2095.057454244832,
+          "event_speed_mps": 29.096679621818097,
+          "event_time_s": 83.5999999999974,
+          "lateral_force_n": 163519.59471280637,
+          "lateral_ratio": 163519.59471280637,
+          "minimum_wheel_load_n": 0.0,
+          "nadal_elapsed_s": 0.1,
+          "nadal_threshold": 1.222193206269197,
+          "offrail_distance_m": 72.77054862164151,
+          "unloading_elapsed_s": 0.1
+        }
+      ]
+    }
+  ],
+  "limits": [
+    "The build04 first attempt and its failure remain immutable; this second attempt does not turn that history into a pass.",
+    "Own laboratory fallback vehicle geometry and fixtures only; no original Vauclain visual acceptance or full OR solver parity.",
+    "On/off snapshots are not phase-identical numeric traces.",
+    "A still image does not establish an oscillation waveform, all running-gear world poses or an entire transition; directed CPU/ECS tests provide their separate evidence.",
+    "Private player data,credentials and downloaded original assets are not distributed."
+  ]
+}

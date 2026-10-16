@@ -7,4 +7,7 @@
   ( ORTSDavis_A 371 )
   ( ORTSDavis_B 20.0 )
   ( ORTSDavis_C 0.86 )
+  (ORTSTrackGauge 4ft 8.5in)
+  (ORTSRigidWheelBase 9ft 6in)
+  (ORTSUnbalancedSuperElevation 6in)
 )

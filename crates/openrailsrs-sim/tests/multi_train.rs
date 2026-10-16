@@ -82,6 +82,7 @@ fn make_two_train_scenario(
             edge_speed_limits: vec![],
         },
         train: TrainSection {
+            rack: None,
             bogie_dynamics: vec![],
             freight: None,
             systems: vec![],
@@ -104,6 +105,7 @@ fn make_two_train_scenario(
             penalty_per_second_late: 1.0,
         },
         simulation: SimulationSection {
+            yard_operations: Default::default(),
             rail_operations: Default::default(),
             weather_track: None,
             native_physics: None,
@@ -127,6 +129,7 @@ fn make_two_train_scenario(
             metadata: "run_primary.toml".into(),
         },
         extra_trains: vec![TrainEntryDef {
+            rack: None,
             bogie_dynamics: vec![],
             activity_uids: vec![],
             legs: vec![],

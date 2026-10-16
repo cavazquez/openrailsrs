@@ -1,0 +1,96 @@
+{
+  "schema": 1,
+  "kind": "publication_of_root_directed_cpu_test_execution",
+  "status": "pass",
+  "passed": 59,
+  "failed": 0,
+  "ignored": 0,
+  "completed_utc": "2026-10-16T13:05:36.308945+00:00",
+  "log_sha256": "aaf22f351caef1c7353c2ef6154ec3c282b997e0362a7bb571a7fe79e810aa57",
+  "result_sha256": "b126ab29fc91649d637b45fa54ef742adaa12a368e137ad6b3ded08f667909c2",
+  "targets": [
+    {
+      "name": "native_mu_phase",
+      "passed": 3,
+      "source": "crates/openrailsrs-sim/tests/native_mu_phase.rs",
+      "source_sha256_at_publication": "124e76b91a0c20a9e1a65956441a98ccb877b722b5ac0f9eaa2ce455ce7503ce",
+      "binary_from_execution_log": "target/debug/deps/native_mu_phase-29e0ffe64c7f1783",
+      "binary_sha256_at_publication": "1ed0fb25e0cb6c5b65e01c28d2b89abb94e02d17e28e6d9cc35be8ca01115d28"
+    },
+    {
+      "name": "native_steam_cycle",
+      "passed": 9,
+      "source": "crates/openrailsrs-sim/tests/native_steam_cycle.rs",
+      "source_sha256_at_publication": "05092334112be068f7063ec50f1c40c44881343e4342cee2bf1faa18bb626d79",
+      "binary_from_execution_log": "target/debug/deps/native_steam_cycle-a53f49c1cdc2c08d",
+      "binary_sha256_at_publication": "bc6796ca57dfc630eb3308e12c6c5e3179aaa463b799f624ca739a931b612cd6"
+    },
+    {
+      "name": "native_steam_integration",
+      "passed": 3,
+      "source": "crates/openrailsrs-sim/tests/native_steam_integration.rs",
+      "source_sha256_at_publication": "66c13533f9c4e0127ac9a9c7a6abc60a8499a400f262f374cb3c9e5bd26edee3",
+      "binary_from_execution_log": "target/debug/deps/native_steam_integration-d4eedc21dd36e7ff",
+      "binary_sha256_at_publication": "6a062fdc503b92b3ded42f197a17ddb595323f7bd1e634de3f37a89817c0b288"
+    },
+    {
+      "name": "native_steam_subsystem_oracle",
+      "passed": 3,
+      "source": "crates/openrailsrs-sim/tests/native_steam_subsystem_oracle.rs",
+      "source_sha256_at_publication": "1e5980b059a8a16ad922338e5305572059a9645043c2fc2cc71a7bba1689d485",
+      "binary_from_execution_log": "target/debug/deps/native_steam_subsystem_oracle-c7fee5be30a9f613",
+      "binary_sha256_at_publication": "cc16aa4793cd947db55540b03478a2407f9861e8044f1f1c6f462834a64e270d"
+    },
+    {
+      "name": "operational_yards",
+      "passed": 20,
+      "source": "crates/openrailsrs-sim/tests/operational_yards.rs",
+      "source_sha256_at_publication": "50e3d674855772b32abe2f26630cd1c28911b2c5114eedad0c58f1ef9af20233",
+      "binary_from_execution_log": "target/debug/deps/operational_yards-721327c931f47273",
+      "binary_sha256_at_publication": "f7990c3c4bb844f0f1ffc72d835525a6bd906c95b96e13b0f910c95e1179bfe9"
+    },
+    {
+      "name": "physical_extensions",
+      "passed": 14,
+      "source": "crates/openrailsrs-sim/tests/physical_extensions.rs",
+      "source_sha256_at_publication": "fdae2601b5889fb7ce32319fc5ede8f42c84ce1dc7dbe6b72fdd7a199b19bc48",
+      "binary_from_execution_log": "target/debug/deps/physical_extensions-6ab75e03ed948319",
+      "binary_sha256_at_publication": "3ed0ca8332585c4819eb9354e933be9474e48ad5d3ae72e6a7e24f18c76cfbed"
+    },
+    {
+      "name": "physics_seven_native",
+      "passed": 3,
+      "source": "crates/openrailsrs-sim/tests/physics_seven_native.rs",
+      "source_sha256_at_publication": "49f70fdb21558c26630804acd538dfaec7f6bd4508ca3072174774361a7d411d",
+      "binary_from_execution_log": "target/debug/deps/physics_seven_native-881cbcd931e6b673",
+      "binary_sha256_at_publication": "0781df57e4f76c4720fbee8c003a8df0161121140d932db60fb4fc9b8c6a0a51"
+    },
+    {
+      "name": "twenty_joint_physics",
+      "passed": 3,
+      "source": "crates/openrailsrs-sim/tests/twenty_joint_physics.rs",
+      "source_sha256_at_publication": "7cfb5e3290fc079ec8c27e2139feb82ff49cb1d6e5da621f5d62a2abb046bb59",
+      "binary_from_execution_log": "target/debug/deps/twenty_joint_physics-e63f5a9960c2fe95",
+      "binary_sha256_at_publication": "3786c0eeec7b8bcf458ed4010b0a05f9b33c8fcaa523e56d9dd69134414f7747"
+    },
+    {
+      "name": "native_parameter_scopes",
+      "passed": 1,
+      "source": "crates/openrailsrs-train/tests/native_parameter_scopes.rs",
+      "source_sha256_at_publication": "4c7149d9aedf141a49ddc8b424a4c0b0ff19651a26512481e6827e89226f15c3",
+      "binary_from_execution_log": "target/debug/deps/native_parameter_scopes-399b26eba997bfde",
+      "binary_sha256_at_publication": "e0a17e95c6b84c6889c2e9895ae36f999929216d53b66051713beda7996f351e"
+    }
+  ],
+  "native_subsystem_coverage": {
+    "target": "native_steam_subsystem_oracle",
+    "tests_passed": 3,
+    "native_rows": 3202,
+    "table_calls": 310,
+    "fixture_sha256": "c4183cc9a0585d331741b0de8cfb1b2ed6300f4152396399fb9cf402305c9fef",
+    "provenance_sha256": "b81e0cb568f51a45dfe10998e3973fe6ccc65dedc0034a6275db43aac0d60b9d",
+    "protocol_sha256": "c62fc972d0799c3fa7d32db8e6bcd19fde852b986b8ebe652bbb96de0e7e73cb"
+  },
+  "scope": "Directed tests only; no workspace-wide check, GPU, Wine, installed original assets or universal steam compatibility claim.",
+  "source_binding": "The execution log identifies target binary filenames. Source/binary SHA values are sampled at publication after the Root-controlled directed run, not represented as independently measured pre-run hashes. Native comparison receipts preserve their own actual measurement hashes."
+}

@@ -1,0 +1,71 @@
+{
+  "ticks": 1600,
+  "dt_s": 0.05,
+  "kind": "native_diagnostic_drive_no_full_cycle_parity_claim",
+  "rust_cycle_options": {
+    "startup": "or_hot",
+    "boiler_efficiency": 0.7,
+    "heat_loss_w": 15000.0,
+    "feedwater_c": 20.0,
+    "cylinder_efficiency": 0.12,
+    "idle_steam_kg_s": 0.05,
+    "volume_and_coal_heat": "Original initialized numeric parameters, not fitted from trajectory"
+  },
+  "commands": [
+    {
+      "tick": 0,
+      "phase": "idle_fire",
+      "throttle": 0,
+      "brake": 1,
+      "cutoff": 0.65,
+      "damper": 0.2,
+      "firing": 0.2,
+      "injector1": false,
+      "injector2": false
+    },
+    {
+      "tick": 200,
+      "phase": "steam_load",
+      "throttle": 0.65,
+      "brake": 0,
+      "cutoff": 0.65,
+      "damper": 0.9,
+      "firing": 0.8,
+      "injector1": false,
+      "injector2": false
+    },
+    {
+      "tick": 800,
+      "phase": "injection",
+      "throttle": 0.65,
+      "brake": 0,
+      "cutoff": 0.45,
+      "damper": 0.9,
+      "firing": 0.8,
+      "injector1": true,
+      "injector2": false
+    },
+    {
+      "tick": 1100,
+      "phase": "coast",
+      "throttle": 0,
+      "brake": 0,
+      "cutoff": 0.45,
+      "damper": 0.3,
+      "firing": 0.3,
+      "injector1": false,
+      "injector2": false
+    },
+    {
+      "tick": 1400,
+      "phase": "braking",
+      "throttle": 0,
+      "brake": 1,
+      "cutoff": 0.45,
+      "damper": 0.3,
+      "firing": 0.3,
+      "injector1": false,
+      "injector2": false
+    }
+  ]
+}

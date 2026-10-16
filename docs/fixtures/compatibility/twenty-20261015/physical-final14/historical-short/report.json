@@ -1,0 +1,490 @@
+{
+  "cases": [
+    {
+      "comparison": {
+        "brake": {
+          "max_abs_diff": 0.9256,
+          "mean_abs_diff": 0.01232875336762185,
+          "rms_diff": 0.07680187612395617,
+          "samples": 1361
+        },
+        "brake_pass": true,
+        "energy": {
+          "max_abs_diff": 0.0,
+          "mean_abs_diff": 0.0,
+          "rms_diff": 0.0,
+          "samples": 0
+        },
+        "energy_pass": true,
+        "file_a": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/examples/baselines/chiltern_birmingham/or_evaluation_speed.csv",
+        "file_b": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/historical-short14/birmingham_multi_body/run.csv",
+        "pass": true,
+        "position": {
+          "max_abs_diff": 18.4615,
+          "mean_abs_diff": 8.606547690078141,
+          "rms_diff": 10.483292914059076,
+          "samples": 1361
+        },
+        "position_pass": true,
+        "throttle": {
+          "max_abs_diff": 0.0,
+          "mean_abs_diff": 0.0,
+          "rms_diff": 0.0,
+          "samples": 1361
+        },
+        "throttle_pass": true,
+        "time_alignment": "resampled_linear_step_0.1s",
+        "velocity": {
+          "max_abs_diff": 1.1131239999999991,
+          "mean_abs_diff": 0.33487206495224053,
+          "rms_diff": 0.41757708353935286,
+          "samples": 1361
+        },
+        "velocity_pass": true
+      },
+      "coverage": {
+        "candidate_end_s": 136.0,
+        "candidate_start_s": 0.0,
+        "covered_fraction": 1.0,
+        "reference_end_s": 136.0,
+        "reference_start_s": 0.0
+      },
+      "error": null,
+      "id": "birmingham_multi_body",
+      "pass": true,
+      "phases": [
+        {
+          "brake": {
+            "max_abs_diff": 0.9256,
+            "mean_abs_diff": 0.05593144444444446,
+            "rms_diff": 0.16358378941440674,
+            "samples": 300
+          },
+          "label": "0–30 s",
+          "position": {
+            "max_abs_diff": 18.051258000000033,
+            "mean_abs_diff": 7.274348937321723,
+            "rms_diff": 9.845913038873158,
+            "samples": 300
+          },
+          "t_end_s": 30.0,
+          "t_start_s": 0.0,
+          "throttle": {
+            "max_abs_diff": 0.0,
+            "mean_abs_diff": 0.0,
+            "rms_diff": 0.0,
+            "samples": 300
+          },
+          "velocity": {
+            "max_abs_diff": 1.1131239999999991,
+            "mean_abs_diff": 0.6118483533333307,
+            "rms_diff": 0.7376132857889766,
+            "samples": 300
+          }
+        },
+        {
+          "brake": {
+            "max_abs_diff": 0.0,
+            "mean_abs_diff": 0.0,
+            "rms_diff": 0.0,
+            "samples": 310
+          },
+          "label": "30–61 s",
+          "position": {
+            "max_abs_diff": 18.4615,
+            "mean_abs_diff": 16.46300056451605,
+            "rms_diff": 16.549800998597643,
+            "samples": 310
+          },
+          "t_end_s": 61.0,
+          "t_start_s": 30.0,
+          "throttle": {
+            "max_abs_diff": 0.0,
+            "mean_abs_diff": 0.0,
+            "rms_diff": 0.0,
+            "samples": 310
+          },
+          "velocity": {
+            "max_abs_diff": 0.26068799999999115,
+            "mean_abs_diff": 0.18332719483871027,
+            "rms_diff": 0.19507212146804598,
+            "samples": 310
+          }
+        },
+        {
+          "brake": {
+            "max_abs_diff": 0.0,
+            "mean_abs_diff": 0.0,
+            "rms_diff": 0.0,
+            "samples": 751
+          },
+          "label": "61–136 s",
+          "position": {
+            "max_abs_diff": 13.095499999999845,
+            "mean_abs_diff": 5.895707789613664,
+            "rms_diff": 6.883352864404657,
+            "samples": 751
+          },
+          "t_end_s": 136.0,
+          "t_start_s": 61.0,
+          "throttle": {
+            "max_abs_diff": 0.0,
+            "mean_abs_diff": 0.0,
+            "rms_diff": 0.0,
+            "samples": 751
+          },
+          "velocity": {
+            "max_abs_diff": 0.3307399999999383,
+            "mean_abs_diff": 0.28678421304926777,
+            "rms_diff": 0.2880207860232186,
+            "samples": 751
+          }
+        }
+      ],
+      "reference_duplicate_times": 1
+    },
+    {
+      "comparison": {
+        "brake": {
+          "max_abs_diff": 0.0,
+          "mean_abs_diff": 0.0,
+          "rms_diff": 0.0,
+          "samples": 1201
+        },
+        "brake_pass": true,
+        "energy": {
+          "max_abs_diff": 0.0,
+          "mean_abs_diff": 0.0,
+          "rms_diff": 0.0,
+          "samples": 0
+        },
+        "energy_pass": true,
+        "file_a": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/examples/baselines/chiltern_fullthrottle/or_evaluation_speed.csv",
+        "file_b": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/historical-short14/full_throttle_multi_body/run.csv",
+        "pass": true,
+        "position": {
+          "max_abs_diff": 1748.3949999999381,
+          "mean_abs_diff": 635.0768547044044,
+          "rms_diff": 829.8762321524333,
+          "samples": 1201
+        },
+        "position_pass": true,
+        "throttle": {
+          "max_abs_diff": 0.0,
+          "mean_abs_diff": 0.0,
+          "rms_diff": 0.0,
+          "samples": 1201
+        },
+        "throttle_pass": true,
+        "time_alignment": "resampled_linear_step_0.1s",
+        "velocity": {
+          "max_abs_diff": 0.7013919999999993,
+          "mean_abs_diff": 0.41625632506244886,
+          "rms_diff": 0.4394292980609094,
+          "samples": 1201
+        },
+        "velocity_pass": true
+      },
+      "coverage": {
+        "candidate_end_s": 120.0,
+        "candidate_start_s": 0.0,
+        "covered_fraction": 1.0,
+        "reference_end_s": 120.0,
+        "reference_start_s": 0.0
+      },
+      "error": null,
+      "id": "full_throttle_multi_body",
+      "pass": true,
+      "phases": [
+        {
+          "brake": {
+            "max_abs_diff": 0.0,
+            "mean_abs_diff": 0.0,
+            "rms_diff": 0.0,
+            "samples": 300
+          },
+          "label": "0–30 s",
+          "position": {
+            "max_abs_diff": 135.3615000000014,
+            "mean_abs_diff": 44.33942333333353,
+            "rms_diff": 60.065672768479395,
+            "samples": 300
+          },
+          "t_end_s": 30.0,
+          "t_start_s": 0.0,
+          "throttle": {
+            "max_abs_diff": 0.0,
+            "mean_abs_diff": 0.0,
+            "rms_diff": 0.0,
+            "samples": 300
+          },
+          "velocity": {
+            "max_abs_diff": 0.7013919999999993,
+            "mean_abs_diff": 0.40067209466666653,
+            "rms_diff": 0.4669834489919116,
+            "samples": 300
+          }
+        },
+        {
+          "brake": {
+            "max_abs_diff": 0.0,
+            "mean_abs_diff": 0.0,
+            "rms_diff": 0.0,
+            "samples": 300
+          },
+          "label": "30–60 s",
+          "position": {
+            "max_abs_diff": 517.4130000000092,
+            "mean_abs_diff": 310.3500383333384,
+            "rms_diff": 329.605961319949,
+            "samples": 300
+          },
+          "t_end_s": 60.0,
+          "t_start_s": 30.0,
+          "throttle": {
+            "max_abs_diff": 0.0,
+            "mean_abs_diff": 0.0,
+            "rms_diff": 0.0,
+            "samples": 300
+          },
+          "velocity": {
+            "max_abs_diff": 0.43184399999999634,
+            "mean_abs_diff": 0.32536729333333586,
+            "rms_diff": 0.3319024369594358,
+            "samples": 300
+          }
+        },
+        {
+          "brake": {
+            "max_abs_diff": 0.0,
+            "mean_abs_diff": 0.0,
+            "rms_diff": 0.0,
+            "samples": 601
+          },
+          "label": "60–120 s",
+          "position": {
+            "max_abs_diff": 1748.3949999999381,
+            "mean_abs_diff": 1092.0473610648717,
+            "rms_diff": 1149.0050495622734,
+            "samples": 601
+          },
+          "t_end_s": 120.0,
+          "t_start_s": 60.0,
+          "throttle": {
+            "max_abs_diff": 0.0,
+            "mean_abs_diff": 0.0,
+            "rms_diff": 0.0,
+            "samples": 601
+          },
+          "velocity": {
+            "max_abs_diff": 0.5494559999999566,
+            "mean_abs_diff": 0.46940437603993357,
+            "rms_diff": 0.47120230139633174,
+            "samples": 601
+          }
+        }
+      ],
+      "reference_duplicate_times": 0
+    },
+    {
+      "comparison": {
+        "brake": {
+          "max_abs_diff": 0.7999999999989267,
+          "mean_abs_diff": 0.052045160096245824,
+          "rms_diff": 0.15105286517216662,
+          "samples": 1801
+        },
+        "brake_pass": true,
+        "energy": {
+          "max_abs_diff": 0.0,
+          "mean_abs_diff": 0.0,
+          "rms_diff": 0.0,
+          "samples": 0
+        },
+        "energy_pass": true,
+        "file_a": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/examples/baselines/chiltern_brake_coast/or_evaluation_speed.csv",
+        "file_b": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/historical-short14/brake_coast_multi_body/run.csv",
+        "pass": true,
+        "position": {
+          "max_abs_diff": 2098.6149999999516,
+          "mean_abs_diff": 1033.2919669627818,
+          "rms_diff": 1259.2587772887073,
+          "samples": 1801
+        },
+        "position_pass": true,
+        "throttle": {
+          "max_abs_diff": 0.9999999999985931,
+          "mean_abs_diff": 0.005552470849528356,
+          "rms_diff": 0.060993077223422926,
+          "samples": 1801
+        },
+        "throttle_pass": true,
+        "time_alignment": "resampled_linear_step_0.1s",
+        "velocity": {
+          "max_abs_diff": 0.7609239999999886,
+          "mean_abs_diff": 0.344969971571357,
+          "rms_diff": 0.4365731781317801,
+          "samples": 1801
+        },
+        "velocity_pass": true
+      },
+      "coverage": {
+        "candidate_end_s": 180.0,
+        "candidate_start_s": 0.0,
+        "covered_fraction": 1.0,
+        "reference_end_s": 180.0,
+        "reference_start_s": 0.0
+      },
+      "error": null,
+      "id": "brake_coast_multi_body",
+      "pass": true,
+      "phases": [
+        {
+          "brake": {
+            "max_abs_diff": 0.06666666666657288,
+            "mean_abs_diff": 0.00036630036629944635,
+            "rms_diff": 0.0041344911529654065,
+            "samples": 1001
+          },
+          "label": "0–100 s",
+          "position": {
+            "max_abs_diff": 1284.357999999969,
+            "mean_abs_diff": 459.3432857142842,
+            "rms_diff": 603.8415390530222,
+            "samples": 1001
+          },
+          "t_end_s": 100.0,
+          "t_start_s": 0.0,
+          "throttle": {
+            "max_abs_diff": 0.9999999999985931,
+            "mean_abs_diff": 0.005494505494491695,
+            "rms_diff": 0.062017367294481096,
+            "samples": 1001
+          },
+          "velocity": {
+            "max_abs_diff": 0.7609239999999886,
+            "mean_abs_diff": 0.527520555844157,
+            "rms_diff": 0.5606818028968215,
+            "samples": 1001
+          }
+        },
+        {
+          "brake": {
+            "max_abs_diff": 0.7999999999989267,
+            "mean_abs_diff": 0.4643481481481387,
+            "rms_diff": 0.4707147056937708,
+            "samples": 150
+          },
+          "label": "100–115 s",
+          "position": {
+            "max_abs_diff": 1540.564999999974,
+            "mean_abs_diff": 1427.4200566666361,
+            "rms_diff": 1429.3534503921355,
+            "samples": 150
+          },
+          "t_end_s": 115.0,
+          "t_start_s": 100.0,
+          "throttle": {
+            "max_abs_diff": 0.9000000000014126,
+            "mean_abs_diff": 0.030000000000095877,
+            "rms_diff": 0.13784048752121297,
+            "samples": 150
+          },
+          "velocity": {
+            "max_abs_diff": 0.7088204000002172,
+            "mean_abs_diff": 0.34768578666671424,
+            "rms_diff": 0.4069474231245292,
+            "samples": 150
+          }
+        },
+        {
+          "brake": {
+            "max_abs_diff": 0.5111111111105808,
+            "mean_abs_diff": 0.03648376068377259,
+            "rms_diff": 0.10982782519511017,
+            "samples": 650
+          },
+          "label": "115–180 s",
+          "position": {
+            "max_abs_diff": 2098.6149999999516,
+            "mean_abs_diff": 1826.2202999999647,
+            "rms_diff": 1833.2223053651285,
+            "samples": 650
+          },
+          "t_end_s": 180.0,
+          "t_start_s": 115.0,
+          "throttle": {
+            "max_abs_diff": 0.0,
+            "mean_abs_diff": 0.0,
+            "rms_diff": 0.0,
+            "samples": 650
+          },
+          "velocity": {
+            "max_abs_diff": 0.2512240000002617,
+            "mean_abs_diff": 0.06321534523077624,
+            "rms_diff": 0.07589738957028505,
+            "samples": 650
+          }
+        }
+      ],
+      "reference_duplicate_times": 0
+    },
+    {
+      "comparison": {
+        "brake": {
+          "max_abs_diff": 0.0,
+          "mean_abs_diff": 0.0,
+          "rms_diff": 0.0,
+          "samples": 301
+        },
+        "brake_pass": true,
+        "energy": {
+          "max_abs_diff": 0.0,
+          "mean_abs_diff": 0.0,
+          "rms_diff": 0.0,
+          "samples": 0
+        },
+        "energy_pass": true,
+        "file_a": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/examples/baselines/chiltern_throttle50/or_evaluation_speed.csv",
+        "file_b": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/historical-short14/half_throttle/run.csv",
+        "pass": true,
+        "position": {
+          "max_abs_diff": 105.901,
+          "mean_abs_diff": 36.62181229235893,
+          "rms_diff": 48.581388714138384,
+          "samples": 301
+        },
+        "position_pass": true,
+        "throttle": {
+          "max_abs_diff": 0.0,
+          "mean_abs_diff": 0.0,
+          "rms_diff": 0.0,
+          "samples": 301
+        },
+        "throttle_pass": true,
+        "time_alignment": "resampled_linear_step_0.1s",
+        "velocity": {
+          "max_abs_diff": 0.7619919999999949,
+          "mean_abs_diff": 0.5689244132890364,
+          "rms_diff": 0.6019708378392381,
+          "samples": 301
+        },
+        "velocity_pass": true
+      },
+      "coverage": {
+        "candidate_end_s": 30.0,
+        "candidate_start_s": 0.0,
+        "covered_fraction": 1.0,
+        "reference_end_s": 30.0,
+        "reference_start_s": 0.0
+      },
+      "error": null,
+      "id": "half_throttle",
+      "pass": true,
+      "phases": [],
+      "reference_duplicate_times": 0
+    }
+  ],
+  "pass": true,
+  "reference_version": "1.6.1"
+}

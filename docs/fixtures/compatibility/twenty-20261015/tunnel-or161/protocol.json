@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "status": "declared_before_first_rust_tunnel_comparison",
+  "native_method": "TrainCar.UpdateTunnelForce; Train.ProcessTunnels runs after physics",
+  "force_maximum_absolute_error_n": 0.01,
+  "original_full_service_six_limits_changed": false,
+  "original_full_service_protocol_sha256": "7f5d39ada7927a4048ab63ae6a85311f47e2769e77095d5d6893133639d381b4",
+  "native08_trace_sha256": "362ecf741d06ae02e5bfb6ea67af88559d0f98adf631342d42e070c91f4eb13a",
+  "native07_projection_sha256": "21212399f6289ff44b6d108d6312670008e6503abee0054df2d4dd150d6e2be2",
+  "source_sha256": {
+    "Source/Orts.Simulation/Simulation/RollingStocks/TrainCar.cs": "f1020ef9aedfd0d502383920a94abfc6a93ed3627ab8f8874862579176fb2348",
+    "Source/Orts.Simulation/Simulation/Physics/Train.cs": "c4bc5b5822f8d154ea723c5bcb0390ccd54c675b65ec4d12d2e3e2acf92cf2cf"
+  },
+  "selection": "Everycar active/path-count transition: force rowsK,K+1,K+2; everycar force maximum; rowsat400/500/600s; first computedrow. Deduplicate by forceRow/car; approximately100\u2013300 calls, no downsampling of the full route reference.",
+  "phase_contract": "expected force at rowN uses CarTunnelData, train length/mass and local absolute speed from rowN\u22121; current car mass/dimensions are static SF hardware. Outside-tunnel rows retain expected0 and verify captured phase; geometry helper is invoked only for active previous context.",
+  "hardware_contract": "car_cross_section_m2 is computed by Single width*height from static dimensions. No observed TrainCrossSectionAreaM2 field enters the model. Route Single/Double area/perimeter are source defaults from authoredTRK SpeedLimit223.52m/s and absent author overrides (70/32 and100/37.5).",
+  "tunnel_length_contract": "Single(Ahead+Behind) from previous CarTunnelData, not fullgroup physical length; fields carry explicit nullable validity bits.",
+  "scope": "Isolated native subsystem with prescribed geometry/speed/mass inputs only. Full closed-loop route must derive geometry and motion itself; no sampled tunnel forces/positions/states may drive acceptance.",
+  "acceptance": "No original threshold or fixture is regenerated to make Rust pass; failed attempts retained."
+}

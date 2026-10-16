@@ -52,6 +52,7 @@ pub mod hud;
 pub mod launch;
 pub mod live;
 pub mod log;
+pub mod multiplayer;
 pub mod or_cab_material;
 pub mod or_shader {
     pub use openrailsrs_or_shader::*;
@@ -155,6 +156,7 @@ pub mod world_instancing;
 mod world_lod_fade;
 pub mod world_operations;
 pub mod world_tile_index;
+mod yard_scene;
 
 #[cfg(test)]
 mod app_floating;
@@ -239,7 +241,16 @@ impl Plugin for ViewerPlugin {
             app.add_systems(Update, performance::log_shader_dependencies);
         }
         app.add_plugins(driving_hud::DrivingHudPlugin);
+        app.add_plugins(multiplayer::MultiplayerPlugin);
         app.add_plugins(player_ui::PlayerUiPlugin);
+        app.add_systems(
+            Update,
+            yard_scene::update
+                .after(live::sync_live_render_clock)
+                .after(floating_origin::apply_floating_origin)
+                .run_if(live::live_mode_active)
+                .run_if(in_state(ViewerAppState::Playing)),
+        );
         #[cfg(feature = "dev-tools")]
         app.init_resource::<equipment_capture::EquipmentCapture>()
             .add_systems(
@@ -293,6 +304,7 @@ impl Plugin for ViewerPlugin {
             .add_systems(
                 Update,
                 environment::update
+                    .run_if(multiplayer::local_simulation)
                     .after(player_ui::EnvironmentControls)
                     .before(player_ui::apply_weather)
                     .before(route_lighting::update_route_sun)
@@ -302,6 +314,7 @@ impl Plugin for ViewerPlugin {
             .add_systems(
                 Update,
                 weather_state::update
+                    .run_if(multiplayer::local_simulation)
                     .after(environment::update)
                     .before(live::live_driver_input)
                     .before(player_ui::apply_weather)
@@ -550,6 +563,7 @@ impl Plugin for ViewerPlugin {
             Update,
             (
                 cab_mouse::cab_mouse_controls
+                    .run_if(multiplayer::standalone_controls)
                     .before(camera::orbit_camera_system)
                     .before(camera::fly_camera_system)
                     .run_if(live::live_mode_active),
@@ -766,7 +780,10 @@ impl Plugin for ViewerPlugin {
                 Update,
                 (
                     performance::measure_journey,
-                    traffic::update_traffic_poses.run_if(live::live_mode_active),
+                    traffic::update_traffic_poses
+                        .after(live::sync_live_render_clock)
+                        .after(floating_origin::apply_floating_origin)
+                        .run_if(live::live_mode_active),
                 )
                     .run_if(in_state(ViewerAppState::Playing)),
             )
@@ -798,6 +815,7 @@ impl Plugin for ViewerPlugin {
                         .run_if(teleport::teleport_closed)
                         .run_if(live::live_mode_inactive),
                     live::live_driver_input
+                        .run_if(multiplayer::standalone_controls)
                         .run_if(player_ui::world_input_available)
                         .run_if(teleport::teleport_closed)
                         .run_if(live::live_mode_active),
@@ -968,6 +986,7 @@ impl Plugin for ViewerPlugin {
             .add_systems(
                 FixedUpdate,
                 live::advance_live_sim
+                    .run_if(multiplayer::local_simulation)
                     .run_if(live::live_mode_active)
                     .run_if(world::initial_scenery_ready)
                     .run_if(in_state(ViewerAppState::Playing)),

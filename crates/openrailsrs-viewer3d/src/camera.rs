@@ -1628,8 +1628,9 @@ pub fn orbit_camera_system(
     ui: Option<Res<crate::player_ui::PlayerUiState>>,
     pointer: Option<Res<crate::player_ui::UiPointerCapture>>,
     cab: Option<Res<crate::cab_mouse::CabMouseState>>,
+    network: Option<Res<crate::multiplayer::MultiplayerState>>,
 ) {
-    if !crate::player_ui::camera_input_available(ui, pointer, cab) {
+    if !crate::player_ui::camera_input_available(ui, network, pointer, cab) {
         motion.clear();
         wheel.clear();
         return;
@@ -1803,8 +1804,9 @@ pub fn fly_camera_system(
     ui: Option<Res<crate::player_ui::PlayerUiState>>,
     pointer: Option<Res<crate::player_ui::UiPointerCapture>>,
     cab: Option<Res<crate::cab_mouse::CabMouseState>>,
+    network: Option<Res<crate::multiplayer::MultiplayerState>>,
 ) {
-    if !crate::player_ui::camera_input_available(ui, pointer, cab) {
+    if !crate::player_ui::camera_input_available(ui, network, pointer, cab) {
         motion.clear();
         wheel.clear();
         return;

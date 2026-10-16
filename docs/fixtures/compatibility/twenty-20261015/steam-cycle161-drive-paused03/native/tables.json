@@ -1,0 +1,2117 @@
+{
+  "method": "Original SteamTable factory/Interpolator.Item/Interpolator2D.Get",
+  "points": [
+    {
+      "factory": "BackpressureSatIHPtoPSI",
+      "x": 0.0,
+      "value": 0.0,
+      "domain_min": 0.0,
+      "domain_max": 3000.0
+    },
+    {
+      "factory": "BackpressureSatIHPtoPSI",
+      "x": 390.0,
+      "value": 1.94999993,
+      "domain_min": 0.0,
+      "domain_max": 3000.0
+    },
+    {
+      "factory": "BackpressureSatIHPtoPSI",
+      "x": 1500.0,
+      "value": 9.6,
+      "domain_min": 0.0,
+      "domain_max": 3000.0
+    },
+    {
+      "factory": "BackpressureSatIHPtoPSI",
+      "x": 2700.0,
+      "value": 27.0,
+      "domain_min": 0.0,
+      "domain_max": 3000.0
+    },
+    {
+      "factory": "BackpressureSatIHPtoPSI",
+      "x": 3000.0,
+      "value": 30.0,
+      "domain_min": 0.0,
+      "domain_max": 3000.0
+    },
+    {
+      "factory": "BackpressureSuperIHPtoPSI",
+      "x": 0.0,
+      "value": 0.0,
+      "domain_min": 0.0,
+      "domain_max": 3000.0
+    },
+    {
+      "factory": "BackpressureSuperIHPtoPSI",
+      "x": 390.0,
+      "value": 0.487499982,
+      "domain_min": 0.0,
+      "domain_max": 3000.0
+    },
+    {
+      "factory": "BackpressureSuperIHPtoPSI",
+      "x": 1500.0,
+      "value": 4.15,
+      "domain_min": 0.0,
+      "domain_max": 3000.0
+    },
+    {
+      "factory": "BackpressureSuperIHPtoPSI",
+      "x": 2700.0,
+      "value": 23.0,
+      "domain_min": 0.0,
+      "domain_max": 3000.0
+    },
+    {
+      "factory": "BackpressureSuperIHPtoPSI",
+      "x": 3000.0,
+      "value": 26.0,
+      "domain_min": 0.0,
+      "domain_max": 3000.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower0RpM",
+      "x": 0.0,
+      "value": 1.0,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower0RpM",
+      "x": 0.13,
+      "value": 1.0,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower0RpM",
+      "x": 0.5,
+      "value": 1.0,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower0RpM",
+      "x": 0.9,
+      "value": 1.0,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower0RpM",
+      "x": 1.0,
+      "value": 1.0,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower100RpM",
+      "x": 0.0,
+      "value": 0.6875,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower100RpM",
+      "x": 0.13,
+      "value": 0.68825,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower100RpM",
+      "x": 0.5,
+      "value": 0.755,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower100RpM",
+      "x": 0.9,
+      "value": 0.9325,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower100RpM",
+      "x": 1.0,
+      "value": 0.9875,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower150RpM",
+      "x": 0.0,
+      "value": 0.64,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower150RpM",
+      "x": 0.13,
+      "value": 0.641499937,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower150RpM",
+      "x": 0.5,
+      "value": 0.6975,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower150RpM",
+      "x": 0.9,
+      "value": 0.875,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower150RpM",
+      "x": 1.0,
+      "value": 0.93,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower200RpM",
+      "x": 0.0,
+      "value": 0.61,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower200RpM",
+      "x": 0.13,
+      "value": 0.61,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower200RpM",
+      "x": 0.5,
+      "value": 0.65,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower200RpM",
+      "x": 0.9,
+      "value": 0.83,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower200RpM",
+      "x": 1.0,
+      "value": 0.88,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower250RpM",
+      "x": 0.0,
+      "value": 0.5775,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower250RpM",
+      "x": 0.13,
+      "value": 0.5775,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower250RpM",
+      "x": 0.5,
+      "value": 0.62,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower250RpM",
+      "x": 0.9,
+      "value": 0.7825,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower250RpM",
+      "x": 1.0,
+      "value": 0.825,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower300RpM",
+      "x": 0.0,
+      "value": 0.55,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower300RpM",
+      "x": 0.13,
+      "value": 0.549999952,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower300RpM",
+      "x": 0.5,
+      "value": 0.59,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower300RpM",
+      "x": 0.9,
+      "value": 0.73,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower300RpM",
+      "x": 1.0,
+      "value": 0.7675,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower350RpM",
+      "x": 0.0,
+      "value": 0.52,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower350RpM",
+      "x": 0.13,
+      "value": 0.52,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower350RpM",
+      "x": 0.5,
+      "value": 0.57,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower350RpM",
+      "x": 0.9,
+      "value": 0.7075,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower350RpM",
+      "x": 1.0,
+      "value": 0.74,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower50RpM",
+      "x": 0.0,
+      "value": 0.745,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower50RpM",
+      "x": 0.13,
+      "value": 0.762999952,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower50RpM",
+      "x": 0.5,
+      "value": 0.8375,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower50RpM",
+      "x": 0.9,
+      "value": 0.97,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureLower50RpM",
+      "x": 1.0,
+      "value": 1.0,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper0RpM",
+      "x": 0.0,
+      "value": 1.0,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper0RpM",
+      "x": 0.13,
+      "value": 1.0,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper0RpM",
+      "x": 0.5,
+      "value": 1.0,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper0RpM",
+      "x": 0.9,
+      "value": 1.0,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper0RpM",
+      "x": 1.0,
+      "value": 1.0,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper100RpM",
+      "x": 0.0,
+      "value": 0.72,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper100RpM",
+      "x": 0.13,
+      "value": 0.749,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper100RpM",
+      "x": 0.5,
+      "value": 0.85,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper100RpM",
+      "x": 0.9,
+      "value": 0.955,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper100RpM",
+      "x": 1.0,
+      "value": 0.98,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper150RpM",
+      "x": 0.0,
+      "value": 0.68,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper150RpM",
+      "x": 0.13,
+      "value": 0.7175,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper150RpM",
+      "x": 0.5,
+      "value": 0.8125,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper150RpM",
+      "x": 0.9,
+      "value": 0.93,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper150RpM",
+      "x": 1.0,
+      "value": 0.9575,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper200RpM",
+      "x": 0.0,
+      "value": 0.66,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper200RpM",
+      "x": 0.13,
+      "value": 0.6875,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper200RpM",
+      "x": 0.5,
+      "value": 0.78,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper200RpM",
+      "x": 0.9,
+      "value": 0.908,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper200RpM",
+      "x": 1.0,
+      "value": 0.938,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper250RpM",
+      "x": 0.0,
+      "value": 0.645,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper250RpM",
+      "x": 0.13,
+      "value": 0.67175,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper250RpM",
+      "x": 0.5,
+      "value": 0.76,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper250RpM",
+      "x": 0.9,
+      "value": 0.88,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper250RpM",
+      "x": 1.0,
+      "value": 0.913,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper300RpM",
+      "x": 0.0,
+      "value": 0.63,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper300RpM",
+      "x": 0.13,
+      "value": 0.652749956,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper300RpM",
+      "x": 0.5,
+      "value": 0.73,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper300RpM",
+      "x": 0.9,
+      "value": 0.85,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper300RpM",
+      "x": 1.0,
+      "value": 0.877,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper350RpM",
+      "x": 0.0,
+      "value": 0.6125,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper350RpM",
+      "x": 0.13,
+      "value": 0.636,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper350RpM",
+      "x": 0.5,
+      "value": 0.7125,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper350RpM",
+      "x": 0.9,
+      "value": 0.8375,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper350RpM",
+      "x": 1.0,
+      "value": 0.865,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper50RpM",
+      "x": 0.0,
+      "value": 0.79,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper50RpM",
+      "x": 0.13,
+      "value": 0.822999954,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper50RpM",
+      "x": 0.5,
+      "value": 0.9,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper50RpM",
+      "x": 0.9,
+      "value": 0.98,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CutOffInitialPressureUpper50RpM",
+      "x": 1.0,
+      "value": 1.0,
+      "domain_min": 0.0,
+      "domain_max": 1.0
+    },
+    {
+      "factory": "CylinderCondensationFractionInterpolatorX",
+      "x": 0.05,
+      "value": 0.526,
+      "domain_min": 0.05,
+      "domain_max": 0.55
+    },
+    {
+      "factory": "CylinderCondensationFractionInterpolatorX",
+      "x": 0.114999995,
+      "value": 0.3975,
+      "domain_min": 0.05,
+      "domain_max": 0.55
+    },
+    {
+      "factory": "CylinderCondensationFractionInterpolatorX",
+      "x": 0.3,
+      "value": 0.213,
+      "domain_min": 0.05,
+      "domain_max": 0.55
+    },
+    {
+      "factory": "CylinderCondensationFractionInterpolatorX",
+      "x": 0.5,
+      "value": 0.125,
+      "domain_min": 0.05,
+      "domain_max": 0.55
+    },
+    {
+      "factory": "CylinderCondensationFractionInterpolatorX",
+      "x": 0.55,
+      "value": 0.11,
+      "domain_min": 0.05,
+      "domain_max": 0.55
+    },
+    {
+      "factory": "CylinderEventAdmissiontoCutoff",
+      "x": 0.05,
+      "value": 0.0241,
+      "domain_min": 0.05,
+      "domain_max": 0.8
+    },
+    {
+      "factory": "CylinderEventAdmissiontoCutoff",
+      "x": 0.1475,
+      "value": 0.008205001,
+      "domain_min": 0.05,
+      "domain_max": 0.8
+    },
+    {
+      "factory": "CylinderEventAdmissiontoCutoff",
+      "x": 0.425,
+      "value": 0.00239999988,
+      "domain_min": 0.05,
+      "domain_max": 0.8
+    },
+    {
+      "factory": "CylinderEventAdmissiontoCutoff",
+      "x": 0.724999964,
+      "value": 0.000850000069,
+      "domain_min": 0.05,
+      "domain_max": 0.8
+    },
+    {
+      "factory": "CylinderEventAdmissiontoCutoff",
+      "x": 0.8,
+      "value": 0.0006,
+      "domain_min": 0.05,
+      "domain_max": 0.8
+    },
+    {
+      "factory": "CylinderEventCompressiontoCutoff",
+      "x": 0.05,
+      "value": 0.458,
+      "domain_min": 0.05,
+      "domain_max": 0.8
+    },
+    {
+      "factory": "CylinderEventCompressiontoCutoff",
+      "x": 0.1475,
+      "value": 0.344030023,
+      "domain_min": 0.05,
+      "domain_max": 0.8
+    },
+    {
+      "factory": "CylinderEventCompressiontoCutoff",
+      "x": 0.425,
+      "value": 0.207899988,
+      "domain_min": 0.05,
+      "domain_max": 0.8
+    },
+    {
+      "factory": "CylinderEventCompressiontoCutoff",
+      "x": 0.724999964,
+      "value": 0.103850007,
+      "domain_min": 0.05,
+      "domain_max": 0.8
+    },
+    {
+      "factory": "CylinderEventCompressiontoCutoff",
+      "x": 0.8,
+      "value": 0.0771,
+      "domain_min": 0.05,
+      "domain_max": 0.8
+    },
+    {
+      "factory": "CylinderEventExhausttoCutoff",
+      "x": 0.05,
+      "value": 0.5306,
+      "domain_min": 0.05,
+      "domain_max": 0.8
+    },
+    {
+      "factory": "CylinderEventExhausttoCutoff",
+      "x": 0.1475,
+      "value": 0.66198,
+      "domain_min": 0.05,
+      "domain_max": 0.8
+    },
+    {
+      "factory": "CylinderEventExhausttoCutoff",
+      "x": 0.425,
+      "value": 0.8173,
+      "domain_min": 0.05,
+      "domain_max": 0.8
+    },
+    {
+      "factory": "CylinderEventExhausttoCutoff",
+      "x": 0.724999964,
+      "value": 0.91905,
+      "domain_min": 0.05,
+      "domain_max": 0.8
+    },
+    {
+      "factory": "CylinderEventExhausttoCutoff",
+      "x": 0.8,
+      "value": 0.9422,
+      "domain_min": 0.05,
+      "domain_max": 0.8
+    },
+    {
+      "factory": "InjCapMinFactorInterpolatorX",
+      "x": 75.0,
+      "value": 0.366,
+      "domain_min": 75.0,
+      "domain_max": 225.0
+    },
+    {
+      "factory": "InjCapMinFactorInterpolatorX",
+      "x": 94.5,
+      "value": 0.373539984,
+      "domain_min": 75.0,
+      "domain_max": 225.0
+    },
+    {
+      "factory": "InjCapMinFactorInterpolatorX",
+      "x": 150.0,
+      "value": 0.395,
+      "domain_min": 75.0,
+      "domain_max": 225.0
+    },
+    {
+      "factory": "InjCapMinFactorInterpolatorX",
+      "x": 210.0,
+      "value": 0.476,
+      "domain_min": 75.0,
+      "domain_max": 225.0
+    },
+    {
+      "factory": "InjCapMinFactorInterpolatorX",
+      "x": 225.0,
+      "value": 0.509,
+      "domain_min": 75.0,
+      "domain_max": 225.0
+    },
+    {
+      "factory": "InjDelWaterTempMaxPressureInterpolatorFtoPSI",
+      "x": 75.0,
+      "value": 128.0,
+      "domain_min": 75.0,
+      "domain_max": 225.0
+    },
+    {
+      "factory": "InjDelWaterTempMaxPressureInterpolatorFtoPSI",
+      "x": 94.5,
+      "value": 133.459991,
+      "domain_min": 75.0,
+      "domain_max": 225.0
+    },
+    {
+      "factory": "InjDelWaterTempMaxPressureInterpolatorFtoPSI",
+      "x": 150.0,
+      "value": 149.0,
+      "domain_min": 75.0,
+      "domain_max": 225.0
+    },
+    {
+      "factory": "InjDelWaterTempMaxPressureInterpolatorFtoPSI",
+      "x": 210.0,
+      "value": 168.0,
+      "domain_min": 75.0,
+      "domain_max": 225.0
+    },
+    {
+      "factory": "InjDelWaterTempMaxPressureInterpolatorFtoPSI",
+      "x": 225.0,
+      "value": 174.0,
+      "domain_min": 75.0,
+      "domain_max": 225.0
+    },
+    {
+      "factory": "InjDelWaterTempMinPressureInterpolatorFtoPSI",
+      "x": 75.0,
+      "value": 217.0,
+      "domain_min": 75.0,
+      "domain_max": 225.0
+    },
+    {
+      "factory": "InjDelWaterTempMinPressureInterpolatorFtoPSI",
+      "x": 94.5,
+      "value": 226.88,
+      "domain_min": 75.0,
+      "domain_max": 225.0
+    },
+    {
+      "factory": "InjDelWaterTempMinPressureInterpolatorFtoPSI",
+      "x": 150.0,
+      "value": 255.0,
+      "domain_min": 75.0,
+      "domain_max": 225.0
+    },
+    {
+      "factory": "InjDelWaterTempMinPressureInterpolatorFtoPSI",
+      "x": 210.0,
+      "value": 263.6,
+      "domain_min": 75.0,
+      "domain_max": 225.0
+    },
+    {
+      "factory": "InjDelWaterTempMinPressureInterpolatorFtoPSI",
+      "x": 225.0,
+      "value": 269.0,
+      "domain_min": 75.0,
+      "domain_max": 225.0
+    },
+    {
+      "factory": "Injector09FlowrateInterpolatorPSItoUKGpM",
+      "x": 0.0,
+      "value": 7.3,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "Injector09FlowrateInterpolatorPSItoUKGpM",
+      "x": 39.0,
+      "value": 17.645,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "Injector09FlowrateInterpolatorPSItoUKGpM",
+      "x": 150.0,
+      "value": 41.43,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "Injector09FlowrateInterpolatorPSItoUKGpM",
+      "x": 270.0,
+      "value": 46.03,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "Injector09FlowrateInterpolatorPSItoUKGpM",
+      "x": 300.0,
+      "value": 46.8,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "Injector10FlowrateInterpolatorPSItoUKGpM",
+      "x": 0.0,
+      "value": 7.3,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "Injector10FlowrateInterpolatorPSItoUKGpM",
+      "x": 39.0,
+      "value": 20.491,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "Injector10FlowrateInterpolatorPSItoUKGpM",
+      "x": 150.0,
+      "value": 51.0,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "Injector10FlowrateInterpolatorPSItoUKGpM",
+      "x": 270.0,
+      "value": 57.37,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "Injector10FlowrateInterpolatorPSItoUKGpM",
+      "x": 300.0,
+      "value": 58.45,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "Injector11FlowrateInterpolatorPSItoUKGpM",
+      "x": 0.0,
+      "value": 9.3,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "Injector11FlowrateInterpolatorPSItoUKGpM",
+      "x": 39.0,
+      "value": 24.91,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "Injector11FlowrateInterpolatorPSItoUKGpM",
+      "x": 150.0,
+      "value": 61.09,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "Injector11FlowrateInterpolatorPSItoUKGpM",
+      "x": 270.0,
+      "value": 68.15,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "Injector11FlowrateInterpolatorPSItoUKGpM",
+      "x": 300.0,
+      "value": 69.25,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "Injector13FlowrateInterpolatorPSItoUKGpM",
+      "x": 0.0,
+      "value": 9.3,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "Injector13FlowrateInterpolatorPSItoUKGpM",
+      "x": 39.0,
+      "value": 32.8850021,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "Injector13FlowrateInterpolatorPSItoUKGpM",
+      "x": 150.0,
+      "value": 87.5,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "Injector13FlowrateInterpolatorPSItoUKGpM",
+      "x": 270.0,
+      "value": 98.74,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "Injector13FlowrateInterpolatorPSItoUKGpM",
+      "x": 300.0,
+      "value": 100.61,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "Injector14FlowrateInterpolatorPSItoUKGpM",
+      "x": 0.0,
+      "value": 9.3,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "Injector14FlowrateInterpolatorPSItoUKGpM",
+      "x": 39.0,
+      "value": 38.510994,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "Injector14FlowrateInterpolatorPSItoUKGpM",
+      "x": 150.0,
+      "value": 104.09,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "Injector14FlowrateInterpolatorPSItoUKGpM",
+      "x": 270.0,
+      "value": 125.77,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "Injector14FlowrateInterpolatorPSItoUKGpM",
+      "x": 300.0,
+      "value": 130.68,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "Injector15FlowrateInterpolatorPSItoUKGpM",
+      "x": 0.0,
+      "value": 9.3,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "Injector15FlowrateInterpolatorPSItoUKGpM",
+      "x": 39.0,
+      "value": 42.509,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "Injector15FlowrateInterpolatorPSItoUKGpM",
+      "x": 150.0,
+      "value": 117.0,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "Injector15FlowrateInterpolatorPSItoUKGpM",
+      "x": 270.0,
+      "value": 139.97,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "Injector15FlowrateInterpolatorPSItoUKGpM",
+      "x": 300.0,
+      "value": 144.88,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "InjWaterFedSteamPressureInterpolatorFtoPSI",
+      "x": 75.0,
+      "value": 17.2,
+      "domain_min": 75.0,
+      "domain_max": 225.0
+    },
+    {
+      "factory": "InjWaterFedSteamPressureInterpolatorFtoPSI",
+      "x": 94.5,
+      "value": 16.056,
+      "domain_min": 75.0,
+      "domain_max": 225.0
+    },
+    {
+      "factory": "InjWaterFedSteamPressureInterpolatorFtoPSI",
+      "x": 150.0,
+      "value": 12.8,
+      "domain_min": 75.0,
+      "domain_max": 225.0
+    },
+    {
+      "factory": "InjWaterFedSteamPressureInterpolatorFtoPSI",
+      "x": 210.0,
+      "value": 10.3,
+      "domain_min": 75.0,
+      "domain_max": 225.0
+    },
+    {
+      "factory": "InjWaterFedSteamPressureInterpolatorFtoPSI",
+      "x": 225.0,
+      "value": 9.7,
+      "domain_min": 75.0,
+      "domain_max": 225.0
+    },
+    {
+      "factory": "PressureToTemperatureInterpolatorPSItoF",
+      "x": 0.0,
+      "value": 212.0,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "PressureToTemperatureInterpolatorPSItoF",
+      "x": 39.0,
+      "value": 285.43,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "PressureToTemperatureInterpolatorPSItoF",
+      "x": 150.0,
+      "value": 365.9,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "PressureToTemperatureInterpolatorPSItoF",
+      "x": 270.0,
+      "value": 412.6,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "PressureToTemperatureInterpolatorPSItoF",
+      "x": 300.0,
+      "value": 421.8,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "SatBoilerEfficiencyGrateAreaInterpolatorLbstoX",
+      "x": 0.0,
+      "value": 0.8,
+      "domain_min": 0.0,
+      "domain_max": 220.0
+    },
+    {
+      "factory": "SatBoilerEfficiencyGrateAreaInterpolatorLbstoX",
+      "x": 28.5999985,
+      "value": 0.723629951,
+      "domain_min": 0.0,
+      "domain_max": 220.0
+    },
+    {
+      "factory": "SatBoilerEfficiencyGrateAreaInterpolatorLbstoX",
+      "x": 110.0,
+      "value": 0.482,
+      "domain_min": 0.0,
+      "domain_max": 220.0
+    },
+    {
+      "factory": "SatBoilerEfficiencyGrateAreaInterpolatorLbstoX",
+      "x": 198.0,
+      "value": 0.2209,
+      "domain_min": 0.0,
+      "domain_max": 220.0
+    },
+    {
+      "factory": "SatBoilerEfficiencyGrateAreaInterpolatorLbstoX",
+      "x": 220.0,
+      "value": 0.156,
+      "domain_min": 0.0,
+      "domain_max": 220.0
+    },
+    {
+      "factory": "SatInitialPressureDropRatioInterpolatorRpMtoX",
+      "x": 0.0,
+      "value": 0.98,
+      "domain_min": 0.0,
+      "domain_max": 750.0
+    },
+    {
+      "factory": "SatInitialPressureDropRatioInterpolatorRpMtoX",
+      "x": 97.5,
+      "value": 0.95075,
+      "domain_min": 0.0,
+      "domain_max": 750.0
+    },
+    {
+      "factory": "SatInitialPressureDropRatioInterpolatorRpMtoX",
+      "x": 375.0,
+      "value": 0.8725,
+      "domain_min": 0.0,
+      "domain_max": 750.0
+    },
+    {
+      "factory": "SatInitialPressureDropRatioInterpolatorRpMtoX",
+      "x": 675.0,
+      "value": 0.85375,
+      "domain_min": 0.0,
+      "domain_max": 750.0
+    },
+    {
+      "factory": "SatInitialPressureDropRatioInterpolatorRpMtoX",
+      "x": 750.0,
+      "value": 0.85,
+      "domain_min": 0.0,
+      "domain_max": 750.0
+    },
+    {
+      "factory": "SaturatedSpeedFactorSpeedDropFtpMintoX",
+      "x": 0.0,
+      "value": 1.0,
+      "domain_min": 0.0,
+      "domain_max": 2100.0
+    },
+    {
+      "factory": "SaturatedSpeedFactorSpeedDropFtpMintoX",
+      "x": 273.0,
+      "value": 0.966420054,
+      "domain_min": 0.0,
+      "domain_max": 2100.0
+    },
+    {
+      "factory": "SaturatedSpeedFactorSpeedDropFtpMintoX",
+      "x": 1050.0,
+      "value": 0.39200002,
+      "domain_min": 0.0,
+      "domain_max": 2100.0
+    },
+    {
+      "factory": "SaturatedSpeedFactorSpeedDropFtpMintoX",
+      "x": 1890.0,
+      "value": 0.203100011,
+      "domain_min": 0.0,
+      "domain_max": 2100.0
+    },
+    {
+      "factory": "SaturatedSpeedFactorSpeedDropFtpMintoX",
+      "x": 2100.0,
+      "value": 0.185,
+      "domain_min": 0.0,
+      "domain_max": 2100.0
+    },
+    {
+      "factory": "SaturationPressureInterpolatorKtoPSI",
+      "x": 372.76,
+      "value": 0.0,
+      "domain_min": 372.76,
+      "domain_max": 489.66
+    },
+    {
+      "factory": "SaturationPressureInterpolatorKtoPSI",
+      "x": 387.957,
+      "value": 9.900335,
+      "domain_min": 372.76,
+      "domain_max": 489.66
+    },
+    {
+      "factory": "SaturationPressureInterpolatorKtoPSI",
+      "x": 431.210022,
+      "value": 70.84288,
+      "domain_min": 372.76,
+      "domain_max": 489.66
+    },
+    {
+      "factory": "SaturationPressureInterpolatorKtoPSI",
+      "x": 477.97,
+      "value": 234.6429,
+      "domain_min": 372.76,
+      "domain_max": 489.66
+    },
+    {
+      "factory": "SaturationPressureInterpolatorKtoPSI",
+      "x": 489.66,
+      "value": 300.0,
+      "domain_min": 372.76,
+      "domain_max": 489.66
+    },
+    {
+      "factory": "SpecificHeatInterpolatorKtoKJpKGpK",
+      "x": 274.0,
+      "value": 4.217,
+      "domain_min": 274.0,
+      "domain_max": 496.0
+    },
+    {
+      "factory": "SpecificHeatInterpolatorKtoKJpKGpK",
+      "x": 302.86,
+      "value": 4.22806025,
+      "domain_min": 274.0,
+      "domain_max": 496.0
+    },
+    {
+      "factory": "SpecificHeatInterpolatorKtoKJpKGpK",
+      "x": 385.0,
+      "value": 4.3405,
+      "domain_min": 274.0,
+      "domain_max": 496.0
+    },
+    {
+      "factory": "SpecificHeatInterpolatorKtoKJpKGpK",
+      "x": 473.8,
+      "value": 4.5774,
+      "domain_min": 274.0,
+      "domain_max": 496.0
+    },
+    {
+      "factory": "SpecificHeatInterpolatorKtoKJpKGpK",
+      "x": 496.0,
+      "value": 4.6703,
+      "domain_min": 274.0,
+      "domain_max": 496.0
+    },
+    {
+      "factory": "SteamDensityInterpolatorPSItoLBpFT3",
+      "x": 0.0,
+      "value": 0.0373,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "SteamDensityInterpolatorPSItoLBpFT3",
+      "x": 39.0,
+      "value": 0.1255,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "SteamDensityInterpolatorPSItoLBpFT3",
+      "x": 150.0,
+      "value": 0.3627,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "SteamDensityInterpolatorPSItoLBpFT3",
+      "x": 270.0,
+      "value": 0.6155,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "SteamDensityInterpolatorPSItoLBpFT3",
+      "x": 300.0,
+      "value": 0.679,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "SteamHeatInterpolatorPSItoBTUpLB",
+      "x": 0.0,
+      "value": 1150.28,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "SteamHeatInterpolatorPSItoBTUpLB",
+      "x": 39.0,
+      "value": 1175.603,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "SteamHeatInterpolatorPSItoBTUpLB",
+      "x": 150.0,
+      "value": 1195.97,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "SteamHeatInterpolatorPSItoBTUpLB",
+      "x": 270.0,
+      "value": 1202.92,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "SteamHeatInterpolatorPSItoBTUpLB",
+      "x": 300.0,
+      "value": 1203.77,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "SteamHeatPressureToTemperatureInterpolatorPSItoF",
+      "x": 0.0,
+      "value": 212.0,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "SteamHeatPressureToTemperatureInterpolatorPSItoF",
+      "x": 39.0,
+      "value": 285.43,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "SteamHeatPressureToTemperatureInterpolatorPSItoF",
+      "x": 150.0,
+      "value": 365.9,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "SteamHeatPressureToTemperatureInterpolatorPSItoF",
+      "x": 270.0,
+      "value": 412.6,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "SteamHeatPressureToTemperatureInterpolatorPSItoF",
+      "x": 300.0,
+      "value": 421.8,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "SuperBoilerEfficiencyGrateAreaInterpolatorLbstoX",
+      "x": 0.0,
+      "value": 0.903,
+      "domain_min": 0.0,
+      "domain_max": 220.0
+    },
+    {
+      "factory": "SuperBoilerEfficiencyGrateAreaInterpolatorLbstoX",
+      "x": 28.5999985,
+      "value": 0.824836,
+      "domain_min": 0.0,
+      "domain_max": 220.0
+    },
+    {
+      "factory": "SuperBoilerEfficiencyGrateAreaInterpolatorLbstoX",
+      "x": 110.0,
+      "value": 0.60225,
+      "domain_min": 0.0,
+      "domain_max": 220.0
+    },
+    {
+      "factory": "SuperBoilerEfficiencyGrateAreaInterpolatorLbstoX",
+      "x": 198.0,
+      "value": 0.361569971,
+      "domain_min": 0.0,
+      "domain_max": 220.0
+    },
+    {
+      "factory": "SuperBoilerEfficiencyGrateAreaInterpolatorLbstoX",
+      "x": 220.0,
+      "value": 0.3014,
+      "domain_min": 0.0,
+      "domain_max": 220.0
+    },
+    {
+      "factory": "SuperheatedSpeedFactorSpeedDropFtpMintoX",
+      "x": 0.0,
+      "value": 1.0,
+      "domain_min": 0.0,
+      "domain_max": 2100.0
+    },
+    {
+      "factory": "SuperheatedSpeedFactorSpeedDropFtpMintoX",
+      "x": 273.0,
+      "value": 0.99124,
+      "domain_min": 0.0,
+      "domain_max": 2100.0
+    },
+    {
+      "factory": "SuperheatedSpeedFactorSpeedDropFtpMintoX",
+      "x": 1050.0,
+      "value": 0.635499954,
+      "domain_min": 0.0,
+      "domain_max": 2100.0
+    },
+    {
+      "factory": "SuperheatedSpeedFactorSpeedDropFtpMintoX",
+      "x": 1890.0,
+      "value": 0.4204,
+      "domain_min": 0.0,
+      "domain_max": 2100.0
+    },
+    {
+      "factory": "SuperheatedSpeedFactorSpeedDropFtpMintoX",
+      "x": 2100.0,
+      "value": 0.41,
+      "domain_min": 0.0,
+      "domain_max": 2100.0
+    },
+    {
+      "factory": "SuperheatTempInterpolatorLbpHtoDegF",
+      "x": 0.0,
+      "value": 0.0,
+      "domain_min": 0.0,
+      "domain_max": 36000.0
+    },
+    {
+      "factory": "SuperheatTempInterpolatorLbpHtoDegF",
+      "x": 4680.0,
+      "value": 80.2,
+      "domain_min": 0.0,
+      "domain_max": 36000.0
+    },
+    {
+      "factory": "SuperheatTempInterpolatorLbpHtoDegF",
+      "x": 18000.0,
+      "value": 260.0,
+      "domain_min": 0.0,
+      "domain_max": 36000.0
+    },
+    {
+      "factory": "SuperheatTempInterpolatorLbpHtoDegF",
+      "x": 32400.0,
+      "value": 363.0,
+      "domain_min": 0.0,
+      "domain_max": 36000.0
+    },
+    {
+      "factory": "SuperheatTempInterpolatorLbpHtoDegF",
+      "x": 36000.0,
+      "value": 384.0,
+      "domain_min": 0.0,
+      "domain_max": 36000.0
+    },
+    {
+      "factory": "SuperheatTempLimitInterpolatorXtoDegF",
+      "x": 0.05,
+      "value": 265.0,
+      "domain_min": 0.05,
+      "domain_max": 0.55
+    },
+    {
+      "factory": "SuperheatTempLimitInterpolatorXtoDegF",
+      "x": 0.114999995,
+      "value": 238.400009,
+      "domain_min": 0.05,
+      "domain_max": 0.55
+    },
+    {
+      "factory": "SuperheatTempLimitInterpolatorXtoDegF",
+      "x": 0.3,
+      "value": 145.0,
+      "domain_min": 0.05,
+      "domain_max": 0.55
+    },
+    {
+      "factory": "SuperheatTempLimitInterpolatorXtoDegF",
+      "x": 0.5,
+      "value": 75.0,
+      "domain_min": 0.05,
+      "domain_max": 0.55
+    },
+    {
+      "factory": "SuperheatTempLimitInterpolatorXtoDegF",
+      "x": 0.55,
+      "value": 60.0,
+      "domain_min": 0.05,
+      "domain_max": 0.55
+    },
+    {
+      "factory": "SuperInitialPressureDropRatioInterpolatorRpMtoX",
+      "x": 0.0,
+      "value": 0.99,
+      "domain_min": 0.0,
+      "domain_max": 750.0
+    },
+    {
+      "factory": "SuperInitialPressureDropRatioInterpolatorRpMtoX",
+      "x": 97.5,
+      "value": 0.970500052,
+      "domain_min": 0.0,
+      "domain_max": 750.0
+    },
+    {
+      "factory": "SuperInitialPressureDropRatioInterpolatorRpMtoX",
+      "x": 375.0,
+      "value": 0.9175,
+      "domain_min": 0.0,
+      "domain_max": 750.0
+    },
+    {
+      "factory": "SuperInitialPressureDropRatioInterpolatorRpMtoX",
+      "x": 675.0,
+      "value": 0.893749952,
+      "domain_min": 0.0,
+      "domain_max": 750.0
+    },
+    {
+      "factory": "SuperInitialPressureDropRatioInterpolatorRpMtoX",
+      "x": 750.0,
+      "value": 0.89,
+      "domain_min": 0.0,
+      "domain_max": 750.0
+    },
+    {
+      "factory": "TemperatureToPressureInterpolatorFtoPSI",
+      "x": 212.0,
+      "value": 0.0,
+      "domain_min": 212.0,
+      "domain_max": 421.8
+    },
+    {
+      "factory": "TemperatureToPressureInterpolatorFtoPSI",
+      "x": 239.274,
+      "value": 9.954018,
+      "domain_min": 212.0,
+      "domain_max": 421.8
+    },
+    {
+      "factory": "TemperatureToPressureInterpolatorFtoPSI",
+      "x": 316.9,
+      "value": 71.13924,
+      "domain_min": 212.0,
+      "domain_max": 421.8
+    },
+    {
+      "factory": "TemperatureToPressureInterpolatorFtoPSI",
+      "x": 400.819977,
+      "value": 234.9142,
+      "domain_min": 212.0,
+      "domain_max": 421.8
+    },
+    {
+      "factory": "TemperatureToPressureInterpolatorFtoPSI",
+      "x": 421.8,
+      "value": 300.0,
+      "domain_min": 212.0,
+      "domain_max": 421.8
+    },
+    {
+      "factory": "WaterDensityInterpolatorPSItoLBpFT3",
+      "x": 0.0,
+      "value": 59.83,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "WaterDensityInterpolatorPSItoLBpFT3",
+      "x": 39.0,
+      "value": 57.7689972,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "WaterDensityInterpolatorPSItoLBpFT3",
+      "x": 150.0,
+      "value": 55.0,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "WaterDensityInterpolatorPSItoLBpFT3",
+      "x": 270.0,
+      "value": 53.12,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "WaterDensityInterpolatorPSItoLBpFT3",
+      "x": 300.0,
+      "value": 52.73,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "WaterHeatInterpolatorPSItoBTUpLB",
+      "x": 0.0,
+      "value": 180.15,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "WaterHeatInterpolatorPSItoBTUpLB",
+      "x": 39.0,
+      "value": 254.788986,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "WaterHeatInterpolatorPSItoBTUpLB",
+      "x": 150.0,
+      "value": 338.56,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "WaterHeatInterpolatorPSItoBTUpLB",
+      "x": 270.0,
+      "value": 388.78,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "WaterHeatInterpolatorPSItoBTUpLB",
+      "x": 300.0,
+      "value": 398.84,
+      "domain_min": 0.0,
+      "domain_max": 300.0
+    },
+    {
+      "factory": "WaterHeatToPressureInterpolatorBTUpLBtoPSI",
+      "x": 180.15,
+      "value": 0.0,
+      "domain_min": 180.15,
+      "domain_max": 398.84
+    },
+    {
+      "factory": "WaterHeatToPressureInterpolatorBTUpLBtoPSI",
+      "x": 208.5797,
+      "value": 10.3809423,
+      "domain_min": 180.15,
+      "domain_max": 398.84
+    },
+    {
+      "factory": "WaterHeatToPressureInterpolatorBTUpLBtoPSI",
+      "x": 289.495,
+      "value": 73.90111,
+      "domain_min": 180.15,
+      "domain_max": 398.84
+    },
+    {
+      "factory": "WaterHeatToPressureInterpolatorBTUpLBtoPSI",
+      "x": 376.971,
+      "value": 237.463379,
+      "domain_min": 180.15,
+      "domain_max": 398.84
+    },
+    {
+      "factory": "WaterHeatToPressureInterpolatorBTUpLBtoPSI",
+      "x": 398.84,
+      "value": 300.0,
+      "domain_min": 180.15,
+      "domain_max": 398.84
+    }
+  ],
+  "grids": [
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 0.0,
+      "cutoff": 0.1,
+      "value": 1.0
+    },
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 0.0,
+      "cutoff": 0.3,
+      "value": 1.0
+    },
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 0.0,
+      "cutoff": 0.45,
+      "value": 1.0
+    },
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 0.0,
+      "cutoff": 0.65,
+      "value": 1.0
+    },
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 0.0,
+      "cutoff": 0.75,
+      "value": 1.0
+    },
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 0.0,
+      "cutoff": 0.9,
+      "value": 1.0
+    },
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 12.0,
+      "cutoff": 0.1,
+      "value": 0.9568
+    },
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 12.0,
+      "cutoff": 0.3,
+      "value": 0.966399968
+    },
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 12.0,
+      "cutoff": 0.45,
+      "value": 0.973
+    },
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 12.0,
+      "cutoff": 0.65,
+      "value": 0.983199954
+    },
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 12.0,
+      "cutoff": 0.75,
+      "value": 0.988
+    },
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 12.0,
+      "cutoff": 0.9,
+      "value": 0.9952
+    },
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 50.0,
+      "cutoff": 0.1,
+      "value": 0.82
+    },
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 50.0,
+      "cutoff": 0.3,
+      "value": 0.86
+    },
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 50.0,
+      "cutoff": 0.45,
+      "value": 0.887500048
+    },
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 50.0,
+      "cutoff": 0.65,
+      "value": 0.93
+    },
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 50.0,
+      "cutoff": 0.75,
+      "value": 0.95
+    },
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 50.0,
+      "cutoff": 0.9,
+      "value": 0.98
+    },
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 110.0,
+      "cutoff": 0.1,
+      "value": 0.734
+    },
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 110.0,
+      "cutoff": 0.3,
+      "value": 0.788000047
+    },
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 110.0,
+      "cutoff": 0.45,
+      "value": 0.830000043
+    },
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 110.0,
+      "cutoff": 0.65,
+      "value": 0.881
+    },
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 110.0,
+      "cutoff": 0.75,
+      "value": 0.907
+    },
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 110.0,
+      "cutoff": 0.9,
+      "value": 0.95
+    },
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 350.0,
+      "cutoff": 0.1,
+      "value": 0.63
+    },
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 350.0,
+      "cutoff": 0.3,
+      "value": 0.663
+    },
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 350.0,
+      "cutoff": 0.45,
+      "value": 0.7
+    },
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 350.0,
+      "cutoff": 0.65,
+      "value": 0.758749962
+    },
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 350.0,
+      "cutoff": 0.75,
+      "value": 0.792
+    },
+    {
+      "factory": "CutoffInitialPressureUpper",
+      "rpm": 350.0,
+      "cutoff": 0.9,
+      "value": 0.8375
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 0.0,
+      "cutoff": 0.1,
+      "value": 1.0
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 0.0,
+      "cutoff": 0.3,
+      "value": 1.0
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 0.0,
+      "cutoff": 0.45,
+      "value": 1.0
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 0.0,
+      "cutoff": 0.65,
+      "value": 1.0
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 0.0,
+      "cutoff": 0.75,
+      "value": 1.0
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 0.0,
+      "cutoff": 0.9,
+      "value": 1.0
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 12.0,
+      "cutoff": 0.1,
+      "value": 0.9424
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 12.0,
+      "cutoff": 0.3,
+      "value": 0.949
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 12.0,
+      "cutoff": 0.45,
+      "value": 0.958
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 12.0,
+      "cutoff": 0.65,
+      "value": 0.97179997
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 12.0,
+      "cutoff": 0.75,
+      "value": 0.979599953
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 12.0,
+      "cutoff": 0.9,
+      "value": 0.9928
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 50.0,
+      "cutoff": 0.1,
+      "value": 0.76
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 50.0,
+      "cutoff": 0.3,
+      "value": 0.7875
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 50.0,
+      "cutoff": 0.45,
+      "value": 0.825000048
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 50.0,
+      "cutoff": 0.65,
+      "value": 0.8825
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 50.0,
+      "cutoff": 0.75,
+      "value": 0.914999962
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 50.0,
+      "cutoff": 0.9,
+      "value": 0.97
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 110.0,
+      "cutoff": 0.1,
+      "value": 0.678000033
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 110.0,
+      "cutoff": 0.3,
+      "value": 0.6969
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 110.0,
+      "cutoff": 0.45,
+      "value": 0.72875
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 110.0,
+      "cutoff": 0.65,
+      "value": 0.7986
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 110.0,
+      "cutoff": 0.75,
+      "value": 0.844
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 110.0,
+      "cutoff": 0.9,
+      "value": 0.921
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 350.0,
+      "cutoff": 0.1,
+      "value": 0.52
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 350.0,
+      "cutoff": 0.3,
+      "value": 0.528
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 350.0,
+      "cutoff": 0.45,
+      "value": 0.5575
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 350.0,
+      "cutoff": 0.65,
+      "value": 0.6175
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 350.0,
+      "cutoff": 0.75,
+      "value": 0.652500033
+    },
+    {
+      "factory": "CutoffInitialPressureLower",
+      "rpm": 350.0,
+      "cutoff": 0.9,
+      "value": 0.7075
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "completed_at_utc": "2026-10-16T15:27:44.713011+00:00",
+  "status": "pass",
+  "cargo_invoked": false,
+  "wine_invoked": false,
+  "runtime_modified_by_capture": false,
+  "original_assets_versioned": false,
+  "source_inputs_unchanged_during_library_build": true,
+  "source_inputs_unchanged_during_helper_build_and_capture": true,
+  "verified_source_file_count": 900,
+  "source_snapshot_sha256_before": "a730bd86671407f145850b478d5ebebc3f67cb7fd2948ea3170f862e53a63228",
+  "source_snapshot_sha256_after": "a730bd86671407f145850b478d5ebebc3f67cb7fd2948ea3170f862e53a63228",
+  "libraries_unchanged_during_helper_build_and_capture": true,
+  "library_preparation": "Coherent workspace build14 emitted these exact selected libraries with all898 runtime/script sources and140 acceptance fixture files unchanged. This is a fresh physical replay after the native curve/adhesion fixes; a later complete check.sh gate remains required. Sources and libraries are checked before and after this direct rustc replay.",
+  "libraries": {
+    "serde_json": {
+      "file": "libserde_json-87a8e1f99d134334.rlib",
+      "sha256": "688f8881d192157e337b7e1b75f77edc09de0e93cbfed0cc21457bf92d2905ef"
+    },
+    "openrailsrs_scenarios": {
+      "file": "libopenrailsrs_scenarios-9cd3e3309e3e4a46.rlib",
+      "sha256": "33bb918bbcdaa53e6920bedac22f53ea69518c7eb0bfdfc949b729a9530416d1"
+    },
+    "openrailsrs_sim": {
+      "file": "libopenrailsrs_sim-8aea4f5f640cd4f3.rlib",
+      "sha256": "1f498ce917ce5cb8701788e8f53ac7f5b86205c3caa7bbe3d557a535bb20c0d4"
+    }
+  },
+  "comparison": {
+    "status": "pass",
+    "reference": "Open Rails 1.6.1",
+    "transferred_original_vehicles": 8,
+    "force_cases": 3,
+    "maximum_force_error_n": 0.00038474577013403177,
+    "driving_after_restore_m": 16.08371905622363,
+    "limits": [
+      "Stationary manual rear-to-front joining only in Rust",
+      "OR automatically requires signed movement; zero-speed scan is retained separately",
+      "Different simple rigid / elastic transient and slack laws are not declared equivalent",
+      "Original stock is driven on owned synthetic track; native route/signal/full-physics parity not certified"
+    ]
+  },
+  "rust_output_byte_identical_to_historical32": false,
+  "depot_observed_identical_to_historical32": false,
+  "scope": "New Rust execution only. Original Open Rails DLL capture, tolerances and historical Rust output are unchanged. Coupling is stationary manual rear/front contact and three prescribed static equilibria; this does not certify moving-impact or full-route parity. DepotStateCompare emitted its unchanged historical source_scope string; the new execution identity is recorded here rather than rewriting raw helper output."
+}

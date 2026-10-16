@@ -11,6 +11,7 @@ fn example() -> (std::path::PathBuf, ScenarioFile) {
 }
 fn service(s: &ScenarioFile) -> TrainEntryDef {
     TrainEntryDef {
+        rack: None,
         bogie_dynamics: vec![],
         activity_uids: vec![],
         legs: vec![],

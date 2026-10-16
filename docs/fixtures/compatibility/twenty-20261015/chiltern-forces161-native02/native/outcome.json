@@ -1,0 +1,58 @@
+{
+  "success": true,
+  "mode": "service",
+  "time_s": 750.100011177361,
+  "stops": [
+    {
+      "station": "Northolt Park",
+      "arrival_s": 0.0,
+      "position_error_m": 1.9073486328125E-05,
+      "arrival_speed_mps": 0.0,
+      "depart_s": 20.05,
+      "boarding_s": 20.000000000000149
+    },
+    {
+      "station": "South Ruislip",
+      "arrival_s": 328.95000000000005,
+      "position_error_m": 3.5333595275878906,
+      "arrival_speed_mps": 0.096793986856937408,
+      "depart_s": 420.05,
+      "boarding_s": 91.04999999999697
+    },
+    {
+      "station": "West Ruislip",
+      "arrival_s": 691.40000000000009,
+      "position_error_m": 2.8669185638427734,
+      "arrival_speed_mps": 0.091813176870346069,
+      "depart_s": 750.05000000000007,
+      "boarding_s": 58.599999999998808
+    }
+  ],
+  "failure": null,
+  "step_s": 0.05,
+  "seed": 0,
+  "native_tasks": [
+    {
+      "station": "Northolt Park",
+      "completed": true,
+      "arrival_s": 0.0,
+      "departure_s": 27.099999999998545,
+      "boarding_s": 20.0
+    },
+    {
+      "station": "South Ruislip",
+      "completed": true,
+      "arrival_s": 328.59999999999854,
+      "departure_s": 427.94999999999709,
+      "boarding_s": 20.0
+    },
+    {
+      "station": "West Ruislip",
+      "completed": true,
+      "arrival_s": 691.0,
+      "departure_s": null,
+      "boarding_s": 25.0
+    }
+  ],
+  "distance_m": 7054.788
+}

@@ -68,7 +68,7 @@ struct LocationFile {
     timezone: Option<String>,
 }
 impl RouteLocation {
-    fn valid(self) -> bool {
+    pub(crate) fn valid(self) -> bool {
         self.latitude.is_finite()
             && self.longitude.is_finite()
             && (-90.0..=90.0).contains(&self.latitude)
@@ -118,7 +118,7 @@ impl WeatherSample {
     fn fresh(&self, now: i64) -> bool {
         (-900..=MAX_WEATHER_AGE_S).contains(&(now.saturating_sub(self.time)))
     }
-    fn valid(&self) -> bool {
+    pub(crate) fn valid(&self) -> bool {
         DateTime::from_timestamp(self.time, 0).is_some()
             && self.forecast.len() <= 72
             && self

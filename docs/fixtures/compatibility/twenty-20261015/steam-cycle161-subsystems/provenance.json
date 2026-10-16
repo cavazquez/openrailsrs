@@ -1,0 +1,104 @@
+{
+  "schema": 1,
+  "kind": "lossy_projection_of_genuine_native_capture_for_cpu_regression",
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "extraction_algorithm": [
+    "Verify the immutable raw capture manifest and every registered file hash.",
+    "For every raw row0..1600 select the17 named scalar columns, preserving JSON decimal numbers; encode only injector booleans as0/1. No rounding, interpolation, downsampling, fitted constants or native equations.",
+    "Copy predeclared programme inputs, independently parsed authored hardware profile and static world position/height; exclude all native evolving state from inputs.",
+    "Copy all250 one-dimensional and60 two-dimensional original DLL table calls. Deduplicate only after hot/cold raw table hashes match exactly.",
+    "Compact JSON whitespace only; this file has a new derived SHA and is not claimed byte-identical to the raw captures."
+  ],
+  "original_resources_bundled": false,
+  "post_start_observed_model_state_prescribed": false,
+  "native_limits_changed": false,
+  "rust_execution": "not_run_for_this_ci_target",
+  "cases": {
+    "hot_subsystem": {
+      "capture_manifest_sha256": "abd64cb3088dc54a0266df0c275d3953dfe8a4589fca92166d09dac8a4683e40",
+      "capture_status_preserved": "captured_not_compared",
+      "raw_reference_sha256": "1695013d83c7b749ac1cd8288bc0f9c49eaca07ffd478c170de14012c148ca59",
+      "raw_initial_sha256": "6cd2dd036271dfe9f8ad118e60216c4c864e8a9fc03075141ea4799763758cff",
+      "raw_tables_sha256": "850a2817b252119b56815ee4520b9f8ff5b414b48de4aa682b006d05c256d1d6",
+      "raw_input_sha256": "b041e896dc7c11c9b6263f81a22168624ed62eeecdb6d5ed6739849428f55f47",
+      "raw_helper_sha256": "87d276a35e4eb5d6afa58b66e81c42acf8b748fdec662ccfa63974d3e8d540b6",
+      "original_assets_sha256": {
+        "BR_3FT_47629.eng": "3cb8a216ac9f3c43859fbef8a5bc1b355382e92474eeb2b35134975a77b25fa5",
+        "RS_HiWyc-Marylebone1710atDenham.pat": "bcbdf82db3bcff06175c4921adbc966b98417a01968675c0aac09def7e0f71df"
+      },
+      "original_assemblies_sha256": {
+        "RunActivity.exe": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2",
+        "Orts.Simulation.dll": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679",
+        "Orts.Settings.dll": "fe0d8d81149f480f3972c80e64ffaf6012c7599e32c26c8e4d46510e3edbb2e7",
+        "Orts.Common.dll": "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212",
+        "Orts.Formats.Msts.dll": "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465",
+        "Orts.Parsers.Msts.dll": "8e0781c9f861ed95b4467d1bf948ea7aca896d634f21ac5952f97a9f630d0b36",
+        "MonoGame.Framework.dll": "c6a16c29705a4c847e0e4a2647bf432604cd9320cbc5d4125ab01ae7bb7e6542",
+        "Newtonsoft.Json.dll": "9af2e1c672afd67a291b8f2031a341a3788d4d9f683eaddc6ceab3a3a74c546e",
+        "GNU.Gettext.dll": "f1421ebbc4d70214324414c7c33abf7e536e225f833080ab9d79a572452e024b"
+      },
+      "original_source_sha256": {
+        "Source/Orts.Simulation/Simulation/RollingStocks/MSTSSteamLocomotive.cs": "4eb9bc6436344032945c2dfa4065d4055ac4e57b4fc48f4d2dd6fcf9a63ebdf0",
+        "Source/Orts.Simulation/Common/SteamTable.cs": "9e6d57d726a2c0dd827c4fb2a0a4a1d21325ebda0252027a47c2a8c41843ce0b",
+        "Source/Orts.Common/SmoothedData.cs": "df2330fdaa9a74ed47cb1fff414dccc81806786cc3edd6a6a243a6c51705ab55",
+        "Source/Orts.Parsers.Msts/Interpolator.cs": "f4217230089447e74162589a43d40deb2350c5b76786ff77962f7a9477fff7cc",
+        "Source/Orts.Simulation/Simulation/RollingStocks/SubSystems/Brakes/MSTS/VacuumSinglePipe.cs": "0ed9d006f8ed0aa24a50c6e26f452028a111427643d9da069acf68c91af8fba4"
+      },
+      "profile_derivation": {
+        "method": "Direct copy of measured initial.json#/profile, authored STF parsed by parse_native_steam161(read_vehicle_ast(originalENG)); hot_start comes from the predeclared case",
+        "measurement_receipt_sha256": "0adc0a10331da0deae12d9db1b4fc2021f511c2a8e4dbb30611c0ec1fa47bc0f",
+        "measurement_initial_sha256": "3521312db744c99c460e35cad8ebffe56345904bc39fd3c0dda6a7e69144c356",
+        "measured_parser_source_sha256": "ef65c968d10e7cf1c3bf77ccde016c7d68738ca3bcb3c4dd955d5d41e4906469",
+        "measured_example_source_sha256": "255cbe72201ec6fb2772c968673a045d168bf80313c6a2fd7f31780311440898",
+        "post_start_native_model_state_used_as_hardware": false
+      }
+    },
+    "cold_subsystem": {
+      "capture_manifest_sha256": "69c3e00601db4b00e79b77f07cd18de4c30e547481f8635588e5b02fdd999915",
+      "capture_status_preserved": "captured_not_compared",
+      "raw_reference_sha256": "19cb99634b4eced92f9665a5d3b75f4a2c48e5f08a4e14f4349bcb3437d00c19",
+      "raw_initial_sha256": "85350cfd103479759de85725ee5886f80826be9967552bee1456e9d7ef8ad055",
+      "raw_tables_sha256": "850a2817b252119b56815ee4520b9f8ff5b414b48de4aa682b006d05c256d1d6",
+      "raw_input_sha256": "403ff204c19bba879a9edb8cde048e73fea9d41d6ca2a91f7755ba0e1dd9df1d",
+      "raw_helper_sha256": "87d276a35e4eb5d6afa58b66e81c42acf8b748fdec662ccfa63974d3e8d540b6",
+      "original_assets_sha256": {
+        "BR_3FT_47629.eng": "3cb8a216ac9f3c43859fbef8a5bc1b355382e92474eeb2b35134975a77b25fa5",
+        "RS_HiWyc-Marylebone1710atDenham.pat": "bcbdf82db3bcff06175c4921adbc966b98417a01968675c0aac09def7e0f71df"
+      },
+      "original_assemblies_sha256": {
+        "RunActivity.exe": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2",
+        "Orts.Simulation.dll": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679",
+        "Orts.Settings.dll": "fe0d8d81149f480f3972c80e64ffaf6012c7599e32c26c8e4d46510e3edbb2e7",
+        "Orts.Common.dll": "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212",
+        "Orts.Formats.Msts.dll": "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465",
+        "Orts.Parsers.Msts.dll": "8e0781c9f861ed95b4467d1bf948ea7aca896d634f21ac5952f97a9f630d0b36",
+        "MonoGame.Framework.dll": "c6a16c29705a4c847e0e4a2647bf432604cd9320cbc5d4125ab01ae7bb7e6542",
+        "Newtonsoft.Json.dll": "9af2e1c672afd67a291b8f2031a341a3788d4d9f683eaddc6ceab3a3a74c546e",
+        "GNU.Gettext.dll": "f1421ebbc4d70214324414c7c33abf7e536e225f833080ab9d79a572452e024b"
+      },
+      "original_source_sha256": {
+        "Source/Orts.Simulation/Simulation/RollingStocks/MSTSSteamLocomotive.cs": "4eb9bc6436344032945c2dfa4065d4055ac4e57b4fc48f4d2dd6fcf9a63ebdf0",
+        "Source/Orts.Simulation/Common/SteamTable.cs": "9e6d57d726a2c0dd827c4fb2a0a4a1d21325ebda0252027a47c2a8c41843ce0b",
+        "Source/Orts.Common/SmoothedData.cs": "df2330fdaa9a74ed47cb1fff414dccc81806786cc3edd6a6a243a6c51705ab55",
+        "Source/Orts.Parsers.Msts/Interpolator.cs": "f4217230089447e74162589a43d40deb2350c5b76786ff77962f7a9477fff7cc",
+        "Source/Orts.Simulation/Simulation/RollingStocks/SubSystems/Brakes/MSTS/VacuumSinglePipe.cs": "0ed9d006f8ed0aa24a50c6e26f452028a111427643d9da069acf68c91af8fba4"
+      },
+      "profile_derivation": {
+        "method": "Direct copy of measured initial.json#/profile, authored STF parsed by parse_native_steam161(read_vehicle_ast(originalENG)); hot_start comes from the predeclared case",
+        "measurement_receipt_sha256": "09a99d9ccb40d670e7f606798aff0d5a549c9a7b87da06d56bc912ac2b9ee0d1",
+        "measurement_initial_sha256": "b4300162ea34e9289347a847085c0b47b03805b4fe1e47cd14df9676c5aba6f7",
+        "measured_parser_source_sha256": "ef65c968d10e7cf1c3bf77ccde016c7d68738ca3bcb3c4dd955d5d41e4906469",
+        "measured_example_source_sha256": "255cbe72201ec6fb2772c968673a045d168bf80313c6a2fd7f31780311440898",
+        "post_start_native_model_state_used_as_hardware": false
+      }
+    }
+  },
+  "files_sha256": {
+    "extract-fixture.py": "d864fc72d482ad6d592f3d9cbfa291db86f9f3b17bcac9b6401091788640833e",
+    "protocol.json": "c62fc972d0799c3fa7d32db8e6bcd19fde852b986b8ebe652bbb96de0e7e73cb",
+    "raw-manifests/cold_subsystem.json": "69c3e00601db4b00e79b77f07cd18de4c30e547481f8635588e5b02fdd999915",
+    "raw-manifests/hot_subsystem.json": "abd64cb3088dc54a0266df0c275d3953dfe8a4589fca92166d09dac8a4683e40",
+    "reference.json": "c4183cc9a0585d331741b0de8cfb1b2ed6300f4152396399fb9cf402305c9fef"
+  }
+}

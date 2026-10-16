@@ -176,6 +176,9 @@ pub fn run_scenario_headless_with_driver(
     scenario: &ScenarioFile,
     driver: &mut dyn Driver,
 ) -> Result<SimRunResult, SimError> {
+    if !scenario.simulation.yard_operations.is_empty() {
+        return Err(SimError::Msg("Los patios operativos requieren LiveDrive/LiveTraffic; este runner no ejecuta mesas, pools ni crews".into()));
+    }
     let route_dir = scenario_dir.join(&scenario.route.path);
     let mut graph = load_track_graph_from_route_dir(&route_dir)?;
     crate::freight::cap_graph(&mut graph, scenario.train.freight.as_ref());
@@ -243,6 +246,7 @@ pub fn run_scenario_headless_with_driver(
     let steam_params = consist.aggregate_steam_params();
     let partial_throttle_run_up_time_s = max_partial_throttle_run_up_time_s(&diesel_engines);
     let mut train_physics = TrainPhysics {
+        rack: Default::default(),
         bogies: openrailsrs_train::bogie_geometry::load_models_for_consist(
             &consist_path,
             consist_root(&consist_path),
@@ -297,6 +301,22 @@ pub fn run_scenario_headless_with_driver(
         partial_throttle_run_up_time_s,
         orts_inherit_partial_run_up: scenario.simulation.orts_inherit_partial_run_up,
     };
+    if let Some(native) = &mut train_physics.native {
+        native.configure_adhesion_inputs(
+            scenario_dir,
+            scenario.simulation.time_step,
+            scenario.simulation.duration,
+        )?;
+    } else if scenario
+        .simulation
+        .native_physics
+        .as_ref()
+        .is_some_and(|environment| environment.adhesion_input_file.is_some())
+    {
+        return Err(SimError::Msg(
+            "Las entradas ambientales requieren una formación con física nativa compatible".into(),
+        ));
+    }
 
     let stop_nodes: HashSet<&str> = scenario
         .route
@@ -326,15 +346,31 @@ pub fn run_scenario_headless_with_driver(
 
     let mut path_data = PathData::from_path(&path_edges, &graph);
     crate::freight::cap(&mut path_data, scenario.train.freight.as_ref());
+    train_physics.rack = crate::rack::RackTrainConfig::from_scenario(
+        scenario.train.rack.as_ref(),
+        train_physics.vehicle_lengths_m.len(),
+        path_data.total_length_m(),
+    )
+    .map_err(SimError::Msg)?;
     let mut state = TrainSimState::new(path_edges);
+    if let Some(native) = train_physics
+        .native
+        .as_ref()
+        .filter(|native| native.environment.adhesion_input_file.is_some())
+    {
+        state.native_dynamics = Some(native.initial_state(train_physics.diesel_engines.len()));
+    }
+    state.rack = crate::rack::RackTrainState::new(&train_physics.rack);
     state.articulated_joints = crate::bogie_dynamics::apply_overrides(
         &mut train_physics.bogies,
         &scenario.train.bogie_dynamics,
     )
     .map_err(SimError::Msg)?;
-    state
+    state.bogies = train_physics
         .bogies
-        .resize_with(train_physics.bogies.len(), Default::default);
+        .iter()
+        .map(crate::bogie_dynamics::VehicleBogieState::from_model)
+        .collect();
     state.weather_track = scenario.simulation.weather_track.clone();
     crate::vehicle_systems::configure(
         &mut state,
@@ -370,7 +406,7 @@ pub fn run_scenario_headless_with_driver(
     state.boiler_state = consist
         .aggregate_steam_params()
         .map(|p| crate::steam::BoilerState::from_params(&p));
-    crate::steam_equipment::configure(&mut state, &consist);
+    crate::steam_equipment::configure(&mut state, &consist).map_err(SimError::Msg)?;
     // Initialise diesel RPM at each engine's idle speed.
     if !train_physics.diesel_engines.is_empty() {
         state.diesel_rpm = train_physics
@@ -457,7 +493,14 @@ pub fn run_scenario_headless_with_driver(
     let mut phase = RunPhase::Normal;
 
     let mut steps = 0_u64;
-    while state.time_s() < duration {
+    // Repeated 50 ms ticks can end a few ulps below the requested horizon.
+    // Do not request a spurious extra input after that horizon is complete.
+    while state.time_s() + 1e-9 < duration {
+        if let Some(native) = &train_physics.native {
+            native
+                .validate_adhesion_tick(&state, dt)
+                .map_err(SimError::Msg)?;
+        }
         match phase {
             // ── Approaching phase: brake hard until v ≈ 0, then snap to node and dwell. ──
             RunPhase::Approaching { ref node, dwell_s } => {

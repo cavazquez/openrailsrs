@@ -69,6 +69,9 @@ pub struct TrafficService {
 
 #[derive(Default)]
 pub struct LiveTraffic {
+    /// Owned by the multiplayer authority, including disconnected drivers.
+    /// Authority checkpoints persist this assignment, not railway snapshots.
+    pub remote_drivers: HashSet<String>,
     pub control_history: Vec<String>,
     pub couplings: Vec<crate::independent_coupling::CouplingReceipt>,
     pub services: Vec<TrafficService>,
@@ -90,6 +93,7 @@ pub struct TrafficSnapshot {
 
 impl LiveTraffic {
     pub fn from_scenario(directory: &Path, scenario: &ScenarioFile) -> Result<Self, String> {
+        crate::operational_yards::validate_yard_actor_definitions(scenario)?;
         let warm = scenario
             .extra_trains
             .iter()
@@ -98,7 +102,10 @@ impl LiveTraffic {
         if !warm.is_finite() || !(0. ..=21600.).contains(&warm) {
             return Err("Preparación de tráfico fuera del límite de seis horas simuladas".into());
         }
-        if warm > 0. && scenario.simulation.rail_operations != Default::default() {
+        if warm > 0.
+            && (scenario.simulation.rail_operations != Default::default()
+                || !scenario.simulation.yard_operations.is_empty())
+        {
             return Err("La preparación previa de AI original requiere una actividad sin planes de operación personalizados".into());
         }
         let mut ids = HashSet::new();
@@ -148,6 +155,7 @@ impl LiveTraffic {
             let mut session = LiveDriveSession::from_scenario(directory, &ai)
                 .map_err(|e| format!("{}: {e}", entry.id))?;
             session.service_id.clone_from(&entry.id);
+            session.initialize_yard_operations()?;
             session.headlights = 2;
             if entry.parked {
                 session.driver_direction = 0.5;
@@ -293,6 +301,18 @@ impl LiveTraffic {
         self.workers = workers;
         Ok(())
     }
+    pub fn set_remote_drivers(&mut self, ids: HashSet<String>) -> Result<(), String> {
+        if ids.len() > 16
+            || ids
+                .iter()
+                .any(|id| !self.services.iter().any(|s| &s.id == id))
+        {
+            return Err("Servicio remoto desconocido".into());
+        }
+        self.remote_drivers = ids;
+        Ok(())
+    }
+
     pub fn worker_count(&self) -> usize {
         self.workers.max(1)
     }
@@ -358,10 +378,23 @@ impl LiveTraffic {
     }
 
     fn advance_services(&mut self, dt: f64) {
+        let remote = &self.remote_drivers;
         let step = |service: &mut TrafficService| {
             if service.departed && !service.parked && !service.session.arrived {
                 service.session.speed_mul = 1.;
-                service.session.step_autodrive(dt, 0.75, |_| {});
+                if remote.contains(&service.id) {
+                    let human = service.session.state.yard_operations.human_driven;
+                    service.session.state.yard_operations.human_driven = true;
+                    service.session.step_realtime(dt, |_| {});
+                    service.session.state.yard_operations.human_driven = human;
+                } else if service.session.yard_free_rolling() {
+                    service.session.step_free_rolling(dt);
+                } else if !service.session.step_ai_runaround(dt)
+                    && !service.session.step_meeting_approach(dt)
+                    && !service.session.step_pool_service(dt)
+                {
+                    service.session.step_autodrive(dt, 0.75, |_| {});
+                }
             }
         };
         // Grants and occupancy are already frozen by the serial coordinator.
@@ -424,6 +457,7 @@ impl LiveTraffic {
             service.session.validate_snapshot(&snapshot.session)?;
         }
         crate::SessionSnapshot::validate_shared_dispatcher(saved.iter().map(|s| &s.session))?;
+        crate::operational_yards::validate_shared_yard_snapshots(saved.iter().map(|s| &s.session))?;
         Ok(())
     }
 
@@ -564,6 +598,12 @@ impl LiveTraffic {
         let works = player.closed_work_occupancy(&footprints);
         blocks.extend(works.iter().map(|w| (w.edge.clone(), w.owner.clone())));
         footprints.extend(works);
+        let machinery = player.yard_device_occupancy();
+        blocks.extend(machinery.iter().map(|p| (p.edge.clone(), p.owner.clone())));
+        footprints.extend(machinery);
+        let protection = self.yard_recovery_occupancy(player);
+        blocks.extend(protection.iter().map(|p| (p.edge.clone(), p.owner.clone())));
+        footprints.extend(protection);
         (blocks, footprints)
     }
 
@@ -678,7 +718,10 @@ impl LiveTraffic {
             .works
             .iter()
             .any(|w| w.closed);
-        if self.services.is_empty() && !timed_closures {
+        if self.services.is_empty()
+            && !timed_closures
+            && player.state.yard_operations.definition.is_empty()
+        {
             self.sync_activity_context(player);
             let before = player.time_s();
             if let Some(notch) = automatic {
@@ -693,16 +736,32 @@ impl LiveTraffic {
             return;
         }
         let speed = player.speed_mul;
-        let dt = player.realtime_physics_dt();
+        let base_dt = player.realtime_physics_dt();
+        let original_dt = player.dt;
+        let service_dt: Vec<_> = self
+            .services
+            .iter()
+            .map(|s| (s.id.clone(), s.session.dt))
+            .collect();
         let mut budget = player.sim_time_remainder + real_dt * speed;
         player.speed_mul = 1.0;
         player.sim_time_remainder = 0.0;
-        while budget + 1e-12 >= dt {
+        while budget + 1e-12 >= base_dt {
+            // Contact uses a smaller physical quantum near another train; it
+            // never moves stock backwards to repair an overlap afterwards.
+            self.resolve_yard_contacts(player);
+            let dt = self.yard_contact_quantum(player, base_dt);
+            player.dt = dt;
+            for service in &mut self.services {
+                service.session.dt = dt;
+            }
             let clock = player.time_s();
             let mut occupied = player.own_occupied_edges();
+            let mut occupied_spans = player.own_track_occupancy();
             for service in &self.services {
                 if service.departed {
                     occupied.extend(service.session.own_occupied_edges());
+                    occupied_spans.extend(service.session.own_track_occupancy());
                 }
             }
             for service in &mut self.services {
@@ -718,11 +777,30 @@ impl LiveTraffic {
                         surface.advance(dt);
                     }
                     let footprint = service.session.own_occupied_edges();
-                    if clock + 1e-9 >= service.departure_s
-                        && footprint.keys().all(|edge| !occupied.contains_key(edge))
-                    {
+                    let spans = service.session.own_track_occupancy();
+                    // Two separately authored trains may occupy different
+                    // intervals of one long vector (a native portion meeting).
+                    // The previous edge-only test deadlocked that encounter.
+                    // A legacy off-route/empty footprint keeps its conservative
+                    // whole-edge spawn protection instead of appearing twice.
+                    let clear = if spans.is_empty() {
+                        footprint.keys().all(|edge| !occupied.contains_key(edge))
+                    } else {
+                        !spans.iter().any(|span| {
+                            occupied_spans
+                                .iter()
+                                .any(|other| crate::track_reservations::overlaps(span, other))
+                        }) && footprint.keys().all(|edge| {
+                            !occupied.contains_key(edge)
+                                || occupied_spans
+                                    .iter()
+                                    .any(|p| p.edge.as_str() == edge.trim_end_matches("_r"))
+                        })
+                    };
+                    if clock + 1e-9 >= service.departure_s && clear {
                         service.departed = true;
                         occupied.extend(footprint);
+                        occupied_spans.extend(spans);
                     }
                 }
             }
@@ -740,9 +818,18 @@ impl LiveTraffic {
                 player.step_realtime(dt, &mut transition);
             }
             self.advance_services(dt);
+            self.tick_yard_operations(player, dt);
             budget -= dt;
         }
         player.speed_mul = speed;
+        player.dt = original_dt;
+        for service in &mut self.services {
+            if let Some((_, dt)) = service_dt.iter().find(|(id, _)| id == &service.id) {
+                service.session.dt = *dt;
+            } else {
+                service.session.dt = original_dt;
+            }
+        }
         player.sim_time_remainder = budget;
         self.synchronize_occupancy(player);
     }
@@ -778,6 +865,7 @@ fn service_scenario(player: &ScenarioFile, entry: &TrainEntryDef) -> ScenarioFil
     ai.train.cab_equipment.clone_from(&entry.cab_equipment);
     ai.train.presentation.clone_from(&entry.presentation);
     ai.train.bogie_dynamics.clone_from(&entry.bogie_dynamics);
+    ai.train.rack.clone_from(&entry.rack);
     ai.train.vehicle_profiles.clear();
     ai.train.power_load = Default::default();
     ai.train

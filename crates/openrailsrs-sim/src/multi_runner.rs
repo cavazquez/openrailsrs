@@ -165,6 +165,7 @@ fn build_physics(
     };
     let partial_throttle_run_up_time_s = max_partial_throttle_run_up_time_s(&diesel_engines);
     Ok(TrainPhysics {
+        rack: Default::default(),
         bogies: openrailsrs_train::bogie_geometry::load_models_for_consist(
             consist_path,
             consist_root(consist_path),
@@ -213,12 +214,30 @@ fn build_physics(
 
 // ── Public entry point ────────────────────────────────────────────────────────
 
+fn reject_single_train_adhesion_inputs(scenario: &ScenarioFile) -> Result<(), SimError> {
+    if scenario
+        .simulation
+        .native_physics
+        .as_ref()
+        .is_some_and(|environment| environment.adhesion_input_file.is_some())
+    {
+        return Err(SimError::Msg(
+            "Las entradas ambientales por vehículo requieren el ejecutor individual o LiveDrive/LiveTraffic; este runner multitrén no las reproduce".into(),
+        ));
+    }
+    Ok(())
+}
+
 /// Run all trains in `scenario` (primary + `extra_trains`) on a single shared
 /// clock with block-level occupancy enforcement.
 pub fn run_scenario_multi_train(
     scenario_dir: &Path,
     scenario: &ScenarioFile,
 ) -> Result<MultiTrainResult, SimError> {
+    reject_single_train_adhesion_inputs(scenario)?;
+    if !scenario.simulation.yard_operations.is_empty() {
+        return Err(SimError::Msg("Los patios operativos requieren LiveDrive/LiveTraffic; este runner no ejecuta mesas, pools ni crews".into()));
+    }
     // ── Load shared route graph ───────────────────────────────────────────────
     let route_dir = scenario_dir.join(&scenario.route.path);
     let mut graph = load_track_graph_from_route_dir(&route_dir)?;
@@ -261,15 +280,24 @@ pub fn run_scenario_multi_train(
         physics.power_supply.loads = scenario.train.power_load.clone();
         let mut path_data = PathData::from_path(&path_edges, &graph);
         crate::freight::cap(&mut path_data, scenario.train.freight.as_ref());
+        physics.rack = crate::rack::RackTrainConfig::from_scenario(
+            scenario.train.rack.as_ref(),
+            physics.vehicle_lengths_m.len(),
+            path_data.total_length_m(),
+        )
+        .map_err(SimError::Msg)?;
         let mut state = TrainSimState::new(path_edges);
+        state.rack = crate::rack::RackTrainState::new(&physics.rack);
         state.articulated_joints = crate::bogie_dynamics::apply_overrides(
             &mut physics.bogies,
             &scenario.train.bogie_dynamics,
         )
         .map_err(SimError::Msg)?;
-        state
+        state.bogies = physics
             .bogies
-            .resize_with(physics.bogies.len(), Default::default);
+            .iter()
+            .map(crate::bogie_dynamics::VehicleBogieState::from_model)
+            .collect();
         state.weather_track = scenario.simulation.weather_track.clone();
         let mut loaded_consist =
             load_consist_with_asset_root(&consist_path, consist_root(&consist_path)).ok();
@@ -302,7 +330,7 @@ pub fn run_scenario_multi_train(
             .map(|p| crate::steam::BoilerState::from_params(&p));
         if let Some(consist) = loaded_consist.as_ref() {
             physics.mass_kg = consist.total_mass_kg();
-            crate::steam_equipment::configure(&mut state, consist);
+            crate::steam_equipment::configure(&mut state, consist).map_err(SimError::Msg)?;
             let engines = consist.diesel_traction_models();
             if !engines.is_empty() {
                 state.diesel_rpm = engines.iter().map(|e| e.idle_rpm()).collect();
@@ -403,13 +431,22 @@ pub fn run_scenario_multi_train(
         )?;
         let mut path_data = PathData::from_path(&path_edges, &g2);
         crate::freight::cap(&mut path_data, entry.freight.as_ref());
+        physics.rack = crate::rack::RackTrainConfig::from_scenario(
+            entry.rack.as_ref(),
+            physics.vehicle_lengths_m.len(),
+            path_data.total_length_m(),
+        )
+        .map_err(SimError::Msg)?;
         let mut state = TrainSimState::new(path_edges);
+        state.rack = crate::rack::RackTrainState::new(&physics.rack);
         state.articulated_joints =
             crate::bogie_dynamics::apply_overrides(&mut physics.bogies, &entry.bogie_dynamics)
                 .map_err(SimError::Msg)?;
-        state
+        state.bogies = physics
             .bogies
-            .resize_with(physics.bogies.len(), Default::default);
+            .iter()
+            .map(crate::bogie_dynamics::VehicleBogieState::from_model)
+            .collect();
         state.weather_track = scenario.simulation.weather_track.clone();
         let mut loaded_consist2 =
             load_consist_with_asset_root(&consist_path, consist_root(&consist_path)).ok();
@@ -438,7 +475,7 @@ pub fn run_scenario_multi_train(
             .map(|p| crate::steam::BoilerState::from_params(&p));
         if let Some(consist) = loaded_consist2.as_ref() {
             physics.mass_kg = consist.total_mass_kg();
-            crate::steam_equipment::configure(&mut state, consist);
+            crate::steam_equipment::configure(&mut state, consist).map_err(SimError::Msg)?;
             let engines = consist.diesel_traction_models();
             if !engines.is_empty() {
                 state.diesel_rpm = engines.iter().map(|e| e.idle_rpm()).collect();
@@ -835,6 +872,10 @@ impl LiveMultiSim {
             .parent()
             .ok_or_else(|| SimError::Msg("scenario path has no parent directory".into()))?;
         let scenario = openrailsrs_scenarios::load_scenario(scenario_path)?;
+        reject_single_train_adhesion_inputs(&scenario)?;
+        if !scenario.simulation.yard_operations.is_empty() {
+            return Err(SimError::Msg("Los patios operativos requieren LiveDrive/LiveTraffic; este runner no ejecuta mesas, pools ni crews".into()));
+        }
 
         let route_dir = scenario_dir.join(&scenario.route.path);
         let mut graph = load_track_graph_from_route_dir(&route_dir)?;
@@ -876,15 +917,24 @@ impl LiveMultiSim {
                 .map(|e| e.length_m)
                 .sum();
             let path_data = PathData::from_path(&path_edges, &graph);
+            physics.rack = crate::rack::RackTrainConfig::from_scenario(
+                scenario.train.rack.as_ref(),
+                physics.vehicle_lengths_m.len(),
+                path_data.total_length_m(),
+            )
+            .map_err(SimError::Msg)?;
             let mut state = TrainSimState::new(path_edges);
+            state.rack = crate::rack::RackTrainState::new(&physics.rack);
             state.articulated_joints = crate::bogie_dynamics::apply_overrides(
                 &mut physics.bogies,
                 &scenario.train.bogie_dynamics,
             )
             .map_err(SimError::Msg)?;
-            state
+            state.bogies = physics
                 .bogies
-                .resize_with(physics.bogies.len(), Default::default);
+                .iter()
+                .map(crate::bogie_dynamics::VehicleBogieState::from_model)
+                .collect();
             state.weather_track = scenario.simulation.weather_track.clone();
             state.brake_system =
                 build_brake_from_path(&consist_path, &scenario.train.vehicle_profiles);
@@ -901,6 +951,7 @@ impl LiveMultiSim {
                     &mut consist,
                     &scenario.train.vehicle_profiles,
                 )?;
+                crate::steam_equipment::configure(&mut state, &consist).map_err(SimError::Msg)?;
                 state.init_multi_body_if_enabled(
                     &consist,
                     scenario.simulation.multi_body,
@@ -953,13 +1004,22 @@ impl LiveMultiSim {
                 .map(|e| e.length_m)
                 .sum();
             let path_data = PathData::from_path(&path_edges, &g2);
+            physics.rack = crate::rack::RackTrainConfig::from_scenario(
+                entry.rack.as_ref(),
+                physics.vehicle_lengths_m.len(),
+                path_data.total_length_m(),
+            )
+            .map_err(SimError::Msg)?;
             let mut state = TrainSimState::new(path_edges);
+            state.rack = crate::rack::RackTrainState::new(&physics.rack);
             state.articulated_joints =
                 crate::bogie_dynamics::apply_overrides(&mut physics.bogies, &entry.bogie_dynamics)
                     .map_err(SimError::Msg)?;
-            state
+            state.bogies = physics
                 .bogies
-                .resize_with(physics.bogies.len(), Default::default);
+                .iter()
+                .map(crate::bogie_dynamics::VehicleBogieState::from_model)
+                .collect();
             state.weather_track = scenario.simulation.weather_track.clone();
             state.brake_system =
                 build_brake_from_path(&consist_path, &scenario.train.vehicle_profiles);
@@ -976,6 +1036,7 @@ impl LiveMultiSim {
                     &mut consist,
                     &scenario.train.vehicle_profiles,
                 )?;
+                crate::steam_equipment::configure(&mut state, &consist).map_err(SimError::Msg)?;
                 state.init_multi_body_if_enabled(
                     &consist,
                     scenario.simulation.multi_body,
@@ -1052,13 +1113,22 @@ impl LiveMultiSim {
                 .map(|e| e.length_m)
                 .sum();
             let path_data = PathData::from_path(&path_edges, &graph);
+            physics.rack = crate::rack::RackTrainConfig::from_scenario(
+                None,
+                physics.vehicle_lengths_m.len(),
+                path_data.total_length_m(),
+            )
+            .map_err(SimError::Msg)?;
             let mut state = TrainSimState::new(path_edges);
+            state.rack = crate::rack::RackTrainState::new(&physics.rack);
             state.articulated_joints =
                 crate::bogie_dynamics::apply_overrides(&mut physics.bogies, &[])
                     .map_err(SimError::Msg)?;
-            state
+            state.bogies = physics
                 .bogies
-                .resize_with(physics.bogies.len(), Default::default);
+                .iter()
+                .map(crate::bogie_dynamics::VehicleBogieState::from_model)
+                .collect();
 
             state.brake_system = build_brake_from_path(&consist_path, &[]);
             state.boiler_state =

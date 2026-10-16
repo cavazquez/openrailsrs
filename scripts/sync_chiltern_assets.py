@@ -230,9 +230,9 @@ def extract_drive_wheel_line(text: str) -> str:
 
 
 def extract_curve_values(text: str) -> dict[str, str]:
-    """Retain authored gauge/deficiency and units; absent values use OR defaults."""
+    """Retain authored gauge, rigid wheelbase and deficiency with their units."""
     values = {}
-    for key in ("ORTSTrackGauge", "ORTSUnbalancedSuperElevation"):
+    for key in ("ORTSTrackGauge", "ORTSRigidWheelBase", "ORTSUnbalancedSuperElevation"):
         matches = re.findall(r"\b" + key + r"\s*\(([^)]*)\)", text, re.I)
         if len(matches) > 1:
             raise ValueError(f"Ambiguous {key} in rolling stock")

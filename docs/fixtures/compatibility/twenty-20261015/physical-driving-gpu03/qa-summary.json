@@ -1,0 +1,216 @@
+{
+  "schema": 1,
+  "created_at_utc": "2026-10-16T12:23:24.213677+00:00",
+  "status": "strict_declared_retry_pass_and_pixels_inspected",
+  "viewer_sha256": "80da4d50267917e84a75d1396887bb954b862d691b24e8d67f6b94c058f049e3",
+  "runner_sha256": "2fb27a9f649e282e5fb70fe9a774a2ee09372866840134dae90320c48d729c77",
+  "proposal_sha256": "32961b8c04bf95ab61ee963aaddb2a55950306c9d30bfe9843b21df2b2b53f2d",
+  "plan_sha256": "26af7b1f6712d13acd0b9f318c04ebbe5ce670ba00e6182e8f96565adab3a3a3",
+  "result_sha256": "4a135678d23c71e4d7f155e01579641fd0c58c46ce224dd227e4b626bcf6a5fb",
+  "source_directory": "tmp/twenty-20261015/physics-driving-gpu03",
+  "previous_failed_attempt": "../physical-driving-gpu02/README.md",
+  "runner_returncode": 0,
+  "execution_scope": "Normal build05, private hardware Vulkan RX7600 PCI0000:03:00.0,1280x720. CPU work ran concurrently; no isolated performance or memory claim. Only one case,55 wall seconds at2x,normal fixed timestep. No Rust/Cargo edits by the capture agent.",
+  "unchanged_acceptance": "All prior assertions,controls,horizon,material and physical thresholds are unchanged. The retry added only panel none at30 wall seconds to record an intermediate actual speed. The old failed attempt remains immutable.",
+  "image": "derailment-from-rest.png",
+  "image_sha256": "24e9b8d2e74e5cab6cf839385e9c6368eb8410340b87e4fef5c9d1ed21e28511",
+  "source_report_sha256": "e1a1463719a2a52a010dda251d9245a431788dc34a6fa0948ab7b71b3d97e3a2",
+  "source_log_sha256": "1cedc5c1c6da88c765cd316db740d3065e40db9e2ae2dd80fedadf90ef00ad7f",
+  "source_process_receipt_sha256": "98c1a79b7770bf3245fc4a3b96cf09b9a522c86aecbbf48c7ae8bf308034558e",
+  "unchanged_validation_sha256": "3450bfc79989c90ec316c33fbdd23c717515680b79213caea03d3c7f40f74b02",
+  "processes": {
+    "started_unix_s": 1792153259.199087,
+    "viewer_pid": 47963,
+    "viewer_returncode": 0,
+    "compositor_pid": 47937,
+    "compositor_returncode": 0,
+    "elapsed_s": 67.87639106400002
+  },
+  "all_observed_pids_absent": true,
+  "renderer": {
+    "backend": "Vulkan",
+    "device_type": "DiscreteGpu",
+    "hardware": true,
+    "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+  },
+  "active_device_pci": "0000:03:00.0",
+  "shader_pipelines": {
+    "failed": 0,
+    "pending": 0
+  },
+  "odometer_m": 2078.6010606555756,
+  "drive_controls": {
+    "brake": 0.0,
+    "braking_intervention": "Asistencia de tráfico",
+    "direction": 1.0,
+    "missed_stops": [],
+    "paused": true,
+    "throttle": 1.0,
+    "traction_load_fraction": 0.0,
+    "traffic_brake_assistance": false
+  },
+  "actions": [
+    {
+      "index": 0,
+      "time_s": 0.0,
+      "odometer_m": 0.0,
+      "speed_mps": 0.0,
+      "controls": {
+        "brake": 1.0,
+        "direction": 0.5,
+        "throttle": 0.0
+      },
+      "result": {
+        "Ok": null
+      }
+    },
+    {
+      "index": 1,
+      "time_s": 0.0,
+      "odometer_m": 0.0,
+      "speed_mps": 0.0,
+      "controls": {
+        "brake": 1.0,
+        "direction": 0.5,
+        "throttle": 0.0
+      },
+      "result": {
+        "Ok": null
+      }
+    },
+    {
+      "index": 2,
+      "time_s": 0.0,
+      "odometer_m": 0.0,
+      "speed_mps": 0.0,
+      "controls": {
+        "brake": 1.0,
+        "direction": 0.5,
+        "throttle": 0.0
+      },
+      "result": {
+        "Ok": null
+      }
+    },
+    {
+      "index": 3,
+      "time_s": 0.3,
+      "odometer_m": 0.0,
+      "speed_mps": 0.0,
+      "controls": {
+        "brake": 0.0,
+        "direction": 1.0,
+        "throttle": 1.0
+      },
+      "result": {
+        "Ok": null
+      }
+    },
+    {
+      "index": 4,
+      "time_s": 59.29999999999877,
+      "odometer_m": 1279.3860097134386,
+      "speed_mps": 29.34007370960672,
+      "controls": {
+        "brake": 0.0,
+        "direction": 1.0,
+        "throttle": 1.0
+      },
+      "result": {
+        "Ok": null
+      }
+    },
+    {
+      "index": 5,
+      "time_s": 109.24999999999594,
+      "odometer_m": 2078.6010606555756,
+      "speed_mps": 0.0,
+      "controls": {
+        "brake": 0.0,
+        "direction": 1.0,
+        "throttle": 1.0
+      },
+      "result": {
+        "Ok": null
+      }
+    },
+    {
+      "index": 6,
+      "time_s": 109.24999999999594,
+      "odometer_m": 2078.6010606555756,
+      "speed_mps": 0.0,
+      "controls": {
+        "brake": 0.0,
+        "direction": 1.0,
+        "throttle": 1.0
+      },
+      "result": {
+        "Ok": null
+      }
+    },
+    {
+      "index": 7,
+      "time_s": 109.24999999999594,
+      "odometer_m": 2078.6010606555756,
+      "speed_mps": 0.0,
+      "controls": {
+        "brake": 0.0,
+        "direction": 1.0,
+        "throttle": 1.0
+      },
+      "result": {
+        "Ok": null
+      }
+    },
+    {
+      "index": 8,
+      "time_s": 109.24999999999594,
+      "odometer_m": 2078.6010606555756,
+      "speed_mps": 0.0,
+      "controls": {
+        "brake": 0.0,
+        "direction": 1.0,
+        "throttle": 1.0
+      },
+      "result": {
+        "Ok": null
+      }
+    }
+  ],
+  "derailment_events": [
+    {
+      "cause": "WheelUnloading",
+      "enabled_override": false,
+      "event_chainage_m": 2095.057454244832,
+      "event_speed_mps": 29.096679621818097,
+      "event_time_s": 83.5999999999974,
+      "lateral_force_n": 163519.59471280637,
+      "lateral_ratio": 163519.59471280637,
+      "minimum_wheel_load_n": 0.0,
+      "nadal_elapsed_s": 0.1,
+      "nadal_threshold": 1.222193206269197,
+      "offrail_distance_m": 72.77054862164151,
+      "unloading_elapsed_s": 0.1
+    }
+  ],
+  "pixel_review": {
+    "status": "original1280x720PNGinspected",
+    "visible": [
+      "Consecuencias de descarrilamiento: No",
+      "DESCARRILAMIENTO 1: Descarga de rueda sostenida",
+      "t=83.60s · 2095.1m · 104.7km/h",
+      "fuerza lateral163.5kN · carga mínima0.0kN",
+      "Emergencia aplicada: tracción cortada",
+      "Esfuerzo pedido0.0kN · transmitido0.0kN",
+      "Freno independiente0% · emergenciaSí"
+    ],
+    "clipping": "Lower auxiliary/battery lines continue beyond the scroll area. Required cause,forces,emergency and consequence switch are readable. Mouse-wheel scrolling not exercised."
+  },
+  "limits": [
+    "Own physical laboratory formation2MW/80t and30t coach; not original OR/Vauclain artwork or original solver parity.",
+    "The still image establishes final diagnostics, not a real fall or collision animation.",
+    "SessionSnapshot JSON roundtrip happened in-process after driving; not the full disk-save menu.",
+    "No physical position,speed,cause or forces were prescribed.",
+    "Private player data,credentials and downloaded original content are not published."
+  ]
+}

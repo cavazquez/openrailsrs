@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "kind": "python_single_source_phase_diagnosis_only",
+  "source_car_observation_sha256": "255304a33d0f365a23cabdb8fdc43c60c01e0cbb4ef9e540d153a21f4c781356",
+  "source_iir_observation_sha256": "3392f303463a7d54b48cda1bfd8bd260855ffcc952fb77747e9bf3eea71a1103",
+  "diagnostic_script_sha256": "47ed80f446d4bbcd7b9519b79660c3c2fdf416f3944f3f7f3c02e716974e7833",
+  "calls": 120016,
+  "maximum_force_error_n": 0.0,
+  "maximum_rear_coefficient_error": 0.0,
+  "geometry_phase": "CurrentCurveRadiusM/SuperElevationM from previous sample; AbsSpeedMpS from current sample before integration",
+  "coefficient_phase": "head current coefficient for cars0..6; rear current coefficient for car7, each using previous AbsSpeedMpS and current observed base factor",
+  "genuine_oracle": "The CSV CurveForceN field is the original DLL measurement. This Python calculation diagnoses the source phase and is not an oracle or expected-force generator.",
+  "rust_executed": false,
+  "closed_trajectory_outputs_prescribed": false
+}

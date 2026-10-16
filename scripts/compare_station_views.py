@@ -22,18 +22,27 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def compare(directory, stations, require_native_sun=True):
+def compare(directory, stations, require_native_sun=True, references=REFERENCE):
+    if not stations or len(set(stations)) != len(stations):
+        raise ValueError("Choose unique, nonempty station views")
     rows = []
     for station in stations:
         for view in ("exterior", "cab"):
             label = station if view == "exterior" else station + "-cab"
-            native_path = REFERENCE / (station + "-" + view + ".json")
+            native_path = references / (station + "-" + view + ".json")
             native = json.loads(native_path.read_text())
+            if native.get("version") != "1.6.1":
+                raise ValueError("Unpinned native viewer version")
             native_png = native_path.with_suffix(".png")
             if digest(native_png) != native.get("image_sha256", native.get("png_sha256")):
                 raise ValueError(f"Original reference changed: {native_png}")
             bevy_path = directory / (label + ".stream.json")
             bevy = json.loads(bevy_path.read_text())
+            for solar_vector in (native["solar_direction"], bevy["solar_direction"]):
+                if len(solar_vector) != 3 or not all(math.isfinite(v) for v in solar_vector):
+                    raise ValueError("Solar vectors need three finite components")
+                if abs(sum(v*v for v in solar_vector)-1) > 0.001:
+                    raise ValueError("Solar vector must have unit length")
             image = directory / (label + ".png")
             camera = compare_camera(native, bevy["camera"])
             position = camera["position_error_m"]
@@ -69,9 +78,10 @@ def main():
     parser.add_argument("--captures", type=Path, required=True)
     parser.add_argument("--station", action="append", default=[])
     parser.add_argument("--allow-continuous-sun", action="store_true")
+    parser.add_argument("--references", type=Path, default=REFERENCE)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    result = compare(args.captures, args.station or ["northolt-park", "south-ruislip", "west-ruislip"], not args.allow_continuous_sun)
+    result = compare(args.captures, args.station or ["northolt-park", "south-ruislip", "west-ruislip"], not args.allow_continuous_sun, args.references)
     args.output.write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps({"views": len(result["views"]), "passed": result["passed"]}))
     if not result["passed"]:

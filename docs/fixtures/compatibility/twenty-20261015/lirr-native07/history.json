@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "native_attempts": [
+    {
+      "attempt": "05",
+      "status": "historical_complete_paused_context",
+      "public_package": "../lirr-native05",
+      "raw_reference_preserved": true
+    },
+    {
+      "attempt": "06",
+      "status": "failed_own_helper_compilation_before_OR_physics",
+      "private_receipt_sha256": "81bd2ca6de609d4750115eff5dd71349454592d8b0c48305b7e062005a1a3d61",
+      "reason": "Nonpublic adhesion field requires read-only reflection; attempt07 makes that access correction without changing driver or context."
+    },
+    {
+      "attempt": "07",
+      "status": "native_capture_complete",
+      "private_receipt_sha256": "36654722f5f27b2fe5e7cb88dd3dee7285f97323ee22c2960ed2e9af7c16a312"
+    }
+  ],
+  "current_reference": "reference.csv.gz",
+  "current_rust_acceptance": "PENDING; no Rust replay against07 has executed yet",
+  "thresholds_changed": false,
+  "original_content_or_binary_exported": false
+}

@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "status": "DECLARED_BEFORE_EXECUTION",
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "activity": "01Brooklyn-Hempstead.act",
+  "activity_sha256": "c667aeedf94b2b90283e801906f865e37d4e8a4b67cd83430bab74b94ac287ab",
+  "consist": "SFexpress-500",
+  "cars": 7,
+  "step_s": 0.05,
+  "maximum_duration_s": 3600,
+  "minimum_duration_s": 1575,
+  "minimum_distance_m": 30000,
+  "minimum_original_platforms": 2,
+  "thresholds": {"velocity_rms_mps": 0.75, "maximum_odometer_error_m": 45, "brake_pipe_rms_psi": 5, "cylinder_rms_psi": 5, "motive_force_rms_n": 5000, "brake_force_rms_n": 5000},
+  "controls": "Native driver uses original signals, speed limits, platforms and boarding. Rust replays exactly the same 20Hz handles, with physical path and original vehicles. Station scoring and ACT goals are outside this physics comparison and are not allowed to truncate its diagnostics.",
+  "prohibited": ["Changing original files", "Regenerating old references", "Increasing thresholds after observing a failure", "Calling a short or truncated run a full-service acceptance"]
+}

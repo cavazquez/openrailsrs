@@ -11,6 +11,83 @@ use serde::{Deserialize, Serialize};
 use crate::{TrainError, from_ast::resolve_consist_entry_path};
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct IrregularitySection {
+    pub start_chainage_m: f64,
+    pub end_chainage_m: f64,
+    pub transition_m: f64,
+    pub seed: u64,
+    /// Wavelength and peak rail-height amplitude, in metres. Both rails share
+    /// this spectrum but receive separate deterministic phases.
+    pub spectrum: Vec<[f64; 2]>,
+}
+impl IrregularitySection {
+    pub fn valid(&self) -> bool {
+        self.start_chainage_m.is_finite()
+            && self.start_chainage_m >= 0.
+            && self.end_chainage_m.is_finite()
+            && self.end_chainage_m > self.start_chainage_m
+            && (0.5..=(self.end_chainage_m - self.start_chainage_m) / 2.)
+                .contains(&self.transition_m)
+            && !self.spectrum.is_empty()
+            && self.spectrum.len() <= 32
+            && self
+                .spectrum
+                .iter()
+                .all(|v| (0.5..=1000.).contains(&v[0]) && (0. ..=0.1).contains(&v[1]))
+    }
+}
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct VerticalSuspension {
+    pub enabled: bool,
+    pub sprung_mass_fraction: f64,
+    pub spring_n_m: f64,
+    pub damper_ns_m: f64,
+    pub contact_spring_n_m: f64,
+    pub contact_damper_ns_m: f64,
+    pub travel_m: f64,
+    pub bump_stop_n_m: f64,
+    pub sections: Vec<IrregularitySection>,
+}
+impl VerticalSuspension {
+    pub fn valid(&self) -> bool {
+        (0.5..=0.99).contains(&self.sprung_mass_fraction)
+            && (10_000. ..=100_000_000.).contains(&self.spring_n_m)
+            && (0. ..=10_000_000.).contains(&self.damper_ns_m)
+            && (100_000. ..=1_000_000_000.).contains(&self.contact_spring_n_m)
+            && (0. ..=10_000_000.).contains(&self.contact_damper_ns_m)
+            && (0.001..=0.5).contains(&self.travel_m)
+            && (100_000. ..=1_000_000_000.).contains(&self.bump_stop_n_m)
+            && self.sections.len() <= 4096
+            && self.sections.iter().all(IrregularitySection::valid)
+            && self
+                .sections
+                .windows(2)
+                .all(|s| s[0].end_chainage_m <= s[1].start_chainage_m)
+    }
+}
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct DerailmentLimits {
+    pub enabled: bool,
+    pub minimum_speed_mps: f64,
+    pub nadal_multiplier: f64,
+    pub unloading_fraction: f64,
+    pub persistence_s: f64,
+    pub offrail_drag_mu: f64,
+}
+impl DerailmentLimits {
+    pub fn valid(&self) -> bool {
+        (0. ..=10.).contains(&self.minimum_speed_mps)
+            && (0.25..=4.).contains(&self.nadal_multiplier)
+            && (0. ..=0.5).contains(&self.unloading_fraction)
+            && (0.01..=30.).contains(&self.persistence_s)
+            && (0.01..=2.).contains(&self.offrail_drag_mu)
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct LateralSuspension {
     pub stiffness_npm: f64,
     pub damping_nspm: f64,
@@ -33,6 +110,8 @@ pub struct VehicleBogieModel {
     /// Formation coordinates: support 0 is toward increasing path chainage.
     pub support_offsets_m: [f64; 2],
     pub gauge_m: f64,
+    /// Native CentreOfGravity.Y may be zero; it removes height-induced load
+    /// transfer without changing the supported mass or inventing a fallback.
     pub cog_height_m: f64,
     pub axles: u32,
     pub bogies: u32,
@@ -40,6 +119,10 @@ pub struct VehicleBogieModel {
     pub flange_angle_rad: f64,
     pub flange_height_m: f64,
     pub suspension: Option<LateralSuspension>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vertical_suspension: Option<VerticalSuspension>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub derailment: Option<DerailmentLimits>,
 }
 impl VehicleBogieModel {
     pub fn for_length(length_m: f64) -> Self {
@@ -62,6 +145,8 @@ impl VehicleBogieModel {
             flange_angle_rad: 1.22173,
             flange_height_m: 0.0254,
             suspension: None,
+            vertical_suspension: None,
+            derailment: None,
         }
     }
     pub fn valid(&self) -> bool {
@@ -75,7 +160,7 @@ impl VehicleBogieModel {
             && self.support_offsets_m[0] > 0.
             && self.support_offsets_m[1] < 0.
             && (0.3..=2.5).contains(&self.gauge_m)
-            && (0.05..=10.).contains(&self.cog_height_m)
+            && (0. ..=10.).contains(&self.cog_height_m)
             && (1..=32).contains(&self.axles)
             && (1..=8).contains(&self.bogies)
             && (0.1..=30.).contains(&self.rigid_wheelbase_m)
@@ -85,6 +170,11 @@ impl VehicleBogieModel {
                 .suspension
                 .as_ref()
                 .is_none_or(LateralSuspension::valid)
+            && self
+                .vertical_suspension
+                .as_ref()
+                .is_none_or(VerticalSuspension::valid)
+            && self.derailment.as_ref().is_none_or(DerailmentLimits::valid)
     }
     pub fn reverse(&mut self) {
         self.support_offsets_m = [-self.support_offsets_m[1], -self.support_offsets_m[0]];
@@ -244,6 +334,20 @@ mod tests {
         assert_eq!(p.gauge_m, 1.);
         assert_eq!(p.cog_height_m, 1.6);
         assert!((p.flange_angle_rad - 1.221731).abs() < 1e-8);
+    }
+    #[test]
+    fn native_zero_centre_of_gravity_height_is_preserved() {
+        let ast = openrailsrs_formats::parse_vehicle_text(
+            "Wagon ( legacy CentreOfGravity ( 0m 0m 0m ) )",
+        )
+        .unwrap();
+        let mut model = parse_bogie_model(&ast, false, 20.);
+        assert_eq!(model.cog_height_m, 0.);
+        assert!(model.valid());
+        model.cog_height_m = -0.01;
+        assert!(!model.valid());
+        model.cog_height_m = f64::NAN;
+        assert!(!model.valid());
     }
     #[test]
     fn reversal_preserves_asymmetric_support_geometry() {

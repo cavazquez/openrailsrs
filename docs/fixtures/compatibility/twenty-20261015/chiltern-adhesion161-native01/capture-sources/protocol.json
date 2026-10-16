@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "status": "declared_before_original_capture_and_rust_comparison",
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "reference_trace": "examples/baselines/chiltern_local/capture/trace.csv",
+  "reference_trace_sha256": "ad9e690435d784df243c8a49bfdb37137c6e5f98f8941045adfde27e4500a7e2",
+  "required_rows_including_initial": 15003,
+  "legacy_columns": 20,
+  "legacy_projection_acceptance": "byte exact raw CSV SHA256; every old column at every row must match, not tolerance",
+  "capture_mode": "original service autonomous controls; unchanged HeadlessCapture Load/Run/Sample logic with additive read-only observer only",
+  "step_s": 0.05,
+  "initial_state": "Read original filter x/y and coefficient arrays after Simulator.Start, before first Simulator.Update; no reset assumed or invoked",
+  "per_vehicle_phase": "Post-update x[0] is the exact Single input consumed by that original filter on this tick, including BaseFrictionCoefficientFactor+AdhesionRandom; base is read directly, not derived from any output",
+  "allowed_replay_inputs": [
+    "initial x[]/y[] and filter hardware",
+    "post-step input_factor x[0]",
+    "post-step base_factor"
+  ],
+  "forbidden_trajectory_inputs": [
+    "post-step output_factor y[0] or y[]",
+    "diagnostics_not_inputs",
+    "native force",
+    "native speed",
+    "native position",
+    "native pressure",
+    "native wheel/slip state"
+  ],
+  "filter_validation_abs": 1e-06,
+  "filter_validation_scope": "Post-step y[0] only for isolated filter regression; no replacement of prior motion thresholds",
+  "original_service_tolerances_unchanged": true,
+  "source_original_assets_read_only": true,
+  "helper_original_sha256": "c832f071a28f61178da2814d382069c3dc15cdb2aff7b89f40fe5974ffdb60a0",
+  "helper_instrumented_sha256": "6f11cc960f0b666ef8f35e77f61ee4631efb85c6c43af8a6b43fbac2eefdc649",
+  "instrumentation": "Four marked additive blocks only; stripping them plus the inserted separator recovers the original source byte-for-byte. No simulation method, RNG or property with physics side effects is called by the observer."
+}

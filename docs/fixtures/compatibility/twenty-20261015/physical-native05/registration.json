@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "phase": "registered_before_wine_and_rust_comparison",
+  "helper_sha256": "4d92da562b340f9e1b170bceb94cb5bb829fbbefc9a2ae90d1f520528fb7433f",
+  "capture_script_sha256": "8535d14d0c7e40703c72dfb637410325c134036e677486422daf8d24598ebfe5",
+  "inputs_sha256": "29348715131a3e8e0e0b2c53a931b698d920d96009c0f34d572d2d1e832ed7d9",
+  "protocol_sha256": "7e82b09d91489f63981c4082de87d39d245b3152105f9fe2b20b55ad5d0f018c",
+  "wine_isolation_helper_sha256": "4e87773fd3fe535f5660a427ea12b8b6a716266ebf9161e433aa66fc86e9f590",
+  "assemblies": {
+    "RunActivity.exe": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2",
+    "Orts.Simulation.dll": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679",
+    "Orts.Settings.dll": "fe0d8d81149f480f3972c80e64ffaf6012c7599e32c26c8e4d46510e3edbb2e7",
+    "Orts.Common.dll": "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212",
+    "Orts.Formats.Msts.dll": "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465",
+    "Orts.Parsers.Msts.dll": "8e0781c9f861ed95b4467d1bf948ea7aca896d634f21ac5952f97a9f630d0b36",
+    "MonoGame.Framework.dll": "c6a16c29705a4c847e0e4a2647bf432604cd9320cbc5d4125ab01ae7bb7e6542",
+    "Newtonsoft.Json.dll": "9af2e1c672afd67a291b8f2031a341a3788d4d9f683eaddc6ceab3a3a74c546e",
+    "GNU.Gettext.dll": "f1421ebbc4d70214324414c7c33abf7e536e225f833080ab9d79a572452e024b"
+  },
+  "source_files": {
+    "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/RF_Blue_Pullman/RF_WP_DMBSH.eng": "468a335e44e17fe206e016b61cc98459bb88cd42839b374cae6c3224bd27d402",
+    "/home/cristian/repos/propios/ProyectoOpenRails/openrails/Source/Orts.Simulation/Common/SteamTable.cs": "9e6d57d726a2c0dd827c4fb2a0a4a1d21325ebda0252027a47c2a8c41843ce0b",
+    "/home/cristian/repos/propios/ProyectoOpenRails/openrails/Source/Orts.Simulation/Simulation/RollingStocks/SubSystems/Brakes/MSTS/AirSinglePipe.cs": "8927e78b1a0216c24d1b89c0d8d53858fb07b14fb1f1c71ffa3a307bfd1f161e",
+    "/home/cristian/repos/propios/ProyectoOpenRails/openrails/Source/Orts.Simulation/Simulation/RollingStocks/MSTSSteamLocomotive.cs": "4eb9bc6436344032945c2dfa4065d4055ac4e57b4fc48f4d2dd6fcf9a63ebdf0"
+  },
+  "steam_originals": {
+    "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/UK_Steam_BR_3F_47629/BR_3FT_47629.eng": "3cb8a216ac9f3c43859fbef8a5bc1b355382e92474eeb2b35134975a77b25fa5",
+    "/home/cristian/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern/PATHS/RS_HiWyc-Marylebone1710atDenham.pat": "bcbdf82db3bcff06175c4921adbc966b98417a01968675c0aac09def7e0f71df"
+  },
+  "steam_drive_config_sha256": "7b53ccb5d142cb3846a21fce3580ac4d7fb9e725c384a1d8054755088c0d18e1"
+}

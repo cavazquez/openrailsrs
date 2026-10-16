@@ -48,13 +48,18 @@ python3 scripts/verify_chiltern_service_capture.py
 python3 scripts/run_oracles.py --suite service --out-dir tmp/service-parity
 ```
 
-El servicio completo de `oracles/chiltern-service.toml` pasa desde la revisión
-del 5 de octubre de 2026: RMS **0,2081 m/s**, pico **1,0921 m/s** y diferencia
-máxima de odómetro **39,61 m**, con cobertura del 100 %. Los presupuestos siguen
-siendo 0,75 m/s, 2 m/s y 45 m; las cinco fases también cumplen su RMS ≤1,10 m/s.
-La referencia de Open Rails 1.6.1, sus 15003 muestras, los controles y sus hashes
-permanecen intactos. `check.sh` ejecuta ahora los cuatro ensayos cortos y este
-servicio completo, además de la partida jugable.
+El [servicio completo actualizado](fixtures/compatibility/twenty-20261015/physical-final14/chiltern-service/report.json)
+de `oracles/chiltern-service.toml` registra el 16 de octubre RMS **0,0137895 m/s**,
+pico **0,0430717 m/s** y diferencia máxima de odómetro **5,803 m**. Cubre los
+**750,1 s** de la referencia y sus cinco fases. Los presupuestos permanecen en
+0,75 m/s, 2 m/s, 45 m y RMS por fase ≤1,10 m/s. Las 15.003 muestras originales,
+los controles y sus hashes siguen intactos. El pase del 5 de octubre
+(0,2081 m/s y 39,61 m) corresponde a la versión de entonces, no a esta medición.
+
+El [batch14](fixtures/compatibility/twenty-20261015/physical-final14/result.json)
+también aprobó cuatro ensayos cortos, Class 47, tres paradas jugables, LIRR y
+vapor acotado. Es una ejecución dirigida; la puerta global final de `check.sh`
+todavía está pendiente.
 
 El replay usa las pendientes/límites nativos del corredor y una extracción
 numérica independiente de la formación original: 440906,4 kg, 166,164 m,
@@ -64,13 +69,23 @@ patinaje Pacha, rodamientos con temperatura y conexiones rígidas declaradas.
 No incluye los recursos gráficos descargados en Git. Procedencia, extracción y
 condiciones del entorno: [fixtures físicos](../examples/chiltern_local/physics/README.md).
 
-El cliente original avanzaba el simulador con el clima pausado. Se reproducen
-esas entradas explícitamente, con factor base de adherencia 0,5, primer sector
-resbaladizo de la semilla original y temperatura inicial medida; el ruido de
-adherencia se representa por su media. El resultado certifica este ensayo y sus
-presupuestos, no equivalencia universal de motores, frenado, clima o scripts.
-La escala de demanda EP de este caso es 45 PSI. Los casos cortos mantienen su
-convenio histórico y su material rodante, sin volver a capturar sus referencias.
+El cliente original avanzaba el simulador con el clima pausado. La
+[captura ambiental aditiva](fixtures/compatibility/twenty-20261015/chiltern-adhesion161-native01/README.md)
+reproduce exactamente la traza histórica y aporta sólo la variación ambiental
+y los buffers iniciales reales del filtro. Rust calcula su posición, su base de
+adherencia y los estados posteriores: no recibe fuerzas, velocidades ni salidas
+observadas del filtro. Los [diagnósticos por coche](fixtures/compatibility/twenty-20261015/chiltern-forces161-native02/)
+se conservan aparte y no alimentan la conducción. [Contrato y prueba manual](NATIVE_ADHESION_INPUTS.md).
+La escala de demanda EP de este caso sigue en 45 PSI. Los casos cortos mantienen
+su convenio histórico y su material rodante, sin volver a capturar referencias.
+
+Los [perfiles geométricos importados](fixtures/compatibility/twenty-20261015/chiltern-geometry14/provenance.json)
+proceden del TDB, TSECTION y las unidades del TRK original. La aceptación cubre
+los seis arcos dirigidos del corredor de tres estaciones; no certifica la ruta
+completa de seis estaciones. En la copia extendida, `e14615` y `e14615_r`
+conservan una discrepancia heredada de 600 m, fuera de ese corredor, y quedaron
+excluidos de esta actualización geométrica. Sus longitudes no se ajustaron a
+la trayectoria observada.
 
 Con el Content original disponible, este comando agrega la comparación
 espacial de las tres estaciones contra los extremos de andén del TDB original:
@@ -160,10 +175,11 @@ puntos de retorno y el registro explícito de energía son extensiones Rust;
 se verifican con conservación y disipación, sin atribuirlas al solver de OR.
 
 Las referencias históricas aprobadas permanecen intactas. La ampliación suma
-8.750 puntos nativos seleccionados; la termodinámica completa de vapor, las
-protecciones eléctricas específicas y la física completa de LIRR siguen
-identificadas como pendientes, sin convertir una captura parcial en aceptación
-universal del material rodante.
+8.750 puntos nativos seleccionados. Las comprobaciones posteriores añaden el
+[perfil nativo de vapor](NATIVE_STEAM161.md), con subsistemas caliente/frío y
+una comparación cerrada de 80 segundos, y el recorrido LIRR descrito más abajo.
+Las protecciones eléctricas específicas y otros equipos de vapor conservan su
+alcance pendiente; estas aceptaciones no certifican todo el material rodante.
 
 ## Escenario y oráculos gráficos
 
@@ -336,11 +352,13 @@ arranque y frenado completo de servicio. No sustituye el baseline Pullman.
 python3 scripts/run_oracles.py --suite class47 --out-dir tmp/class47-parity
 ```
 
-Pasa con RMS **0,2382 m/s**, pico **1,9415 m/s** y diferencia máxima de odómetro
-**25,79 m**, usando los mismos límites de **0,75 m/s / 2 m/s / 45 m** fijados antes
-de comparar. Cubre las 5001 muestras y las seis fases. Manifiesto, controles y
-traza están en `examples/baselines/class47`; el verificador rechaza cambios de
-hash, cliente, versión o cobertura.
+El [resultado actual de Class 47](fixtures/compatibility/twenty-20261015/physical-final14/class47/report.json)
+pasa con RMS **0,1340799 m/s**, pico **0,5050689 m/s** y diferencia máxima de
+odómetro **17,91061 m**, con los mismos límites previos **0,75 m/s / 2 m/s / 45 m**.
+Cubre las 5.001 muestras originales y las seis fases; la comparación publicada
+las remuestrea a 0,1 s. Manifiesto, controles y traza permanecen en
+`examples/baselines/class47`; el verificador rechaza cambios de hash, cliente,
+versión o cobertura.
 
 La extracción numérica conserva los valores finales de los Includes y los
 bloques parciales de alimentación. El motor mantiene 450 RPM para alimentar los
@@ -471,12 +489,41 @@ horario marca Hempstead a 1575 s: no puede tratarse la estimación como un plazo
 Este oráculo valida parámetros y orientación; no afirma paridad de la traza
 completa ni de la respuesta de todas las válvulas americanas.
 
+La [comparación actual LIRR12](fixtures/compatibility/twenty-20261015/physical-final14/lirr/comparison.json)
+reproduce Brooklyn–Hempstead con siete vehículos, dos plataformas originales y
+32.583 muestras a 20 Hz. Pasaron los seis límites fijados antes del ensayo:
+velocidad RMS **0,0360176 m/s**, distancia máxima **12,35546875 m**, fuerza motriz
+RMS 3.116,67 N, freno RMS 73,30 N, tubería RMS 0,000419 psi y cilindro RMS
+0,000116 psi. Los límites siguen en 0,75 m/s, 45 m, 5.000 N, 5.000 N, 5 psi y 5 psi.
+Rust recibe mandos y calcula su trayectoria; no recibe fuerzas ni posiciones
+observadas. El replay físico omite sólo la evaluación de objetivos ACT para
+conservar toda la traza. No certifica todos los eventos, sonidos, scripts ni
+válvulas de otras formaciones. El [pase anterior LIRR10](fixtures/compatibility/twenty-20261015/lirr-full-service-replay10/README.md)
+conserva sus cifras de entonces (0,03985 m/s y 11,486 m), sus recibos y el
+historial de fallos; no se reasigna al binario actual.
+
+La [comparación cerrada de vapor10](fixtures/compatibility/twenty-20261015/physical-final14/steam/comparison.json)
+completa 1.600 ticks de la locomotora tanque simple y manual dentro de los
+límites previos. El error máximo de distancia es **1,982907 m** frente al límite
+de 2 m, y el de velocidad **0,0478134 m/s** frente a 0,1 m/s. El
+[pase vapor08](fixtures/compatibility/twenty-20261015/steam-cycle161-closed08/README.md)
+permanece como resultado anterior. El perfil nativo conserva
+`conservation_passed = null`; las pruebas conservativas del recipiente propio
+y su compound tienen alcance separado. Estos pases dirigidos no sustituyen
+la puerta global final.
+
 
 ## Masa efectiva del combustible — OR 1.6.1
 
 `openrails-consumable-mass.json` contiene cinco invocaciones de `MSTSWagon.UpdateLocomotiveLoadPhysics` en las DLL originales: 5.000, 2.500, 1 y 0 litros, y recarga a 5.000. El tren de prueba tiene masa llena de 80.000 kg, vacía de 75.746 kg, sin agua de calefacción ni arena. Se contrasta masa y peso adherente con 0,02 kg de tolerancia por precisión float de OR. [Proveniencia](../oracles/openrails-consumable-mass-provenance.json) y [capturador](../scripts/capture_consumable_mass_reference.py).
 
-OR exige animación de carga continua para activar este método; la implementación Rust aplica reserva diésel efectiva también al material sin esa declaración. Es una extensión intencional. No se afirma aquí masa completa de arena, agua auxiliar o reservas de vapor. Las referencias y tolerancias existentes de velocidad, posición, frenos y alimentación siguen fijadas.
+OR exige animación de carga continua para activar este método. El perfil nativo
+Rust conserva la masa declarada del material heredado sin esa animación; los
+perfiles con inventario declarado y el modelo propio mantienen sus reservas
+finitas. La extensión propia no se impone al contenido nativo. No se afirma aquí
+masa completa de arena, agua auxiliar ni todas las variantes de animación de
+carga. Las referencias y tolerancias existentes de velocidad, posición, frenos
+y alimentación siguen fijadas.
 
 
 ### Equipos, peralte e inyectores: cuarta entrega

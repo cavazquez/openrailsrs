@@ -1,0 +1,28 @@
+{
+  "reached_all_platforms": true,
+  "native_context": "live-unpaused-v1",
+  "paused_at_end": false,
+  "original_task_count": 2,
+  "native_tasks_completed": [
+    true,
+    true
+  ],
+  "elapsed_s": 1629.1000242754817,
+  "distance_m": 31361.2012,
+  "arrivals": [
+    {
+      "platform": 1556,
+      "arrival_s": 0.0,
+      "position_error_m": 56.706893920898438,
+      "speed_mps": 0.0
+    },
+    {
+      "platform": 895,
+      "arrival_s": 1609.1000000000001,
+      "position_error_m": 6.346893310546875,
+      "speed_mps": 0.0885925143957138
+    }
+  ],
+  "measurement": "throttle/brake are actual CurrentValue after original controllers; requested handles and every local/oriented vehicle force are retained; Train.UpdatePhysics Flipped XOR rear-cab orientation",
+  "scope": "Original activity, timetable, stock, signals and brake handles; last terminal task may finish only when the train departs"
+}

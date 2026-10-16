@@ -361,4 +361,7 @@ Engine ( "RF_WP_DMBSA"
             Notch ( 1.0 0 Dummy ) ) )
   ORTSLengthBogieCentre ( 46ft 6in )
   CouplingHasRigidConnection (  )
+  (ORTSTrackGauge 4ft 8.5in)
+  (ORTSRigidWheelBase 9ft 6in)
+  (ORTSUnbalancedSuperElevation 6in)
 )

@@ -1,0 +1,98 @@
+{
+  "schema": 1,
+  "wineserver_stop_returncode": 0,
+  "remaining_processes": [],
+  "forbidden_drivers_seen": [],
+  "observation_count": 143,
+  "commands": [
+    {
+      "args": [
+        "wine",
+        "reg",
+        "add",
+        "HKCU\\Software\\Wine\\Drivers",
+        "/v",
+        "Graphics",
+        "/t",
+        "REG_SZ",
+        "/d",
+        "null",
+        "/f"
+      ],
+      "pid": 36084,
+      "returncode": 0,
+      "elapsed_s": 0.9188240160001442,
+      "log": "$CAPTURE/wine-isolation/registry-set-0.log"
+    },
+    {
+      "args": [
+        "wine",
+        "reg",
+        "add",
+        "HKCU\\Software\\Wine\\WineDbg",
+        "/v",
+        "ShowCrashDialog",
+        "/t",
+        "REG_DWORD",
+        "/d",
+        "0",
+        "/f"
+      ],
+      "pid": 36155,
+      "returncode": 0,
+      "elapsed_s": 0.16580658700013373,
+      "log": "$CAPTURE/wine-isolation/registry-set-1.log"
+    },
+    {
+      "args": [
+        "wine",
+        "reg",
+        "query",
+        "HKCU\\Software\\Wine\\WineDbg",
+        "/v",
+        "ShowCrashDialog"
+      ],
+      "pid": 36158,
+      "returncode": 0,
+      "elapsed_s": 0.1108002559999477,
+      "log": "$CAPTURE/wine-isolation/registry-query.log"
+    },
+    {
+      "args": [
+        "wine",
+        "C:\\windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe",
+        "/nologo",
+        "/main:ActivityTrajectory",
+        "/out:ActivityTrajectory.exe",
+        "/r:RunActivity.exe",
+        "/r:Orts.Simulation.dll",
+        "/r:Orts.Common.dll",
+        "/r:Orts.Settings.dll",
+        "/r:Orts.Formats.Msts.dll",
+        "/r:Orts.Parsers.Msts.dll",
+        "/r:MonoGame.Framework.dll",
+        "/r:Newtonsoft.Json.dll",
+        "Z:$REPOSITORY\\tools\\openrails-reference\\HeadlessCapture.cs",
+        "Z:$REPOSITORY\\tools\\openrails-reference\\ActivityTrajectory.cs"
+      ],
+      "pid": 36161,
+      "returncode": 0,
+      "elapsed_s": 0.2747173460002159,
+      "log": "$CAPTURE/compile.log"
+    },
+    {
+      "args": [
+        "wine",
+        "ActivityTrajectory.exe",
+        "Z:$ORIGINAL_CONTENT\\ROUTES\\LIRR\\ACTIVITIES\\01Brooklyn-Hempstead.act",
+        "Z:$CAPTURE\\native",
+        "live-unpaused-v1"
+      ],
+      "pid": 36176,
+      "returncode": 0,
+      "elapsed_s": 6.345613082999989,
+      "log": "$CAPTURE/capture.log"
+    }
+  ],
+  "only_private_prefix": "$PRIVATE_PREFIX"
+}

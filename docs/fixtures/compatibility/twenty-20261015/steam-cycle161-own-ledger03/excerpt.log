@@ -1,0 +1,4 @@
+     Running unittests src/lib.rs (target/debug/deps/openrailsrs_sim-ad371369575803bf)
+test steam_thermodynamics::tests::bypass_keeps_hp_exhaust_out_of_the_receiver_work_ledger ... ok
+test steam_thermodynamics::tests::sub_newton_hp_force_cannot_create_lp_work ... ok
+test result: ok. 151 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 15.08s

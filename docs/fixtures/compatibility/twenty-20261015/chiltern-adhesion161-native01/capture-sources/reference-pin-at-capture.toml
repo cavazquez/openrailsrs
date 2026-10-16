@@ -1,0 +1,1586 @@
+# Reference changes require an explicit recapture and review, never cargo update.
+version = "1.6.1"
+tag = "1.6.1"
+commit = "d16e670da333d26d2edfc97d5631a19dadf49ce5"
+repository = "https://github.com/openrails/openrails"
+release = "https://www.openrails.org/download/program/"
+version_evidence = "examples/baselines/chiltern_birmingham/openrails_evaluation_log.txt"
+
+# The other Chiltern captures use scripts documented for this same installation.
+# Explorer logs expose speed/controls; their DISTANCETRAVELLED is always zero.
+
+[[files]]
+path = "examples/baselines/chiltern_birmingham/or_evaluation_speed.csv"
+sha256 = "a6a388ef71b406c262754f97b0051d9077bda47d69c50bcf3cbdc2597891ced3"
+
+[[files]]
+path = "examples/baselines/chiltern_birmingham/openrails_log.txt"
+sha256 = "d0758d1598b77875da5a79d95f91fff85782d6f2ea9d594659ac7ab2379bbcca"
+
+[[files]]
+path = "examples/baselines/chiltern_birmingham/openrails_evaluation_log.txt"
+sha256 = "e3a1454d0aa7d2e41e943349137ebf39e3d77ffac5b39dfa673e99cee6325c95"
+
+[[files]]
+path = "examples/baselines/chiltern_fullthrottle/or_evaluation_speed.csv"
+sha256 = "699ce89c1e837d39f9afe632e6840dbb9fcdb8790b02ce2230e60ccd232bb56b"
+
+[[files]]
+path = "examples/baselines/chiltern_brake_coast/or_evaluation_speed.csv"
+sha256 = "edebe28164fa9ca625a92604f4799e53751aab4ce39dcb6a4772ab3204f9c124"
+
+[[files]]
+path = "examples/baselines/chiltern_throttle50/or_evaluation_speed.csv"
+sha256 = "345357742e9de1e241307844da7c5c9d83ef37c53cb7ab367c0f5ba975b29400"
+
+[[files]]
+path = "examples/chiltern/driver_or.csv"
+sha256 = "4e6481a854b801255c0caf9e62119a1495a80bd1d94bb32b29f67a4818c97699"
+
+[[files]]
+path = "examples/chiltern/driver_throttle100.csv"
+sha256 = "e706b2183a3d32df1179d05846562e366c42996b1c4353562eee594b91bc5bb0"
+
+[[files]]
+path = "examples/chiltern/driver_brake_coast.csv"
+sha256 = "a0579cf883bf462acbdca04c640151dd986a7f307c6ba27cbf285cdc64168a00"
+
+[[files]]
+path = "examples/chiltern/driver_throttle50.csv"
+sha256 = "1781ec1a79532fadbb52083c1014632b7f88db2e398e21502670e3499d6637c7"
+
+[[binaries]]
+name = "RunActivity.exe"
+sha256 = "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2"
+
+[[binaries]]
+name = "Orts.Simulation.dll"
+sha256 = "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679"
+
+# Complete native local service: generated ACT/SRV/PAT, original DLL client and outputs.
+
+[[files]]
+path = "examples/baselines/chiltern_local/content/Chiltern/ROUTES/Chiltern/ACTIVITIES/openrailsrs_chiltern_local.act"
+sha256 = "ad543163934063408abd2d6acc21a43b5f157708664d4d67c7a74b6fcba3fcc9"
+
+[[files]]
+path = "examples/baselines/chiltern_local/content/Chiltern/ROUTES/Chiltern/SERVICES/openrailsrs_chiltern_local.srv"
+sha256 = "71b102acbe77107a478de42063f99fbfee07a0acc00d0343765f1265ca2a4308"
+
+[[files]]
+path = "examples/baselines/chiltern_local/content/Chiltern/ROUTES/Chiltern/PATHS/openrailsrs_chiltern_local.pat"
+sha256 = "d0a32b9bc436c870799762f58a6e162b9fed26dedead4685c05383c2d157c9cb"
+
+[[files]]
+path = "examples/baselines/chiltern_local/capture/trace.csv"
+sha256 = "ad9e690435d784df243c8a49bfdb37137c6e5f98f8941045adfde27e4500a7e2"
+
+[[files]]
+path = "examples/baselines/chiltern_local/capture/initial.json"
+sha256 = "aa7611255dff6b69654a15c674b246f21dbed69241e14dfbb2125ce23162e716"
+
+[[files]]
+path = "examples/baselines/chiltern_local/capture/outcome.json"
+sha256 = "3b5a0af595220a98a86320beacc6d7feaeb9714dc688ebd42b3d131e54098310"
+
+[[files]]
+path = "examples/baselines/chiltern_local/config.json"
+sha256 = "abd72e6dcdd7ef0eef163108f4cda961d51510902f88e0f20c56c060eedc9207"
+
+[[files]]
+path = "examples/baselines/chiltern_local/driver.csv"
+sha256 = "78e5ac1e27abeac774ac10410da7dabf8b1aa89bd9da5da034321d14d04c143e"
+
+[[files]]
+path = "examples/baselines/chiltern_local/preparation.json"
+sha256 = "3a2e535474b85f83680d9f8a0cdf3844803b9f3b9aa3373e14a322c27fb6cda0"
+
+[[files]]
+path = "examples/baselines/chiltern_local/HeadlessCapture.cs"
+sha256 = "c832f071a28f61178da2814d382069c3dc15cdb2aff7b89f40fe5974ffdb60a0"
+
+[[files]]
+path = "examples/baselines/chiltern_local/manifest.json"
+sha256 = "22ab7fea6aee4c836c10758f6c8544f298edcf9636af5ebd4838499c15e0d9c1"
+
+[[files]]
+path = "examples/baselines/chiltern_local/reproducibility.json"
+sha256 = "1c54758f0b5dbc3a46f2d6db2fee820fe4af8251281bd058833c353bff285b8e"
+
+# Native building composition and controlled Northolt exterior reference.
+
+[[files]]
+path = "oracles/chiltern-scenery.json"
+sha256 = "1024afc98bc2c2706cf67aa67ee6252db636a121b5ae3cc5d8e3fd8cb82e7f21"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_local/northolt_exterior.png"
+sha256 = "623e6f3a6d080ed49f064fb90dff3a0b962eedb45fc66b7dd520575d65feab45"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_local/northolt_exterior.json"
+sha256 = "4d85e1dcf5549089d7990a2be1614bbb7235aebc668e9d5e70062d575bb72b19"
+
+[[scenery_binaries]]
+name = "Orts.Formats.Msts.dll"
+sha256 = "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465"
+
+# Native low camera: open undersides in the original Northolt content.
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_local/northolt_low_exterior.png"
+sha256 = "c5827cc0dc597e952a9db6ca74c787983e687a6927f2f46972549fd82f883ac5"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_local/northolt_low_exterior.json"
+sha256 = "8a4109f26450f326fe5308763d71ddcafedda0decd2b3b98f39716d8f7f686dd"
+
+# Native geometry / solar equation samples, without a renderer.
+
+[[files]]
+path = "oracles/solar-or161.json"
+sha256 = "e037d38fdcfda6ad4e5f26c18fef4b45d6cc448c6ab8606e31a6fef390386770"
+
+[[files]]
+path = "tools/openrails-reference/SolarReference.cs"
+sha256 = "a4d53e18640fe4411c988f8da90cfd42bc05dbd7a4ccae5f781e6c1fdc7129e2"
+
+[[files]]
+path = "tools/openrails-reference/solar-samples.json"
+sha256 = "fcbd2e1682ec25826921ff7d861804cce1fe1605f37a84d8a38afd5b222665ca"
+
+[[scenery_binaries]]
+name = "Orts.Common.dll"
+sha256 = "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212"
+
+# Native South / West scenery views, after original WORLD loading.
+
+[[files]]
+path = "tools/openrails-reference/SceneryCapture.cs"
+sha256 = "876e0ec7eb9c7a0482e201e3f5b1132b7867c6e3aca3f74fb6a8ea4419f5bed4"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_local/south_ruislip_exterior.png"
+sha256 = "b427671488908a09ad0bf8266b2f52dec1e714834076efd42b8495a8fc007c5b"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_local/south_ruislip_exterior.json"
+sha256 = "ae06f4c51cfe4ad8b48071eddf1e1c2d89f759a2fe083b91472e013b6e0282a2"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_local/west_ruislip_exterior.png"
+sha256 = "8bbcf1ce99ddcf1987be76f65c270d60866084882e8774a74375a6571c1fbd13"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_local/west_ruislip_exterior.json"
+sha256 = "5f3ffe96dfbf88852c9fce8bf288bb75e42b2a344a2ac9abb04b20d764e3c425"
+
+# Six native station poses, including the original cab at every station.
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_station_views/northolt-park-cab.png"
+sha256 = "211bdffab9028c957fde9d5312c2f1bb5a231370551d6539086a1d5ca7030203"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_station_views/northolt-park-cab.json"
+sha256 = "10cbdc78ac902bc5e7d2dd0971d456c28fbabddfd099846e3c635b9f52e79553"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_station_views/northolt-park-exterior.png"
+sha256 = "364f2d7ae95e9947bbcf3b65e71d21650f8ffd75ad378317ba85ba60e8001754"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_station_views/northolt-park-exterior.json"
+sha256 = "2a4619a6c06283a691ce6f6ac225418a97ed93c6bc6c3e4eb46dc3146f3c7f8c"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_station_views/south-ruislip-cab.png"
+sha256 = "492b1a318c3ed03f6bdbfcbd192bc6f80c84e555242a10bba9046a46866b66d2"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_station_views/south-ruislip-cab.json"
+sha256 = "d072d4b4b42121545a7293ad45395d7fdf628e7ad4eb8a9ccacf4ecedb0b918f"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_station_views/south-ruislip-exterior.png"
+sha256 = "40296bdf6be8614a1200ac6435747c8a3ca01e589b0fff640766354dd7b04a0d"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_station_views/south-ruislip-exterior.json"
+sha256 = "ccb1b77bd13331a3513e44b9dd7b4466b0424b54e6aeb1b07c5ecbdc8c085137"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_station_views/west-ruislip-cab.png"
+sha256 = "e2ecb67d7e890845d4f889068e1e5c34f882a3240ac73a574d1142400a25c81f"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_station_views/west-ruislip-cab.json"
+sha256 = "e3ad3bfbd8e15aa5cf1a2718fc502feb6480f2eba7726eb93566a2de7d59df24"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_station_views/west-ruislip-exterior.png"
+sha256 = "1fb0c500e7080fb6b55ea81790505c51893341066b0307e06450c9873ed1c6f9"
+
+[[files]]
+path = "docs/fixtures/visual/or_reference/chiltern_station_views/west-ruislip-exterior.json"
+sha256 = "50ae7c14ededf733ffcb8e3022f3bb8def040f32d919d7836a3649094f1cb2d5"
+
+# Isolated OR 1.6.1 curve-comfort expression, compiled with original float arithmetic.
+
+[[files]]
+path = "oracles/superelevation-or-1.6.1.json"
+sha256 = "6481574e52973a9fb78274ba1aef0897b3cdf141d8c8babac1c999af22bc38ab"
+
+# Isolated unchanged OR cant/runoff profiles with native float conversions.
+
+[[files]]
+path = "oracles/cant-profiles-or-1.6.1.json"
+sha256 = "ed3fcf438bb5c46672f5c8b031755abd85cded2ea3731de252775ce187066e0d"
+
+[[files]]
+path = "examples/baselines/class47/manifest.json"
+sha256 = "967dcd2b67329f0cf53f9174a87778544383375ca2355595e854e3a736f45129"
+
+[[files]]
+path = "examples/baselines/class47/driver.csv"
+sha256 = "36388515fa81a90bffd1158e0f142a13da4d4c635f55b85db5d8b0b993d1337d"
+
+[[files]]
+path = "examples/baselines/class47/capture/initial.json"
+sha256 = "003f62633dd9f6491f3dfd211b2cf641a69a3b7d41e86b55927e3a44bd4ea966"
+
+[[files]]
+path = "examples/baselines/class47/capture/outcome.json"
+sha256 = "612b24e8218dcf568d7b63ee3d35d5e6798e5975ea63c57cb0127c5c4b24f422"
+
+[[files]]
+path = "examples/baselines/class47/capture/trace.csv"
+sha256 = "51fe072f2ed890fdb734d04a969917a6826155b411c3ec4b2c14e292ae1f4955"
+
+# Original SMS parser, variable-distance triggers and inverse-distance gain.
+
+[[files]]
+path = "oracles/fixtures/audio-distance.sms"
+sha256 = "6b14e464decfd17bc2253b7ad4066f4749c6fa06d5becf087e2fa6307052c8bc"
+
+[[files]]
+path = "tools/openrails-reference/AudioReference.cs"
+sha256 = "763dc33c83694e1a7aa27c99f76567d6a492d41310ab3291af5a7a6c2e9de58f"
+
+[[files]]
+path = "oracles/openrails-audio.json"
+sha256 = "ef9134737e584dc61d13917e5c202d3b8338138014804cd1bfa02e3a314b9560"
+
+[[files]]
+path = "oracles/openrails-audio-provenance.json"
+sha256 = "470edae7eee44d5a27a43b0690f697431d4d614caac2e801538b69e4440c86c1"
+
+[[files]]
+path = "tools/openrails-reference/ElectricReference.cs"
+sha256 = "99b410f52a56bcb51bba2af5474b274a415178a327d4143cc8e865adb7b3c2a0"
+
+[[files]]
+path = "oracles/openrails-electric.json"
+sha256 = "4359aaa85bb5dff54d8bc5efdc04a68870bb55690a05ab03a76b723b531e7f37"
+
+[[files]]
+path = "oracles/openrails-electric-provenance.json"
+sha256 = "f458b138475a22e297ac00d83c2aed90ffdf2fd27063d161ab359bce8dc189bc"
+
+# Original non-geared diesel lifecycle, STF resource units and sound event IDs.
+
+[[files]]
+path = "tools/openrails-reference/TractionOperationReference.cs"
+sha256 = "5fa5df7d2af0ff06ca91ff1f04059b6ae25738bd000d475ccbdcd11c6cda9e07"
+
+[[files]]
+path = "oracles/openrails-traction-operation.json"
+sha256 = "bd22e5b0bb55ec10c0c03f1171333a95399cb38b74cf33ef76c83c08a42ca072"
+
+[[files]]
+path = "oracles/openrails-traction-operation-provenance.json"
+sha256 = "a1d2e244979e4e16d9f050acce288aa8083520b3b496a91ec35d8fe99fe2deb0"
+
+# Original vacuum, legacy EP and default power supplies for installed formations.
+
+[[files]]
+path = "tools/openrails-reference/BrakePowerReference.cs"
+sha256 = "f09ad78bcb4cdaa538e33b6dbb2ca8ac255083b0fa70903076f6f3cfc0e4f5c6"
+
+[[files]]
+path = "oracles/openrails-brake-power.json"
+sha256 = "723251e0418d42acb9d0c965a786afc682bc0d289c28395463406150c04e61e8"
+
+[[files]]
+path = "oracles/openrails-brake-power-provenance.json"
+sha256 = "e07b641e4b9dcbfec3077d6e4730046dabb9cdf15efd3fbad156ecad609d4868"
+
+[[files]]
+path = "examples/brake_supply_native/121single-con.con"
+sha256 = "50b8463c62441c0e21e7b286b2aa3ad0169cfb56c2d1942a4a0532489740de96"
+
+[[files]]
+path = "examples/brake_supply_native/1960centralwr8car-con.con"
+sha256 = "679333fc11d90fef0321bbfdf331e819f5a085856d0dab5a5d28100415d767ae"
+
+[[files]]
+path = "examples/brake_supply_native/bristol-pullman-con.con"
+sha256 = "d0b11d8002df1d33bb8d3d1190e43f7b64856bd0ff8e6cb22e7bdf4f8bdb891e"
+
+[[files]]
+path = "examples/brake_supply_native/downton-hall-le-con.con"
+sha256 = "d0361357022bb54e4a56a1fac7c4cdcd19636dd29b51bd3e4344e6d899ec14b7"
+
+[[files]]
+path = "examples/brake_supply_native/kingle-con.con"
+sha256 = "a3343a9825e362dd4af229c4685e92fd9bdfad4a36231578de57a3cbe4b751b4"
+
+[[files]]
+path = "examples/brake_supply_native/mt-mt-class-47-6-mk2-pp-con.con"
+sha256 = "cb281a1c63bf8c1fe252c2d24678ebd4a254ea83c4d094191d66300430dee168"
+
+[[files]]
+path = "examples/brake_supply_native/profiles.json"
+sha256 = "dcb117020a99266919e30d4cb11ce78a663af19e0913522fd5e2d487fdeeb67e"
+
+[[files]]
+path = "examples/brake_supply_native/provenance.json"
+sha256 = "2c1412b8b03085d1adebcd349e98e264dc092bb9aaf7fb0c1f17232d9d403bd9"
+
+[[files]]
+path = "examples/brake_supply_native/r-stock-6-car-con.con"
+sha256 = "e4709755efc77ebf0d230f501487ba7a47b2b25e719e4f64428891bbf68d0af1"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/0b02c8f061c9.wag"
+sha256 = "07b3eddd6c022bc007bb60e954bae0cc2907fc28655e2d01cfbbcd1cc3971448"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/1812693b6ca0.wag"
+sha256 = "52c2f1e6c0f900c1d1501f7067a7d8d6b1fd153c814584982bc05a97479add44"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/1aa5b3dfe7c9.eng"
+sha256 = "87a5b2dc34b46bb474808f11ef1241aa8c99ed9e2299466194e5b95748abc442"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/207f338067cc.eng"
+sha256 = "3863aade3969ee3b276e666f812b308509f3be7ef14d08f08e1600ea5d85fa3c"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/2e745329c63e.eng"
+sha256 = "cdb19d9713328545bf2930d465b07dd8a733723352bfa59a54976d994cf3f61d"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/4161fbba02d4.wag"
+sha256 = "3e391c3d941cb8068cb9134384d595eb2fd52cb1281d1fd3e0637e4d322c9715"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/43cbe1ce2075.eng"
+sha256 = "c34fe16c1ea2626ec2d9dcc849b277424ca1dfe5fbff45c932c1a3e50565ba55"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/46a8411c7a1a.eng"
+sha256 = "713338852246e78407891dc0d80e119c7dc0e2922f30ebdabf4aaeaf436c2c10"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/47d93a2d1efd.eng"
+sha256 = "6c19a4d088b79d50df9bdf1195069ceaa7f0fdbe1a13d7c420dd01e240731e74"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/4cd9656c1238.wag"
+sha256 = "7121f45cdfce108139f29259b69bdf1970d2e81f80a76a3c0092212c337d7850"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/4ea3bf2355f6.wag"
+sha256 = "2086f94ca273bb4c13307acb0650afeb7278db9da7ba13c9e155324d6b9a0f5a"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/5b5885d8a98e.wag"
+sha256 = "8c1b343e0e700531e2ac3ab4de14a7483565af53b7ac73e2c471fb4a33ad787a"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/5bcf3c25ab42.wag"
+sha256 = "be057b78003238f5db2bf4bd03d92884bf206dc1c817643e83abcbe36d9c60f1"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/86b9af33a1f3.wag"
+sha256 = "5ac4f9925b27215a7b182371c9fb7f4f1c20f6e3ff6fd9f39edf23e4cc4bed80"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/904145f2c1d2.eng"
+sha256 = "c098da0ec6aadbd3f0015a93b925321d7741d78afb97348cd9bfa32be53f91b4"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/9a5618fb82b7.wag"
+sha256 = "258b5bab6ce5d4d30365fdb86ce6cc91e4d18ff51afa425ca30ef6a1b4672b72"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/b0b2158fbe94.wag"
+sha256 = "b64bb88f3e6baf36799d2ec24498789d81eb933173e5acc101fc7c5f76f02818"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/b490bea8bf47.wag"
+sha256 = "dd504fde4ce7a79353bfb811e8b68b39970a644e156ae57c905748dbd67c4eba"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/d4684bf68f49.wag"
+sha256 = "c3af39b5a3676920c75ad514d8f5614d7099c42c60224f8358270651df2eef03"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/d48ba927ce1c.wag"
+sha256 = "abfebd23ac33a5c96b399ce687a61d6977e1385f9df6ffdb09c5dcb7ef7cf22b"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/df540d3c68ff.wag"
+sha256 = "4dacaeef9fb86b1478596bd696342e4db32ec60aa46be351ba419196b7f898c3"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/e82d5984aebf.eng"
+sha256 = "991302b6d20da877ce89163fbe183a91026233531dfa20173102832d88e34083"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/ef7dc960e903.eng"
+sha256 = "deaa085abf1192a472db9c474f6ac1ebcfec8067c02cd6e739ec488dcb39f8b1"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/f0a6e44cd462.wag"
+sha256 = "ee05a15a1f7dae72bca34b18282eab28c467549841aa9a20eac7374f2eaa6c04"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/f965dc08e136.wag"
+sha256 = "f1035fb0e89288ff04b06fe1f778e343500f060b53d83ef077acaa823f656eaa"
+
+[[files]]
+path = "examples/brake_supply_native/vehicles/f9b2e5c4f49d.wag"
+sha256 = "8eaccaff343bd383acc7c33a61c4494572ab67da899ea50563312619bef06a94"
+
+# Additional native rolling-stock families: original captures, prior limits and Rust replay.
+
+[[files]]
+path = "docs/fixtures/compatibility/coupler-forces-or161/input.json"
+sha256 = "0f0d992e6ed66d4646cd149242f05f48ffcef3ad11c71a5cf1e01c8c79bb1ee1"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupler-forces-or161/manifest.json"
+sha256 = "c05c4d829a110c3071d7d4b18f6343c5d5b90544d5fc9858648f02901826b868"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupler-forces-or161/protocol.json"
+sha256 = "f0cb323e47023e3130fbde3f97f5910ad2bfd1025e181a9cb4987de8ac3f69a7"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupler-forces-or161/reference.json"
+sha256 = "e262d769422b1345f9e99a50682462ca517c1057b29335486acdc4841c488861"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupler-forces-or161/wine-isolation/isolation.json"
+sha256 = "5b484c0a971d222d2d7e0ce40292de1a13e33b495683720c90566ee810150cfd"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupler-forces-or161/wine-isolation/release.json"
+sha256 = "4dd1033301364f3c2696340992de568c7bcff294440b8ada1b12426c166de327"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-replay-20261015/depot.json"
+sha256 = "21d93ccb7eb98d81bd377a30715f83b980df2db4498fef4835f4075f4b934239"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-replay-20261015/execution.json"
+sha256 = "9dac409a0890328f9ea1c0e30fb9373e69e60dd649e34bb93e2bc06f6064ac60"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-replay-20261015/receipt.json"
+sha256 = "0288c775f43635ef20164912d125c2e3347899693e8f033c918c2f1c500ae062"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-replay-20261015/source-inputs.json"
+sha256 = "dc97b66283198fdddbb6dfe87cdabb4e40aa5b06fa887bef943fb82fa409d9a0"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/capture-script.py"
+sha256 = "ff61a44135dee5fc8b9869ce762513237afeb68bcde701e34aff02d9304661c4"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/capture.log"
+sha256 = "7882c1c540efd5753dac7b13cf88fa25c83870eb19df9d25cc94f86d1d0e84f2"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/compile.log"
+sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/content/TRAINS/CONSISTS/openrailsrs_gearbox_class101.con"
+sha256 = "62965e6a99990621b3089304e4d4347fbaac4cc787949a4dfd1d07da6dd6796b"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/drive-config.json"
+sha256 = "80a8d09b82cc3ec1ea140a28649406e64119822be4b6bcbf60cda5df6029326e"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/inputs.json"
+sha256 = "80ea4131fd91172c277e80e9d314a8f2535d266fb4ba44b44893e5e25ec7cf75"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/manifest.json"
+sha256 = "521224427bad6c4db232c8424c7f6490856ddb4463042760a95cb0209c5fae28"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/native-drive.log"
+sha256 = "abef0e6779555e649480f05169b99a52cad2f060b60b2585f3e8d343aee6cfa1"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/native-drive/initial.json"
+sha256 = "07037d94f79cf13b8b545690fe754ada12bd100cb5aa9911dfeb25535a6d6c3c"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/native-drive/outcome.json"
+sha256 = "44ef1cc6fc7f6b5f391a3226adcf1b5a1a839b3773cd9bda3558bbde8774df9d"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/native-drive/trace.csv"
+sha256 = "11729fc7c9ec3caa029f10976d5f217f3885fcfa972f3825dc6a75f802746433"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/recapture-preparation.json"
+sha256 = "d47afd3c3eb4485b44ab16bc1a69f9f679c54e336a4f6ebb9601e066d860fb53"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/reference.json"
+sha256 = "3e942d1fe335ec771b2543a81a969b169a255ceaed1c66d6367ff6e094e7d143"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/registration.json"
+sha256 = "73be02c67f798b4d72a571a07d15e35b78f005282d78016aa29af9cd4ea64508"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/replica-manifest.json"
+sha256 = "70eaa19a9ae9f9e743698be96c607f4eda4b1ce5a28cb31d7c118ee2b20dbcb7"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/replica-native-drive-initial.json"
+sha256 = "4d42053251311ee0efa67ce73f891dda4b2f1d90d09211a432e6b09589c85c94"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/reproducibility.json"
+sha256 = "61069a1a4ed07b98c35ef9b900ea0f9746838bbe5ed30573bec5f9b9f90bcc29"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/rust-drive/comparison.json"
+sha256 = "e0812a9ab1c4b34a21bd7b54e7b72fd3d985340f1537ed49ff7924d40b8c09ec"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/rust-drive/initial.json"
+sha256 = "5927c71778db01fa52300d460206c4193567a17836324bf1109d291e19ea385e"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/rust-drive/receipt.json"
+sha256 = "da985eb88f6aa138eda12f6a4dd81502201a9a27a5b2402fc76387f9a6660380"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/rust-drive/scenario.toml"
+sha256 = "8e7285a206043cfddd2ea46f99013f055619a9b0d5a5148e5ae4e585ee13f7d9"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/rust-drive/source-diff.patch.gz"
+sha256 = "94e861d8a26960bb078c473688dba2a166d289720d2ebddbf7f8c776620e63ed"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/rust-drive/trace.csv.gz"
+sha256 = "b5b2b504d871ba3979d110b1d930316f11aeeaf2abeb2598a51a5a4fec1cf2d9"
+
+[[files]]
+path = "docs/fixtures/compatibility/gearbox-or161/tolerances.json"
+sha256 = "74648bc45c1c3affabdc9c8341f423f5cf66a743c0980b66709a2f33b3d617ed"
+
+[[files]]
+path = "docs/fixtures/compatibility/vacuum-independent-or161/wine-isolation/isolation.json"
+sha256 = "6f4c0f61285a57662fa55827257649b9ba3877e7cb026cd2b2a05ff35b1b9659"
+
+[[files]]
+path = "docs/fixtures/compatibility/vacuum-independent-or161/wine-isolation/release.json"
+sha256 = "1155321de8df7c0c4406dac7d881c4792489e6abf81a0ef1edebc9daa9fb0411"
+
+[[files]]
+path = "examples/vacuum_independent/reference-input.json"
+sha256 = "3e6bcfb218e0051d53a3aced997c991dd38f66c869150e2b19723b1e988fde8a"
+
+[[files]]
+path = "examples/vacuum_independent/vehicles/diesel_vacuum.eng"
+sha256 = "150a92c2232eacbe3210072d1794b266a8e7c95f4fef514378c06662871369cd"
+
+[[files]]
+path = "examples/vacuum_independent/vehicles/hall_engine.eng"
+sha256 = "67ef1eeafa7aa008d565b68b8375c81419848d71ae556bf525d4805a4dac5ca4"
+
+[[files]]
+path = "examples/vacuum_independent/vehicles/hall_notched.eng"
+sha256 = "f7e55ac06c6adeb647f9aa9bee5a50dcd3c16f6c75e04039ab6c1009cfda577b"
+
+[[files]]
+path = "examples/vacuum_independent/vehicles/hall_tender.wag"
+sha256 = "30744c4d1f4edd5337d9e6f78455f03e844fb9d2c8b1616ba6745de85fb0827d"
+
+[[files]]
+path = "examples/vacuum_independent/vehicles/trailer.wag"
+sha256 = "c9b2b7f137809203466320f38f802f004b0766bab662b4db69d700213d6a947a"
+
+[[files]]
+path = "oracles/coupling-reference-provenance.json"
+sha256 = "913a9c59cbcf30c85220770cd0e41ae670871b58983e9f664874076df75a693d"
+
+[[files]]
+path = "oracles/coupling-reference.json"
+sha256 = "856bfa60d0be9fac22c6e05a8d05f3cf510a4bd7cebc253f87b0015329d195a4"
+
+[[files]]
+path = "oracles/coupling-rust-next-five-20261015.json"
+sha256 = "6d1ef06391ad3237ad4941bb4362e8106d41e0ea275e1ecb995e3b4b4f2768a3"
+
+[[files]]
+path = "oracles/coupling-rust32.json"
+sha256 = "2eeb73e081d6e32a94ab14f6c14c633890ca882f0266ce6621493a90fa778927"
+
+[[files]]
+path = "oracles/openrails-vacuum-independent-provenance.json"
+sha256 = "6f680f83b86e7e0b4fce2fb6c621d2ffcbc7625ac7dbf6ec332ef5fe45eec5dc"
+
+[[files]]
+path = "oracles/openrails-vacuum-independent.json"
+sha256 = "88c058606b0fb635c113a27e4a2ff78ce0c9b85e3125b309e5a06c93460e40b4"
+
+[[files]]
+path = "oracles/rolling-stock-families.json"
+sha256 = "f4fe0dc0f338e198af9a402466d2fda647e6a783d1569627106dfce40fef501b"
+
+[[files]]
+path = "scripts/capture_coupler_forces_reference.py"
+sha256 = "3f3447c9c947dfad0fe8fc4e6a1479b5ca5a4d4e5fb9689f095435a5c8e88d6e"
+
+[[files]]
+path = "scripts/capture_gearbox_reference.py"
+sha256 = "9766e685652b73a2dbbbdee8350c1f36a4ae5824aedb8bb19a58a5963a44a569"
+
+[[files]]
+path = "scripts/capture_vacuum_independent_reference.py"
+sha256 = "7f4561becd9c6621c090e65fac6cb523490919fd192bfc69f918ce790658b032"
+
+[[files]]
+path = "scripts/oracle_wine.py"
+sha256 = "4e87773fd3fe535f5660a427ea12b8b6a716266ebf9161e433aa66fc86e9f590"
+
+[[files]]
+path = "tools/openrails-reference/CouplerForcesReference.cs"
+sha256 = "3699312a7e3dd42cc99c8623c9287adea068af8d89f38f2702e5b5f0822dc955"
+
+[[files]]
+path = "tools/openrails-reference/GearboxReference.cs"
+sha256 = "9467e7d9ba31193b38021290f85ca80dc4dee86a486f34075a9a1d0ed9cf6a61"
+
+[[files]]
+path = "tools/openrails-reference/VacuumIndependentReference.cs"
+sha256 = "e0d0001cf7d45c22b95855278b227b2f52e72a85de62dc61a5042f7dbbeb8367"
+
+[[files]]
+path = "tools/openrails-reference/gearbox-protocol.json"
+sha256 = "38fd571d931b4c8bd0cc5701dc471628352443eb503cafcdeb5eb59448a6184d"
+
+# Native operational block/link, rolling-region and bogie captures (OR 1.6.1).
+
+[[files]]
+path = "docs/fixtures/compatibility/bogie-dynamics-or161/input.json"
+sha256 = "c73ad5e3c2e8950857796b604f87d58091fb3580757680a7b0e01b826af26e0c"
+
+[[files]]
+path = "docs/fixtures/compatibility/bogie-dynamics-or161/manifest.json"
+sha256 = "67ecad9855fcbd4d5d994953beea38f5a6d23044bb9226aff7abc69b89c0b543"
+
+[[files]]
+path = "docs/fixtures/compatibility/bogie-dynamics-or161/protocol.json"
+sha256 = "2c7c09667048be6cb8a6ecd75ebd20df180fcef1008e5107e62f53b04bdaa10c"
+
+[[files]]
+path = "docs/fixtures/compatibility/bogie-dynamics-or161/reference.json"
+sha256 = "a491890c45d1ec224d25dac2221550866839f15ce3295abec9b439e5ffcb9b3a"
+
+[[files]]
+path = "docs/fixtures/compatibility/bogie-dynamics-or161/wine-isolation/isolation.json"
+sha256 = "8d98910f2f5eecebb7d9ad8ca20ae2390ef0956e383eabcacd9e06b825659e6e"
+
+[[files]]
+path = "docs/fixtures/compatibility/bogie-dynamics-or161/wine-isolation/release.json"
+sha256 = "a7f7ad910d6a08ff2732b1c06b962186052bdde99eff74cda0ba2c85f5afe6ae"
+
+[[files]]
+path = "docs/fixtures/compatibility/operational-signals-or161/input.json"
+sha256 = "74ec825cd876e966e141dfe96003fe853e9032e0d1491ef25c6da4f39791e61e"
+
+[[files]]
+path = "docs/fixtures/compatibility/operational-signals-or161/manifest.json"
+sha256 = "881c3fda12c49e77090030b26cd7523f72065d114d9e8549455a275d95c58cd6"
+
+[[files]]
+path = "docs/fixtures/compatibility/operational-signals-or161/protocol.json"
+sha256 = "bd3ae702d242f0e5da88173e27f676309ff6df7dac94b2cc5b66d3cb5ab73fc5"
+
+[[files]]
+path = "docs/fixtures/compatibility/operational-signals-or161/reference.json"
+sha256 = "291e69e557d2cf24c0a282701dfb27cd9ab7f269b1fd237da7f84991003d3005"
+
+[[files]]
+path = "docs/fixtures/compatibility/operational-signals-or161/wine-isolation.json"
+sha256 = "6910fe035b5cfefe5b8a0437ac730af9df79b6a4f09afedc20b600c13befa39b"
+
+[[files]]
+path = "docs/fixtures/compatibility/operational-signals-or161/wine-release.json"
+sha256 = "500bc8ef7417c8f3fc53e7e9e3487b3d9aedf2fbe0becb9c56966148d29f4f91"
+
+[[files]]
+path = "docs/fixtures/compatibility/track-sound-or161/input.json"
+sha256 = "05513260c53364add7b76f8c020f97a88c72b94883de53c1748be89470a52f1e"
+
+[[files]]
+path = "docs/fixtures/compatibility/track-sound-or161/manifest.json"
+sha256 = "124b76a1094e7f6472e3439862cd85b11c4506809f26778912b947831fbcb5ee"
+
+[[files]]
+path = "docs/fixtures/compatibility/track-sound-or161/protocol.json"
+sha256 = "33a208a04ffc1fd94139339ab4227e15f3fa15576f5ee89bd517c0b5ac6a025f"
+
+[[files]]
+path = "docs/fixtures/compatibility/track-sound-or161/reference.json"
+sha256 = "822005282be251c55f0b727299895acc86c83116c7bc6036fa798e5dd6a3d922"
+
+[[files]]
+path = "docs/fixtures/compatibility/track-sound-or161/wine-isolation.json"
+sha256 = "5a6b2de52eaf195eb9f13f88748099c857b101157cc83a67840b4e6b8608894a"
+
+[[files]]
+path = "docs/fixtures/compatibility/track-sound-or161/wine-release.json"
+sha256 = "b1503028842fee8a98cfd95543a9eda42ae1ea0a333f9d7eaf3875c551601e8d"
+
+[[files]]
+path = "tools/openrails-reference/BogieDynamicsReference.cs"
+sha256 = "d3e37de90d60e1a4c80aaa037200e918f3da1cf420eb59260c1a6fb37838751b"
+
+[[files]]
+path = "tools/openrails-reference/OperationalSignalsReference.cs"
+sha256 = "81edf27ab3155df36a654afde480e86c0fc690e3c4b9f7d6e014d75374ceea7e"
+
+[[files]]
+path = "tools/openrails-reference/TrackSoundReference.cs"
+sha256 = "abccb6234d258601bb26fa9c9963e062133548084684f3da7d0f525ce53775f8"
+
+[[files]]
+path = "scripts/capture_bogie_dynamics_reference.py"
+sha256 = "0186a860e1dc1ffc269ef7e8a0bf0c897097568107f516e7d50e7fabe29e7d23"
+
+[[files]]
+path = "scripts/capture_operational_signals_reference.py"
+sha256 = "1bb4c5ffaa3f2d49573264ee1e7e9141f281d88ed55a48c0a0b42773198986d4"
+
+[[files]]
+path = "scripts/capture_track_sound_reference.py"
+sha256 = "161a728837f3aa46813e23f60d1dcfc42bccb4ccf18a8ca6c6441ae0e9df2840"
+
+[[files]]
+path = "oracles/coupling-rust-next-ten-20261015.json"
+sha256 = "6d1ef06391ad3237ad4941bb4362e8106d41e0ea275e1ecb995e3b4b4f2768a3"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-20261015/depot.json"
+sha256 = "21d93ccb7eb98d81bd377a30715f83b980df2db4498fef4835f4075f4b934239"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-20261015/execution.json"
+sha256 = "3b56fb194c0fc7489e2e57ef9316cf026c8de3a3c2333ef1e3659abb0e1db673"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-20261015/receipt.json"
+sha256 = "e76087239badacc7153f25c5c0538ec417b6d5c88b702272f893de50b66f0595"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-20261015/source-inputs.json"
+sha256 = "4fe935ff9cc986b5a649f4645eb0712ddc9f63232c80d93e9fcddebcdc8eb3fd"
+
+[[files]]
+path = "oracles/coupling-rust-next-ten-final-20261015.json"
+sha256 = "6d1ef06391ad3237ad4941bb4362e8106d41e0ea275e1ecb995e3b4b4f2768a3"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-final-20261015/depot.json"
+sha256 = "21d93ccb7eb98d81bd377a30715f83b980df2db4498fef4835f4075f4b934239"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-final-20261015/execution.json"
+sha256 = "e87101a35a741495021f93261bbd792123032563b140c58167e2ac4e47b90cda"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-final-20261015/receipt.json"
+sha256 = "6af169005077a8ca7565910a76c9a25be0dbd125bb822e53f43e4766893ac718"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-final-20261015/source-inputs.json"
+sha256 = "361ec573d5ed178e060d9bf87aa1e03b007f44cc8b5df8de9e9b99b6ad5f6f44"
+
+[[files]]
+path = "oracles/coupling-rust-next-ten-tail-20261015.json"
+sha256 = "6d1ef06391ad3237ad4941bb4362e8106d41e0ea275e1ecb995e3b4b4f2768a3"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-tail-20261015/depot.json"
+sha256 = "21d93ccb7eb98d81bd377a30715f83b980df2db4498fef4835f4075f4b934239"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-tail-20261015/execution.json"
+sha256 = "6ea19764ce9bc26e2529da3246db57c51d14f6ba0613d32a85c5adf08e3662d2"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-tail-20261015/receipt.json"
+sha256 = "4e38452679a1b4669b1e2267dd8cc83ac7fc25868caca219788eb921fd5acfb9"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-tail-20261015/source-inputs.json"
+sha256 = "1e2f5e452e61ffba87c6adc8df72ab62c09449e69fb265d860074a7a1cdd1f41"
+
+[[files]]
+path = "oracles/coupling-rust-next-ten-sections-20261015.json"
+sha256 = "6d1ef06391ad3237ad4941bb4362e8106d41e0ea275e1ecb995e3b4b4f2768a3"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-sections-20261015/depot.json"
+sha256 = "21d93ccb7eb98d81bd377a30715f83b980df2db4498fef4835f4075f4b934239"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-sections-20261015/execution.json"
+sha256 = "7f2a90133f1a1628888c5fc057030db545abab2b3fc7ff776878cc713b5b3f42"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-sections-20261015/receipt.json"
+sha256 = "850d31727d9bc4fdb5567eb4d0143f9c9e1d0d1578af9e68712c948ecbfb7c33"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-next-ten-sections-20261015/source-inputs.json"
+sha256 = "311529789177781ae3f1d97e65e03e924e1119e45b5913896f3bc6e5b3c9edfe"
+
+[[files]]
+path = "oracles/coupling-rust-twenty-systems-20261015.json"
+sha256 = "e4c1c1608094ab767eeffd9898dd4fa2b016ab89dbab3a016a63a9c1974fc4b5"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-twenty-systems-20261015/depot.json"
+sha256 = "21d93ccb7eb98d81bd377a30715f83b980df2db4498fef4835f4075f4b934239"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-twenty-systems-20261015/execution.json"
+sha256 = "f88decf133540a6f858e078421f67d95b2f7dc179bf789795a4b3ccecf94c241"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-twenty-systems-20261015/receipt.json"
+sha256 = "75a2fcb4ffd5907f69843303e7f49de567a831c6bcaad5a929db55ea2e61ec95"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-twenty-systems-20261015/source-inputs.json"
+sha256 = "aa14de9a6078fcdd1d10ef03170b5ce389fd49ce70a48da852c3286cd37e4081"
+
+# Original physical systems capture05: immutable source artifacts and separate CPU execution receipt.
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/physical-native05/PhysicalSystemsReference.cs"
+sha256 = "4d92da562b340f9e1b170bceb94cb5bb829fbbefc9a2ae90d1f520528fb7433f"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/physical-native05/capture-script.py"
+sha256 = "8535d14d0c7e40703c72dfb637410325c134036e677486422daf8d24598ebfe5"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/physical-native05/coverage.json"
+sha256 = "6ec61c74cde41501ca131b24ecf1e11c0368c5a5e0dd60aecc3fa8427349fd96"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/physical-native05/execution.json"
+sha256 = "1829839844efde4f028713520f533543939ace3cd082885fe37b4610198afa6a"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/physical-native05/inputs.json"
+sha256 = "29348715131a3e8e0e0b2c53a931b698d920d96009c0f34d572d2d1e832ed7d9"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/physical-native05/manifest.json"
+sha256 = "667fb11206aa479c6a6d5901e880f0d1c1f1ad1699643c598d667620db774014"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/physical-native05/native-steam/steam-drive.json"
+sha256 = "caf524d9dad7c1034d5df1a41de034b589d6e0d943981116c4cda2f72e93683b"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/physical-native05/protocol.json"
+sha256 = "7e82b09d91489f63981c4082de87d39d245b3152105f9fe2b20b55ad5d0f018c"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/physical-native05/reference.json"
+sha256 = "1c72d5774b0b9dcfa39704e47e176cddb7e7eddc2438ec4fcb4b0663aee08b05"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/physical-native05/registration.json"
+sha256 = "e7ee0fe5c713fc742fb9401d7a9ca3b2f6cbbca2c57c7c5943a95bcd66ee4ab0"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/physical-native05/steam-drive-config.json"
+sha256 = "7b53ccb5d142cb3846a21fce3580ac4d7fb9e725c384a1d8054755088c0d18e1"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/physical-native05/wine-isolation/isolation.json"
+sha256 = "24b5f97904f0b1a161b609e8c626f25dcb51febfdb962b33021d96082a6fb0d5"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/physical-native05/wine-isolation/release.json"
+sha256 = "4914a6dee2477907399f184a6e9a66fdb1ba11c0f41c61c52974d6a629710e2b"
+
+# Bounded native steam: immutable captures02/03/04/05, measured closed06, and CPU projection/execution.
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed06/comparison.json"
+sha256 = "680a3698616210d3749c164b136306a407eb3d18ff45d709271f214c5d59e72c"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed06/configuration-overlay.json"
+sha256 = "7b229e02a8bcf185b504e3cbf89561f912909379e57bfaad43b5c9bf1976e2b2"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed06/driver-input.json"
+sha256 = "7b53ccb5d142cb3846a21fce3580ac4d7fb9e725c384a1d8054755088c0d18e1"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed06/execution.log"
+sha256 = "680a3698616210d3749c164b136306a407eb3d18ff45d709271f214c5d59e72c"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed06/initial.json"
+sha256 = "e5026ad3387486eaff1b85411382a1b2a642591e3360cc0c30b31c2ee0c11ae3"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed06/publication.json"
+sha256 = "c7d79ca932faa7113ae1c28cbfc7e049005420a23fcc42ce69fc38519bc1a617"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed06/receipt.json"
+sha256 = "68c0fa1503030f3ad3f826479d2e52086dd55333069378b048c5505d7deae671"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed06/trace.csv"
+sha256 = "f9e08e06275d64496121d5e752f331886109296c9f8f80d079964c27a9fdacde"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-cold05/SteamCycleReference.cs"
+sha256 = "87d276a35e4eb5d6afa58b66e81c42acf8b748fdec662ccfa63974d3e8d540b6"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-cold05/capture-script.py"
+sha256 = "6274314678cc3d98c52997e3bc54de5c27a2b1d07375c9fdf6d3407e080775f5"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-cold05/capture.log"
+sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-cold05/compile.log"
+sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-cold05/input.json"
+sha256 = "403ff204c19bba879a9edb8cde048e73fea9d41d6ca2a91f7755ba0e1dd9df1d"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-cold05/manifest.json"
+sha256 = "69c3e00601db4b00e79b77f07cd18de4c30e547481f8635588e5b02fdd999915"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-cold05/measurements/01/comparison.json"
+sha256 = "c44e3e7c7122255c8140d85b10e64fa82731e1531c37e9e169056a31f96e20e0"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-cold05/measurements/01/initial.json"
+sha256 = "b4300162ea34e9289347a847085c0b47b03805b4fe1e47cd14df9676c5aba6f7"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-cold05/measurements/01/receipt.json"
+sha256 = "09a99d9ccb40d670e7f606798aff0d5a549c9a7b87da06d56bc912ac2b9ee0d1"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-cold05/measurements/01/trace.csv"
+sha256 = "69358873ca525579cd8d22d7589e6b025bad9eca760919fda2f53323c37cb7ba"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-cold05/native/initial.json"
+sha256 = "85350cfd103479759de85725ee5886f80826be9967552bee1456e9d7ef8ad055"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-cold05/native/reference.json.gz"
+sha256 = "04f0bc40af172746ac7927272061e2f1f9935186113df7d05786e075f41ff393"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-cold05/native/tables.json"
+sha256 = "850a2817b252119b56815ee4520b9f8ff5b414b48de4aa682b006d05c256d1d6"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-cold05/protocol.json"
+sha256 = "c62fc972d0799c3fa7d32db8e6bcd19fde852b986b8ebe652bbb96de0e7e73cb"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-cold05/publication.json"
+sha256 = "96ca46852ab7672cb0efa06ae47a72240ced9ecf4f976735c2fdf68265321f27"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-cold05/registration.json"
+sha256 = "55efd4e53f50be367d6e637e65d2587457bb3141deee390607d9b62d514fb5c9"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-cold05/wine-isolation/isolation.json"
+sha256 = "4dca58b6398334f04f7f87189d3e850153b8b46a236ba15955cc2898deea2b71"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-cold05/wine-isolation/release.json"
+sha256 = "7e155e04636703bb0d0bfd447b3562276a156ccddd8703a48b984aad73b328c5"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-paused03/SteamCycleReference.cs"
+sha256 = "87d276a35e4eb5d6afa58b66e81c42acf8b748fdec662ccfa63974d3e8d540b6"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-paused03/capture-script.py"
+sha256 = "6274314678cc3d98c52997e3bc54de5c27a2b1d07375c9fdf6d3407e080775f5"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-paused03/capture.log"
+sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-paused03/compile.log"
+sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-paused03/input.json"
+sha256 = "b79969cebdb2b9100e5983d96c53bf3b5159f369400ecf99a3b358e2c9b5cb58"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-paused03/manifest.json"
+sha256 = "866a9c084f7855712aefd5a9810ff9b3caf786ad33bcdff7ce44104d9a0c871b"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-paused03/native/initial.json"
+sha256 = "6cd2dd036271dfe9f8ad118e60216c4c864e8a9fc03075141ea4799763758cff"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-paused03/native/reference.json.gz"
+sha256 = "3a27a899ec2372b7bcaabf39d77667bce64334026e1d75963953317d61c350b9"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-paused03/native/tables.json"
+sha256 = "850a2817b252119b56815ee4520b9f8ff5b414b48de4aa682b006d05c256d1d6"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-paused03/protocol.json"
+sha256 = "c62fc972d0799c3fa7d32db8e6bcd19fde852b986b8ebe652bbb96de0e7e73cb"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-paused03/publication.json"
+sha256 = "5a7ebe029e495f2559454745e7a62127be3aaf54961d8723aa2e7bfb4bb3be63"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-paused03/registration.json"
+sha256 = "dd5fbc803a74cf8ea6f9c57ea8dee60392018f9e5a5db509844b611b746ae247"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-paused03/wine-isolation/isolation.json"
+sha256 = "4dca58b6398334f04f7f87189d3e850153b8b46a236ba15955cc2898deea2b71"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-paused03/wine-isolation/release.json"
+sha256 = "48ac4fccbec368ef26a54e769aa237a7e37652212bc0ea23208f9694c335c26b"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-unpaused04/SteamCycleReference.cs"
+sha256 = "87d276a35e4eb5d6afa58b66e81c42acf8b748fdec662ccfa63974d3e8d540b6"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-unpaused04/capture-script.py"
+sha256 = "6274314678cc3d98c52997e3bc54de5c27a2b1d07375c9fdf6d3407e080775f5"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-unpaused04/capture.log"
+sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-unpaused04/compile.log"
+sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-unpaused04/input.json"
+sha256 = "8f287418903a542d30897347947a76c13e4e0f175b31fff089b5c45ae9781351"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-unpaused04/manifest.json"
+sha256 = "dd765f72145a25e89135d2af5d67ba3e5bd310f28773833716734a548c99ac8c"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-unpaused04/native/initial.json"
+sha256 = "f8143b1756fb2915281a48de45f3f3c2c923a2b70ed277f7fbebc0e14fb42518"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-unpaused04/native/reference.json.gz"
+sha256 = "805981e54e7e34382954fd5dc0cc1bfe98fb6d96dc60605205f8db7a2bf4fc86"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-unpaused04/native/tables.json"
+sha256 = "850a2817b252119b56815ee4520b9f8ff5b414b48de4aa682b006d05c256d1d6"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-unpaused04/protocol.json"
+sha256 = "c62fc972d0799c3fa7d32db8e6bcd19fde852b986b8ebe652bbb96de0e7e73cb"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-unpaused04/publication.json"
+sha256 = "9e6afd047802d3ddf4196c1f1c9dbf613c99f2ee46acce9484d2ea7e309b98a6"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-unpaused04/registration.json"
+sha256 = "5538219329a1d2bb3622ec2bbbcd0efc3faef9ceb8cb832ebe06eaed88dcc085"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-unpaused04/wine-isolation/isolation.json"
+sha256 = "4dca58b6398334f04f7f87189d3e850153b8b46a236ba15955cc2898deea2b71"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-unpaused04/wine-isolation/release.json"
+sha256 = "21e14c4e1763e201783c0d8d67526f34c975425325f19e76744f19b389d62fc1"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-hot02/SteamCycleReference.cs"
+sha256 = "87d276a35e4eb5d6afa58b66e81c42acf8b748fdec662ccfa63974d3e8d540b6"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-hot02/capture-script.py"
+sha256 = "6274314678cc3d98c52997e3bc54de5c27a2b1d07375c9fdf6d3407e080775f5"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-hot02/capture.log"
+sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-hot02/compile.log"
+sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-hot02/input.json"
+sha256 = "b041e896dc7c11c9b6263f81a22168624ed62eeecdb6d5ed6739849428f55f47"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-hot02/manifest.json"
+sha256 = "abd64cb3088dc54a0266df0c275d3953dfe8a4589fca92166d09dac8a4683e40"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-hot02/measurements/01/comparison.json"
+sha256 = "67a2dde5cfa41eb5021624000331e30ddb6959fd79b45a1b926589c39d5b3ed6"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-hot02/measurements/01/initial.json"
+sha256 = "3521312db744c99c460e35cad8ebffe56345904bc39fd3c0dda6a7e69144c356"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-hot02/measurements/01/receipt.json"
+sha256 = "0adc0a10331da0deae12d9db1b4fc2021f511c2a8e4dbb30611c0ec1fa47bc0f"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-hot02/measurements/01/trace.csv"
+sha256 = "be9e019fcf0bea248b2b10c442f0deb16dcd25cd059bf16e8cd3e6a204d2947e"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-hot02/native/initial.json"
+sha256 = "6cd2dd036271dfe9f8ad118e60216c4c864e8a9fc03075141ea4799763758cff"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-hot02/native/reference.json.gz"
+sha256 = "da8b62111b865ffda3468937f26e3d9e47908b19ed17ca45a9c9c00e6ab0a862"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-hot02/native/tables.json"
+sha256 = "850a2817b252119b56815ee4520b9f8ff5b414b48de4aa682b006d05c256d1d6"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-hot02/protocol.json"
+sha256 = "c62fc972d0799c3fa7d32db8e6bcd19fde852b986b8ebe652bbb96de0e7e73cb"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-hot02/publication.json"
+sha256 = "4a8de8fe0416eb16317ca60dce737b88be02d2518c3e68c7f374e59fe416a26c"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-hot02/registration.json"
+sha256 = "2a96a991280350860606f98e0f13c7560c53a7f8f32c3bce6d3c096fcce28dc6"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-hot02/wine-isolation/isolation.json"
+sha256 = "4dca58b6398334f04f7f87189d3e850153b8b46a236ba15955cc2898deea2b71"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-hot02/wine-isolation/release.json"
+sha256 = "d47b71c45640a3bec57b0017b21aa6fb056dbbacc352b123242335584d25454d"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-subsystems/execution/receipt.json"
+sha256 = "8b90bdc040d3f02ea57cb21275d6732b60ea80b5c8a2328a62cfb1f21a6d10cd"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-subsystems/execution/result.json"
+sha256 = "b126ab29fc91649d637b45fa54ef742adaa12a368e137ad6b3ded08f667909c2"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-subsystems/execution/run.log"
+sha256 = "aaf22f351caef1c7353c2ef6154ec3c282b997e0362a7bb571a7fe79e810aa57"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-subsystems/extract-fixture.py"
+sha256 = "d864fc72d482ad6d592f3d9cbfa291db86f9f3b17bcac9b6401091788640833e"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-subsystems/protocol.json"
+sha256 = "c62fc972d0799c3fa7d32db8e6bcd19fde852b986b8ebe652bbb96de0e7e73cb"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-subsystems/provenance.json"
+sha256 = "b81e0cb568f51a45dfe10998e3973fe6ccc65dedc0034a6275db43aac0d60b9d"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-subsystems/raw-manifests/cold_subsystem.json"
+sha256 = "69c3e00601db4b00e79b77f07cd18de4c30e547481f8635588e5b02fdd999915"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-subsystems/raw-manifests/hot_subsystem.json"
+sha256 = "abd64cb3088dc54a0266df0c275d3953dfe8a4589fca92166d09dac8a4683e40"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-subsystems/reference.json"
+sha256 = "c4183cc9a0585d331741b0de8cfb1b2ed6300f4152396399fb9cf402305c9fef"
+
+[[files]]
+path = "oracles/steam-cycle-161-execution.json"
+sha256 = "d60bf39d0c030d0214447c9d768020b6ff9db9f4f4c03708abb47d2d4f33e21e"
+
+[[files]]
+path = "oracles/steam-cycle-161-protocol.json"
+sha256 = "c62fc972d0799c3fa7d32db8e6bcd19fde852b986b8ebe652bbb96de0e7e73cb"
+
+[[files]]
+path = "scripts/capture_steam_cycle_reference.py"
+sha256 = "6274314678cc3d98c52997e3bc54de5c27a2b1d07375c9fdf6d3407e080775f5"
+
+[[files]]
+path = "scripts/extract_steam_cycle_fixture.py"
+sha256 = "d864fc72d482ad6d592f3d9cbfa291db86f9f3b17bcac9b6401091788640833e"
+
+[[files]]
+path = "scripts/publish_steam_cycle_reference.py"
+sha256 = "a9ada05fd96769d00836ee770db3bfbdb6a76dbf4a7243c5675e151c8192b9bb"
+
+[[files]]
+path = "tools/openrails-reference/SteamCycleReference.cs"
+sha256 = "b06428684307771e624ee4c21df48d6e822117cacf8360b63d7a881b70dc6d38"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-own-ledger03/excerpt.log"
+sha256 = "ed70c17f5854f8c084b34e6666480d7190dbe28bd275b405a7d625483da6abb1"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-own-ledger03/receipt.json"
+sha256 = "ab9847ba520cc2bc45696ed6576932dfd1b45299a53c1f4703435cfd6aeebdcf"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-own-ledger03/result.json"
+sha256 = "cd348407e040d306443cb908f66e0af7ea3ba039f32859dbde64879067499c69"
+
+# Additive original LIRR tunnel diagnostics and prescribed subsystem reference.
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/README.md"
+sha256 = "2f136300e9b1a3a15c90d4b2825dc9c544c81f4265e71315a9738307d154ebaf"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/capture-sources/ActivityTrajectory07.cs"
+sha256 = "d292049916f4840ad3fdd93e9f3eb197c8505046ca698606e5977168b9d4bfe6"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/capture-sources/ActivityTrajectoryDiagnostics.cs"
+sha256 = "309729644b9f4d2c5692789b4079ddf24b1d56ecc914d2bf417b0f4722b03113"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/capture-sources/HeadlessCapture.cs"
+sha256 = "c832f071a28f61178da2814d382069c3dc15cdb2aff7b89f40fe5974ffdb60a0"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/capture-sources/capture-script.py"
+sha256 = "04052466686190652c19e6281e42b93601744fde412830c5178f1aa28d68e308"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/capture-sources/capture-script07.py"
+sha256 = "19d08aa0ed4a2d17aba8f0d3961c1424866446e735a0cdedbe89e7afb1142aeb"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/capture-sources/declaration.json"
+sha256 = "f5a3f23d34b8d5aad26694fdd856862d48e228ba9da62c0748d52261c7a22b5d"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/capture-sources/oracle_wine.py"
+sha256 = "4e87773fd3fe535f5660a427ea12b8b6a716266ebf9161e433aa66fc86e9f590"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/capture-sources/protocol.json"
+sha256 = "7f5d39ada7927a4048ab63ae6a85311f47e2769e77095d5d6893133639d381b4"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/capture-sources/reference-pin-at-capture.toml"
+sha256 = "1bdb2732be0d2ee869e4635835781984ca765d142d9ef337e77b9f86bba4d92b"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/capture.log"
+sha256 = "911cb048532facbc1cca5a0e733f952ef4ee36679e92ecab40c7164730b805ad"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/compile.log"
+sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/manifest.json"
+sha256 = "ff7ae813e38c837529c622153a2c5f0f2835c0970f66569db7bc5be51495cf72"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/native/initial.json"
+sha256 = "4e58cffabe8aebb63cee29144b813b594abd8944baf3836ac718eb90dc041fa7"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/native/outcome.json"
+sha256 = "578871d156b8446e5b5624262b1207cf61f418c100a12dbe69163254ca6a8b95"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/native/trace.csv.gz"
+sha256 = "546f42528beaa1854ae5bebb0a6548496bda185283e900cda9767b1391c15343"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/native-coverage.json"
+sha256 = "d930fd917bd1b27eb72eda2c6bf8acd1a018ff09a8f9e93eb88371dfd62423ee"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/publication.json"
+sha256 = "eaec000b97044e621b2f8833785a0743a9e3131f42f71035eb7007a69e2fccea"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/receipt.json"
+sha256 = "e23d05891364016280192a34d687371fca727fe60bc4cb9daaff148c6e7a0d3b"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/source-lineage.json"
+sha256 = "b64ceed5f07d54589c96b427e573af087fa8bd9c12f100fbfdd0aab92be01001"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/telemetry-integrity.json"
+sha256 = "a585b2c03c694a0158cfe3cd74e7c55301129a3b35b1b341d0c2739dc4fa11ec"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/tunnel-diagnostic.json"
+sha256 = "82895f80c12fa8e619dfaae74099389ff8697a58498dc95b41fff11e2aac0fc5"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/wine-isolation/isolation.json"
+sha256 = "4dca58b6398334f04f7f87189d3e850153b8b46a236ba15955cc2898deea2b71"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/wine-isolation/release.json"
+sha256 = "4caf8a4b12558e01ef4d069eb21b12939c8e12fcaacec440d23e7be98a7967d7"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/tunnel-or161/README.md"
+sha256 = "843155b8c423373269347bfb43cfe30dcbbafc119f0437dc324b97476ef43336"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/tunnel-or161/extract-fixture.py"
+sha256 = "9d72be455cc0df0c94487dee162a1e52a55f0cf84d0827f38fd3439073dd9539"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/tunnel-or161/native08-manifest.json"
+sha256 = "ff7ae813e38c837529c622153a2c5f0f2835c0970f66569db7bc5be51495cf72"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/tunnel-or161/protocol.json"
+sha256 = "49eed6db5e701f9e513a5f4b15091ba5f8c17a42435136da835a850df8877705"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/tunnel-or161/provenance.json"
+sha256 = "9f9e9b8265fd74de339ba83b037484237f30e35159cbb5012ad4ba8a2af7f3f1"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/tunnel-or161/reference.json"
+sha256 = "aee7e30da94c70e700c087f3dd7b7e7cc9d859d09152254d2bcdf75e322cc40c"
+
+[[files]]
+path = "oracles/tunnel-161-protocol.json"
+sha256 = "49eed6db5e701f9e513a5f4b15091ba5f8c17a42435136da835a850df8877705"
+
+[[files]]
+path = "scripts/extract_tunnel_reference.py"
+sha256 = "9d72be455cc0df0c94487dee162a1e52a55f0cf84d0827f38fd3439073dd9539"
+
+[[files]]
+path = "tools/openrails-reference/ActivityTrajectoryDiagnostics.cs"
+sha256 = "309729644b9f4d2c5692789b4079ddf24b1d56ecc914d2bf417b0f4722b03113"
+
+[[files]]
+path = "oracles/coupling-rust-twenty-systems-final-20261015.json"
+sha256 = "e32536dbf626294b70c334c188f685e4eeb82b593ac7ff179d67f8fb20d7a7b1"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-twenty-systems-final-20261015/depot.json"
+sha256 = "a8053fa1254dbd21cd1bcc71c3eaae8d817565736adf89ca9f68168f2064a72e"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-twenty-systems-final-20261015/execution.json"
+sha256 = "25d29a348ea289452cdd5320458a5ef3623ffc4f10ec6aa33a37a31bee916c38"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-twenty-systems-final-20261015/receipt.json"
+sha256 = "d20f1bd9f0314026e149929fa0ae4443e9c3488873e42582cd637bc26562dcd7"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-twenty-systems-final-20261015/source-inputs.json"
+sha256 = "8fdb74895b6cd4a009bca461cd3993e65ef9a55e6f5afec1e4847b0a864897bd"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed08/README.md"
+sha256 = "fd69854970d077fe340d87d4ead91aeb5b5cc0aad571494db9dd823d0401129d"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed08/build-fixture-snapshot.json"
+sha256 = "39bdbb77fa0836682696a4ef0f5904db2ac8877a7c4073eac095c6e0b1c119cf"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed08/build-result.json"
+sha256 = "e248ffe7d669b5249f13dc94f36130dfdd3d21c42bd66a4687d7cc7e0ddc39e3"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed08/build-source-snapshot.json"
+sha256 = "683608559ede78f65565b7543988a7c7cac4c726ce53281986142cab934db937"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed08/comparison.json"
+sha256 = "9237adc95b6a38660749d3f219e6ed07f3bf3fd80310c9b03a278b98a5c51dd4"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed08/configuration-overlay.json"
+sha256 = "7b229e02a8bcf185b504e3cbf89561f912909379e57bfaad43b5c9bf1976e2b2"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed08/driver-input.json"
+sha256 = "7b53ccb5d142cb3846a21fce3580ac4d7fb9e725c384a1d8054755088c0d18e1"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed08/execution.log"
+sha256 = "9237adc95b6a38660749d3f219e6ed07f3bf3fd80310c9b03a278b98a5c51dd4"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed08/initial.json"
+sha256 = "e5026ad3387486eaff1b85411382a1b2a642591e3360cc0c30b31c2ee0c11ae3"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed08/publication.json"
+sha256 = "b6f37b287e01485f009aebb3523dfa1fc919a4f8b9122674dd804c41178cbf0f"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed08/receipt.json"
+sha256 = "a056348732afff9725e8662f9871c09a21adb9a255443bdbf0738209d531fbc1"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed08/trace.csv"
+sha256 = "4731aa2fd81823ec7a2d1d143d65aab93283214f5f7208a735717e2e531a4d63"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-full-service-replay10/README.md"
+sha256 = "dd70a97187437a5337052d7ac086decb73878ff76806a865189e879ec2f743d7"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-full-service-replay10/acceptance-fixture-inputs.json"
+sha256 = "39bdbb77fa0836682696a4ef0f5904db2ac8877a7c4073eac095c6e0b1c119cf"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-full-service-replay10/build11.json"
+sha256 = "e248ffe7d669b5249f13dc94f36130dfdd3d21c42bd66a4687d7cc7e0ddc39e3"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-full-service-replay10/comparison.json"
+sha256 = "cc8d3029601c4ab8a4d02da4d90da27b14162cdf64d3978444bccf07fa83ae11"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-full-service-replay10/configuration.json"
+sha256 = "42a8f60f2a1ad9cd830814b87b6802ed697909780d2e75d5d5ab22997cd29870"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-full-service-replay10/history.json"
+sha256 = "25fdeff71ab9a4cc885895498182c7f7204b95e61c992ba5505bf02f91950b53"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-full-service-replay10/import.log"
+sha256 = "70ec6506f7f418d8ddc2bbf33ff1cff562ba37fc79563d6eebedcc9df4ee08af"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-full-service-replay10/manifest.json"
+sha256 = "d8dea5722db5d07e29fd76c48c0d8ff4b1be56a34b2b53110ee4bdc41ceb6333"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-full-service-replay10/protocol.json"
+sha256 = "7f5d39ada7927a4048ab63ae6a85311f47e2769e77095d5d6893133639d381b4"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-full-service-replay10/receipt.json"
+sha256 = "d5d8af3ce6ea99b45deba91a5461c40f42801dd45998430099b3d84e05a2b554"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-full-service-replay10/replay-script.py"
+sha256 = "00850e74431b7cc3cb4abe3122c8ed4f247f3b277268ac71a9962dd1679f6118"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-full-service-replay10/replay.log"
+sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-full-service-replay10/runtime-source-inputs.json"
+sha256 = "683608559ede78f65565b7543988a7c7cac4c726ce53281986142cab934db937"
+
+[[files]]
+path = "docs/fixtures/compatibility/twenty-20261015/lirr-full-service-replay10/rust.csv.gz"
+sha256 = "aa6c922aee9702b79e1a20c1afa86e9a44ebe5ea62598444261470fd710aa0c2"
+
+[[files]]
+path = "docs/NATIVE_PLAIN_AIR.md"
+sha256 = "d4ab6d155da2f6338265eca9df4fdb93c458e1f8720b039a8cf14e981679fdf3"
+
+[[files]]
+path = "docs/NATIVE_TUNNEL_RESISTANCE.md"
+sha256 = "0122f871b43f41a8f0eba8cc83ae67772c054842f99c7c5784209e422440a161"
+
+[[files]]
+path = "oracles/coupling-rust-twenty-systems-finalcheck-20261016.json"
+sha256 = "e32536dbf626294b70c334c188f685e4eeb82b593ac7ff179d67f8fb20d7a7b1"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-twenty-systems-finalcheck-20261016/depot.json"
+sha256 = "a8053fa1254dbd21cd1bcc71c3eaae8d817565736adf89ca9f68168f2064a72e"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-twenty-systems-finalcheck-20261016/execution.json"
+sha256 = "f801699343dfc4638e7b6ad180fbefb3f8d943057ae376cee5490b9499a44ef7"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-twenty-systems-finalcheck-20261016/receipt.json"
+sha256 = "d20f1bd9f0314026e149929fa0ae4443e9c3488873e42582cd637bc26562dcd7"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-twenty-systems-finalcheck-20261016/source-inputs.json"
+sha256 = "bb02bff8d2b0aa457fff8663ff1ab0ad23f500c14d056cb379d116a5222920bf"

@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "published_utc": "2026-10-16T13:43:04.113452+00:00",
+  "status": "FULL_SERVICE_SIX_THRESHOLDS_PASS",
+  "measurement": "LIRR native07 original DLL vs Rust replay10, build11",
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "reference": {
+    "path": "../lirr-native07/reference.csv.gz",
+    "compressed_sha256": "a46bede31e31c8424b6e8081f98dad49f706bc894d4e61708524963ca6e4d70d",
+    "uncompressed_sha256": "21212399f6289ff44b6d108d6312670008e6503abee0054df2d4dd150d6e2be2",
+    "uncompressed_bytes": 49921414
+  },
+  "rust": {
+    "path": "rust.csv.gz",
+    "compressed_sha256": "aa6c922aee9702b79e1a20c1afa86e9a44ebe5ea62598444261470fd710aa0c2",
+    "uncompressed_sha256": "50514006ecc104e5666c3593acc959aba5089d7e6cb11a26fa8494fd6d8c4b1c",
+    "uncompressed_bytes": 3799961
+  },
+  "source_artifact_sha256": {
+    "lirr-replay-10/receipt.json": "d565108ca99ee85586331983731894c5cb29fc0ebf786b1e6d5873a4e6936d76",
+    "build-11-result.json": "e248ffe7d669b5249f13dc94f36130dfdd3d21c42bd66a4687d7cc7e0ddc39e3",
+    "runtime-before-build11.json": "683608559ede78f65565b7543988a7c7cac4c726ce53281986142cab934db937",
+    "compiler-artifacts11.jsonl": "ba77f6789196d2e23a6a6f30c35ac43b0dfaedf8cf6851cb3f6a458981dd01d0",
+    "lirr-native-07/receipt.json": "36654722f5f27b2fe5e7cb88dd3dee7285f97323ee22c2960ed2e9af7c16a312"
+  },
+  "export_transformations": [
+    "Rust CSV gzip with mtime0, byte-identical after decompression; canonical reference reused without modification",
+    "Host path prefixes in JSON/logs replaced by named placeholders; original source hashes retained separately",
+    "No ENG/WAG/CON/PAT/TDB, imported graph, DLL, binary, compiler artifact log or Wine prefix redistributed"
+  ],
+  "files": {
+    "README.md": "dd70a97187437a5337052d7ac086decb73878ff76806a865189e879ec2f743d7",
+    "acceptance-fixture-inputs.json": "39bdbb77fa0836682696a4ef0f5904db2ac8877a7c4073eac095c6e0b1c119cf",
+    "build11.json": "e248ffe7d669b5249f13dc94f36130dfdd3d21c42bd66a4687d7cc7e0ddc39e3",
+    "comparison.json": "cc8d3029601c4ab8a4d02da4d90da27b14162cdf64d3978444bccf07fa83ae11",
+    "configuration.json": "42a8f60f2a1ad9cd830814b87b6802ed697909780d2e75d5d5ab22997cd29870",
+    "history.json": "25fdeff71ab9a4cc885895498182c7f7204b95e61c992ba5505bf02f91950b53",
+    "import.log": "70ec6506f7f418d8ddc2bbf33ff1cff562ba37fc79563d6eebedcc9df4ee08af",
+    "protocol.json": "7f5d39ada7927a4048ab63ae6a85311f47e2769e77095d5d6893133639d381b4",
+    "receipt.json": "d5d8af3ce6ea99b45deba91a5461c40f42801dd45998430099b3d84e05a2b554",
+    "replay-script.py": "00850e74431b7cc3cb4abe3122c8ed4f247f3b277268ac71a9962dd1679f6118",
+    "replay.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "runtime-source-inputs.json": "683608559ede78f65565b7543988a7c7cac4c726ce53281986142cab934db937",
+    "rust.csv.gz": "aa6c922aee9702b79e1a20c1afa86e9a44ebe5ea62598444261470fd710aa0c2"
+  }
+}

@@ -1090,6 +1090,7 @@ fn parse_diesel_power_tab_max(ast: &Ast) -> Option<f64> {
 }
 
 fn parse_steam_fields(ast: &Ast) -> Result<Option<MstsSteamFields>, FormatError> {
+    let full_ast = ast;
     fn steam_body(ast: &Ast) -> Option<&Ast> {
         let Ast::List(items) = ast else { return None };
         if items.iter().any(|a| matches!(a, Ast::List(v)
@@ -1196,6 +1197,44 @@ fn parse_steam_fields(ast: &Ast) -> Result<Option<MstsSteamFields>, FormatError>
         quantity(ast, "ORTSSteamFiremanMaxPossibleFiringRate", "lb/h")?
             .or(quantity(ast, "SteamFiremanMaxPossibleFiringRate", "lb/h")?)
             .unwrap_or(1.);
+    let cylinder_count =
+        super::traction_operation::parse_steam_extensions(ast, &mut operation, cylinder_count)?
+            .unwrap_or(cylinder_count);
+    if let Some(selected) = find_optional_scalar_field(ast, &["ORTSRSNativeSteam161"], "Steam")? {
+        if ![0., 1.].contains(&selected) {
+            return Err(FormatError::UnexpectedAtom {
+                key: "ORTSRSNativeSteam161".into(),
+                context: "Steam".into(),
+                expected: "0 or 1".into(),
+            });
+        }
+        if selected == 1. {
+            if operation.thermodynamics.is_some() || operation.compound.is_some() {
+                return Err(FormatError::UnexpectedAtom {
+                    key: "ORTSRSNativeSteam161".into(),
+                    context: "Steam cycle".into(),
+                    expected: "one selected cycle, without finite-vessel or compound extensions"
+                        .into(),
+                });
+            }
+            operation.native_or161 = Some(super::parse_native_steam161(full_ast)?);
+        }
+    }
+    if operation.thermodynamics.is_some() && pressure > 19.6993 {
+        return Err(FormatError::UnexpectedAtom {
+            key: "MaxBoilerPressure".into(),
+            context: "SteamTable domain".into(),
+            expected: "working pressure whose 1.05 safety limit is at most 300 psi".into(),
+        });
+    }
+    let initial_water_kg = operation.native_or161.as_ref().map_or(
+        quantity(ast, "MaxTenderWaterMass", "kg")?.unwrap_or(12_000.),
+        |p| p.tender_water_capacity_kg as f64,
+    );
+    let initial_coal_kg = operation.native_or161.as_ref().map_or(
+        quantity(ast, "MaxTenderCoalMass", "kg")?.unwrap_or(6_000.),
+        |p| p.tender_coal_capacity_kg as f64,
+    );
     Ok(Some(MstsSteamFields {
         operation,
         cylinder_count,
@@ -1205,8 +1244,8 @@ fn parse_steam_fields(ast: &Ast) -> Result<Option<MstsSteamFields>, FormatError>
         working_pressure_bar: pressure,
         evaporation_rate_kg_per_s: quantity(ast, "MaxBoilerOutput", "lb/h")?.unwrap_or(8.0),
         coal_consumption_kg_per_s: 0.5,
-        initial_water_kg: quantity(ast, "MaxTenderWaterMass", "kg")?.unwrap_or(12_000.),
-        initial_coal_kg: quantity(ast, "MaxTenderCoalMass", "kg")?.unwrap_or(6_000.),
+        initial_water_kg,
+        initial_coal_kg,
     }))
 }
 

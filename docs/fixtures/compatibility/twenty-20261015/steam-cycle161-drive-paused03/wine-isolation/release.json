@@ -1,0 +1,98 @@
+{
+  "schema": 1,
+  "wineserver_stop_returncode": 0,
+  "remaining_processes": [],
+  "forbidden_drivers_seen": [],
+  "observation_count": 121,
+  "commands": [
+    {
+      "args": [
+        "wine",
+        "reg",
+        "add",
+        "HKCU\\Software\\Wine\\Drivers",
+        "/v",
+        "Graphics",
+        "/t",
+        "REG_SZ",
+        "/d",
+        "null",
+        "/f"
+      ],
+      "pid": 59222,
+      "returncode": 0,
+      "elapsed_s": 0.9178044509999381,
+      "log": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/steam-native-cycle03/wine-isolation/registry-set-0.log"
+    },
+    {
+      "args": [
+        "wine",
+        "reg",
+        "add",
+        "HKCU\\Software\\Wine\\WineDbg",
+        "/v",
+        "ShowCrashDialog",
+        "/t",
+        "REG_DWORD",
+        "/d",
+        "0",
+        "/f"
+      ],
+      "pid": 59292,
+      "returncode": 0,
+      "elapsed_s": 0.16458808700008376,
+      "log": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/steam-native-cycle03/wine-isolation/registry-set-1.log"
+    },
+    {
+      "args": [
+        "wine",
+        "reg",
+        "query",
+        "HKCU\\Software\\Wine\\WineDbg",
+        "/v",
+        "ShowCrashDialog"
+      ],
+      "pid": 59307,
+      "returncode": 0,
+      "elapsed_s": 0.10976353799924254,
+      "log": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/steam-native-cycle03/wine-isolation/registry-query.log"
+    },
+    {
+      "args": [
+        "wine",
+        "C:\\windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe",
+        "/nologo",
+        "/out:SteamCycleReference.exe",
+        "/r:RunActivity.exe",
+        "/r:Orts.Simulation.dll",
+        "/r:Orts.Settings.dll",
+        "/r:Orts.Common.dll",
+        "/r:Orts.Formats.Msts.dll",
+        "/r:Orts.Parsers.Msts.dll",
+        "/r:MonoGame.Framework.dll",
+        "/r:Newtonsoft.Json.dll",
+        "/r:GNU.Gettext.dll",
+        "Z:\\home\\cristian\\repos\\propios\\ProyectoOpenRails\\openrailsrs\\tmp\\twenty-20261015\\steam-native-cycle03\\SteamCycleReference.cs"
+      ],
+      "pid": 59310,
+      "returncode": 0,
+      "elapsed_s": 0.27338386500014167,
+      "log": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/steam-native-cycle03/compile.log"
+    },
+    {
+      "args": [
+        "wine",
+        "SteamCycleReference.exe",
+        "Z:\\home\\cristian\\repos\\propios\\ProyectoOpenRails\\openrailsrs\\tmp\\twenty-20261015\\steam-native-cycle03\\content\\ROUTES\\Chiltern\\PATHS\\RS_HiWyc-Marylebone1710atDenham.pat",
+        "Z:\\home\\cristian\\repos\\propios\\ProyectoOpenRails\\openrailsrs\\tmp\\twenty-20261015\\steam-native-cycle03\\content\\TRAINS\\CONSISTS\\physical_seven_original_steam.con",
+        "Z:\\home\\cristian\\repos\\propios\\ProyectoOpenRails\\openrailsrs\\tmp\\twenty-20261015\\steam-native-cycle03\\native",
+        "Z:\\home\\cristian\\repos\\propios\\ProyectoOpenRails\\openrailsrs\\tmp\\twenty-20261015\\steam-native-cycle03\\input.json"
+      ],
+      "pid": 59313,
+      "returncode": 0,
+      "elapsed_s": 5.148604601000443,
+      "log": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/steam-native-cycle03/capture.log"
+    }
+  ],
+  "only_private_prefix": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/lirr-wine-prefix"
+}

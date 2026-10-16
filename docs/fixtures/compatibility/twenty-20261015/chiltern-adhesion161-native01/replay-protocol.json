@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "status": "declared_before_first_rust_environmental_replay",
+  "original_capture_protocol_sha256": "5f6fbc7c37427b54910dd68b53397773b96018f07286cabd713438ae84c63cd4",
+  "input_schema": [
+    "time_s",
+    "vehicle",
+    "input_factor",
+    "base_factor",
+    "filter_x0",
+    "filter_x1",
+    "filter_y0",
+    "filter_y1"
+  ],
+  "initial": "actual original x/y buffers only at time0; both locomotives have allzero buffers and base0, not Reset(.5)",
+  "post_tick": "Read exact Single x0 and original base. Derive realized variation Single(input_factor-base_factor), then combine it with our independently evolved local base determined by our own position/weather. Do not anchor slippery transition to native motion/position.",
+  "base_observation_scope": "subtraction and validation only; not a prescribed runtime base transition",
+  "post_tick_filter_state": "all four x/y columns are empty; output y0 resides only in isolated filter oracle, never in runtime input file",
+  "filter_maximum_absolute_error": 1e-06,
+  "prior_motion_limits_unchanged": true,
+  "original_service_protocol": "oracles/chiltern-service.toml",
+  "original_service_protocol_sha256": "5f5978ccad9fa239227cae4d8a0ac5131e6c19906d5efbde5882d163e3ef5c3c",
+  "runtime_input": "examples/chiltern_local/physics/native-adhesion-inputs.csv",
+  "runtime_input_sha256": "355be676ad0d64120aa66014efd3f31f18d5848e863451d61ecc01d5570155a7",
+  "trace_identity": "all15003rows/all20columns rawbyteSHAad9e690435d784df243c8a49bfdb37137c6e5f98f8941045adfde27e4500a7e2",
+  "source_scope": "single frozen original environmental input realization; no output forces/speeds/slip/filter state prescribed afterstart"
+}

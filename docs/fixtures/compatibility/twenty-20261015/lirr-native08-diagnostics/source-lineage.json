@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "kind": "native08_additive_diagnostics_provenance",
+  "native07_private_receipt_sha256": "36654722f5f27b2fe5e7cb88dd3dee7285f97323ee22c2960ed2e9af7c16a312",
+  "native07_trace_sha256": "21212399f6289ff44b6d108d6312670008e6503abee0054df2d4dd150d6e2be2",
+  "native08_trace_sha256": "362ecf741d06ae02e5bfb6ea67af88559d0f98adf631342d42e070c91f4eb13a",
+  "original_helper07_public": "docs/fixtures/compatibility/twenty-20261015/lirr-native07/ActivityTrajectory.cs",
+  "original_helper07_sha256": "d292049916f4840ad3fdd93e9f3eb197c8505046ca698606e5977168b9d4bfe6",
+  "diagnostic_helper08_sha256": "309729644b9f4d2c5692789b4079ddf24b1d56ecc914d2bf417b0f4722b03113",
+  "native_only_no_rust_source_identity_claim": true,
+  "input_files_checked_pre_and_post": 280,
+  "all_registered_inputs_unchanged": true,
+  "dll_recheck": {
+    "RunActivity.exe": {
+      "runtime_sha256_before_execution": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2",
+      "original_sha256_after_execution": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2",
+      "runtime_sha256_after_execution": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2"
+    },
+    "Orts.Simulation.dll": {
+      "runtime_sha256_before_execution": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679",
+      "original_sha256_after_execution": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679",
+      "runtime_sha256_after_execution": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679"
+    },
+    "Orts.Common.dll": {
+      "runtime_sha256_before_execution": "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212",
+      "original_sha256_after_execution": "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212",
+      "runtime_sha256_after_execution": "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212"
+    },
+    "Orts.Settings.dll": {
+      "runtime_sha256_before_execution": "fe0d8d81149f480f3972c80e64ffaf6012c7599e32c26c8e4d46510e3edbb2e7",
+      "original_sha256_after_execution": "fe0d8d81149f480f3972c80e64ffaf6012c7599e32c26c8e4d46510e3edbb2e7",
+      "runtime_sha256_after_execution": "fe0d8d81149f480f3972c80e64ffaf6012c7599e32c26c8e4d46510e3edbb2e7"
+    },
+    "Orts.Formats.Msts.dll": {
+      "runtime_sha256_before_execution": "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465",
+      "original_sha256_after_execution": "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465",
+      "runtime_sha256_after_execution": "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465"
+    },
+    "Orts.Parsers.Msts.dll": {
+      "runtime_sha256_before_execution": "8e0781c9f861ed95b4467d1bf948ea7aca896d634f21ac5952f97a9f630d0b36",
+      "original_sha256_after_execution": "8e0781c9f861ed95b4467d1bf948ea7aca896d634f21ac5952f97a9f630d0b36",
+      "runtime_sha256_after_execution": "8e0781c9f861ed95b4467d1bf948ea7aca896d634f21ac5952f97a9f630d0b36"
+    },
+    "MonoGame.Framework.dll": {
+      "runtime_sha256_before_execution": "c6a16c29705a4c847e0e4a2647bf432604cd9320cbc5d4125ab01ae7bb7e6542",
+      "original_sha256_after_execution": "c6a16c29705a4c847e0e4a2647bf432604cd9320cbc5d4125ab01ae7bb7e6542",
+      "runtime_sha256_after_execution": "c6a16c29705a4c847e0e4a2647bf432604cd9320cbc5d4125ab01ae7bb7e6542"
+    },
+    "Newtonsoft.Json.dll": {
+      "runtime_sha256_before_execution": "9af2e1c672afd67a291b8f2031a341a3788d4d9f683eaddc6ceab3a3a74c546e",
+      "original_sha256_after_execution": "9af2e1c672afd67a291b8f2031a341a3788d4d9f683eaddc6ceab3a3a74c546e",
+      "runtime_sha256_after_execution": "9af2e1c672afd67a291b8f2031a341a3788d4d9f683eaddc6ceab3a3a74c546e"
+    }
+  },
+  "dll_precheck_method": "Hashes were recorded on runtime files copied directly from original installation before compilation/execution; post-check verifies those same runtime files and all original corresponding DLLs against that pre-execution image.",
+  "wine_owned_processes_after_capture": [],
+  "human_trace_hashes_unchanged": true,
+  "original_thresholds_unchanged": true,
+  "numeric_model_hypothesis_implemented": false
+}

@@ -780,6 +780,7 @@ mod tests {
                     cooling_on: false,
                     rpm,
                     demanded_rpm: rpm,
+                    native_rpm_rate: 0.,
                     command_running: true,
                     phase: openrailsrs_sim::diesel_operation::EnginePhase::Running,
                     fuel_l: 25.,
@@ -787,6 +788,7 @@ mod tests {
                     refilled_l: 0.,
                     flow_lps: 0.,
                     gearbox: None,
+                    hydraulic: None,
                 },
             )
             .collect();

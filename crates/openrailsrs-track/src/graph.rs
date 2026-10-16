@@ -56,6 +56,9 @@ pub struct Edge {
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct EdgePhysicsProfile {
+    /// Native TSECTION tunnel groups, independently mirrored for each direction.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub native_tunnels: Vec<crate::tunnel::NativeTunnel>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub curves: Vec<PositionCurve>,
     /// Native PhysElevTable samples, independent of visual signed roll.
@@ -137,6 +140,9 @@ impl TrackGraph {
         profile
             .curves
             .sort_by(|a, b| a.position_m.total_cmp(&b.position_m));
+        profile
+            .native_tunnels
+            .sort_by(|a, b| a.start_m.total_cmp(&b.start_m));
         self.profiles.insert(edge.into(), profile);
     }
     pub fn physics_profile(&self, edge: &str) -> Option<&EdgePhysicsProfile> {
@@ -396,6 +402,11 @@ impl TrackGraph {
                 && let Some(original) = self.profiles.get(id)
             {
                 profile.track_sound_regions = original.track_sound_regions.clone();
+            }
+            if profile.native_tunnels.is_empty()
+                && let Some(original) = self.profiles.get(id)
+            {
+                profile.native_tunnels = original.native_tunnels.clone();
             }
             graph.set_physics_profile(id, profile);
         }

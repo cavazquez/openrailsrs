@@ -1,0 +1,32 @@
+[scenario]
+name="Consecuencia opcional de descarga en curva"
+description="Contenido propio. Tablas/válvulas originales separadas de extensiones declaradas; validación pendiente de fase conjunta."
+[route]
+path="../player_lab/bogie_curve_route"
+start="n0"
+destination="n38"
+start_offset_m=135.0
+assume_signals_clear=true
+[train]
+consist="consists/hydraulic.con"
+[simulation]
+duration=120.0
+time_step=0.05
+seed=20261015
+multi_body=true
+[gameplay]
+objective="arrive"
+difficulty="normal"
+[output]
+csv="run.csv"
+metadata="run.json"
+
+[[train.bogie_dynamics]]
+vehicle=0
+[train.bogie_dynamics.derailment]
+enabled=true
+minimum_speed_mps=1.0
+nadal_multiplier=1.0
+unloading_fraction=0.05
+persistence_s=0.1
+offrail_drag_mu=0.5

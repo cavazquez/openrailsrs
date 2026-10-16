@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "reference": "Open Rails 1.6.1",
+  "commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "inputs": {
+    "ROUTES/Chiltern/Chiltern.tdb": "acc945a063dce6a3272bfae610c48b2aff939d2435d5b1db07f2b36614e7b47a",
+    "ROUTES/Chiltern/Chiltern.trk": "6db1a0902bcf8521dab2eda59106ea7070688597b27c0f83f0a1788e2b8d585c",
+    "GLOBAL/tsection.dat": "7e05b50bb86a279c0881d05248da220b0804e34aa0452633baf8ba95361888fa",
+    "ROUTES/Chiltern/tsection.dat": "d3461dc5ab7c88442905ded34e7947c7374f45034f0f7f8bbdbecf40d92e9dc9",
+    "ROUTES/Chiltern/OpenRails/tsection.dat": "fff0b45ddf8387f6746f765868f1298760a45cd6693b5b08d5ebac65818726a4"
+  },
+  "command": [
+    "target/debug/openrailsrs",
+    "import-msts",
+    "<original-content>/ROUTES/Chiltern",
+    "--out-dir",
+    "<new-output>"
+  ],
+  "import_binary_sha256": "994d4b7fc17963d28ea109abfd0084ad11d7980d8415c135c0e936f5f2bdef6e",
+  "full_imported_track_sha256": "b53b89d6d9539c265bfe9179fc449bb51ca96d46e657cdce7615ed3b514579c2",
+  "projection_sha256": "02bf431d3113cfcd5f81d1528e833f5c4bc33bc13390a7917fab9382d3975d0d",
+  "projection_edges": 32,
+  "integration_sha256": "e7bf47e574944a6be735e49f0027099bf5d64e044ac29fb79d4fad34521ae281",
+  "source_only": true,
+  "native_trajectory_outputs_used_as_inputs": false,
+  "scope": "Curves/cant only on existing edges with unchanged original physical length. All six directed edges in the historical three-station corridor are covered. Two legacy e14615 edges outside that corridor have a separate 600 m length discrepancy, explicitly excluded here. No claim of full six-station physics parity."
+}

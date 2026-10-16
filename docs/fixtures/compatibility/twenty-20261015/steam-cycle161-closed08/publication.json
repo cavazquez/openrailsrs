@@ -1,0 +1,165 @@
+{
+  "schema": 1,
+  "kind": "immutable_rust_native_steam_measurement_publication",
+  "source_attempt": "tmp/twenty-20261015/steam-native-compare08",
+  "copied_bytes_unchanged": true,
+  "files_sha256": {
+    "build-fixture-snapshot.json": "39bdbb77fa0836682696a4ef0f5904db2ac8877a7c4073eac095c6e0b1c119cf",
+    "build-result.json": "e248ffe7d669b5249f13dc94f36130dfdd3d21c42bd66a4687d7cc7e0ddc39e3",
+    "build-source-snapshot.json": "683608559ede78f65565b7543988a7c7cac4c726ce53281986142cab934db937",
+    "comparison.json": "9237adc95b6a38660749d3f219e6ed07f3bf3fd80310c9b03a278b98a5c51dd4",
+    "configuration-overlay.json": "7b229e02a8bcf185b504e3cbf89561f912909379e57bfaad43b5c9bf1976e2b2",
+    "driver-input.json": "7b53ccb5d142cb3846a21fce3580ac4d7fb9e725c384a1d8054755088c0d18e1",
+    "execution.log": "9237adc95b6a38660749d3f219e6ed07f3bf3fd80310c9b03a278b98a5c51dd4",
+    "initial.json": "e5026ad3387486eaff1b85411382a1b2a642591e3360cc0c30b31c2ee0c11ae3",
+    "receipt.json": "a056348732afff9725e8662f9871c09a21adb9a255443bdbf0738209d531fbc1",
+    "trace.csv": "4731aa2fd81823ec7a2d1d143d65aab93283214f5f7208a735717e2e531a4d63"
+  },
+  "status": "within_prior_limits",
+  "completed_ticks": 1600,
+  "dt_s": 0.05,
+  "duration_s": 80.0,
+  "selected_model": "native-or161",
+  "binary_sha256": "922c65c5fb31dbd280773b36412aef72b58af87dd98caaa1b50ca8443577fb77",
+  "build_source_snapshot_sha256": "683608559ede78f65565b7543988a7c7cac4c726ce53281986142cab934db937",
+  "build_source_count": 752,
+  "build_fixture_snapshot_sha256": "39bdbb77fa0836682696a4ef0f5904db2ac8877a7c4073eac095c6e0b1c119cf",
+  "build_fixture_files_unchanged": 27,
+  "measured_source_file_count": 728,
+  "actual_measured_source_hashes": "receipt.json#/measurement_source_sha256",
+  "comparator_source_sha256": "e644933ed69f6a5c5d951a7b735683b07046e2eb0d693fe06e827e8c15382fe2",
+  "hardware_and_controls": "configuration-overlay.json plus literal captured driver-input.json; authored STF native profile, independently initialized; no measured thermal or motion state supplied",
+  "original_capture_manifest_sha256": "667fb11206aa479c6a6d5901e880f0d1c1f1ad1699643c598d667620db774014",
+  "original_trace_sha256": "caf524d9dad7c1034d5df1a41de034b589d6e0d943981116c4cda2f72e93683b",
+  "original_protocol_sha256": "7e82b09d91489f63981c4082de87d39d245b3152105f9fe2b20b55ad5d0f018c",
+  "native_reference": "../physical-native05/native-steam/steam-drive.json",
+  "static_context": "../steam-cycle161-drive-paused03/native/initial.json",
+  "static_context_manifest_sha256": "866a9c084f7855712aefd5a9810ff9b3caf786ad33bcdff7ce44104d9a0c871b",
+  "limits": {
+    "boiler_enthalpy_j_abs": 100000.0,
+    "boiler_mass_kg_abs": 1.0,
+    "coal_burn_kg_s_abs": 0.05,
+    "distance_m_abs": 2.0,
+    "injection_kg_s_abs": 0.05,
+    "injector_state": "exact",
+    "motive_force_n_abs": 100.0,
+    "pressure_bar_abs": 0.1,
+    "production_kg_s_abs": 0.1,
+    "scope": "Prior diagnostic limits, including independently initialized state. A failure remains a failure and does not become an extension-parity claim.",
+    "speed_mps_abs": 0.1,
+    "steam_consumption_kg_s_abs": 0.1,
+    "tender_coal_kg_abs": 1.0,
+    "tender_water_kg_abs": 1.0,
+    "water_fraction_abs": 0.002
+  },
+  "maximum_errors": {
+    "boiler_heat_btu": {
+      "maximum_absolute_error": 31.5,
+      "phase": "coast",
+      "worst_tick": 1102
+    },
+    "boiler_heat_j": {
+      "maximum_absolute_error": 33234.25935745239,
+      "phase": "coast",
+      "worst_tick": 1102
+    },
+    "boiler_mass_kg": {
+      "maximum_absolute_error": 0.0223606863655732,
+      "phase": "coast",
+      "worst_tick": 1355
+    },
+    "boiler_mass_lb": {
+      "maximum_absolute_error": 0.04929687500043656,
+      "phase": "coast",
+      "worst_tick": 1355
+    },
+    "coal_burn_kg_s": {
+      "maximum_absolute_error": 3.65078657074136e-05,
+      "phase": "coast",
+      "worst_tick": 1101
+    },
+    "distance_m": {
+      "maximum_absolute_error": 1.8623010546875776,
+      "phase": "braking",
+      "worst_tick": 1600
+    },
+    "injection_kg_s": {
+      "maximum_absolute_error": 2.0101583744214224e-06,
+      "phase": "injection",
+      "worst_tick": 1089
+    },
+    "motive_force_n": {
+      "maximum_absolute_error": 18.49223124999844,
+      "phase": "injection",
+      "worst_tick": 1092
+    },
+    "net_evaporation_kg_s": {
+      "maximum_absolute_error": 0.03209464815881802,
+      "phase": "injection",
+      "worst_tick": 929
+    },
+    "pressure_bar": {
+      "maximum_absolute_error": 3.474270893200071e-05,
+      "phase": "braking",
+      "worst_tick": 1592
+    },
+    "pressure_psi": {
+      "maximum_absolute_error": 0.0005039003906119888,
+      "phase": "braking",
+      "worst_tick": 1592
+    },
+    "production_kg_s": {
+      "maximum_absolute_error": 7.570388549815732e-06,
+      "phase": "injection",
+      "worst_tick": 1086
+    },
+    "speed_mps": {
+      "maximum_absolute_error": 0.05043986228027464,
+      "phase": "coast",
+      "worst_tick": 1386
+    },
+    "steam_consumption_kg_s": {
+      "maximum_absolute_error": 0.0010269444555222051,
+      "phase": "steam_load",
+      "worst_tick": 678
+    },
+    "tender_coal_kg": {
+      "maximum_absolute_error": 0.005003906249839929,
+      "phase": "braking",
+      "worst_tick": 1407
+    },
+    "tender_water_kg": {
+      "maximum_absolute_error": 0.0002752127411440597,
+      "phase": "injection",
+      "worst_tick": 978
+    },
+    "thermal_power_w": {
+      "maximum_absolute_error": 9.281640625093132,
+      "phase": "coast",
+      "worst_tick": 1109
+    },
+    "water_fraction": {
+      "maximum_absolute_error": 4.608125305227695e-06,
+      "phase": "braking",
+      "worst_tick": 1596
+    }
+  },
+  "injector_state_mismatches": 0,
+  "full_route_claim": false,
+  "full_workspace_gate_claim": false,
+  "full_universal_steam_parity_claim": false,
+  "own_finite_vessel_is_native_cycle": false,
+  "scope": "3F tank, coal, manual fireman, one simple direct-drive engine, non-EQ vacuum, SimpleControlPhysics, Paused=true original reference context. One 80s driven trajectory; no external tender, automatic fireman or native Compound acceptance.",
+  "historical_closed06_preserved": {
+    "publication_sha256": "c7d79ca932faa7113ae1c28cbfc7e049005420a23fcc42ce69fc38519bc1a617",
+    "binary_sha256": "5fc13442f463a20641d6b63e5da177ace6393b22ab4a8f677004215347209a56"
+  },
+  "excluded": [
+    "original ENG/PAT/CON/DLL/runtime/content",
+    "imported full route",
+    "rust-source.diff",
+    "rust-working-tree.txt",
+    "all six human trace contents"
+  ],
+  "provenance_note": "The original measurement receipt and build/source/fixture snapshots remain byte-identical. The receipt records hashes of deliberately unbundled artifacts. HEAD is ancestry; the actual executable and dirty measured sources identify this run. Build source count752 and measurement source count728 use different explicit inventories. This result does not certify later edits or a workspace-wide CI gate."
+}

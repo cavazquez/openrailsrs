@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "completed_utc": "2026-10-16T15:25:32.891581+00:00",
+  "status": "pass",
+  "command": "cargo build --locked --workspace --all-features --bins --examples --message-format=json-render-diagnostics",
+  "source_count": 898,
+  "source_inputs_unchanged": true,
+  "new_acceptance_fixture_files_unchanged": 140,
+  "new_acceptance_fixture_snapshot_sha256": "933b4d0b3f0c581f1545d8abc0911634c98f29f5a06d35b0d2b61e201f30ce64",
+  "source_snapshot_sha256": "8d6fe674c512a07c5f059de063ab4e6acc5398f50c40f33402efb60bf3d265fc",
+  "artifact_log_sha256": "99114cf7e59e249449642b692a080961f6201b0a5200994744911ac62cfd2e3a",
+  "binaries": {
+    "target/debug/openrailsrs": "216f4c859d1472ed7264aad093a083bf4a3d0a29cd333d83ceb6f84928af8fc2",
+    "target/debug/openrailsrs-viewer3d": "ef6eaa4ff3dbed700ba2dbb41938615add4ef700d8bdbff1072478ed6ddf8ed4",
+    "target/debug/examples/activity_trajectory": "c7849328a2c502d371399cd7e4e82a653693b2dbf5ffcbe53c2c432ed8613743",
+    "target/debug/examples/steam_native_compare": "7af6db7f555e2e793d249b5ac53ef086e5ed45f040015700e661a0c6de3699c0",
+    "target/debug/examples/steam_cycle_compare": "7548010316e0e48e5c551dbd3194df8d145d17eaf1166ae295b3639d88d69845"
+  }
+}

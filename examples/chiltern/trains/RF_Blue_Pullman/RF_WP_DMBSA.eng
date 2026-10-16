@@ -306,4 +306,7 @@
     1350 186
     1500 195
   )
+  (ORTSTrackGauge 4ft 8.5in)
+  (ORTSRigidWheelBase 9ft 6in)
+  (ORTSUnbalancedSuperElevation 6in)
 )

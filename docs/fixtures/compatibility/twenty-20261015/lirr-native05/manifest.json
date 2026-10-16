@@ -1,0 +1,78 @@
+{
+  "schema": 1,
+  "capture_kind": "original_dll_calls",
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "status": "HISTORICAL_PAUSED_CONTEXT_NATIVE_COMPLETE_PLAYABLE_ACCEPTANCE_PENDING",
+  "protocol_sha256": "8a861f32454a2bfa2eb6ee497d87b7968aae627a71d1462195704898964c326e",
+  "thresholds": {
+    "velocity_rms_mps": 0.75,
+    "maximum_odometer_error_m": 45,
+    "brake_pipe_rms_psi": 5,
+    "cylinder_rms_psi": 5,
+    "motive_force_rms_n": 5000,
+    "brake_force_rms_n": 5000
+  },
+  "reference": {
+    "file": "reference.csv.gz",
+    "uncompressed_sha256": "86c44d3042dbcd7f7ed398706b7cacfab4e8c441c845ef4b5aaa8c07cc0e9976",
+    "uncompressed_bytes": 14706950,
+    "compressed_sha256": "04cb8cc25ae9db6f67ac583501b43223f4260e1447fb2bd0bb514cf7f5b3fee5",
+    "compressed_bytes": 2686098
+  },
+  "files": {
+    "ActivityTrajectory.cs": "bea60b02ac5cffda07fb88c621ddfdd904da9721c4cce49c99dfa4d48d7f4a6d",
+    "HeadlessCapture.cs": "c832f071a28f61178da2814d382069c3dc15cdb2aff7b89f40fe5974ffdb60a0",
+    "README.md": "730cae5443746e08b4b5a2762f25036e93407e63349f576aac2efe5efa0ebfab",
+    "capture-execution.json": "707f2d30b05966e0218c5a81fee212cd6313851d01e9c350ebd05075acef75ca",
+    "capture-script.py": "355e6cb6988aaf0a49c3be8fb1343477fa6881a1e79b19dcce08908371f50b8c",
+    "coverage.json": "6b64bed2c2f1f3b38c279d97e552c5852c2d0dfe024161c3f43e615a922428db",
+    "diagnostics/replay02-comparison.json": "5cd2236d9cf004fecc04c80fdce0aa52f0732273471e0cab92d53e4d2a2d1133",
+    "diagnostics/replay02-execution.json": "3a4f9fdc063aaf3bf7e7ad8d214c893caf36d3fafd06da63bfcf70291f26575d",
+    "diagnostics/replay02-import.log": "770c0db320544facfb6b954db6dd33fc9d29522abae7d45532e18e0ffc33e4ef",
+    "diagnostics/replay02-replay.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "diagnostics/replay02.csv.gz": "7219734de685608759bd000f4d6feef52db47e07a8417392099e65aef4673b31",
+    "diagnostics/replay03-execution.json": "916a9983e2ab16a0e5cb1b824c61dea02c4a5bd3ec1b709e34da8c2809494408",
+    "diagnostics/replay03-import.log": "e7bc9c598e65e56bbd047c07d6d8a48fc379c1482525435fc323cb38103ae304",
+    "diagnostics/replay03-replay.log": "4596c9fe3017f11d570007446b7445a6c57f3374f3dcc43114cbf3de7e627115",
+    "diagnostics/replay03.csv.gz": "e5aae602f9ea14077792b4dd43ba30cad95a343d8d0d654ad5c45ccd259f72bf",
+    "diagnostics/replay04-comparison.json": "ce196bf1abb9df89ce14dc244ac97fd646327b22e0b506f8bd1ec18bd4c2da23",
+    "diagnostics/replay04-execution.json": "1769cdfdead84a620292eb4281695ce4e6bfdec93c7fa089b2eab1b371db68ae",
+    "diagnostics/replay04-import.log": "0ca533462444e2d6753c16196caa3aea427f4896951dd82d7a04548aa38fd62d",
+    "diagnostics/replay04-replay.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "diagnostics/replay04.csv.gz": "63af4ffef8499b45d5c14db7a6eb4682d555b8226609df752d4a9e7731c100a8",
+    "historical/native04.csv.gz": "c0d699d4f184e11a54886291cb036a7972793f34f284dd0a491f0e1f4c18e51f",
+    "historical-artifacts.json": "079105b1e8f7dea70f3d96105e9aa1bfaae34d4c7af819bcf16e37fb477ffe83",
+    "history.json": "192d3f9ec6926639c5a7eb306204f76ac8596944b3f37210339d132c8b5eeb64",
+    "initial.json": "f40feadd0125835d0e269965a15fd570adf40bc52f7e6f3bb58c75f3f0faa456",
+    "measurement-coherence.json": "b6ee74f83b7bd6402d727806e7a1a0af155c620c406aedc4bb1446516a689456",
+    "measurement-declaration.json": "cb86a81f8b10fabd156694c1ed29258ba9951a8297a7155c3a8cfe49e20c5515",
+    "oracle_wine.py": "4e87773fd3fe535f5660a427ea12b8b6a716266ebf9161e433aa66fc86e9f590",
+    "outcome.json": "0cc87004726a3736a80eee1f924c35762ea59d1bd55449d7ba9a8e3cb8f7619b",
+    "protocol.json": "8a861f32454a2bfa2eb6ee497d87b7968aae627a71d1462195704898964c326e",
+    "reference-pin-at-capture.toml": "1a7a80f560ef1039e237c465621cb3066cbbae56662f7e617f395593783f2970",
+    "reference.csv.gz": "04cb8cc25ae9db6f67ac583501b43223f4260e1447fb2bd0bb514cf7f5b3fee5",
+    "source-inputs.json": "4289395c931ac2a30a916d0482b27bb323a05f55561ee832bf0e14e58f9edad7",
+    "wine-isolation/isolation.json": "c615455118ee7e126ec795e599ab397619b7306263943f24d5a3a892c230e207",
+    "wine-isolation/release.json": "a68f468ab3903cd81e2c80910bb3441e4a1d4705967d4c578c75d2b2f319ec59"
+  },
+  "source_artifact_sha256": {
+    "lirr-native-05/receipt.json": "54e1f878f95327ce5437f89928b9289acabea4ef44bbd63960a13f8fe57d05d5",
+    "lirr-native-05/native/trace.csv": "86c44d3042dbcd7f7ed398706b7cacfab4e8c441c845ef4b5aaa8c07cc0e9976",
+    "lirr-native-05/native/initial.json": "f40feadd0125835d0e269965a15fd570adf40bc52f7e6f3bb58c75f3f0faa456",
+    "lirr-native-05/native/outcome.json": "0cc87004726a3736a80eee1f924c35762ea59d1bd55449d7ba9a8e3cb8f7619b",
+    "lirr-native-05/wine-isolation/isolation.json": "4dca58b6398334f04f7f87189d3e850153b8b46a236ba15955cc2898deea2b71",
+    "lirr-native-05/wine-isolation/release.json": "5b729d2e126977235ce88de42595e0d8a73b97bec357626dfc8aa8ff5641f9d1"
+  },
+  "export_transformations": [
+    "CSV streams compressed losslessly with mtime0; original decompressed hashes retained",
+    "Absolute host paths in receipts/logs replaced by named placeholders; source receipts retain distinct historical hashes",
+    "No original route/stock bytes, imported route graphs, DLLs, Wine prefix or binary exported"
+  ],
+  "context_limitation": "05 inherited Simulator.Paused=true and no original viewer weather initialization. Preserved, not rewritten; see ../lirr-native07 for predeclared live context.",
+  "historical_replay04_raw_sha256": {
+    "lirr-replay-04/receipt.json": "101679fe19ae5d1fc3bf1b8198aaf154854253333650cafe66b181f5537ba23b",
+    "lirr-replay-04/rust.csv": "05a32509a3802ac802148246ac3f17fca70a2ce92cfbf7e3b8509431e66ccbee",
+    "lirr-replay-04/comparison.json": "ce196bf1abb9df89ce14dc244ac97fd646327b22e0b506f8bd1ec18bd4c2da23"
+  }
+}

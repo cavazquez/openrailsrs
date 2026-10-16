@@ -1,5 +1,5 @@
-//! Presentation suspension, independent of railway forces. Track pose is the
-//! rest frame; wheel/bogie children undo the body pose to remain on the rails.
+//! Body presentation consumes physical vertical suspension when configured.
+//! Cosmetic motion remains optional; running gear keeps its track pose.
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -83,6 +83,10 @@ pub struct TrainMotion {
     pub level: MotionLevel,
 }
 
+/// Procedural running gear shares suspension compensation with authored parts.
+#[derive(Component)]
+pub struct FallbackRunningGear;
+
 pub fn restore_running_gear(
     motion: Res<TrainMotion>,
     mut parts: Query<(Entity, &mut Transform), With<TrainExteriorAnimPart>>,
@@ -108,6 +112,9 @@ impl TrainMotion {
             "max_roll_deg":self.cars.values().map(|c|c.roll.position.abs().to_degrees()).fold(0.0_f32,f32::max),
             "max_pitch_deg":self.cars.values().map(|c|c.pitch.position.abs().to_degrees()).fold(0.0_f32,f32::max),
             "max_vertical_m":self.cars.values().map(|c|c.bounce.position.abs()).fold(0.0_f32,f32::max),
+            "physical_max_body_offset_m":self.cars.values().map(|c|c.physical_pose.translation.length()).fold(0.0_f32,f32::max),
+            "physical_max_body_angle_deg":self.cars.values().map(|c|c.physical_pose.rotation.angle_between(Quat::IDENTITY).to_degrees()).fold(0.0_f32,f32::max),
+            "running_gear_parts":self.running_gear.len(),
             "wheel_bogie_pose_compensated":true})
     }
 }
@@ -144,6 +151,50 @@ fn suspension_pose(roll: f32, pitch: f32, bounce: f32) -> Transform {
     Transform::from_translation(pivot - rotation * pivot + Vec3::Y * bounce).with_rotation(rotation)
 }
 
+/// Physical displacements are measured from the track rest frame. Model
+/// coordinates reverse with the stock; authored mesh flips reverse roll/pitch.
+fn vertical_pose(
+    session: &openrailsrs_sim::LiveDriveSession,
+    vehicle: usize,
+    flipped: bool,
+) -> Option<Transform> {
+    let model = session.physics.bogies.get(vehicle)?;
+    let params = model.vertical_suspension.as_ref()?;
+    let state = session.state.bogies.get(vehicle)?.vertical.as_ref()?;
+    if !state.enabled(params) {
+        return None;
+    }
+    let z = state
+        .supports
+        .each_ref()
+        .map(|support| support.wheels.each_ref().map(|w| w.body_z_m));
+    let front = (z[0][0] + z[0][1]) / 2.;
+    let rear = (z[1][0] + z[1][1]) / 2.;
+    let left = (z[0][0] + z[1][0]) / 2.;
+    let right = (z[0][1] + z[1][1]) / 2.;
+    let direction = if flipped { -1. } else { 1. };
+    let roll = ((right - left).atan2(model.gauge_m) * direction) as f32;
+    let pitch = ((rear - front).atan2(model.support_offsets_m[0] - model.support_offsets_m[1])
+        * direction) as f32;
+    Some(suspension_pose(roll, pitch, ((front + rear) / 2.) as f32))
+}
+
+fn has_vertical_physics(session: &openrailsrs_sim::LiveDriveSession) -> bool {
+    session.physics.bogies.iter().enumerate().any(|(i, model)| {
+        model
+            .vertical_suspension
+            .as_ref()
+            .is_some_and(|parameters| {
+                session
+                    .state
+                    .bogies
+                    .get(i)
+                    .and_then(|bogie| bogie.vertical.as_ref())
+                    .is_some_and(|state| state.enabled(parameters))
+            })
+    })
+}
+
 #[allow(clippy::type_complexity)]
 pub fn update(
     live: Res<crate::live::LiveDrive>,
@@ -163,6 +214,7 @@ pub fn update(
                 With<TrainWheelAnim>,
                 With<TrainBogieAnim>,
                 With<TrainKeyedAnim>,
+                With<FallbackRunningGear>,
             )>,
             Without<TrainCarTrackOffset>,
         ),
@@ -184,6 +236,12 @@ pub fn update(
     }
     let scale = level.scale();
     if scale == 0.0
+        && !has_vertical_physics(&live.session)
+        && live
+            .traffic
+            .services
+            .iter()
+            .all(|t| !has_vertical_physics(&t.session))
         && presentation
             .as_ref()
             .is_none_or(|p| p.vehicles.iter().all(|v| v.suspension.is_none()))
@@ -269,7 +327,12 @@ pub fn update(
             .filter(|_| offset.track_index == 0)
             .and_then(|p| p.vehicles.iter().find(|v| v.vehicle == index))
             .and_then(|v| v.suspension.as_ref());
-        let depression = suspension.map_or(0., |s| -s.depression(mass) as f32);
+        let vertical = vertical_pose(session, index, offset.flipped);
+        let depression = if vertical.is_some() {
+            0.
+        } else {
+            suspension.map_or(0., |s| -s.depression(mass) as f32)
+        };
         let omega = suspension.map_or(7., |s| {
             (s.natural_frequency(mass) * s.damping_ratio).clamp(1., 30.) as f32
         });
@@ -298,7 +361,11 @@ pub fn update(
                 f64::from(offset.offset_m),
                 0.0,
             );
-            let response = track_response(distance, speed, index);
+            let response = if vertical.is_some() {
+                Vec3::ZERO
+            } else {
+                track_response(distance, speed, index)
+            };
             car.distance = distance;
             car.vehicle = index;
             let roll = (-lateral * 0.014 + response.y) * scale;
@@ -323,7 +390,8 @@ pub fn update(
             .map_or(0., |c| c.crosswind.angle_rad - c.tilt.angle_rad)
             as f32
             * if offset.flipped { -1. } else { 1. };
-        car.physical_pose = suspension_pose(physical_roll, 0., 0.);
+        car.physical_pose =
+            suspension_pose(physical_roll, 0., 0.) * vertical.unwrap_or(Transform::IDENTITY);
         // Rebuild from spring coordinates every frame; never compound a physical
         // angle onto the previous render pose during pause or a camera switch.
         car.pose = car.physical_pose
@@ -359,6 +427,121 @@ pub fn update(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn driving_physical_suspension_reaches_ecs_mesh_with_cosmetic_motion_off() {
+        use bevy::ecs::system::RunSystemOnce;
+        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../examples/physics_lab/scenario_vertical.toml");
+        let mut live = crate::live::LiveDrive::from_scenario_path(&path).unwrap();
+        assert_eq!(live.session.velocity_mps(), 0.);
+        live.session.driver_direction = 1.;
+        live.session.driver_throttle = 0.8;
+        live.session.driver_brake = 0.;
+        for _ in 0..400 {
+            live.session.step_realtime(0.05, |_| {});
+        }
+        assert!(live.session.state.odometer_m > 1.);
+        let physical = vertical_pose(&live.session, 0, false).unwrap();
+        assert!(physical.translation.length() > 1e-6);
+        live.paused = true;
+        let offset = live.session.formation.center_offset_m(0) as f32;
+        let mut app = App::new();
+        app.insert_resource(live)
+            .insert_resource(crate::player_settings::PlayerSettings {
+                train_motion: MotionLevel::Off,
+                ..default()
+            })
+            .init_resource::<TrainMotion>();
+        let root = app.world_mut().spawn(Transform::IDENTITY).id();
+        let car = app
+            .world_mut()
+            .spawn((
+                Transform::IDENTITY,
+                ChildOf(root),
+                TrainCarTrackOffset {
+                    offset_m: offset,
+                    track_index: 0,
+                    flipped: false,
+                },
+            ))
+            .id();
+        let gear_baseline = Transform::from_xyz(0.4, 0.5, -3.)
+            .with_rotation(Quat::from_rotation_y(0.7))
+            .with_scale(Vec3::new(20., 3.6, 3.));
+        let wheel = app
+            .world_mut()
+            .spawn((
+                gear_baseline,
+                ChildOf(car),
+                TrainExteriorAnimPart,
+                FallbackRunningGear,
+            ))
+            .id();
+        app.world_mut().run_system_once(update).unwrap();
+        assert_eq!(*app.world().get::<Transform>(car).unwrap(), physical);
+        assert_eq!(app.world().resource::<TrainMotion>().cars.len(), 1);
+        let wheel_world =
+            physical.to_matrix() * app.world().get::<Transform>(wheel).unwrap().to_matrix();
+        for (actual, expected) in wheel_world
+            .to_cols_array()
+            .iter()
+            .zip(gear_baseline.to_matrix().to_cols_array())
+        {
+            assert!((actual - expected).abs() < 1e-4);
+        }
+        app.world_mut()
+            .run_system_once(restore_running_gear)
+            .unwrap();
+        app.world_mut()
+            .resource_mut::<crate::live::LiveDrive>()
+            .session
+            .set_vertical_irregularities_enabled(false);
+        *app.world_mut().get_mut::<Transform>(car).unwrap() = Transform::IDENTITY;
+        app.world_mut().run_system_once(update).unwrap();
+        assert!(app.world().resource::<TrainMotion>().cars.is_empty());
+        assert_eq!(
+            *app.world().get::<Transform>(car).unwrap(),
+            Transform::IDENTITY
+        );
+        assert_eq!(*app.world().get::<Transform>(wheel).unwrap(), gear_baseline);
+    }
+
+    #[test]
+    fn physical_quarter_car_motion_reaches_the_mesh_and_respects_disable_and_flip() {
+        use openrailsrs_train::bogie_geometry::VerticalSuspension;
+        let path = crate::test_harness::smoke_scenario_path();
+        let mut live = crate::live::LiveDrive::from_scenario_path(&path).unwrap();
+        let parameters = VerticalSuspension {
+            enabled: true,
+            sprung_mass_fraction: 0.9,
+            spring_n_m: 1e6,
+            damper_ns_m: 1e5,
+            contact_spring_n_m: 1e7,
+            contact_damper_ns_m: 1e5,
+            travel_m: 0.1,
+            bump_stop_n_m: 1e7,
+            sections: vec![],
+        };
+        let mut state = openrailsrs_sim::track_irregularity::VerticalVehicleState::new(&parameters);
+        for support in &mut state.supports {
+            support.wheels[0].body_z_m = 0.;
+            support.wheels[1].body_z_m = 0.02;
+        }
+        live.session.physics.bogies[0].vertical_suspension = Some(parameters);
+        live.session.state.bogies[0].vertical = Some(state);
+        let first = vertical_pose(&live.session, 0, false).unwrap();
+        let flipped = vertical_pose(&live.session, 0, true).unwrap();
+        assert!(
+            (first.rotation.angle_between(Quat::IDENTITY) - 0.02_f32.atan2(1.435)).abs() < 1e-5
+        );
+        assert!(first.rotation.angle_between(flipped.rotation.inverse()) < 1e-5);
+        assert_eq!(first, vertical_pose(&live.session, 0, false).unwrap());
+        live.session.set_vertical_irregularities_enabled(false);
+        assert!(vertical_pose(&live.session, 0, false).is_none());
+        live.session.set_vertical_irregularities_enabled(true);
+        assert_eq!(first, vertical_pose(&live.session, 0, false).unwrap());
+    }
+
     #[test]
     fn damped_suspension_is_stable_across_frame_rates_and_pause() {
         let mut one = Spring::default();

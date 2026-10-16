@@ -4,6 +4,7 @@ pub mod bogie_dynamics;
 pub mod cab_equipment;
 pub mod error;
 pub mod model;
+pub mod operational_yards;
 pub mod overlay;
 pub mod sound_regions;
 pub mod timetable;
@@ -37,6 +38,7 @@ pub fn load_scenario(path: impl AsRef<Path>) -> Result<ScenarioFile, ScenarioErr
     Ok(file)
 }
 
+pub mod rack;
 pub mod rail_operations;
 
 pub mod presentation;

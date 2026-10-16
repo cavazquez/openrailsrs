@@ -1,0 +1,82 @@
+{
+  "schema": 1,
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "status": "prepared_not_executed_not_acceptance",
+  "limits_declared_before_capture": true,
+  "historic_05_unchanged": true,
+  "source_sha256": {
+    "Source/Orts.Simulation/Simulation/RollingStocks/MSTSSteamLocomotive.cs": "4eb9bc6436344032945c2dfa4065d4055ac4e57b4fc48f4d2dd6fcf9a63ebdf0",
+    "Source/Orts.Simulation/Common/SteamTable.cs": "9e6d57d726a2c0dd827c4fb2a0a4a1d21325ebda0252027a47c2a8c41843ce0b",
+    "Source/Orts.Common/SmoothedData.cs": "df2330fdaa9a74ed47cb1fff414dccc81806786cc3edd6a6a243a6c51705ab55",
+    "Source/Orts.Parsers.Msts/Interpolator.cs": "f4217230089447e74162589a43d40deb2350c5b76786ff77962f7a9477fff7cc",
+    "Source/Orts.Simulation/Simulation/RollingStocks/SubSystems/Brakes/MSTS/VacuumSinglePipe.cs": "0ed9d006f8ed0aa24a50c6e26f452028a111427643d9da069acf68c91af8fba4"
+  },
+  "assemblies_sha256": {
+    "Orts.Simulation.dll": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679",
+    "Orts.Common.dll": "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212",
+    "Orts.Parsers.Msts.dll": "8e0781c9f861ed95b4467d1bf948ea7aca896d634f21ac5952f97a9f630d0b36",
+    "Orts.Settings.dll": "fe0d8d81149f480f3972c80e64ffaf6012c7599e32c26c8e4d46510e3edbb2e7",
+    "RunActivity.exe": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2"
+  },
+  "native_limits": {
+    "pressure_bar_abs": 0.1,
+    "boiler_mass_kg_abs": 1.0,
+    "boiler_enthalpy_j_abs": 100000.0,
+    "water_fraction_abs": 0.002,
+    "production_kg_s_abs": 0.1,
+    "steam_consumption_kg_s_abs": 0.1,
+    "injection_kg_s_abs": 0.05,
+    "coal_burn_kg_s_abs": 0.05,
+    "tender_coal_kg_abs": 1.0,
+    "tender_water_kg_abs": 1.0,
+    "motive_force_n_abs": 100.0,
+    "speed_mps_abs": 0.1,
+    "distance_m_abs": 2.0,
+    "injector_state": "exact",
+    "scope": "Prior diagnostic limits, including independently initialized state. A failure remains a failure and does not become an extension-parity claim."
+  },
+  "new_table_limits": {
+    "abs": 0.0002,
+    "relative": 2e-06,
+    "selection": "All50 no-argument SteamTable Interpolator factories; fractions0,.13,.5,.9,1 across each static domain;2D upper/lower grids RPM0,12,50,110,350 cutoff.1,.3,.45,.65,.75,.9"
+  },
+  "supported_port": "Explicit opt-in. Original coal/manual/simple direct-drive one-engine, injector feed, non-EQ vacuum, SimpleControlPhysics. Preserve f32, initialization order, inferredsuperheater with earlySAT choices, filters and one-tick feedback. No filename matching. Own finite vessel/receiver remains separate.",
+  "phases": [
+    "idle_fire",
+    "steam_load",
+    "injection",
+    "coast",
+    "braking"
+  ],
+  "cases": [
+    "hot_subsystem",
+    "cold_subsystem",
+    "hot_drive_paused",
+    "hot_drive_unpaused"
+  ],
+  "contexts": {
+    "hot_drive_paused": "Matches historic05 Simulator.Paused=true context, now explicit. Does not replace05.",
+    "hot_drive_unpaused": "Real unpaused original drive, declared separately. Does not reinterpret05.",
+    "subsystem": "Original MSTSSteamLocomotive.Update with programmed0/8/16/12/4m/s and external pipe14.5037738/4.2/4.2/4.2/14.5037738psi, chosen before capture. Not a route drive.",
+    "injectors": "Actual controller explicitly SetValue0/1 and Update(dt), same as original05. Fraction copied at endUpdateFiring, not instantaneously injected.",
+    "environment": "Capture MassKG,InitialCarOutsideTempC,CarOutsideTempC,CarHeightAboveSeaLevelM,Paused and exacthardware before tick. No native post-start state fed into Rust."
+  },
+  "methods": [
+    "SteamTable factory /Interpolator.Item/Interpolator2D.Get",
+    "MSTSSteamLocomotive.Update (prescribed subsystem inputs)",
+    "Simulator.SetExplore/Start/Update (closed loop)"
+  ],
+  "baseline_policy": "New directories only. No approved references, source/DLL originals or six human traces may be rewritten.",
+  "wine_policy": "OracleWine only; fresh marked private prefix; Graphics=null, ShowCrashDialog=0 verified; no inherited user displays/audio; exact-prefix cleanup receipt.",
+  "acceptance_policy": "Rows and native metadata are evidence only until real Rust comparisons pass the unchanged05limits. No pressure/heat/flow/force/speed fitting or post-start observed-state injection. A failed case remains failed.",
+  "own_compound": "No claimofVauclain or fullreceiver/LP conservation. Ownprofile force/consumption and persistence measured separately.",
+  "new_static_hardware_limits": {
+    "boiler_volume_ft3_abs": 0.0001,
+    "fire_mass_kg_abs": 0.001,
+    "firing_rate_kg_s_abs": 1e-05,
+    "fuel_burn_cap_kg_s_abs": 1e-05,
+    "maximum_steam_output_lb_s_abs": 0.0001,
+    "evaporation_area_m2_abs": 0.0001
+  }
+}

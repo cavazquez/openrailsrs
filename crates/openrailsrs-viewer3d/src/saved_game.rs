@@ -164,14 +164,13 @@ impl SavedGame {
         }
         Ok(bytes)
     }
-    pub fn save(
+    pub fn capture(
         live: &mut LiveDrive,
         content: &ActivePlayerContent,
         camera: SavedCamera,
-        path: &Path,
         weather: Option<&crate::weather_state::WeatherState>,
         settings: Option<&crate::player_settings::PlayerSettings>,
-    ) -> Result<(), String> {
+    ) -> Result<Self, String> {
         let game = Self {
             control_history: live.traffic.control_history.clone(),
             pending_control: None,
@@ -205,6 +204,17 @@ impl SavedGame {
             weather_checkpoint: weather.and_then(crate::weather_state::WeatherState::checkpoint),
             camera,
         };
+        Ok(game)
+    }
+    pub fn save(
+        live: &mut LiveDrive,
+        content: &ActivePlayerContent,
+        camera: SavedCamera,
+        path: &Path,
+        weather: Option<&crate::weather_state::WeatherState>,
+        settings: Option<&crate::player_settings::PlayerSettings>,
+    ) -> Result<(), String> {
+        let game = Self::capture(live, content, camera, weather, settings)?;
         let bytes = game.encoded()?;
         atomic_write(path, &bytes)?;
         // A replaced slot remains available in history. Private application

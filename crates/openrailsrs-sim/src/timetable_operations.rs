@@ -29,13 +29,16 @@ impl LiveDriveSession {
                         self.formation.length_m()
                     }
             })
+        } else if let TimetableAction::PickUp { count } = operation.action {
+            self.runaround_pickup_reference(&operation.section, count)
         } else {
             self.head_chainage_m()
         };
         if self.velocity_mps().abs() > 0.1 || (operation_head - operation.chainage_m).abs() > 20.0 {
             return;
         }
-        let automatic = automatic || !operation.manual;
+        let automatic =
+            (automatic || !operation.manual) && !self.state.yard_operations.human_driven;
         let finished = match operation.action {
             TimetableAction::Detach { keep } => {
                 if automatic
@@ -84,10 +87,18 @@ impl LiveDriveSession {
                         .iter()
                         .any(|s| s.id == operation.section)
                 {
-                    if self
-                        .recouple_section(&operation.section, crate::sections::CouplingEnd::Rear)
-                        .is_err()
+                    if self.yard_front_pickup(&operation.section)
+                        && (self.velocity_mps().abs() > 0.005
+                            || (self.head_chainage_m() - operation.chainage_m).abs() > 0.008)
                     {
+                        return;
+                    }
+                    let end = if self.yard_front_pickup(&operation.section) {
+                        crate::sections::CouplingEnd::Front
+                    } else {
+                        crate::sections::CouplingEnd::Rear
+                    };
+                    if self.recouple_section(&operation.section, end).is_err() {
                         return;
                     }
                     for car in &mut self.formation.cars[..self.formation.coupled_count] {
@@ -95,6 +106,7 @@ impl LiveDriveSession {
                         car.hose_connected = true;
                         car.front_cock_open = true;
                         car.rear_cock_open = true;
+                        car.train_bus_connected = true;
                     }
                     self.sync_operating_brakes();
                 }
@@ -138,6 +150,39 @@ impl crate::LiveTraffic {
         }
         let result = match operation.action {
             TimetableAction::JoinService { service, front } => {
+                if player.state.yard_operations.human_driven
+                    || self.remote_drivers.contains(&player.service_id)
+                    || self.remote_drivers.contains(&service)
+                {
+                    player.state.rail_operations.notice =
+                        "Transferencia pendiente: la formación tiene un conductor humano de red"
+                            .into();
+                    return;
+                }
+                if player
+                    .state
+                    .yard_operations
+                    .definition
+                    .rendezvous
+                    .iter()
+                    .any(|r| {
+                        r.receiver == player.service_id
+                            && r.donor.eq_ignore_ascii_case(&service)
+                            && r.receiver_leg
+                                .is_none_or(|leg| leg == player.operational_leg)
+                            && (player.time_s() < r.not_before_s
+                                || player
+                                    .state
+                                    .yard_operations
+                                    .rendezvous
+                                    .get(&r.id)
+                                    .is_some_and(|m| m.failed))
+                    })
+                {
+                    player.state.rail_operations.notice =
+                        "El encuentro no está autorizado o venció; no se recoge su porción".into();
+                    return;
+                }
                 let Some(index) = self
                     .services
                     .iter()
@@ -159,6 +204,23 @@ impl crate::LiveTraffic {
                 };
                 let mut last = Err("No hay contacto físico entre los servicios".into());
                 for end in ends {
+                    let strict = player
+                        .state
+                        .yard_operations
+                        .definition
+                        .rendezvous
+                        .iter()
+                        .any(|r| {
+                            r.receiver == player.service_id
+                                && r.donor.eq_ignore_ascii_case(&service)
+                                && r.receiver_leg
+                                    .is_none_or(|leg| leg == player.operational_leg)
+                        });
+                    if strict && !player.strict_portion_contact(&self.services[index].session, end)
+                    {
+                        last=Err("Esperando contacto de la porción a menos de 8 mm y ambas formaciones detenidas".into());
+                        continue;
+                    }
                     let mut donor = match self.services[index].session.clone_for_sections() {
                         Ok(d) => d,
                         Err(e) => {
@@ -210,6 +272,14 @@ impl crate::LiveTraffic {
                 last
             }
             TimetableAction::SplitService { service } => {
+                if player.state.yard_operations.human_driven
+                    || self.remote_drivers.contains(&player.service_id)
+                    || self.remote_drivers.contains(&service)
+                {
+                    player.state.rail_operations.notice =
+                        "División pendiente: la formación tiene un conductor humano de red".into();
+                    return;
+                }
                 // The declared operation includes the crew securing its portion.
                 // Prepare that state separately so a failed split cannot alter
                 // the player's handbrakes or lose either physical train.

@@ -79,6 +79,7 @@ impl LiveDriveSession {
                     vehicle,
                     params: params.clone(),
                     boiler: boiler.clone(),
+                    local_regulator: None,
                 });
         }
     }
@@ -341,11 +342,39 @@ impl LiveDriveSession {
                 .native_bearing_c
                 .iter()
                 .any(|(id, t)| !ids.contains(id) || !t.is_finite() || !(-100. ..=500.).contains(t))
-            || formation.native_axles.iter().any(|(id, a)| {
-                !ids.contains(id) || !a.speed_mps.is_finite() || a.speed_mps.abs() > 1000.
-            })
+            || formation
+                .native_axles
+                .iter()
+                .any(|(id, a)| !ids.contains(id) || !a.valid() || a.speed_mps.abs() > 1000.)
         {
             return Err("Estado nativo de una sección guardada inválido".into());
+        }
+        let original_ids = self.vehicle_ids();
+        let sources = self
+            .original_physics
+            .native
+            .as_ref()
+            .map(|n| n.adhesion_inputs.as_slice())
+            .unwrap_or_default();
+        let source_count = sources.iter().filter(|s| s.is_some()).count();
+        if formation.native_adhesion.len() != source_count
+            || formation.native_adhesion.iter().any(|(id, filter)| {
+                original_ids
+                    .iter()
+                    .position(|i| i == id)
+                    .and_then(|i| sources.get(i))
+                    .and_then(Option::as_ref)
+                    .is_none_or(|s| {
+                        !filter.valid()
+                            || filter.source_sha256 != s.sha256
+                            || filter.source_vehicle != s.vehicle
+                            || filter.cursor >= s.samples.len()
+                    })
+            })
+        {
+            return Err(
+                "La fuente ambiental guardada no corresponde al SHA y vehículo originales".into(),
+            );
         }
         if formation.sections.is_empty() {
             return Ok(());
@@ -433,6 +462,7 @@ impl LiveDriveSession {
         let p = &mut self.original_physics;
         let previous_mass = p.mass_kg;
         let previous_davis = p.davis.clone();
+        p.rack = p.rack.select(order);
         reordered(&mut p.bogies, order, total);
         reordered(&mut p.vehicle_davis, order, total);
         reordered(&mut p.vehicle_lengths_m, order, total);
@@ -453,6 +483,12 @@ impl LiveDriveSession {
         if let Some(native) = &mut p.native {
             reordered(&mut native.vehicles, order, total);
             reordered(&mut native.vehicle_masses_kg, order, total);
+            reordered(&mut native.adhesion_inputs, order, total);
+            native.locomotive_indices = native
+                .locomotive_indices
+                .iter()
+                .filter_map(|i| inverse.get(*i).and_then(|j| *j))
+                .collect();
             native.control_vehicle_index = inverse
                 .get(native.control_vehicle_index)
                 .and_then(|i| *i)
@@ -582,6 +618,13 @@ impl LiveDriveSession {
                     .native_bearing_c
                     .insert(id.clone(), temperature);
             }
+            for (id, filter) in ids.iter().zip(&d.adhesion_filters) {
+                if let Some(filter) = filter {
+                    self.formation
+                        .native_adhesion
+                        .insert(id.clone(), filter.clone());
+                }
+            }
             for (&vehicle, axle) in diesel.iter().zip(&d.axles) {
                 if let Some(id) = ids.get(vehicle) {
                     self.formation.native_axles.insert(id.clone(), axle.clone());
@@ -595,6 +638,9 @@ impl LiveDriveSession {
             .native_bearing_c
             .retain(|id, _| ids.contains(id));
         self.formation.native_axles.retain(|id, _| ids.contains(id));
+        self.formation
+            .native_adhesion
+            .retain(|id, _| ids.contains(id));
         let diesel = self.native_active_diesel_indices();
         if let Some(d) = &mut self.state.native_dynamics {
             let ambient = self
@@ -615,12 +661,31 @@ impl LiveDriveSession {
                         .unwrap_or(ambient)
                 })
                 .collect();
+            d.adhesion_filters = self
+                .original_physics
+                .native
+                .as_ref()
+                .filter(|p| p.has_adhesion_inputs())
+                .map_or_else(Vec::new, |p| {
+                    ids.iter()
+                        .enumerate()
+                        .map(|(i, id)| {
+                            self.formation.native_adhesion.get(id).cloned().or_else(|| {
+                                p.adhesion_inputs
+                                    .get(i)
+                                    .and_then(Option::as_ref)
+                                    .map(|s| s.initial.clone())
+                            })
+                        })
+                        .collect()
+                });
             d.axles = diesel
                 .iter()
                 .map(|&i| {
                     self.formation.native_axles.get(&ids[i]).cloned().unwrap_or(
                         crate::native_dynamics::NativeAxleState {
                             speed_mps: self.state.velocity_mps,
+                            ..Default::default()
                         },
                     )
                 })
@@ -691,6 +756,7 @@ impl LiveDriveSession {
                 .collect();
         }
         let s = &mut self.state;
+        s.rack = s.rack.select(order);
         s.active_cab_vehicle = s
             .active_cab_vehicle
             .and_then(|i| inverse.get(i).and_then(|j| *j));
@@ -724,6 +790,7 @@ impl LiveDriveSession {
         indexed(&mut s.cab_equipment, &inverse, |v| &mut v.config.vehicle);
         if let Some(d) = &mut s.native_dynamics {
             reordered(&mut d.bearing_c, order, total);
+            reordered(&mut d.adhesion_filters, order, total);
             reordered(&mut d.axles, &engine_order, old_diesel.len());
             d.bearing_c.truncate(active);
         }
@@ -753,6 +820,11 @@ impl LiveDriveSession {
 
 impl LiveDriveSession {
     pub fn uncouple_after_named(&mut self, index: usize, id: &str) -> Result<(), String> {
+        if self.yard_driving_blocked() {
+            return Err(
+                "Esperá que la mesa se alinee antes de desacoplar la formación transportada".into(),
+            );
+        }
         let keep = index.checked_add(1).ok_or("Coche inválido")?;
         let old = self.formation.coupled_count;
         if id.trim().is_empty()
@@ -974,6 +1046,11 @@ impl LiveDriveSession {
         Ok(anchor)
     }
     pub fn recouple_section(&mut self, id: &str, end: CouplingEnd) -> Result<(), String> {
+        if self.yard_driving_blocked() {
+            return Err(
+                "Esperá que la mesa se alinee antes de modificar la formación transportada".into(),
+            );
+        }
         self.ensure_section_metadata();
         let anchor = self.validate_section_pickup(id, end)?;
         let section = self

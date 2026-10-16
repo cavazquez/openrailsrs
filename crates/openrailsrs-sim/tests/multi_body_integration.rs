@@ -40,6 +40,7 @@ fn physics_step_wagon_lags_locomotive_with_multi_body() {
     );
 
     let train = TrainPhysics {
+        rack: Default::default(),
         bogies: vec![],
         power_supply: Default::default(),
         rail_adhesion: None,
@@ -107,6 +108,7 @@ fn multi_body_dt_one_second_remains_stable_over_ten_steps() {
     };
 
     let train = TrainPhysics {
+        rack: Default::default(),
         bogies: vec![],
         power_supply: Default::default(),
         rail_adhesion: None,

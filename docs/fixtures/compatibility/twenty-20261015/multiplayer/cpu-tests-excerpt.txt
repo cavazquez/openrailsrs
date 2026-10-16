@@ -1,0 +1,30 @@
+Source: tmp/twenty-20261015/tests-01.log
+Source SHA256: 28aee541c36b4db651d3912126b6e0e71dd0ae85b2c1c52e5de967c9bc2ae310
+Command: cargo test --locked --workspace --all-features --no-fail-fast -- --test-threads=1
+Scope: multiplayer-only extract from the first integrated run.
+The whole workspace run had 14 failures in other targets; this extract does not certify a passing workspace gate.
+
+     Running tests/multiplayer.rs (target/debug/deps/multiplayer-aab3e021c568bd6b)
+
+running 7 tests
+test an_oversized_wire_frame_is_closed_before_deserializing_a_body ... ok
+test driver_and_fireman_commands_reach_the_same_real_boiler_then_restore ... ok
+test malformed_commands_and_client_authoritative_snapshots_are_rejected ... ok
+test retries_gaps_and_reconnect_never_repeat_a_command ... ok
+test role_changes_are_atomic_and_checkpoint_restarts_revoke_old_epochs ... ok
+test tcp_transport_reconnects_and_drop_releases_the_port ... ok
+test two_drivers_dispatcher_and_fireman_have_separate_authority ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s
+
+Viewer multiplayer tests (original source line numbers):
+2864: test multiplayer::persistence::tests::atomic_private_write_replaces_a_public_slot_with_a_private_file ... ok
+2865: test multiplayer::persistence::tests::identities_are_independent_and_are_never_replaced_after_a_parse_failure ... ok
+2866: test multiplayer::tests::cooperative_double_steam_keeps_both_thermodynamic_ledgers_in_the_server_save ... ok
+2867: test multiplayer::tests::observer_cameras_follow_rendered_services_and_do_not_create_an_extra_train ... ok
+2868: test multiplayer::tests::viewer_checkpoint_preserves_world_and_revokes_old_authority_on_restore ... ok
+2869: test multiplayer::tests::viewer_two_drivers_dispatch_fireman_spectator_and_shutdown_use_real_tcp ... ok
+2870: test multiplayer::tests::viewer_with_real_tcp_latency_receives_one_authoritative_result ... ok
+
+Multiplayer subset: 7 game + 5 viewer plugin + 2 persistence = 14 passed, 0 failed.
+CPU tests use real TCP and railway state with no renderer; camera-follow coverage uses ECS transforms.

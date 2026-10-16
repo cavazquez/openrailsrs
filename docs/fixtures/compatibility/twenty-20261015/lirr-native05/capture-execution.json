@@ -1,0 +1,125 @@
+{
+  "schema": 1,
+  "capture_kind": "original_dll_calls",
+  "status": "native_capture_complete",
+  "comparison_pending": true,
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "wall_time_s": 8.018469296999683,
+  "assemblies_sha256": {
+    "RunActivity.exe": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2",
+    "Orts.Simulation.dll": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679",
+    "Orts.Common.dll": "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212",
+    "Orts.Settings.dll": "fe0d8d81149f480f3972c80e64ffaf6012c7599e32c26c8e4d46510e3edbb2e7",
+    "Orts.Formats.Msts.dll": "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465",
+    "Orts.Parsers.Msts.dll": "8e0781c9f861ed95b4467d1bf948ea7aca896d634f21ac5952f97a9f630d0b36",
+    "MonoGame.Framework.dll": "c6a16c29705a4c847e0e4a2647bf432604cd9320cbc5d4125ab01ae7bb7e6542",
+    "Newtonsoft.Json.dll": "9af2e1c672afd67a291b8f2031a341a3788d4d9f683eaddc6ceab3a3a74c546e"
+  },
+  "source_receipt_sha256": "54e1f878f95327ce5437f89928b9289acabea4ef44bbd63960a13f8fe57d05d5",
+  "original_outputs_sha256": {
+    "runtime/ActivityTrajectory.exe": "bd5b2dd3c9c925ae1d3ad2cece2d72b0f7700ce4f2466821e1577f756e6643b6",
+    "native/trace.csv": "86c44d3042dbcd7f7ed398706b7cacfab4e8c441c845ef4b5aaa8c07cc0e9976",
+    "native/initial.json": "f40feadd0125835d0e269965a15fd570adf40bc52f7e6f3bb58c75f3f0faa456",
+    "native/outcome.json": "0cc87004726a3736a80eee1f924c35762ea59d1bd55449d7ba9a8e3cb8f7619b",
+    "native-coverage.json": "6b64bed2c2f1f3b38c279d97e552c5852c2d0dfe024161c3f43e615a922428db",
+    "wine-isolation/isolation.json": "4dca58b6398334f04f7f87189d3e850153b8b46a236ba15955cc2898deea2b71",
+    "wine-isolation/release.json": "5b729d2e126977235ce88de42595e0d8a73b97bec357626dfc8aa8ff5641f9d1"
+  },
+  "commands": [
+    {
+      "args": [
+        "wine",
+        "reg",
+        "add",
+        "HKCU\\Software\\Wine\\Drivers",
+        "/v",
+        "Graphics",
+        "/t",
+        "REG_SZ",
+        "/d",
+        "null",
+        "/f"
+      ],
+      "pid": 400625,
+      "returncode": 0,
+      "elapsed_s": 0.7812439660046948,
+      "log": "$CAPTURE/wine-isolation/registry-set-0.log"
+    },
+    {
+      "args": [
+        "wine",
+        "reg",
+        "add",
+        "HKCU\\Software\\Wine\\WineDbg",
+        "/v",
+        "ShowCrashDialog",
+        "/t",
+        "REG_DWORD",
+        "/d",
+        "0",
+        "/f"
+      ],
+      "pid": 400695,
+      "returncode": 0,
+      "elapsed_s": 0.1671015119936783,
+      "log": "$CAPTURE/wine-isolation/registry-set-1.log"
+    },
+    {
+      "args": [
+        "wine",
+        "reg",
+        "query",
+        "HKCU\\Software\\Wine\\WineDbg",
+        "/v",
+        "ShowCrashDialog"
+      ],
+      "pid": 400698,
+      "returncode": 0,
+      "elapsed_s": 0.11199300800217316,
+      "log": "$CAPTURE/wine-isolation/registry-query.log"
+    },
+    {
+      "args": [
+        "wine",
+        "C:\\windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe",
+        "/nologo",
+        "/main:ActivityTrajectory",
+        "/out:ActivityTrajectory.exe",
+        "/r:RunActivity.exe",
+        "/r:Orts.Simulation.dll",
+        "/r:Orts.Common.dll",
+        "/r:Orts.Settings.dll",
+        "/r:Orts.Formats.Msts.dll",
+        "/r:Orts.Parsers.Msts.dll",
+        "/r:MonoGame.Framework.dll",
+        "/r:Newtonsoft.Json.dll",
+        "$REPOSITORY\\tools\\openrails-reference\\HeadlessCapture.cs",
+        "$REPOSITORY\\tools\\openrails-reference\\ActivityTrajectory.cs"
+      ],
+      "pid": 400701,
+      "returncode": 0,
+      "elapsed_s": 0.2798569279984804,
+      "log": "$CAPTURE/compile.log"
+    },
+    {
+      "args": [
+        "wine",
+        "ActivityTrajectory.exe",
+        "$ORIGINAL_CONTENT\\ROUTES\\LIRR\\ACTIVITIES\\01Brooklyn-Hempstead.act",
+        "$CAPTURE\\native"
+      ],
+      "pid": 400704,
+      "returncode": 0,
+      "elapsed_s": 5.38134179199551,
+      "log": "$CAPTURE/capture.log"
+    }
+  ],
+  "native_artifact": {
+    "file": "reference.csv.gz",
+    "uncompressed_sha256": "86c44d3042dbcd7f7ed398706b7cacfab4e8c441c845ef4b5aaa8c07cc0e9976",
+    "uncompressed_bytes": 14706950,
+    "compressed_sha256": "04cb8cc25ae9db6f67ac583501b43223f4260e1447fb2bd0bb514cf7f5b3fee5",
+    "compressed_bytes": 2686098
+  }
+}

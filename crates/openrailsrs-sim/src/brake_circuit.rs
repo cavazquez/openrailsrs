@@ -27,6 +27,17 @@ impl AirCircuit {
         }
     }
     pub fn step(&mut self, command: f64, service_bar: f64, full_bar: f64, powered: bool, dt: f64) {
+        self.step_with_charging_factor(command, service_bar, full_bar, powered, 1., dt);
+    }
+    pub(crate) fn step_with_charging_factor(
+        &mut self,
+        command: f64,
+        service_bar: f64,
+        full_bar: f64,
+        powered: bool,
+        charging_factor: f64,
+        dt: f64,
+    ) {
         self.charged_bar_m3 = 0.;
         if !dt.is_finite() || dt <= 0.0 {
             return;
@@ -52,8 +63,9 @@ impl AirCircuit {
         }
         if self.compressor_on {
             let before = self.reservoir_bar;
-            self.reservoir_bar =
-                (self.reservoir_bar + self.params.charging_bar_s * dt).min(self.params.maximum_bar);
+            self.reservoir_bar = (self.reservoir_bar
+                + self.params.charging_bar_s * charging_factor.max(0.) * dt)
+                .min(self.params.maximum_bar);
             self.charged_bar_m3 = (self.reservoir_bar - before) * self.params.reservoir_m3;
         }
     }

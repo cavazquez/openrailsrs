@@ -5,7 +5,6 @@ import math
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
 
 from check_station_cameras import STATIONS, check, compare
 import compare_station_views
@@ -78,22 +77,21 @@ class StationCameras(unittest.TestCase):
                         "performance": {"gameplay_frame_p95_ms": 25.0}, "draw_calls": 100,
                         "floating_origin_shift": 0, "renderer": "test"}
                 (folder / f"{name}.stream.json").write_text(json.dumps(bevy))
-            with patch.object(compare_station_views, "REFERENCE", reference):
-                self.assertTrue(compare_station_views.compare(folder, ["test"])["passed"])
-                capture = folder / "test.stream.json"
-                bevy = json.loads(capture.read_text())
-                bevy["solar_direction"] = [0, 1, 0]
-                capture.write_text(json.dumps(bevy))
-                result = compare_station_views.compare(folder, ["test"])
-                self.assertFalse(result["passed"])
-                self.assertFalse(result["views"][0]["checks"]["native_sun"])
-                bevy["camera"]["position_world"][0] += 4
-                capture.write_text(json.dumps(bevy))
-                result = compare_station_views.compare(folder, ["test"], require_native_sun=False)
-                self.assertFalse(result["passed"])
-                (reference / "test-exterior.png").write_bytes(b"changed reference")
-                with self.assertRaisesRegex(ValueError, "Original reference changed"):
-                    compare_station_views.compare(folder, ["test"])
+            self.assertTrue(compare_station_views.compare(folder, ["test"], references=reference)["passed"])
+            capture = folder / "test.stream.json"
+            bevy = json.loads(capture.read_text())
+            bevy["solar_direction"] = [0, 1, 0]
+            capture.write_text(json.dumps(bevy))
+            result = compare_station_views.compare(folder, ["test"], references=reference)
+            self.assertFalse(result["passed"])
+            self.assertFalse(result["views"][0]["checks"]["native_sun"])
+            bevy["camera"]["position_world"][0] += 4
+            capture.write_text(json.dumps(bevy))
+            result = compare_station_views.compare(folder, ["test"], require_native_sun=False, references=reference)
+            self.assertFalse(result["passed"])
+            (reference / "test-exterior.png").write_bytes(b"changed reference")
+            with self.assertRaisesRegex(ValueError, "Original reference changed"):
+                compare_station_views.compare(folder, ["test"], references=reference)
 
 
 if __name__ == "__main__":

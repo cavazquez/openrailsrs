@@ -1,0 +1,59 @@
+{
+  "properties": 157,
+  "subsystems": [
+    {
+      "id": "rf_blue_pullman_author_legacy_emergency",
+      "rows": 2140,
+      "emergency_seen": true,
+      "independent_cylinder_seen": true,
+      "rearm_release_seen": true
+    },
+    {
+      "id": "rf_author_derived_rate_valve_dump",
+      "rows": 2140,
+      "emergency_seen": true,
+      "independent_cylinder_seen": true,
+      "rearm_release_seen": true
+    },
+    {
+      "id": "rf_author_derived_quick_action",
+      "rows": 2140,
+      "emergency_seen": true,
+      "independent_cylinder_seen": true,
+      "rearm_release_seen": true
+    }
+  ],
+  "networks": [
+    {
+      "id": "rf_blue_pullman_author_legacy_emergency",
+      "rows": 2140,
+      "three_measured_cars": true,
+      "tail_emergency_seen": true,
+      "nonuniform_pressure_seen": true,
+      "tail_rearm_release_seen": true
+    },
+    {
+      "id": "rf_author_derived_rate_valve_dump",
+      "rows": 2140,
+      "three_measured_cars": true,
+      "tail_emergency_seen": true,
+      "nonuniform_pressure_seen": true,
+      "tail_rearm_release_seen": true
+    },
+    {
+      "id": "rf_author_derived_quick_action",
+      "rows": 2140,
+      "three_measured_cars": true,
+      "tail_emergency_seen": true,
+      "nonuniform_pressure_seen": true,
+      "tail_rearm_release_seen": true
+    }
+  ],
+  "steam_drive": {
+    "rows": 1601,
+    "moved": true,
+    "production_seen": true,
+    "steam_consumption_seen": true,
+    "injection_seen": true
+  }
+}

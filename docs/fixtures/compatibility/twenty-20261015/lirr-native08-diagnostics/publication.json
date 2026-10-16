@@ -1,0 +1,151 @@
+{
+  "schema": 1,
+  "kind": "lossless_publication_of_additive_original_tunnel_capture",
+  "native_manifest_sha256": "ff7ae813e38c837529c622153a2c5f0f2835c0970f66569db7bc5be51495cf72",
+  "rows": 32583,
+  "previous_columns": 164,
+  "columns": 306,
+  "previous_columns_project_to07_byte_sha256": "21212399f6289ff44b6d108d6312670008e6503abee0054df2d4dd150d6e2be2",
+  "raw_trace_sha256": "362ecf741d06ae02e5bfb6ea67af88559d0f98adf631342d42e070c91f4eb13a",
+  "files": {
+    "receipt.json": {
+      "sha256": "e23d05891364016280192a34d687371fca727fe60bc4cb9daaff148c6e7a0d3b",
+      "raw_path": "receipt.json",
+      "raw_sha256": "e23d05891364016280192a34d687371fca727fe60bc4cb9daaff148c6e7a0d3b",
+      "transformation": "none; literal captured bytes"
+    },
+    "native/trace.csv.gz": {
+      "sha256": "546f42528beaa1854ae5bebb0a6548496bda185283e900cda9767b1391c15343",
+      "raw_path": "native/trace.csv",
+      "raw_sha256": "362ecf741d06ae02e5bfb6ea67af88559d0f98adf631342d42e070c91f4eb13a",
+      "transformation": "lossless gzip mtime0"
+    },
+    "native/initial.json": {
+      "sha256": "4e58cffabe8aebb63cee29144b813b594abd8944baf3836ac718eb90dc041fa7",
+      "raw_path": "native/initial.json",
+      "raw_sha256": "4e58cffabe8aebb63cee29144b813b594abd8944baf3836ac718eb90dc041fa7",
+      "transformation": "none; literal captured bytes"
+    },
+    "native/outcome.json": {
+      "sha256": "578871d156b8446e5b5624262b1207cf61f418c100a12dbe69163254ca6a8b95",
+      "raw_path": "native/outcome.json",
+      "raw_sha256": "578871d156b8446e5b5624262b1207cf61f418c100a12dbe69163254ca6a8b95",
+      "transformation": "none; literal captured bytes"
+    },
+    "native-coverage.json": {
+      "sha256": "d930fd917bd1b27eb72eda2c6bf8acd1a018ff09a8f9e93eb88371dfd62423ee",
+      "raw_path": "native-coverage.json",
+      "raw_sha256": "d930fd917bd1b27eb72eda2c6bf8acd1a018ff09a8f9e93eb88371dfd62423ee",
+      "transformation": "none; literal captured bytes"
+    },
+    "compile.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "raw_path": "compile.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "transformation": "none; literal captured bytes"
+    },
+    "capture.log": {
+      "sha256": "911cb048532facbc1cca5a0e733f952ef4ee36679e92ecab40c7164730b805ad",
+      "raw_path": "capture.log",
+      "raw_sha256": "911cb048532facbc1cca5a0e733f952ef4ee36679e92ecab40c7164730b805ad",
+      "transformation": "none; literal captured bytes"
+    },
+    "telemetry-integrity.json": {
+      "sha256": "a585b2c03c694a0158cfe3cd74e7c55301129a3b35b1b341d0c2739dc4fa11ec",
+      "raw_path": "telemetry-integrity.json",
+      "raw_sha256": "a585b2c03c694a0158cfe3cd74e7c55301129a3b35b1b341d0c2739dc4fa11ec",
+      "transformation": "none; literal captured bytes"
+    },
+    "tunnel-diagnostic.json": {
+      "sha256": "82895f80c12fa8e619dfaae74099389ff8697a58498dc95b41fff11e2aac0fc5",
+      "raw_path": "tunnel-diagnostic.json",
+      "raw_sha256": "82895f80c12fa8e619dfaae74099389ff8697a58498dc95b41fff11e2aac0fc5",
+      "transformation": "none; literal captured bytes"
+    },
+    "source-lineage.json": {
+      "sha256": "b64ceed5f07d54589c96b427e573af087fa8bd9c12f100fbfdd0aab92be01001",
+      "raw_path": "source-lineage.json",
+      "raw_sha256": "b64ceed5f07d54589c96b427e573af087fa8bd9c12f100fbfdd0aab92be01001",
+      "transformation": "none; literal captured bytes"
+    },
+    "wine-isolation/isolation.json": {
+      "sha256": "4dca58b6398334f04f7f87189d3e850153b8b46a236ba15955cc2898deea2b71",
+      "raw_path": "wine-isolation/isolation.json",
+      "raw_sha256": "4dca58b6398334f04f7f87189d3e850153b8b46a236ba15955cc2898deea2b71",
+      "transformation": "none; literal captured bytes"
+    },
+    "wine-isolation/release.json": {
+      "sha256": "4caf8a4b12558e01ef4d069eb21b12939c8e12fcaacec440d23e7be98a7967d7",
+      "raw_path": "wine-isolation/release.json",
+      "raw_sha256": "4caf8a4b12558e01ef4d069eb21b12939c8e12fcaacec440d23e7be98a7967d7",
+      "transformation": "none; literal captured bytes"
+    },
+    "capture-sources/ActivityTrajectory07.cs": {
+      "sha256": "d292049916f4840ad3fdd93e9f3eb197c8505046ca698606e5977168b9d4bfe6",
+      "raw_path": "capture-sources/ActivityTrajectory07.cs",
+      "raw_sha256": "d292049916f4840ad3fdd93e9f3eb197c8505046ca698606e5977168b9d4bfe6",
+      "transformation": "none; literal captured bytes"
+    },
+    "capture-sources/ActivityTrajectoryDiagnostics.cs": {
+      "sha256": "309729644b9f4d2c5692789b4079ddf24b1d56ecc914d2bf417b0f4722b03113",
+      "raw_path": "capture-sources/ActivityTrajectoryDiagnostics.cs",
+      "raw_sha256": "309729644b9f4d2c5692789b4079ddf24b1d56ecc914d2bf417b0f4722b03113",
+      "transformation": "none; literal captured bytes"
+    },
+    "capture-sources/HeadlessCapture.cs": {
+      "sha256": "c832f071a28f61178da2814d382069c3dc15cdb2aff7b89f40fe5974ffdb60a0",
+      "raw_path": "capture-sources/HeadlessCapture.cs",
+      "raw_sha256": "c832f071a28f61178da2814d382069c3dc15cdb2aff7b89f40fe5974ffdb60a0",
+      "transformation": "none; literal captured bytes"
+    },
+    "capture-sources/capture-script.py": {
+      "sha256": "04052466686190652c19e6281e42b93601744fde412830c5178f1aa28d68e308",
+      "raw_path": "capture-sources/capture-script.py",
+      "raw_sha256": "04052466686190652c19e6281e42b93601744fde412830c5178f1aa28d68e308",
+      "transformation": "none; literal captured bytes"
+    },
+    "capture-sources/capture-script07.py": {
+      "sha256": "19d08aa0ed4a2d17aba8f0d3961c1424866446e735a0cdedbe89e7afb1142aeb",
+      "raw_path": "capture-sources/capture-script07.py",
+      "raw_sha256": "19d08aa0ed4a2d17aba8f0d3961c1424866446e735a0cdedbe89e7afb1142aeb",
+      "transformation": "none; literal captured bytes"
+    },
+    "capture-sources/declaration.json": {
+      "sha256": "f5a3f23d34b8d5aad26694fdd856862d48e228ba9da62c0748d52261c7a22b5d",
+      "raw_path": "capture-sources/declaration.json",
+      "raw_sha256": "f5a3f23d34b8d5aad26694fdd856862d48e228ba9da62c0748d52261c7a22b5d",
+      "transformation": "none; literal captured bytes"
+    },
+    "capture-sources/oracle_wine.py": {
+      "sha256": "4e87773fd3fe535f5660a427ea12b8b6a716266ebf9161e433aa66fc86e9f590",
+      "raw_path": "capture-sources/oracle_wine.py",
+      "raw_sha256": "4e87773fd3fe535f5660a427ea12b8b6a716266ebf9161e433aa66fc86e9f590",
+      "transformation": "none; literal captured bytes"
+    },
+    "capture-sources/protocol.json": {
+      "sha256": "7f5d39ada7927a4048ab63ae6a85311f47e2769e77095d5d6893133639d381b4",
+      "raw_path": "capture-sources/protocol.json",
+      "raw_sha256": "7f5d39ada7927a4048ab63ae6a85311f47e2769e77095d5d6893133639d381b4",
+      "transformation": "none; literal captured bytes"
+    },
+    "capture-sources/reference-pin-at-capture.toml": {
+      "sha256": "1bdb2732be0d2ee869e4635835781984ca765d142d9ef337e77b9f86bba4d92b",
+      "raw_path": "capture-sources/reference-pin-at-capture.toml",
+      "raw_sha256": "1bdb2732be0d2ee869e4635835781984ca765d142d9ef337e77b9f86bba4d92b",
+      "transformation": "none; literal captured bytes"
+    },
+    "manifest.json": {
+      "sha256": "ff7ae813e38c837529c622153a2c5f0f2835c0970f66569db7bc5be51495cf72",
+      "transformation": "none; literal native manifest"
+    }
+  },
+  "rust_acceptance": "not_measured_by_this_capture",
+  "original_assets_bundled": false,
+  "excluded": [
+    "runtime",
+    "original ENG/WAG/CON/ACT/PAT/route/DLL assets",
+    "Wine prefix",
+    "human trace contents"
+  ],
+  "scope": "Read-only original DLL fields. Prior164 columns are byte-identical in all32583 rows. Gzip hash differs from raw CSV; decompression reproduces RAW08. Raw JSON/source/receipts retain their captured host paths and identities."
+}

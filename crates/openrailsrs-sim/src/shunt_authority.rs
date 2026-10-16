@@ -57,11 +57,7 @@ impl crate::LiveDriveSession {
         if ahead.is_some_and(|d| distance_m <= d) {
             return Err("La distancia autorizada debe alcanzar más allá de la señal".into());
         }
-        if self
-            .distance_to_occupied_block_m()
-            .is_some_and(|d| d <= distance_m)
-            || self.shunt_has_parked_section(distance_m)
-        {
+        if self.shunt_corridor_blocked(distance_m) {
             return Err(
                 "No se puede autorizar una maniobra hacia otro tren o vehículos estacionados"
                     .into(),
@@ -96,10 +92,7 @@ impl crate::LiveDriveSession {
             || self.head_chainage_m() + 1. < authority.start_m
             || self.state.path_reversed != authority.reversed
             || self.graph.signal(&authority.signal).is_none()
-            || self.distance_to_occupied_block_m().is_some_and(|d| {
-                d <= authority.distance_m - (self.head_chainage_m() - authority.start_m)
-            })
-            || self.shunt_has_parked_section(
+            || self.shunt_corridor_blocked(
                 authority.distance_m - (self.head_chainage_m() - authority.start_m),
             );
         if invalid {
@@ -108,6 +101,52 @@ impl crate::LiveDriveSession {
             self.signal_overrides.remove(&id);
             self.native_signals.needs_refresh = true;
         }
+    }
+    /// Restricted shunting checks the requested physical corridor. Ordinary
+    /// running still obeys whole signal blocks. An occupied block without
+    /// detailed footprints remains blocked; neither grants nor parked stock
+    /// can be bypassed by this exception.
+    fn shunt_corridor_blocked(&self, distance_m: f64) -> bool {
+        if self.shunt_has_parked_section(distance_m) {
+            return true;
+        }
+        let head = self.head_chainage_m();
+        let limit = head + distance_m.max(0.);
+        let mut before = 0.;
+        for (id, edge) in self.state.path_edges.iter().zip(&self.path_data.edges) {
+            let end = before + edge.length_m;
+            if end >= head && before <= limit {
+                let base = id.strip_suffix("_r").unwrap_or(id);
+                let low = (head - before).max(0.);
+                let high = (limit - before).min(edge.length_m);
+                let intersects = |span: &crate::native_signals::TrackOccupancy| {
+                    if span.edge != base {
+                        return false;
+                    }
+                    let (a, b) = if id.ends_with("_r") {
+                        (edge.length_m - span.end_m, edge.length_m - span.start_m)
+                    } else {
+                        (span.start_m, span.end_m)
+                    };
+                    b >= low && a <= high
+                };
+                if self.external_track_occupancy.iter().any(intersects)
+                    || self.external_track_reservations.iter().any(intersects)
+                    || (self.edge_is_occupied(id, &self.external_occupancy)
+                        && !self
+                            .external_track_occupancy
+                            .iter()
+                            .any(|span| span.edge == base))
+                {
+                    return true;
+                }
+            }
+            before = end;
+            if before > limit {
+                break;
+            }
+        }
+        false
     }
     fn shunt_has_parked_section(&self, distance_m: f64) -> bool {
         // Detached portions have immutable paths. A chainage from another PAT
@@ -153,6 +192,47 @@ impl crate::LiveDriveSession {
 
 #[cfg(test)]
 mod section_authority_tests {
+    #[test]
+    fn short_shunt_keeps_distant_stock_outside_the_corridor_but_respects_grants_and_unknown_blocks()
+    {
+        let folder = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/smoke");
+        let definition =
+            openrailsrs_scenarios::load_scenario(folder.join("scenario.toml")).unwrap();
+        let mut s = crate::LiveDriveSession::from_scenario(&folder, &definition).unwrap();
+        s.state.pos_on_edge_m = 80.;
+        s.external_occupancy
+            .insert("e1".into(), "Distant AI".into());
+        let span = crate::native_signals::TrackOccupancy {
+            edge: "e1".into(),
+            start_m: 600.,
+            end_m: 650.,
+            owner: "Distant AI".into(),
+        };
+        s.external_track_occupancy.push(span.clone());
+        assert!(!s.shunt_corridor_blocked(150.));
+        assert!(s.shunt_corridor_blocked(600.));
+        s.external_track_reservations
+            .push(crate::native_signals::TrackOccupancy {
+                start_m: 200.,
+                end_m: 300.,
+                ..span.clone()
+            });
+        assert!(s.shunt_corridor_blocked(150.));
+        s.external_track_reservations.clear();
+        s.external_track_occupancy.clear();
+        assert!(s.shunt_corridor_blocked(150.));
+        s.external_track_occupancy
+            .push(crate::native_signals::TrackOccupancy {
+                start_m: 100.,
+                end_m: 120.,
+                ..span
+            });
+        assert!(s.shunt_corridor_blocked(150.));
+        // Canonical footprints must work in the reverse direction too.
+        s.state.path_edges[0] = "e1_r".into();
+        s.state.pos_on_edge_m = 4850.;
+        assert!(s.shunt_corridor_blocked(100.));
+    }
     #[test]
     fn shunting_checks_each_parked_physical_track_instead_of_foreign_chainage() {
         let folder = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))

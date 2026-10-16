@@ -47,11 +47,25 @@ impl crate::LiveDriveSession {
                 let actual = (0..self.formation.cars.len())
                     .filter(|i| self.car_on_siding(*i, def))
                     .collect::<Vec<_>>();
-                let mut expected = def.vehicles.clone();
-                expected.sort_unstable();
-                let composition = actual == expected;
+                let identities = self.vehicle_ids();
+                let mut actual_ids = actual
+                    .iter()
+                    .map(|i| identities[*i].clone())
+                    .collect::<Vec<_>>();
+                actual_ids.sort();
+                let mut expected = def
+                    .vehicles
+                    .iter()
+                    .map(|i| format!("{}/car/{i}", self.service_id))
+                    .collect::<Vec<_>>();
+                expected.sort();
+                let composition = actual_ids == expected;
                 let secured = actual.iter().all(|i| {
-                    *i >= self.formation.coupled_count && self.formation.cars[*i].handbrake
+                    (*i >= self.formation.coupled_count
+                        || self.formation.cars[..self.formation.coupled_count]
+                            .iter()
+                            .all(|c| !c.powered))
+                        && self.formation.cars[*i].handbrake
                 });
                 let accepted = composition && secured && self.velocity_mps() < 0.1;
                 YardDeliveryStatus {
@@ -85,19 +99,6 @@ impl crate::LiveTraffic {
             .iter()
             .map(|def| {
                 let desired_service = def.service.as_deref().unwrap_or("Jugador");
-                let identity =
-                    |session: &crate::LiveDriveSession, index: usize| -> (String, usize) {
-                        if session.service_id == player.service_id {
-                            for receipt in &self.couplings {
-                                let first = receipt.before.formation.cars.len();
-                                let end = first + receipt.donor_before.formation.cars.len();
-                                if (first..end).contains(&index) {
-                                    return (receipt.donor.clone(), index - first);
-                                }
-                            }
-                        }
-                        (session.service_id.clone(), index)
-                    };
                 let actual = std::iter::once(player)
                     .chain(
                         self.services
@@ -113,18 +114,23 @@ impl crate::LiveTraffic {
                     .collect::<Vec<_>>();
                 let mut ids = actual
                     .iter()
-                    .map(|(s, i)| identity(s, *i))
+                    .map(|(s, i)| s.vehicle_ids()[*i].clone())
                     .collect::<Vec<_>>();
                 ids.sort();
                 let mut expected = def
                     .vehicles
                     .iter()
-                    .map(|i| (desired_service.to_string(), *i))
+                    .map(|i| format!("{desired_service}/car/{i}"))
                     .collect::<Vec<_>>();
                 expected.sort();
                 let composition = ids == expected;
                 let secured = actual.iter().all(|(s, i)| {
-                    *i >= s.formation.coupled_count && s.formation.cars[*i].handbrake
+                    (*i >= s.formation.coupled_count
+                        || s.formation.cars[..s.formation.coupled_count]
+                            .iter()
+                            .all(|c| !c.powered))
+                        && s.formation.cars[*i].handbrake
+                        && s.velocity_mps().abs() < 0.1
                 });
                 YardDeliveryStatus {
                     id: def.id.clone(),

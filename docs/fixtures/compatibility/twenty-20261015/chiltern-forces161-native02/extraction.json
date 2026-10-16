@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "kind": "deterministic_projection_of_original_fields",
+  "extractor_sha256": "bb0dc9e2980b244706e088eefac3d649503c7811538875bbe2ec71561f4723d1",
+  "source_car_observation_sha256": "255304a33d0f365a23cabdb8fdc43c60c01e0cbb4ef9e540d153a21f4c781356",
+  "source_adhesion_observation_sha256": "3392f303463a7d54b48cda1bfd8bd260855ffcc952fb77747e9bf3eea71a1103",
+  "source_trace_sha256": "ad9e690435d784df243c8a49bfdb37137c6e5f98f8941045adfde27e4500a7e2",
+  "fixture_sha256": "dfdd41d166da63f5e2a3a0c681f2effe3e11aa272d5aac91a457d36a50ae47c5",
+  "protocol_sha256": "b553a66098b7e538fa15855db787050383af2db59d51935cba093586d20a8b16",
+  "rows": 256,
+  "expected_force_method": "direct original CurveForceN field, never a formula",
+  "derived_input": "Single source expression for the shared wagon coefficient; labelled per-locomotive context",
+  "rust_executed": false
+}

@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "status": "DECLARED_BEFORE_NATIVE05_EXECUTION",
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "unchanged_thresholds": {
+    "velocity_rms_mps": 0.75,
+    "maximum_odometer_error_m": 45,
+    "brake_pipe_rms_psi": 5,
+    "cylinder_rms_psi": 5,
+    "motive_force_rms_n": 5000,
+    "brake_force_rms_n": 5000
+  },
+  "protocol_sha256": "8a861f32454a2bfa2eb6ee497d87b7968aae627a71d1462195704898964c326e",
+  "previous_attempt_preserved": "lirr-native-04",
+  "previous_rust_attempt_preserved": "lirr-replay-02",
+  "measurement_corrections": {
+    "force_frame": "OR Train.UpdatePhysics Train.cs2058-2066 inverts local motive+gravity by Flipped XOR (IsDriveable AND IsActualPlayerTrain AND UsingRearCab). Record each local force, sign and oriented force; sum train-frame channels for comparison.",
+    "controls": "throttle/brake columns record the original CurrentValue. requested_throttle/requested_brake preserve the same driver requests. No driver, original DLL, source route/stock, duration, timestep or tolerance is changed.",
+    "initial_pneumatics": "Read-only primitive fields of original initialized train/locomotive/controller and each BrakeSystem before tick0; never prescribe a later state from Rust or alter original settings."
+  },
+  "source_sha256": {
+    "tools/openrails-reference/ActivityTrajectory.cs": "bea60b02ac5cffda07fb88c621ddfdd904da9721c4cce49c99dfa4d48d7f4a6d",
+    "tools/openrails-reference/HeadlessCapture.cs": "c832f071a28f61178da2814d382069c3dc15cdb2aff7b89f40fe5974ffdb60a0",
+    "scripts/capture_lirr_full_service.py": "355e6cb6988aaf0a49c3be8fb1343477fa6881a1e79b19dcce08908371f50b8c",
+    "scripts/oracle_wine.py": "4e87773fd3fe535f5660a427ea12b8b6a716266ebf9161e433aa66fc86e9f590",
+    "oracles/openrails-reference.toml": "1a7a80f560ef1039e237c465621cb3066cbbae56662f7e617f395593783f2970"
+  },
+  "no_acceptance_claim": "Native04 and replay02 remain historical failures/diagnostics;05 must complete every coverage gate and any Rust comparison must retain all original thresholds."
+}

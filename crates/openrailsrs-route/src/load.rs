@@ -223,25 +223,32 @@ fn layout_to_graph(layout: RouteLayoutFile) -> Result<TrackGraph, RouteError> {
         let edge = g.edge(&id).ok_or_else(|| {
             RouteError::Msg(format!("Physical profile references missing edge {id}"))
         })?;
-        if profile.speed_posts.iter().any(|p| {
-            !p.position_m.is_finite()
-                || !(0.0..=edge.length_m).contains(&p.position_m)
-                || !p.speed_limit_kmh.is_finite()
-                || p.speed_limit_kmh <= 0.0
-        }) || profile.grades.iter().any(|p| {
-            !p.position_m.is_finite()
-                || !(0.0..=edge.length_m).contains(&p.position_m)
-                || !p.grade_percent.is_finite()
-                || p.grade_percent.abs() > 25.0
-        }) || profile.physical_cant.iter().any(|p| {
-            !p.position_m.is_finite()
-                || !(0.0..=edge.length_m).contains(&p.position_m)
-                || !p.cant_m.is_finite()
-                || p.cant_m < 0.
-        }) || profile
-            .track_sound_regions
-            .iter()
-            .any(|p| !p.position_m.is_finite() || !(0. ..=edge.length_m).contains(&p.position_m))
+        if profile.native_tunnels.iter().any(|p| !p.valid())
+            || profile
+                .native_tunnels
+                .windows(2)
+                .any(|p| p[0].end_m > p[1].start_m)
+            || profile.speed_posts.iter().any(|p| {
+                !p.position_m.is_finite()
+                    || !(0.0..=edge.length_m).contains(&p.position_m)
+                    || !p.speed_limit_kmh.is_finite()
+                    || p.speed_limit_kmh <= 0.0
+            })
+            || profile.grades.iter().any(|p| {
+                !p.position_m.is_finite()
+                    || !(0.0..=edge.length_m).contains(&p.position_m)
+                    || !p.grade_percent.is_finite()
+                    || p.grade_percent.abs() > 25.0
+            })
+            || profile.physical_cant.iter().any(|p| {
+                !p.position_m.is_finite()
+                    || !(0.0..=edge.length_m).contains(&p.position_m)
+                    || !p.cant_m.is_finite()
+                    || p.cant_m < 0.
+            })
+            || profile.track_sound_regions.iter().any(|p| {
+                !p.position_m.is_finite() || !(0. ..=edge.length_m).contains(&p.position_m)
+            })
         {
             return Err(RouteError::Msg(format!(
                 "Invalid speed/grade profile for {id}"

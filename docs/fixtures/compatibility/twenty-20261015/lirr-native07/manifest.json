@@ -1,0 +1,58 @@
+{
+  "schema": 1,
+  "capture_kind": "original_dll_calls",
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "status": "LIVE_NATIVE_REFERENCE_COMPLETE_RUST_ACCEPTANCE_PENDING",
+  "protocol_sha256": "7f5d39ada7927a4048ab63ae6a85311f47e2769e77095d5d6893133639d381b4",
+  "thresholds": {
+    "velocity_rms_mps": 0.75,
+    "maximum_odometer_error_m": 45,
+    "brake_pipe_rms_psi": 5,
+    "cylinder_rms_psi": 5,
+    "motive_force_rms_n": 5000,
+    "brake_force_rms_n": 5000
+  },
+  "reference": {
+    "file": "reference.csv.gz",
+    "uncompressed_sha256": "21212399f6289ff44b6d108d6312670008e6503abee0054df2d4dd150d6e2be2",
+    "uncompressed_bytes": 49921414,
+    "compressed_sha256": "a46bede31e31c8424b6e8081f98dad49f706bc894d4e61708524963ca6e4d70d",
+    "compressed_bytes": 10508703
+  },
+  "files": {
+    "ActivityTrajectory.cs": "d292049916f4840ad3fdd93e9f3eb197c8505046ca698606e5977168b9d4bfe6",
+    "HeadlessCapture.cs": "c832f071a28f61178da2814d382069c3dc15cdb2aff7b89f40fe5974ffdb60a0",
+    "README.md": "9fdb649213d4dede5fd18a7e8635695bd6a4b1a8a43cc75e9f6e82162e951604",
+    "capture-execution.json": "884a513059021c02f7567030ab31d6ccdb34ba267af15d2f1c489b47bf3a374c",
+    "capture-script.py": "19d08aa0ed4a2d17aba8f0d3961c1424866446e735a0cdedbe89e7afb1142aeb",
+    "capture.log": "4d965554c7d85d3bb0b445b7f7529b1f8f56ca5d236350bde22ea5f046d350f8",
+    "coverage.json": "d930fd917bd1b27eb72eda2c6bf8acd1a018ff09a8f9e93eb88371dfd62423ee",
+    "history.json": "2b8c6837a76c73c450c1afe15e4f524828c30a09aa52d22374edbd7a3742d362",
+    "initial.json": "7c6f271a059770f58cb069f8f9f077dcaaca2bb43f7e31fbc5ccab9b0b7c8e29",
+    "measurement-declaration.json": "96c199a7747e72d58cf360308b733429ab822c2fa0a566839419107b5bb73df6",
+    "oracle_wine.py": "4e87773fd3fe535f5660a427ea12b8b6a716266ebf9161e433aa66fc86e9f590",
+    "outcome.json": "71dc5d535dc8dcd4873919ad935abcdde187c871ff2fd2d67b20f5442c0078cc",
+    "protocol.json": "7f5d39ada7927a4048ab63ae6a85311f47e2769e77095d5d6893133639d381b4",
+    "reference-pin-at-capture.toml": "1a7a80f560ef1039e237c465621cb3066cbbae56662f7e617f395593783f2970",
+    "reference.csv.gz": "a46bede31e31c8424b6e8081f98dad49f706bc894d4e61708524963ca6e4d70d",
+    "source-inputs.json": "f2398b261187b71d2b74979c2808e8a4239214b147b1a49d8f7f9ee711f95e4f",
+    "telemetry-integrity.json": "10959af56f7f37578d6d474065757d5f342fb7a071c505367d991ca967ae665e",
+    "wine-isolation/isolation.json": "c615455118ee7e126ec795e599ab397619b7306263943f24d5a3a892c230e207",
+    "wine-isolation/release.json": "b2dfe95b6ca7a3737c14556bd902408a65b8a85992a60e104c4e586d7ad9fa6f"
+  },
+  "source_artifact_sha256": {
+    "lirr-native-07/receipt.json": "36654722f5f27b2fe5e7cb88dd3dee7285f97323ee22c2960ed2e9af7c16a312",
+    "lirr-native-07/native/trace.csv": "21212399f6289ff44b6d108d6312670008e6503abee0054df2d4dd150d6e2be2",
+    "lirr-native-07/native/initial.json": "4e58cffabe8aebb63cee29144b813b594abd8944baf3836ac718eb90dc041fa7",
+    "lirr-native-07/native/outcome.json": "578871d156b8446e5b5624262b1207cf61f418c100a12dbe69163254ca6a8b95",
+    "lirr-native-07/telemetry-integrity.json": "10959af56f7f37578d6d474065757d5f342fb7a071c505367d991ca967ae665e",
+    "lirr-native-07/wine-isolation/isolation.json": "4dca58b6398334f04f7f87189d3e850153b8b46a236ba15955cc2898deea2b71",
+    "lirr-native-07/wine-isolation/release.json": "336aad3d382573c89143a773fc025ac0bc3a9968db87a8aadc7ffd80ec075f36"
+  },
+  "export_transformations": [
+    "CSV compressed losslessly with gzip mtime0; decompressed original hash retained",
+    "JSON/log host paths replaced by named placeholders; raw source receipt hashes kept separately",
+    "No original content definitions, route graph, DLL, binaries or Wine prefix exported"
+  ]
+}

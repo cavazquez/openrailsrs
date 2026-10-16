@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "kind": "own_compound_work_ledger_cpu_regression_excerpt",
+  "status": "pass",
+  "tests_passed": 2,
+  "tests": [
+    "steam_thermodynamics::tests::bypass_keeps_hp_exhaust_out_of_the_receiver_work_ledger",
+    "steam_thermodynamics::tests::sub_newton_hp_force_cannot_create_lp_work"
+  ],
+  "raw_log": "tmp/twenty-20261015/libs-and-mp03.log",
+  "raw_log_sha256": "eff357073d97b5371f4cb01e516a1ce2ba7b477edd6138cb42e2b7f291325616",
+  "raw_result_sha256": "cd348407e040d306443cb908f66e0af7ea3ba039f32859dbde64879067499c69",
+  "excerpt_sha256": "ed70c17f5854f8c084b34e6666480d7190dbe28bd275b405a7d625483da6abb1",
+  "extraction": "Noncontiguous original lines copied literally, no inserted or changed test outcomes",
+  "raw_line_numbers_1_based": [
+    838,
+    970,
+    971,
+    993
+  ],
+  "suite": "openrailsrs-sim library",
+  "suite_passed": 151,
+  "suite_failed": 0,
+  "suite_ignored": 0,
+  "run_total_passed": 1774,
+  "run_total_ignored": 46,
+  "binary_from_run_log": "target/debug/deps/openrailsrs_sim-ad371369575803bf",
+  "binary_sha256_at_publication": "d150e160a606573739ecb3e6eb327d1e14153f59d715892d081069432947ad9b",
+  "source": "crates/openrailsrs-sim/src/steam_thermodynamics.rs",
+  "source_sha256_at_publication": "929f9e551302b53ddb5cb4eb8d86f36c2f94890c89e5e4d7c30f2a7020d7e1f8",
+  "scope": "Own HP/receiver/LP extension only. Work below1N and starting-valve bypass bookkeeping; no original-DLL compound parity, no full receiver/LP energy closure claim.",
+  "source_binding": "Binary filename comes from execution log; source/binary hashes sampled at publication after that run. Historical steam comparison and directed11 receipts remain unchanged."
+}

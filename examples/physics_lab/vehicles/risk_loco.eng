@@ -1,0 +1,8 @@
+SIMISA@@@@@@@@@@JINX0D0t______
+Wagon ( owned_curve_risk_loco Type ( Engine ) Mass ( 80t ) Size ( 3m 4m 20m )
+ BrakeSystemType ( Air_single_pipe ) MaxBrakeForce ( 180kN ) )
+Engine ( owned_curve_risk_loco Type ( Diesel )
+ MaxPower ( 2MW ) MaxForce ( 240kN ) MaxVelocity ( 160km/h )
+ DieselEngineIdleRPM ( 300 ) DieselEngineMaxRPM ( 900 )
+ DieselEngineMaxRPMChangeRate ( 80 ) MaxDieselLevel ( 5000l )
+ DieselUsedPerHourAtIdle ( 20l ) DieselUsedPerHourAtMaxPower ( 400l ) )

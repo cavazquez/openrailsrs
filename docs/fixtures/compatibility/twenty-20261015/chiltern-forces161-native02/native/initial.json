@@ -1,0 +1,89 @@
+{
+  "front": {
+    "tile_x": -6086,
+    "tile_z": 14927,
+    "x": 706.648,
+    "y": 61.0375137,
+    "z": 915.9426,
+    "node": 96,
+    "offset_m": 142.416748,
+    "direction": "Backward"
+  },
+  "error_m": 1.9073486328125E-05,
+  "cars": 8,
+  "length_m": 166.164,
+  "settings": {
+    "UseAdvancedAdhesion": true,
+    "SimpleControlPhysics": false,
+    "AdhesionFactor": 100,
+    "AdhesionFactorChange": 10,
+    "AdhesionProportionalToWeather": false,
+    "GraduatedRelease": false,
+    "BrakePipeChargingRate": 21,
+    "CorrectQuestionableBrakingParams": false,
+    "CurveSpeedDependent": false,
+    "TunnelResistanceDependent": false,
+    "WindResistanceDependent": false,
+    "NoForcedRedAtStationStops": false,
+    "ActRandomizationLevel": 0,
+    "ActWeatherRandomizationLevel": 0
+  },
+  "vehicles": [
+    {
+      "length_m": 20.602,
+      "mass_kg": 69091.4,
+      "max_brake_force_n": 367174.0,
+      "brake_type": "EPBrakeSystem",
+      "source": "RF_WP_DMBSA.eng"
+    },
+    {
+      "length_m": 20.71,
+      "mass_kg": 50802.5,
+      "max_brake_force_n": 268530.25,
+      "brake_type": "EPBrakeSystem",
+      "source": "RF_WP_PSB.wag"
+    },
+    {
+      "length_m": 20.71,
+      "mass_kg": 50802.5,
+      "max_brake_force_n": 268530.25,
+      "brake_type": "EPBrakeSystem",
+      "source": "RF_WP_KFC.wag"
+    },
+    {
+      "length_m": 20.71,
+      "mass_kg": 50802.5,
+      "max_brake_force_n": 268530.25,
+      "brake_type": "EPBrakeSystem",
+      "source": "RF_WP_PCFD.wag"
+    },
+    {
+      "length_m": 20.71,
+      "mass_kg": 50802.5,
+      "max_brake_force_n": 268530.25,
+      "brake_type": "EPBrakeSystem",
+      "source": "RF_WP_PCFE.wag"
+    },
+    {
+      "length_m": 20.71,
+      "mass_kg": 50802.5,
+      "max_brake_force_n": 268530.25,
+      "brake_type": "EPBrakeSystem",
+      "source": "RF_WP_KFF.wag"
+    },
+    {
+      "length_m": 20.71,
+      "mass_kg": 50802.5,
+      "max_brake_force_n": 268530.25,
+      "brake_type": "EPBrakeSystem",
+      "source": "RF_WP_PSG.wag"
+    },
+    {
+      "length_m": 20.602,
+      "mass_kg": 67000.0,
+      "max_brake_force_n": 70000.0,
+      "brake_type": "AirSinglePipe",
+      "source": "RF_WP_DMBSH.eng"
+    }
+  ]
+}

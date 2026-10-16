@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "status": "DECLARED_BEFORE_NATIVE07_EXECUTION",
+  "activity_and_consist_unchanged": true,
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "protocol": {
+    "schema": 2,
+    "status": "DECLARED_BEFORE_EXECUTION",
+    "reference_version": "1.6.1",
+    "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+    "activity": "01Brooklyn-Hempstead.act",
+    "activity_sha256": "c667aeedf94b2b90283e801906f865e37d4e8a4b67cd83430bab74b94ac287ab",
+    "consist": "SFexpress-500",
+    "cars": 7,
+    "step_s": 0.05,
+    "maximum_duration_s": 3600,
+    "minimum_duration_s": 1575,
+    "minimum_distance_m": 30000,
+    "minimum_original_platforms": 2,
+    "thresholds": {
+      "velocity_rms_mps": 0.75,
+      "maximum_odometer_error_m": 45,
+      "brake_pipe_rms_psi": 5,
+      "cylinder_rms_psi": 5,
+      "motive_force_rms_n": 5000,
+      "brake_force_rms_n": 5000
+    },
+    "controls": "Native driver uses original signals, speed limits, platforms and boarding. Rust replays exactly the same 20Hz handles, with physical path and original vehicles. Station scoring and ACT goals are outside this physics comparison and are not allowed to truncate its diagnostics.",
+    "prohibited": [
+      "Changing original files",
+      "Regenerating old references",
+      "Increasing thresholds after observing a failure",
+      "Calling a short or truncated run a full-service acceptance"
+    ],
+    "measurement_context": {
+      "contract": "live-unpaused-v1",
+      "paused": false,
+      "use_advanced_adhesion": true,
+      "simple_control_physics": false,
+      "adhesion_factor_percent": 100,
+      "adhesion_factor_change_percent": 0,
+      "adhesion_proportional_to_weather": false,
+      "initialization": "Original ACT/CON initialization unchanged; explicitly set Simulator.Paused=false before initial sample; no warmup and no observed-state injection.",
+      "force_frame": "Original local motive/gravity forces multiplied by Flipped XOR player rear-cab orientation only when summing the train; raw per-vehicle local/oriented channels retained.",
+      "controls": "Actual CurrentValue of the original controllers; requested handles are diagnostic channels.",
+      "initial_force_phase": "At t=0 raw original force fields have not yet had an Update tick; preserve them as zero where original initializes them so; do not mask this sample.",
+      "original_weather": "Clear, zero precipitation from the original ACT; no live weather or randomization.",
+      "viewer_clear_preset": {
+        "visibility_m": 20000,
+        "cloud_cover_factor": 0.05,
+        "precipitation_ppspm2": 0,
+        "precipitation_liquidity": 1,
+        "source": "OR1.6.1 Source/RunActivity/Viewer3D/Weather.cs SetInitialWeatherParameters/UpdateWeatherParameters lines174-192",
+        "reason": "The real viewer initializes these static weather inputs; Simulator alone leaves them zero. The original ACT must already declare Clear."
+      }
+    },
+    "supersedes_context": {
+      "capture": "lirr-native-05",
+      "reason": "The previous helper inherited Simulator.Paused=true. Original UpdateFrictionCoefficient skips weather while paused and clamps its uninitialized base factor to0.5; that is not the context of an unpaused playable service. Preserve05, all its failed replays and their raw metrics.",
+      "additional_predeclared_change": "Disable native adhesion randomization explicitly (AdhesionFactor100, AdhesionFactorChange0) for the new dry deterministic experiment; preserve the historical05 setting10 and all raw records."
+    },
+    "required_diagnostics": [
+      "sim_paused",
+      "visibility_m",
+      "precipitation_ppspm2",
+      "slippery_spot_distance_m",
+      "slippery_spot_length_m",
+      "per_vehicle_local_velocity",
+      "per_vehicle_brake_pipe_cylinder_and_forces",
+      "per_motor_signed_wheel_speed",
+      "per_motor_driver_radius_and_axle_inertia",
+      "per_motor_traction_and_motive_local_forces",
+      "per_motor_brake_retard_and_skid",
+      "per_motor_environment_base_filtered_and_adhesion",
+      "per_axle_drive_output_compensated_forces_and_signed_speed",
+      "per_axle_integrator_substeps_and_memory"
+    ]
+  },
+  "source_sha256": {
+    "tools/openrails-reference/ActivityTrajectory.cs": "d292049916f4840ad3fdd93e9f3eb197c8505046ca698606e5977168b9d4bfe6",
+    "scripts/capture_lirr_full_service.py": "19d08aa0ed4a2d17aba8f0d3961c1424866446e735a0cdedbe89e7afb1142aeb",
+    "oracles/lirr-full-service-live-protocol.json": "7f5d39ada7927a4048ab63ae6a85311f47e2769e77095d5d6893133639d381b4"
+  },
+  "reference_pin_sha256": "1a7a80f560ef1039e237c465621cb3066cbbae56662f7e617f395593783f2970",
+  "native_output": "tmp/twenty-20261015/lirr-native-07",
+  "private_prefix": "tmp/twenty-20261015/lirr-wine-prefix",
+  "previous_captures_preserved": [
+    "lirr-native-04",
+    "lirr-native-05",
+    "lirr-native-06"
+  ],
+  "previous_replays_preserved": [
+    "lirr-replay-01",
+    "lirr-replay-02",
+    "lirr-replay-03",
+    "lirr-replay-04"
+  ],
+  "acceptance": "All original six numerical thresholds still apply, including initial sample. Complete coverage and exact actual handles required; a context/capture failure or truncated replay is not acceptance.",
+  "not_state_injection": "Only static original-viewer Clear weather and experiment settings are initialized before first tick; no observed speed, force, wheel state, brake state or pressure is imposed after original ACT initialization.",
+  "previous_attempt": "06 failed own helper compilation before original physics; accessing nonpublic BaseFrictionCoefficientFactor now uses read-only reflection, no driver/context change."
+}

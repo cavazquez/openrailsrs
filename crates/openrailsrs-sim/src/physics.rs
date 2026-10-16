@@ -36,6 +36,7 @@ fn speed_limit_traction_factor(v: f64, speed_cap: f64) -> f64 {
 #[derive(Clone)]
 pub struct TrainPhysics {
     pub bogies: Vec<openrailsrs_train::bogie_geometry::VehicleBogieModel>,
+    pub rack: crate::rack::RackTrainConfig,
     pub power_supply: crate::power_supply::PowerTrainConfig,
     pub rail_adhesion: Option<crate::adhesion::RailAdhesionConfig>,
     pub diesel: crate::diesel_operation::DieselTrainConfig,
@@ -113,12 +114,81 @@ pub fn step(
     train: &TrainPhysics,
     dt: f64,
 ) -> StepResult {
+    step_direction(state, path_data, train, dt, false)
+}
+
+/// Reverse motion keeps the real multi-edge path for contact, electrical,
+/// weather, yard and rack queries. A virtual long edge loses world chainage.
+pub fn step_backwards(
+    state: &mut TrainSimState,
+    path_data: &PathData,
+    train: &TrainPhysics,
+    dt: f64,
+) -> StepResult {
+    step_direction(state, path_data, train, dt, true)
+}
+
+fn step_direction(
+    state: &mut TrainSimState,
+    path_data: &PathData,
+    train: &TrainPhysics,
+    dt: f64,
+    backwards: bool,
+) -> StepResult {
     let edge_data = match path_data.get(state.edge_index) {
         Some(e) => e,
         None => return StepResult { arrived: true },
     };
 
     let v = state.velocity_mps.max(0.0);
+    let head = path_data.chainage_at_edge_position(state.edge_index, state.pos_on_edge_m);
+    let mut front = head;
+    let mut vehicle_centers = Vec::with_capacity(train.vehicle_lengths_m.len());
+    let vehicle_grades: Vec<_> = train
+        .vehicle_lengths_m
+        .iter()
+        .enumerate()
+        .map(|(i, length)| {
+            let nominal = front - head - length / 2.;
+            let center = head
+                + if state.path_reversed {
+                    -train.vehicle_lengths_m.iter().sum::<f64>() - nominal
+                } else {
+                    nominal
+                };
+            let span = train
+                .native
+                .as_ref()
+                .and_then(|n| n.vehicles.get(i))
+                .map(|p| {
+                    p.pitch_span_m.unwrap_or_else(|| {
+                        let face = p.coupler_face_length_m.unwrap_or(*length);
+                        if face >= 4.3 {
+                            face - 4.3
+                        } else {
+                            *length * 0.65
+                        }
+                    })
+                })
+                .unwrap_or(*length);
+            vehicle_centers.push(center);
+            let grade = path_data.average_grade_between(center - span / 2., center + span / 2.)
+                / 100.0
+                * if backwards { -1. } else { 1. };
+            front -= length;
+            if train.native.is_some() {
+                // TrainCar.UpdateGravity projects weight onto the normalized
+                // car axis (sin pitch); a percentage grade is tan pitch.
+                grade / grade.hypot(1.)
+            } else {
+                grade
+            }
+        })
+        .collect();
+    crate::bogie_dynamics::advance_train(state, train, path_data, &vehicle_centers, dt);
+    if crate::derailment::any_active(state, train) {
+        state.brake_system.emergency = true;
+    }
     crate::surface_conditions::update_program_input(state);
     crate::vehicle_systems::advance_doors(state, train.vehicle_lengths_m.len(), dt);
     if let Some(program) = &state.weather_track
@@ -179,19 +249,42 @@ pub fn step(
     } else {
         state.brake
     };
-    let brake_frac = train.brake_mapping.command_to_sim_fraction(brake_command);
+    let brake_frac = if state.brake_system.native_start_handle().is_some() {
+        // An authored MSTS valve takes the actual controller handle; the
+        // generic pressure-to-force mapping would rescale its notch position.
+        brake_command.clamp(0., 1.)
+    } else {
+        train.brake_mapping.command_to_sim_fraction(brake_command)
+    };
     for car in &mut state.diesel.cars {
         if let Some(gear) = &mut car.gearbox {
             gear.previous_brake = state.brake;
         }
     }
 
+    let native_steam_brakes = crate::steam_equipment::prepare_native_brakes(
+        state,
+        state.brake.clamp(0., 1.),
+        dt,
+        backwards,
+    );
+    let mut native_curve_coefficients = Vec::new();
     if let Some(native) = &train.native {
         if state.native_dynamics.as_ref().is_none_or(|d| {
-            d.bearing_c.len() != native.vehicles.len()
+            d.bearing_c.len() != train.vehicle_lengths_m.len()
                 || d.axles.len() != train.diesel_engines.len()
         }) {
+            let mu_throttle = state.native_dynamics.as_ref().map_or(0., |d| d.mu_throttle);
             let mut dynamics = native.initial_state(train.diesel_engines.len());
+            dynamics.mu_throttle = mu_throttle;
+            dynamics.bearing_c.truncate(train.vehicle_lengths_m.len());
+            if let Some(previous) = &state.native_dynamics {
+                dynamics
+                    .adhesion_filters
+                    .clone_from(&previous.adhesion_filters);
+                dynamics.adhesion_factor = previous.adhesion_factor;
+                dynamics.wagon_curve_coefficient = previous.wagon_curve_coefficient;
+            }
             for axle in &mut dynamics.axles {
                 axle.speed_mps = v;
             }
@@ -202,6 +295,13 @@ pub fn step(
             v,
             state.odometer_m,
             dt,
+        );
+        let adhesion_time = state.time_s();
+        native.advance_adhesion_inputs(state.native_dynamics.as_mut().unwrap(), adhesion_time, dt);
+        native_curve_coefficients = native.prepare_curve_friction(
+            state.native_dynamics.as_mut().unwrap(),
+            &train.diesel_vehicle_indices,
+            v,
         );
         if let Some(config) = &train.rail_adhesion {
             let base = if native.environment.first_slippery_spot.is_some() {
@@ -217,55 +317,65 @@ pub fn step(
                 if let Some(cylinder) = state.brake_system.cylinders.get_mut(index) {
                     cylinder.set_native_air_skid(
                         state.throttle < 0.001
-                            && crate::native_dynamics::NativeAxleState {
-                                speed_mps: state
-                                    .rail_adhesion
-                                    .as_ref()
-                                    .and_then(|r| r.cars.get(index))
-                                    .map_or(axle.speed_mps, |c| c.wheel_speed_mps),
-                            }
-                            .wheel_slipping(
-                                v,
-                                state
-                                    .rail_adhesion
-                                    .as_ref()
-                                    .and_then(|r| r.cars.get(index))
-                                    .map_or(dynamics.adhesion_factor, |c| c.factor),
-                            ),
+                            && state
+                                .rail_adhesion
+                                .as_ref()
+                                .and_then(|r| r.cars.get(index))
+                                .map_or_else(
+                                    || axle.clone(),
+                                    |c| crate::native_dynamics::NativeAxleState {
+                                        speed_mps: c.wheel_speed_mps,
+                                        integration: c.axle_integration.clone(),
+                                    },
+                                )
+                                .wheel_slipping(
+                                    v,
+                                    state
+                                        .rail_adhesion
+                                        .as_ref()
+                                        .and_then(|r| r.cars.get(index))
+                                        .map_or(native.adhesion_factor_for(dynamics, index), |c| {
+                                            c.factor
+                                        }),
+                                ),
                     );
                 }
             }
         }
         // Native safety interlocks use the actual cylinder pressure after this
         // tick's EP update, independently of the driver's brake handle.
-        state.brake_system.step_with_speed(brake_frac, dt, v);
+        if !native_steam_brakes {
+            state.brake_system.step_with_speed(brake_frac, dt, v);
+        }
     } else if let Some(config) = &train.rail_adhesion {
         crate::adhesion::prepare(state, config, 1., dt);
-        if state.rail_adhesion.is_some() {
+        if state.rail_adhesion.is_some() && !native_steam_brakes {
             state.brake_system.step_with_speed(brake_frac, dt, v);
         }
     }
-    if train.native.is_none() && state.rail_adhesion.is_none() {
+    if !native_steam_brakes && train.native.is_none() && state.rail_adhesion.is_none() {
         state.brake_system.step_with_speed(brake_frac, dt, v);
     }
     crate::auxiliary_work::step_circuits(state, dt);
-    let physical_throttle =
-        if !crate::vehicle_systems::doors_allow_traction(state, train.vehicle_lengths_m.len()) {
-            0.
-        } else {
-            train.native.as_ref().map_or(state.throttle, |native| {
-                native.throttle(
-                    state.throttle,
-                    state
-                        .brake_system
-                        .cylinders
-                        .first()
-                        .map_or(0., |c| c.pressure_bar()),
-                )
-            })
-        };
+    let physical_throttle = if crate::derailment::any_active(state, train)
+        || !crate::vehicle_systems::doors_allow_traction(state, train.vehicle_lengths_m.len())
+    {
+        0.
+    } else {
+        train.native.as_ref().map_or(state.throttle, |native| {
+            native.throttle(
+                state.throttle,
+                state
+                    .brake_system
+                    .cylinders
+                    .first()
+                    .map_or(0., |c| c.pressure_bar()),
+            )
+        })
+    };
     crate::multiple_unit::advance(state, train, dt);
     let native_brake_forces = state.brake_system.cylinder_forces_n(v);
+    let native_retard_forces = state.brake_system.previous_native_retard_forces_n();
     crate::power_supply::advance(state, &train.power_supply);
     crate::cab_equipment::advance(state, dt);
     let mut diesel_config = train.diesel.clone();
@@ -302,8 +412,25 @@ pub fn step(
         .collect();
     let engine_throttles = vehicle_throttles
         .iter()
-        .map(|(&index, &command)| {
-            let lagged = if train.native.is_some() {
+        .map(|(&index, &command)| (index, command))
+        .chain(train.diesel_vehicle_indices.iter().map(|&index| {
+            (
+                index,
+                crate::multiple_unit::throttle(state, index, physical_throttle),
+            )
+        }))
+        .map(|(index, command)| {
+            let explicit_mu = state.vehicle_systems.iter().any(|car| {
+                car.definition.vehicle == index && car.definition.multiple_unit.is_some()
+            });
+            let governor_command = if let (Some(native), Some(dynamics)) =
+                (&train.native, &state.native_dynamics)
+                && !explicit_mu
+            {
+                native.governor_throttle(dynamics, index, command)
+            } else if train.native.is_some() {
+                // Explicit Rust MU protocols already have their own delivery
+                // time. Preserve the gearbox's local controller phase there.
                 state
                     .diesel
                     .car(index)
@@ -312,7 +439,7 @@ pub fn step(
             } else {
                 command
             };
-            (index, lagged)
+            (index, governor_command)
         })
         .collect();
     state.fuel_consumption_g += crate::diesel_operation::advance_at_speed(
@@ -332,6 +459,11 @@ pub fn step(
     }
     state.diesel.cars.extend(retained);
     state.diesel.cars.sort_by_key(|c| c.vehicle);
+    if let Some(dynamics) = &mut state.native_dynamics {
+        // All governor commands above were sampled before this publication;
+        // it must survive a save between physical ticks or a cab change.
+        dynamics.mu_throttle = physical_throttle;
+    }
     crate::traction_energy::prepare(state, train.vehicle_lengths_m.len());
     crate::engine_equipment::advance(state, physical_throttle, train.vehicle_lengths_m.len(), dt);
     crate::power_supply::advance(state, &train.power_supply);
@@ -371,13 +503,7 @@ pub fn step(
     // Steam path: boiler + cylinder model (updates boiler state in place).
     // Electric/diesel path: P/v law or explicit traction curve.
     let mut f_motor = if !state.steam_boilers.is_empty() {
-        crate::steam_equipment::advance(
-            state,
-            train.vehicle_lengths_m.len(),
-            physical_throttle,
-            steam_wheel_speed,
-            dt,
-        )
+        crate::steam_equipment::advance(state, train, physical_throttle, steam_wheel_speed, dt)
     } else if let (Some(params), Some(boiler)) = (&train.steam_params, state.boiler_state.as_mut())
     {
         // Route limits are driving instructions. Only legacy toy scenarios use
@@ -469,7 +595,14 @@ pub fn step(
                 } else if let Some(car) = state.diesel.car(vehicle_index) {
                     car.rpm
                 } else if train.native.is_some() {
-                    engine.advance_native_rpm(rpm, physical_throttle, dt)
+                    engine.advance_native_rpm(
+                        rpm,
+                        engine_throttles
+                            .get(&vehicle_index)
+                            .copied()
+                            .unwrap_or(physical_throttle),
+                        dt,
+                    )
                 } else {
                     engine.advance_rpm(rpm, physical_throttle, dt)
                 };
@@ -505,6 +638,15 @@ pub fn step(
                 let legacy = train.legacy_power_cap;
 
                 let geared_force = state.diesel.car(vehicle_index).and_then(|s| {
+                    if let Some(hydraulic) = &s.hydraulic {
+                        return Some(
+                            if s.phase == crate::diesel_operation::EnginePhase::Running {
+                                hydraulic.force_n
+                            } else {
+                                0.
+                            },
+                        );
+                    }
                     let gear = s.gearbox.as_ref()?;
                     let config = train
                         .diesel
@@ -562,7 +704,13 @@ pub fn step(
                         .native_dynamics
                         .as_ref()
                         .and_then(|d| d.axles.get(i))
-                        .map_or(v, |a| a.speed_mps.abs());
+                        .map_or(v, |a| {
+                            let speed = state
+                                .vehicles
+                                .get(vehicle_index)
+                                .map_or(v, |car| car.velocity_mps);
+                            a.traction_speed_mps(speed)
+                        });
                     let target = if let Some(fraction) =
                         crate::engine_equipment::apparent_fraction(state, vehicle_index)
                     {
@@ -647,11 +795,19 @@ pub fn step(
                 let grip = crate::adhesion::factor(
                     state,
                     train.diesel_vehicle_indices.get(i).copied().unwrap_or(i),
-                    state
-                        .native_dynamics
-                        .as_ref()
-                        .map_or(1., |d| d.adhesion_factor),
+                    state.native_dynamics.as_ref().map_or(1., |d| {
+                        train.native.as_ref().map_or(d.adhesion_factor, |n| {
+                            n.adhesion_factor_for(d, vehicle_index)
+                        })
+                    }),
                 );
+                let vertical_normal_factor =
+                    crate::track_irregularity::normal_factor(state, vehicle_index);
+                let vertical_contact_enabled = state
+                    .bogies
+                    .get(vehicle_index)
+                    .and_then(|b| b.vertical.as_ref())
+                    .is_some_and(|s| s.enabled_override.unwrap_or(s.configured_enabled));
                 let rail_force = if let (Some(native), Some(dynamics)) =
                     (&train.native, &mut state.native_dynamics)
                 {
@@ -682,25 +838,46 @@ pub fn step(
                         .vehicles
                         .get(vehicle_index)
                         .map_or(v, |vehicle| vehicle.velocity_mps);
+                    let local_frame_sign = if (0.25..0.75).contains(&state.driver_reverser)
+                        && dynamics.axles[i].integration.local_frame_sign != 0.
+                    {
+                        dynamics.axles[i].integration.local_frame_sign
+                    } else if profile.flipped ^ (backwards ^ state.path_reversed) {
+                        -1.
+                    } else {
+                        1.
+                    };
                     let force = if native.environment.simple_control_physics {
                         dynamics.axles[i].speed_mps = speed;
-                        force_n
+                        if vertical_contact_enabled {
+                            force_n.min(
+                                engine.adhesion_mass_kg * mass / base_mass.max(1.)
+                                    * vertical_normal_factor
+                                    * G
+                                    * crate::adhesion::friction(speed, grip),
+                            )
+                        } else {
+                            force_n
+                        }
                     } else {
-                        dynamics.axles[i].step(
+                        dynamics.axles[i].step_oriented(
                             profile,
                             mass,
-                            engine.adhesion_mass_kg * mass / base_mass.max(1.0),
+                            engine.adhesion_mass_kg * mass / base_mass.max(1.0)
+                                * vertical_normal_factor,
                             speed,
                             force_n,
-                            native_brake_forces
+                            native_retard_forces
                                 .get(vehicle_index)
                                 .copied()
                                 .unwrap_or(0.),
                             grip,
                             dt,
+                            local_frame_sign,
                         )
                     };
                     let wheel_speed = dynamics.axles[i].speed_mps;
+                    let integration = dynamics.axles[i].integration.clone();
                     crate::adhesion::record(
                         state,
                         vehicle_index,
@@ -710,6 +887,13 @@ pub fn step(
                         force,
                         dt,
                     );
+                    if let Some(car) = state
+                        .rail_adhesion
+                        .as_mut()
+                        .and_then(|rail| rail.cars.get_mut(vehicle_index))
+                    {
+                        car.axle_integration = integration;
+                    }
                     force
                 } else if let Some(config) = &train.rail_adhesion {
                     let index = train.diesel_vehicle_indices.get(i).copied().unwrap_or(i);
@@ -880,9 +1064,59 @@ pub fn step(
         }
     }
 
+    if !train.rack.vehicles.is_empty()
+        && f_motor > 0.
+        && state.motor_force_n.iter().all(|f| f.abs() < 1e-9)
+        && let Some(vehicle) = train
+            .rack
+            .vehicles
+            .iter()
+            .find(|p| p.vehicle < train.vehicle_lengths_m.len())
+            .map(|p| p.vehicle)
+    {
+        if let Some(f) = state.motor_force_n.get_mut(vehicle) {
+            *f = f_motor;
+        }
+        if let Some(f) = state.rail_force_n.get_mut(vehicle) {
+            *f = f_motor;
+        }
+    }
+    f_motor += crate::rack::apply_traction(state, train, path_data, dt);
+    if crate::derailment::any_active(state, train) {
+        f_motor = 0.;
+        state.motor_force_n.fill(0.);
+        state.rail_force_n.fill(0.);
+    }
+    for (slot, &vehicle) in rail_motor_forces
+        .iter_mut()
+        .zip(&train.diesel_vehicle_indices)
+    {
+        *slot = state.rail_force_n.get(vehicle).copied().unwrap_or(0.);
+    }
+    for (vehicle, force) in &mut contact_motor_forces {
+        *force = state.rail_force_n.get(*vehicle).copied().unwrap_or(0.);
+    }
+
     // Advance the air-brake system and read the total cylinder force.
     // When no cylinders are registered (default state), fall back to the
     // instantaneous scalar model so existing single-mass simulations are unchanged.
+    if let Some(dynamics) = &state.native_dynamics {
+        for (motor, axle) in dynamics.axles.iter().enumerate() {
+            let vehicle = train
+                .diesel_vehicle_indices
+                .get(motor)
+                .copied()
+                .unwrap_or(motor);
+            if let Some(cylinder) = state.brake_system.cylinders.get_mut(vehicle) {
+                cylinder.set_native_air_skid(
+                    state.throttle < 0.001
+                        && axle.integration.wheel_slip
+                        && cylinder.retard_force_n(v) > 25.,
+                );
+            }
+        }
+        state.brake_system.record_native_brake_forces(v);
+    }
     let effective_mass = crate::consumable_mass::total_mass_kg(train, state);
     let effective_vehicle_masses: Vec<_> = state
         .vehicle_masses
@@ -936,50 +1170,98 @@ pub fn step(
             crate::brake_equipment::forces(state, train, v, dt, equipment_brake_forces);
         f_brake = equipment_brake_forces.iter().sum();
     }
-    let f_resist = train.davis.resistance_n(v);
-    let grade_fraction = edge_data.grade_at(state.pos_on_edge_m) / 100.0;
-    let f_grade = effective_mass * G * grade_fraction;
-    let head = path_data.chainage_at_edge_position(state.edge_index, state.pos_on_edge_m);
-    let mut front = head;
-    let mut vehicle_centers = Vec::with_capacity(train.vehicle_lengths_m.len());
-    let vehicle_grades: Vec<_> = train
-        .vehicle_lengths_m
+    // Tooth brakes, yard retarders and off-rail drag are mechanical contacts.
+    // Apply them after wheel adhesion limits, once in every integration branch.
+    let rack_brakes = crate::rack::brake_forces(state, train.vehicle_lengths_m.len());
+    let offrail_drag = crate::derailment::drag_forces(state, train);
+    let before_yard = equipment_brake_forces.clone();
+    crate::yard_gravity::apply_retarder_brakes(
+        state,
+        path_data,
+        &train.vehicle_lengths_m,
+        &mut equipment_brake_forces,
+    );
+    let yard_brakes = equipment_brake_forces
+        .iter()
+        .zip(&before_yard)
+        .map(|(after, before)| (after - before).max(0.))
+        .collect::<Vec<_>>();
+    f_brake += yard_brakes.iter().sum::<f64>();
+    let contact_brakes = rack_brakes
         .iter()
         .enumerate()
-        .map(|(i, length)| {
-            let nominal = front - head - length / 2.;
-            let center = head
-                + if state.path_reversed {
-                    -train.vehicle_lengths_m.iter().sum::<f64>() - nominal
-                } else {
-                    nominal
-                };
-            let span = train
-                .native
-                .as_ref()
-                .and_then(|n| n.vehicles.get(i))
-                .map(|p| {
-                    p.pitch_span_m.unwrap_or_else(|| {
-                        let face = p.coupler_face_length_m.unwrap_or(*length);
-                        if face >= 4.3 {
-                            face - 4.3
-                        } else {
-                            *length * 0.65
-                        }
-                    })
-                })
-                .unwrap_or(*length);
-            vehicle_centers.push(center);
-            let grade =
-                path_data.average_grade_between(center - span / 2., center + span / 2.) / 100.0;
-            front -= length;
-            grade
+        .map(|(i, r)| {
+            r + offrail_drag.get(i).copied().unwrap_or(0.)
+                + yard_brakes.get(i).copied().unwrap_or(0.)
         })
-        .collect();
-    crate::bogie_dynamics::advance_train(state, train, path_data, &vehicle_centers, dt);
+        .collect::<Vec<_>>();
+    let mechanical_brakes = contact_brakes.iter().any(|f| *f > 0.);
+    for (i, force) in equipment_brake_forces.iter_mut().enumerate() {
+        let extra =
+            rack_brakes.get(i).copied().unwrap_or(0.) + offrail_drag.get(i).copied().unwrap_or(0.);
+        *force += extra;
+        f_brake += extra;
+    }
+    if mechanical_brakes {
+        let mut wheel = before_yard;
+        if let Some(config) = &train.rail_adhesion {
+            crate::adhesion::cap_brakes(state, config, &mut wheel);
+        }
+        for (i, f) in equipment_brake_forces.iter_mut().enumerate() {
+            *f = wheel[i] + contact_brakes.get(i).copied().unwrap_or(0.);
+        }
+        f_brake = equipment_brake_forces.iter().sum();
+    }
+    let equipped_brakes = equipped_brakes || mechanical_brakes;
+    let vertical_resistances = crate::track_irregularity::longitudinal_forces(state);
+    // OR evaluates tunnel drag once per vehicle before its body/coupler tick.
+    // Geometry comes from the current pose, published at the preceding tick;
+    // observed native forces or positions never enter this calculation.
+    let tunnel_forces: Vec<f64> = train.native.as_ref().map_or_else(Vec::new, |native| {
+        let train_length_m = train
+            .vehicle_lengths_m
+            .iter()
+            .fold(0_f32, |sum, length| sum + *length as f32) as f64;
+        native
+            .vehicles
+            .iter()
+            .enumerate()
+            .map(|(i, vehicle)| {
+                let mass = effective_vehicle_masses.get(i).copied().unwrap_or_else(|| {
+                    crate::consumable_mass::vehicle_mass_kg(
+                        train,
+                        state,
+                        i,
+                        native.vehicle_masses_kg[i],
+                    )
+                });
+                let input = crate::native_tunnel::TunnelForceInput {
+                    train_length_m,
+                    train_mass_kg: effective_mass,
+                    car_mass_kg: mass,
+                    car_cross_section_m2: vehicle.body_cross_section_m2,
+                    speed_mps: state.vehicles.get(i).map_or(v, |car| car.velocity_mps),
+                };
+                crate::native_tunnel::force_at(
+                    path_data,
+                    vehicle_centers[i],
+                    train.vehicle_lengths_m[i],
+                    state.path_reversed,
+                    &input,
+                )
+            })
+            .collect()
+    });
+    let f_resist = train.davis.resistance_n(v) + vertical_resistances.iter().sum::<f64>();
+    let grade_fraction =
+        edge_data.grade_at(state.pos_on_edge_m) / 100.0 * if backwards { -1. } else { 1. };
+    let f_grade = effective_mass * G * grade_fraction;
     let resistance = |i: usize, mass: f64, davis: &DavisCoefficients, speed: f64| {
+        let roughness = vertical_resistances.get(i).copied().unwrap_or(0.);
         if let (Some(native), Some(dynamics)) = (&train.native, &state.native_dynamics) {
-            native.resistance(i, mass, davis, speed, dynamics)
+            roughness
+                + tunnel_forces.get(i).copied().unwrap_or(0.)
+                + native.resistance(i, mass, davis, speed, dynamics)
                 + native.curve_resistance_n(
                     i,
                     path_data,
@@ -987,9 +1269,10 @@ pub fn step(
                     train.vehicle_lengths_m[i],
                     mass,
                     speed,
+                    native_curve_coefficients[i],
                 )
         } else {
-            davis.resistance_n(speed)
+            roughness + davis.resistance_n(speed)
         }
     };
     // ── Multi-body coupler path ───────────────────────────────────────────────
@@ -1032,8 +1315,8 @@ pub fn step(
             .zip(&effective_vehicle_masses)
             .map(|(g, m)| m * G * g)
             .sum();
-        let new_speed =
-            (v + dt * (f_motor - f_brake - resist - grade) / effective_mass.max(1.)).max(0.);
+        let new_speed = (v + dt * (f_motor - f_brake - resist - grade) / effective_mass.max(1.))
+            .max(0.) as f32 as f64;
         if state.couplers.iter().any(|c| c.native_profile.is_some()) {
             let acceleration = if dt > 0. { (new_speed - v) / dt } else { 0. };
             let requested = if equipped_brakes {
@@ -1088,7 +1371,7 @@ pub fn step(
         }
         for vehicle in &mut state.vehicles {
             vehicle.velocity_mps = new_speed;
-            vehicle.position_m += 0.5 * (v + new_speed) * dt;
+            vehicle.position_m += (new_speed as f32 * dt as f32) as f64;
         }
         for coupler in &mut state.couplers {
             coupler.extension_m = 0.;
@@ -1177,7 +1460,18 @@ pub fn step(
                     masses.iter().map(|m| f_brake * m / total_mass).collect()
                 };
                 if let Some(config) = &train.rail_adhesion {
-                    crate::adhesion::cap_brakes(state, config, &mut brake_forces);
+                    if mechanical_brakes {
+                        let mut wheel = brake_forces.clone();
+                        for (i, f) in wheel.iter_mut().enumerate() {
+                            *f = (*f - contact_brakes.get(i).copied().unwrap_or(0.)).max(0.);
+                        }
+                        crate::adhesion::cap_brakes(state, config, &mut wheel);
+                        for (i, f) in brake_forces.iter_mut().enumerate() {
+                            *f = wheel[i] + contact_brakes.get(i).copied().unwrap_or(0.);
+                        }
+                    } else {
+                        crate::adhesion::cap_brakes(state, config, &mut brake_forces);
+                    }
                 }
                 let authored_joints = state.couplers.iter().any(|c| c.native_profile.is_some());
                 let grade_resist: Vec<f64> = if train.vehicle_davis.len() == state.vehicles.len() {
@@ -1271,13 +1565,18 @@ pub fn step(
         .native
         .as_ref()
         .is_some_and(|n| n.environment.simple_control_physics);
-    let v_new = if simple_native {
+    // Train.Update uses final Single speed and distanceM for native scalar and
+    // rigid formations. Elastic couplers retain their Rust body integrator;
+    // they are not declared a port of OR's constraint/slack integrator.
+    let native_scalar_motion =
+        train.native.is_some() && (state.vehicles.is_empty() || rigid_native);
+    let v_new = if simple_native || native_scalar_motion {
         v_new as f32 as f64
     } else {
         v_new
     };
     let v_avg = 0.5 * (v + v_new);
-    let travel_max = if simple_native {
+    let travel_max = if native_scalar_motion {
         // Train.Update's distanceM uses the final Single speed of the tick.
         (v_new as f32 * dt as f32) as f64
     } else {
@@ -1288,6 +1587,26 @@ pub fn step(
     let mut arrived = false;
 
     while travel > 0.0 && state.edge_index < path_data.edges.len() {
+        if backwards {
+            let room = state.pos_on_edge_m;
+            if travel <= room {
+                state.pos_on_edge_m -= travel;
+                traveled += travel;
+                travel = 0.;
+            } else {
+                let consumed = room.max(0.);
+                travel -= consumed;
+                traveled += consumed;
+                if state.edge_index == 0 {
+                    state.pos_on_edge_m = 0.;
+                    arrived = true;
+                    break;
+                }
+                state.edge_index -= 1;
+                state.pos_on_edge_m = path_data.edges[state.edge_index].length_m;
+            }
+            continue;
+        }
         // Direct vec index — no hash lookup.
         let len = path_data.edges[state.edge_index].length_m;
         let room = len - state.pos_on_edge_m;
@@ -1342,9 +1661,15 @@ pub fn step(
     crate::auxiliary_work::steam_extras(state, effective_dt);
     crate::traction_energy::account(state, v_avg, effective_dt);
     crate::brake_equipment::account(state, v_avg, effective_dt);
-    state.odometer_m += traveled;
+    state.odometer_m = if native_scalar_motion {
+        // OR DistanceTravelledM is a Single accumulated after each native tick.
+        f64::from(state.odometer_m as f32 + traveled as f32)
+    } else {
+        state.odometer_m + traveled
+    };
     state.time = state.time + effective_dt;
     state.velocity_mps = if arrived { 0.0 } else { v_new };
+    crate::yard_gravity::account_retarder_work(state, effective_dt);
     crate::diesel_operation::advance_temperature(
         state,
         &train.diesel,

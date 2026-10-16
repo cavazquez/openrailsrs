@@ -1,0 +1,153 @@
+{
+  "schema": 1,
+  "kind": "additive_original_adhesion_observation_and_input_projection",
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "original_receipt_sha256": "b4b1cf8234cd1709b350ccd3c6018a11e1e149b6fb7d4a80267b9cbe3fbad352",
+  "original_trace_rows": 15003,
+  "original_trace_columns": 20,
+  "original_trace_sha256": "ad9e690435d784df243c8a49bfdb37137c6e5f98f8941045adfde27e4500a7e2",
+  "original_trace_public_path": "examples/baselines/chiltern_local/capture/trace.csv",
+  "all_original_trace_bytes_unchanged": true,
+  "raw_observation_sha256": "3392f303463a7d54b48cda1bfd8bd260855ffcc952fb77747e9bf3eea71a1103",
+  "runtime_input_external_path": "examples/chiltern_local/physics/native-adhesion-inputs.csv",
+  "runtime_input_external_sha256": "355be676ad0d64120aa66014efd3f31f18d5848e863451d61ecc01d5570155a7",
+  "runtime_input_rows": 30006,
+  "initial_buffers_observed_zero": true,
+  "filter_oracle_not_runtime_input": true,
+  "prior_filter_limit": 1e-06,
+  "prior_motion_limits_unchanged": true,
+  "files": {
+    "receipt.json": {
+      "sha256": "b4b1cf8234cd1709b350ccd3c6018a11e1e149b6fb7d4a80267b9cbe3fbad352",
+      "raw_path": "receipt.json",
+      "raw_sha256": "b4b1cf8234cd1709b350ccd3c6018a11e1e149b6fb7d4a80267b9cbe3fbad352",
+      "transformation": "none; literal bytes"
+    },
+    "compile.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "raw_path": "compile.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "transformation": "none; literal bytes"
+    },
+    "capture.log": {
+      "sha256": "1926f4c48e99a3e622aa95262b84db6069efbb11d60aabdabc34fa5af283d28a",
+      "raw_path": "capture.log",
+      "raw_sha256": "1926f4c48e99a3e622aa95262b84db6069efbb11d60aabdabc34fa5af283d28a",
+      "transformation": "none; literal bytes"
+    },
+    "trace-integrity.json": {
+      "sha256": "16d85cd602ffaa81c739ab9ef425742bbbff6c5687a9fd5e7160e9c21d69f061",
+      "raw_path": "trace-integrity.json",
+      "raw_sha256": "16d85cd602ffaa81c739ab9ef425742bbbff6c5687a9fd5e7160e9c21d69f061",
+      "transformation": "none; literal bytes"
+    },
+    "input-extraction.json": {
+      "sha256": "855d118f35be3d0640140f0a993f3b8711d6a74a1a125f7e03d7bf2f5cb7cd3b",
+      "raw_path": "input-extraction.json",
+      "raw_sha256": "855d118f35be3d0640140f0a993f3b8711d6a74a1a125f7e03d7bf2f5cb7cd3b",
+      "transformation": "none; literal bytes"
+    },
+    "input-projection-verified.json": {
+      "sha256": "233607bfd788a5e6e601764b587349bfdae5dbe01f69407c5472b7b91b01f394",
+      "raw_path": "input-projection-verified.json",
+      "raw_sha256": "233607bfd788a5e6e601764b587349bfdae5dbe01f69407c5472b7b91b01f394",
+      "transformation": "none; literal bytes"
+    },
+    "native/initial.json": {
+      "sha256": "aa7611255dff6b69654a15c674b246f21dbed69241e14dfbb2125ce23162e716",
+      "raw_path": "native/initial.json",
+      "raw_sha256": "aa7611255dff6b69654a15c674b246f21dbed69241e14dfbb2125ce23162e716",
+      "transformation": "none; literal bytes"
+    },
+    "native/outcome.json": {
+      "sha256": "3b5a0af595220a98a86320beacc6d7feaeb9714dc688ebd42b3d131e54098310",
+      "raw_path": "native/outcome.json",
+      "raw_sha256": "3b5a0af595220a98a86320beacc6d7feaeb9714dc688ebd42b3d131e54098310",
+      "transformation": "none; literal bytes"
+    },
+    "wine-isolation/isolation.json": {
+      "sha256": "4dca58b6398334f04f7f87189d3e850153b8b46a236ba15955cc2898deea2b71",
+      "raw_path": "wine-isolation/isolation.json",
+      "raw_sha256": "4dca58b6398334f04f7f87189d3e850153b8b46a236ba15955cc2898deea2b71",
+      "transformation": "none; literal bytes"
+    },
+    "wine-isolation/release.json": {
+      "sha256": "7bdca5907ba41cf2ddf83de69e82be3c841a2b83fb227457244389bf93bd6e78",
+      "raw_path": "wine-isolation/release.json",
+      "raw_sha256": "7bdca5907ba41cf2ddf83de69e82be3c841a2b83fb227457244389bf93bd6e78",
+      "transformation": "none; literal bytes"
+    },
+    "capture-sources/ChilternAdhesionReference.cs": {
+      "sha256": "6f11cc960f0b666ef8f35e77f61ee4631efb85c6c43af8a6b43fbac2eefdc649",
+      "raw_path": "capture-sources/ChilternAdhesionReference.cs",
+      "raw_sha256": "6f11cc960f0b666ef8f35e77f61ee4631efb85c6c43af8a6b43fbac2eefdc649",
+      "transformation": "none; literal capture source or preflight snapshot"
+    },
+    "capture-sources/HeadlessCapture-original.cs": {
+      "sha256": "c832f071a28f61178da2814d382069c3dc15cdb2aff7b89f40fe5974ffdb60a0",
+      "raw_path": "capture-sources/HeadlessCapture-original.cs",
+      "raw_sha256": "c832f071a28f61178da2814d382069c3dc15cdb2aff7b89f40fe5974ffdb60a0",
+      "transformation": "none; literal capture source or preflight snapshot"
+    },
+    "capture-sources/capture.py": {
+      "sha256": "764c191130270d0aabccb416d5ee0a1b66a4c92e71e6f2d8dd9b59ee22a71c90",
+      "raw_path": "capture-sources/capture.py",
+      "raw_sha256": "764c191130270d0aabccb416d5ee0a1b66a4c92e71e6f2d8dd9b59ee22a71c90",
+      "transformation": "none; literal capture source or preflight snapshot"
+    },
+    "capture-sources/oracle_wine.py": {
+      "sha256": "4e87773fd3fe535f5660a427ea12b8b6a716266ebf9161e433aa66fc86e9f590",
+      "raw_path": "capture-sources/oracle_wine.py",
+      "raw_sha256": "4e87773fd3fe535f5660a427ea12b8b6a716266ebf9161e433aa66fc86e9f590",
+      "transformation": "none; literal capture source or preflight snapshot"
+    },
+    "capture-sources/protocol.json": {
+      "sha256": "5f6fbc7c37427b54910dd68b53397773b96018f07286cabd713438ae84c63cd4",
+      "raw_path": "capture-sources/protocol.json",
+      "raw_sha256": "5f6fbc7c37427b54910dd68b53397773b96018f07286cabd713438ae84c63cd4",
+      "transformation": "none; literal capture source or preflight snapshot"
+    },
+    "capture-sources/reference-pin-at-capture.toml": {
+      "sha256": "ae9741d933ee1cc8caed949a28a2fcc29f74f53559d35274bd230d7d90ffec6d",
+      "raw_path": "capture-sources/reference-pin-at-capture.toml",
+      "raw_sha256": "ae9741d933ee1cc8caed949a28a2fcc29f74f53559d35274bd230d7d90ffec6d",
+      "transformation": "none; literal capture source or preflight snapshot"
+    },
+    "native/adhesion-observation.json.gz": {
+      "sha256": "ee096259565a47007d752174d0664c0b1b7e4071c04632037c7ce96a0e13742a",
+      "raw_path": "native/adhesion-observation.json",
+      "raw_sha256": "3392f303463a7d54b48cda1bfd8bd260855ffcc952fb77747e9bf3eea71a1103",
+      "transformation": "lossless gzip level9/mtime0; exact decoded bytes"
+    },
+    "replay-protocol.json": {
+      "sha256": "0a7f9450dd6473adab20dfd1e0893f9e4182f8696e440a13a4ac554ba3916063",
+      "transformation": "explicit input-only replay contract; original capture protocol preserved separately"
+    },
+    "filter-oracle.json": {
+      "sha256": "3ea3cce0ef4150967f46e8e993e0c48b4cf5a8bb6b784367cedf8f6999237962",
+      "raw_sha256": "3392f303463a7d54b48cda1bfd8bd260855ffcc952fb77747e9bf3eea71a1103",
+      "transformation": "all30006 genuine y0 samples selected without force formula, rounding or downsampling; output-only isolated test"
+    },
+    "initial-filter-context.json": {
+      "sha256": "e3fa4e803a81c21a62a960c4ab868a281abf0065d5c2a1f35af7d5d817cfae1e",
+      "raw_sha256": "3392f303463a7d54b48cda1bfd8bd260855ffcc952fb77747e9bf3eea71a1103",
+      "transformation": "literal initial filter fields projected; no post-start state"
+    },
+    "publish.py": {
+      "sha256": "fe382006930792cbc773317c89bf02b258b53bc9f984f257b94c37ed0dbfbdca",
+      "transformation": "own extraction/publication script used here"
+    }
+  },
+  "original_resources_bundled": false,
+  "rust_execution": "not_run_by_this_capture",
+  "full_workspace_gate_claim": false,
+  "excluded": [
+    "original ENG/WAG/CON/ACT/SRV/PAT/TDB/TRK/route/DLL assets",
+    "runtime and private Wineprefix",
+    "all six human trace contents",
+    "duplicate original20column trace (already pinned separately)",
+    "duplicate runtime input CSV (external path/hash above)"
+  ],
+  "scope": "Original service unchanged, paused historical context. Only observation added. Runtime uses a captured environmental variation, not recorded forces/motion/filter outputs; source x/y state is supplied only at initialization. Full measured original outputs remain diagnostics and isolated-filter evidence."
+}

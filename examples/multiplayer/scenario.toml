@@ -1,0 +1,36 @@
+[scenario]
+name = "Multijugador: dos trenes de vapor"
+description = "Ejemplo propio para dos conductores, un fogonero, despachador y espectadores. Abrir el mismo servicio en cada visor y entrar a F10 → Multijugador. No requiere descargas."
+start_time_s = 36000.0
+
+[route]
+path = "route"
+start = "a"
+destination = "b"
+start_offset_m = 80.0
+
+[train]
+consist = "../steam/consists/steam.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+
+[simulation]
+duration = 3600.0
+time_step = 0.05
+seed = 42
+legacy_power_cap = false
+
+[output]
+csv = "run.csv"
+metadata = "run.json"
+
+[[extra_trains]]
+id = "vapor_2"
+consist = "../steam/consists/steam.con"
+start = "c"
+destination = "d"
+start_time_s = 0.0
+start_offset_m = 80.0
+output_csv = "vapor_2.csv"

@@ -1,0 +1,13 @@
+{
+  "220": [
+    "docs/fixtures/compatibility/twenty-20261015/physical-final14/lirr/comparison.json",
+    "docs/fixtures/compatibility/twenty-20261015/physical-final14/lirr/receipt.json"
+  ],
+  "223": [
+    "docs/fixtures/compatibility/twenty-20261015/physical-final14/steam/comparison.json",
+    "docs/fixtures/compatibility/twenty-20261015/physical-final14/steam/receipt.json"
+  ],
+  "directed_batch": "docs/fixtures/compatibility/twenty-20261015/physical-final14/result.json",
+  "global_gate_passed": false,
+  "close_now": false
+}

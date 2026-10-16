@@ -1,0 +1,6 @@
+(Train
+  (Comment "Original openrailsrs fixture: no downloaded assets.")
+  (Engine "vehicles/yard_loco.eng")
+  (Wagon "vehicles/yard_wagon.wag")
+  (Wagon "vehicles/yard_wagon.wag")
+)

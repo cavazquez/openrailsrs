@@ -1,0 +1,117 @@
+   Compiling openrailsrs-train v0.1.0 (/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/crates/openrailsrs-train)
+   Compiling openrailsrs-sim v0.1.0 (/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/crates/openrailsrs-sim)
+    Finished `test` profile [optimized] target(s) in 34.26s
+     Running tests/native_mu_phase.rs (target/debug/deps/native_mu_phase-29e0ffe64c7f1783)
+
+running 3 tests
+test engine_order_uses_the_selected_cab_as_the_mu_publication_boundary ... ok
+test lead_governor_reads_old_mu_and_following_engine_reads_new_mu_on_rise_and_fall ... ok
+test saved_mu_phase_survives_a_pending_controller_change_and_rejects_invalid_history ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/native_steam_cycle.rs (target/debug/deps/native_steam_cycle-a53f49c1cdc2c08d)
+
+running 9 tests
+test all_native_filters_and_delayed_inputs_survive_save_resume_exactly ... ok
+test manual_injection_and_tender_accounting_keep_the_native_tick_lag ... ok
+test native_empty_vacuum_network_is_rejected_before_state_mutation ... ok
+test native_initialize_retains_legacy_superheater_table_selection_and_filters ... ok
+test native_parser_accepts_both_normalized_and_named_engine_roots ... ok
+test native_usage_counter_integrates_the_published_usage_phase ... ok
+test native_vacuum_nonfinite_height_and_handle_are_rejected_before_any_mutation ... ok
+test native_vacuum_uses_previous_kind_but_current_ejector_control_and_saves_the_phase ... ok
+test original05_initialized_hardware_is_derived_from_authored_input ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/native_steam_integration.rs (target/debug/deps/native_steam_integration-d4eedc21dd36e7ff)
+
+running 3 tests
+test native_cycle_and_vacuum_brake_resume_with_the_same_future ... ok
+test native_formation_requires_its_supported_vacuum_equipment_at_the_head ... ok
+test native_snapshot_rejects_missing_state_changed_hardware_and_inconsistent_mirrors ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/native_steam_subsystem_oracle.rs (target/debug/deps/native_steam_subsystem_oracle-c7fee5be30a9f613)
+
+running 3 tests
+test all310_original_dll_steam_table_calls_respect_the_prior_limits ... ok
+test original_cold_subsystem1601_rows_evolve_from_authored_hardware ... ok
+test original_hot_subsystem1601_rows_evolve_from_authored_hardware ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running tests/operational_yards.rs (target/debug/deps/operational_yards-721327c931f47273)
+
+running 20 tests
+test ai_runs_around_its_immobile_coaches_and_collects_from_the_other_end ... ok
+test alternative_classification_requires_explicit_exclusive_stock_destinations ... ok
+test collision_prescribed_speed_fixture_keeps_occupancy_records_impact_and_applies_emergency_brakes ... ok
+test declared_retarder_adds_force_per_vehicle_and_dissipates_only_real_work ... ok
+test every_authored_yard_scenario_loads_real_stock_and_a_shared_world ... ok
+test gravity_classifies_both_declared_roads_using_grade_and_actual_retarder_work ... ok
+test human_network_drivers_are_neither_consumed_nor_cut_by_automatic_yard_crews ... ok
+test inconsistent_shared_device_or_pool_world_is_rejected_atomically ... ok
+test mobile_portion_drives_to_contact_transfers_real_identities_and_restores ... ok
+test mobile_portion_timeout_and_incompatible_material_do_not_create_replacements ... ok
+test moving_devices_reject_motion_partial_train_overload_and_corrupt_save_without_mutation ... ok
+test optional_runaway_requires_protection_and_real_stopping_before_recovery ... ok
+test pool_allocates_only_one_real_member_and_restores_its_claim ... ok
+test pool_and_actor_definition_errors_are_explicit ... ok
+test pool_drives_out_and_back_returns_and_reuses_the_same_consumed_stock ... ok
+test recovery_rejects_late_protection_bad_retarder_and_moving_cuts ... ok
+test runaround_rejects_missing_cab_and_discontinuous_plan ... ok
+test transfer_table_transports_physical_stock_and_resumes_mid_translation ... ok
+test turntable_transports_physical_stock_and_resumes_mid_rotation ... ok
+test unmatched_wayside_equipment_preserves_ordinary_vehicle_physics ... ok
+
+test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.37s
+
+     Running tests/physical_extensions.rs (target/debug/deps/physical_extensions-6ab75e03ed948319)
+
+running 14 tests
+test double_steam_force_and_consumption_are_metered_by_locomotive_identity ... ok
+test emergency_has_pipe_reservoir_and_rearm_states_separate_from_independent ... ok
+test explicit_native_steam_startup_initializes_one_consistent_mass_energy_state ... ok
+test hydraulic_launch_load_fuel_heat_and_shifts_share_the_physics_tick ... ok
+test independent_boilers_compound_and_controls_survive_a_driven_save ... ok
+test local_regulator_obeys_the_same_operational_and_safety_interlocks ... ok
+test one_shared_vertical_support_preserves_both_body_loads_and_spatial_reversal ... ok
+test optional_derailment_records_cause_cuts_force_and_keeps_the_failure_on_restore ... ok
+test optional_equipment_rejects_unknown_units_impossible_curves_and_unsupported_valves ... ok
+test rack_positive_contact_brakes_gradient_without_an_adhesion_cap ... ok
+test rack_rejects_an_incompatible_system_and_refuses_engagement_at_speed ... ok
+test reversing_on_the_second_edge_keeps_rack_and_roughness_in_world_chainage ... ok
+test vertical_profile_is_spatial_reproducible_and_affects_contact_and_motion ... ok
+test vessel_conserves_mass_energy_through_fire_load_injection_and_safety ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running tests/physics_seven_native.rs (target/debug/deps/physics_seven_native-881cbcd931e6b673)
+
+running 3 tests
+test original_emergency_service_pipe3_reservoir_and_rearm_match_runtime_subsystem ... ok
+test original_steam_property_interpolators_match_at_knots_and_between_them ... ok
+test original_three_car_propagation_keeps_only_the_head_boundary_prescribed ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+
+     Running tests/twenty_joint_physics.rs (target/debug/deps/twenty_joint_physics-e63f5a9960c2fe95)
+
+running 3 tests
+test converter_rack_vertical_contact_emergency_and_restore_run_together ... ok
+test optional_derailment_is_reachable_by_driving_from_rest ... Driven incident: time=74.04999999999794s, distance=2007.1786851030433m, peak=34.363104895315665m/s, events=[(0, DerailmentState { enabled_override: None, cause: Some(WheelUnloading), event_time_s: Some(73.99999999999794), event_chainage_m: Some(2095.4816834108683), event_speed_mps: 34.02785903003234, lateral_force_n: 232688.61905491754, minimum_wheel_load_n: 0.0, nadal_threshold: 1.222193206269197, lateral_ratio: 232688.61905491754, nadal_elapsed_s: 0.1, unloading_elapsed_s: 0.1, offrail_distance_m: 0.0 })]
+ok
+test rack_entry_and_exit_follow_a_train_accelerating_from_rest ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/native_parameter_scopes.rs (target/debug/deps/native_parameter_scopes-399b26eba997bfde)
+
+running 1 test
+test resolved_consist_driver_radius_keeps_its_engine_scope_and_includes ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

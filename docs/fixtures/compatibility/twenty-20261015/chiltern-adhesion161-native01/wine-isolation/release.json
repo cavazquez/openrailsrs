@@ -1,0 +1,99 @@
+{
+  "schema": 1,
+  "wineserver_stop_returncode": 0,
+  "remaining_processes": [],
+  "forbidden_drivers_seen": [],
+  "observation_count": 175,
+  "commands": [
+    {
+      "args": [
+        "wine",
+        "reg",
+        "add",
+        "HKCU\\Software\\Wine\\Drivers",
+        "/v",
+        "Graphics",
+        "/t",
+        "REG_SZ",
+        "/d",
+        "null",
+        "/f"
+      ],
+      "pid": 128500,
+      "returncode": 0,
+      "elapsed_s": 0.9231481360002363,
+      "log": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/chiltern-adhesion-native01/wine-isolation/registry-set-0.log"
+    },
+    {
+      "args": [
+        "wine",
+        "reg",
+        "add",
+        "HKCU\\Software\\Wine\\WineDbg",
+        "/v",
+        "ShowCrashDialog",
+        "/t",
+        "REG_DWORD",
+        "/d",
+        "0",
+        "/f"
+      ],
+      "pid": 128570,
+      "returncode": 0,
+      "elapsed_s": 0.16410829499909596,
+      "log": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/chiltern-adhesion-native01/wine-isolation/registry-set-1.log"
+    },
+    {
+      "args": [
+        "wine",
+        "reg",
+        "query",
+        "HKCU\\Software\\Wine\\WineDbg",
+        "/v",
+        "ShowCrashDialog"
+      ],
+      "pid": 128573,
+      "returncode": 0,
+      "elapsed_s": 0.11112436999974307,
+      "log": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/chiltern-adhesion-native01/wine-isolation/registry-query.log"
+    },
+    {
+      "args": [
+        "wine",
+        "C:\\windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe",
+        "/nologo",
+        "/target:exe",
+        "/main:HeadlessCapture",
+        "/out:ChilternAdhesionReference.exe",
+        "/r:RunActivity.exe",
+        "/r:Orts.Simulation.dll",
+        "/r:Orts.Common.dll",
+        "/r:Orts.Settings.dll",
+        "/r:Orts.Formats.Msts.dll",
+        "/r:Orts.Parsers.Msts.dll",
+        "/r:MonoGame.Framework.dll",
+        "/r:Newtonsoft.Json.dll",
+        "Z:\\home\\cristian\\repos\\propios\\ProyectoOpenRails\\openrailsrs\\tmp\\twenty-20261015\\chiltern-adhesion-native01\\capture-sources\\ChilternAdhesionReference.cs"
+      ],
+      "pid": 128576,
+      "returncode": 0,
+      "elapsed_s": 0.2737907320006343,
+      "log": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/chiltern-adhesion-native01/compile.log"
+    },
+    {
+      "args": [
+        "wine",
+        "ChilternAdhesionReference.exe",
+        "service",
+        "Z:\\home\\cristian\\repos\\propios\\ProyectoOpenRails\\openrailsrs\\tmp\\twenty-20261015\\chiltern-adhesion-native01\\content\\Chiltern\\ROUTES\\Chiltern\\ACTIVITIES\\openrailsrs_chiltern_local.act",
+        "Z:\\home\\cristian\\repos\\propios\\ProyectoOpenRails\\openrailsrs\\tmp\\twenty-20261015\\chiltern-adhesion-native01\\native",
+        "Z:\\home\\cristian\\repos\\propios\\ProyectoOpenRails\\openrailsrs\\tmp\\twenty-20261015\\chiltern-adhesion-native01\\config.json"
+      ],
+      "pid": 128579,
+      "returncode": 0,
+      "elapsed_s": 8.138786692999929,
+      "log": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/chiltern-adhesion-native01/capture.log"
+    }
+  ],
+  "only_private_prefix": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/lirr-wine-prefix"
+}

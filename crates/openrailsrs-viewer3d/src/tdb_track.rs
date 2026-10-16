@@ -948,6 +948,8 @@ mod tests {
         cat.shapes.insert(
             0,
             TrackShapeDef {
+                tunnel_shape: None,
+                num_paths: None,
                 file_name: "sec0.s".into(),
                 road_shape: false,
                 paths: vec![TrackShapePath {
@@ -1007,6 +1009,8 @@ mod tests {
         cat.shapes.insert(
             1,
             TrackShapeDef {
+                tunnel_shape: None,
+                num_paths: None,
                 file_name: "s1.s".into(),
                 road_shape: false,
                 paths: vec![TrackShapePath {
@@ -1022,6 +1026,8 @@ mod tests {
         cat.shapes.insert(
             2,
             TrackShapeDef {
+                tunnel_shape: None,
+                num_paths: None,
                 file_name: "s2.s".into(),
                 road_shape: false,
                 paths: vec![TrackShapePath {

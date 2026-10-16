@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use crate::ast::{Ast, Atom};
 use crate::encoding::{read_msts_file_to_string, resolve_path_case_insensitive};
 use crate::error::FormatError;
-use crate::parser::{parse_all_top_level_lenient, parse_first};
+use crate::parser::{parse_all_top_level_lenient, parse_first, parse_named_stf};
 use crate::typed::TrackVectorPoint;
 
 use super::activity::find_string_field;
@@ -74,6 +74,86 @@ pub struct RouteFile {
     /// Native season/weather environment filenames, e.g. `SummerClear`.
     pub environments: Vec<(String, String)>,
     pub cant: super::RouteCantSettings,
+    pub tunnels: RouteTunnelSettings,
+}
+
+/// Authored TRK tunnel geometry. Zero/absence selects native speed defaults.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct RouteTunnelSettings {
+    pub single_area_m2: f64,
+    pub single_perimeter_m: f64,
+    pub double_area_m2: f64,
+    pub double_perimeter_m: f64,
+}
+impl RouteTunnelSettings {
+    fn from_ast(ast: &Ast) -> Result<Self, FormatError> {
+        Ok(Self {
+            single_area_m2: tunnel_quantity(ast, "ORTSSingleTunnelArea", true)?,
+            single_perimeter_m: tunnel_quantity(ast, "ORTSSingleTunnelPerimeter", false)?,
+            double_area_m2: tunnel_quantity(ast, "ORTSDoubleTunnelArea", true)?,
+            double_perimeter_m: tunnel_quantity(ast, "ORTSDoubleTunnelPerimeter", false)?,
+        })
+    }
+}
+fn tunnel_quantity(ast: &Ast, key: &str, area: bool) -> Result<f64, FormatError> {
+    let blocks = super::named_blocks(ast, key);
+    let Some(Ast::List(items)) = blocks.last() else {
+        return Ok(0.);
+    };
+    let raw = items
+        .iter()
+        .filter_map(|item| match item {
+            Ast::Atom(atom) => {
+                atom_to_string(atom).or_else(|| atom_to_number(atom).map(|n| n.to_string()))
+            }
+            _ => None,
+        })
+        .filter(|s| !s.eq_ignore_ascii_case(key))
+        .collect::<Vec<_>>()
+        .join("");
+    let end = raw
+        .find(|c: char| !c.is_ascii_digit() && !matches!(c, '.' | '-' | '+' | 'e' | 'E'))
+        .unwrap_or(raw.len());
+    let invalid = || FormatError::UnexpectedAtom {
+        key: key.into(),
+        context: "Tr_RouteFile tunnel geometry".into(),
+        expected: "finite nonnegative native area/distance with compatible units".into(),
+    };
+    let number = raw[..end].parse::<f32>().map_err(|_| invalid())?;
+    let suffix = raw[end..].to_ascii_lowercase();
+    let scale = if key == "SpeedLimit" {
+        match suffix.as_str() {
+            "" | "m/s" => 1.,
+            "cm/s" => 0.01,
+            "mm/s" => 0.001,
+            "mph" => 0.44704,
+            "ft/s" => 0.3048,
+            "in/s" => 0.0254,
+            "kph" | "km/h" | "kmph" | "kmh" => 0.27777778,
+            _ => return Err(invalid()),
+        }
+    } else if area {
+        match suffix.as_str() {
+            "" | "*(ft^2)" | "ft^2" => f64::from(0.09290304_f32),
+            "*(m^2)" | "m^2" => 1.,
+            _ => return Err(invalid()),
+        }
+    } else {
+        match suffix.as_str() {
+            "" | "m" => 1.,
+            "cm" => 0.01,
+            "mm" => 0.001,
+            "km" => 1000.,
+            "ft" => 0.3048,
+            "in" => 0.0254,
+            _ => return Err(invalid()),
+        }
+    };
+    let value = (f64::from(number) * scale) as f32;
+    if !value.is_finite() || value < 0. {
+        return Err(invalid());
+    }
+    Ok(f64::from(value))
 }
 
 impl RouteFile {
@@ -92,23 +172,17 @@ impl RouteFile {
             route_id,
             name,
             loading_screen: find_string_field(ast, &["LoadingScreen"]),
-            speed_limit_mps: super::named_blocks(ast, "SpeedLimit")
-                .first()
-                .and_then(|block| {
-                    let Ast::List(items) = block else { return None };
-                    items
-                        .iter()
-                        .filter_map(|item| match item {
-                            Ast::Atom(atom) => atom_to_number(atom),
-                            _ => None,
-                        })
-                        .find(|value| value.is_finite() && *value > 0.)
-                }),
+            speed_limit_mps: if super::named_blocks(ast, "SpeedLimit").is_empty() {
+                None
+            } else {
+                Some(tunnel_quantity(ast, "SpeedLimit", false)?)
+            },
             route_start,
             source_path: None,
             overhead_wire: parse_overhead_wire_params(ast),
             environments: parse_environments(ast),
             cant: super::RouteCantSettings::from_ast(ast),
+            tunnels: RouteTunnelSettings::from_ast(ast)?,
         })
     }
 
@@ -243,11 +317,21 @@ fn load_trk_ast_with_includes(path: &Path, visited: &mut Vec<PathBuf>) -> Result
     }
     // Route overlays are multiple top-level `Token ( ... )` blocks (include + ORTS*).
     // Base `.trk` files are usually a single `Tr_RouteFile ( ... )` expression.
-    let blocks = parse_all_top_level_lenient(&text);
-    if blocks.is_empty() {
-        return Err(FormatError::UnexpectedEof);
+    // Keep keyword-before-parenthesis names, including empty flags such as
+    // MilepostUnitsMiles(). Dropping names produced sibling Symbol/List pairs
+    // that scalar route readers tolerated but cant/standard readers could not
+    // see, silently selecting metric defaults for native imperial routes.
+    match parse_named_stf(&text) {
+        Ok(ast) => trees.push(ast),
+        Err(_) => {
+            // Preserve the existing recovery path for malformed legacy files.
+            let blocks = parse_all_top_level_lenient(&text);
+            if blocks.is_empty() {
+                return Err(FormatError::UnexpectedEof);
+            }
+            trees.extend(blocks);
+        }
     }
-    trees.extend(blocks);
     Ok(Ast::List(trees))
 }
 
@@ -503,6 +587,35 @@ Tr_RouteFile (
     }
 
     #[test]
+    fn native_overlay_include_keeps_empty_imperial_flag_and_cant_standard_blocks() {
+        let dir = tempfile::tempdir().unwrap();
+        let route_dir = dir.path().join("ImperialRoute");
+        let overlay_dir = route_dir.join("OpenRails");
+        std::fs::create_dir_all(&overlay_dir).unwrap();
+        let base = route_dir.join("ImperialRoute.trk");
+        std::fs::write(&base, "SIMISA@@@@@@@@@@JINX0r0t______\nTr_RouteFile ( RouteID ( ImperialRoute ) Name ( \"Imperial route\" ) SpeedLimit ( 40.2336 ) MilepostUnitsMiles ( ) ORTSTrackGauge ( 4ft 8.5in ) )").unwrap();
+        let overlay = overlay_dir.join("ImperialRoute.trk");
+        std::fs::write(
+            &overlay,
+            "include ( \"../ImperialRoute.trk\" )\nORTSDefaultTurntableSMS ( turntable.sms )",
+        )
+        .unwrap();
+        let route = RouteFile::from_route_dir(&route_dir).unwrap();
+        assert_eq!(route.route_id, "ImperialRoute");
+        assert_eq!(route.speed_limit_mps, Some(f64::from(40.2336_f32)));
+        assert_eq!(route.cant.design_speed_mps, 40.2336_f32);
+        assert_eq!(route.cant.standards[0].min_cant_m, 0.5_f32 * 0.0254_f32);
+        assert_eq!(route.cant.standards[0].precision_m, 0.25_f32 * 0.0254_f32);
+        assert!((route.cant.gauge_m - 1.4351).abs() < 1e-6);
+        // A structured top-level override also needs its external keyword;
+        // the old loader discarded it along with the include's unit flag.
+        std::fs::write(&overlay, "include ( \"../ImperialRoute.trk\" )\nORTSSuperElevation ( MaximumCant ( 4in ) Precision ( 0.25in ) MaxFreightUnderbalance ( 2in ) )").unwrap();
+        let route = RouteFile::from_route_dir(&route_dir).unwrap();
+        assert!((route.cant.standards[0].max_cant_m - 0.1016).abs() < 1e-6);
+        assert!((route.cant.standards[0].freight_deficiency_m - 0.0508).abs() < 1e-6);
+    }
+
+    #[test]
     fn openrails_override_include_supplies_route_start() {
         let dir = tempfile::tempdir().expect("tempdir");
         let route_dir = dir.path().join("Chiltern");
@@ -569,5 +682,32 @@ ORTSDefaultTurntableSMS ( turntable.sms )
         let b = find_trk_path(&route_dir).expect("b");
         assert_eq!(a, b);
         assert!(a.ends_with("DemoRoute.trk"));
+    }
+    #[test]
+    fn native_tunnel_trk_units_are_single_scaled_and_unknown_units_reject() {
+        let parse = |text: &str| RouteFile::from_ast(&crate::parse_named_stf(text).unwrap());
+        let route=parse("Tr_RouteFile(RouteID(x) SpeedLimit(90mph) ORTSSingleTunnelArea(100) ORTSSingleTunnelPerimeter(100ft) ORTSDoubleTunnelArea(100m^2) ORTSDoubleTunnelPerimeter(37.5m))").unwrap();
+        assert_eq!(
+            route.speed_limit_mps,
+            Some(f64::from((90_f64 * 0.44704) as f32))
+        );
+        assert_eq!(
+            route.tunnels.single_area_m2,
+            f64::from((100_f64 * f64::from(0.09290304_f32)) as f32)
+        );
+        assert_eq!(
+            route.tunnels.single_perimeter_m,
+            f64::from((100_f64 * 0.3048) as f32)
+        );
+        assert_eq!(route.tunnels.double_area_m2, 100.);
+        assert_eq!(route.tunnels.double_perimeter_m, 37.5);
+        for value in ["100fortnights", "-1m^2", "NaN"] {
+            assert!(
+                parse(&format!(
+                    "Tr_RouteFile(RouteID(x) ORTSSingleTunnelArea({value}))"
+                ))
+                .is_err()
+            );
+        }
     }
 }

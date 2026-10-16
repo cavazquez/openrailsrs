@@ -1,0 +1,58 @@
+{
+  "schema": 1,
+  "native_attempts": [
+    {
+      "attempt": "01",
+      "status": "failed_execution",
+      "private_original_receipt_sha256": "06edd7e9add272c09f7997264320ace26417cd486057f468aa3cca1c4c3c1587"
+    },
+    {
+      "attempt": "02",
+      "status": "failed_execution",
+      "private_original_receipt_sha256": "1c20663bda5a78bf877de4ef4acccf96edce3f8955263464fe72ff280f259f3c"
+    },
+    {
+      "attempt": "03",
+      "status": "failed_native_coverage",
+      "private_original_receipt_sha256": "d55fbb6a37afd6823fe4c12d93b19b8acd35ab9d94be387b9f8f747efb38c62a"
+    },
+    {
+      "attempt": "04",
+      "status": "native_capture_complete",
+      "private_original_receipt_sha256": "c2189bde0d3f24c4fdd4ba7f35ab5cabc787992eefc03c9b7e13574f9931b80d"
+    },
+    {
+      "attempt": "05",
+      "status": "native_capture_complete",
+      "private_original_receipt_sha256": "54e1f878f95327ce5437f89928b9289acabea4ef44bbd63960a13f8fe57d05d5"
+    }
+  ],
+  "rust_attempts": [
+    {
+      "attempt": "01",
+      "status": "failed_execution",
+      "private_original_receipt_sha256": "bfede773a2f4634da3a528c49ea3c40816fd464c5e667db9afee7ff49fab7103"
+    },
+    {
+      "attempt": "02",
+      "status": "failed_tolerance_or_coverage",
+      "private_original_receipt_sha256": "6171334f7c96587581d5232bc00b3cc58b5f55c9154ff15ff2db4ef28ab0056b"
+    },
+    {
+      "attempt": "03",
+      "status": "failed_execution",
+      "private_original_receipt_sha256": "30b7240d2cd3872aaa2d0c56a12f4e22f0fe707d7d8f43e9e89a6c074ed51684"
+    },
+    {
+      "attempt": "04",
+      "status": "failed_tolerance_or_coverage",
+      "private_original_receipt_sha256": "101679fe19ae5d1fc3bf1b8198aaf154854253333650cafe66b181f5537ba23b",
+      "complete_samples": 33703,
+      "note": "Complete diagnostic; pressure channels pass numerical thresholds but other four fail. Original reference05 was paused; no playable-parity claim."
+    }
+  ],
+  "current_reference": "reference.csv.gz",
+  "current_rust_acceptance": "PENDING; reference05 is historical paused context; new live reference07 requires its own full replay.",
+  "original_routes_stock_and_wine_prefix_exported": false,
+  "context_limitation": "05 inherited Simulator.Paused=true and no original viewer weather initialization. Preserved, not rewritten; see ../lirr-native07 for predeclared live context."
+}

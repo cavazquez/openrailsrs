@@ -1,0 +1,13 @@
+SIMISA@@@@@@@@@@JINX0D0t______
+Wagon ( owned-air Type ( Freight ) Mass ( 30t ) Size ( 3m 4m 20m )
+ BrakeSystemType ( Air_single_pipe )
+ BrakeEquipmentType ( "Triple_valve, Auxilary_reservoir, Emergency_brake_reservoir, Handbrake" )
+ MaxBrakeForce ( 100kN ) BrakeCylinderPressureForMaxBrakeBrakeForce ( 70psi )
+ MaxApplicationRate ( 20psi/s ) MaxReleaseRate ( 10psi/s )
+ MaxAuxilaryChargingRate ( 2psi/s ) TripleValveRatio ( 2.5 )
+ EmergencyResCapacity ( 0.07m3 ) EmergencyResVolumeMultiplier ( 1.4 )
+ EmergencyResChargingRate ( 1.684psi/s )
+ ORTSEmergencyValveActuationRate ( 15psi/s )
+ ORTSEmergencyDumpValveRate ( 25psi/s ) ORTSEmergencyDumpValveTimer ( 5s )
+ ORTSRSAdvancedEmergency ( 1 )
+ )

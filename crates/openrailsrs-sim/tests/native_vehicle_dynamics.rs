@@ -68,7 +68,10 @@ fn bearing_temperature_and_legacy_tail_match_independent_native_static_forces() 
 #[test]
 fn wheel_speed_and_transmitted_force_remain_distinct_during_slip() {
     let (_, native) = native_stock();
-    let mut axle = NativeAxleState { speed_mps: 10. };
+    let mut axle = NativeAxleState {
+        speed_mps: 10.,
+        ..Default::default()
+    };
     let mut transmitted = 0.;
     for _ in 0..100 {
         transmitted = axle.step(

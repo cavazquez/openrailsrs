@@ -1,0 +1,162 @@
+{
+  "schema": 1,
+  "kind": "compact_publication_of_measured_rust_steam_diagnostic",
+  "recorded_utc": "2026-10-16T03:12:12.231456+00:00",
+  "source_attempt": "tmp/twenty-20261015/steam-compare02",
+  "copied_bytes_unchanged": true,
+  "artifacts_sha256": {
+    "comparison.json": "1c9193e3adb09fdccfa8704d6d2353cfa4db7511c9c640ff2494ca7f50d26669",
+    "configuration-overlay.json": "fd7623fd7b7de7089c2e54895c23d74e2a8f974ae927d7fe178493394bd30af0",
+    "initial.json": "60df42bfc7d76857e13f9f4872c2b206897c7ae3b6a3bf9a6862f5c926492e9e",
+    "process.json": "d60aebee2c67a5a02915283107ceffa122d27324a96b80177704cd77ccaeb1cf",
+    "receipt.json": "7d58d934a091c585f4f719cf1a1455172ff464cc62c84a91d7c186f8a457b273",
+    "trace.csv": "80c5d2368974eb4b180753c5f703cc44faae72cf17591672b6ec01b97bddba63"
+  },
+  "binary_sha256": "e29121cd782b7add7289ee7e8a6d6e7e30471cac6e1c4e98fee63859bcaad0ad",
+  "measurement_source_files": 709,
+  "rust_crate_sources_unchanged_during_execution": true,
+  "rust_crate_source_count": 683,
+  "original_capture_manifest_sha256": "667fb11206aa479c6a6d5901e880f0d1c1f1ad1699643c598d667620db774014",
+  "original_steam_trace_sha256": "caf524d9dad7c1034d5df1a41de034b589d6e0d943981116c4cda2f72e93683b",
+  "native_fixture": "../physical-native05/",
+  "original_limits_sha256": "7e82b09d91489f63981c4082de87d39d245b3152105f9fe2b20b55ad5d0f018c",
+  "exit_code": 1,
+  "completed_ticks": 1600,
+  "status": "outside_prior_limits",
+  "full_native_steam_cycle_parity": false,
+  "native_compound_or_double_steam_parity": false,
+  "issues_remaining_open": [
+    223,
+    224
+  ],
+  "conservation_passed": true,
+  "mass_residual_kg_abs": 2.758042683126405e-10,
+  "energy_residual_j_abs": 5.0067901611328125e-05,
+  "maximum_errors": {
+    "boiler_enthalpy_j": {
+      "maximum_absolute_error": 972935971.541955,
+      "phase": "braking",
+      "worst_tick": 1596
+    },
+    "boiler_mass_kg": {
+      "maximum_absolute_error": 317.89317361505437,
+      "phase": "braking",
+      "worst_tick": 1596
+    },
+    "coal_burn_kg_s": {
+      "maximum_absolute_error": 0.414473754,
+      "phase": "steam_load",
+      "worst_tick": 245
+    },
+    "distance_m": {
+      "maximum_absolute_error": 1288.2681822140726,
+      "phase": "braking",
+      "worst_tick": 1600
+    },
+    "injection_kg_s": {
+      "maximum_absolute_error": 5.0,
+      "phase": "injection",
+      "worst_tick": 801
+    },
+    "motive_force_n": {
+      "maximum_absolute_error": 76333.90327533471,
+      "phase": "steam_load",
+      "worst_tick": 327
+    },
+    "net_evaporation_kg_s": {
+      "maximum_absolute_error": 11.493630877157557,
+      "phase": "steam_load",
+      "worst_tick": 611
+    },
+    "pressure_bar": {
+      "maximum_absolute_error": 6.284217656790623,
+      "phase": "injection",
+      "worst_tick": 1100
+    },
+    "production_kg_s": {
+      "maximum_absolute_error": 1.9516890615967049,
+      "phase": "idle_fire",
+      "worst_tick": 200
+    },
+    "speed_mps": {
+      "maximum_absolute_error": 27.46251108129883,
+      "phase": "steam_load",
+      "worst_tick": 800
+    },
+    "steam_consumption_kg_s": {
+      "maximum_absolute_error": 11.495794949691485,
+      "phase": "steam_load",
+      "worst_tick": 616
+    },
+    "tender_coal_kg": {
+      "maximum_absolute_error": 16.715211498044027,
+      "phase": "braking",
+      "worst_tick": 1600
+    },
+    "tender_water_kg": {
+      "maximum_absolute_error": 27.56875109885732,
+      "phase": "injection",
+      "worst_tick": 1100
+    },
+    "thermal_power_w": {
+      "maximum_absolute_error": 2801417.163328414,
+      "phase": "injection",
+      "worst_tick": 1100
+    },
+    "water_fraction": {
+      "maximum_absolute_error": 0.09130739671743238,
+      "phase": "coast",
+      "worst_tick": 1101
+    }
+  },
+  "same_numeric_artifacts_as_attempt01": {
+    "comparison.json": true,
+    "initial.json": true,
+    "trace.csv": true,
+    "configuration-overlay.json": true
+  },
+  "excluded_from_publication": [
+    "rust-source.diff",
+    "rust-working-tree.txt",
+    "scenario.toml",
+    "route/",
+    "original-steam.con",
+    "original ENG/PAT/DLL/content/runtime",
+    "all six protected human trace contents"
+  ],
+  "scope_note": "The original unmodified receipt retains hashes of private attempt artifacts; only the listed compact files are published. HEAD is ancestry, not a claim that it contains the measured dirty sources. The six human files are represented only by unchanged hashes in process.json. No native state, speed or force was prescribed to the Rust tick.",
+  "own_model_tests": {
+    "log": "tmp/twenty-20261015/directed-tests03.log",
+    "log_sha256": "8da9f4f081de601c5622782cbc70b08abb78de982667dbad054bd7cd14c4f537",
+    "test_binary": "target/debug/deps/physical_extensions-6ab75e03ed948319",
+    "binary_sha256": "4b58d8e7a19c35220ebad732e773403f1d176d45031132d054a1871c9af27825",
+    "passed": 14,
+    "failed": 0,
+    "ignored": 0,
+    "tests": [
+      "double_steam_force_and_consumption_are_metered_by_locomotive_identity",
+      "emergency_has_pipe_reservoir_and_rearm_states_separate_from_independent",
+      "explicit_native_steam_startup_initializes_one_consistent_mass_energy_state",
+      "hydraulic_launch_load_fuel_heat_and_shifts_share_the_physics_tick",
+      "independent_boilers_compound_and_controls_survive_a_driven_save",
+      "local_regulator_obeys_the_same_operational_and_safety_interlocks",
+      "one_shared_vertical_support_preserves_both_body_loads_and_spatial_reversal",
+      "optional_derailment_records_cause_cuts_force_and_keeps_the_failure_on_restore",
+      "optional_equipment_rejects_unknown_units_impossible_curves_and_unsupported_valves",
+      "rack_positive_contact_brakes_gradient_without_an_adhesion_cap",
+      "rack_rejects_an_incompatible_system_and_refuses_engagement_at_speed",
+      "reversing_on_the_second_edge_keeps_rack_and_roughness_in_world_chainage",
+      "vertical_profile_is_spatial_reproducible_and_affects_contact_and_motion",
+      "vessel_conserves_mass_energy_through_fire_load_injection_and_safety"
+    ],
+    "verified_scopes": [
+      "finite boiler mass and energy conservation, coherent hot/cold start",
+      "independent boilers, local regulator interlocks, compound receiver and save/restore",
+      "per-locomotive force impulses, steam/coal consumption and separate heat inputs",
+      "advanced service/emergency/rearm separated from real independent controller",
+      "hydraulic converter, rack, optional derailment, vertical contact and shared support",
+      "backwards multi-edge motion and persisted equipment validation"
+    ],
+    "native_equivalence_claim": false
+  }
+}

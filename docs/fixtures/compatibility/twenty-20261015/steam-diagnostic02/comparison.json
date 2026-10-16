@@ -1,0 +1,1171 @@
+{
+  "comparison_kind": "closed_loop_diagnostic",
+  "completed_ticks": 1600,
+  "conservation_passed": true,
+  "energy_residual_j_abs": 0.000050067901611328125,
+  "expected_ticks": 1600,
+  "failed_metrics": [
+    {
+      "field": "pressure_bar",
+      "limit": 0.1,
+      "maximum_absolute_error": 5.769399583137707,
+      "phase": "braking",
+      "worst_tick": 1401
+    },
+    {
+      "field": "boiler_mass_kg",
+      "limit": 1.0,
+      "maximum_absolute_error": 317.89317361505437,
+      "phase": "braking",
+      "worst_tick": 1596
+    },
+    {
+      "field": "boiler_enthalpy_j",
+      "limit": 100000.0,
+      "maximum_absolute_error": 972935971.541955,
+      "phase": "braking",
+      "worst_tick": 1596
+    },
+    {
+      "field": "water_fraction",
+      "limit": 0.002,
+      "maximum_absolute_error": 0.08839120187908256,
+      "phase": "braking",
+      "worst_tick": 1401
+    },
+    {
+      "field": "production_kg_s",
+      "limit": 0.1,
+      "maximum_absolute_error": 1.371734827583539,
+      "phase": "braking",
+      "worst_tick": 1600
+    },
+    {
+      "field": "net_evaporation_kg_s",
+      "limit": 0.1,
+      "maximum_absolute_error": 0.6633307269294164,
+      "phase": "braking",
+      "worst_tick": 1598
+    },
+    {
+      "field": "steam_consumption_kg_s",
+      "limit": 0.1,
+      "maximum_absolute_error": 0.6674211378969019,
+      "phase": "braking",
+      "worst_tick": 1600
+    },
+    {
+      "field": "coal_burn_kg_s",
+      "limit": 0.05,
+      "maximum_absolute_error": 0.07394421999999998,
+      "phase": "braking",
+      "worst_tick": 1401
+    },
+    {
+      "field": "tender_coal_kg",
+      "limit": 1.0,
+      "maximum_absolute_error": 16.715211498044027,
+      "phase": "braking",
+      "worst_tick": 1600
+    },
+    {
+      "field": "tender_water_kg",
+      "limit": 1.0,
+      "maximum_absolute_error": 27.409524015491115,
+      "phase": "braking",
+      "worst_tick": 1401
+    },
+    {
+      "field": "speed_mps",
+      "limit": 0.1,
+      "maximum_absolute_error": 14.005126934082032,
+      "phase": "braking",
+      "worst_tick": 1401
+    },
+    {
+      "field": "distance_m",
+      "limit": 2.0,
+      "maximum_absolute_error": 1288.2681822140726,
+      "phase": "braking",
+      "worst_tick": 1600
+    },
+    {
+      "field": "pressure_bar",
+      "limit": 0.1,
+      "maximum_absolute_error": 6.282526473992355,
+      "phase": "coast",
+      "worst_tick": 1101
+    },
+    {
+      "field": "boiler_mass_kg",
+      "limit": 1.0,
+      "maximum_absolute_error": 317.66362635398673,
+      "phase": "coast",
+      "worst_tick": 1400
+    },
+    {
+      "field": "boiler_enthalpy_j",
+      "limit": 100000.0,
+      "maximum_absolute_error": 964912996.4232936,
+      "phase": "coast",
+      "worst_tick": 1400
+    },
+    {
+      "field": "water_fraction",
+      "limit": 0.002,
+      "maximum_absolute_error": 0.09130739671743238,
+      "phase": "coast",
+      "worst_tick": 1101
+    },
+    {
+      "field": "production_kg_s",
+      "limit": 0.1,
+      "maximum_absolute_error": 1.359378363490712,
+      "phase": "coast",
+      "worst_tick": 1400
+    },
+    {
+      "field": "net_evaporation_kg_s",
+      "limit": 0.1,
+      "maximum_absolute_error": 1.2029151578281017,
+      "phase": "coast",
+      "worst_tick": 1102
+    },
+    {
+      "field": "steam_consumption_kg_s",
+      "limit": 0.1,
+      "maximum_absolute_error": 2.0295501663479163,
+      "phase": "coast",
+      "worst_tick": 1101
+    },
+    {
+      "field": "injection_kg_s",
+      "limit": 0.05,
+      "maximum_absolute_error": 3.18314932018391,
+      "phase": "coast",
+      "worst_tick": 1101
+    },
+    {
+      "field": "coal_burn_kg_s",
+      "limit": 0.05,
+      "maximum_absolute_error": 0.092356837,
+      "phase": "coast",
+      "worst_tick": 1101
+    },
+    {
+      "field": "tender_coal_kg",
+      "limit": 1.0,
+      "maximum_absolute_error": 14.555323030078853,
+      "phase": "coast",
+      "worst_tick": 1400
+    },
+    {
+      "field": "tender_water_kg",
+      "limit": 1.0,
+      "maximum_absolute_error": 27.409524015491115,
+      "phase": "coast",
+      "worst_tick": 1101
+    },
+    {
+      "field": "speed_mps",
+      "limit": 0.1,
+      "maximum_absolute_error": 22.210659338378907,
+      "phase": "coast",
+      "worst_tick": 1101
+    },
+    {
+      "field": "distance_m",
+      "limit": 2.0,
+      "maximum_absolute_error": 1168.0293335474237,
+      "phase": "coast",
+      "worst_tick": 1400
+    },
+    {
+      "field": "pressure_bar",
+      "limit": 0.1,
+      "maximum_absolute_error": 0.3872982681285482,
+      "phase": "idle_fire",
+      "worst_tick": 200
+    },
+    {
+      "field": "boiler_enthalpy_j",
+      "limit": 100000.0,
+      "maximum_absolute_error": 17481913.929542065,
+      "phase": "idle_fire",
+      "worst_tick": 200
+    },
+    {
+      "field": "production_kg_s",
+      "limit": 0.1,
+      "maximum_absolute_error": 1.9516890615967049,
+      "phase": "idle_fire",
+      "worst_tick": 200
+    },
+    {
+      "field": "net_evaporation_kg_s",
+      "limit": 0.1,
+      "maximum_absolute_error": 5.743856133140071,
+      "phase": "idle_fire",
+      "worst_tick": 1
+    },
+    {
+      "field": "coal_burn_kg_s",
+      "limit": 0.05,
+      "maximum_absolute_error": 0.09374297100000001,
+      "phase": "idle_fire",
+      "worst_tick": 1
+    },
+    {
+      "field": "tender_coal_kg",
+      "limit": 1.0,
+      "maximum_absolute_error": 1.4030387120069463,
+      "phase": "idle_fire",
+      "worst_tick": 200
+    },
+    {
+      "field": "pressure_bar",
+      "limit": 0.1,
+      "maximum_absolute_error": 6.284217656790623,
+      "phase": "injection",
+      "worst_tick": 1100
+    },
+    {
+      "field": "boiler_mass_kg",
+      "limit": 1.0,
+      "maximum_absolute_error": 317.4655575499228,
+      "phase": "injection",
+      "worst_tick": 1100
+    },
+    {
+      "field": "boiler_enthalpy_j",
+      "limit": 100000.0,
+      "maximum_absolute_error": 949900344.3589315,
+      "phase": "injection",
+      "worst_tick": 1100
+    },
+    {
+      "field": "water_fraction",
+      "limit": 0.002,
+      "maximum_absolute_error": 0.09130605814191839,
+      "phase": "injection",
+      "worst_tick": 1100
+    },
+    {
+      "field": "production_kg_s",
+      "limit": 0.1,
+      "maximum_absolute_error": 0.7419296290512931,
+      "phase": "injection",
+      "worst_tick": 801
+    },
+    {
+      "field": "net_evaporation_kg_s",
+      "limit": 0.1,
+      "maximum_absolute_error": 7.033007827722031,
+      "phase": "injection",
+      "worst_tick": 807
+    },
+    {
+      "field": "steam_consumption_kg_s",
+      "limit": 0.1,
+      "maximum_absolute_error": 7.058274641458391,
+      "phase": "injection",
+      "worst_tick": 807
+    },
+    {
+      "field": "injection_kg_s",
+      "limit": 0.05,
+      "maximum_absolute_error": 5.0,
+      "phase": "injection",
+      "worst_tick": 801
+    },
+    {
+      "field": "coal_burn_kg_s",
+      "limit": 0.05,
+      "maximum_absolute_error": 0.361708295,
+      "phase": "injection",
+      "worst_tick": 801
+    },
+    {
+      "field": "tender_coal_kg",
+      "limit": 1.0,
+      "maximum_absolute_error": 11.364490328131524,
+      "phase": "injection",
+      "worst_tick": 1100
+    },
+    {
+      "field": "tender_water_kg",
+      "limit": 1.0,
+      "maximum_absolute_error": 27.56875109885732,
+      "phase": "injection",
+      "worst_tick": 1100
+    },
+    {
+      "field": "speed_mps",
+      "limit": 0.1,
+      "maximum_absolute_error": 27.451585724414063,
+      "phase": "injection",
+      "worst_tick": 801
+    },
+    {
+      "field": "distance_m",
+      "limit": 2.0,
+      "maximum_absolute_error": 901.1023090597376,
+      "phase": "injection",
+      "worst_tick": 1100
+    },
+    {
+      "field": "motive_force_n",
+      "limit": 100.0,
+      "maximum_absolute_error": 22540.67492404676,
+      "phase": "injection",
+      "worst_tick": 801
+    },
+    {
+      "field": "pressure_bar",
+      "limit": 0.1,
+      "maximum_absolute_error": 4.58543626437557,
+      "phase": "steam_load",
+      "worst_tick": 800
+    },
+    {
+      "field": "boiler_mass_kg",
+      "limit": 1.0,
+      "maximum_absolute_error": 256.08490246368183,
+      "phase": "steam_load",
+      "worst_tick": 800
+    },
+    {
+      "field": "boiler_enthalpy_j",
+      "limit": 100000.0,
+      "maximum_absolute_error": 733708614.125349,
+      "phase": "steam_load",
+      "worst_tick": 800
+    },
+    {
+      "field": "water_fraction",
+      "limit": 0.002,
+      "maximum_absolute_error": 0.07053986792323319,
+      "phase": "steam_load",
+      "worst_tick": 800
+    },
+    {
+      "field": "production_kg_s",
+      "limit": 0.1,
+      "maximum_absolute_error": 0.845934498819056,
+      "phase": "steam_load",
+      "worst_tick": 287
+    },
+    {
+      "field": "net_evaporation_kg_s",
+      "limit": 0.1,
+      "maximum_absolute_error": 11.493630877157557,
+      "phase": "steam_load",
+      "worst_tick": 611
+    },
+    {
+      "field": "steam_consumption_kg_s",
+      "limit": 0.1,
+      "maximum_absolute_error": 11.495794949691485,
+      "phase": "steam_load",
+      "worst_tick": 616
+    },
+    {
+      "field": "coal_burn_kg_s",
+      "limit": 0.05,
+      "maximum_absolute_error": 0.414473754,
+      "phase": "steam_load",
+      "worst_tick": 245
+    },
+    {
+      "field": "tender_coal_kg",
+      "limit": 1.0,
+      "maximum_absolute_error": 8.530576456089875,
+      "phase": "steam_load",
+      "worst_tick": 800
+    },
+    {
+      "field": "speed_mps",
+      "limit": 0.1,
+      "maximum_absolute_error": 27.46251108129883,
+      "phase": "steam_load",
+      "worst_tick": 800
+    },
+    {
+      "field": "distance_m",
+      "limit": 2.0,
+      "maximum_absolute_error": 524.9013225884852,
+      "phase": "steam_load",
+      "worst_tick": 800
+    },
+    {
+      "field": "motive_force_n",
+      "limit": 100.0,
+      "maximum_absolute_error": 76333.90327533471,
+      "phase": "steam_load",
+      "worst_tick": 327
+    }
+  ],
+  "full_native_steam_cycle_parity_claim": false,
+  "initialization": "Each factory initializes independently; initial pressure/mass/heat differences are retained and counted.",
+  "injector_state_mismatches": 0,
+  "integral_units": "A rate integral has mass units; the diagnostic also emits integrals of non-rate fields without treating them as conserved amounts.",
+  "limits": {
+    "boiler_enthalpy_j_abs": 100000.0,
+    "boiler_mass_kg_abs": 1.0,
+    "coal_burn_kg_s_abs": 0.05,
+    "distance_m_abs": 2.0,
+    "injection_kg_s_abs": 0.05,
+    "injector_state": "exact",
+    "motive_force_n_abs": 100.0,
+    "pressure_bar_abs": 0.1,
+    "production_kg_s_abs": 0.1,
+    "scope": "Prior diagnostic limits, including independently initialized state. A failure remains a failure and does not become an extension-parity claim.",
+    "speed_mps_abs": 0.1,
+    "steam_consumption_kg_s_abs": 0.1,
+    "tender_coal_kg_abs": 1.0,
+    "tender_water_kg_abs": 1.0,
+    "water_fraction_abs": 0.002
+  },
+  "mass_residual_kg_abs": 2.758042683126405e-10,
+  "native_reference": "Original DLL Simulator.Update; no substitute equations in helper",
+  "native_state_or_motion_prescribed": false,
+  "original_content_unchanged": true,
+  "phase_metrics": {
+    "braking": {
+      "boiler_enthalpy_j": {
+        "maximum_absolute_error": 972935971.541955,
+        "native_integral": 38931035095.46463,
+        "rows": 200,
+        "rust_integral": 29239542110.57976,
+        "squared_error": 1.878511798709231e+20,
+        "worst_tick": 1596
+      },
+      "boiler_mass_kg": {
+        "maximum_absolute_error": 317.89317361505437,
+        "native_integral": 45961.60945224599,
+        "rows": 200,
+        "rust_integral": 42783.81333063735,
+        "squared_error": 20196777.25077722,
+        "worst_tick": 1596
+      },
+      "coal_burn_kg_s": {
+        "maximum_absolute_error": 0.07394421999999998,
+        "native_integral": 2.820899428,
+        "rows": 200,
+        "rust_integral": 2.1382668000000113,
+        "squared_error": 0.9340972589376346,
+        "worst_tick": 1401
+      },
+      "distance_m": {
+        "maximum_absolute_error": 1288.2681822140726,
+        "native_integral": 13653.265106999994,
+        "rows": 200,
+        "rust_integral": 25968.055589756004,
+        "squared_error": 303547618.397137,
+        "worst_tick": 1600
+      },
+      "injection_kg_s": {
+        "maximum_absolute_error": 0.0,
+        "native_integral": 0.0,
+        "rows": 200,
+        "rust_integral": 0.0,
+        "squared_error": 0.0,
+        "worst_tick": 0
+      },
+      "motive_force_n": {
+        "maximum_absolute_error": 0.0,
+        "native_integral": 0.0,
+        "rows": 200,
+        "rust_integral": 0.0,
+        "squared_error": 0.0,
+        "worst_tick": 0
+      },
+      "net_evaporation_kg_s": {
+        "maximum_absolute_error": 0.6633307269294164,
+        "native_integral": 0.42208446784934495,
+        "rows": 200,
+        "rust_integral": 0.6932163651063092,
+        "squared_error": 2.0501093262828696,
+        "worst_tick": 1598
+      },
+      "pressure_bar": {
+        "maximum_absolute_error": 5.769399583137707,
+        "native_integral": 109.96803304163177,
+        "rows": 200,
+        "rust_integral": 53.93092110799521,
+        "squared_error": 6282.14669579365,
+        "worst_tick": 1401
+      },
+      "production_kg_s": {
+        "maximum_absolute_error": 1.371734827583539,
+        "native_integral": 31.777416333163924,
+        "rows": 200,
+        "rust_integral": 18.120404587085325,
+        "squared_error": 373.0305095065726,
+        "worst_tick": 1600
+      },
+      "speed_mps": {
+        "maximum_absolute_error": 14.005126934082032,
+        "native_integral": 258.65496709500013,
+        "rows": 200,
+        "rust_integral": 378.8941125869749,
+        "squared_error": 29136.516929468726,
+        "worst_tick": 1401
+      },
+      "steam_consumption_kg_s": {
+        "maximum_absolute_error": 0.6674211378969019,
+        "native_integral": 0.3970884356914892,
+        "rows": 200,
+        "rust_integral": 0.5000000000000003,
+        "squared_error": 1.8956073619062115,
+        "worst_tick": 1600
+      },
+      "tender_coal_kg": {
+        "maximum_absolute_error": 16.715211498044027,
+        "native_integral": 32846.784659499994,
+        "rows": 200,
+        "rust_integral": 32690.378591647688,
+        "squared_error": 49003.45835700312,
+        "worst_tick": 1600
+      },
+      "tender_water_kg": {
+        "maximum_absolute_error": 27.409524015491115,
+        "native_integral": 69377.32022015519,
+        "rows": 200,
+        "rust_integral": 69103.22498000009,
+        "squared_error": 150256.40135115763,
+        "worst_tick": 1401
+      },
+      "thermal_power_w": {
+        "maximum_absolute_error": 993592.7784000002,
+        "native_integral": 40125592.62100001,
+        "rows": 200,
+        "rust_integral": 49992677.78400021,
+        "squared_error": 194721847372080.3,
+        "worst_tick": 1401
+      },
+      "water_fraction": {
+        "maximum_absolute_error": 0.08839120187908256,
+        "native_integral": 8.940745077799999,
+        "rows": 200,
+        "rust_integral": 8.06619586017356,
+        "squared_error": 1.529730949954381,
+        "worst_tick": 1401
+      }
+    },
+    "coast": {
+      "boiler_enthalpy_j": {
+        "maximum_absolute_error": 964912996.4232936,
+        "native_integral": 57310041276.25785,
+        "rows": 300,
+        "rust_integral": 42946130994.57405,
+        "squared_error": 2.7510174912276496e+20,
+        "worst_tick": 1400
+      },
+      "boiler_mass_kg": {
+        "maximum_absolute_error": 317.66362635398673,
+        "native_integral": 68947.43468046775,
+        "rows": 300,
+        "rust_integral": 64185.09499595454,
+        "squared_error": 30239842.047920916,
+        "worst_tick": 1400
+      },
+      "coal_burn_kg_s": {
+        "maximum_absolute_error": 0.092356837,
+        "native_integral": 4.453276345300001,
+        "rows": 300,
+        "rust_integral": 3.207400200000022,
+        "squared_error": 2.078155209064275,
+        "worst_tick": 1101
+      },
+      "distance_m": {
+        "maximum_absolute_error": 1168.0293335474237,
+        "native_integral": 15209.686427650004,
+        "rows": 300,
+        "rust_integral": 30887.834928212473,
+        "squared_error": 329510921.6210648,
+        "worst_tick": 1400
+      },
+      "injection_kg_s": {
+        "maximum_absolute_error": 3.18314932018391,
+        "native_integral": 0.1591574660091955,
+        "rows": 300,
+        "rust_integral": 0.0,
+        "squared_error": 10.132439594587288,
+        "worst_tick": 1101
+      },
+      "motive_force_n": {
+        "maximum_absolute_error": 0.0,
+        "native_integral": 0.0,
+        "rows": 300,
+        "rust_integral": 0.0,
+        "squared_error": 0.0,
+        "worst_tick": 0
+      },
+      "net_evaporation_kg_s": {
+        "maximum_absolute_error": 1.2029151578281017,
+        "native_integral": 0.5708782957608491,
+        "rows": 300,
+        "rust_integral": 1.032968627298942,
+        "squared_error": 2.676623757481797,
+        "worst_tick": 1102
+      },
+      "pressure_bar": {
+        "maximum_absolute_error": 6.282526473992355,
+        "native_integral": 163.6709129085815,
+        "rows": 300,
+        "rust_integral": 73.2380667153659,
+        "squared_error": 10910.77075124142,
+        "worst_tick": 1101
+      },
+      "production_kg_s": {
+        "maximum_absolute_error": 1.359378363490712,
+        "native_integral": 47.45688081811614,
+        "rows": 300,
+        "rust_integral": 27.216368014603805,
+        "squared_error": 546.2482926348118,
+        "worst_tick": 1400
+      },
+      "speed_mps": {
+        "maximum_absolute_error": 22.210659338378907,
+        "native_integral": 436.66616827999974,
+        "rows": 300,
+        "rust_integral": 703.5940593719479,
+        "squared_error": 96671.30372995448,
+        "worst_tick": 1101
+      },
+      "steam_consumption_kg_s": {
+        "maximum_absolute_error": 2.0295501663479163,
+        "native_integral": 0.6419537340309844,
+        "rows": 300,
+        "rust_integral": 0.749999999999995,
+        "squared_error": 6.5185771590892,
+        "worst_tick": 1101
+      },
+      "tender_coal_kg": {
+        "maximum_absolute_error": 14.555323030078853,
+        "native_integral": 49272.0109375,
+        "rows": 300,
+        "rust_integral": 49077.89467124588,
+        "squared_error": 50503.69911429721,
+        "worst_tick": 1400
+      },
+      "tender_water_kg": {
+        "maximum_absolute_error": 27.409524015491115,
+        "native_integral": 104065.98033023295,
+        "rows": 300,
+        "rust_integral": 103654.83746999947,
+        "squared_error": 225384.60202673677,
+        "worst_tick": 1101
+      },
+      "thermal_power_w": {
+        "maximum_absolute_error": 1015975.2984000002,
+        "native_integral": 59918667.566999964,
+        "rows": 300,
+        "rust_integral": 74989016.67600015,
+        "squared_error": 302833266353790.94,
+        "worst_tick": 1102
+      },
+      "water_fraction": {
+        "maximum_absolute_error": 0.09130739671743238,
+        "native_integral": 13.406700306500007,
+        "rows": 300,
+        "rust_integral": 12.059033198901163,
+        "squared_error": 2.4218183194858143,
+        "worst_tick": 1101
+      }
+    },
+    "idle_fire": {
+      "boiler_enthalpy_j": {
+        "maximum_absolute_error": 17481913.929542065,
+        "native_integral": 37077422423.4133,
+        "rows": 200,
+        "rust_integral": 36988436202.02087,
+        "squared_error": 2.0928330864129948e+16,
+        "worst_tick": 200
+      },
+      "boiler_mass_kg": {
+        "maximum_absolute_error": 0.23535646205709781,
+        "native_integral": 46329.75413694462,
+        "rows": 200,
+        "rust_integral": 46328.56583468937,
+        "squared_error": 3.7385007935617884,
+        "worst_tick": 200
+      },
+      "coal_burn_kg_s": {
+        "maximum_absolute_error": 0.09374297100000001,
+        "native_integral": 2.3213354654500002,
+        "rows": 200,
+        "rust_integral": 1.4255111999999974,
+        "squared_error": 1.6061422674141137,
+        "worst_tick": 1
+      },
+      "distance_m": {
+        "maximum_absolute_error": 0.0,
+        "native_integral": 0.0,
+        "rows": 200,
+        "rust_integral": 0.0,
+        "squared_error": 0.0,
+        "worst_tick": 0
+      },
+      "injection_kg_s": {
+        "maximum_absolute_error": 0.0,
+        "native_integral": 0.0,
+        "rows": 200,
+        "rust_integral": 0.0,
+        "squared_error": 0.0,
+        "worst_tick": 0
+      },
+      "motive_force_n": {
+        "maximum_absolute_error": 0.0,
+        "native_integral": 0.0,
+        "rows": 200,
+        "rust_integral": 0.0,
+        "squared_error": 0.0,
+        "worst_tick": 0
+      },
+      "net_evaporation_kg_s": {
+        "maximum_absolute_error": 5.743856133140071,
+        "native_integral": 0.5589426492069833,
+        "rows": 200,
+        "rust_integral": 0.5586303665431842,
+        "squared_error": 33.17167163418931,
+        "worst_tick": 1
+      },
+      "pressure_bar": {
+        "maximum_absolute_error": 0.3872982681285482,
+        "native_integral": 107.0375326997787,
+        "rows": 200,
+        "rust_integral": 108.9250405969974,
+        "squared_error": 9.77567419275424,
+        "worst_tick": 200
+      },
+      "production_kg_s": {
+        "maximum_absolute_error": 1.9516890615967049,
+        "native_integral": 31.435562194033334,
+        "rows": 200,
+        "rust_integral": 11.973699212335708,
+        "squared_error": 757.5303120414177,
+        "worst_tick": 200
+      },
+      "speed_mps": {
+        "maximum_absolute_error": 0.0,
+        "native_integral": 0.0,
+        "rows": 200,
+        "rust_integral": 0.0,
+        "squared_error": 0.0,
+        "worst_tick": 0
+      },
+      "steam_consumption_kg_s": {
+        "maximum_absolute_error": 0.05000000000000001,
+        "native_integral": 0.2502223745587784,
+        "rows": 200,
+        "rust_integral": 0.5000000000000003,
+        "squared_error": 0.12540699508765568,
+        "worst_tick": 1
+      },
+      "tender_coal_kg": {
+        "maximum_absolute_error": 1.4030387120069463,
+        "native_integral": 33020.991226,
+        "rows": 200,
+        "rust_integral": 33013.96215063217,
+        "squared_error": 131.82315914142714,
+        "worst_tick": 200
+      },
+      "tender_water_kg": {
+        "maximum_absolute_error": 0.008668934904562775,
+        "native_integral": 69853.13829065117,
+        "rows": 200,
+        "rust_integral": 69853.22498000007,
+        "squared_error": 0.015030086475909329,
+        "worst_tick": 1
+      },
+      "thermal_power_w": {
+        "maximum_absolute_error": 641945.0944000003,
+        "native_integral": 39681397.704500005,
+        "rows": 200,
+        "rust_integral": 33328451.85599998,
+        "squared_error": 80722889214509.48,
+        "worst_tick": 200
+      },
+      "water_fraction": {
+        "maximum_absolute_error": 0.0015889317874289155,
+        "native_integral": 9.000453141800001,
+        "rows": 200,
+        "rust_integral": 9.008251188524278,
+        "squared_error": 0.00016673840671114522,
+        "worst_tick": 200
+      }
+    },
+    "initial": {
+      "boiler_enthalpy_j": {
+        "maximum_absolute_error": 749.2098293304443,
+        "native_integral": 0.0,
+        "rows": 1,
+        "rust_integral": 0.0,
+        "squared_error": 561315.3683653536,
+        "worst_tick": 0
+      },
+      "boiler_mass_kg": {
+        "maximum_absolute_error": 0.00019918615271308227,
+        "native_integral": 0.0,
+        "rows": 1,
+        "rust_integral": 0.0,
+        "squared_error": 3.967512343263933e-8,
+        "worst_tick": 0
+      },
+      "coal_burn_kg_s": {
+        "maximum_absolute_error": 0.0,
+        "native_integral": 0.0,
+        "rows": 1,
+        "rust_integral": 0.0,
+        "squared_error": 0.0,
+        "worst_tick": 0
+      },
+      "distance_m": {
+        "maximum_absolute_error": 0.0,
+        "native_integral": 0.0,
+        "rows": 1,
+        "rust_integral": 0.0,
+        "squared_error": 0.0,
+        "worst_tick": 0
+      },
+      "injection_kg_s": {
+        "maximum_absolute_error": 0.0,
+        "native_integral": 0.0,
+        "rows": 1,
+        "rust_integral": 0.0,
+        "squared_error": 0.0,
+        "worst_tick": 0
+      },
+      "motive_force_n": {
+        "maximum_absolute_error": 0.0,
+        "native_integral": 0.0,
+        "rows": 1,
+        "rust_integral": 0.0,
+        "squared_error": 0.0,
+        "worst_tick": 0
+      },
+      "net_evaporation_kg_s": {
+        "maximum_absolute_error": 0.0,
+        "native_integral": 0.0,
+        "rows": 1,
+        "rust_integral": 0.0,
+        "squared_error": 0.0,
+        "worst_tick": 0
+      },
+      "pressure_bar": {
+        "maximum_absolute_error": 1.5974777056726452e-11,
+        "native_integral": 0.0,
+        "rows": 1,
+        "rust_integral": 0.0,
+        "squared_error": 2.5519350201211386e-22,
+        "worst_tick": 0
+      },
+      "production_kg_s": {
+        "maximum_absolute_error": 0.0,
+        "native_integral": 0.0,
+        "rows": 1,
+        "rust_integral": 0.0,
+        "squared_error": 0.0,
+        "worst_tick": 0
+      },
+      "speed_mps": {
+        "maximum_absolute_error": 0.0,
+        "native_integral": 0.0,
+        "rows": 1,
+        "rust_integral": 0.0,
+        "squared_error": 0.0,
+        "worst_tick": 0
+      },
+      "steam_consumption_kg_s": {
+        "maximum_absolute_error": 0.0,
+        "native_integral": 0.0,
+        "rows": 1,
+        "rust_integral": 0.0,
+        "squared_error": 0.0,
+        "worst_tick": 0
+      },
+      "tender_coal_kg": {
+        "maximum_absolute_error": 0.00011360000007698545,
+        "native_integral": 0.0,
+        "rows": 1,
+        "rust_integral": 0.0,
+        "squared_error": 1.2904960017491094e-8,
+        "worst_tick": 0
+      },
+      "tender_water_kg": {
+        "maximum_absolute_error": 0.008668934904562775,
+        "native_integral": 0.0,
+        "rows": 1,
+        "rust_integral": 0.0,
+        "squared_error": 0.00007515043237954681,
+        "worst_tick": 0
+      },
+      "thermal_power_w": {
+        "maximum_absolute_error": 0.0,
+        "native_integral": 0.0,
+        "rows": 1,
+        "rust_integral": 0.0,
+        "squared_error": 0.0,
+        "worst_tick": 0
+      },
+      "water_fraction": {
+        "maximum_absolute_error": 1.1102230246251565e-16,
+        "native_integral": 0.0,
+        "rows": 1,
+        "rust_integral": 0.0,
+        "squared_error": 1.232595164407831e-32,
+        "worst_tick": 0
+      }
+    },
+    "injection": {
+      "boiler_enthalpy_j": {
+        "maximum_absolute_error": 949900344.3589315,
+        "native_integral": 56688203806.38264,
+        "rows": 300,
+        "rust_integral": 43939415467.2726,
+        "squared_error": 2.1787428240783137e+20,
+        "worst_tick": 1100
+      },
+      "boiler_mass_kg": {
+        "maximum_absolute_error": 317.4655575499228,
+        "native_integral": 68823.8763366042,
+        "rows": 300,
+        "rust_integral": 64478.463829080916,
+        "squared_error": 25271493.322506707,
+        "worst_tick": 1100
+      },
+      "coal_burn_kg_s": {
+        "maximum_absolute_error": 0.361708295,
+        "native_integral": 4.393198956700001,
+        "rows": 300,
+        "rust_integral": 9.622200599999974,
+        "squared_error": 36.473981883624106,
+        "worst_tick": 801
+      },
+      "distance_m": {
+        "maximum_absolute_error": 901.1023090597376,
+        "native_integral": 8784.217583500005,
+        "rows": 300,
+        "rust_integral": 19587.332080529064,
+        "squared_error": 159160329.31471673,
+        "worst_tick": 1100
+      },
+      "injection_kg_s": {
+        "maximum_absolute_error": 5.0,
+        "native_integral": 47.39416899994376,
+        "rows": 300,
+        "rust_integral": 75.0,
+        "squared_error": 1036.2100549180639,
+        "worst_tick": 801
+      },
+      "motive_force_n": {
+        "maximum_absolute_error": 22540.67492404676,
+        "native_integral": 367490.0030450003,
+        "rows": 300,
+        "rust_integral": 617737.997184833,
+        "squared_error": 86012563794.6787,
+        "worst_tick": 801
+      },
+      "net_evaporation_kg_s": {
+        "maximum_absolute_error": 7.033007827722031,
+        "native_integral": 30.187646098450386,
+        "rows": 300,
+        "rust_integral": 118.37859175227732,
+        "squared_error": 10508.05210395612,
+        "worst_tick": 807
+      },
+      "pressure_bar": {
+        "maximum_absolute_error": 6.284217656790623,
+        "native_integral": 162.70935169573767,
+        "rows": 300,
+        "rust_integral": 80.01143347200643,
+        "squared_error": 9190.770553491837,
+        "worst_tick": 1100
+      },
+      "production_kg_s": {
+        "maximum_absolute_error": 0.7419296290512931,
+        "native_integral": 47.34360719453758,
+        "rows": 300,
+        "rust_integral": 36.62111028115203,
+        "squared_error": 153.3622763942362,
+        "worst_tick": 801
+      },
+      "speed_mps": {
+        "maximum_absolute_error": 27.451585724414063,
+        "native_integral": 401.79900411,
+        "rows": 300,
+        "rust_integral": 778.0000179290784,
+        "squared_error": 189398.34182258236,
+        "worst_tick": 801
+      },
+      "steam_consumption_kg_s": {
+        "maximum_absolute_error": 7.058274641458391,
+        "native_integral": 30.11873540892781,
+        "rows": 300,
+        "rust_integral": 118.94261393624811,
+        "squared_error": 10652.86396269922,
+        "worst_tick": 807
+      },
+      "tender_coal_kg": {
+        "maximum_absolute_error": 11.364490328131524,
+        "native_integral": 49320.664523,
+        "rows": 300,
+        "rust_integral": 49170.87250627155,
+        "squared_error": 30119.541823683656,
+        "worst_tick": 1100
+      },
+      "tender_water_kg": {
+        "maximum_absolute_error": 27.56875109885732,
+        "native_integral": 104425.41941867786,
+        "rows": 300,
+        "rust_integral": 104215.46246999993,
+        "squared_error": 77335.59694105077,
+        "worst_tick": 1100
+      },
+      "thermal_power_w": {
+        "maximum_absolute_error": 2801417.163328414,
+        "native_integral": 59771518.411999956,
+        "rows": 300,
+        "rust_integral": 101016106.75033924,
+        "squared_error": 2268462059165325.5,
+        "worst_tick": 1100
+      },
+      "water_fraction": {
+        "maximum_absolute_error": 0.09130605814191839,
+        "native_integral": 13.378265217100003,
+        "rows": 300,
+        "rust_integral": 12.151182847027444,
+        "squared_error": 2.0185130082130613,
+        "worst_tick": 1100
+      }
+    },
+    "steam_load": {
+      "boiler_enthalpy_j": {
+        "maximum_absolute_error": 733708614.125349,
+        "native_integral": 112986314954.51294,
+        "rows": 600,
+        "rust_integral": 104017101772.68654,
+        "squared_error": 8.532465824298644e+19,
+        "worst_tick": 800
+      },
+      "boiler_mass_kg": {
+        "maximum_absolute_error": 256.08490246368183,
+        "native_integral": 138349.5027299606,
+        "rows": 600,
+        "rust_integral": 135271.07783529736,
+        "squared_error": 10331123.609316552,
+        "worst_tick": 800
+      },
+      "coal_burn_kg_s": {
+        "maximum_absolute_error": 0.414473754,
+        "native_integral": 7.384159086250002,
+        "rows": 600,
+        "rust_integral": 19.24440120000012,
+        "squared_error": 93.93807968648332,
+        "worst_tick": 245
+      },
+      "distance_m": {
+        "maximum_absolute_error": 524.9013225884852,
+        "native_integral": 4137.437325827476,
+        "rows": 600,
+        "rust_integral": 9840.868067636427,
+        "squared_error": 37555648.09810048,
+        "worst_tick": 800
+      },
+      "injection_kg_s": {
+        "maximum_absolute_error": 0.0,
+        "native_integral": 0.0,
+        "rows": 600,
+        "rust_integral": 0.0,
+        "squared_error": 0.0,
+        "worst_tick": 0
+      },
+      "motive_force_n": {
+        "maximum_absolute_error": 76333.90327533471,
+        "native_integral": 1255289.85233,
+        "rows": 600,
+        "rust_integral": 3109042.889401335,
+        "squared_error": 2391874054431.4893,
+        "worst_tick": 327
+      },
+      "net_evaporation_kg_s": {
+        "maximum_absolute_error": 11.493630877157557,
+        "native_integral": 53.69096360109597,
+        "rows": 600,
+        "rust_integral": 309.72489354188656,
+        "squared_error": 50876.789679581474,
+        "worst_tick": 611
+      },
+      "pressure_bar": {
+        "maximum_absolute_error": 4.58543626437557,
+        "native_integral": 322.81713457286946,
+        "rows": 600,
+        "rust_integral": 278.83037244439635,
+        "squared_error": 2990.0926526101503,
+        "worst_tick": 800
+      },
+      "production_kg_s": {
+        "maximum_absolute_error": 0.845934498819056,
+        "native_integral": 94.65752466401688,
+        "rows": 600,
+        "rust_integral": 70.36836226045148,
+        "squared_error": 393.97823367875066,
+        "worst_tick": 287
+      },
+      "speed_mps": {
+        "maximum_absolute_error": 27.46251108129883,
+        "native_integral": 391.64542110713984,
+        "rows": 600,
+        "rust_integral": 916.5466621302072,
+        "squared_error": 228292.27440993697,
+        "worst_tick": 800
+      },
+      "steam_consumption_kg_s": {
+        "maximum_absolute_error": 11.495794949691485,
+        "native_integral": 53.265976044881185,
+        "rows": 600,
+        "rust_integral": 309.2826364691494,
+        "squared_error": 50921.59503976508,
+        "worst_tick": 616
+      },
+      "tender_coal_kg": {
+        "maximum_absolute_error": 8.530576456089875,
+        "native_integral": 98932.37703250005,
+        "rows": 600,
+        "rust_integral": 98748.08213678496,
+        "squared_error": 24966.976575008062,
+        "worst_tick": 800
+      },
+      "tender_water_kg": {
+        "maximum_absolute_error": 0.008668934904562775,
+        "native_integral": 209559.41487195043,
+        "rows": 600,
+        "rust_integral": 209559.67493999764,
+        "squared_error": 0.04509025942772802,
+        "worst_tick": 201
+      },
+      "thermal_power_w": {
+        "maximum_absolute_error": 2690367.2236746675,
+        "native_integral": 119494378.94199997,
+        "rows": 600,
+        "rust_integral": 195445049.77207157,
+        "squared_error": 3849542426138125.0,
+        "worst_tick": 800
+      },
+      "water_fraction": {
+        "maximum_absolute_error": 0.07053986792323319,
+        "native_integral": 26.883833090550002,
+        "rows": 600,
+        "rust_integral": 26.087638024452595,
+        "squared_error": 0.7512504705715913,
+        "worst_tick": 800
+      }
+    }
+  },
+  "production_definition": "production_kg_s compares gross thermal capacity Qdot/h_steam with the original EvaporationLBpS. The separate net_evaporation_kg_s observes liquid mass change plus injector input, using native raw density/volume/fraction; both retain the prior production tolerance. Thermal power is diagnostic without a new acceptance threshold.",
+  "rust_model": "Pinned original property tables plus declared finite-volume vessel/cylinder extension",
+  "schema": 1,
+  "status": "outside_prior_limits"
+}

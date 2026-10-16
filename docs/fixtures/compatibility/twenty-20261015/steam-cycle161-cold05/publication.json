@@ -1,0 +1,134 @@
+{
+  "schema": 1,
+  "kind": "derived_publication_of_immutable_original_dll_capture",
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "captured_manifest_sha256": "69c3e00601db4b00e79b77f07cd18de4c30e547481f8635588e5b02fdd999915",
+  "captured_status_preserved": "captured_not_compared",
+  "case": "cold_subsystem",
+  "rows": 1601,
+  "scope": "prescribed_speed_subsystem",
+  "publication_script_sha256": "a9ada05fd96769d00836ee770db3bfbdb6a76dbf4a7243c5675e151c8192b9bb",
+  "original_resources_bundled": false,
+  "post_start_observed_state_supplied_to_rust": false,
+  "original_resource_hashes": {
+    "BR_3FT_47629.eng": "3cb8a216ac9f3c43859fbef8a5bc1b355382e92474eeb2b35134975a77b25fa5",
+    "RS_HiWyc-Marylebone1710atDenham.pat": "bcbdf82db3bcff06175c4921adbc966b98417a01968675c0aac09def7e0f71df"
+  },
+  "files": {
+    "manifest.json": {
+      "sha256": "69c3e00601db4b00e79b77f07cd18de4c30e547481f8635588e5b02fdd999915",
+      "transformation": "none; immutable captured manifest, including original captured status and local provenance paths"
+    },
+    "SteamCycleReference.cs": {
+      "sha256": "87d276a35e4eb5d6afa58b66e81c42acf8b748fdec662ccfa63974d3e8d540b6",
+      "raw_capture_path": "SteamCycleReference.cs",
+      "raw_capture_sha256": "87d276a35e4eb5d6afa58b66e81c42acf8b748fdec662ccfa63974d3e8d540b6",
+      "raw_bytes": 15891,
+      "transformation": "none; byte-for-byte copy"
+    },
+    "capture-script.py": {
+      "sha256": "6274314678cc3d98c52997e3bc54de5c27a2b1d07375c9fdf6d3407e080775f5",
+      "raw_capture_path": "capture-script.py",
+      "raw_capture_sha256": "6274314678cc3d98c52997e3bc54de5c27a2b1d07375c9fdf6d3407e080775f5",
+      "raw_bytes": 7674,
+      "transformation": "none; byte-for-byte copy"
+    },
+    "capture.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "raw_capture_path": "capture.log",
+      "raw_capture_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "raw_bytes": 0,
+      "transformation": "none; byte-for-byte copy"
+    },
+    "compile.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "raw_capture_path": "compile.log",
+      "raw_capture_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "raw_bytes": 0,
+      "transformation": "none; byte-for-byte copy"
+    },
+    "input.json": {
+      "sha256": "403ff204c19bba879a9edb8cde048e73fea9d41d6ca2a91f7755ba0e1dd9df1d",
+      "raw_capture_path": "input.json",
+      "raw_capture_sha256": "403ff204c19bba879a9edb8cde048e73fea9d41d6ca2a91f7755ba0e1dd9df1d",
+      "raw_bytes": 1835,
+      "transformation": "none; byte-for-byte copy"
+    },
+    "native/initial.json": {
+      "sha256": "85350cfd103479759de85725ee5886f80826be9967552bee1456e9d7ef8ad055",
+      "raw_capture_path": "native/initial.json",
+      "raw_capture_sha256": "85350cfd103479759de85725ee5886f80826be9967552bee1456e9d7ef8ad055",
+      "raw_bytes": 76293,
+      "transformation": "none; byte-for-byte copy"
+    },
+    "native/reference.json.gz": {
+      "sha256": "04f0bc40af172746ac7927272061e2f1f9935186113df7d05786e075f41ff393",
+      "raw_capture_path": "native/reference.json",
+      "raw_capture_sha256": "19cb99634b4eced92f9665a5d3b75f4a2c48e5f08a4e14f4349bcb3437d00c19",
+      "raw_bytes": 12809343,
+      "transformation": "gzip level9 mtime0; decompressed bytes exactly equal captured bytes"
+    },
+    "native/tables.json": {
+      "sha256": "850a2817b252119b56815ee4520b9f8ff5b414b48de4aa682b006d05c256d1d6",
+      "raw_capture_path": "native/tables.json",
+      "raw_capture_sha256": "850a2817b252119b56815ee4520b9f8ff5b414b48de4aa682b006d05c256d1d6",
+      "raw_bytes": 47641,
+      "transformation": "none; byte-for-byte copy"
+    },
+    "protocol.json": {
+      "sha256": "c62fc972d0799c3fa7d32db8e6bcd19fde852b986b8ebe652bbb96de0e7e73cb",
+      "raw_capture_path": "protocol.json",
+      "raw_capture_sha256": "c62fc972d0799c3fa7d32db8e6bcd19fde852b986b8ebe652bbb96de0e7e73cb",
+      "raw_bytes": 4744,
+      "transformation": "none; byte-for-byte copy"
+    },
+    "registration.json": {
+      "sha256": "55efd4e53f50be367d6e637e65d2587457bb3141deee390607d9b62d514fb5c9",
+      "raw_capture_path": "registration.json",
+      "raw_capture_sha256": "55efd4e53f50be367d6e637e65d2587457bb3141deee390607d9b62d514fb5c9",
+      "raw_bytes": 2577,
+      "transformation": "none; byte-for-byte copy"
+    },
+    "wine-isolation/isolation.json": {
+      "sha256": "4dca58b6398334f04f7f87189d3e850153b8b46a236ba15955cc2898deea2b71",
+      "raw_capture_path": "wine-isolation/isolation.json",
+      "raw_capture_sha256": "4dca58b6398334f04f7f87189d3e850153b8b46a236ba15955cc2898deea2b71",
+      "raw_bytes": 796,
+      "transformation": "none; byte-for-byte copy"
+    },
+    "wine-isolation/release.json": {
+      "sha256": "7e155e04636703bb0d0bfd447b3562276a156ccddd8703a48b984aad73b328c5",
+      "raw_capture_path": "wine-isolation/release.json",
+      "raw_capture_sha256": "7e155e04636703bb0d0bfd447b3562276a156ccddd8703a48b984aad73b328c5",
+      "raw_bytes": 3399,
+      "transformation": "none; byte-for-byte copy"
+    },
+    "measurements/01/comparison.json": {
+      "sha256": "c44e3e7c7122255c8140d85b10e64fa82731e1531c37e9e169056a31f96e20e0",
+      "transformation": "none; immutable Rust measurement bytes"
+    },
+    "measurements/01/initial.json": {
+      "sha256": "b4300162ea34e9289347a847085c0b47b03805b4fe1e47cd14df9676c5aba6f7",
+      "transformation": "none; immutable Rust measurement bytes"
+    },
+    "measurements/01/receipt.json": {
+      "sha256": "09a99d9ccb40d670e7f606798aff0d5a549c9a7b87da06d56bc912ac2b9ee0d1",
+      "transformation": "none; immutable Rust measurement bytes"
+    },
+    "measurements/01/trace.csv": {
+      "sha256": "69358873ca525579cd8d22d7589e6b025bad9eca760919fda2f53323c37cb7ba",
+      "transformation": "none; immutable Rust measurement bytes"
+    }
+  },
+  "rust_measurements": [
+    {
+      "directory": "measurements/01",
+      "result": "pass",
+      "executable_sha256": "fac2c5b675523c7aa7ab3f7651c9f94c4ff896bb84a0063f6cb09b7731839b94",
+      "receipt_sha256": "09a99d9ccb40d670e7f606798aff0d5a549c9a7b87da06d56bc912ac2b9ee0d1",
+      "claim": "This executable and these recorded sources only; no workspace-wide or route-drive acceptance follows from a subsystem result"
+    }
+  ],
+  "recovery": "Read immutable manifest.json. For native/reference.json only, decompress native/reference.json.gz and verify the decompressed SHA256 against manifest.files. All other captured files are byte-for-byte copies. Original ENG/PAT/DLL/runtime/content directories are deliberately absent."
+}

@@ -1,0 +1,111 @@
+{
+  "schema": 1,
+  "wineserver_stop_returncode": 0,
+  "remaining_processes": [],
+  "forbidden_drivers_seen": [],
+  "observation_count": 149,
+  "commands": [
+    {
+      "args": [
+        "wine",
+        "reg",
+        "add",
+        "HKCU\\Software\\Wine\\Drivers",
+        "/v",
+        "Graphics",
+        "/t",
+        "REG_SZ",
+        "/d",
+        "null",
+        "/f"
+      ],
+      "pid": 360598,
+      "returncode": 0,
+      "elapsed_s": 0.7898908979987027,
+      "log": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/physical-native-05/wine-isolation/registry-set-0.log"
+    },
+    {
+      "args": [
+        "wine",
+        "reg",
+        "add",
+        "HKCU\\Software\\Wine\\WineDbg",
+        "/v",
+        "ShowCrashDialog",
+        "/t",
+        "REG_DWORD",
+        "/d",
+        "0",
+        "/f"
+      ],
+      "pid": 360668,
+      "returncode": 0,
+      "elapsed_s": 0.7807974520001153,
+      "log": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/physical-native-05/wine-isolation/registry-set-1.log"
+    },
+    {
+      "args": [
+        "wine",
+        "reg",
+        "query",
+        "HKCU\\Software\\Wine\\WineDbg",
+        "/v",
+        "ShowCrashDialog"
+      ],
+      "pid": 360739,
+      "returncode": 0,
+      "elapsed_s": 0.11248962700119591,
+      "log": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/physical-native-05/wine-isolation/registry-query.log"
+    },
+    {
+      "args": [
+        "wine",
+        "C:\\windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe",
+        "/nologo",
+        "/out:PhysicalSystemsReference.exe",
+        "/r:RunActivity.exe",
+        "/r:Orts.Simulation.dll",
+        "/r:Orts.Settings.dll",
+        "/r:Orts.Common.dll",
+        "/r:Orts.Formats.Msts.dll",
+        "/r:Orts.Parsers.Msts.dll",
+        "/r:MonoGame.Framework.dll",
+        "/r:Newtonsoft.Json.dll",
+        "/r:GNU.Gettext.dll",
+        "Z:\\home\\cristian\\repos\\propios\\ProyectoOpenRails\\openrailsrs\\tools\\openrails-reference\\PhysicalSystemsReference.cs"
+      ],
+      "pid": 360742,
+      "returncode": 0,
+      "elapsed_s": 0.27981369699773495,
+      "log": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/physical-native-05/compile.log"
+    },
+    {
+      "args": [
+        "wine",
+        "PhysicalSystemsReference.exe",
+        "Z:\\home\\cristian\\repos\\propios\\ProyectoOpenRails\\openrailsrs\\tmp\\twenty-20261015\\physical-native-05\\inputs.json",
+        "Z:\\home\\cristian\\repos\\propios\\ProyectoOpenRails\\openrailsrs\\tmp\\twenty-20261015\\physical-native-05\\reference.json"
+      ],
+      "pid": 360745,
+      "returncode": 0,
+      "elapsed_s": 0.9557645490021969,
+      "log": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/physical-native-05/capture.log"
+    },
+    {
+      "args": [
+        "wine",
+        "PhysicalSystemsReference.exe",
+        "steam-drive",
+        "Z:\\home\\cristian\\repos\\propios\\ProyectoOpenRails\\openrailsrs\\tmp\\twenty-20261015\\physical-native-05\\content\\ROUTES\\Chiltern\\PATHS\\RS_HiWyc-Marylebone1710atDenham.pat",
+        "Z:\\home\\cristian\\repos\\propios\\ProyectoOpenRails\\openrailsrs\\tmp\\twenty-20261015\\physical-native-05\\content\\TRAINS\\CONSISTS\\physical_seven_original_steam.con",
+        "Z:\\home\\cristian\\repos\\propios\\ProyectoOpenRails\\openrailsrs\\tmp\\twenty-20261015\\physical-native-05\\native-steam",
+        "Z:\\home\\cristian\\repos\\propios\\ProyectoOpenRails\\openrailsrs\\tmp\\twenty-20261015\\physical-native-05\\steam-drive-config.json"
+      ],
+      "pid": 360749,
+      "returncode": 0,
+      "elapsed_s": 5.589545326001826,
+      "log": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/physical-native-05/native-steam.log"
+    }
+  ],
+  "only_private_prefix": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/physical-wine-05/wine-prefix"
+}

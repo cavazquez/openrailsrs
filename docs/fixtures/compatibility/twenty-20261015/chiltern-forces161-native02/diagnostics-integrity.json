@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "all_car_rows": 120024,
+  "car_diagnostics_sha256": "255304a33d0f365a23cabdb8fdc43c60c01e0cbb4ef9e540d153a21f4c781356",
+  "same_old_trace_sha256": "ad9e690435d784df243c8a49bfdb37137c6e5f98f8941045adfde27e4500a7e2",
+  "same_adhesion_observation_sha256": "3392f303463a7d54b48cda1bfd8bd260855ffcc952fb77747e9bf3eea71a1103",
+  "optional_empty_fields": [
+    "BrakeShoeCoefficientFriction",
+    "BrakeShoeCoefficientFrictionAdjFactor",
+    "BrakeShoeRetardCoefficientFrictionAdjFactor"
+  ],
+  "diagnostics_may_drive_rust": false
+}

@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "completed_utc": "2026-10-16T15:41:14.110073+00:00",
+  "scope": "Remove only surplus empty EOF lines from seven owned exercises after successful joint verification; parsed TOML values identical. No runtime source, native acceptance fixture, reference, control or tolerance changed.",
+  "check_result_sha256": "6d7928e0206309dc815643483a48d8ba885e13a85b6c281e8964c3e94832b106",
+  "files": [
+    {
+      "path": "examples/operational_yards/scenario.toml",
+      "before_sha256": "9ff1eb715a530c138d01f2ba320521f4ae6b70dd1cc9330452fff932b25e9cca",
+      "after_sha256": "caec28bf3b9b4c2a1237a59424458ce755d8f3861938a2c348dd9616ec99d1eb",
+      "parsed_values_identical": true
+    },
+    {
+      "path": "examples/operational_yards/scenario_gravity.toml",
+      "before_sha256": "6a133ddb7909d461902fe8e776da2526b98791606e6473f8268a0dddee79dd3d",
+      "after_sha256": "bc34cd42d92231e73b37a6a19978037f4732a295dd9e6cbd36532008b24f5968",
+      "parsed_values_identical": true
+    },
+    {
+      "path": "examples/operational_yards/scenario_meeting.toml",
+      "before_sha256": "e4b9263c936d5ddc6be568266f046dd90545e274437b8de59aaf7e9724b12643",
+      "after_sha256": "108e672abc5352829e08f2923855b0bbfda1e7dd8dfd700d60db075af74fe468",
+      "parsed_values_identical": true
+    },
+    {
+      "path": "examples/operational_yards/scenario_pool.toml",
+      "before_sha256": "3c273b5ae13b9aab1ce501c99d28b6f343567e5fbd2cdf4159db6ec45a9f216b",
+      "after_sha256": "22d431f980d01ce7231fe1574f3ca6b857a47ed0a6ed3e64cbfa127e5c65266f",
+      "parsed_values_identical": true
+    },
+    {
+      "path": "examples/operational_yards/scenario_recovery.toml",
+      "before_sha256": "fc6eb0617a1c9f2a1e8d0e40a177f8347d49bcf0a761d74e5f0da4558de5d9a0",
+      "after_sha256": "b057a25e57b71793345e437dcd8a298171ce45ba8c0993f52563dda99133982f",
+      "parsed_values_identical": true
+    },
+    {
+      "path": "examples/operational_yards/scenario_transfer.toml",
+      "before_sha256": "934b196eb68d4e21643b12d7c6492fe03d5b21fcb26c1c4925b62b1203244b08",
+      "after_sha256": "95cd4f7f35d8b9a50384bc8810fc7a9160bef73bf699f9d70115e6855f3dd958",
+      "parsed_values_identical": true
+    },
+    {
+      "path": "examples/operational_yards/scenario_turntable.toml",
+      "before_sha256": "4df08e09b1a8e704ff3a017ab64396f5aec375390773fb216f4724cd204dead2",
+      "after_sha256": "fa7d0c7674349994ed11757ab4e1ee29b9985e91f55b83f45031208c308f66d3",
+      "parsed_values_identical": true
+    }
+  ]
+}

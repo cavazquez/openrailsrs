@@ -28,6 +28,8 @@ mod native_cant_import;
 mod native_signal_import;
 #[path = "native_track_sound.rs"]
 mod native_track_sound;
+#[path = "native_tunnel_import.rs"]
+mod native_tunnel_import;
 
 // ── TOML schema (mirrors openrailsrs-route/src/load.rs) ─────────────────────
 
@@ -159,6 +161,7 @@ fn cached_import(
     )?;
     let text = native_cant_import::bind(route_dir, &tdb, &catalog, &text)?;
     let text = native_track_sound::bind(route_dir, &tdb, &text)?;
+    let text = native_tunnel_import::bind(route_dir, &tdb, &catalog, &text)?;
     let text = bind_electric_supply(route_dir, &text)?;
     let text = native_signal_import::bind(
         route_dir,

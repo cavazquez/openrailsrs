@@ -1,0 +1,288 @@
+{
+  "schema": 1,
+  "completed_utc": "2026-10-16T15:23:51.237213+00:00",
+  "origin": "Original TDB/TSECTION and canonical TRK+OpenRails include units, never observed trajectory or force",
+  "source_import_sha256": "31e0dfa601196b0361fe53be51ad77646fd18704a36809af8975631cb1c565b3",
+  "routes": {
+    "chiltern_local": {
+      "path": "examples/chiltern_local/track.toml",
+      "before_sha256": "0bf0960b8a955585ddb585a108338066daa65a35d92b40ffc05fe84b1677e9e9",
+      "after_sha256": "c2b200e1c374a782982624337bc2f22e286abcbc306fcf54687cc7bd615a1abb",
+      "edge_profiles_added": {
+        "e94_r": {
+          "curves": 16,
+          "physical_cant": 41
+        },
+        "e96_r": {
+          "curves": 43,
+          "physical_cant": 115
+        },
+        "e98": {
+          "curves": 6,
+          "physical_cant": 16
+        },
+        "e100_r": {
+          "curves": 12,
+          "physical_cant": 24
+        },
+        "e102": {
+          "curves": 23,
+          "physical_cant": 47
+        },
+        "e104_r": {
+          "curves": 3,
+          "physical_cant": 6
+        }
+      },
+      "other_parsed_inputs_unchanged": true,
+      "excluded_legacy_edges": []
+    },
+    "chiltern_extended": {
+      "path": "examples/chiltern_extended/track.toml",
+      "before_sha256": "82e517f88d0bdc7759191b636b9923894e22b061b20d8ac8132257a80df1066e",
+      "after_sha256": "dfbac1a3ca21869f4b104344611015be45dea189be266a12afc6d8a25630f4f6",
+      "edge_profiles_added": {
+        "e94_r": {
+          "curves": 16,
+          "physical_cant": 41
+        },
+        "e96_r": {
+          "curves": 43,
+          "physical_cant": 115
+        },
+        "e98": {
+          "curves": 6,
+          "physical_cant": 16
+        },
+        "e100_r": {
+          "curves": 12,
+          "physical_cant": 24
+        },
+        "e102": {
+          "curves": 23,
+          "physical_cant": 47
+        },
+        "e104_r": {
+          "curves": 3,
+          "physical_cant": 6
+        },
+        "e9760": {
+          "curves": 8,
+          "physical_cant": 16
+        },
+        "e3661_r": {
+          "curves": 40,
+          "physical_cant": 82
+        },
+        "e3659": {
+          "curves": 10,
+          "physical_cant": 20
+        },
+        "e106": {
+          "curves": 4,
+          "physical_cant": 8
+        },
+        "e108": {
+          "curves": 4,
+          "physical_cant": 8
+        },
+        "e94": {
+          "curves": 16,
+          "physical_cant": 41
+        },
+        "e96": {
+          "curves": 43,
+          "physical_cant": 115
+        },
+        "e98_r": {
+          "curves": 6,
+          "physical_cant": 16
+        },
+        "e100": {
+          "curves": 12,
+          "physical_cant": 24
+        },
+        "e102_r": {
+          "curves": 23,
+          "physical_cant": 47
+        },
+        "e104": {
+          "curves": 3,
+          "physical_cant": 6
+        },
+        "e9760_r": {
+          "curves": 8,
+          "physical_cant": 16
+        },
+        "e3661": {
+          "curves": 40,
+          "physical_cant": 82
+        },
+        "e3659_r": {
+          "curves": 10,
+          "physical_cant": 20
+        },
+        "e106_r": {
+          "curves": 4,
+          "physical_cant": 8
+        },
+        "e108_r": {
+          "curves": 4,
+          "physical_cant": 8
+        },
+        "e14618_r": {
+          "curves": 7,
+          "physical_cant": 14
+        },
+        "e14618": {
+          "curves": 7,
+          "physical_cant": 14
+        },
+        "e3666_r": {
+          "curves": 25,
+          "physical_cant": 52
+        },
+        "e3666": {
+          "curves": 25,
+          "physical_cant": 52
+        },
+        "e14606_r": {
+          "curves": 13,
+          "physical_cant": 29
+        },
+        "e14606": {
+          "curves": 13,
+          "physical_cant": 29
+        },
+        "e14603_r": {
+          "curves": 18,
+          "physical_cant": 56
+        },
+        "e14603": {
+          "curves": 18,
+          "physical_cant": 56
+        },
+        "e14601_r": {
+          "curves": 17,
+          "physical_cant": 36
+        },
+        "e14601": {
+          "curves": 17,
+          "physical_cant": 36
+        }
+      },
+      "other_parsed_inputs_unchanged": true,
+      "excluded_legacy_edges": [
+        {
+          "edge": "e14615_r",
+          "legacy_length_m": 3226.936564218667,
+          "native_length_m": 3826.936564218667,
+          "reason": "Separate legacy600m chainage discrepancy beyond historical three-station corridor; excluded, not fitted"
+        },
+        {
+          "edge": "e14615",
+          "legacy_length_m": 3226.936564218667,
+          "native_length_m": 3826.936564218667,
+          "reason": "Separate legacy600m chainage discrepancy beyond historical three-station corridor; excluded, not fitted"
+        }
+      ]
+    },
+    "chiltern_traffic": {
+      "path": "examples/chiltern_traffic/track.toml",
+      "before_sha256": "f60cc408898e1db7ca31d0a4875676be9d716c61c340c46b32de0df4ea75622f",
+      "after_sha256": "0e09b1e60e9c43b19f3ac7c0cdaea2719929fec8a443d093c65ff969cf278614",
+      "edge_profiles_added": {
+        "e94_r": {
+          "curves": 16,
+          "physical_cant": 41
+        },
+        "e96_r": {
+          "curves": 43,
+          "physical_cant": 115
+        },
+        "e98": {
+          "curves": 6,
+          "physical_cant": 16
+        },
+        "e100_r": {
+          "curves": 12,
+          "physical_cant": 24
+        },
+        "e102": {
+          "curves": 23,
+          "physical_cant": 47
+        },
+        "e104_r": {
+          "curves": 3,
+          "physical_cant": 6
+        },
+        "e9760": {
+          "curves": 8,
+          "physical_cant": 16
+        },
+        "e3661_r": {
+          "curves": 40,
+          "physical_cant": 82
+        },
+        "e3659": {
+          "curves": 10,
+          "physical_cant": 20
+        },
+        "e106": {
+          "curves": 4,
+          "physical_cant": 8
+        },
+        "e108": {
+          "curves": 4,
+          "physical_cant": 8
+        },
+        "e94": {
+          "curves": 16,
+          "physical_cant": 41
+        },
+        "e96": {
+          "curves": 43,
+          "physical_cant": 115
+        },
+        "e98_r": {
+          "curves": 6,
+          "physical_cant": 16
+        },
+        "e100": {
+          "curves": 12,
+          "physical_cant": 24
+        },
+        "e102_r": {
+          "curves": 23,
+          "physical_cant": 47
+        },
+        "e104": {
+          "curves": 3,
+          "physical_cant": 6
+        },
+        "e9760_r": {
+          "curves": 8,
+          "physical_cant": 16
+        },
+        "e3661": {
+          "curves": 40,
+          "physical_cant": 82
+        },
+        "e3659_r": {
+          "curves": 10,
+          "physical_cant": 20
+        },
+        "e106_r": {
+          "curves": 4,
+          "physical_cant": 8
+        },
+        "e108_r": {
+          "curves": 4,
+          "physical_cant": 8
+        }
+      },
+      "other_parsed_inputs_unchanged": true,
+      "excluded_legacy_edges": []
+    }
+  }
+}

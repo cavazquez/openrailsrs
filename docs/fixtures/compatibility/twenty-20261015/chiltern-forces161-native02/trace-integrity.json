@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "rows": 15003,
+  "previous_rows": 15003,
+  "columns": 20,
+  "sha256": "ad9e690435d784df243c8a49bfdb37137c6e5f98f8941045adfde27e4500a7e2",
+  "reference_sha256": "ad9e690435d784df243c8a49bfdb37137c6e5f98f8941045adfde27e4500a7e2",
+  "all_previous_columns_byte_identical": true,
+  "per_column_scalar_string_mismatches": {
+    "time_s": 0,
+    "edge_id": 0,
+    "pos_on_edge_m": 0,
+    "velocity_mps": 0,
+    "odometer_m": 0,
+    "throttle": 0,
+    "brake": 0,
+    "native_brake_handle": 0,
+    "brake_pipe_psi": 0,
+    "cylinder_psi": 0,
+    "doors_command_open": 0,
+    "next_signal": 0,
+    "next_signal_distance_m": 0,
+    "mass_kg": 0,
+    "allowed_speed_mps": 0,
+    "door_state": 0,
+    "motive_force_n": 0,
+    "brake_force_n": 0,
+    "friction_force_n": 0,
+    "gravity_force_n": 0
+  }
+}

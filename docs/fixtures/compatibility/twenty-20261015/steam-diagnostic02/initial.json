@@ -1,0 +1,42 @@
+{
+  "native": {
+    "boiler_enthalpy_j": 3682749736.4113145,
+    "boiler_mass_kg": 4633.107634282743,
+    "coal_burn_kg_s": 0.0,
+    "distance_m": 0.0,
+    "injection_kg_s": 0.0,
+    "injector1": false,
+    "injector2": false,
+    "motive_force_n": 0.0,
+    "net_evaporation_kg_s": 0.0,
+    "pressure_bar": 10.6868738044104,
+    "production_kg_s": 0.0,
+    "speed_mps": 0.0,
+    "steam_consumption_kg_s": 0.0,
+    "tender_coal_kg": 3302.15234,
+    "tender_water_kg": 6985.313829065096,
+    "thermal_power_w": 0.0,
+    "water_fraction": 0.9
+  },
+  "rust": {
+    "boiler_enthalpy_j": 3682750485.621144,
+    "boiler_mass_kg": 4633.1078334688955,
+    "coal_burn_kg_s": 0.0,
+    "distance_m": 0.0,
+    "energy_residual_j": 0.0,
+    "injection_kg_s": 0.0,
+    "injector1": false,
+    "injector2": false,
+    "mass_residual_kg": 0.0,
+    "motive_force_n": 0.0,
+    "net_evaporation_kg_s": 0.0,
+    "pressure_bar": 10.686873804426375,
+    "production_kg_s": 0.0,
+    "speed_mps": 0.0,
+    "steam_consumption_kg_s": 0.0,
+    "tender_coal_kg": 3302.1524536,
+    "tender_water_kg": 6985.322498,
+    "thermal_power_w": 0.0,
+    "water_fraction": 0.8999999999999999
+  }
+}

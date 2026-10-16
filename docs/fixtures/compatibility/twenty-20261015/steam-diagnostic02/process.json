@@ -1,0 +1,28 @@
+{
+  "command": [
+    "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/target/debug/examples/steam_native_compare",
+    "--capture-dir",
+    "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/physical-native-05",
+    "--out-dir",
+    "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/steam-compare02"
+  ],
+  "exit_code": 1,
+  "started_utc": "2026-10-16T03:10:25.997589+00:00",
+  "finished_utc": "2026-10-16T03:10:59.801776+00:00",
+  "binary_sha256": "e29121cd782b7add7289ee7e8a6d6e7e30471cac6e1c4e98fee63859bcaad0ad",
+  "binary_unchanged": true,
+  "source_file_count": 683,
+  "rust_sources_unchanged": true,
+  "protected_traces_sha256": {
+    "examples/chiltern/run.csv": "ddba584bf99a24d18e2869e10159cbc3f6af0486f29a72d097bf71afb4ab5716",
+    "examples/chiltern/run.json": "c5696f1896bf944936bbcdbdf34b7f7a9948ed4a8c549295bb9a237c1f82c047",
+    "examples/chiltern/run_brake_coast_multi_body.csv": "3be525dca9a355c809dac4ce17c915ebbadd2c87ef0ad468037ff3cb72b09022",
+    "examples/chiltern/run_throttle100.csv": "30bd23a47ebd42c53298735ce56985d26bbac1b4f64a0a9eaa0c52468fc4f1d0",
+    "examples/chiltern/run_throttle50.csv": "46909080f32aa1c5b5d17877394014e5fffa20e81d77630cc83a57da98813b91",
+    "examples/chiltern/run_throttle75.csv": "0de294a0fd7e85f1f32fd5c54fe9d56686fcf7170fe77c45e48bcb4fd1d0ef28"
+  },
+  "protected_traces_unchanged": true,
+  "cargo_invoked": false,
+  "wine_invoked": false,
+  "log_sha256": "1c9193e3adb09fdccfa8704d6d2353cfa4db7511c9c640ff2494ca7f50d26669"
+}

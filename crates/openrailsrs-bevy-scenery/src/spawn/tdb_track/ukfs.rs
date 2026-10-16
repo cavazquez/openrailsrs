@@ -115,6 +115,8 @@ mod tests {
         cat.shapes.insert(
             idx,
             TrackShapeDef {
+                tunnel_shape: None,
+                num_paths: None,
                 file_name: file.into(),
                 road_shape: road,
                 paths: vec![TrackShapePath {

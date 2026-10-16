@@ -524,6 +524,7 @@ pub fn import_native_timetable_with_consist(
                 presentation: actor.train.presentation,
                 electric_pickups: actor.train.electric_pickups,
                 bogie_dynamics: actor.train.bogie_dynamics,
+                rack: actor.train.rack,
                 activity_uids: vec![],
                 pre_roll_s: pre_roll,
                 parked: false,
@@ -531,6 +532,7 @@ pub fn import_native_timetable_with_consist(
                 output_csv: format!("timetable-{}.csv", scenario.extra_trains.len()),
             });
     }
+    install_mobile_rendezvous(&mut scenario, imported)?;
     scenario.validate().map_err(|e| error(e.to_string()))?;
     Ok(scenario)
 }
@@ -1111,5 +1113,123 @@ mod portion_tests {
             )
             .is_err()
         );
+    }
+}
+
+/// Convert original foreign `$pickup` operations into physical, timed crew
+/// handshakes for both the selected train and its imported AI actors. The
+/// original CON/PAT/TT files and operation rows remain unchanged.
+fn install_mobile_rendezvous(
+    scenario: &mut ScenarioFile,
+    imported: &Path,
+) -> Result<(), MstsError> {
+    use openrailsrs_scenarios::operational_yards::RendezvousDef;
+    let loaded =
+        openrailsrs_route::load_route_from_dir(imported).map_err(|e| error(e.to_string()))?;
+    let actors = std::iter::once(("Jugador".to_string(), scenario.route.legs.clone(), 0.))
+        .chain(
+            scenario
+                .extra_trains
+                .iter()
+                .map(|a| (a.id.clone(), a.legs.clone(), a.start_time_s - a.pre_roll_s)),
+        )
+        .collect::<Vec<_>>();
+    for (receiver, legs, offset) in actors {
+        for (leg_i, leg) in legs.iter().enumerate() {
+            for (op_i, op) in leg.operations.iter().enumerate() {
+                let TimetableAction::JoinService {
+                    service: donor,
+                    front,
+                } = &op.action
+                else {
+                    continue;
+                };
+                let mut before = 0.;
+                let mut placement = None;
+                for id in &leg.edges {
+                    let edge = loaded.graph.edge(id).ok_or_else(|| {
+                        error("Foreign pickup has a missing original track vector")
+                    })?;
+                    if op.chainage_m <= before + edge.length_m + 0.001 {
+                        let p = op.chainage_m - before;
+                        placement = Some((
+                            id.trim_end_matches("_r").to_string(),
+                            if id.ends_with("_r") {
+                                edge.length_m - p
+                            } else {
+                                p
+                            },
+                        ));
+                        break;
+                    }
+                    before += edge.length_m;
+                }
+                let (edge, position_m) = placement
+                    .ok_or_else(|| error("Foreign pickup marker is beyond its original path"))?;
+                let not_before_s = (offset + leg.not_before_s.unwrap_or(0.)).max(0.);
+                scenario
+                    .simulation
+                    .yard_operations
+                    .rendezvous
+                    .push(RendezvousDef {
+                        id: format!(
+                            "tt-{}-{leg_i}-{op_i}",
+                            scenario.simulation.yard_operations.rendezvous.len()
+                        ),
+                        receiver: receiver.clone(),
+                        donor: donor.clone(),
+                        edge,
+                        position_m,
+                        not_before_s,
+                        max_wait_s: 21600.,
+                        front: front.unwrap_or(false),
+                        receiver_leg: Some(leg_i),
+                    });
+            }
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod mobile_handshake_import_tests {
+    use super::*;
+    #[test]
+    fn native_pickup_commands_produce_physical_handshakes_for_player_and_ai() {
+        let directory =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/operational_yards");
+        let mut scenario =
+            openrailsrs_scenarios::load_scenario(directory.join("scenario_meeting.toml")).unwrap();
+        let native=NativeTimetable::from_text(";Receiver;Incoming\n#path;main;main\n#consist;loco;loco\n#start;09:00;09:00\nMeeting;09:04 $pickup=Incoming;09:04\n#dispose;$static;$static\n").unwrap();
+        let mut operations = vec![];
+        let mut coupled = 1;
+        let mut parked = None;
+        let mut joined = HashMap::new();
+        append_service_operations(
+            &mut operations,
+            &timetable_commands(&native.services[0].stops[0].timing).unwrap(),
+            450.,
+            false,
+            &mut coupled,
+            1,
+            &mut parked,
+            &mut joined,
+            |reference| Ok((reference.to_lowercase(), 1)),
+        )
+        .unwrap();
+        scenario.extra_trains[0].legs[0].operations = operations;
+        scenario.simulation.yard_operations.rendezvous.clear();
+        install_mobile_rendezvous(&mut scenario, &directory.join("meeting")).unwrap();
+        let handshakes = &scenario.simulation.yard_operations.rendezvous;
+        assert_eq!(handshakes.len(), 1);
+        let meeting = &handshakes[0];
+        assert_eq!(
+            (&meeting.receiver, &meeting.donor),
+            (&"receiver".to_string(), &"incoming".to_string())
+        );
+        assert_eq!(meeting.edge, "approach");
+        assert_eq!(meeting.position_m, 450.);
+        assert_eq!(meeting.receiver_leg, Some(0));
+        assert!(scenario.validate().is_ok());
     }
 }

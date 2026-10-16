@@ -246,6 +246,14 @@ pub fn update_traffic_poses(
         } else {
             Visibility::Hidden
         };
+        if let Some(mut pose) =
+            crate::yard_scene::car_pose(&live, marker.0, 0, offset.delta, &focus, &origin)
+        {
+            pose.translation -=
+                pose.rotation * Vec3::X * service.session.formation.center_offset_m(0) as f32;
+            transform.set_if_neq(pose);
+            continue;
+        }
         let Some((edge, position)) = live.visual_position_for_service(marker.0, 0.0, 0.0) else {
             continue;
         };

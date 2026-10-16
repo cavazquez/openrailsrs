@@ -1,0 +1,40 @@
+SIMISA@@@@@@@@@@JINX0D0t______
+Wagon (
+    own_plain_control
+    Type ( Engine ) Size ( 2.5m 3m 12.19m ) Mass ( 25t )
+    BrakeSystemType ( Air_single_pipe )
+    BrakeEquipmentType ( "Triple_valve, Auxilary_reservoir, Emergency_brake_reservoir" )
+    MaxBrakeForce ( 40kN )
+    BrakeCylinderPressureForMaxBrakeBrakeForce ( 70psi )
+    TripleValveRatio ( 2.5 )
+    MaxReleaseRate ( 5psi/s ) MaxApplicationRate ( 15psi/s )
+    MaxAuxilaryChargingRate ( 25psi/s )
+    EmergencyResCapacity ( 7ft3 ) EmergencyResChargingRate ( 15psi/s )
+    BrakePipeVolume ( 0.01m3 )
+)
+Engine (
+    own_plain_control Type ( Diesel )
+    MaxPower ( 1000kW ) MaxForce ( 100kN ) MaxVelocity ( 100km/h )
+    DieselEngineIdleRPM ( 315 ) DieselEngineMaxRPM ( 900 )
+    AirBrakesMainMaxAirPressure ( 130psi )
+    AirBrakesMainResVolume ( 8ft3 )
+    AirBrakesCompressorRestartPressure ( 125psi )
+    AirBrakesAirCompressorPowerRating ( 1.7ft3 )
+    AirBrakesIsCompressorElectricOrMechanical ( 1 )
+    TrainBrakesControllerMaxSystemPressure ( 90psi )
+    TrainBrakesControllerFullServicePressureDrop ( 26psi )
+    TrainBrakesControllerMinPressureReduction ( 6psi )
+    TrainBrakesControllerMaxApplicationRate ( 20psi/s )
+    TrainBrakesControllerMaxReleaseRate ( 20psi/s )
+    TrainBrakesControllerEmergencyApplicationRate ( 45psi/s )
+    EngineControllers (
+        Brake_Train ( 0 1 0.1 0.7
+            NumNotches ( 4
+                Notch ( 0 0 TrainBrakesControllerReleaseStart )
+                Notch ( 0.2 1 TrainBrakesControllerGraduatedSelfLapLimitedHoldingStart )
+                Notch ( 0.7 0 TrainBrakesControllerContinuousServiceStart )
+                Notch ( 0.8 0 TrainBrakesControllerEmergencyStart )
+            )
+        )
+    )
+)

@@ -5,6 +5,10 @@ use serde::{Deserialize, Serialize};
 pub struct RailOperationsDef {
     pub passing_plans: Vec<PassingPlanDef>,
     pub yard_deliveries: Vec<YardDeliveryDef>,
+    /// Explicitly exclusive destinations for the same physical stock. Without
+    /// a group, assigning a vehicle to two deliveries remains an error.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub yard_delivery_alternatives: Vec<Vec<String>>,
     pub depots: Vec<DepotDef>,
     pub connections: Vec<ConnectionDef>,
     pub works: Vec<TrackWorkDef>,
@@ -137,7 +141,44 @@ pub struct IncidentDef {
 }
 impl RailOperationsDef {
     pub fn valid(&self) -> bool {
-        self.passing_plans.len() <= 64
+        let alternatives_valid = self.yard_delivery_alternatives.len() <= 64
+            && self
+                .yard_delivery_alternatives
+                .iter()
+                .flatten()
+                .collect::<std::collections::BTreeSet<_>>()
+                .len()
+                == self
+                    .yard_delivery_alternatives
+                    .iter()
+                    .map(Vec::len)
+                    .sum::<usize>()
+            && self.yard_delivery_alternatives.iter().all(|group| {
+                (2..=8).contains(&group.len())
+                    && group.iter().enumerate().all(|(i, id)| {
+                        let Some(a) = self.yard_deliveries.iter().find(|d| &d.id == id) else {
+                            return false;
+                        };
+                        group[..i].iter().all(|other| {
+                            let Some(b) = self.yard_deliveries.iter().find(|d| &d.id == other)
+                            else {
+                                return false;
+                            };
+                            let mut av = a.vehicles.clone();
+                            let mut bv = b.vehicles.clone();
+                            av.sort_unstable();
+                            bv.sort_unstable();
+                            a.service == b.service
+                                && av == bv
+                                && (a.edge.strip_suffix("_r").unwrap_or(&a.edge)
+                                    != b.edge.strip_suffix("_r").unwrap_or(&b.edge)
+                                    || a.end_m <= b.start_m
+                                    || b.end_m <= a.start_m)
+                        })
+                    })
+            });
+        alternatives_valid
+            && self.passing_plans.len() <= 64
             && self
                 .passing_plans
                 .iter()
@@ -149,7 +190,10 @@ impl RailOperationsDef {
                     && self.yard_deliveries[..i].iter().all(|other| {
                         other.id != d.id
                             && (other.service != d.service
-                                || !other.vehicles.iter().any(|v| d.vehicles.contains(v)))
+                                || !other.vehicles.iter().any(|v| d.vehicles.contains(v))
+                                || self.yard_delivery_alternatives.iter().any(|group| {
+                                    group.contains(&d.id) && group.contains(&other.id)
+                                }))
                     })
             })
             && self.connections.len() <= 128

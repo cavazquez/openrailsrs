@@ -1,6 +1,10 @@
 //! Optional live wheel/rail contact. Headless reference runs keep their authored
 //! environment unless a caller explicitly supplies weather. No rendering types.
-use crate::{SimError, native_dynamics::NativeAxleState, state::TrainSimState};
+use crate::{
+    SimError,
+    native_dynamics::{NativeAxleIntegration, NativeAxleState},
+    state::TrainSimState,
+};
 use openrailsrs_formats::NativeVehiclePhysics;
 use openrailsrs_train::{Consist, Vehicle};
 use serde::{Deserialize, Serialize};
@@ -73,6 +77,7 @@ impl RailAdhesionConfig {
                 .zip(&consist.vehicles)
                 .zip(masses)
                 .map(|((mut profile, v), mass_kg)| {
+                    profile.flipped = v.flipped();
                     let (powered, steam) = match v {
                         Vehicle::Loco(l) => {
                             if let Some(s) = &l.steam {
@@ -101,6 +106,8 @@ pub struct RailCarState {
     pub consumed_sand_m3: f64,
     pub using_sand: bool,
     pub wheel_speed_mps: f64,
+    #[serde(default)]
+    pub axle_integration: NativeAxleIntegration,
     /// Signed extra rolling distance, relative to the car's path motion.
     pub slip_distance_m: f64,
     pub previous_slip_distance_m: f64,
@@ -176,6 +183,11 @@ impl RailAdhesionState {
                         })
                     .abs()
                         < 1.0e-8
+                    && NativeAxleState {
+                        speed_mps: c.wheel_speed_mps,
+                        integration: c.axle_integration.clone(),
+                    }
+                    .valid()
                     && c.wheel_speed_mps.is_finite()
                     && c.wheel_speed_mps.abs() <= 1000.
                     && c.slip_distance_m.is_finite()
@@ -255,7 +267,16 @@ pub(crate) fn prepare(state: &mut TrainSimState, config: &RailAdhesionConfig, ba
             .surface_conditions
             .as_ref()
             .map_or(1., |s| s.grip_multiplier());
-        car.factor = (base * rail.weather_factor * multiplier * ice).clamp(0.05, 2.5);
+        // A recorded noise input supplies this vehicle's own filtered base.
+        // Keep the normal weather, sand and surface contacts on top of it;
+        // otherwise the always-present live contact would mask that input.
+        let vehicle_base = state
+            .native_dynamics
+            .as_ref()
+            .and_then(|dynamics| dynamics.adhesion_filters.get(i))
+            .and_then(Option::as_ref)
+            .map_or(base, |input| f64::from(input.filter.y[0].clamp(0.05, 2.5)));
+        car.factor = (vehicle_base * rail.weather_factor * multiplier * ice).clamp(0.05, 2.5);
         if car.using_sand {
             let delivered = required.min(car.sand_m3);
             car.sand_m3 -= delivered;
@@ -308,6 +329,7 @@ pub(crate) fn record(
     c.integrated = true;
     c.slipping = NativeAxleState {
         speed_mps: wheel_speed,
+        integration: c.axle_integration.clone(),
     }
     .wheel_slipping(speed, c.factor);
     c.requested_force_n = requested;
@@ -350,17 +372,31 @@ pub(crate) fn transmit(
     }
     let mut axle = NativeAxleState {
         speed_mps: car.wheel_speed_mps,
+        integration: car.axle_integration.clone(),
     };
-    let force = axle.step(
+    let orientation = if v.profile.flipped ^ rail.backwards {
+        -1.
+    } else {
+        1.
+    };
+    let force = axle.step_oriented(
         &v.profile,
         v.mass_kg,
-        v.profile.driven_mass_kg,
+        v.profile.driven_mass_kg * crate::track_irregularity::normal_factor(state, vehicle),
         speed,
         requested,
         brake,
         car.factor,
         dt,
+        orientation,
     );
+    if let Some(c) = state
+        .rail_adhesion
+        .as_mut()
+        .and_then(|r| r.cars.get_mut(vehicle))
+    {
+        c.axle_integration = axle.integration.clone();
+    }
     record(state, vehicle, speed, axle.speed_mps, requested, force, dt);
     force
 }
@@ -379,7 +415,12 @@ pub(crate) fn cap_brakes(state: &TrainSimState, config: &RailAdhesionConfig, for
             .vehicles
             .get(i)
             .map_or(state.velocity_mps, |v| v.velocity_mps);
-        *force = force.min(v.mass_kg * 9.80665 * friction(speed, factor(state, i, 1.)));
+        *force = force.min(
+            v.mass_kg
+                * 9.80665
+                * friction(speed, factor(state, i, 1.))
+                * crate::track_irregularity::normal_factor(state, i),
+        );
     }
 }
 

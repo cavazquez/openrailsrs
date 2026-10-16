@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "reference_version": "1.6.1",
+  "samples": 32583,
+  "step_s": 0.05,
+  "duration_s": 1629.1000000000001,
+  "distance_m": 31361.201171875,
+  "coverage": {
+    "native_reached_all_platforms": true,
+    "original_platforms": true,
+    "all_original_tasks_visited": true,
+    "original_formation": true,
+    "full_distance": true,
+    "full_duration": true,
+    "declared_duration_limit": true,
+    "native_context_matches_predeclaration": true,
+    "unpaused_every_sample": true,
+    "dry_original_weather": true,
+    "original_motor_axles_recorded": true,
+    "context_unchanged_at_end": true
+  },
+  "passed": true,
+  "comparison_pending": true,
+  "scope": "Original DLL capture only; this does not certify Rust parity."
+}

@@ -1,0 +1,22 @@
+[scenario]
+name="Transmisión hidráulica y emergencia neumática"
+description="Contenido propio. Tablas/válvulas originales separadas de extensiones declaradas; validación pendiente de fase conjunta."
+[route]
+path="route"
+start="a"
+destination="b"
+start_offset_m=100.0
+assume_signals_clear=true
+[train]
+consist="consists/hydraulic.con"
+[simulation]
+duration=120.0
+time_step=0.05
+seed=20261015
+multi_body=true
+[gameplay]
+objective="arrive"
+difficulty="normal"
+[output]
+csv="run.csv"
+metadata="run.json"

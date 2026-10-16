@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "phase": "registered_before_capture_and_rust_comparison",
+  "input_sha256": "403ff204c19bba879a9edb8cde048e73fea9d41d6ca2a91f7755ba0e1dd9df1d",
+  "protocol_sha256": "c62fc972d0799c3fa7d32db8e6bcd19fde852b986b8ebe652bbb96de0e7e73cb",
+  "helper_sha256": "87d276a35e4eb5d6afa58b66e81c42acf8b748fdec662ccfa63974d3e8d540b6",
+  "capture_script_sha256": "6274314678cc3d98c52997e3bc54de5c27a2b1d07375c9fdf6d3407e080775f5",
+  "wine_isolation_helper_sha256": "4e87773fd3fe535f5660a427ea12b8b6a716266ebf9161e433aa66fc86e9f590",
+  "originals": {
+    "/home/cristian/Documentos/Open Rails/Content/Chiltern/TRAINS/TRAINSET/UK_Steam_BR_3F_47629/BR_3FT_47629.eng": "3cb8a216ac9f3c43859fbef8a5bc1b355382e92474eeb2b35134975a77b25fa5",
+    "/home/cristian/Documentos/Open Rails/Content/Chiltern/ROUTES/Chiltern/PATHS/RS_HiWyc-Marylebone1710atDenham.pat": "bcbdf82db3bcff06175c4921adbc966b98417a01968675c0aac09def7e0f71df"
+  },
+  "source_files": {
+    "Source/Orts.Simulation/Simulation/RollingStocks/MSTSSteamLocomotive.cs": "4eb9bc6436344032945c2dfa4065d4055ac4e57b4fc48f4d2dd6fcf9a63ebdf0",
+    "Source/Orts.Simulation/Common/SteamTable.cs": "9e6d57d726a2c0dd827c4fb2a0a4a1d21325ebda0252027a47c2a8c41843ce0b",
+    "Source/Orts.Common/SmoothedData.cs": "df2330fdaa9a74ed47cb1fff414dccc81806786cc3edd6a6a243a6c51705ab55",
+    "Source/Orts.Parsers.Msts/Interpolator.cs": "f4217230089447e74162589a43d40deb2350c5b76786ff77962f7a9477fff7cc",
+    "Source/Orts.Simulation/Simulation/RollingStocks/SubSystems/Brakes/MSTS/VacuumSinglePipe.cs": "0ed9d006f8ed0aa24a50c6e26f452028a111427643d9da069acf68c91af8fba4"
+  },
+  "assemblies": {
+    "RunActivity.exe": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2",
+    "Orts.Simulation.dll": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679",
+    "Orts.Settings.dll": "fe0d8d81149f480f3972c80e64ffaf6012c7599e32c26c8e4d46510e3edbb2e7",
+    "Orts.Common.dll": "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212",
+    "Orts.Formats.Msts.dll": "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465",
+    "Orts.Parsers.Msts.dll": "8e0781c9f861ed95b4467d1bf948ea7aca896d634f21ac5952f97a9f630d0b36",
+    "MonoGame.Framework.dll": "c6a16c29705a4c847e0e4a2647bf432604cd9320cbc5d4125ab01ae7bb7e6542",
+    "Newtonsoft.Json.dll": "9af2e1c672afd67a291b8f2031a341a3788d4d9f683eaddc6ceab3a3a74c546e",
+    "GNU.Gettext.dll": "f1421ebbc4d70214324414c7c33abf7e536e225f833080ab9d79a572452e024b"
+  }
+}

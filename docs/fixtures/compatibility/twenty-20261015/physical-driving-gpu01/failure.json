@@ -1,0 +1,10 @@
+{
+  "status": "failed_or_incomplete",
+  "reason": "No rendered physical body displacement",
+  "completed_cases": [
+    "hydraulic-running",
+    "rack-positive-braking",
+    "rack-entry-exit"
+  ],
+  "scope": "Retain raw outputs; never reinterpret this failure as acceptance."
+}

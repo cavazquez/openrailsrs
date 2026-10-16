@@ -4996,7 +4996,9 @@ version = "0.1.0"
 dependencies = [
  "openrailsrs-scenarios",
  "openrailsrs-sim",
+ "openrailsrs-track",
  "serde",
+ "serde_json",
  "tempfile",
  "thiserror 2.0.21",
  "toml",
@@ -5182,6 +5184,7 @@ dependencies = [
  "openrailsrs-content",
  "openrailsrs-core",
  "openrailsrs-formats",
+ "openrailsrs-game",
  "openrailsrs-msts",
  "openrailsrs-or-shader",
  "openrailsrs-route",

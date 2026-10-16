@@ -433,6 +433,7 @@ pub(crate) fn apply(
                 .map(|id| loaded.graph.edge(id).unwrap().to.0.clone()),
         );
         scenario.extra_trains.push(TrainEntryDef {
+            rack: None,
             activity_uids: uids,
             bogie_dynamics: vec![],
             legs: vec![],
@@ -641,6 +642,8 @@ mod tests {
             catalog.shapes.insert(
                 42,
                 TrackShapeDef {
+                    tunnel_shape: None,
+                    num_paths: None,
                     file_name: String::new(),
                     main_route: Some(main_route),
                     clearance_dist_m: None,

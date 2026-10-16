@@ -1225,6 +1225,8 @@ mod tests {
         catalog.shapes.insert(
             1,
             TrackShapeDef {
+                tunnel_shape: None,
+                num_paths: None,
                 file_name: "road.s".into(),
                 main_route: None,
                 clearance_dist_m: None,

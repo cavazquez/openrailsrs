@@ -1,0 +1,3088 @@
+{
+  "after": {
+    "cylinders": [
+      {
+        "air_isolated": false,
+        "air_vented": false,
+        "apply_ramp_rate_n_per_s": 244782.67000670845,
+        "authored_response": true,
+        "automatic_pipe_bar": 5.0,
+        "current_force_n": 0.0,
+        "ep_instant": true,
+        "full_pressure_bar": 3.1026407805000003,
+        "handbrake_force_n": 0.0,
+        "independent_force_n": 0.0,
+        "latched_command": 0.0,
+        "mass_kg": 69091.4,
+        "max_force_n": 367174.00501006265,
+        "native_air_skid": false,
+        "native_ep": {
+          "auto_air_psi_m3": 0.0,
+          "auto_pressure_psi": 0.0,
+          "auxiliary_psi": 70.0,
+          "cylinder_air_psi_m3": 0.0,
+          "linear_volume_m3": null,
+          "low_stage": false,
+          "pipe_volume_ratio": 0.2,
+          "pressure_psi": 0.0,
+          "profile": {
+            "application_psi_s": 3.0,
+            "auxiliary_volume_m3": 0.0692353454,
+            "charging_psi_s": 2.0,
+            "diameter_m": 0.35559999999999997,
+            "low_stage_psi": null,
+            "main_reservoir": true,
+            "max_psi": 45.0,
+            "reference_psi": 50.0,
+            "release_psi_s": 10.0,
+            "service_psi": 45.0,
+            "shoe_count": 8.0,
+            "shoe_type": "Cast_Iron_P10",
+            "spring_psi": 5.0,
+            "stage_down_mps": 0.0,
+            "stage_up_mps": 0.0,
+            "stroke_m": 0.2032
+          },
+          "travel_table": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.010090370055755929,
+              0.0
+            ],
+            [
+              0.33816462590058194,
+              0.16256
+            ],
+            [
+              1.3595648013293784,
+              0.19868444444444444
+            ],
+            [
+              1.5074205633694897,
+              0.2032
+            ],
+            [
+              6.925768105110312,
+              0.32512
+            ],
+            [
+              13.851536210220624,
+              0.32512
+            ]
+          ]
+        },
+        "position_m": 0.0,
+        "release_ramp_rate_n_per_s": 81594.22333556948,
+        "shoe_friction": {
+          "mu_at_zero_kph": 1.0,
+          "points_kph": [
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        "skid_adhesion_mu": 0.0,
+        "state": "Charged",
+        "time_pending_s": 0.0,
+        "transfer_only": false
+      },
+      {
+        "air_isolated": false,
+        "air_vented": false,
+        "apply_ramp_rate_n_per_s": 89510.08082334863,
+        "authored_response": true,
+        "automatic_pipe_bar": 5.0,
+        "current_force_n": 0.0,
+        "ep_instant": true,
+        "full_pressure_bar": 6.2052815610000005,
+        "handbrake_force_n": 0.0,
+        "independent_force_n": 0.0,
+        "latched_command": 0.0,
+        "mass_kg": 50802.5,
+        "max_force_n": 268530.24247004587,
+        "native_air_skid": false,
+        "native_ep": {
+          "auto_air_psi_m3": 0.0,
+          "auto_pressure_psi": 0.0,
+          "auxiliary_psi": 70.0,
+          "cylinder_air_psi_m3": 0.0,
+          "linear_volume_m3": null,
+          "low_stage": false,
+          "pipe_volume_ratio": 0.2,
+          "pressure_psi": 0.0,
+          "profile": {
+            "application_psi_s": 3.0,
+            "auxiliary_volume_m3": 0.0692353454,
+            "charging_psi_s": 2.0,
+            "diameter_m": 0.35559999999999997,
+            "low_stage_psi": 50.0,
+            "main_reservoir": false,
+            "max_psi": 90.0,
+            "reference_psi": 50.0,
+            "release_psi_s": 10.0,
+            "service_psi": 90.0,
+            "shoe_count": 8.0,
+            "shoe_type": "Cast_Iron_P10",
+            "spring_psi": 5.0,
+            "stage_down_mps": 13.4112,
+            "stage_up_mps": 17.8816,
+            "stroke_m": 0.2032
+          },
+          "travel_table": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.010090370055755929,
+              0.0
+            ],
+            [
+              0.33816462590058194,
+              0.16256
+            ],
+            [
+              1.3595648013293784,
+              0.19868444444444444
+            ],
+            [
+              1.5074205633694897,
+              0.2032
+            ],
+            [
+              6.925768105110312,
+              0.32512
+            ],
+            [
+              13.851536210220624,
+              0.32512
+            ]
+          ]
+        },
+        "position_m": 20.7264,
+        "release_ramp_rate_n_per_s": 29836.69360778287,
+        "shoe_friction": {
+          "mu_at_zero_kph": 1.0,
+          "points_kph": [
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        "skid_adhesion_mu": 0.0,
+        "state": "Charged",
+        "time_pending_s": 0.0,
+        "transfer_only": false
+      },
+      {
+        "air_isolated": false,
+        "air_vented": false,
+        "apply_ramp_rate_n_per_s": 89510.08082334863,
+        "authored_response": true,
+        "automatic_pipe_bar": 5.0,
+        "current_force_n": 0.0,
+        "ep_instant": true,
+        "full_pressure_bar": 6.2052815610000005,
+        "handbrake_force_n": 0.0,
+        "independent_force_n": 0.0,
+        "latched_command": 0.0,
+        "mass_kg": 50802.5,
+        "max_force_n": 268530.24247004587,
+        "native_air_skid": false,
+        "native_ep": {
+          "auto_air_psi_m3": 0.0,
+          "auto_pressure_psi": 0.0,
+          "auxiliary_psi": 70.0,
+          "cylinder_air_psi_m3": 0.0,
+          "linear_volume_m3": null,
+          "low_stage": false,
+          "pipe_volume_ratio": 0.2,
+          "pressure_psi": 0.0,
+          "profile": {
+            "application_psi_s": 3.0,
+            "auxiliary_volume_m3": 0.0692353454,
+            "charging_psi_s": 2.0,
+            "diameter_m": 0.35559999999999997,
+            "low_stage_psi": 50.0,
+            "main_reservoir": false,
+            "max_psi": 90.0,
+            "reference_psi": 50.0,
+            "release_psi_s": 10.0,
+            "service_psi": 90.0,
+            "shoe_count": 8.0,
+            "shoe_type": "Cast_Iron_P10",
+            "spring_psi": 5.0,
+            "stage_down_mps": 13.4112,
+            "stage_up_mps": 17.8816,
+            "stroke_m": 0.2032
+          },
+          "travel_table": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.010090370055755929,
+              0.0
+            ],
+            [
+              0.33816462590058194,
+              0.16256
+            ],
+            [
+              1.3595648013293784,
+              0.19868444444444444
+            ],
+            [
+              1.5074205633694897,
+              0.2032
+            ],
+            [
+              6.925768105110312,
+              0.32512
+            ],
+            [
+              13.851536210220624,
+              0.32512
+            ]
+          ]
+        },
+        "position_m": 41.4528,
+        "release_ramp_rate_n_per_s": 29836.69360778287,
+        "shoe_friction": {
+          "mu_at_zero_kph": 1.0,
+          "points_kph": [
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        "skid_adhesion_mu": 0.0,
+        "state": "Charged",
+        "time_pending_s": 0.0,
+        "transfer_only": false
+      },
+      {
+        "air_isolated": false,
+        "air_vented": false,
+        "apply_ramp_rate_n_per_s": 89510.08082334863,
+        "authored_response": true,
+        "automatic_pipe_bar": 5.0,
+        "current_force_n": 0.0,
+        "ep_instant": true,
+        "full_pressure_bar": 6.2052815610000005,
+        "handbrake_force_n": 0.0,
+        "independent_force_n": 0.0,
+        "latched_command": 0.0,
+        "mass_kg": 50802.5,
+        "max_force_n": 268530.24247004587,
+        "native_air_skid": false,
+        "native_ep": {
+          "auto_air_psi_m3": 0.0,
+          "auto_pressure_psi": 0.0,
+          "auxiliary_psi": 70.0,
+          "cylinder_air_psi_m3": 0.0,
+          "linear_volume_m3": null,
+          "low_stage": false,
+          "pipe_volume_ratio": 0.2,
+          "pressure_psi": 0.0,
+          "profile": {
+            "application_psi_s": 3.0,
+            "auxiliary_volume_m3": 0.0692353454,
+            "charging_psi_s": 2.0,
+            "diameter_m": 0.35559999999999997,
+            "low_stage_psi": 50.0,
+            "main_reservoir": false,
+            "max_psi": 90.0,
+            "reference_psi": 50.0,
+            "release_psi_s": 10.0,
+            "service_psi": 90.0,
+            "shoe_count": 8.0,
+            "shoe_type": "Cast_Iron_P10",
+            "spring_psi": 5.0,
+            "stage_down_mps": 13.4112,
+            "stage_up_mps": 17.8816,
+            "stroke_m": 0.2032
+          },
+          "travel_table": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.010090370055755929,
+              0.0
+            ],
+            [
+              0.33816462590058194,
+              0.16256
+            ],
+            [
+              1.3595648013293784,
+              0.19868444444444444
+            ],
+            [
+              1.5074205633694897,
+              0.2032
+            ],
+            [
+              6.925768105110312,
+              0.32512
+            ],
+            [
+              13.851536210220624,
+              0.32512
+            ]
+          ]
+        },
+        "position_m": 62.17920000000001,
+        "release_ramp_rate_n_per_s": 29836.69360778287,
+        "shoe_friction": {
+          "mu_at_zero_kph": 1.0,
+          "points_kph": [
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        "skid_adhesion_mu": 0.0,
+        "state": "Charged",
+        "time_pending_s": 0.0,
+        "transfer_only": false
+      },
+      {
+        "air_isolated": true,
+        "air_vented": false,
+        "apply_ramp_rate_n_per_s": 89510.08082334863,
+        "authored_response": true,
+        "automatic_pipe_bar": 5.0,
+        "current_force_n": 0.0,
+        "ep_instant": true,
+        "full_pressure_bar": 6.2052815610000005,
+        "handbrake_force_n": 174544.65760552982,
+        "independent_force_n": 0.0,
+        "latched_command": 0.0,
+        "mass_kg": 50802.5,
+        "max_force_n": 268530.24247004587,
+        "native_air_skid": false,
+        "native_ep": {
+          "auto_air_psi_m3": 0.0,
+          "auto_pressure_psi": 0.0,
+          "auxiliary_psi": 70.0,
+          "cylinder_air_psi_m3": 0.0,
+          "linear_volume_m3": null,
+          "low_stage": false,
+          "pipe_volume_ratio": 0.2,
+          "pressure_psi": 0.0,
+          "profile": {
+            "application_psi_s": 3.0,
+            "auxiliary_volume_m3": 0.0692353454,
+            "charging_psi_s": 2.0,
+            "diameter_m": 0.35559999999999997,
+            "low_stage_psi": 50.0,
+            "main_reservoir": false,
+            "max_psi": 90.0,
+            "reference_psi": 50.0,
+            "release_psi_s": 10.0,
+            "service_psi": 90.0,
+            "shoe_count": 8.0,
+            "shoe_type": "Cast_Iron_P10",
+            "spring_psi": 5.0,
+            "stage_down_mps": 13.4112,
+            "stage_up_mps": 17.8816,
+            "stroke_m": 0.2032
+          },
+          "travel_table": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.010090370055755929,
+              0.0
+            ],
+            [
+              0.33816462590058194,
+              0.16256
+            ],
+            [
+              1.3595648013293784,
+              0.19868444444444444
+            ],
+            [
+              1.5074205633694897,
+              0.2032
+            ],
+            [
+              6.925768105110312,
+              0.32512
+            ],
+            [
+              13.851536210220624,
+              0.32512
+            ]
+          ]
+        },
+        "position_m": 82.9056,
+        "release_ramp_rate_n_per_s": 29836.69360778287,
+        "shoe_friction": {
+          "mu_at_zero_kph": 1.0,
+          "points_kph": [
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        "skid_adhesion_mu": 0.0,
+        "state": "Charged",
+        "time_pending_s": 0.0,
+        "transfer_only": false
+      },
+      {
+        "air_isolated": true,
+        "air_vented": false,
+        "apply_ramp_rate_n_per_s": 89510.08082334863,
+        "authored_response": true,
+        "automatic_pipe_bar": 5.0,
+        "current_force_n": 0.0,
+        "ep_instant": true,
+        "full_pressure_bar": 6.2052815610000005,
+        "handbrake_force_n": 174544.65760552982,
+        "independent_force_n": 0.0,
+        "latched_command": 0.0,
+        "mass_kg": 50802.5,
+        "max_force_n": 268530.24247004587,
+        "native_air_skid": false,
+        "native_ep": {
+          "auto_air_psi_m3": 0.0,
+          "auto_pressure_psi": 0.0,
+          "auxiliary_psi": 70.0,
+          "cylinder_air_psi_m3": 0.0,
+          "linear_volume_m3": null,
+          "low_stage": false,
+          "pipe_volume_ratio": 0.2,
+          "pressure_psi": 0.0,
+          "profile": {
+            "application_psi_s": 3.0,
+            "auxiliary_volume_m3": 0.0692353454,
+            "charging_psi_s": 2.0,
+            "diameter_m": 0.35559999999999997,
+            "low_stage_psi": 50.0,
+            "main_reservoir": false,
+            "max_psi": 90.0,
+            "reference_psi": 50.0,
+            "release_psi_s": 10.0,
+            "service_psi": 90.0,
+            "shoe_count": 8.0,
+            "shoe_type": "Cast_Iron_P10",
+            "spring_psi": 5.0,
+            "stage_down_mps": 13.4112,
+            "stage_up_mps": 17.8816,
+            "stroke_m": 0.2032
+          },
+          "travel_table": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.010090370055755929,
+              0.0
+            ],
+            [
+              0.33816462590058194,
+              0.16256
+            ],
+            [
+              1.3595648013293784,
+              0.19868444444444444
+            ],
+            [
+              1.5074205633694897,
+              0.2032
+            ],
+            [
+              6.925768105110312,
+              0.32512
+            ],
+            [
+              13.851536210220624,
+              0.32512
+            ]
+          ]
+        },
+        "position_m": 103.632,
+        "release_ramp_rate_n_per_s": 29836.69360778287,
+        "shoe_friction": {
+          "mu_at_zero_kph": 1.0,
+          "points_kph": [
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        "skid_adhesion_mu": 0.0,
+        "state": "Charged",
+        "time_pending_s": 0.0,
+        "transfer_only": false
+      },
+      {
+        "air_isolated": true,
+        "air_vented": false,
+        "apply_ramp_rate_n_per_s": 89510.08082334863,
+        "authored_response": true,
+        "automatic_pipe_bar": 5.0,
+        "current_force_n": 0.0,
+        "ep_instant": true,
+        "full_pressure_bar": 6.2052815610000005,
+        "handbrake_force_n": 174544.65760552982,
+        "independent_force_n": 0.0,
+        "latched_command": 0.0,
+        "mass_kg": 50802.5,
+        "max_force_n": 268530.24247004587,
+        "native_air_skid": false,
+        "native_ep": {
+          "auto_air_psi_m3": 0.0,
+          "auto_pressure_psi": 0.0,
+          "auxiliary_psi": 70.0,
+          "cylinder_air_psi_m3": 0.0,
+          "linear_volume_m3": null,
+          "low_stage": false,
+          "pipe_volume_ratio": 0.2,
+          "pressure_psi": 0.0,
+          "profile": {
+            "application_psi_s": 3.0,
+            "auxiliary_volume_m3": 0.0692353454,
+            "charging_psi_s": 2.0,
+            "diameter_m": 0.35559999999999997,
+            "low_stage_psi": 50.0,
+            "main_reservoir": false,
+            "max_psi": 90.0,
+            "reference_psi": 50.0,
+            "release_psi_s": 10.0,
+            "service_psi": 90.0,
+            "shoe_count": 8.0,
+            "shoe_type": "Cast_Iron_P10",
+            "spring_psi": 5.0,
+            "stage_down_mps": 13.4112,
+            "stage_up_mps": 17.8816,
+            "stroke_m": 0.2032
+          },
+          "travel_table": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.010090370055755929,
+              0.0
+            ],
+            [
+              0.33816462590058194,
+              0.16256
+            ],
+            [
+              1.3595648013293784,
+              0.19868444444444444
+            ],
+            [
+              1.5074205633694897,
+              0.2032
+            ],
+            [
+              6.925768105110312,
+              0.32512
+            ],
+            [
+              13.851536210220624,
+              0.32512
+            ]
+          ]
+        },
+        "position_m": 124.35840000000002,
+        "release_ramp_rate_n_per_s": 29836.69360778287,
+        "shoe_friction": {
+          "mu_at_zero_kph": 1.0,
+          "points_kph": [
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        "skid_adhesion_mu": 0.0,
+        "state": "Charged",
+        "time_pending_s": 0.0,
+        "transfer_only": false
+      },
+      {
+        "air_isolated": true,
+        "air_vented": false,
+        "apply_ramp_rate_n_per_s": 39999.99999999999,
+        "authored_response": true,
+        "automatic_pipe_bar": 5.0,
+        "current_force_n": 0.0,
+        "ep_instant": false,
+        "full_pressure_bar": 4.826330103,
+        "handbrake_force_n": 45500.0,
+        "independent_force_n": 0.0,
+        "latched_command": 0.0,
+        "mass_kg": 67000.0,
+        "max_force_n": 70000.0,
+        "native_air_skid": false,
+        "position_m": 145.08480000000003,
+        "release_ramp_rate_n_per_s": 39999.99999999999,
+        "shoe_friction": {
+          "mu_at_zero_kph": 1.0,
+          "points_kph": [
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        "skid_adhesion_mu": 0.0,
+        "state": "Charged",
+        "time_pending_s": 0.0,
+        "transfer_only": false
+      }
+    ],
+    "effective_mass_kg": 440906.4,
+    "fuel": [
+      {
+        "command_running": true,
+        "consumed_l": 0.0,
+        "cooling_on": false,
+        "demanded_rpm": 650.0,
+        "flow_lps": 0.0,
+        "fuel_l": 1136.5225,
+        "phase": "Running",
+        "refilled_l": 0.0,
+        "rpm": 650.0,
+        "temperature_c": 40.0,
+        "vehicle": 0
+      },
+      {
+        "command_running": false,
+        "consumed_l": 0.0,
+        "cooling_on": false,
+        "demanded_rpm": 0.0,
+        "flow_lps": 0.0,
+        "fuel_l": 3141.89178072,
+        "phase": "Stopped",
+        "refilled_l": 0.0,
+        "rpm": 0.0,
+        "temperature_c": 40.0,
+        "vehicle": 7
+      }
+    ],
+    "head_m": 260.0,
+    "occupancy": [
+      {
+        "edge": "approach",
+        "end_m": 260.0,
+        "owner": "Jugador",
+        "start_m": 239.2736
+      },
+      {
+        "edge": "approach",
+        "end_m": 239.2736,
+        "owner": "Jugador",
+        "start_m": 218.54719999999998
+      },
+      {
+        "edge": "approach",
+        "end_m": 218.5472,
+        "owner": "Jugador",
+        "start_m": 197.8208
+      },
+      {
+        "edge": "approach",
+        "end_m": 197.8208,
+        "owner": "Jugador",
+        "start_m": 177.09439999999998
+      },
+      {
+        "edge": "approach",
+        "end_m": 177.0944,
+        "owner": "Jugador",
+        "start_m": 156.368
+      },
+      {
+        "edge": "approach",
+        "end_m": 156.368,
+        "owner": "Jugador",
+        "start_m": 135.64159999999998
+      },
+      {
+        "edge": "approach",
+        "end_m": 135.6416,
+        "owner": "Jugador",
+        "start_m": 114.9152
+      },
+      {
+        "edge": "approach",
+        "end_m": 114.91520000000001,
+        "owner": "Jugador",
+        "start_m": 94.31320000000001
+      }
+    ],
+    "speed_mps": 0.0,
+    "vehicle_systems": [
+      {
+        "aux": {
+          "battery_j": 0.0,
+          "battery_used_j": 0.0,
+          "compressor_w": 0.0,
+          "compressor_work_j": 0.0,
+          "initial_battery_j": 0.0,
+          "injector_steam_kg": 0.0,
+          "injector_water_kg": 0.0,
+          "steam_used_kg": 0.0
+        },
+        "brakes": {
+          "cooled_j": 0.0,
+          "delay_s": 0.0,
+          "dissipated_j": 0.0,
+          "electric_force_n": 0.0,
+          "friction_force_n": 0.0,
+          "heat_j": 0.0,
+          "pressure_fraction": 1.0,
+          "previous_speed_mps": 0.0,
+          "ramped_force_n": 0.0,
+          "regenerative_w": 0.0,
+          "returned_j": 0.0,
+          "rheostatic_w": 0.0,
+          "sliding": false,
+          "started_s": null,
+          "temperature_c": 20.0,
+          "traction_cut": false,
+          "traction_fraction": 1.0,
+          "wheel_speed_mps": 0.0
+        },
+        "crosswind": {
+          "angle_rad": 0.0,
+          "angular_velocity_rad_s": 0.0,
+          "lateral_force_n": 0.0,
+          "moment_nm": 0.0
+        },
+        "definition": {
+          "auxiliaries": null,
+          "battery": null,
+          "brake_heat": null,
+          "crosswind": null,
+          "diesel_circuits": null,
+          "doors": null,
+          "electric_brake": {
+            "apply_delay_s": 10.0,
+            "blend_with_service": false,
+            "efficiency": 1.0,
+            "force_curve": [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                2.2352,
+                0.0
+              ],
+              [
+                11.176,
+                100000.0
+              ],
+              [
+                29.0576,
+                0.0
+              ],
+              [
+                29.5576,
+                0.0
+              ],
+              [
+                100.0,
+                0.0
+              ]
+            ],
+            "force_ramp_n_s": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maximum_current_a": 700.0,
+            "native_response": true,
+            "notches": [],
+            "power_ramp_w_s": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "receptivity_w": 0.0,
+            "regenerative_max_w": 0.0,
+            "rheostat_max_w": 1000000000000.0
+          },
+          "motors": [],
+          "multiple_unit": null,
+          "tilt": null,
+          "traction_control": null,
+          "train_bus": null,
+          "vehicle": 7,
+          "wheel_slide": null
+        },
+        "door_close_at_progress": [
+          null,
+          null
+        ],
+        "door_fraction": [
+          0.0,
+          0.0
+        ],
+        "door_target": [
+          false,
+          false
+        ],
+        "energy": {
+          "active": null,
+          "charged_j": 0.0,
+          "charging_w": 0.0,
+          "discharged_j": 0.0,
+          "energy_j": 0.0,
+          "losses_j": 0.0,
+          "mechanical_j": 0.0,
+          "selection": "auto"
+        },
+        "motors": [],
+        "mu": {
+          "compatible": false,
+          "dynamic_brake": 0.0,
+          "pending": null,
+          "queue": [],
+          "reverser": 0.5,
+          "throttle": 0.0
+        },
+        "tilt": {
+          "angle_rad": 0.0,
+          "demanded_rad": 0.0
+        }
+      }
+    ],
+    "vehicles": [
+      {
+        "battery_on": true,
+        "front_cock_open": true,
+        "handbrake": false,
+        "hose_connected": true,
+        "length_m": 20.7264,
+        "mass_kg": 69091.4,
+        "mu_connected": true,
+        "name": "RF_MP_DMBFA",
+        "power_on": true,
+        "powered": true,
+        "rear_cock_open": true,
+        "train_bus_connected": true,
+        "train_supply_switch_on": false
+      },
+      {
+        "battery_on": false,
+        "front_cock_open": true,
+        "handbrake": false,
+        "hose_connected": true,
+        "length_m": 20.7264,
+        "mass_kg": 50802.5,
+        "mu_connected": false,
+        "name": "Carriage",
+        "power_on": false,
+        "powered": false,
+        "rear_cock_open": true,
+        "train_bus_connected": true,
+        "train_supply_switch_on": false
+      },
+      {
+        "battery_on": false,
+        "front_cock_open": true,
+        "handbrake": false,
+        "hose_connected": true,
+        "length_m": 20.7264,
+        "mass_kg": 50802.5,
+        "mu_connected": false,
+        "name": "Carriage",
+        "power_on": false,
+        "powered": false,
+        "rear_cock_open": true,
+        "train_bus_connected": true,
+        "train_supply_switch_on": false
+      },
+      {
+        "battery_on": false,
+        "front_cock_open": true,
+        "handbrake": false,
+        "hose_connected": true,
+        "length_m": 20.7264,
+        "mass_kg": 50802.5,
+        "mu_connected": false,
+        "name": "Carriage",
+        "power_on": false,
+        "powered": false,
+        "rear_cock_open": false,
+        "train_bus_connected": true,
+        "train_supply_switch_on": false
+      },
+      {
+        "battery_on": false,
+        "front_cock_open": false,
+        "handbrake": true,
+        "hose_connected": false,
+        "length_m": 20.7264,
+        "mass_kg": 50802.5,
+        "mu_connected": false,
+        "name": "Carriage",
+        "power_on": false,
+        "powered": false,
+        "rear_cock_open": true,
+        "train_bus_connected": false,
+        "train_supply_switch_on": false
+      },
+      {
+        "battery_on": false,
+        "front_cock_open": true,
+        "handbrake": true,
+        "hose_connected": true,
+        "length_m": 20.7264,
+        "mass_kg": 50802.5,
+        "mu_connected": false,
+        "name": "Carriage",
+        "power_on": false,
+        "powered": false,
+        "rear_cock_open": true,
+        "train_bus_connected": true,
+        "train_supply_switch_on": false
+      },
+      {
+        "battery_on": false,
+        "front_cock_open": true,
+        "handbrake": true,
+        "hose_connected": true,
+        "length_m": 20.7264,
+        "mass_kg": 50802.5,
+        "mu_connected": false,
+        "name": "Carriage",
+        "power_on": false,
+        "powered": false,
+        "rear_cock_open": true,
+        "train_bus_connected": true,
+        "train_supply_switch_on": false
+      },
+      {
+        "battery_on": false,
+        "front_cock_open": true,
+        "handbrake": true,
+        "hose_connected": true,
+        "length_m": 20.602,
+        "mass_kg": 67000.0,
+        "mu_connected": true,
+        "name": "RF_WP_DMBSH",
+        "power_on": false,
+        "powered": true,
+        "rear_cock_open": true,
+        "train_bus_connected": true,
+        "train_supply_switch_on": false
+      }
+    ]
+  },
+  "before_donor": {
+    "cylinders": [
+      {
+        "air_isolated": false,
+        "air_vented": false,
+        "apply_ramp_rate_n_per_s": 89510.08082334863,
+        "authored_response": true,
+        "automatic_pipe_bar": 5.0,
+        "current_force_n": 0.0,
+        "ep_instant": true,
+        "full_pressure_bar": 6.2052815610000005,
+        "handbrake_force_n": 174544.65760552982,
+        "independent_force_n": 0.0,
+        "latched_command": 0.0,
+        "mass_kg": 50802.5,
+        "max_force_n": 268530.24247004587,
+        "native_air_skid": false,
+        "native_ep": {
+          "auto_air_psi_m3": 0.0,
+          "auto_pressure_psi": 0.0,
+          "auxiliary_psi": 70.0,
+          "cylinder_air_psi_m3": 0.0,
+          "linear_volume_m3": null,
+          "low_stage": false,
+          "pipe_volume_ratio": 0.2,
+          "pressure_psi": 0.0,
+          "profile": {
+            "application_psi_s": 3.0,
+            "auxiliary_volume_m3": 0.0692353454,
+            "charging_psi_s": 2.0,
+            "diameter_m": 0.35559999999999997,
+            "low_stage_psi": 50.0,
+            "main_reservoir": false,
+            "max_psi": 90.0,
+            "reference_psi": 50.0,
+            "release_psi_s": 10.0,
+            "service_psi": 90.0,
+            "shoe_count": 8.0,
+            "shoe_type": "Cast_Iron_P10",
+            "spring_psi": 5.0,
+            "stage_down_mps": 13.4112,
+            "stage_up_mps": 17.8816,
+            "stroke_m": 0.2032
+          },
+          "travel_table": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.010090370055755929,
+              0.0
+            ],
+            [
+              0.33816462590058194,
+              0.16256
+            ],
+            [
+              1.3595648013293784,
+              0.19868444444444444
+            ],
+            [
+              1.5074205633694897,
+              0.2032
+            ],
+            [
+              6.925768105110312,
+              0.32512
+            ],
+            [
+              13.851536210220624,
+              0.32512
+            ]
+          ]
+        },
+        "position_m": 0.0,
+        "release_ramp_rate_n_per_s": 29836.69360778287,
+        "shoe_friction": {
+          "mu_at_zero_kph": 1.0,
+          "points_kph": [
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        "skid_adhesion_mu": 0.0,
+        "state": "Charged",
+        "time_pending_s": 0.0,
+        "transfer_only": false
+      },
+      {
+        "air_isolated": false,
+        "air_vented": false,
+        "apply_ramp_rate_n_per_s": 89510.08082334863,
+        "authored_response": true,
+        "automatic_pipe_bar": 5.0,
+        "current_force_n": 0.0,
+        "ep_instant": true,
+        "full_pressure_bar": 6.2052815610000005,
+        "handbrake_force_n": 174544.65760552982,
+        "independent_force_n": 0.0,
+        "latched_command": 0.0,
+        "mass_kg": 50802.5,
+        "max_force_n": 268530.24247004587,
+        "native_air_skid": false,
+        "native_ep": {
+          "auto_air_psi_m3": 0.0,
+          "auto_pressure_psi": 0.0,
+          "auxiliary_psi": 70.0,
+          "cylinder_air_psi_m3": 0.0,
+          "linear_volume_m3": null,
+          "low_stage": false,
+          "pipe_volume_ratio": 0.2,
+          "pressure_psi": 0.0,
+          "profile": {
+            "application_psi_s": 3.0,
+            "auxiliary_volume_m3": 0.0692353454,
+            "charging_psi_s": 2.0,
+            "diameter_m": 0.35559999999999997,
+            "low_stage_psi": 50.0,
+            "main_reservoir": false,
+            "max_psi": 90.0,
+            "reference_psi": 50.0,
+            "release_psi_s": 10.0,
+            "service_psi": 90.0,
+            "shoe_count": 8.0,
+            "shoe_type": "Cast_Iron_P10",
+            "spring_psi": 5.0,
+            "stage_down_mps": 13.4112,
+            "stage_up_mps": 17.8816,
+            "stroke_m": 0.2032
+          },
+          "travel_table": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.010090370055755929,
+              0.0
+            ],
+            [
+              0.33816462590058194,
+              0.16256
+            ],
+            [
+              1.3595648013293784,
+              0.19868444444444444
+            ],
+            [
+              1.5074205633694897,
+              0.2032
+            ],
+            [
+              6.925768105110312,
+              0.32512
+            ],
+            [
+              13.851536210220624,
+              0.32512
+            ]
+          ]
+        },
+        "position_m": 20.7264,
+        "release_ramp_rate_n_per_s": 29836.69360778287,
+        "shoe_friction": {
+          "mu_at_zero_kph": 1.0,
+          "points_kph": [
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        "skid_adhesion_mu": 0.0,
+        "state": "Charged",
+        "time_pending_s": 0.0,
+        "transfer_only": false
+      },
+      {
+        "air_isolated": false,
+        "air_vented": false,
+        "apply_ramp_rate_n_per_s": 89510.08082334863,
+        "authored_response": true,
+        "automatic_pipe_bar": 5.0,
+        "current_force_n": 0.0,
+        "ep_instant": true,
+        "full_pressure_bar": 6.2052815610000005,
+        "handbrake_force_n": 174544.65760552982,
+        "independent_force_n": 0.0,
+        "latched_command": 0.0,
+        "mass_kg": 50802.5,
+        "max_force_n": 268530.24247004587,
+        "native_air_skid": false,
+        "native_ep": {
+          "auto_air_psi_m3": 0.0,
+          "auto_pressure_psi": 0.0,
+          "auxiliary_psi": 70.0,
+          "cylinder_air_psi_m3": 0.0,
+          "linear_volume_m3": null,
+          "low_stage": false,
+          "pipe_volume_ratio": 0.2,
+          "pressure_psi": 0.0,
+          "profile": {
+            "application_psi_s": 3.0,
+            "auxiliary_volume_m3": 0.0692353454,
+            "charging_psi_s": 2.0,
+            "diameter_m": 0.35559999999999997,
+            "low_stage_psi": 50.0,
+            "main_reservoir": false,
+            "max_psi": 90.0,
+            "reference_psi": 50.0,
+            "release_psi_s": 10.0,
+            "service_psi": 90.0,
+            "shoe_count": 8.0,
+            "shoe_type": "Cast_Iron_P10",
+            "spring_psi": 5.0,
+            "stage_down_mps": 13.4112,
+            "stage_up_mps": 17.8816,
+            "stroke_m": 0.2032
+          },
+          "travel_table": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.010090370055755929,
+              0.0
+            ],
+            [
+              0.33816462590058194,
+              0.16256
+            ],
+            [
+              1.3595648013293784,
+              0.19868444444444444
+            ],
+            [
+              1.5074205633694897,
+              0.2032
+            ],
+            [
+              6.925768105110312,
+              0.32512
+            ],
+            [
+              13.851536210220624,
+              0.32512
+            ]
+          ]
+        },
+        "position_m": 41.4528,
+        "release_ramp_rate_n_per_s": 29836.69360778287,
+        "shoe_friction": {
+          "mu_at_zero_kph": 1.0,
+          "points_kph": [
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        "skid_adhesion_mu": 0.0,
+        "state": "Charged",
+        "time_pending_s": 0.0,
+        "transfer_only": false
+      },
+      {
+        "air_isolated": false,
+        "air_vented": false,
+        "apply_ramp_rate_n_per_s": 39999.99999999999,
+        "authored_response": true,
+        "automatic_pipe_bar": 5.0,
+        "current_force_n": 0.0,
+        "ep_instant": false,
+        "full_pressure_bar": 4.826330103,
+        "handbrake_force_n": 45500.0,
+        "independent_force_n": 0.0,
+        "latched_command": 0.0,
+        "mass_kg": 67000.0,
+        "max_force_n": 70000.0,
+        "native_air_skid": false,
+        "position_m": 62.17920000000001,
+        "release_ramp_rate_n_per_s": 39999.99999999999,
+        "shoe_friction": {
+          "mu_at_zero_kph": 1.0,
+          "points_kph": [
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        "skid_adhesion_mu": 0.0,
+        "state": "Charged",
+        "time_pending_s": 0.0,
+        "transfer_only": false
+      }
+    ],
+    "effective_mass_kg": 219407.5,
+    "fuel": [
+      {
+        "command_running": false,
+        "consumed_l": 0.0,
+        "cooling_on": false,
+        "demanded_rpm": 0.0,
+        "flow_lps": 0.0,
+        "fuel_l": 3141.89178072,
+        "phase": "Stopped",
+        "refilled_l": 0.0,
+        "rpm": 0.0,
+        "temperature_c": 40.0,
+        "vehicle": 3
+      }
+    ],
+    "head_m": 177.0944,
+    "occupancy": [
+      {
+        "edge": "approach",
+        "end_m": 177.0944,
+        "owner": "donor",
+        "start_m": 156.368
+      },
+      {
+        "edge": "approach",
+        "end_m": 156.368,
+        "owner": "donor",
+        "start_m": 135.64159999999998
+      },
+      {
+        "edge": "approach",
+        "end_m": 135.6416,
+        "owner": "donor",
+        "start_m": 114.9152
+      },
+      {
+        "edge": "approach",
+        "end_m": 114.9152,
+        "owner": "donor",
+        "start_m": 94.3132
+      }
+    ],
+    "speed_mps": 0.0,
+    "vehicle_systems": [
+      {
+        "aux": {
+          "battery_j": 0.0,
+          "battery_used_j": 0.0,
+          "compressor_w": 0.0,
+          "compressor_work_j": 0.0,
+          "initial_battery_j": 0.0,
+          "injector_steam_kg": 0.0,
+          "injector_water_kg": 0.0,
+          "steam_used_kg": 0.0
+        },
+        "brakes": {
+          "cooled_j": 0.0,
+          "delay_s": 0.0,
+          "dissipated_j": 0.0,
+          "electric_force_n": 0.0,
+          "friction_force_n": 0.0,
+          "heat_j": 0.0,
+          "pressure_fraction": 1.0,
+          "previous_speed_mps": 0.0,
+          "ramped_force_n": 0.0,
+          "regenerative_w": 0.0,
+          "returned_j": 0.0,
+          "rheostatic_w": 0.0,
+          "sliding": false,
+          "started_s": null,
+          "temperature_c": 20.0,
+          "traction_cut": false,
+          "traction_fraction": 1.0,
+          "wheel_speed_mps": 0.0
+        },
+        "crosswind": {
+          "angle_rad": 0.0,
+          "angular_velocity_rad_s": 0.0,
+          "lateral_force_n": 0.0,
+          "moment_nm": 0.0
+        },
+        "definition": {
+          "auxiliaries": null,
+          "battery": null,
+          "brake_heat": null,
+          "crosswind": null,
+          "diesel_circuits": null,
+          "doors": null,
+          "electric_brake": {
+            "apply_delay_s": 10.0,
+            "blend_with_service": false,
+            "efficiency": 1.0,
+            "force_curve": [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                2.2352,
+                0.0
+              ],
+              [
+                11.176,
+                100000.0
+              ],
+              [
+                29.0576,
+                0.0
+              ],
+              [
+                29.5576,
+                0.0
+              ],
+              [
+                100.0,
+                0.0
+              ]
+            ],
+            "force_ramp_n_s": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maximum_current_a": 700.0,
+            "native_response": true,
+            "notches": [],
+            "power_ramp_w_s": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "receptivity_w": 0.0,
+            "regenerative_max_w": 0.0,
+            "rheostat_max_w": 1000000000000.0
+          },
+          "motors": [],
+          "multiple_unit": null,
+          "tilt": null,
+          "traction_control": null,
+          "train_bus": null,
+          "vehicle": 3,
+          "wheel_slide": null
+        },
+        "door_close_at_progress": [
+          null,
+          null
+        ],
+        "door_fraction": [
+          0.0,
+          0.0
+        ],
+        "door_target": [
+          false,
+          false
+        ],
+        "energy": {
+          "active": null,
+          "charged_j": 0.0,
+          "charging_w": 0.0,
+          "discharged_j": 0.0,
+          "energy_j": 0.0,
+          "losses_j": 0.0,
+          "mechanical_j": 0.0,
+          "selection": "auto"
+        },
+        "motors": [],
+        "mu": {
+          "compatible": false,
+          "dynamic_brake": 0.0,
+          "pending": null,
+          "queue": [],
+          "reverser": 0.5,
+          "throttle": 0.0
+        },
+        "tilt": {
+          "angle_rad": 0.0,
+          "demanded_rad": 0.0
+        }
+      }
+    ],
+    "vehicles": [
+      {
+        "battery_on": false,
+        "front_cock_open": true,
+        "handbrake": true,
+        "hose_connected": true,
+        "length_m": 20.7264,
+        "mass_kg": 50802.5,
+        "mu_connected": false,
+        "name": "Carriage",
+        "power_on": false,
+        "powered": false,
+        "rear_cock_open": true,
+        "train_bus_connected": true,
+        "train_supply_switch_on": false
+      },
+      {
+        "battery_on": false,
+        "front_cock_open": true,
+        "handbrake": true,
+        "hose_connected": true,
+        "length_m": 20.7264,
+        "mass_kg": 50802.5,
+        "mu_connected": false,
+        "name": "Carriage",
+        "power_on": false,
+        "powered": false,
+        "rear_cock_open": true,
+        "train_bus_connected": true,
+        "train_supply_switch_on": false
+      },
+      {
+        "battery_on": false,
+        "front_cock_open": true,
+        "handbrake": true,
+        "hose_connected": true,
+        "length_m": 20.7264,
+        "mass_kg": 50802.5,
+        "mu_connected": false,
+        "name": "Carriage",
+        "power_on": false,
+        "powered": false,
+        "rear_cock_open": true,
+        "train_bus_connected": true,
+        "train_supply_switch_on": false
+      },
+      {
+        "battery_on": false,
+        "front_cock_open": true,
+        "handbrake": true,
+        "hose_connected": true,
+        "length_m": 20.602,
+        "mass_kg": 67000.0,
+        "mu_connected": true,
+        "name": "RF_WP_DMBSH",
+        "power_on": false,
+        "powered": true,
+        "rear_cock_open": true,
+        "train_bus_connected": true,
+        "train_supply_switch_on": false
+      }
+    ]
+  },
+  "before_player": {
+    "cylinders": [
+      {
+        "air_isolated": false,
+        "air_vented": false,
+        "apply_ramp_rate_n_per_s": 244782.67000670845,
+        "authored_response": true,
+        "automatic_pipe_bar": 5.0,
+        "current_force_n": 0.0,
+        "ep_instant": true,
+        "full_pressure_bar": 3.1026407805000003,
+        "handbrake_force_n": 0.0,
+        "independent_force_n": 0.0,
+        "latched_command": 0.0,
+        "mass_kg": 69091.4,
+        "max_force_n": 367174.00501006265,
+        "native_air_skid": false,
+        "native_ep": {
+          "auto_air_psi_m3": 0.0,
+          "auto_pressure_psi": 0.0,
+          "auxiliary_psi": 70.0,
+          "cylinder_air_psi_m3": 0.0,
+          "linear_volume_m3": null,
+          "low_stage": false,
+          "pipe_volume_ratio": 0.2,
+          "pressure_psi": 0.0,
+          "profile": {
+            "application_psi_s": 3.0,
+            "auxiliary_volume_m3": 0.0692353454,
+            "charging_psi_s": 2.0,
+            "diameter_m": 0.35559999999999997,
+            "low_stage_psi": null,
+            "main_reservoir": true,
+            "max_psi": 45.0,
+            "reference_psi": 50.0,
+            "release_psi_s": 10.0,
+            "service_psi": 45.0,
+            "shoe_count": 8.0,
+            "shoe_type": "Cast_Iron_P10",
+            "spring_psi": 5.0,
+            "stage_down_mps": 0.0,
+            "stage_up_mps": 0.0,
+            "stroke_m": 0.2032
+          },
+          "travel_table": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.010090370055755929,
+              0.0
+            ],
+            [
+              0.33816462590058194,
+              0.16256
+            ],
+            [
+              1.3595648013293784,
+              0.19868444444444444
+            ],
+            [
+              1.5074205633694897,
+              0.2032
+            ],
+            [
+              6.925768105110312,
+              0.32512
+            ],
+            [
+              13.851536210220624,
+              0.32512
+            ]
+          ]
+        },
+        "position_m": 0.0,
+        "release_ramp_rate_n_per_s": 81594.22333556948,
+        "shoe_friction": {
+          "mu_at_zero_kph": 1.0,
+          "points_kph": [
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        "skid_adhesion_mu": 0.0,
+        "state": "Charged",
+        "time_pending_s": 0.0,
+        "transfer_only": false
+      },
+      {
+        "air_isolated": false,
+        "air_vented": false,
+        "apply_ramp_rate_n_per_s": 89510.08082334863,
+        "authored_response": true,
+        "automatic_pipe_bar": 5.0,
+        "current_force_n": 0.0,
+        "ep_instant": true,
+        "full_pressure_bar": 6.2052815610000005,
+        "handbrake_force_n": 0.0,
+        "independent_force_n": 0.0,
+        "latched_command": 0.0,
+        "mass_kg": 50802.5,
+        "max_force_n": 268530.24247004587,
+        "native_air_skid": false,
+        "native_ep": {
+          "auto_air_psi_m3": 0.0,
+          "auto_pressure_psi": 0.0,
+          "auxiliary_psi": 70.0,
+          "cylinder_air_psi_m3": 0.0,
+          "linear_volume_m3": null,
+          "low_stage": false,
+          "pipe_volume_ratio": 0.2,
+          "pressure_psi": 0.0,
+          "profile": {
+            "application_psi_s": 3.0,
+            "auxiliary_volume_m3": 0.0692353454,
+            "charging_psi_s": 2.0,
+            "diameter_m": 0.35559999999999997,
+            "low_stage_psi": 50.0,
+            "main_reservoir": false,
+            "max_psi": 90.0,
+            "reference_psi": 50.0,
+            "release_psi_s": 10.0,
+            "service_psi": 90.0,
+            "shoe_count": 8.0,
+            "shoe_type": "Cast_Iron_P10",
+            "spring_psi": 5.0,
+            "stage_down_mps": 13.4112,
+            "stage_up_mps": 17.8816,
+            "stroke_m": 0.2032
+          },
+          "travel_table": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.010090370055755929,
+              0.0
+            ],
+            [
+              0.33816462590058194,
+              0.16256
+            ],
+            [
+              1.3595648013293784,
+              0.19868444444444444
+            ],
+            [
+              1.5074205633694897,
+              0.2032
+            ],
+            [
+              6.925768105110312,
+              0.32512
+            ],
+            [
+              13.851536210220624,
+              0.32512
+            ]
+          ]
+        },
+        "position_m": 20.7264,
+        "release_ramp_rate_n_per_s": 29836.69360778287,
+        "shoe_friction": {
+          "mu_at_zero_kph": 1.0,
+          "points_kph": [
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        "skid_adhesion_mu": 0.0,
+        "state": "Charged",
+        "time_pending_s": 0.0,
+        "transfer_only": false
+      },
+      {
+        "air_isolated": false,
+        "air_vented": false,
+        "apply_ramp_rate_n_per_s": 89510.08082334863,
+        "authored_response": true,
+        "automatic_pipe_bar": 5.0,
+        "current_force_n": 0.0,
+        "ep_instant": true,
+        "full_pressure_bar": 6.2052815610000005,
+        "handbrake_force_n": 0.0,
+        "independent_force_n": 0.0,
+        "latched_command": 0.0,
+        "mass_kg": 50802.5,
+        "max_force_n": 268530.24247004587,
+        "native_air_skid": false,
+        "native_ep": {
+          "auto_air_psi_m3": 0.0,
+          "auto_pressure_psi": 0.0,
+          "auxiliary_psi": 70.0,
+          "cylinder_air_psi_m3": 0.0,
+          "linear_volume_m3": null,
+          "low_stage": false,
+          "pipe_volume_ratio": 0.2,
+          "pressure_psi": 0.0,
+          "profile": {
+            "application_psi_s": 3.0,
+            "auxiliary_volume_m3": 0.0692353454,
+            "charging_psi_s": 2.0,
+            "diameter_m": 0.35559999999999997,
+            "low_stage_psi": 50.0,
+            "main_reservoir": false,
+            "max_psi": 90.0,
+            "reference_psi": 50.0,
+            "release_psi_s": 10.0,
+            "service_psi": 90.0,
+            "shoe_count": 8.0,
+            "shoe_type": "Cast_Iron_P10",
+            "spring_psi": 5.0,
+            "stage_down_mps": 13.4112,
+            "stage_up_mps": 17.8816,
+            "stroke_m": 0.2032
+          },
+          "travel_table": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.010090370055755929,
+              0.0
+            ],
+            [
+              0.33816462590058194,
+              0.16256
+            ],
+            [
+              1.3595648013293784,
+              0.19868444444444444
+            ],
+            [
+              1.5074205633694897,
+              0.2032
+            ],
+            [
+              6.925768105110312,
+              0.32512
+            ],
+            [
+              13.851536210220624,
+              0.32512
+            ]
+          ]
+        },
+        "position_m": 41.4528,
+        "release_ramp_rate_n_per_s": 29836.69360778287,
+        "shoe_friction": {
+          "mu_at_zero_kph": 1.0,
+          "points_kph": [
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        "skid_adhesion_mu": 0.0,
+        "state": "Charged",
+        "time_pending_s": 0.0,
+        "transfer_only": false
+      },
+      {
+        "air_isolated": false,
+        "air_vented": false,
+        "apply_ramp_rate_n_per_s": 89510.08082334863,
+        "authored_response": true,
+        "automatic_pipe_bar": 5.0,
+        "current_force_n": 0.0,
+        "ep_instant": true,
+        "full_pressure_bar": 6.2052815610000005,
+        "handbrake_force_n": 0.0,
+        "independent_force_n": 0.0,
+        "latched_command": 0.0,
+        "mass_kg": 50802.5,
+        "max_force_n": 268530.24247004587,
+        "native_air_skid": false,
+        "native_ep": {
+          "auto_air_psi_m3": 0.0,
+          "auto_pressure_psi": 0.0,
+          "auxiliary_psi": 70.0,
+          "cylinder_air_psi_m3": 0.0,
+          "linear_volume_m3": null,
+          "low_stage": false,
+          "pipe_volume_ratio": 0.2,
+          "pressure_psi": 0.0,
+          "profile": {
+            "application_psi_s": 3.0,
+            "auxiliary_volume_m3": 0.0692353454,
+            "charging_psi_s": 2.0,
+            "diameter_m": 0.35559999999999997,
+            "low_stage_psi": 50.0,
+            "main_reservoir": false,
+            "max_psi": 90.0,
+            "reference_psi": 50.0,
+            "release_psi_s": 10.0,
+            "service_psi": 90.0,
+            "shoe_count": 8.0,
+            "shoe_type": "Cast_Iron_P10",
+            "spring_psi": 5.0,
+            "stage_down_mps": 13.4112,
+            "stage_up_mps": 17.8816,
+            "stroke_m": 0.2032
+          },
+          "travel_table": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.010090370055755929,
+              0.0
+            ],
+            [
+              0.33816462590058194,
+              0.16256
+            ],
+            [
+              1.3595648013293784,
+              0.19868444444444444
+            ],
+            [
+              1.5074205633694897,
+              0.2032
+            ],
+            [
+              6.925768105110312,
+              0.32512
+            ],
+            [
+              13.851536210220624,
+              0.32512
+            ]
+          ]
+        },
+        "position_m": 62.17920000000001,
+        "release_ramp_rate_n_per_s": 29836.69360778287,
+        "shoe_friction": {
+          "mu_at_zero_kph": 1.0,
+          "points_kph": [
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        "skid_adhesion_mu": 0.0,
+        "state": "Charged",
+        "time_pending_s": 0.0,
+        "transfer_only": false
+      }
+    ],
+    "effective_mass_kg": 221498.9,
+    "fuel": [
+      {
+        "command_running": true,
+        "consumed_l": 0.0,
+        "cooling_on": false,
+        "demanded_rpm": 650.0,
+        "flow_lps": 0.0,
+        "fuel_l": 1136.5225,
+        "phase": "Running",
+        "refilled_l": 0.0,
+        "rpm": 650.0,
+        "temperature_c": 40.0,
+        "vehicle": 0
+      }
+    ],
+    "head_m": 260.0,
+    "occupancy": [
+      {
+        "edge": "approach",
+        "end_m": 260.0,
+        "owner": "Jugador",
+        "start_m": 239.2736
+      },
+      {
+        "edge": "approach",
+        "end_m": 239.2736,
+        "owner": "Jugador",
+        "start_m": 218.54719999999998
+      },
+      {
+        "edge": "approach",
+        "end_m": 218.5472,
+        "owner": "Jugador",
+        "start_m": 197.8208
+      },
+      {
+        "edge": "approach",
+        "end_m": 197.8208,
+        "owner": "Jugador",
+        "start_m": 177.09439999999998
+      }
+    ],
+    "speed_mps": 0.0,
+    "vehicle_systems": [],
+    "vehicles": [
+      {
+        "battery_on": true,
+        "front_cock_open": true,
+        "handbrake": false,
+        "hose_connected": true,
+        "length_m": 20.7264,
+        "mass_kg": 69091.4,
+        "mu_connected": true,
+        "name": "RF_MP_DMBFA",
+        "power_on": true,
+        "powered": true,
+        "rear_cock_open": true,
+        "train_bus_connected": true,
+        "train_supply_switch_on": false
+      },
+      {
+        "battery_on": false,
+        "front_cock_open": true,
+        "handbrake": false,
+        "hose_connected": true,
+        "length_m": 20.7264,
+        "mass_kg": 50802.5,
+        "mu_connected": false,
+        "name": "Carriage",
+        "power_on": false,
+        "powered": false,
+        "rear_cock_open": true,
+        "train_bus_connected": true,
+        "train_supply_switch_on": false
+      },
+      {
+        "battery_on": false,
+        "front_cock_open": true,
+        "handbrake": false,
+        "hose_connected": true,
+        "length_m": 20.7264,
+        "mass_kg": 50802.5,
+        "mu_connected": false,
+        "name": "Carriage",
+        "power_on": false,
+        "powered": false,
+        "rear_cock_open": true,
+        "train_bus_connected": true,
+        "train_supply_switch_on": false
+      },
+      {
+        "battery_on": false,
+        "front_cock_open": true,
+        "handbrake": false,
+        "hose_connected": true,
+        "length_m": 20.7264,
+        "mass_kg": 50802.5,
+        "mu_connected": false,
+        "name": "Carriage",
+        "power_on": false,
+        "powered": false,
+        "rear_cock_open": true,
+        "train_bus_connected": true,
+        "train_supply_switch_on": false
+      }
+    ]
+  },
+  "force_equilibrium": [
+    {
+      "acceleration_mps2": [
+        0.0,
+        0.0
+      ],
+      "acceleration_tolerance_mps2": 0.00001,
+      "coupler_force_rust_n": 0.0,
+      "elastic_extension_m": 0.0,
+      "force_tolerance_n": 0.1,
+      "id": "stationary_unloaded",
+      "input_force_n": [
+        0.0,
+        0.0
+      ],
+      "masses_kg": [
+        69091.4,
+        50802.5
+      ],
+      "maximum_force_error_n": 0.0,
+      "or_force_with_rust_sign_n": -0.0,
+      "scope": "Prescribed static equilibrium; different rigid/elastic extension and transient laws"
+    },
+    {
+      "acceleration_mps2": [
+        0.6672566327394471,
+        0.6672566327394471
+      ],
+      "acceleration_tolerance_mps2": 0.00001,
+      "coupler_force_rust_n": 33898.30508474576,
+      "elastic_extension_m": 0.18449152542372882,
+      "force_tolerance_n": 0.1,
+      "id": "engaged_tension",
+      "input_force_n": [
+        80000.0,
+        0.0
+      ],
+      "masses_kg": [
+        69091.4,
+        50802.5
+      ],
+      "maximum_force_error_n": 0.00038474576285807416,
+      "or_force_with_rust_sign_n": 33898.3047,
+      "scope": "Prescribed static equilibrium; different rigid/elastic extension and transient laws"
+    },
+    {
+      "acceleration_mps2": [
+        0.667256632739447,
+        0.6672566327394472
+      ],
+      "acceleration_tolerance_mps2": 0.00001,
+      "coupler_force_rust_n": -46101.69491525423,
+      "elastic_extension_m": -0.24550847457627117,
+      "force_tolerance_n": 0.1,
+      "id": "engaged_compression",
+      "input_force_n": [
+        0.0,
+        80000.0
+      ],
+      "masses_kg": [
+        69091.4,
+        50802.5
+      ],
+      "maximum_force_error_n": 0.00038474577013403177,
+      "or_force_with_rust_sign_n": -46101.6953,
+      "scope": "Prescribed static equilibrium; different rigid/elastic extension and transient laws"
+    }
+  ],
+  "moving_after_restore": {
+    "distance_m": 15.958283321226588,
+    "time_s": 20.0,
+    "vehicles": 8
+  },
+  "rejected_traction_during_contact": true,
+  "rejected_unsecured_donor": true,
+  "removed_donor": true,
+  "restored_before_drive": {
+    "cylinders": [
+      {
+        "air_isolated": false,
+        "air_vented": false,
+        "apply_ramp_rate_n_per_s": 244782.67000670845,
+        "authored_response": true,
+        "automatic_pipe_bar": 5.0,
+        "current_force_n": 0.0,
+        "ep_instant": true,
+        "full_pressure_bar": 3.1026407805000003,
+        "handbrake_force_n": 0.0,
+        "independent_force_n": 0.0,
+        "latched_command": 0.0,
+        "mass_kg": 69091.4,
+        "max_force_n": 367174.00501006265,
+        "native_air_skid": false,
+        "native_ep": {
+          "auto_air_psi_m3": 0.0,
+          "auto_pressure_psi": 0.0,
+          "auxiliary_psi": 70.0,
+          "cylinder_air_psi_m3": 0.0,
+          "linear_volume_m3": null,
+          "low_stage": false,
+          "pipe_volume_ratio": 0.2,
+          "pressure_psi": 0.0,
+          "profile": {
+            "application_psi_s": 3.0,
+            "auxiliary_volume_m3": 0.0692353454,
+            "charging_psi_s": 2.0,
+            "diameter_m": 0.35559999999999997,
+            "low_stage_psi": null,
+            "main_reservoir": true,
+            "max_psi": 45.0,
+            "reference_psi": 50.0,
+            "release_psi_s": 10.0,
+            "service_psi": 45.0,
+            "shoe_count": 8.0,
+            "shoe_type": "Cast_Iron_P10",
+            "spring_psi": 5.0,
+            "stage_down_mps": 0.0,
+            "stage_up_mps": 0.0,
+            "stroke_m": 0.2032
+          },
+          "travel_table": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.010090370055755929,
+              0.0
+            ],
+            [
+              0.33816462590058194,
+              0.16256
+            ],
+            [
+              1.3595648013293784,
+              0.19868444444444444
+            ],
+            [
+              1.5074205633694897,
+              0.2032
+            ],
+            [
+              6.925768105110312,
+              0.32512
+            ],
+            [
+              13.851536210220624,
+              0.32512
+            ]
+          ]
+        },
+        "position_m": 0.0,
+        "release_ramp_rate_n_per_s": 81594.22333556948,
+        "shoe_friction": {
+          "mu_at_zero_kph": 1.0,
+          "points_kph": [
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        "skid_adhesion_mu": 0.0,
+        "state": "Charged",
+        "time_pending_s": 0.0,
+        "transfer_only": false
+      },
+      {
+        "air_isolated": false,
+        "air_vented": false,
+        "apply_ramp_rate_n_per_s": 89510.08082334863,
+        "authored_response": true,
+        "automatic_pipe_bar": 5.0,
+        "current_force_n": 0.0,
+        "ep_instant": true,
+        "full_pressure_bar": 6.2052815610000005,
+        "handbrake_force_n": 0.0,
+        "independent_force_n": 0.0,
+        "latched_command": 0.0,
+        "mass_kg": 50802.5,
+        "max_force_n": 268530.24247004587,
+        "native_air_skid": false,
+        "native_ep": {
+          "auto_air_psi_m3": 0.0,
+          "auto_pressure_psi": 0.0,
+          "auxiliary_psi": 70.0,
+          "cylinder_air_psi_m3": 0.0,
+          "linear_volume_m3": null,
+          "low_stage": false,
+          "pipe_volume_ratio": 0.2,
+          "pressure_psi": 0.0,
+          "profile": {
+            "application_psi_s": 3.0,
+            "auxiliary_volume_m3": 0.0692353454,
+            "charging_psi_s": 2.0,
+            "diameter_m": 0.35559999999999997,
+            "low_stage_psi": 50.0,
+            "main_reservoir": false,
+            "max_psi": 90.0,
+            "reference_psi": 50.0,
+            "release_psi_s": 10.0,
+            "service_psi": 90.0,
+            "shoe_count": 8.0,
+            "shoe_type": "Cast_Iron_P10",
+            "spring_psi": 5.0,
+            "stage_down_mps": 13.4112,
+            "stage_up_mps": 17.8816,
+            "stroke_m": 0.2032
+          },
+          "travel_table": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.010090370055755929,
+              0.0
+            ],
+            [
+              0.33816462590058194,
+              0.16256
+            ],
+            [
+              1.3595648013293784,
+              0.19868444444444444
+            ],
+            [
+              1.5074205633694897,
+              0.2032
+            ],
+            [
+              6.925768105110312,
+              0.32512
+            ],
+            [
+              13.851536210220624,
+              0.32512
+            ]
+          ]
+        },
+        "position_m": 20.7264,
+        "release_ramp_rate_n_per_s": 29836.69360778287,
+        "shoe_friction": {
+          "mu_at_zero_kph": 1.0,
+          "points_kph": [
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        "skid_adhesion_mu": 0.0,
+        "state": "Charged",
+        "time_pending_s": 0.0,
+        "transfer_only": false
+      },
+      {
+        "air_isolated": false,
+        "air_vented": false,
+        "apply_ramp_rate_n_per_s": 89510.08082334863,
+        "authored_response": true,
+        "automatic_pipe_bar": 5.0,
+        "current_force_n": 0.0,
+        "ep_instant": true,
+        "full_pressure_bar": 6.2052815610000005,
+        "handbrake_force_n": 0.0,
+        "independent_force_n": 0.0,
+        "latched_command": 0.0,
+        "mass_kg": 50802.5,
+        "max_force_n": 268530.24247004587,
+        "native_air_skid": false,
+        "native_ep": {
+          "auto_air_psi_m3": 0.0,
+          "auto_pressure_psi": 0.0,
+          "auxiliary_psi": 70.0,
+          "cylinder_air_psi_m3": 0.0,
+          "linear_volume_m3": null,
+          "low_stage": false,
+          "pipe_volume_ratio": 0.2,
+          "pressure_psi": 0.0,
+          "profile": {
+            "application_psi_s": 3.0,
+            "auxiliary_volume_m3": 0.0692353454,
+            "charging_psi_s": 2.0,
+            "diameter_m": 0.35559999999999997,
+            "low_stage_psi": 50.0,
+            "main_reservoir": false,
+            "max_psi": 90.0,
+            "reference_psi": 50.0,
+            "release_psi_s": 10.0,
+            "service_psi": 90.0,
+            "shoe_count": 8.0,
+            "shoe_type": "Cast_Iron_P10",
+            "spring_psi": 5.0,
+            "stage_down_mps": 13.4112,
+            "stage_up_mps": 17.8816,
+            "stroke_m": 0.2032
+          },
+          "travel_table": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.010090370055755929,
+              0.0
+            ],
+            [
+              0.33816462590058194,
+              0.16256
+            ],
+            [
+              1.3595648013293784,
+              0.19868444444444444
+            ],
+            [
+              1.5074205633694897,
+              0.2032
+            ],
+            [
+              6.925768105110312,
+              0.32512
+            ],
+            [
+              13.851536210220624,
+              0.32512
+            ]
+          ]
+        },
+        "position_m": 41.4528,
+        "release_ramp_rate_n_per_s": 29836.69360778287,
+        "shoe_friction": {
+          "mu_at_zero_kph": 1.0,
+          "points_kph": [
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        "skid_adhesion_mu": 0.0,
+        "state": "Charged",
+        "time_pending_s": 0.0,
+        "transfer_only": false
+      },
+      {
+        "air_isolated": false,
+        "air_vented": false,
+        "apply_ramp_rate_n_per_s": 89510.08082334863,
+        "authored_response": true,
+        "automatic_pipe_bar": 5.0,
+        "current_force_n": 0.0,
+        "ep_instant": true,
+        "full_pressure_bar": 6.2052815610000005,
+        "handbrake_force_n": 0.0,
+        "independent_force_n": 0.0,
+        "latched_command": 0.0,
+        "mass_kg": 50802.5,
+        "max_force_n": 268530.24247004587,
+        "native_air_skid": false,
+        "native_ep": {
+          "auto_air_psi_m3": 0.0,
+          "auto_pressure_psi": 0.0,
+          "auxiliary_psi": 70.0,
+          "cylinder_air_psi_m3": 0.0,
+          "linear_volume_m3": null,
+          "low_stage": false,
+          "pipe_volume_ratio": 0.2,
+          "pressure_psi": 0.0,
+          "profile": {
+            "application_psi_s": 3.0,
+            "auxiliary_volume_m3": 0.0692353454,
+            "charging_psi_s": 2.0,
+            "diameter_m": 0.35559999999999997,
+            "low_stage_psi": 50.0,
+            "main_reservoir": false,
+            "max_psi": 90.0,
+            "reference_psi": 50.0,
+            "release_psi_s": 10.0,
+            "service_psi": 90.0,
+            "shoe_count": 8.0,
+            "shoe_type": "Cast_Iron_P10",
+            "spring_psi": 5.0,
+            "stage_down_mps": 13.4112,
+            "stage_up_mps": 17.8816,
+            "stroke_m": 0.2032
+          },
+          "travel_table": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.010090370055755929,
+              0.0
+            ],
+            [
+              0.33816462590058194,
+              0.16256
+            ],
+            [
+              1.3595648013293784,
+              0.19868444444444444
+            ],
+            [
+              1.5074205633694897,
+              0.2032
+            ],
+            [
+              6.925768105110312,
+              0.32512
+            ],
+            [
+              13.851536210220624,
+              0.32512
+            ]
+          ]
+        },
+        "position_m": 62.17920000000001,
+        "release_ramp_rate_n_per_s": 29836.69360778287,
+        "shoe_friction": {
+          "mu_at_zero_kph": 1.0,
+          "points_kph": [
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        "skid_adhesion_mu": 0.0,
+        "state": "Charged",
+        "time_pending_s": 0.0,
+        "transfer_only": false
+      },
+      {
+        "air_isolated": true,
+        "air_vented": false,
+        "apply_ramp_rate_n_per_s": 89510.08082334863,
+        "authored_response": true,
+        "automatic_pipe_bar": 5.0,
+        "current_force_n": 0.0,
+        "ep_instant": true,
+        "full_pressure_bar": 6.2052815610000005,
+        "handbrake_force_n": 174544.65760552982,
+        "independent_force_n": 0.0,
+        "latched_command": 0.0,
+        "mass_kg": 50802.5,
+        "max_force_n": 268530.24247004587,
+        "native_air_skid": false,
+        "native_ep": {
+          "auto_air_psi_m3": 0.0,
+          "auto_pressure_psi": 0.0,
+          "auxiliary_psi": 70.0,
+          "cylinder_air_psi_m3": 0.0,
+          "linear_volume_m3": null,
+          "low_stage": false,
+          "pipe_volume_ratio": 0.2,
+          "pressure_psi": 0.0,
+          "profile": {
+            "application_psi_s": 3.0,
+            "auxiliary_volume_m3": 0.0692353454,
+            "charging_psi_s": 2.0,
+            "diameter_m": 0.35559999999999997,
+            "low_stage_psi": 50.0,
+            "main_reservoir": false,
+            "max_psi": 90.0,
+            "reference_psi": 50.0,
+            "release_psi_s": 10.0,
+            "service_psi": 90.0,
+            "shoe_count": 8.0,
+            "shoe_type": "Cast_Iron_P10",
+            "spring_psi": 5.0,
+            "stage_down_mps": 13.4112,
+            "stage_up_mps": 17.8816,
+            "stroke_m": 0.2032
+          },
+          "travel_table": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.010090370055755929,
+              0.0
+            ],
+            [
+              0.33816462590058194,
+              0.16256
+            ],
+            [
+              1.3595648013293784,
+              0.19868444444444444
+            ],
+            [
+              1.5074205633694897,
+              0.2032
+            ],
+            [
+              6.925768105110312,
+              0.32512
+            ],
+            [
+              13.851536210220624,
+              0.32512
+            ]
+          ]
+        },
+        "position_m": 82.9056,
+        "release_ramp_rate_n_per_s": 29836.69360778287,
+        "shoe_friction": {
+          "mu_at_zero_kph": 1.0,
+          "points_kph": [
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        "skid_adhesion_mu": 0.0,
+        "state": "Charged",
+        "time_pending_s": 0.0,
+        "transfer_only": false
+      },
+      {
+        "air_isolated": true,
+        "air_vented": false,
+        "apply_ramp_rate_n_per_s": 89510.08082334863,
+        "authored_response": true,
+        "automatic_pipe_bar": 5.0,
+        "current_force_n": 0.0,
+        "ep_instant": true,
+        "full_pressure_bar": 6.2052815610000005,
+        "handbrake_force_n": 174544.65760552982,
+        "independent_force_n": 0.0,
+        "latched_command": 0.0,
+        "mass_kg": 50802.5,
+        "max_force_n": 268530.24247004587,
+        "native_air_skid": false,
+        "native_ep": {
+          "auto_air_psi_m3": 0.0,
+          "auto_pressure_psi": 0.0,
+          "auxiliary_psi": 70.0,
+          "cylinder_air_psi_m3": 0.0,
+          "linear_volume_m3": null,
+          "low_stage": false,
+          "pipe_volume_ratio": 0.2,
+          "pressure_psi": 0.0,
+          "profile": {
+            "application_psi_s": 3.0,
+            "auxiliary_volume_m3": 0.0692353454,
+            "charging_psi_s": 2.0,
+            "diameter_m": 0.35559999999999997,
+            "low_stage_psi": 50.0,
+            "main_reservoir": false,
+            "max_psi": 90.0,
+            "reference_psi": 50.0,
+            "release_psi_s": 10.0,
+            "service_psi": 90.0,
+            "shoe_count": 8.0,
+            "shoe_type": "Cast_Iron_P10",
+            "spring_psi": 5.0,
+            "stage_down_mps": 13.4112,
+            "stage_up_mps": 17.8816,
+            "stroke_m": 0.2032
+          },
+          "travel_table": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.010090370055755929,
+              0.0
+            ],
+            [
+              0.33816462590058194,
+              0.16256
+            ],
+            [
+              1.3595648013293784,
+              0.19868444444444444
+            ],
+            [
+              1.5074205633694897,
+              0.2032
+            ],
+            [
+              6.925768105110312,
+              0.32512
+            ],
+            [
+              13.851536210220624,
+              0.32512
+            ]
+          ]
+        },
+        "position_m": 103.632,
+        "release_ramp_rate_n_per_s": 29836.69360778287,
+        "shoe_friction": {
+          "mu_at_zero_kph": 1.0,
+          "points_kph": [
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        "skid_adhesion_mu": 0.0,
+        "state": "Charged",
+        "time_pending_s": 0.0,
+        "transfer_only": false
+      },
+      {
+        "air_isolated": true,
+        "air_vented": false,
+        "apply_ramp_rate_n_per_s": 89510.08082334863,
+        "authored_response": true,
+        "automatic_pipe_bar": 5.0,
+        "current_force_n": 0.0,
+        "ep_instant": true,
+        "full_pressure_bar": 6.2052815610000005,
+        "handbrake_force_n": 174544.65760552982,
+        "independent_force_n": 0.0,
+        "latched_command": 0.0,
+        "mass_kg": 50802.5,
+        "max_force_n": 268530.24247004587,
+        "native_air_skid": false,
+        "native_ep": {
+          "auto_air_psi_m3": 0.0,
+          "auto_pressure_psi": 0.0,
+          "auxiliary_psi": 70.0,
+          "cylinder_air_psi_m3": 0.0,
+          "linear_volume_m3": null,
+          "low_stage": false,
+          "pipe_volume_ratio": 0.2,
+          "pressure_psi": 0.0,
+          "profile": {
+            "application_psi_s": 3.0,
+            "auxiliary_volume_m3": 0.0692353454,
+            "charging_psi_s": 2.0,
+            "diameter_m": 0.35559999999999997,
+            "low_stage_psi": 50.0,
+            "main_reservoir": false,
+            "max_psi": 90.0,
+            "reference_psi": 50.0,
+            "release_psi_s": 10.0,
+            "service_psi": 90.0,
+            "shoe_count": 8.0,
+            "shoe_type": "Cast_Iron_P10",
+            "spring_psi": 5.0,
+            "stage_down_mps": 13.4112,
+            "stage_up_mps": 17.8816,
+            "stroke_m": 0.2032
+          },
+          "travel_table": [
+            [
+              0.0,
+              0.0
+            ],
+            [
+              0.010090370055755929,
+              0.0
+            ],
+            [
+              0.33816462590058194,
+              0.16256
+            ],
+            [
+              1.3595648013293784,
+              0.19868444444444444
+            ],
+            [
+              1.5074205633694897,
+              0.2032
+            ],
+            [
+              6.925768105110312,
+              0.32512
+            ],
+            [
+              13.851536210220624,
+              0.32512
+            ]
+          ]
+        },
+        "position_m": 124.35840000000002,
+        "release_ramp_rate_n_per_s": 29836.69360778287,
+        "shoe_friction": {
+          "mu_at_zero_kph": 1.0,
+          "points_kph": [
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        "skid_adhesion_mu": 0.0,
+        "state": "Charged",
+        "time_pending_s": 0.0,
+        "transfer_only": false
+      },
+      {
+        "air_isolated": true,
+        "air_vented": false,
+        "apply_ramp_rate_n_per_s": 39999.99999999999,
+        "authored_response": true,
+        "automatic_pipe_bar": 5.0,
+        "current_force_n": 0.0,
+        "ep_instant": false,
+        "full_pressure_bar": 4.826330103,
+        "handbrake_force_n": 45500.0,
+        "independent_force_n": 0.0,
+        "latched_command": 0.0,
+        "mass_kg": 67000.0,
+        "max_force_n": 70000.0,
+        "native_air_skid": false,
+        "position_m": 145.08480000000003,
+        "release_ramp_rate_n_per_s": 39999.99999999999,
+        "shoe_friction": {
+          "mu_at_zero_kph": 1.0,
+          "points_kph": [
+            [
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        "skid_adhesion_mu": 0.0,
+        "state": "Charged",
+        "time_pending_s": 0.0,
+        "transfer_only": false
+      }
+    ],
+    "effective_mass_kg": 440906.4,
+    "fuel": [
+      {
+        "command_running": true,
+        "consumed_l": 0.0,
+        "cooling_on": false,
+        "demanded_rpm": 650.0,
+        "flow_lps": 0.0,
+        "fuel_l": 1136.5225,
+        "phase": "Running",
+        "refilled_l": 0.0,
+        "rpm": 650.0,
+        "temperature_c": 40.0,
+        "vehicle": 0
+      },
+      {
+        "command_running": false,
+        "consumed_l": 0.0,
+        "cooling_on": false,
+        "demanded_rpm": 0.0,
+        "flow_lps": 0.0,
+        "fuel_l": 3141.89178072,
+        "phase": "Stopped",
+        "refilled_l": 0.0,
+        "rpm": 0.0,
+        "temperature_c": 40.0,
+        "vehicle": 7
+      }
+    ],
+    "head_m": 260.0,
+    "occupancy": [
+      {
+        "edge": "approach",
+        "end_m": 260.0,
+        "owner": "Jugador",
+        "start_m": 239.2736
+      },
+      {
+        "edge": "approach",
+        "end_m": 239.2736,
+        "owner": "Jugador",
+        "start_m": 218.54719999999998
+      },
+      {
+        "edge": "approach",
+        "end_m": 218.5472,
+        "owner": "Jugador",
+        "start_m": 197.8208
+      },
+      {
+        "edge": "approach",
+        "end_m": 197.8208,
+        "owner": "Jugador",
+        "start_m": 177.09439999999998
+      },
+      {
+        "edge": "approach",
+        "end_m": 177.0944,
+        "owner": "Jugador",
+        "start_m": 156.368
+      },
+      {
+        "edge": "approach",
+        "end_m": 156.368,
+        "owner": "Jugador",
+        "start_m": 135.64159999999998
+      },
+      {
+        "edge": "approach",
+        "end_m": 135.6416,
+        "owner": "Jugador",
+        "start_m": 114.9152
+      },
+      {
+        "edge": "approach",
+        "end_m": 114.91520000000001,
+        "owner": "Jugador",
+        "start_m": 94.31320000000001
+      }
+    ],
+    "speed_mps": 0.0,
+    "vehicle_systems": [
+      {
+        "aux": {
+          "battery_j": 0.0,
+          "battery_used_j": 0.0,
+          "compressor_w": 0.0,
+          "compressor_work_j": 0.0,
+          "initial_battery_j": 0.0,
+          "injector_steam_kg": 0.0,
+          "injector_water_kg": 0.0,
+          "steam_used_kg": 0.0
+        },
+        "brakes": {
+          "cooled_j": 0.0,
+          "delay_s": 0.0,
+          "dissipated_j": 0.0,
+          "electric_force_n": 0.0,
+          "friction_force_n": 0.0,
+          "heat_j": 0.0,
+          "pressure_fraction": 1.0,
+          "previous_speed_mps": 0.0,
+          "ramped_force_n": 0.0,
+          "regenerative_w": 0.0,
+          "returned_j": 0.0,
+          "rheostatic_w": 0.0,
+          "sliding": false,
+          "started_s": null,
+          "temperature_c": 20.0,
+          "traction_cut": false,
+          "traction_fraction": 1.0,
+          "wheel_speed_mps": 0.0
+        },
+        "crosswind": {
+          "angle_rad": 0.0,
+          "angular_velocity_rad_s": 0.0,
+          "lateral_force_n": 0.0,
+          "moment_nm": 0.0
+        },
+        "definition": {
+          "auxiliaries": null,
+          "battery": null,
+          "brake_heat": null,
+          "crosswind": null,
+          "diesel_circuits": null,
+          "doors": null,
+          "electric_brake": {
+            "apply_delay_s": 10.0,
+            "blend_with_service": false,
+            "efficiency": 1.0,
+            "force_curve": [
+              [
+                0.0,
+                0.0
+              ],
+              [
+                2.2352,
+                0.0
+              ],
+              [
+                11.176,
+                100000.0
+              ],
+              [
+                29.0576,
+                0.0
+              ],
+              [
+                29.5576,
+                0.0
+              ],
+              [
+                100.0,
+                0.0
+              ]
+            ],
+            "force_ramp_n_s": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "maximum_current_a": 700.0,
+            "native_response": true,
+            "notches": [],
+            "power_ramp_w_s": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "receptivity_w": 0.0,
+            "regenerative_max_w": 0.0,
+            "rheostat_max_w": 1000000000000.0
+          },
+          "motors": [],
+          "multiple_unit": null,
+          "tilt": null,
+          "traction_control": null,
+          "train_bus": null,
+          "vehicle": 7,
+          "wheel_slide": null
+        },
+        "door_close_at_progress": [
+          null,
+          null
+        ],
+        "door_fraction": [
+          0.0,
+          0.0
+        ],
+        "door_target": [
+          false,
+          false
+        ],
+        "energy": {
+          "active": null,
+          "charged_j": 0.0,
+          "charging_w": 0.0,
+          "discharged_j": 0.0,
+          "energy_j": 0.0,
+          "losses_j": 0.0,
+          "mechanical_j": 0.0,
+          "selection": "auto"
+        },
+        "motors": [],
+        "mu": {
+          "compatible": false,
+          "dynamic_brake": 0.0,
+          "pending": null,
+          "queue": [],
+          "reverser": 0.5,
+          "throttle": 0.0
+        },
+        "tilt": {
+          "angle_rad": 0.0,
+          "demanded_rad": 0.0
+        }
+      }
+    ],
+    "vehicles": [
+      {
+        "battery_on": true,
+        "front_cock_open": true,
+        "handbrake": false,
+        "hose_connected": true,
+        "length_m": 20.7264,
+        "mass_kg": 69091.4,
+        "mu_connected": true,
+        "name": "RF_MP_DMBFA",
+        "power_on": true,
+        "powered": true,
+        "rear_cock_open": true,
+        "train_bus_connected": true,
+        "train_supply_switch_on": false
+      },
+      {
+        "battery_on": false,
+        "front_cock_open": true,
+        "handbrake": false,
+        "hose_connected": true,
+        "length_m": 20.7264,
+        "mass_kg": 50802.5,
+        "mu_connected": false,
+        "name": "Carriage",
+        "power_on": false,
+        "powered": false,
+        "rear_cock_open": true,
+        "train_bus_connected": true,
+        "train_supply_switch_on": false
+      },
+      {
+        "battery_on": false,
+        "front_cock_open": true,
+        "handbrake": false,
+        "hose_connected": true,
+        "length_m": 20.7264,
+        "mass_kg": 50802.5,
+        "mu_connected": false,
+        "name": "Carriage",
+        "power_on": false,
+        "powered": false,
+        "rear_cock_open": true,
+        "train_bus_connected": true,
+        "train_supply_switch_on": false
+      },
+      {
+        "battery_on": false,
+        "front_cock_open": true,
+        "handbrake": false,
+        "hose_connected": true,
+        "length_m": 20.7264,
+        "mass_kg": 50802.5,
+        "mu_connected": false,
+        "name": "Carriage",
+        "power_on": false,
+        "powered": false,
+        "rear_cock_open": false,
+        "train_bus_connected": true,
+        "train_supply_switch_on": false
+      },
+      {
+        "battery_on": false,
+        "front_cock_open": false,
+        "handbrake": true,
+        "hose_connected": false,
+        "length_m": 20.7264,
+        "mass_kg": 50802.5,
+        "mu_connected": false,
+        "name": "Carriage",
+        "power_on": false,
+        "powered": false,
+        "rear_cock_open": true,
+        "train_bus_connected": false,
+        "train_supply_switch_on": false
+      },
+      {
+        "battery_on": false,
+        "front_cock_open": true,
+        "handbrake": true,
+        "hose_connected": true,
+        "length_m": 20.7264,
+        "mass_kg": 50802.5,
+        "mu_connected": false,
+        "name": "Carriage",
+        "power_on": false,
+        "powered": false,
+        "rear_cock_open": true,
+        "train_bus_connected": true,
+        "train_supply_switch_on": false
+      },
+      {
+        "battery_on": false,
+        "front_cock_open": true,
+        "handbrake": true,
+        "hose_connected": true,
+        "length_m": 20.7264,
+        "mass_kg": 50802.5,
+        "mu_connected": false,
+        "name": "Carriage",
+        "power_on": false,
+        "powered": false,
+        "rear_cock_open": true,
+        "train_bus_connected": true,
+        "train_supply_switch_on": false
+      },
+      {
+        "battery_on": false,
+        "front_cock_open": true,
+        "handbrake": true,
+        "hose_connected": true,
+        "length_m": 20.602,
+        "mass_kg": 67000.0,
+        "mu_connected": true,
+        "name": "RF_WP_DMBSH",
+        "power_on": false,
+        "powered": true,
+        "rear_cock_open": true,
+        "train_bus_connected": true,
+        "train_supply_switch_on": false
+      }
+    ]
+  },
+  "restored_without_duplicates": true,
+  "scope": "Same original Pullman files on an owned synthetic directed track; state transfer, restore, driving and static load balance, not OR route/impact parity"
+}

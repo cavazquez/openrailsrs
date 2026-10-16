@@ -1,0 +1,312 @@
+{
+  "schema": 1,
+  "created_at_utc": "2026-10-16T02:53:33.582492+00:00",
+  "status": "visual_review_complete_with_limits_and_recorded_differences",
+  "scope": "Qualitative inspection of all 12 original Bevy captures against 12 native Open Rails 1.6.1 references. No global pixel score, no material/geometry identity certification from screenshots alone.",
+  "comparison_sha256": "2d9597306a92f1cc5664b7c6d8812f72dc435acbf9805e549314eb6e4240af4f",
+  "manifest_sha256": "ad8e66bde3af37bf6a3b0060f376b0a460eb9e3f3899bddc6036aeb82fdf3676",
+  "automated_comparison_passed": true,
+  "reference_version": "Open Rails 1.6.1",
+  "conditions": {
+    "clock_time_s": 35700,
+    "weather": "clear",
+    "season": "summer",
+    "width": 1280,
+    "height": 720,
+    "view_radius_m": 450,
+    "cab_fov_deg": 45,
+    "orbit_yaw_rad": 1.6,
+    "orbit_pitch_rad": 0.6,
+    "orbit_distance_m": 160
+  },
+  "method": {
+    "reviewer": "Codex visual inspection",
+    "inspected_images": 24,
+    "original_images_modified": false,
+    "displayed_as": "Six labelled 2x2 sheets at source resolution; Denham Golf Course cab originals also viewed separately.",
+    "sheets": [
+      {
+        "file": "review-sheets/northolt-park.png",
+        "sha256": "59b1c87b2c12db99f222431e79b18fdd5514b1aa485f0e53ec08c5d7d8937bb8"
+      },
+      {
+        "file": "review-sheets/south-ruislip.png",
+        "sha256": "67a5b03e971e881339e526b92ec159a05d9db7502ea82468985cd4123f5fd942"
+      },
+      {
+        "file": "review-sheets/west-ruislip.png",
+        "sha256": "fca46d3177f76a3b9789a280ec16c04a7793945015c2d3f14507eaeecf212a43"
+      },
+      {
+        "file": "review-sheets/denham.png",
+        "sha256": "450439818046523015da70c0ba6f057e4ce6daebbc66c7def463d9ce5e0b973a"
+      },
+      {
+        "file": "review-sheets/denham-golf-course.png",
+        "sha256": "2892f2ac50b08b0eb7ba4125428c31109eb075631a2c478b7a1039b36bfb622d"
+      },
+      {
+        "file": "review-sheets/gerrards-cross.png",
+        "sha256": "73cf54262762e944490adaa4418e550282f006255421c22ca10e38fbec88064b"
+      }
+    ]
+  },
+  "intentional_presentation_differences": [
+    "Bevy continuous solar lighting in ordinary play",
+    "Bevy tone mapping and soft shadows",
+    "The reference sun is frozen only for this comparison"
+  ],
+  "limits": [
+    "450 m view radius: this set does not certify distant skyline, long viewing distances, tile streaming, all LOD transitions or a complete driven service.",
+    "Paused summer/clear daylight captures only; snow, rain, night, reflections and motion are outside this review.",
+    "Bevy tone mapping, continuous solar lighting in ordinary play and soft shadows are intentional. The native sun was frozen for this comparison; identical sun direction does not make the two shading models photometrically identical.",
+    "The HUD and station labels occlude parts of the Bevy captures; hidden pixels are not accepted as inspected scenery.",
+    "Dynamic traffic, road vehicles, semaphore aspects and gauge needles differ and are not static scenery identity evidence.",
+    "No global visual pass is inferred from the passing camera/readiness comparison."
+  ],
+  "confirmed_differences_requiring_explicit_scope": [
+    {
+      "station": "west-ruislip",
+      "view": "cab",
+      "kind": "dynamic_occlusion",
+      "observation": "Extra Pullman in Bevy blocks part of the exterior scene; native has no train there.",
+      "impact": "Cannot certify trees/platforms behind that train from this pair."
+    },
+    {
+      "station": "denham-golf-course",
+      "view": "cab",
+      "kind": "vegetation_silhouette_and_coverage",
+      "observation": "The left tree row is tall and continuous in native, but rounded and separated with larger clearings in Bevy.",
+      "impact": "A remaining qualitative foliage difference; source/LOD attribution has not been established in this read-only screenshot review."
+    }
+  ],
+  "views": [
+    {
+      "station": "northolt-park",
+      "view": "exterior",
+      "native_image": "native/northolt-park-exterior.png",
+      "native_image_sha256": "364f2d7ae95e9947bbcf3b65e71d21650f8ffd75ad378317ba85ba60e8001754",
+      "bevy_image": "bevy/northolt-park.png",
+      "bevy_image_sha256": "da1c207f942c9306daa25cfd90c44022360cf50f9d65bfcb9bd2fd234b3816c4",
+      "visually_inspected": true,
+      "camera_readiness_checks_passed": true,
+      "observations": {
+        "buildings": "Station platform buildings, footbridge, rows of houses and shop facades correspond in footprint and recognizable textures. White shop fronts occur in both renderers.",
+        "vegetation": "Nearby trees and hedges retain cutout silhouettes; no opaque rectangular foliage quads seen. Stronger and softer Bevy shadows change the contrast.",
+        "transparency": "Platform fencing and vegetation cutouts remain open; train windows retain their recognizable texture/detail.",
+        "differences": [
+          "Bevy terrain, rails and roofs are darker under its tone mapping and shadows.",
+          "The outer terrain/culling boundary differs; distant black areas of the reference are not an asset identity check."
+        ]
+      }
+    },
+    {
+      "station": "northolt-park",
+      "view": "cab",
+      "native_image": "native/northolt-park-cab.png",
+      "native_image_sha256": "211bdffab9028c957fde9d5312c2f1bb5a231370551d6539086a1d5ca7030203",
+      "bevy_image": "bevy/northolt-park-cab.png",
+      "bevy_image_sha256": "2756227f1e3989368499aa9c9a0f5444a092484955299255c6a0fcd4e5e10dfb",
+      "visually_inspected": true,
+      "camera_readiness_checks_passed": true,
+      "observations": {
+        "buildings": "Cab desk, window pillars, telephone, instrument panel and visible roadside buildings correspond.",
+        "vegetation": "Trees along both sides are visible, with different shading/brightness.",
+        "transparency": "The windscreen is clear; exterior track and buildings remain visible without an opaque window surface.",
+        "differences": [
+          "Blue clear sky and distant terrain shading differ from the native muted sky.",
+          "HUD and station marker are intentional overlays absent in the native capture."
+        ]
+      }
+    },
+    {
+      "station": "south-ruislip",
+      "view": "exterior",
+      "native_image": "native/south-ruislip-exterior.png",
+      "native_image_sha256": "40296bdf6be8614a1200ac6435747c8a3ca01e589b0fff640766354dd7b04a0d",
+      "bevy_image": "bevy/south-ruislip.png",
+      "bevy_image_sha256": "bdca17f59c040fb4dbe4445976c6a6d854194fc70916e2303bb066acef88dc08",
+      "visually_inspected": true,
+      "camera_readiness_checks_passed": true,
+      "observations": {
+        "buildings": "Both platforms, shelters, station structure, warehouse and large square office block are present in corresponding positions.",
+        "vegetation": "Hedgerows delineate the same nearby parcels; no opaque alpha rectangles seen.",
+        "transparency": "Platform railings and fence gaps are visible; no solid alpha plane obscures the station.",
+        "differences": [
+          "Track ballast and platforms are darker in Bevy; foliage contrast and shadow filtering differ."
+        ]
+      }
+    },
+    {
+      "station": "south-ruislip",
+      "view": "cab",
+      "native_image": "native/south-ruislip-cab.png",
+      "native_image_sha256": "492b1a318c3ed03f6bdbfcbd192bc6f80c84e555242a10bba9046a46866b66d2",
+      "bevy_image": "bevy/south-ruislip-cab.png",
+      "bevy_image_sha256": "fc3e15e534ddf21a6aa2d298e3b2b95f6e6364b601376ff6077b8285cfdcfcb5",
+      "visually_inspected": true,
+      "camera_readiness_checks_passed": true,
+      "observations": {
+        "buildings": "Two industrial chimneys and their factory complex correspond beyond the right tracks; cab geometry remains recognizable.",
+        "vegetation": "Hedges and nearby trees remain visible with brighter leaf highlights in Bevy.",
+        "transparency": "Clear windscreen and thin wire fence are visible.",
+        "differences": [
+          "The visible semaphore arm orientation differs between these runtime captures; aspect/logic parity is not certified by this scene comparison.",
+          "Background terrain and sky differ; assets beyond the 450 m view radius are outside this review."
+        ]
+      }
+    },
+    {
+      "station": "west-ruislip",
+      "view": "exterior",
+      "native_image": "native/west-ruislip-exterior.png",
+      "native_image_sha256": "1fb0c500e7080fb6b55ea81790505c51893341066b0307e06450c9873ed1c6f9",
+      "bevy_image": "bevy/west-ruislip.png",
+      "bevy_image_sha256": "0fda61b9e8925e3d90668d915f37c81cb1bd926c92824ee7688fc9daa9589a4e",
+      "visually_inspected": true,
+      "camera_readiness_checks_passed": true,
+      "observations": {
+        "buildings": "The road overbridge, stairs, platform canopies, industrial sheds and station buildings correspond. Roof and wall textures remain recognizable.",
+        "vegetation": "The right-side line of trees and nearby hedge are present; cutout edges are not filled by rectangular backgrounds.",
+        "transparency": "Bridge/stair openings and railing gaps remain visible.",
+        "differences": [
+          "Additional road vehicles and their positions differ between simulations.",
+          "Soft shadows/tone mapping darken the bridge and station versus the native image."
+        ]
+      }
+    },
+    {
+      "station": "west-ruislip",
+      "view": "cab",
+      "native_image": "native/west-ruislip-cab.png",
+      "native_image_sha256": "e2ecb67d7e890845d4f889068e1e5c34f882a3240ac73a574d1142400a25c81f",
+      "bevy_image": "bevy/west-ruislip-cab.png",
+      "bevy_image_sha256": "42166f60526570501c6a36a221b3ac5a8411d8d8706c5683c1d577c1918e0ea4",
+      "visually_inspected": true,
+      "camera_readiness_checks_passed": true,
+      "observations": {
+        "buildings": "The bridge pier, opening and overhead structure correspond; the cab mesh and instruments remain in place.",
+        "vegetation": "The trees behind the right tracks are partly occluded by a train that is only present in the Bevy image.",
+        "transparency": "Clear windscreen; train windows show their authored detail.",
+        "differences": [
+          "A second Pullman occupies the right half of the exterior scene in Bevy and is absent from the native reference; those occluded pixels cannot validate platform/tree equivalence.",
+          "The camera position tolerance does not imply identical parallax against the nearby bridge pillar."
+        ]
+      }
+    },
+    {
+      "station": "denham",
+      "view": "exterior",
+      "native_image": "native/denham-exterior.png",
+      "native_image_sha256": "2182ee05985f795728d7b4077ae51cdf2253867f5e3265997beb325c2077e8fc",
+      "bevy_image": "bevy/denham.png",
+      "bevy_image_sha256": "bbf0207acdff15ad4aba97ef088b46b4912c6f50115cf7cc781e1a88e20cae45",
+      "visually_inspected": true,
+      "camera_readiness_checks_passed": true,
+      "observations": {
+        "buildings": "Platforms, nearby houses, terraces, roads and hedges retain corresponding layout. No blank white fallback building is apparent.",
+        "vegetation": "Trees along the road and station remain present with stronger Bevy shading.",
+        "transparency": "Fence gaps and individual tree silhouettes remain visible.",
+        "differences": [
+          "Some house facades have substantially different brightness/color under the renderers; this review does not certify material photometry.",
+          "Terrain and distant edge appearance differ at the view boundary."
+        ]
+      }
+    },
+    {
+      "station": "denham",
+      "view": "cab",
+      "native_image": "native/denham-cab.png",
+      "native_image_sha256": "8a2b7ae95911ba2d2a3ec74ec79d4f79d38f6b337cf1ad662f61a9b504b06070",
+      "bevy_image": "bevy/denham-cab.png",
+      "bevy_image_sha256": "6516c0e82b1a3f507ae9e16dd4eb1337b49b02b086d13bace8c60815943dfe02",
+      "visually_inspected": true,
+      "camera_readiness_checks_passed": true,
+      "observations": {
+        "buildings": "Signal box and nearby built structures remain visible in corresponding directions; cab geometry and instruments correspond.",
+        "vegetation": "The dense right-side tree line is present with different shading and silhouette detail.",
+        "transparency": "Windscreen stays clear and individual telegraph wires are visible.",
+        "differences": [
+          "Semaphore arm orientations differ between the runtime captures; signal state is not a scenery/material acceptance result.",
+          "Bevy rails/ground are more contrasted and the clear sky is blue rather than muted."
+        ]
+      }
+    },
+    {
+      "station": "denham-golf-course",
+      "view": "exterior",
+      "native_image": "native/denham-golf-course-exterior.png",
+      "native_image_sha256": "fcc388e23bf9d1a1524f6e54076184caa5a2d099e7f8371db73bcecb076c4672",
+      "bevy_image": "bevy/denham-golf-course.png",
+      "bevy_image_sha256": "58c7e75f5f2355599351ad6acbec9167f2ed5ba778db26f494ea6d98501976a3",
+      "visually_inspected": true,
+      "camera_readiness_checks_passed": true,
+      "observations": {
+        "buildings": "House rows and curved road retain their layout and roof/wall texture identities.",
+        "vegetation": "Forests and nearby trees remain recognizable; their silhouettes and shading are not identical.",
+        "transparency": "Foliage outlines have visible cutouts, without solid rectangular sprite backgrounds.",
+        "differences": [
+          "Forest shading and apparent tree spacing differ. This image alone cannot separate authored forest sampling from LOD/culling."
+        ]
+      }
+    },
+    {
+      "station": "denham-golf-course",
+      "view": "cab",
+      "native_image": "native/denham-golf-course-cab.png",
+      "native_image_sha256": "451d064ed51aae00c1a586d85bbaf16d4d45fb21e41634c90fda65190e95eb64",
+      "bevy_image": "bevy/denham-golf-course-cab.png",
+      "bevy_image_sha256": "343b71c8b4601e29a2669658136fa718e2c5da8c839a628c20ec5a2392927045",
+      "visually_inspected": true,
+      "camera_readiness_checks_passed": true,
+      "observations": {
+        "buildings": "White fence, houses behind the left trees and telegraph poles remain visible; cab mesh and control desk correspond.",
+        "vegetation": "The right forest corresponds, but the left row differs visibly: native shows taller continuous foliage; Bevy shows rounded separated crowns with houses visible through larger clearings.",
+        "transparency": "White fence gaps and right forest cutouts remain visible; clear windscreen.",
+        "differences": [
+          "Left tree-row silhouette/coverage is an unresolved visual difference, not silently accepted as lighting or LOD.",
+          "One paused view cannot demonstrate foliage transition stability while travelling."
+        ]
+      }
+    },
+    {
+      "station": "gerrards-cross",
+      "view": "exterior",
+      "native_image": "native/gerrards-cross-exterior.png",
+      "native_image_sha256": "f749087d452c488c313134dea54bced3a78bc1fcf0e0c4565fb910028ff98dba",
+      "bevy_image": "bevy/gerrards-cross.png",
+      "bevy_image_sha256": "92d7f606cbe293a6462cf7cca2917e81dace61691b6a00fc71583d808f6937b4",
+      "visually_inspected": true,
+      "camera_readiness_checks_passed": true,
+      "observations": {
+        "buildings": "Platform buildings, footbridge, trackside brick building and nearby house rows correspond in layout and recognizable textures.",
+        "vegetation": "Near trees and hedges appear in corresponding areas with softer/darker shadows.",
+        "transparency": "Footbridge/railings retain open gaps; no opaque foliage rectangles seen.",
+        "differences": [
+          "Bevy embankments and track are darker; shadows have softer edges than native.",
+          "Far housing/terrain boundary differs at the limited horizon."
+        ]
+      }
+    },
+    {
+      "station": "gerrards-cross",
+      "view": "cab",
+      "native_image": "native/gerrards-cross-cab.png",
+      "native_image_sha256": "dab3818b5a8eca7add3c1130ea1d82124854bf8ea0a22ef5b3eb3cd4dd9175b0",
+      "bevy_image": "bevy/gerrards-cross-cab.png",
+      "bevy_image_sha256": "e5e0110bcf271b3294539418e1c89c102a8062e11bbc4b231b3ff35159a7f4d9",
+      "visually_inspected": true,
+      "camera_readiness_checks_passed": true,
+      "observations": {
+        "buildings": "The brick trackside building, cuttings, rails and nearby housetops remain visible in corresponding positions.",
+        "vegetation": "Trees on the embankment are visible, with different leaf brightness and horizon silhouette.",
+        "transparency": "Windscreen and visible wire-fence gaps remain clear.",
+        "differences": [
+          "Cab framing is consistent within declared tolerances, while near parallax and the building shade differ.",
+          "Signal/instrument state is dynamic and not certified by this scene review."
+        ]
+      }
+    }
+  ],
+  "summary": "All 12 Bevy views were inspected with their native references. Nearby station buildings, bridges, house textures, cab geometry and windscreen/fence cutouts remain recognizable, with no gross opaque alpha rectangles or blank replacement buildings apparent in the reviewed pixels. Lighting/sky/shadows differ intentionally. Recorded vegetation and dynamic-occlusion differences prevent a blanket claim of identical scenery."
+}

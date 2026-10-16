@@ -1,0 +1,70 @@
+{
+  "effective_rust_params": {
+    "coal_consumption_kg_per_s": 0.7127556,
+    "cylinder_bore_m": 0.4572,
+    "cylinder_count": 2,
+    "driving_wheel_radius_m": 0.699,
+    "evaporation_rate_kg_per_s": 3.239794497804049,
+    "initial_coal_kg": 3302.1524536,
+    "initial_water_kg": 6985.322498,
+    "operation": {
+      "boiler_water_capacity_kg": 5848.300980123034,
+      "injector_rate_kg_s": 5.0,
+      "max_fire_mass_kg": 979.1504,
+      "max_firing_rate_kg_s": 0.752476156,
+      "thermodynamics": {
+        "boiler_efficiency": 0.7,
+        "boiler_volume_m3": 5.8483009801230335,
+        "coal_heat_j_kg": 33400000.0,
+        "cylinder_efficiency": 0.12,
+        "feedwater_c": 20.0,
+        "heat_loss_w": 15000.0,
+        "idle_steam_kg_s": 0.05,
+        "startup": "or_hot"
+      }
+    },
+    "piston_stroke_m": 0.6604,
+    "working_pressure_bar": 11.031611669068798
+  },
+  "kind": "explicit_rust_cycle_overlay_on_read_only_original_stock",
+  "native_speed_force_pressure_heat_flow_prescribed": false,
+  "native_state_prescribed": false,
+  "original_imported_params": {
+    "coal_consumption_kg_per_s": 0.5,
+    "cylinder_bore_m": 0.4572,
+    "cylinder_count": 2,
+    "driving_wheel_radius_m": 0.699,
+    "evaporation_rate_kg_per_s": 2.6459554916666668,
+    "initial_coal_kg": 3302.1524536,
+    "initial_water_kg": 6985.322498,
+    "operation": {
+      "boiler_water_capacity_kg": 2831.6846592,
+      "injector_rate_kg_s": 5.0,
+      "max_fire_mass_kg": 907.18474,
+      "max_firing_rate_kg_s": 1.0
+    },
+    "piston_stroke_m": 0.6604,
+    "working_pressure_bar": 11.031611669068798
+  },
+  "original_initialized_params": {
+    "boiler_volume_ft3": 206.5308,
+    "coal_heat_kj_kg": 33400.0,
+    "evaporation_area_m2": 159.254852,
+    "firing_is_manual": true,
+    "has_tender_coupled": true,
+    "heat_material_thickness_factor": 1.0,
+    "heat_transfer_w_m2_k": 45.0,
+    "hp_cylinders": 2,
+    "hp_diameter_m": 0.4572,
+    "hp_stroke_m": 0.6604,
+    "max_fire_mass_kg": 979.1504,
+    "max_firing_rate_kg_s": 0.752476156,
+    "max_fuel_burn_grate_kg_s": 0.7127556,
+    "max_pressure_psi": 160.0,
+    "max_steam_output_lb_s": 7.14252424,
+    "settings_hot_start": true,
+    "settings_simple_control_physics": true,
+    "settings_use_advanced_adhesion": false
+  },
+  "save_restore_scope": "No snapshot is emitted: this diagnostic uses a declared in-memory model overlay, not an author scenario replacement."
+}

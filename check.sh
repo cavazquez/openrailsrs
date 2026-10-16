@@ -61,7 +61,10 @@ unset OPENRAILSRS_CAPTURE_SOLAR_DIRECTION
 unset OPENRAILSRS_CAPTURE_SANDER
 unset OPENRAILSRS_CAPTURE_EQUIPMENT OPENRAILSRS_CAPTURE_BUG_REPORT
 unset OPENRAILSRS_CAPTURE_ACTIONS OPENRAILSRS_SHADER_DIAGNOSTICS
+unset OPENRAILSRS_CAPTURE_START_PAUSED
 unset OPENRAILSRS_SOAK_SECONDS OPENRAILSRS_SOAK_OUT OPENRAILSRS_SOAK_ROUTES
+unset OPENRAILSRS_NETWORK_HOST OPENRAILSRS_NETWORK_JOIN OPENRAILSRS_NETWORK_IDENTITY
+unset OPENRAILSRS_NETWORK_ROLE OPENRAILSRS_NETWORK_TRAIN OPENRAILSRS_NETWORK_KEY_FILE OPENRAILSRS_NETWORK_RESTORE
 
 echo "==> rustfmt (cargo fmt --check)"
 cargo fmt --all -- --check
@@ -72,7 +75,7 @@ cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
 echo "==> tests"
 # Serial: several suites share process-global counters and environment variables.
 # Project regressions share one Bevy feature set.
-cargo test --locked --workspace --all-features -- --test-threads=1
+cargo test --locked --workspace --all-features --no-fail-fast -- --test-threads=1
 
 # Excluded vendor crates retain their own features; select only CPU regression modules.
 echo "==> pinned Bevy lifecycle regressions (no GPU)"
@@ -106,6 +109,7 @@ python3 -m unittest discover -s scripts -p test_packaging.py
 python3 -m unittest discover -s scripts -p test_formation_physics.py
 python3 -m unittest discover -s scripts -p test_visual_goldens.py
 python3 -m unittest discover -s scripts -p test_station_cameras.py
+python3 -m unittest discover -s scripts -p test_batch_comparisons.py
 python3 -m unittest discover -s scripts -p test_streaming_cab.py
 python3 scripts/build_website.py --check
 

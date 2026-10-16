@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "kind": "exact_single_input_only_projection_verified",
+  "rows": 30006,
+  "initial_vehicles": [
+    0,
+    7
+  ],
+  "initial_buffers": {
+    "0": {
+      "x": [
+        0.0,
+        0.0
+      ],
+      "y": [
+        0.0,
+        0.0
+      ],
+      "base": 0.0
+    },
+    "7": {
+      "x": [
+        0.0,
+        0.0
+      ],
+      "y": [
+        0.0,
+        0.0
+      ],
+      "base": 0.0
+    }
+  },
+  "post_step_values_bit_exact": true,
+  "post_step_filter_buffers_all_omitted": true,
+  "output": "examples/chiltern_local/physics/native-adhesion-inputs.csv",
+  "output_sha256": "355be676ad0d64120aa66014efd3f31f18d5848e863451d61ecc01d5570155a7",
+  "trace_sha256": "ad9e690435d784df243c8a49bfdb37137c6e5f98f8941045adfde27e4500a7e2",
+  "observation_sha256": "3392f303463a7d54b48cda1bfd8bd260855ffcc952fb77747e9bf3eea71a1103",
+  "receipt_sha256": "b4b1cf8234cd1709b350ccd3c6018a11e1e149b6fb7d4a80267b9cbe3fbad352",
+  "private_release_sha256": "7bdca5907ba41cf2ddf83de69e82be3c841a2b83fb227457244389bf93bd6e78",
+  "rust_executed": false,
+  "verification_method": "Python IEEE754 Single bit equality only; original C# execution recorded separately in receipt.json"
+}

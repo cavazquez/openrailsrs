@@ -344,6 +344,7 @@ fn native_geared_diesel_engine_rpm_clutch_fuel_and_force_at_800_prescribed_ticks
             connected: true,
             battery: true,
             params: openrailsrs_formats::DieselOperatingParams {
+                hydraulic: None,
                 gearbox: Some(profile.clone()),
                 thermal: Default::default(),
                 // The native subsystem updates engine flow, not the locomotive

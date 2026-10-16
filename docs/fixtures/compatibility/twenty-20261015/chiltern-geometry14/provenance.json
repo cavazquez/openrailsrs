@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "source_only": true,
+  "reference": "Open Rails1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "inputs": {
+    "ROUTES/Chiltern/Chiltern.tdb": "acc945a063dce6a3272bfae610c48b2aff939d2435d5b1db07f2b36614e7b47a",
+    "ROUTES/Chiltern/Chiltern.trk": "6db1a0902bcf8521dab2eda59106ea7070688597b27c0f83f0a1788e2b8d585c",
+    "ROUTES/Chiltern/OpenRails/Chiltern.trk": "693cdc497ff1f96916d593ea9001277fcd5fd2c7ca0961915fcda603fdffd09d",
+    "GLOBAL/tsection.dat": "7e05b50bb86a279c0881d05248da220b0804e34aa0452633baf8ba95361888fa",
+    "ROUTES/Chiltern/tsection.dat": "d3461dc5ab7c88442905ded34e7947c7374f45034f0f7f8bbdbecf40d92e9dc9",
+    "ROUTES/Chiltern/OpenRails/tsection.dat": "fff0b45ddf8387f6746f765868f1298760a45cd6693b5b08d5ebac65818726a4"
+  },
+  "command": [
+    "target/debug/openrailsrs",
+    "import-msts",
+    "<original-content>/ROUTES/Chiltern",
+    "--out-dir",
+    "<fresh-output>"
+  ],
+  "import_binary_sha256": "216f4c859d1472ed7264aad093a083bf4a3d0a29cd333d83ceb6f84928af8fc2",
+  "full_import_sha256": "31e0dfa601196b0361fe53be51ad77646fd18704a36809af8975631cb1c565b3",
+  "projection_sha256": "490dccd5719269f8a4500c0f5336b68ce7f0638492753b9e774f94b281413357",
+  "projection_edges": 32,
+  "supersedes": "../chiltern-geometry13: earlier diagnostic import selected metric defaults before canonical TRK reader fix; preserve its original bytes and scope",
+  "scope": "All six directed edges of frozen three-station corridor and other already matching legacy edges; not six-station whole-route parity",
+  "original_content_versioned": false
+}

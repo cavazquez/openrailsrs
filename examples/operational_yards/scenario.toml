@@ -1,0 +1,65 @@
+[scenario]
+name = "Patio: una tripulación AI rodea sus coches"
+description = "F9, Patio, iniciar crew-loop. La AI asegura y corta dos vagones, libra ambos cambios por otra vía y recoge por el frente. Los vagones permanecen en su vía."
+
+[route]
+path = "runaround"
+start = "observe"
+destination = "observe_end"
+start_offset_m = 100.0
+assume_signals_clear = true
+
+[train]
+consist = "consists/loco.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+penalty_per_second_late = 0.0
+
+[simulation]
+duration = 2400.0
+time_step = 0.05
+seed = 42
+multi_body = true
+coupler_kind = "freight"
+legacy_power_cap = false
+train_air_full_release_s = 3.0
+
+[[simulation.yard_operations.run_arounds]]
+id = "crew-loop"
+service = "yard-crew"
+keep = 1
+section = "coches-estacionados"
+detach_chainage_m = 180.0
+pickup_chainage_m = 180.0
+automatic = false
+[[simulation.yard_operations.run_arounds.legs]]
+edges = ["upper", "right"]
+start_offset_m = 180.0
+end_chainage_m = 230.0
+reversed = false
+[[simulation.yard_operations.run_arounds.legs]]
+edges = ["right_r", "bypass1", "bypass2", "bypass3", "left"]
+start_offset_m = 40.0
+end_chainage_m = 300.0
+reversed = true
+[[simulation.yard_operations.run_arounds.legs]]
+edges = ["left_r", "upper", "right"]
+start_offset_m = 40.0
+end_chainage_m = 299.0
+reversed = false
+
+[output]
+csv = "run_runaround.csv"
+metadata = "run_runaround.json"
+
+[[extra_trains]]
+id = "yard-crew"
+consist = "consists/runaround.con"
+start = "a"
+destination = "r"
+start_offset_m = 180.0
+waypoints = ["a", "b", "r"]
+parked = true
+output_csv = "yard-crew.csv"

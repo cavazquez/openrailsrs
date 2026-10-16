@@ -71,6 +71,13 @@ impl LiveDriveSession {
                 ) =>
             {
                 match (&self.state.boiler_state, &self.physics.steam_params) {
+                    (Some(b), _) if b.native_or161.is_some() => {
+                        if kind == 5 {
+                            (b.initial_tender_water_kg - b.tender_water_kg).max(0.)
+                        } else {
+                            (b.initial_coal_kg - b.coal_kg).max(0.)
+                        }
+                    }
                     (Some(b), Some(p)) if kind == 5 => {
                         (p.initial_water_kg - b.tender_water_kg).max(0.)
                     }
@@ -265,7 +272,7 @@ impl LiveDriveSession {
         };
         let delay_dt = op.delay_remaining_s.min(dt - opening_dt);
         op.delay_remaining_s -= delay_dt;
-        let delivered = (op.station.feed_kg_s * (dt - opening_dt - delay_dt))
+        let mut delivered = (op.station.feed_kg_s * (dt - opening_dt - delay_dt))
             .min(remaining)
             .min(room);
         if let Some(c) = self.state.freight.iter_mut().find(|c| {
@@ -280,14 +287,46 @@ impl LiveDriveSession {
             }
         } else {
             match op.station.pickup_type {
-                5 => {
+                5 | 6 => {
                     if let Some(b) = &mut self.state.boiler_state {
-                        b.tender_water_kg += delivered;
-                    }
-                }
-                6 => {
-                    if let Some(b) = &mut self.state.boiler_state {
-                        b.coal_kg += delivered;
+                        let native = b.native_or161.is_some();
+                        if native {
+                            let supply = if op.station.pickup_type == 5 {
+                                crate::native_steam::NativeSteamSupply::Water
+                            } else {
+                                crate::native_steam::NativeSteamSupply::Coal
+                            };
+                            match crate::native_steam::replenish_boiler(b, supply, delivered) {
+                                Ok(accepted) => delivered = accepted,
+                                Err(_) => {
+                                    // Invalid native inventories cannot be
+                                    // refilled through a legacy mirror. Stop
+                                    // transferring without charging the source.
+                                    delivered = 0.;
+                                    op.returning = true;
+                                }
+                            }
+                        } else if op.station.pickup_type == 5 {
+                            b.tender_water_kg += delivered;
+                        } else {
+                            b.coal_kg += delivered;
+                        }
+                        let active = self.state.active_cab_vehicle.unwrap_or(0);
+                        if native
+                            && let Some(entry) = self
+                                .state
+                                .steam_boilers
+                                .iter_mut()
+                                .find(|entry| entry.vehicle == active)
+                        {
+                            // A same-tick save must see the authoritative
+                            // native controller inventory and its mirror in
+                            // both representations of the active boiler.
+                            entry.boiler = b.clone();
+                        }
+                    } else {
+                        delivered = 0.;
+                        op.returning = true;
                     }
                 }
                 7 if self
@@ -370,6 +409,78 @@ mod tests {
         d.fuel_l -= 10.;
         d.consumed_l = 10.;
         s
+    }
+    fn native_steam(kind: u32) -> LiveDriveSession {
+        let directory =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/physics_lab");
+        let scenario =
+            openrailsrs_scenarios::load_scenario(directory.join("scenario_native_steam.toml"))
+                .unwrap();
+        let mut s = LiveDriveSession::from_scenario(&directory, &scenario).unwrap();
+        s.intake_points[0] = vec![openrailsrs_formats::IntakePoint {
+            offset_m: -2.,
+            width_m: 1.,
+            pickup_type: kind,
+        }];
+        s.driver_throttle = 0.;
+        s.driver_brake = 1.;
+        s.steam_command(crate::steam::SteamCommand::Injector1)
+            .unwrap();
+        // Deplete the real native reservoirs through its normal thermal and
+        // brake cycle. No observed native trajectory is an initialization.
+        for _ in 0..400 {
+            s.step_realtime(0.05, |_| {});
+        }
+        s
+    }
+    #[test]
+    fn native_refill_updates_controllers_finite_supply_and_same_tick_save() {
+        for kind in [5, 6] {
+            let mut s = native_steam(kind);
+            let b = s.state.boiler_state.as_mut().unwrap();
+            // A recorded fusible-plug failure cannot be repaired by a fuel
+            // installation. Keep the native state and its checked mirror equal.
+            b.native_or161.as_mut().unwrap().FusiblePlugIsBlown = true;
+            b.low_water_failure = true;
+            s.state.steam_boilers[0].boiler = b.clone();
+            let before = b.clone();
+            let room = s.refill_room_kg(0, kind);
+            assert!(room > 0., "native resource did not deplete: kind {kind}");
+            s.begin_refill(station(kind), 0, 0., 1.).unwrap();
+            s.tick_refill(3.);
+            let after = s.state.boiler_state.as_ref().unwrap();
+            let received = if kind == 5 {
+                after.tender_water_kg - before.tender_water_kg
+            } else {
+                after.coal_kg - before.coal_kg
+            };
+            assert!(received > 0. && received <= room.min(4.));
+            assert_eq!(s.state.refill_used_kg["1:2:3"], received);
+            assert_eq!(s.refilling.as_ref().unwrap().delivered_kg, received);
+            assert_eq!(s.state.steam_boilers[0].boiler, *after);
+            let a = after.native_or161.as_ref().unwrap();
+            let b = before.native_or161.as_ref().unwrap();
+            assert_eq!(a.BoilerMassLB, b.BoilerMassLB);
+            assert_eq!(a.BoilerHeatBTU, b.BoilerHeatBTU);
+            assert_eq!(a.FireMassKG, b.FireMassKG);
+            assert_eq!(a.BoilerPressurePSI, b.BoilerPressurePSI);
+            assert!(a.FusiblePlugIsBlown && after.low_water_failure);
+            assert!(if kind == 5 {
+                a.WaterControllerValue > b.WaterControllerValue
+                    && a.FuelControllerValue == b.FuelControllerValue
+            } else {
+                a.FuelControllerValue > b.FuelControllerValue
+                    && a.WaterControllerValue == b.WaterControllerValue
+            });
+            let encoded = serde_json::to_vec(&s.snapshot()).unwrap();
+            let mut restored = native_steam(kind);
+            restored
+                .restore_snapshot(serde_json::from_slice(&encoded).unwrap())
+                .unwrap();
+            assert_eq!(restored.state.boiler_state, s.state.boiler_state);
+            assert_eq!(restored.state.steam_boilers, s.state.steam_boilers);
+            assert_eq!(restored.state.refill_used_kg, s.state.refill_used_kg);
+        }
     }
     #[test]
     fn finite_diesel_supply_waits_for_connection_and_preserves_consumption_and_save() {

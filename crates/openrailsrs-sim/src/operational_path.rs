@@ -172,6 +172,20 @@ impl LiveDriveSession {
             return false;
         }
         let delta = self.head_chainage_m() - leg.end_chainage_m;
+        if self.operational_leg + 1 == self.operational_legs.len()
+            && self
+                .state
+                .yard_operations
+                .pool_members
+                .get(&self.service_id)
+                .is_some_and(|m| m.dispatched)
+            && (delta.abs() > 0.008 || self.velocity_mps().abs() > 0.005)
+        {
+            // Returning physical stock requires a real stop. Finishing this
+            // service at the ordinary 0.1m/s PAT tolerance would freeze the
+            // actor before its crew could secure the material in the pool.
+            return false;
+        }
         if delta.abs() > 10.0 || self.velocity_mps() > 0.1 {
             self.operational_wait_started = None;
             return false;
@@ -197,6 +211,13 @@ impl LiveDriveSession {
                     .pat_operations_completed
                     .contains(&self.operational_leg)
                 {
+                    if self.state.yard_operations.human_driven {
+                        self.driver_throttle = 0.;
+                        self.driver_brake = 1.;
+                        self.state.yard_operations.notice =
+                            "Corte PAT pendiente de una orden de la autoridad de red".into();
+                        return false;
+                    }
                     if keep == 0
                         || keep >= self.formation.coupled_count
                         || self.cab_vehicle() >= keep
@@ -262,6 +283,38 @@ impl LiveDriveSession {
                 .iter()
                 .any(|lock| lock.node == switch.node && lock.position != position)
             {
+                return false;
+            }
+        }
+        if next.edges != self.state.path_edges && !self.physics.rack.vehicles.is_empty() {
+            self.state.yard_operations.notice =
+                "El cambio de itinerario requiere mapear la cremallera al nuevo subtrayecto".into();
+            return false;
+        }
+        // The same five-metre point clearance used by the shared dispatcher
+        // also applies to an AI/native reversal. Stock on either branch cannot
+        // be bypassed by changing graph positions while installing a leg.
+        for switch in &next.switches {
+            let desired = match switch.position {
+                openrailsrs_scenarios::SwitchPositionDef::Straight => SwitchPosition::Straight,
+                openrailsrs_scenarios::SwitchPositionDef::Diverging => SwitchPosition::Diverging,
+            };
+            if self.graph.switch_position(&switch.node) == Some(desired) {
+                continue;
+            }
+            let touched = self
+                .own_track_occupancy()
+                .into_iter()
+                .chain(self.external_track_occupancy.iter().cloned())
+                .any(|p| {
+                    self.graph.edge(&p.edge).is_some_and(|e| {
+                        (e.from.0 == switch.node && p.start_m <= 5.)
+                            || (e.to.0 == switch.node && p.end_m >= e.length_m - 5.)
+                    })
+                });
+            if touched {
+                self.state.yard_operations.notice =
+                    "Esperando que todas las ruedas libren el cambio antes de invertir".into();
                 return false;
             }
         }

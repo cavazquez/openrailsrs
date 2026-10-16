@@ -1560,6 +1560,8 @@ mod tests {
         catalog.shapes.insert(
             shape_idx,
             TrackShapeDef {
+                tunnel_shape: None,
+                num_paths: None,
                 file_name: format!("test_{shape_idx}.s"),
                 road_shape: false,
                 paths: vec![TrackShapePath {
@@ -1590,6 +1592,8 @@ mod tests {
         catalog.shapes.insert(
             99,
             TrackShapeDef {
+                tunnel_shape: None,
+                num_paths: None,
                 file_name: "curve.s".into(),
                 road_shape: false,
                 paths: vec![TrackShapePath {

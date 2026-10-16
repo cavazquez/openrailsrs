@@ -124,3 +124,8 @@ pub use timetable::{
 
 pub mod read_trace;
 pub mod resource_links;
+
+pub use typed::native_steam::{
+    NativeSteamBoilerType, NativeSteamBrakeKind, NativeSteamBrakeNotch, NativeSteamParams,
+    parse_native_steam161,
+};

@@ -25,3 +25,35 @@ scripts/capture_operational_signals_reference.py -text
 scripts/capture_track_sound_reference.py -text
 # Raw test output keeps its terminal newline and byte hashes.
 docs/fixtures/operations/**/*.log -text whitespace=-blank-at-eof
+
+# Full-activity native capture source is pinned before running it.
+tools/openrails-reference/ActivityTrajectory.cs -text
+tools/openrails-reference/PhysicalSystemsReference.cs -text
+# Additive tunnel diagnostics and derived CPU fixture retain literal byte hashes.
+tools/openrails-reference/ActivityTrajectoryDiagnostics.cs -text
+scripts/extract_tunnel_reference.py -text
+oracles/tunnel-161-protocol.json -text
+
+# Keep this batch of hashed captures identical across checkout platforms.
+docs/fixtures/compatibility/twenty-20261015/** -text whitespace=cr-at-eol,-blank-at-eof
+docs/fixtures/compatibility/coupling-twenty-systems-20261015/** -text whitespace=cr-at-eol,-blank-at-eof
+docs/fixtures/compatibility/coupling-twenty-systems-final-20261015/** -text whitespace=cr-at-eol,-blank-at-eof
+oracles/coupling-reference-provenance.json -text
+oracles/coupling-rust-twenty-systems-20261015.json -text
+oracles/steam-cycle-161-execution.json -text
+oracles/steam-cycle-161-protocol.json -text
+scripts/capture_steam_cycle_reference.py -text
+scripts/extract_steam_cycle_fixture.py -text
+scripts/publish_steam_cycle_reference.py -text
+tools/openrails-reference/SteamCycleReference.cs -text
+oracles/coupling-rust-twenty-systems-final-20261015.json -text
+docs/NATIVE_PLAIN_AIR.md -text
+docs/NATIVE_TUNNEL_RESISTANCE.md -text
+
+docs/fixtures/compatibility/coupling-twenty-systems-finalcheck-20261016/** -text whitespace=cr-at-eol,-blank-at-eof
+
+oracles/coupling-rust-twenty-systems-finalcheck-20261016.json -text
+
+examples/chiltern_local/physics/native-adhesion-inputs.csv -text
+docs/fixtures/compatibility/coupling-twenty-systems-geometry-20261016/** -text whitespace=cr-at-eol,-blank-at-eof
+oracles/coupling-rust-twenty-systems-geometry-20261016.json -text

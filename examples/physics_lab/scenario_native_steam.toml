@@ -1,0 +1,27 @@
+[scenario]
+name="Ciclo vapor OR1.6.1: laboratorio manual propio"
+description="Selección explícita por ENG, carbón/simple/inyectores/vacío. Puerto en validación: no declarar paridad antes de sus comparaciones originales. Apariencia y recursos propios."
+[route]
+path="route"
+start="a"
+destination="b"
+start_offset_m=100.0
+assume_signals_clear=true
+[train]
+consist="consists/native_steam.con"
+[simulation]
+duration=120.0
+time_step=0.05
+seed=20261015
+multi_body=true
+legacy_power_cap=false
+[simulation.native_physics]
+ambient_c=20.0
+adhesion_factor=1.0
+simple_control_physics=true
+[gameplay]
+objective="arrive"
+difficulty="normal"
+[output]
+csv="run.csv"
+metadata="run.json"

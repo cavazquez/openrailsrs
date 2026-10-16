@@ -1,0 +1,9 @@
+{
+  "status": "failed_or_incomplete",
+  "reason": "No actual movement in the chronology",
+  "completed_cases": [
+    "vertical-on",
+    "vertical-off"
+  ],
+  "scope": "Retain raw outputs; never reinterpret this failure as acceptance."
+}

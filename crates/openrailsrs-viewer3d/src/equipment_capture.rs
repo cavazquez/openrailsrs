@@ -12,6 +12,27 @@ enum Action {
         after: usize,
     },
     Recouple,
+    Yard {
+        command: openrailsrs_sim::operational_yards::YardCommand,
+    },
+    Drive {
+        throttle: f64,
+        brake: f64,
+        direction: f64,
+    },
+    Rack {
+        vehicle: usize,
+        engaged: bool,
+    },
+    Irregularities {
+        enabled: bool,
+    },
+    Derailment {
+        enabled: bool,
+    },
+    Panel {
+        name: String,
+    },
     Restore,
     TakeControl {
         service: usize,
@@ -76,6 +97,8 @@ pub struct EquipmentCapture {
 }
 #[derive(bevy::ecs::system::SystemParam)]
 pub struct CaptureTransfer<'w> {
+    ui: ResMut<'w, crate::player_ui::PlayerUiState>,
+    network: Option<ResMut<'w, crate::multiplayer::MultiplayerState>>,
     content: Res<'w, crate::player_launch::ActivePlayerContent>,
     settings: Res<'w, crate::player_settings::PlayerSettings>,
     look: Res<'w, crate::camera::DriverLookOffset>,
@@ -142,6 +165,84 @@ pub fn apply(
             Action::Car { vehicle, operation } => live.session.operate_car(*vehicle, *operation),
             Action::Uncouple { after } => live.session.uncouple_after(*after),
             Action::Recouple => live.session.recouple(),
+            Action::Drive {
+                throttle,
+                brake,
+                direction,
+            } => {
+                if let Some(reason) =
+                    crate::multiplayer::deny_local_mutation(transfer.network.as_deref())
+                {
+                    Err(reason.into())
+                } else if !throttle.is_finite()
+                    || !brake.is_finite()
+                    || !(0. ..=1.).contains(throttle)
+                    || !(0. ..=1.).contains(brake)
+                    || ![0., 0.5, 1.].contains(direction)
+                {
+                    Err("Invalid QA driving controls".into())
+                } else {
+                    live.session.driver_throttle = *throttle;
+                    live.session.driver_brake = *brake;
+                    live.session.driver_direction = *direction;
+                    Ok(())
+                }
+            }
+            Action::Yard { command } => {
+                if let Some(reason) =
+                    crate::multiplayer::deny_local_mutation(transfer.network.as_deref())
+                {
+                    Err(reason.into())
+                } else {
+                    let l = &mut *live;
+                    l.traffic.command_yard(&mut l.session, command.clone())
+                }
+            }
+            Action::Rack { vehicle, engaged } => {
+                if let Some(reason) =
+                    crate::multiplayer::deny_local_mutation(transfer.network.as_deref())
+                {
+                    Err(reason.into())
+                } else {
+                    live.session.state.rack.request(*vehicle, *engaged)
+                }
+            }
+            Action::Irregularities { enabled } | Action::Derailment { enabled } => {
+                if let Some(reason) =
+                    crate::multiplayer::deny_local_mutation(transfer.network.as_deref())
+                {
+                    Err(reason.into())
+                } else {
+                    if matches!(
+                        state.actions[index].operation,
+                        Action::Irregularities { .. }
+                    ) {
+                        live.session.set_vertical_irregularities_enabled(*enabled);
+                    } else {
+                        live.session.set_derailment_enabled(*enabled);
+                    }
+                    Ok(())
+                }
+            }
+            Action::Panel { name } => match name.as_str() {
+                "network" => {
+                    if let Some(network) = transfer.network.as_mut() {
+                        network.open = true;
+                        network.revision += 1;
+                    }
+                    Ok(())
+                }
+                "yard" | "traction" | "none" => {
+                    transfer.ui.panel = match name.as_str() {
+                        "yard" => crate::player_ui::PlayerPanel::Yard,
+                        "traction" => crate::player_ui::PlayerPanel::Traction,
+                        _ => crate::player_ui::PlayerPanel::None,
+                    };
+                    transfer.ui.rebuild = true;
+                    Ok(())
+                }
+                _ => Err("Unknown capture panel".into()),
+            },
             Action::TakeControl { service } | Action::CoupleService { service } => (|| {
                 let coupling =
                     matches!(state.actions[index].operation, Action::CoupleService { .. });
@@ -321,6 +422,9 @@ pub fn apply(
             .results
             .push(serde_json::json!({"index":index,"result":result,
                 "time_s":live.session.time_s(), "boarding_progress":live.session.gameplay.boarding_progress(),
+                "odometer_m":live.session.state.odometer_m,
+                "speed_mps":live.session.velocity_mps(),
+                "controls":{"throttle":live.session.driver_throttle,"brake":live.session.driver_brake,"direction":live.session.driver_direction},
                 "passengers":live.session.state.passengers,
                 "refilling":live.session.refilling,
                 "camera_mode":format!("{:?}",*camera_mode),

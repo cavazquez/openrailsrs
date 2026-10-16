@@ -1,0 +1,739 @@
+{
+  "schema": 1,
+  "scope": "Camera/light equivalence and readiness; content requires visual inspection and geometry oracles, not a global pixel score",
+  "reference": "Open Rails 1.6.1",
+  "tolerances_predeclared": {
+    "camera": {
+      "position_error_m": 3.0,
+      "direction_error_deg": 1.0,
+      "fov_error_deg": 0.05,
+      "aspect_error": 0.001
+    },
+    "solar_component": 5e-06,
+    "clock_s": 1e-06
+  },
+  "native_sun_required": true,
+  "views": [
+    {
+      "station": "northolt-park",
+      "view": "exterior",
+      "checks": {
+        "position_error_m": true,
+        "direction_error_deg": true,
+        "fov_error_deg": true,
+        "aspect_error": true,
+        "clock": true,
+        "native_sun": true,
+        "ready_uploads": true,
+        "ready_terrain": true,
+        "ready_shapes": true,
+        "finite_frame_cost": true
+      },
+      "position_error_m": 0.3669583854390532,
+      "forward_error_rad": 1.0215721428991925e-07,
+      "solar_max_component_error": 1.2528991732985162e-08,
+      "native_metadata_sha256": "2a4619a6c06283a691ce6f6ac225418a97ed93c6bc6c3e4eb46dc3146f3c7f8c",
+      "native_image_sha256": "364f2d7ae95e9947bbcf3b65e71d21650f8ffd75ad378317ba85ba60e8001754",
+      "bevy_metadata_sha256": "ba36e70d3a21c605bac218ef4cf252f0332fa991de95796b6f3ecb558fbb15cf",
+      "bevy_image_sha256": "da1c207f942c9306daa25cfd90c44022360cf50f9d65bfcb9bd2fd234b3816c4",
+      "performance": {
+        "elapsed_s": 7.588745299999996,
+        "frame_contexts": null,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 26,
+        "frames": 270,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 25,
+        "gameplay_frames": 43,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 25.345197,
+        "hitches_over_100_ms": 1,
+        "loading_frames": 227,
+        "longest_frame_ms": 834.943368,
+        "peak_rss_mib": 1464.26953125,
+        "rss_mib": 1464.26953125,
+        "startup_longest_frame_ms": 834.943368
+      },
+      "draw_calls": {
+        "grass": 0,
+        "opaque": 129,
+        "scope": "actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi",
+        "shadow": 887
+      },
+      "floating_origin_shift": [
+        -297.279296875,
+        0.0,
+        102.0225830078125
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      }
+    },
+    {
+      "station": "northolt-park",
+      "view": "cab",
+      "checks": {
+        "position_error_m": true,
+        "direction_error_deg": true,
+        "fov_error_deg": true,
+        "aspect_error": true,
+        "clock": true,
+        "native_sun": true,
+        "ready_uploads": true,
+        "ready_terrain": true,
+        "ready_shapes": true,
+        "finite_frame_cost": true
+      },
+      "position_error_m": 0.5610614176437368,
+      "forward_error_rad": 2.1416229636924076e-05,
+      "solar_max_component_error": 1.2528991732985162e-08,
+      "native_metadata_sha256": "10cbdc78ac902bc5e7d2dd0971d456c28fbabddfd099846e3c635b9f52e79553",
+      "native_image_sha256": "211bdffab9028c957fde9d5312c2f1bb5a231370551d6539086a1d5ca7030203",
+      "bevy_metadata_sha256": "3082ccc6f7abfb4fcd7f3ab323eade2f64e69360d1dbec30a6499b108af0d95d",
+      "bevy_image_sha256": "2756227f1e3989368499aa9c9a0f5444a092484955299255c6a0fcd4e5e10dfb",
+      "performance": {
+        "elapsed_s": 9.063822033,
+        "frame_contexts": null,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 48,
+        "frames": 311,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 26,
+        "gameplay_frame_p99_ms": 27,
+        "gameplay_frames": 43,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 26.94539,
+        "hitches_over_100_ms": 2,
+        "loading_frames": 268,
+        "longest_frame_ms": 817.6890850000001,
+        "peak_rss_mib": 2095.5703125,
+        "rss_mib": 1407.7578125,
+        "startup_longest_frame_ms": 817.6890850000001
+      },
+      "draw_calls": {
+        "grass": 0,
+        "opaque": 124,
+        "scope": "actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi",
+        "shadow": 973
+      },
+      "floating_origin_shift": [
+        -297.279296875,
+        0.0,
+        102.0225830078125
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      }
+    },
+    {
+      "station": "south-ruislip",
+      "view": "exterior",
+      "checks": {
+        "position_error_m": true,
+        "direction_error_deg": true,
+        "fov_error_deg": true,
+        "aspect_error": true,
+        "clock": true,
+        "native_sun": true,
+        "ready_uploads": true,
+        "ready_terrain": true,
+        "ready_shapes": true,
+        "finite_frame_cost": true
+      },
+      "position_error_m": 1.1351991337562228,
+      "forward_error_rad": 7.884953353001449e-08,
+      "solar_max_component_error": 1.2528991732985162e-08,
+      "native_metadata_sha256": "ccb1b77bd13331a3513e44b9dd7b4466b0424b54e6aeb1b07c5ecbdc8c085137",
+      "native_image_sha256": "40296bdf6be8614a1200ac6435747c8a3ca01e589b0fff640766354dd7b04a0d",
+      "bevy_metadata_sha256": "5ec715ab26599c29d28d29800729da6b1c6cbf7351cceb43a7efb97547066f38",
+      "bevy_image_sha256": "bdca17f59c040fb4dbe4445976c6a6d854194fc70916e2303bb066acef88dc08",
+      "performance": {
+        "elapsed_s": 11.469035301000002,
+        "frame_contexts": null,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 26,
+        "frames": 425,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 26,
+        "gameplay_frames": 87,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 25.579933999999998,
+        "hitches_over_100_ms": 1,
+        "loading_frames": 338,
+        "longest_frame_ms": 802.6270460000001,
+        "peak_rss_mib": 1605.9140625,
+        "rss_mib": 1358.8515625,
+        "startup_longest_frame_ms": 802.6270460000001
+      },
+      "draw_calls": {
+        "grass": 0,
+        "opaque": 103,
+        "scope": "actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi",
+        "shadow": 599
+      },
+      "floating_origin_shift": [
+        296.3870849609375,
+        0.0,
+        395.4971923828125
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      }
+    },
+    {
+      "station": "south-ruislip",
+      "view": "cab",
+      "checks": {
+        "position_error_m": true,
+        "direction_error_deg": true,
+        "fov_error_deg": true,
+        "aspect_error": true,
+        "clock": true,
+        "native_sun": true,
+        "ready_uploads": true,
+        "ready_terrain": true,
+        "ready_shapes": true,
+        "finite_frame_cost": true
+      },
+      "position_error_m": 0.8301791895699528,
+      "forward_error_rad": 3.1810995288304405e-05,
+      "solar_max_component_error": 1.2528991732985162e-08,
+      "native_metadata_sha256": "d072d4b4b42121545a7293ad45395d7fdf628e7ad4eb8a9ccacf4ecedb0b918f",
+      "native_image_sha256": "492b1a318c3ed03f6bdbfcbd192bc6f80c84e555242a10bba9046a46866b66d2",
+      "bevy_metadata_sha256": "6bc76d4d2cccdde64fbab02ba7dda0028452c051ddc0ac021f9c6eb28da037a6",
+      "bevy_image_sha256": "fc3e15e534ddf21a6aa2d298e3b2b95f6e6364b601376ff6077b8285cfdcfcb5",
+      "performance": {
+        "elapsed_s": 13.741423857000004,
+        "frame_contexts": null,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 37,
+        "frames": 497,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 25,
+        "gameplay_frames": 89,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 25.411025,
+        "hitches_over_100_ms": 2,
+        "loading_frames": 408,
+        "longest_frame_ms": 796.688543,
+        "peak_rss_mib": 2104.72265625,
+        "rss_mib": 1517.5546875,
+        "startup_longest_frame_ms": 796.688543
+      },
+      "draw_calls": {
+        "grass": 0,
+        "opaque": 97,
+        "scope": "actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi",
+        "shadow": 698
+      },
+      "floating_origin_shift": [
+        296.3870849609375,
+        0.0,
+        395.4971923828125
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      }
+    },
+    {
+      "station": "west-ruislip",
+      "view": "exterior",
+      "checks": {
+        "position_error_m": true,
+        "direction_error_deg": true,
+        "fov_error_deg": true,
+        "aspect_error": true,
+        "clock": true,
+        "native_sun": true,
+        "ready_uploads": true,
+        "ready_terrain": true,
+        "ready_shapes": true,
+        "finite_frame_cost": true
+      },
+      "position_error_m": 1.7202422394464547,
+      "forward_error_rad": 9.424321830774487e-08,
+      "solar_max_component_error": 1.2528991732985162e-08,
+      "native_metadata_sha256": "50ae7c14ededf733ffcb8e3022f3bb8def040f32d919d7836a3649094f1cb2d5",
+      "native_image_sha256": "1fb0c500e7080fb6b55ea81790505c51893341066b0307e06450c9873ed1c6f9",
+      "bevy_metadata_sha256": "25ae27f6d2903c8eb91d5c892eb414658e210b6d988dc50ccfd8e803d33cdded",
+      "bevy_image_sha256": "0fda61b9e8925e3d90668d915f37c81cb1bd926c92824ee7688fc9daa9589a4e",
+      "performance": {
+        "elapsed_s": 10.593467214000002,
+        "frame_contexts": null,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 26,
+        "frames": 388,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 25,
+        "gameplay_frames": 109,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 25.477215,
+        "hitches_over_100_ms": 1,
+        "loading_frames": 279,
+        "longest_frame_ms": 848.536158,
+        "peak_rss_mib": 1511.328125,
+        "rss_mib": 1281.21875,
+        "startup_longest_frame_ms": 848.536158
+      },
+      "draw_calls": {
+        "grass": 0,
+        "opaque": 69,
+        "scope": "actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi",
+        "shadow": 269
+      },
+      "floating_origin_shift": [
+        198.76605224609375,
+        0.0,
+        -184.6705322265625
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      }
+    },
+    {
+      "station": "west-ruislip",
+      "view": "cab",
+      "checks": {
+        "position_error_m": true,
+        "direction_error_deg": true,
+        "fov_error_deg": true,
+        "aspect_error": true,
+        "clock": true,
+        "native_sun": true,
+        "ready_uploads": true,
+        "ready_terrain": true,
+        "ready_shapes": true,
+        "finite_frame_cost": true
+      },
+      "position_error_m": 1.182629904669901,
+      "forward_error_rad": 9.04076917368652e-06,
+      "solar_max_component_error": 1.2528991732985162e-08,
+      "native_metadata_sha256": "e3ad3bfbd8e15aa5cf1a2718fc502feb6480f2eba7726eb93566a2de7d59df24",
+      "native_image_sha256": "e2ecb67d7e890845d4f889068e1e5c34f882a3240ac73a574d1142400a25c81f",
+      "bevy_metadata_sha256": "f2a082d05965abe3192e585d317b359d8a501ac7961a16e782a7bfdfb6d88332",
+      "bevy_image_sha256": "42166f60526570501c6a36a221b3ac5a8411d8d8706c5683c1d577c1918e0ea4",
+      "performance": {
+        "elapsed_s": 12.818446202999995,
+        "frame_contexts": null,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 32,
+        "frames": 460,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 25,
+        "gameplay_frames": 106,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 25.377682,
+        "hitches_over_100_ms": 2,
+        "loading_frames": 354,
+        "longest_frame_ms": 826.83383,
+        "peak_rss_mib": 2062.84765625,
+        "rss_mib": 1334.33984375,
+        "startup_longest_frame_ms": 826.83383
+      },
+      "draw_calls": {
+        "grass": 0,
+        "opaque": 63,
+        "scope": "actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi",
+        "shadow": 394
+      },
+      "floating_origin_shift": [
+        198.76605224609375,
+        0.0,
+        -184.6705322265625
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      }
+    },
+    {
+      "station": "denham",
+      "view": "exterior",
+      "checks": {
+        "position_error_m": true,
+        "direction_error_deg": true,
+        "fov_error_deg": true,
+        "aspect_error": true,
+        "clock": true,
+        "native_sun": true,
+        "ready_uploads": true,
+        "ready_terrain": true,
+        "ready_shapes": true,
+        "finite_frame_cost": true
+      },
+      "position_error_m": 0.6084682054423565,
+      "forward_error_rad": 1.1920928955078133e-07,
+      "solar_max_component_error": 1.2528991732985162e-08,
+      "native_metadata_sha256": "fa1825de179068fbf5fe763e0dbe51ea41032a65e817f18e47716bbad3606dfd",
+      "native_image_sha256": "2182ee05985f795728d7b4077ae51cdf2253867f5e3265997beb325c2077e8fc",
+      "bevy_metadata_sha256": "61f955c6fa00cde6b2253bfba9f09605437212e4d4d223dc9d0682d0dca24dbb",
+      "bevy_image_sha256": "bbf0207acdff15ad4aba97ef088b46b4912c6f50115cf7cc781e1a88e20cae45",
+      "performance": {
+        "elapsed_s": 7.689588755000002,
+        "frame_contexts": null,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 37,
+        "frames": 276,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 25,
+        "gameplay_frames": 86,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 25.390424000000003,
+        "hitches_over_100_ms": 1,
+        "loading_frames": 190,
+        "longest_frame_ms": 783.194944,
+        "peak_rss_mib": 1308.2421875,
+        "rss_mib": 1224.81640625,
+        "startup_longest_frame_ms": 783.194944
+      },
+      "draw_calls": {
+        "grass": 0,
+        "opaque": 61,
+        "scope": "actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi",
+        "shadow": 239
+      },
+      "floating_origin_shift": [
+        -372.41015625,
+        0.0,
+        -128.1997833251953
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      }
+    },
+    {
+      "station": "denham",
+      "view": "cab",
+      "checks": {
+        "position_error_m": true,
+        "direction_error_deg": true,
+        "fov_error_deg": true,
+        "aspect_error": true,
+        "clock": true,
+        "native_sun": true,
+        "ready_uploads": true,
+        "ready_terrain": true,
+        "ready_shapes": true,
+        "finite_frame_cost": true
+      },
+      "position_error_m": 1.4181178251747701,
+      "forward_error_rad": 0.00025395401512101477,
+      "solar_max_component_error": 1.2528991732985162e-08,
+      "native_metadata_sha256": "24628e4c2974257f7cbd44f89becd6fe7d0a6b7ab91cea80f721f1e8c8ccbc86",
+      "native_image_sha256": "8a2b7ae95911ba2d2a3ec74ec79d4f79d38f6b337cf1ad662f61a9b504b06070",
+      "bevy_metadata_sha256": "efc0cd6291e3f66ce60b8f1c94eae4cba541fcd00715e692b56b9ca1722a4c3b",
+      "bevy_image_sha256": "6516c0e82b1a3f507ae9e16dd4eb1337b49b02b086d13bace8c60815943dfe02",
+      "performance": {
+        "elapsed_s": 9.423193950000002,
+        "frame_contexts": null,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 34,
+        "frames": 326,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 25,
+        "gameplay_frames": 87,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 25.367752,
+        "hitches_over_100_ms": 2,
+        "loading_frames": 239,
+        "longest_frame_ms": 817.952251,
+        "peak_rss_mib": 2091.640625,
+        "rss_mib": 1354.84375,
+        "startup_longest_frame_ms": 817.952251
+      },
+      "draw_calls": {
+        "grass": 0,
+        "opaque": 41,
+        "scope": "actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi",
+        "shadow": 268
+      },
+      "floating_origin_shift": [
+        -372.41015625,
+        0.0,
+        -128.1997833251953
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      }
+    },
+    {
+      "station": "denham-golf-course",
+      "view": "exterior",
+      "checks": {
+        "position_error_m": true,
+        "direction_error_deg": true,
+        "fov_error_deg": true,
+        "aspect_error": true,
+        "clock": true,
+        "native_sun": true,
+        "ready_uploads": true,
+        "ready_terrain": true,
+        "ready_shapes": true,
+        "finite_frame_cost": true
+      },
+      "position_error_m": 0.9333711395322932,
+      "forward_error_rad": 8.161702118890975e-08,
+      "solar_max_component_error": 1.2528991732985162e-08,
+      "native_metadata_sha256": "2dec787105a53d0c466911f6a7e997c1423250c39af030281433772430843e74",
+      "native_image_sha256": "fcc388e23bf9d1a1524f6e54076184caa5a2d099e7f8371db73bcecb076c4672",
+      "bevy_metadata_sha256": "da42dcad71ab782f22e814065c6411fc886a57b450772a751ee8221fcbdf7716",
+      "bevy_image_sha256": "58c7e75f5f2355599351ad6acbec9167f2ed5ba778db26f494ea6d98501976a3",
+      "performance": {
+        "elapsed_s": 4.838065923000005,
+        "frame_contexts": null,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 25,
+        "frames": 163,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 25,
+        "gameplay_frames": 64,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 25.248915,
+        "hitches_over_100_ms": 1,
+        "loading_frames": 99,
+        "longest_frame_ms": 780.60979,
+        "peak_rss_mib": 1271.46875,
+        "rss_mib": 1271.46875,
+        "startup_longest_frame_ms": 780.60979
+      },
+      "draw_calls": {
+        "grass": 0,
+        "opaque": 36,
+        "scope": "actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi",
+        "shadow": 157
+      },
+      "floating_origin_shift": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      }
+    },
+    {
+      "station": "denham-golf-course",
+      "view": "cab",
+      "checks": {
+        "position_error_m": true,
+        "direction_error_deg": true,
+        "fov_error_deg": true,
+        "aspect_error": true,
+        "clock": true,
+        "native_sun": true,
+        "ready_uploads": true,
+        "ready_terrain": true,
+        "ready_shapes": true,
+        "finite_frame_cost": true
+      },
+      "position_error_m": 1.0336226458428113,
+      "forward_error_rad": 2.8823579985420654e-05,
+      "solar_max_component_error": 1.2528991732985162e-08,
+      "native_metadata_sha256": "893bad2eebe44652f6768a4e68393a4a4a0ef33d7ce92d7b03d41c4f519671c5",
+      "native_image_sha256": "451d064ed51aae00c1a586d85bbaf16d4d45fb21e41634c90fda65190e95eb64",
+      "bevy_metadata_sha256": "02d1d897e7872e816656672e736e76dda5ae649ae0f06c75fef80347bb649b6d",
+      "bevy_image_sha256": "343b71c8b4601e29a2669658136fa718e2c5da8c839a628c20ec5a2392927045",
+      "performance": {
+        "elapsed_s": 5.877077913,
+        "frame_contexts": null,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 458,
+        "frames": 183,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 25,
+        "gameplay_frames": 58,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 25.289257,
+        "hitches_over_100_ms": 2,
+        "loading_frames": 125,
+        "longest_frame_ms": 884.168909,
+        "peak_rss_mib": 2168.21875,
+        "rss_mib": 1708.7734375,
+        "startup_longest_frame_ms": 884.168909
+      },
+      "draw_calls": {
+        "grass": 0,
+        "opaque": 31,
+        "scope": "actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi",
+        "shadow": 229
+      },
+      "floating_origin_shift": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      }
+    },
+    {
+      "station": "gerrards-cross",
+      "view": "exterior",
+      "checks": {
+        "position_error_m": true,
+        "direction_error_deg": true,
+        "fov_error_deg": true,
+        "aspect_error": true,
+        "clock": true,
+        "native_sun": true,
+        "ready_uploads": true,
+        "ready_terrain": true,
+        "ready_shapes": true,
+        "finite_frame_cost": true
+      },
+      "position_error_m": 1.0791172417035018,
+      "forward_error_rad": 1.0215721428991925e-07,
+      "solar_max_component_error": 1.2528991732985162e-08,
+      "native_metadata_sha256": "d55c63b7253bb6cba189d3e6917bb3244d9056cffcb975c853407204adfa8569",
+      "native_image_sha256": "f749087d452c488c313134dea54bced3a78bc1fcf0e0c4565fb910028ff98dba",
+      "bevy_metadata_sha256": "9a1ec9181c761c2da4ea0a127c31097ced10b70c78469f9b4af5cf5d73fa1b7c",
+      "bevy_image_sha256": "92d7f606cbe293a6462cf7cca2917e81dace61691b6a00fc71583d808f6937b4",
+      "performance": {
+        "elapsed_s": 7.914180118000011,
+        "frame_contexts": null,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 28,
+        "frames": 283,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 28,
+        "gameplay_frames": 82,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 28.016269,
+        "hitches_over_100_ms": 1,
+        "loading_frames": 201,
+        "longest_frame_ms": 780.172236,
+        "peak_rss_mib": 1481.9296875,
+        "rss_mib": 1481.9296875,
+        "startup_longest_frame_ms": 780.172236
+      },
+      "draw_calls": {
+        "grass": 0,
+        "opaque": 37,
+        "scope": "actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi",
+        "shadow": 194
+      },
+      "floating_origin_shift": [
+        -59.190185546875,
+        0.0,
+        309.89117431640625
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      }
+    },
+    {
+      "station": "gerrards-cross",
+      "view": "cab",
+      "checks": {
+        "position_error_m": true,
+        "direction_error_deg": true,
+        "fov_error_deg": true,
+        "aspect_error": true,
+        "clock": true,
+        "native_sun": true,
+        "ready_uploads": true,
+        "ready_terrain": true,
+        "ready_shapes": true,
+        "finite_frame_cost": true
+      },
+      "position_error_m": 0.6576503712425079,
+      "forward_error_rad": 1.4656570357253524e-05,
+      "solar_max_component_error": 1.2528991732985162e-08,
+      "native_metadata_sha256": "23a848522e9f87589966acf26a08f4a10e7a72de6dadf2d80f2e90b37230eda1",
+      "native_image_sha256": "dab3818b5a8eca7add3c1130ea1d82124854bf8ea0a22ef5b3eb3cd4dd9175b0",
+      "bevy_metadata_sha256": "d4888d10ae27adba6b2435b05510c21dbeef60eae4ebf6597639fcae010bb69a",
+      "bevy_image_sha256": "e5e0110bcf271b3294539418e1c89c102a8062e11bbc4b231b3ff35159a7f4d9",
+      "performance": {
+        "elapsed_s": 9.349558994000006,
+        "frame_contexts": null,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 37,
+        "frames": 325,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 25,
+        "gameplay_frames": 81,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 25.379061,
+        "hitches_over_100_ms": 2,
+        "loading_frames": 244,
+        "longest_frame_ms": 783.510465,
+        "peak_rss_mib": 2189.5234375,
+        "rss_mib": 1487.65625,
+        "startup_longest_frame_ms": 783.510465
+      },
+      "draw_calls": {
+        "grass": 0,
+        "opaque": 49,
+        "scope": "actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi",
+        "shadow": 247
+      },
+      "floating_origin_shift": [
+        -59.190185546875,
+        0.0,
+        309.89117431640625
+      ],
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      }
+    }
+  ],
+  "passed": true
+}

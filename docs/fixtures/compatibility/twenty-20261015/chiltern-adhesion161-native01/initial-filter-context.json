@@ -1,0 +1,63 @@
+{
+  "schema": 1,
+  "kind": "original_iir_state_before_first_update",
+  "trace_initial_time_s": 0.0,
+  "vehicle_count": 8,
+  "source": "Original Simulator.Start completed; observer runs before first Simulator.Update. No call to Filter/Reset added.",
+  "vehicles": [
+    {
+      "vehicle": 0,
+      "source": "RF_WP_DMBSA.eng",
+      "input_factor": 0.0,
+      "base_factor": 0.0,
+      "output_factor": 0.0,
+      "x": [
+        0.0,
+        0.0
+      ],
+      "y": [
+        0.0,
+        0.0
+      ],
+      "a": [
+        0.00313176424,
+        0.00313176424
+      ],
+      "b": [
+        1.0,
+        -0.993736446
+      ],
+      "order": 1,
+      "filter_type": "Butterworth",
+      "cutoff_rad_s": 6.28318548,
+      "sampling_period_s": 0.001
+    },
+    {
+      "vehicle": 7,
+      "source": "RF_WP_DMBSH.eng",
+      "input_factor": 0.0,
+      "base_factor": 0.0,
+      "output_factor": 0.0,
+      "x": [
+        0.0,
+        0.0
+      ],
+      "y": [
+        0.0,
+        0.0
+      ],
+      "a": [
+        0.00313176424,
+        0.00313176424
+      ],
+      "b": [
+        1.0,
+        -0.993736446
+      ],
+      "order": 1,
+      "filter_type": "Butterworth",
+      "cutoff_rad_s": 6.28318548,
+      "sampling_period_s": 0.001
+    }
+  ]
+}

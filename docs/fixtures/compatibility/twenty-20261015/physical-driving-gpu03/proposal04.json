@@ -1,0 +1,204 @@
+{
+  "schema": 1,
+  "status": "predeclared_before_retry",
+  "scope": "One strict retry of actual from-rest derailment after the previous unchanged harness failed to sample positive speed at its sparse action timestamps. Add only a non-physical panel-none observation at30 real seconds; same horizon55s,2x,controls,physics,material and assertions.",
+  "required_parent_gate": "Parent authorized the one-case strict retry after build05; binary SHA80da4d50267917e84a75d1396887bb954b862d691b24e8d67f6b94c058f049e3. CPU work may overlap; no isolated performance claim.",
+  "source_scenarios_directory": "examples/physics_lab",
+  "scenario_bytes_modified": false,
+  "renderer": "private hardware Vulkan RX7600 PCI0000:03:00.0, private compositor and player data per case",
+  "conditions": {
+    "resolution": [
+      1280,
+      720
+    ],
+    "weather": "clear",
+    "speed_multiplier": "1 by default; only derailment-from-rest explicitly uses 2",
+    "autodrive": false,
+    "time_step_source": "normal LiveDrive fixed tick; wall-time action timestamps do not imply bit-identical tick counts",
+    "view_radius_m": 200,
+    "cosmetic_train_motion": "off",
+    "speed_multiplier_overrides": {
+      "derailment-from-rest": 2
+    }
+  },
+  "input_rules": [
+    "All launches start at the scenario initial position and velocity0.",
+    "Only ordinary driver controls, equipment UI-equivalent toggles, pause, camera orbit and JSON SessionSnapshot restore are permitted.",
+    "Never assign velocity, position, forces, pressures, rack phase or incident cause.",
+    "If a timed capture misses its required physical state, retain failure/incomplete; do not turn null into0 or edit the snapshot."
+  ],
+  "captures": [
+    {
+      "name": "derailment-from-rest",
+      "issues": [
+        324
+      ],
+      "scenario": "scenario_derailment_drive.toml",
+      "hold_s": 55,
+      "actions": [
+        {
+          "at_s": 0,
+          "operation": {
+            "action": "drive",
+            "throttle": 0,
+            "brake": 1,
+            "direction": 0.5
+          }
+        },
+        {
+          "at_s": 0,
+          "operation": {
+            "action": "pause",
+            "value": false
+          }
+        },
+        {
+          "at_s": 0.1,
+          "operation": {
+            "action": "derailment",
+            "enabled": true
+          }
+        },
+        {
+          "at_s": 0.5,
+          "operation": {
+            "action": "drive",
+            "throttle": 1,
+            "brake": 0,
+            "direction": 1
+          }
+        },
+        {
+          "at_s": 30,
+          "operation": {
+            "action": "panel",
+            "name": "none"
+          }
+        },
+        {
+          "at_s": 55,
+          "operation": {
+            "action": "pause",
+            "value": true
+          }
+        },
+        {
+          "at_s": 55.19999999999999,
+          "operation": {
+            "action": "restore"
+          }
+        },
+        {
+          "at_s": 55.30000000000001,
+          "operation": {
+            "action": "derailment",
+            "enabled": false
+          }
+        },
+        {
+          "at_s": 55.400000000000006,
+          "operation": {
+            "action": "panel",
+            "name": "traction"
+          }
+        }
+      ],
+      "expect": "derailment_recorded_disabled",
+      "required_ui": [
+        "DESCARRILAMIENTO",
+        "fuerza lateral",
+        "carga mínima",
+        "Consecuencias de descarrilamiento: No"
+      ],
+      "fixture_selection_reason": "The separate owned drive exercise uses a 2000 m approach and a physical laboratory formation rated 2 MW / 160 km/h: an 80 t locomotive plus a 30 t coach. The earlier limited-power formation did not reach incident speed, a valid non-incident result. Curve, Nadal/unloading thresholds and runtime are unchanged. CPU fromrest09 passed with an actual WheelUnloading cause at 80.55 simulated seconds. GPU remains unexecuted; 55 real seconds at 2x allows approximately 110 simulated seconds without prescribing speed or position.",
+      "speed_mul": 2,
+      "conditions_override": {
+        "speed_multiplier": 2,
+        "wall_time_hold_s": 55,
+        "expected_simulation_horizon_approx_s": 110,
+        "input_timestamps": "wall seconds after QA readiness; recorded action time_s is the real fixed-tick simulation clock",
+        "scope": "Time compression only; physics still integrates its normal fixed time step."
+      },
+      "material": {
+        "scope": "Owned physical laboratory definitions, not an original OR stock compatibility or visual-art acceptance. No author downloads or missing-original substitute assets are included.",
+        "locomotive": {
+          "mass_t": 80,
+          "power_w": 2000000,
+          "maximum_speed_kmh": 160,
+          "maximum_force_n": 240000
+        },
+        "coach": {
+          "mass_t": 30
+        },
+        "files_sha256": {
+          "examples/physics_lab/consists/curve_risk.con": "e625edb701ed2844a5dbf8050a0c058a8be89ec582c7b4aeaf45f3e125334b29",
+          "examples/physics_lab/vehicles/risk_loco.eng": "3b03a0039f424c8545cf0725d6ecaa4068811a7f6fd315d32522cb7e9b1b1e4e",
+          "examples/physics_lab/vehicles/risk_coach.wag": "ca3e33b66bcbd525b04e03c45de2c2c8fcbb4799ef7767f042b0945b9588eccb"
+        }
+      },
+      "prior_cpu_result": {
+        "log": "tmp/twenty-20261015/fromrest-tests09.log",
+        "sha256": "456f0d89c1510a36acaa2d77661947791f64e764ed3080447bbc6bcaf15bf93b",
+        "scope": "Actual fixed-tick LiveDrive from-rest CPU acceptance, not a GPU result or runtime input.",
+        "passed": 3,
+        "failed": 0,
+        "cause": "WheelUnloading",
+        "event_time_s": 80.54999999999757,
+        "event_speed_mps": 29.374189473320993,
+        "event_chainage_m": 2094.2878179062864,
+        "lateral_force_n": 167125.63251476563,
+        "minimum_wheel_load_n": 0.0
+      }
+    }
+  ],
+  "acceptance_common": [
+    "Every action succeeds; first recorded speed is0 and later real movement has odometer>1m.",
+    "Correct hardware PCI, normal exit0 for viewer/compositor, pending/failed shader counts0 and owned PIDs reaped.",
+    "Pause and restore occur after positive odometer; report and original PNG hashes saved with actual control chronology.",
+    "Inspect original PNG at1280x720 for the requested fields and clipping; computed UI text alone is insufficient.",
+    "Observe on/off differences with solver CPU tests; do not call wall-time GPU snapshots an exact same-phase numerical comparison."
+  ],
+  "specific_conditions": {
+    "hydraulic_running": [
+      "At least one real hydraulic state; input_power=output_power+loss within1e-5W, nonnegative losses and fuel consumed>0.",
+      "Gear transitions and load/heat invariants retain their CPU acceptance; this PNG validates the visible meters after actual driving."
+    ],
+    "rack_braking": [
+      "Engaged phase with brake_work_j>1, commanded throttle0/brake1 and an actual driven prefix."
+    ],
+    "rack_exited": [
+      "Initial center90m is outside91..160m rack. Final odometer>70m, section=null, Disengaged phase and transmitted force0.",
+      "The new CPU trajectory must independently record Engaging→Engaged→Disengaged without prescribing position."
+    ],
+    "vertical_on": [
+      "enabled_override=true, physical normal loads and heights finite; at least one sampled wheel differs from static reference load by>1N."
+    ],
+    "vertical_off": [
+      "enabled_override=false; on/off operation visibly represented. Exact dynamics comparison remains fixed-step CPU."
+    ],
+    "derailment_recorded_disabled": [
+      "Non-null cause/event_time>0/event_speed>1m/s after acceleration from rest.",
+      "Cause remains after JSON restore and enabled_override=false; emergency and traction cut are checked in the from-rest CPU test."
+    ]
+  },
+  "limits": [
+    "No completeService, frame-time budget, memory stability, audio or original-content rendering claim.",
+    "SessionSnapshot JSON roundtrip is not a click-through disk-save menu test.",
+    "A still image does not prove an oscillation waveform or an entire LOD transition.",
+    "No rack/vertical/converter/off-rail native solver exists in OR1.6.1; native shared brake components retain their separate original-oracle evidence."
+  ],
+  "proposed_command": "python3 tmp/twenty-20261015/capture-physical-driving04.py --viewer target/debug/openrailsrs-viewer3d --expected-viewer-sha256 80da4d50267917e84a75d1396887bb954b862d691b24e8d67f6b94c058f049e3 --out-dir tmp/twenty-20261015/physics-driving-gpu03 --case derailment-from-rest --execute",
+  "initial_pause_requirement": "Use OPENRAILSRS_CAPTURE_START_PAUSED=1 with dev-tools, SCREENSHOT and CAPTURE_ACTIONS. The parent added this explicit QA pause before fixed ticks. First actions set ordinary full braking/neutral, then pause(false); first recorded time_s and speed_mps must both equal0. No physical-state initialization is overwritten.",
+  "revision": "04-strict-derailment-retry",
+  "base_proposal": {
+    "path": "tmp/twenty-20261015/physics-driving-gpu-proposal.json",
+    "sha256": "b55b612f1f1985f7f0373ec736a3df845c4e46cdd428ad45bf1f7f6fc896403a"
+  },
+  "previous_failed_attempt": {
+    "path": "tmp/twenty-20261015/physics-driving-gpu02",
+    "plan_sha256": "44fb69e0d124ce34502da0354885e89f8faf10e5ce2e57ec33d8be60daa7ffaa",
+    "failure_sha256": "94889846e22062607022dcf53bcb0ab99031bd1c3d8a6df46bfb7c43eae7bef7",
+    "status": "Preserved as failed; not re-evaluated or rewritten."
+  },
+  "additional_action": "At30 wall seconds close/read panel none. This records actual speed near60 simulated seconds before the observed83.6-second event without assigning any physical state or changing ordinary controls."
+}

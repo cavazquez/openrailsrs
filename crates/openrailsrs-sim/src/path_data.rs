@@ -338,6 +338,7 @@ mod tests {
         g.set_physics_profile(
             "e1",
             EdgePhysicsProfile {
+                native_tunnels: vec![],
                 track_sound_regions: vec![],
                 curves: vec![],
                 physical_cant: vec![],

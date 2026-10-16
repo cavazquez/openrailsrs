@@ -244,9 +244,7 @@ def prepare(route, imported, output):
     for alias in graph["msts_aliases"]:
         if alias["id"] in node_ids or alias["id"] in edges:
             track += "\n[[msts_aliases]]\n" + fields(alias)
-    for edge_id, profile in sorted(graph.get("edge_profiles", {}).items()):
-        if edge_id in edges:
-            track += f"\n[edge_profiles.{edge_id}]\n" + fields(profile)
+    track += native.physics_profiles(graph, edges)
     source = tomllib.loads(
         (native.ROOT / "examples/chiltern_traffic/scenario.toml").read_text()
     )

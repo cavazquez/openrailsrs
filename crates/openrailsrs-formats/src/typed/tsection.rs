@@ -60,6 +60,9 @@ pub struct TrackShapeDef {
     pub clearance_dist_m: Option<f64>,
     /// MSTS marks road pieces inside `TrackShape` with `RoadShape ( )`.
     pub road_shape: bool,
+    /// Explicit native metadata; absence allows an overlay to inherit it.
+    pub tunnel_shape: Option<bool>,
+    pub num_paths: Option<u32>,
     pub paths: Vec<TrackShapePath>,
 }
 
@@ -404,7 +407,11 @@ fn merge_track_shapes(existing: &mut TrackShapeDef, incoming: &TrackShapeDef) {
     let existing_score = shape_merge_score(existing);
     let incoming_score = shape_merge_score(incoming);
     if incoming_score > existing_score {
+        let tunnel_shape = incoming.tunnel_shape.or(existing.tunnel_shape);
+        let num_paths = incoming.num_paths.or(existing.num_paths);
         *existing = incoming.clone();
+        existing.tunnel_shape = tunnel_shape;
+        existing.num_paths = num_paths;
     } else {
         if existing.main_route.is_none() {
             existing.main_route = incoming.main_route;
@@ -413,6 +420,12 @@ fn merge_track_shapes(existing: &mut TrackShapeDef, incoming: &TrackShapeDef) {
             existing.clearance_dist_m = incoming.clearance_dist_m;
         }
         existing.road_shape |= incoming.road_shape;
+        if incoming.tunnel_shape.is_some() {
+            existing.tunnel_shape = incoming.tunnel_shape;
+        }
+        if incoming.num_paths.is_some() {
+            existing.num_paths = incoming.num_paths;
+        }
     }
 }
 
@@ -650,6 +663,8 @@ fn parse_track_shape(items: &[Ast]) -> Option<(u32, TrackShapeDef)> {
     let mut main_route = None;
     let mut clearance_dist_m = None;
     let mut road_shape = false;
+    let mut tunnel_shape = None;
+    let mut num_paths = None;
     let mut paths = Vec::new();
     let mut i = body_start;
     while i < items.len() {
@@ -669,6 +684,12 @@ fn parse_track_shape(items: &[Ast]) -> Option<(u32, TrackShapeDef)> {
             }
             Ast::List(sub) if matches_head(sub, "ClearanceDist") => {
                 clearance_dist_m = sub.get(1).and_then(ast_to_f64);
+            }
+            Ast::List(sub) if matches_head(sub, "TunnelShape") => {
+                tunnel_shape = Some(native_shape_bool(sub.get(1)));
+            }
+            Ast::List(sub) if matches_head(sub, "NumPaths") => {
+                num_paths = sub.get(1).and_then(ast_to_u32);
             }
             Ast::List(sub) if matches_head(sub, "RoadShape") => {
                 road_shape = true;
@@ -705,6 +726,17 @@ fn parse_track_shape(items: &[Ast]) -> Option<(u32, TrackShapeDef)> {
                     other => ast_to_f64(other),
                 });
             }
+            Ast::Atom(Atom::Symbol(tag)) if tag.eq_ignore_ascii_case("TunnelShape") => {
+                i += 1;
+                tunnel_shape = Some(native_shape_bool(items.get(i)));
+            }
+            Ast::Atom(Atom::Symbol(tag)) if tag.eq_ignore_ascii_case("NumPaths") => {
+                i += 1;
+                num_paths = items.get(i).and_then(|a| match a {
+                    Ast::List(sub) => sub.first().and_then(ast_to_u32),
+                    other => ast_to_u32(other),
+                });
+            }
             Ast::Atom(Atom::Symbol(tag)) if tag.eq_ignore_ascii_case("RoadShape") => {
                 road_shape = true;
             }
@@ -735,9 +767,22 @@ fn parse_track_shape(items: &[Ast]) -> Option<(u32, TrackShapeDef)> {
             main_route,
             clearance_dist_m,
             road_shape,
+            tunnel_shape,
+            num_paths,
             paths,
         },
     ))
+}
+
+fn native_shape_bool(value: Option<&Ast>) -> bool {
+    match value {
+        None => true,
+        Some(Ast::List(items)) => native_shape_bool(items.first()),
+        Some(Ast::Atom(atom)) => atom_to_number(atom).map_or_else(
+            || atom_to_string(atom).is_none_or(|s| !s.eq_ignore_ascii_case("false") && s != "0"),
+            |n| n != 0.,
+        ),
+    }
 }
 
 fn is_shape_file_name(name: &str) -> bool {
@@ -1208,5 +1253,24 @@ TrackShape ( 1
             "esperaba secciones GLOBAL, tuvo {}",
             catalog.sections.len()
         );
+    }
+    #[test]
+    fn tunnel_shape_and_explicit_path_count_survive_flat_nested_and_overlay_forms() {
+        let parse = |text: &str| {
+            let Ast::List(items) = parse_first(text).unwrap() else {
+                panic!("shape list")
+            };
+            parse_track_shape(&items).unwrap().1
+        };
+        let mut first = parse("(10 (FileName \"tunnel.s\") (NumPaths 2) (TunnelShape))");
+        assert_eq!(first.num_paths, Some(2));
+        assert_eq!(first.tunnel_shape, Some(true));
+        let other = parse("(10 FileName (\"tunnel.s\") NumPaths (1) TunnelShape (0))");
+        merge_track_shapes(&mut first, &other);
+        assert_eq!(first.num_paths, Some(1));
+        assert_eq!(first.tunnel_shape, Some(false));
+        let absent = parse("(10 (FileName \"tunnel.s\"))");
+        merge_track_shapes(&mut first, &absent);
+        assert_eq!(first.tunnel_shape, Some(false));
     }
 }

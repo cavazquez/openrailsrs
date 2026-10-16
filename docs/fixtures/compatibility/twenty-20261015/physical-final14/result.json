@@ -1,0 +1,329 @@
+{
+  "schema": 1,
+  "kind": "directed_physical_batch_publication",
+  "status": "pass",
+  "published_utc": "2026-10-16T15:27:43.638291+00:00",
+  "completed_utc": "2026-10-16T15:27:18.917497+00:00",
+  "actual_batch_receipt_sha256": "7db19ca2c6ca9cf45eece9c3cb1a56656cd68bd733b68612aa9ea82dd0e34567",
+  "actual_build_receipt_sha256": "cbfb90e144e66fe0caedb39791d57dd8bebe14fbcd593963b6de6da23acb2420",
+  "runtime_inputs": 898,
+  "fixture_inputs": 140,
+  "binary_sha256": {
+    "target/debug/openrailsrs": "216f4c859d1472ed7264aad093a083bf4a3d0a29cd333d83ceb6f84928af8fc2",
+    "target/debug/openrailsrs-viewer3d": "ef6eaa4ff3dbed700ba2dbb41938615add4ef700d8bdbff1072478ed6ddf8ed4",
+    "target/debug/examples/activity_trajectory": "c7849328a2c502d371399cd7e4e82a653693b2dbf5ffcbe53c2c432ed8613743",
+    "target/debug/examples/steam_native_compare": "7af6db7f555e2e793d249b5ac53ef086e5ed45f040015700e661a0c6de3699c0",
+    "target/debug/examples/steam_cycle_compare": "7548010316e0e48e5c551dbd3194df8d145d17eaf1166ae295b3639d88d69845"
+  },
+  "global_gate_passed": false,
+  "close_now": false,
+  "assets_or_private_saves_bundled": false,
+  "scope": "Historical native references and authored station service plus complete LIRR and bounded80s steam; not a substitute for the workspace-wide final gate.",
+  "files": {
+    "README.md": {
+      "sha256": "b78dc8ed8c5df85a1be297dabfed1b92007a12fd39c487182d684e6829acaa7c",
+      "bytes": 820,
+      "origin": null
+    },
+    "batch-result.json": {
+      "sha256": "7db19ca2c6ca9cf45eece9c3cb1a56656cd68bd733b68612aa9ea82dd0e34567",
+      "bytes": 4774,
+      "origin": {
+        "source_path": "tmp/twenty-20261015/physical-final14-result.json",
+        "source_sha256": "7db19ca2c6ca9cf45eece9c3cb1a56656cd68bd733b68612aa9ea82dd0e34567",
+        "source_bytes": 4774,
+        "lossless_gzip": false
+      }
+    },
+    "build-result.json": {
+      "sha256": "cbfb90e144e66fe0caedb39791d57dd8bebe14fbcd593963b6de6da23acb2420",
+      "bytes": 1205,
+      "origin": {
+        "source_path": "tmp/twenty-20261015/build-14-result.json",
+        "source_sha256": "cbfb90e144e66fe0caedb39791d57dd8bebe14fbcd593963b6de6da23acb2420",
+        "source_bytes": 1205,
+        "lossless_gzip": false
+      }
+    },
+    "checked-fixture-inputs.json": {
+      "sha256": "933b4d0b3f0c581f1545d8abc0911634c98f29f5a06d35b0d2b61e201f30ce64",
+      "bytes": 21395,
+      "origin": {
+        "source_path": "tmp/twenty-20261015/compile-fixtures-before-build14.json",
+        "source_sha256": "933b4d0b3f0c581f1545d8abc0911634c98f29f5a06d35b0d2b61e201f30ce64",
+        "source_bytes": 21395,
+        "lossless_gzip": false
+      }
+    },
+    "checked-runtime-inputs.json": {
+      "sha256": "8d6fe674c512a07c5f059de063ab4e6acc5398f50c40f33402efb60bf3d265fc",
+      "bytes": 106783,
+      "origin": {
+        "source_path": "tmp/twenty-20261015/runtime-before-build14.json",
+        "source_sha256": "8d6fe674c512a07c5f059de063ab4e6acc5398f50c40f33402efb60bf3d265fc",
+        "source_bytes": 106783,
+        "lossless_gzip": false
+      }
+    },
+    "chiltern-service/chiltern_local_native_controls/run.csv.gz": {
+      "sha256": "39ec6afffe9dd245e8cf83cd1acd49c17ff212922a28c589ec60f4493ce0f82e",
+      "bytes": 335261,
+      "origin": {
+        "source_path": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/service-geometry14/chiltern_local_native_controls/run.csv",
+        "source_sha256": "158d25b96e58ad1ee5f846bb6acaac072f1a4592616646e5757044f0e0a255fa",
+        "source_bytes": 2469320,
+        "lossless_gzip": true
+      }
+    },
+    "chiltern-service/report.json": {
+      "sha256": "1cb2904808980c81e062cf6ac70a2d4ad003f330ad11c34e1456b738111a330c",
+      "bytes": 6377,
+      "origin": {
+        "source_path": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/service-geometry14/report.json",
+        "source_sha256": "1cb2904808980c81e062cf6ac70a2d4ad003f330ad11c34e1456b738111a330c",
+        "source_bytes": 6377,
+        "lossless_gzip": false
+      }
+    },
+    "class47/class47_original_controls/run.csv.gz": {
+      "sha256": "0444f63b1447dfb540abed143b95b9097e393b7c8bdb1e43d60f5d040078e32b",
+      "bytes": 101397,
+      "origin": {
+        "source_path": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/class47-final14/class47_original_controls/run.csv",
+        "source_sha256": "e84eeaa91d4b043e3d3a0fd1b5579edef4cb2ab795e96c744ee1f091c26e7608",
+        "source_bytes": 703982,
+        "lossless_gzip": true
+      }
+    },
+    "class47/report.json": {
+      "sha256": "bfd501203586f76e1b8b0cb6a1f17c14c7256ecbd8e14eec6ab7d29c8940fa87",
+      "bytes": 6725,
+      "origin": {
+        "source_path": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/class47-final14/report.json",
+        "source_sha256": "bfd501203586f76e1b8b0cb6a1f17c14c7256ecbd8e14eec6ab7d29c8940fa87",
+        "source_bytes": 6725,
+        "lossless_gzip": false
+      }
+    },
+    "closure-links.json": {
+      "sha256": "0c633b02aaa7ca7ec566b9b9cd598f8bf5bbc04e7c96454be5b73505f36d5dda",
+      "bytes": 534,
+      "origin": null
+    },
+    "historical-short/birmingham_multi_body/run.csv.gz": {
+      "sha256": "21cff56ced53868ab354ad2d94c9a1d610dbe04729442f8ba967fe88b74c686f",
+      "bytes": 5447,
+      "origin": {
+        "source_path": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/historical-short14/birmingham_multi_body/run.csv",
+        "source_sha256": "c7d9b0daa05670507f846ae259fb0d226ab69db3ab07710defb5d5d3a4986192",
+        "source_bytes": 23293,
+        "lossless_gzip": true
+      }
+    },
+    "historical-short/brake_coast_multi_body/run.csv.gz": {
+      "sha256": "2023cd2d2cb64148d273b0ede129e06db90497c32cdcb4dddcf1a9357dd81a0a",
+      "bytes": 6445,
+      "origin": {
+        "source_path": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/historical-short14/brake_coast_multi_body/run.csv",
+        "source_sha256": "55e997e7ab4391f4f6a2b30434ec1f9b3b44e309d1ff67dff26eead03c883888",
+        "source_bytes": 30241,
+        "lossless_gzip": true
+      }
+    },
+    "historical-short/full_throttle_multi_body/run.csv.gz": {
+      "sha256": "348866bbdb8583db27c2d5183ed9fb6af21a51491a45cc9cd16f19be4dec42d9",
+      "bytes": 4877,
+      "origin": {
+        "source_path": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/historical-short14/full_throttle_multi_body/run.csv",
+        "source_sha256": "bc5e3b29e6e1fc79fb864c7f7263b3a4c2cf6a94eef161212b8440f335733d40",
+        "source_bytes": 20587,
+        "lossless_gzip": true
+      }
+    },
+    "historical-short/half_throttle/run.csv.gz": {
+      "sha256": "7ff524b9bfe0bb98935ca0109ff18f17e79481fb3ec9b5d08f3dc331c9ddd369",
+      "bytes": 1390,
+      "origin": {
+        "source_path": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/historical-short14/half_throttle/run.csv",
+        "source_sha256": "2ece736c418843eacc9a45c6c0991d89fc8638aa82a449d9f93a5d4598206a0d",
+        "source_bytes": 5337,
+        "lossless_gzip": true
+      }
+    },
+    "historical-short/report.json": {
+      "sha256": "57150de69e46bb52c4375f0d03c53f9b297cf2b51df69b33a4e0ee00006914d5",
+      "bytes": 14859,
+      "origin": {
+        "source_path": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/historical-short14/report.json",
+        "source_sha256": "57150de69e46bb52c4375f0d03c53f9b297cf2b51df69b33a4e0ee00006914d5",
+        "source_bytes": 14859,
+        "lossless_gzip": false
+      }
+    },
+    "lirr/comparison.json": {
+      "sha256": "74e234a78a6d517827eaa4c2fd7a4aaa9ef38fa99a8acff444596ea12c80260c",
+      "bytes": 1310,
+      "origin": {
+        "source_path": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/lirr-replay-12/comparison.json",
+        "source_sha256": "74e234a78a6d517827eaa4c2fd7a4aaa9ef38fa99a8acff444596ea12c80260c",
+        "source_bytes": 1310,
+        "lossless_gzip": false
+      }
+    },
+    "lirr/receipt.json": {
+      "sha256": "a59afc73807809d35da4cb6cbc117de402363d25a84c80143a017a52c312983d",
+      "bytes": 160182,
+      "origin": {
+        "source_path": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/lirr-replay-12/receipt.json",
+        "source_sha256": "a59afc73807809d35da4cb6cbc117de402363d25a84c80143a017a52c312983d",
+        "source_bytes": 160182,
+        "lossless_gzip": false
+      }
+    },
+    "lirr/rust.csv.gz": {
+      "sha256": "c23250592511ea28aa8caa253889f05aad4e30d31ed8152eb0d4104949d1507e",
+      "bytes": 995520,
+      "origin": {
+        "source_path": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/lirr-replay-12/rust.csv",
+        "source_sha256": "05d993359152b5f78db5ade0a525ef9cc1cff4075305c9b17c5a9be77438bde5",
+        "source_bytes": 3796720,
+        "lossless_gzip": true
+      }
+    },
+    "logs/chiltern-service.log.gz": {
+      "sha256": "8ad37d46307ff29018d1b38603b72fc1423a134250a9a47327b58674d20e6828",
+      "bytes": 166,
+      "origin": {
+        "source_path": "tmp/twenty-20261015/physical-final14-chiltern-service.log",
+        "source_sha256": "d109a755f85068895f95a34da4dc9ab1ca7507fae97bb8fbb446e199c30726d1",
+        "source_bytes": 175,
+        "lossless_gzip": true
+      }
+    },
+    "logs/class47.log.gz": {
+      "sha256": "def273132b0ee2d1ae069fe0a47fc970365800de13f9c7fbc983c662af3c8b37",
+      "bytes": 163,
+      "origin": {
+        "source_path": "tmp/twenty-20261015/physical-final14-class47.log",
+        "source_sha256": "f0069413e4c797e321e26f21467ae8189a9a5e4c445f9030d7578b42e98cc2e6",
+        "source_bytes": 171,
+        "lossless_gzip": true
+      }
+    },
+    "logs/historical-short.log.gz": {
+      "sha256": "50738fea9da56fb995f8b2cdb7d1bbd5f2e44b0f54b37a586402fecececee65b",
+      "bytes": 261,
+      "origin": {
+        "source_path": "tmp/twenty-20261015/physical-final14-historical-short.log",
+        "source_sha256": "970e4a58cf6975676ca1dc003fc2407dc80844732cea950b7958a4bf7b5883bf",
+        "source_bytes": 508,
+        "lossless_gzip": true
+      }
+    },
+    "logs/lirr.log.gz": {
+      "sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "bytes": 20,
+      "origin": {
+        "source_path": "tmp/twenty-20261015/physical-final14-lirr.log",
+        "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "source_bytes": 0,
+        "lossless_gzip": true
+      }
+    },
+    "logs/station-service.log.gz": {
+      "sha256": "d820850c8d8ac55fbe8ffcd99fd7e8e35c77b69e505fb43c87949f8fe571078e",
+      "bytes": 551,
+      "origin": {
+        "source_path": "tmp/twenty-20261015/physical-final14-station-service.log",
+        "source_sha256": "ff4cdb04e84c5580769db8e17d5de5f3204b4c93a7283e6d9649e175aeac81ab",
+        "source_bytes": 1442,
+        "lossless_gzip": true
+      }
+    },
+    "logs/steam.log.gz": {
+      "sha256": "3e886ae2fcd9a2a6661233699e28c357bd8b278284ecd25d6e0a6a09832ccce6",
+      "bytes": 6463,
+      "origin": {
+        "source_path": "tmp/twenty-20261015/physical-final14-steam.log",
+        "source_sha256": "16ad71306495b4c0f85fcfe8347bc3097a23abda1303378051dde4050821265c",
+        "source_bytes": 31805,
+        "lossless_gzip": true
+      }
+    },
+    "references.json": {
+      "sha256": "e3f26fe8f41b9f28d8e1a05bfcec3141ed6f33a85a1b6243199bb05830295491",
+      "bytes": 1451,
+      "origin": null
+    },
+    "runner.py": {
+      "sha256": "b2f5726caf09d7335e559447c8483b1c12505129b365fd8b0fb4c6a80fd56ee9",
+      "bytes": 3812,
+      "origin": {
+        "source_path": "tmp/twenty-20261015/run-physical-validation14.py",
+        "source_sha256": "b2f5726caf09d7335e559447c8483b1c12505129b365fd8b0fb4c6a80fd56ee9",
+        "source_bytes": 3812,
+        "lossless_gzip": false
+      }
+    },
+    "station-service/outcome.json": {
+      "sha256": "108d07a08c56542015b764f3f95eadd72ca34f65e35bcb31b2f82129c9e1635f",
+      "bytes": 1441,
+      "origin": {
+        "source_path": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/station-service14/outcome.json",
+        "source_sha256": "108d07a08c56542015b764f3f95eadd72ca34f65e35bcb31b2f82129c9e1635f",
+        "source_bytes": 1441,
+        "lossless_gzip": false
+      }
+    },
+    "station-service/run.csv.gz": {
+      "sha256": "8b9e72dd9b85380e74cf4599fe1d4134b24e6b08ad9b0516e1413d07acde9715",
+      "bytes": 250422,
+      "origin": {
+        "source_path": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/station-service14/run.csv",
+        "source_sha256": "16e2c2926540be4c48b189b80e6bcd949a5feda276c5995c4959f50956c0cdca",
+        "source_bytes": 1281196,
+        "lossless_gzip": true
+      }
+    },
+    "station-service/service-diagnostics.csv.gz": {
+      "sha256": "db9062be5c5e8240360f30fd146693d7e05888c31f803f5ace932a43f93154ac",
+      "bytes": 423848,
+      "origin": {
+        "source_path": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/station-service14/service-diagnostics.csv",
+        "source_sha256": "a706be4a5f337597b7b3c960bef051608fde81d1be269d886b706ab82ba80f9b",
+        "source_bytes": 1795335,
+        "lossless_gzip": true
+      }
+    },
+    "steam/comparison.json": {
+      "sha256": "16ad71306495b4c0f85fcfe8347bc3097a23abda1303378051dde4050821265c",
+      "bytes": 31805,
+      "origin": {
+        "source_path": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/steam-native-compare10/comparison.json",
+        "source_sha256": "16ad71306495b4c0f85fcfe8347bc3097a23abda1303378051dde4050821265c",
+        "source_bytes": 31805,
+        "lossless_gzip": false
+      }
+    },
+    "steam/receipt.json": {
+      "sha256": "cf803f71f1df324a020aaf1a7d316da71163e89cea03e6171ccc9576f80005d0",
+      "bytes": 92615,
+      "origin": {
+        "source_path": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/steam-native-compare10/receipt.json",
+        "source_sha256": "cf803f71f1df324a020aaf1a7d316da71163e89cea03e6171ccc9576f80005d0",
+        "source_bytes": 92615,
+        "lossless_gzip": false
+      }
+    },
+    "steam/trace.csv.gz": {
+      "sha256": "28dcd4185d0d744dea90f76970e2fa80d4e38212e9d8e5fe86d8b0d830f35abc",
+      "bytes": 324510,
+      "origin": {
+        "source_path": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/steam-native-compare10/trace.csv",
+        "source_sha256": "53a01984d9ddc8d81367c2168fe0afe828a10fdbd4a677a4e7d6ec123f9098d3",
+        "source_bytes": 887369,
+        "lossless_gzip": true
+      }
+    }
+  }
+}

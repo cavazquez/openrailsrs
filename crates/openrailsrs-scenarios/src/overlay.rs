@@ -214,6 +214,7 @@ mod tests {
                 edge_speed_limits: vec![],
             },
             train: TrainSection {
+                rack: None,
                 bogie_dynamics: vec![],
                 freight: None,
                 systems: vec![],
@@ -236,6 +237,7 @@ mod tests {
                 penalty_per_second_late: 0.0,
             },
             simulation: SimulationSection {
+                yard_operations: Default::default(),
                 rail_operations: Default::default(),
                 weather_track: None,
                 native_physics: None,

@@ -1,0 +1,152 @@
+{
+  "schema": 1,
+  "kind": "immutable_rust_native_steam_measurement_publication",
+  "source_attempt": "tmp/twenty-20261015/steam-native-compare06",
+  "copied_bytes_unchanged": true,
+  "files_sha256": {
+    "comparison.json": "680a3698616210d3749c164b136306a407eb3d18ff45d709271f214c5d59e72c",
+    "configuration-overlay.json": "7b229e02a8bcf185b504e3cbf89561f912909379e57bfaad43b5c9bf1976e2b2",
+    "driver-input.json": "7b53ccb5d142cb3846a21fce3580ac4d7fb9e725c384a1d8054755088c0d18e1",
+    "execution.log": "680a3698616210d3749c164b136306a407eb3d18ff45d709271f214c5d59e72c",
+    "initial.json": "e5026ad3387486eaff1b85411382a1b2a642591e3360cc0c30b31c2ee0c11ae3",
+    "receipt.json": "68c0fa1503030f3ad3f826479d2e52086dd55333069378b048c5505d7deae671",
+    "trace.csv": "f9e08e06275d64496121d5e752f331886109296c9f8f80d079964c27a9fdacde"
+  },
+  "status": "within_prior_limits",
+  "completed_ticks": 1600,
+  "dt_s": 0.05,
+  "duration_s": 80.0,
+  "selected_model": "native-or161",
+  "binary_sha256": "5fc13442f463a20641d6b63e5da177ace6393b22ab4a8f677004215347209a56",
+  "measured_source_file_count": 723,
+  "actual_measured_source_hashes": "receipt.json#/measurement_source_sha256",
+  "hardware_and_controls": "configuration-overlay.json plus driver-input.json; authored STF native profile, independently initialized; no measured thermal or motion state supplied",
+  "original_capture_manifest_sha256": "667fb11206aa479c6a6d5901e880f0d1c1f1ad1699643c598d667620db774014",
+  "original_trace_sha256": "caf524d9dad7c1034d5df1a41de034b589d6e0d943981116c4cda2f72e93683b",
+  "original_protocol_sha256": "7e82b09d91489f63981c4082de87d39d245b3152105f9fe2b20b55ad5d0f018c",
+  "native_reference": "../physical-native05/native-steam/steam-drive.json",
+  "static_context": "../steam-cycle161-drive-paused03/native/initial.json",
+  "static_context_manifest_sha256": "866a9c084f7855712aefd5a9810ff9b3caf786ad33bcdff7ce44104d9a0c871b",
+  "limits": {
+    "boiler_enthalpy_j_abs": 100000.0,
+    "boiler_mass_kg_abs": 1.0,
+    "coal_burn_kg_s_abs": 0.05,
+    "distance_m_abs": 2.0,
+    "injection_kg_s_abs": 0.05,
+    "injector_state": "exact",
+    "motive_force_n_abs": 100.0,
+    "pressure_bar_abs": 0.1,
+    "production_kg_s_abs": 0.1,
+    "scope": "Prior diagnostic limits, including independently initialized state. A failure remains a failure and does not become an extension-parity claim.",
+    "speed_mps_abs": 0.1,
+    "steam_consumption_kg_s_abs": 0.1,
+    "tender_coal_kg_abs": 1.0,
+    "tender_water_kg_abs": 1.0,
+    "water_fraction_abs": 0.002
+  },
+  "maximum_errors": {
+    "boiler_heat_btu": {
+      "maximum_absolute_error": 31.5,
+      "phase": "coast",
+      "worst_tick": 1102
+    },
+    "boiler_heat_j": {
+      "maximum_absolute_error": 33234.25935745239,
+      "phase": "coast",
+      "worst_tick": 1102
+    },
+    "boiler_mass_kg": {
+      "maximum_absolute_error": 0.0223606863655732,
+      "phase": "coast",
+      "worst_tick": 1355
+    },
+    "boiler_mass_lb": {
+      "maximum_absolute_error": 0.04929687500043656,
+      "phase": "coast",
+      "worst_tick": 1355
+    },
+    "coal_burn_kg_s": {
+      "maximum_absolute_error": 3.65078657074136e-05,
+      "phase": "coast",
+      "worst_tick": 1101
+    },
+    "distance_m": {
+      "maximum_absolute_error": 1.8619499721539796,
+      "phase": "braking",
+      "worst_tick": 1600
+    },
+    "injection_kg_s": {
+      "maximum_absolute_error": 2.0101583744214224e-06,
+      "phase": "injection",
+      "worst_tick": 1089
+    },
+    "motive_force_n": {
+      "maximum_absolute_error": 18.49809062499844,
+      "phase": "injection",
+      "worst_tick": 1092
+    },
+    "net_evaporation_kg_s": {
+      "maximum_absolute_error": 0.03209464815881802,
+      "phase": "injection",
+      "worst_tick": 929
+    },
+    "pressure_bar": {
+      "maximum_absolute_error": 3.474270893200071e-05,
+      "phase": "braking",
+      "worst_tick": 1592
+    },
+    "pressure_psi": {
+      "maximum_absolute_error": 0.0005039003906119888,
+      "phase": "braking",
+      "worst_tick": 1592
+    },
+    "production_kg_s": {
+      "maximum_absolute_error": 7.570388549815732e-06,
+      "phase": "injection",
+      "worst_tick": 1086
+    },
+    "speed_mps": {
+      "maximum_absolute_error": 0.050428418188477764,
+      "phase": "coast",
+      "worst_tick": 1386
+    },
+    "steam_consumption_kg_s": {
+      "maximum_absolute_error": 0.0010269444555222051,
+      "phase": "steam_load",
+      "worst_tick": 678
+    },
+    "tender_coal_kg": {
+      "maximum_absolute_error": 0.005003906249839929,
+      "phase": "braking",
+      "worst_tick": 1407
+    },
+    "tender_water_kg": {
+      "maximum_absolute_error": 0.0002752127411440597,
+      "phase": "injection",
+      "worst_tick": 978
+    },
+    "thermal_power_w": {
+      "maximum_absolute_error": 9.281640625093132,
+      "phase": "coast",
+      "worst_tick": 1109
+    },
+    "water_fraction": {
+      "maximum_absolute_error": 4.608125305227695e-06,
+      "phase": "braking",
+      "worst_tick": 1596
+    }
+  },
+  "injector_state_mismatches": 0,
+  "full_route_claim": false,
+  "full_universal_steam_parity_claim": false,
+  "own_finite_vessel_is_native_cycle": false,
+  "scope": "3F tank, coal, manual fireman, one simple direct-drive engine, non-EQ vacuum, SimpleControlPhysics, Paused=true original reference context. One80s driven trajectory; no external tender, automatic fireman or native Compound acceptance.",
+  "excluded": [
+    "original ENG/PAT/CON/DLL/runtime/content",
+    "imported full route",
+    "rust-source.diff",
+    "rust-working-tree.txt",
+    "all six human trace contents"
+  ],
+  "provenance_note": "The original receipt remains byte-identical and records hashes of some private, deliberately unbundled artifacts. HEAD is ancestry; only the recorded executable and dirty measured source hashes identify this run. Later formatting is not attributed retroactively to that executable."
+}

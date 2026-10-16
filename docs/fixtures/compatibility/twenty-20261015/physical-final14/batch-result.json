@@ -1,0 +1,116 @@
+{
+  "schema": 1,
+  "status": "pass",
+  "build_receipt_sha256": "cbfb90e144e66fe0caedb39791d57dd8bebe14fbcd593963b6de6da23acb2420",
+  "runner_sha256": "b2f5726caf09d7335e559447c8483b1c12505129b365fd8b0fb4c6a80fd56ee9",
+  "commands": [
+    {
+      "name": "chiltern-service",
+      "command": [
+        "python3",
+        "scripts/run_oracles.py",
+        "--suite",
+        "service",
+        "--out-dir",
+        "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/service-geometry14"
+      ],
+      "started_utc": "2026-10-16T15:26:28.376740+00:00",
+      "exit_code": 0,
+      "wall_time_s": 0.3954795870013186,
+      "log_sha256": "d109a755f85068895f95a34da4dc9ab1ca7507fae97bb8fbb446e199c30726d1"
+    },
+    {
+      "name": "historical-short",
+      "command": [
+        "python3",
+        "scripts/run_oracles.py",
+        "--out-dir",
+        "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/historical-short14"
+      ],
+      "started_utc": "2026-10-16T15:26:28.772584+00:00",
+      "exit_code": 0,
+      "wall_time_s": 1.621817277999071,
+      "log_sha256": "970e4a58cf6975676ca1dc003fc2407dc80844732cea950b7958a4bf7b5883bf"
+    },
+    {
+      "name": "class47",
+      "command": [
+        "python3",
+        "scripts/run_oracles.py",
+        "--suite",
+        "class47",
+        "--out-dir",
+        "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/class47-final14"
+      ],
+      "started_utc": "2026-10-16T15:26:30.395160+00:00",
+      "exit_code": 0,
+      "wall_time_s": 0.18896105899875693,
+      "log_sha256": "f0069413e4c797e321e26f21467ae8189a9a5e4c445f9030d7578b42e98cc2e6"
+    },
+    {
+      "name": "station-service",
+      "command": [
+        "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/target/debug/openrailsrs",
+        "play-service",
+        "examples/chiltern_local/scenario.toml",
+        "--out-dir",
+        "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/station-service14"
+      ],
+      "started_utc": "2026-10-16T15:26:30.584504+00:00",
+      "exit_code": 0,
+      "wall_time_s": 0.2815565330001846,
+      "log_sha256": "ff4cdb04e84c5580769db8e17d5de5f3204b4c93a7283e6d9649e175aeac81ab"
+    },
+    {
+      "name": "lirr",
+      "command": [
+        "python3",
+        "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/lirr-replay-from-native.py",
+        "--native-dir",
+        "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/lirr-native-07",
+        "--binary",
+        "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/target/debug/openrailsrs",
+        "--replay-binary",
+        "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/target/debug/examples/activity_trajectory",
+        "--captured-pin",
+        "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/openrails-reference-captured07.toml",
+        "--out-dir",
+        "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/lirr-replay-12"
+      ],
+      "started_utc": "2026-10-16T15:26:30.867413+00:00",
+      "exit_code": 0,
+      "wall_time_s": 12.990080004999982,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "steam",
+      "command": [
+        "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/target/debug/examples/steam_native_compare",
+        "--capture-dir",
+        "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/physical-native-05",
+        "--model",
+        "native-or161",
+        "--static-context-capture",
+        "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/steam-native-cycle03",
+        "--out-dir",
+        "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/steam-native-compare10"
+      ],
+      "started_utc": "2026-10-16T15:26:43.883146+00:00",
+      "exit_code": 0,
+      "wall_time_s": 34.85175186400011,
+      "log_sha256": "16ad71306495b4c0f85fcfe8347bc3097a23abda1303378051dde4050821265c"
+    }
+  ],
+  "inputs_changed": [],
+  "binaries_changed": [],
+  "human_traces_unchanged": {
+    "examples/chiltern/run.csv": true,
+    "examples/chiltern/run.json": true,
+    "examples/chiltern/run_brake_coast_multi_body.csv": true,
+    "examples/chiltern/run_throttle100.csv": true,
+    "examples/chiltern/run_throttle50.csv": true,
+    "examples/chiltern/run_throttle75.csv": true
+  },
+  "completed_utc": "2026-10-16T15:27:18.917497+00:00",
+  "scope": "Historical native references and authored station service plus complete LIRR and bounded80s steam; not a substitute for the workspace-wide final gate."
+}

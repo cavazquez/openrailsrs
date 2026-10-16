@@ -1,0 +1,30 @@
+{
+  "native04": {
+    "file": "historical/native04.csv.gz",
+    "uncompressed_sha256": "6c40d4863c6391d62b0468191713d42dc1597412f2e1c73b999a905614650afe",
+    "uncompressed_bytes": 4837687,
+    "compressed_sha256": "c0d699d4f184e11a54886291cb036a7972793f34f284dd0a491f0e1f4c18e51f",
+    "compressed_bytes": 1235217
+  },
+  "replay02": {
+    "file": "diagnostics/replay02.csv.gz",
+    "uncompressed_sha256": "f7dc941ec0aa237d97ea1c8dad6878d9013c87cf15e548a36df8334487cba189",
+    "uncompressed_bytes": 3722363,
+    "compressed_sha256": "7219734de685608759bd000f4d6feef52db47e07a8417392099e65aef4673b31",
+    "compressed_bytes": 1088716
+  },
+  "replay03": {
+    "file": "diagnostics/replay03.csv.gz",
+    "uncompressed_sha256": "65f21147dbb8373e9d9b61591ec81d45e14a75e8c0916c61d6e1e42c16fcac42",
+    "uncompressed_bytes": 3893653,
+    "compressed_sha256": "e5aae602f9ea14077792b4dd43ba30cad95a343d8d0d654ad5c45ccd259f72bf",
+    "compressed_bytes": 1029322
+  },
+  "replay04": {
+    "file": "diagnostics/replay04.csv.gz",
+    "uncompressed_sha256": "05a32509a3802ac802148246ac3f17fca70a2ce92cfbf7e3b8509431e66ccbee",
+    "uncompressed_bytes": 4092647,
+    "compressed_sha256": "63af4ffef8499b45d5c14db7a6eb4682d555b8226609df752d4a9e7731c100a8",
+    "compressed_bytes": 1295736
+  }
+}

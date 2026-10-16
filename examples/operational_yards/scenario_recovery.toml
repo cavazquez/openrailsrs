@@ -1,0 +1,103 @@
+[scenario]
+name = "Recuperación opcional: vagones sin control"
+description = "F9, Patio: proteger secure-on-slope antes de 60 s; aplicar crest-retarder al 100%; liberar release-wagons y asegurar cuando TODOS se detengan dentro de 200–299 m. Sin corte inseguro ni material nuevo."
+
+[route]
+path = "gravity"
+start = "observe"
+destination = "observe_end"
+start_offset_m = 100.0
+assume_signals_clear = true
+
+[train]
+consist = "consists/loco.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+penalty_per_second_late = 0.0
+
+[simulation]
+duration = 2400.0
+time_step = 0.05
+seed = 42
+multi_body = true
+coupler_kind = "freight"
+legacy_power_cap = false
+train_air_full_release_s = 3.0
+
+[[simulation.yard_operations.gravity_releases]]
+id = "release-wagons"
+service = "gravity-wagons"
+release_s = 0.0
+initial_brake_fraction = 0.0
+initial_handbrakes = []
+automatic = false
+[[simulation.yard_operations.gravity_releases.routes]]
+id = "clasificacion-A"
+edges = ["slope", "road_a"]
+[[simulation.yard_operations.gravity_releases.routes]]
+id = "clasificacion-B"
+edges = ["slope", "road_b"]
+[[simulation.yard_operations.retarders]]
+id = "crest-retarder"
+edge = "slope"
+start_m = 220.0
+end_m = 298.0
+max_force_n = 120000.0
+default_fraction = 0.0
+[[simulation.yard_operations.retarders]]
+id = "road-a-retarder"
+edge = "road_a"
+start_m = 60.0
+end_m = 280.0
+max_force_n = 90000.0
+default_fraction = 0.6
+[[simulation.yard_operations.retarders]]
+id = "road-b-retarder"
+edge = "road_b"
+start_m = 60.0
+end_m = 280.0
+max_force_n = 90000.0
+default_fraction = 0.6
+[[simulation.yard_operations.recovery_exercises]]
+id = "secure-on-slope"
+service = "gravity-wagons"
+protection_edge = "slope"
+stop_edge = "slope"
+stop_start_m = 200.0
+stop_end_m = 299.0
+protect_before_s = 60.0
+max_safe_contact_mps = 0.5
+[simulation.rail_operations]
+yard_delivery_alternatives = [["classification-a", "classification-b"]]
+[[simulation.rail_operations.yard_deliveries]]
+id = "classification-a"
+service = "gravity-wagons"
+destination = "Clasificación vía A"
+edge = "road_a"
+start_m = 30.0
+end_m = 290.0
+vehicles = [0, 1]
+[[simulation.rail_operations.yard_deliveries]]
+id = "classification-b"
+service = "gravity-wagons"
+destination = "Clasificación vía B"
+edge = "road_b"
+start_m = 30.0
+end_m = 290.0
+vehicles = [0, 1]
+
+[output]
+csv = "run_gravity.csv"
+metadata = "run_gravity.json"
+
+[[extra_trains]]
+id = "gravity-wagons"
+consist = "consists/wagons.con"
+start = "crest"
+destination = "road_a_end"
+start_offset_m = 80.0
+waypoints = ["crest", "points", "road_a_end"]
+parked = true
+output_csv = "gravity-wagons.csv"

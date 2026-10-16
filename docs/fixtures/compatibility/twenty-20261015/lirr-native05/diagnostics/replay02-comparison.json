@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "reference_version": "1.6.1",
+  "samples": 33703,
+  "errors": {
+    "velocity_rms_mps": 3.8548812080162866,
+    "brake_pipe_rms_psi": 16.82299023080634,
+    "cylinder_rms_psi": 4.0659170578591155,
+    "motive_force_rms_n": 34944.69834685464,
+    "brake_force_rms_n": 22382.37093227365,
+    "maximum_odometer_error_m": 2041.6986967413723
+  },
+  "thresholds_predeclared": {
+    "velocity_rms_mps": 0.75,
+    "maximum_odometer_error_m": 45,
+    "brake_pipe_rms_psi": 5,
+    "cylinder_rms_psi": 5,
+    "motive_force_rms_n": 5000,
+    "brake_force_rms_n": 5000
+  },
+  "checks": {
+    "velocity_rms_mps": false,
+    "brake_pipe_rms_psi": false,
+    "cylinder_rms_psi": true,
+    "motive_force_rms_n": false,
+    "brake_force_rms_n": false,
+    "maximum_odometer_error_m": false
+  },
+  "coverage": {
+    "native_reached_all_platforms": true,
+    "original_platforms": true,
+    "original_formation": true,
+    "full_distance": true,
+    "full_duration": true,
+    "exact_controls": true
+  },
+  "passed": false,
+  "scope": "Native driver uses original signals, speed limits, platforms and boarding. Rust replays exactly the same 20Hz handles, with physical path and original vehicles. Station scoring and ACT goals are outside this physics comparison and are not allowed to truncate its diagnostics."
+}

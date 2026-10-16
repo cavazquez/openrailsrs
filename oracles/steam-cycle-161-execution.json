@@ -1,0 +1,385 @@
+{
+  "schema": 1,
+  "kind": "bounded_native_steam_original_and_rust_evidence",
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "protocol": "oracles/steam-cycle-161-protocol.json",
+  "protocol_sha256": "c62fc972d0799c3fa7d32db8e6bcd19fde852b986b8ebe652bbb96de0e7e73cb",
+  "prior_limits_unchanged": true,
+  "scope": {
+    "vehicle": "Identified3Ftank authoredSTF, no filename-based runtime branch",
+    "fuel": "coal",
+    "fireman": "manual",
+    "engine": "one simple direct-drive engine",
+    "brakes": "non-EQ vacuum",
+    "physics": "SimpleControlPhysics",
+    "live_external_tender": "required external tender rejected explicitly; no linked tender inventory claim",
+    "own_finite_vessel_and_receiver": "separate declared extensions, not equivalent to native cycle",
+    "automatic_fireman_or_native_compound": "not accepted by this evidence",
+    "closed_horizon_s": 80.0,
+    "full_route_or_universal_steam_parity": false
+  },
+  "captures": [
+    {
+      "case": "hot_subsystem",
+      "directory": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-hot02",
+      "publication_sha256": "4a8de8fe0416eb16317ca60dce737b88be02d2518c3e68c7f374e59fe416a26c",
+      "original_manifest_sha256": "abd64cb3088dc54a0266df0c275d3953dfe8a4589fca92166d09dac8a4683e40",
+      "rows": 1601,
+      "scope": "prescribed_speed_subsystem",
+      "captured_status_preserved": "captured_not_compared",
+      "rust_measurements": [
+        {
+          "directory": "measurements/01",
+          "result": "pass",
+          "executable_sha256": "fac2c5b675523c7aa7ab3f7651c9f94c4ff896bb84a0063f6cb09b7731839b94",
+          "receipt_sha256": "0adc0a10331da0deae12d9db1b4fc2021f511c2a8e4dbb30611c0ec1fa47bc0f",
+          "claim": "This executable and these recorded sources only; no workspace-wide or route-drive acceptance follows from a subsystem result"
+        }
+      ]
+    },
+    {
+      "case": "cold_subsystem",
+      "directory": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-cold05",
+      "publication_sha256": "96ca46852ab7672cb0efa06ae47a72240ced9ecf4f976735c2fdf68265321f27",
+      "original_manifest_sha256": "69c3e00601db4b00e79b77f07cd18de4c30e547481f8635588e5b02fdd999915",
+      "rows": 1601,
+      "scope": "prescribed_speed_subsystem",
+      "captured_status_preserved": "captured_not_compared",
+      "rust_measurements": [
+        {
+          "directory": "measurements/01",
+          "result": "pass",
+          "executable_sha256": "fac2c5b675523c7aa7ab3f7651c9f94c4ff896bb84a0063f6cb09b7731839b94",
+          "receipt_sha256": "09a99d9ccb40d670e7f606798aff0d5a549c9a7b87da06d56bc912ac2b9ee0d1",
+          "claim": "This executable and these recorded sources only; no workspace-wide or route-drive acceptance follows from a subsystem result"
+        }
+      ]
+    },
+    {
+      "case": "hot_drive_paused",
+      "directory": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-paused03",
+      "publication_sha256": "5a7ebe029e495f2559454745e7a62127be3aaf54961d8723aa2e7bfb4bb3be63",
+      "original_manifest_sha256": "866a9c084f7855712aefd5a9810ff9b3caf786ad33bcdff7ce44104d9a0c871b",
+      "rows": 1601,
+      "scope": "original_closed_loop_drive",
+      "captured_status_preserved": "captured_not_compared",
+      "rust_measurements": []
+    },
+    {
+      "case": "hot_drive_unpaused",
+      "directory": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-unpaused04",
+      "publication_sha256": "9e6afd047802d3ddf4196c1f1c9dbf613c99f2ee46acce9484d2ea7e309b98a6",
+      "original_manifest_sha256": "dd765f72145a25e89135d2af5d67ba3e5bd310f28773833716734a548c99ac8c",
+      "rows": 1601,
+      "scope": "original_closed_loop_drive",
+      "captured_status_preserved": "captured_not_compared",
+      "rust_measurements": []
+    }
+  ],
+  "closed_measurement": {
+    "directory": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed06",
+    "publication_sha256": "c7d79ca932faa7113ae1c28cbfc7e049005420a23fcc42ce69fc38519bc1a617",
+    "comparison_sha256": "680a3698616210d3749c164b136306a407eb3d18ff45d709271f214c5d59e72c",
+    "receipt_sha256": "68c0fa1503030f3ad3f826479d2e52086dd55333069378b048c5505d7deae671",
+    "binary_sha256": "5fc13442f463a20641d6b63e5da177ace6393b22ab4a8f677004215347209a56",
+    "status": "within_prior_limits",
+    "completed_ticks": 1600,
+    "selected_model": "native-or161",
+    "actual_measured_source_file_count": 723,
+    "native_state_or_motion_prescribed": false,
+    "context": "Original05Paused=true; staticpost-Startcentre only from03",
+    "maximum_errors": {
+      "boiler_heat_btu": {
+        "maximum_absolute_error": 31.5,
+        "phase": "coast",
+        "worst_tick": 1102
+      },
+      "boiler_heat_j": {
+        "maximum_absolute_error": 33234.25935745239,
+        "phase": "coast",
+        "worst_tick": 1102
+      },
+      "boiler_mass_kg": {
+        "maximum_absolute_error": 0.0223606863655732,
+        "phase": "coast",
+        "worst_tick": 1355
+      },
+      "boiler_mass_lb": {
+        "maximum_absolute_error": 0.04929687500043656,
+        "phase": "coast",
+        "worst_tick": 1355
+      },
+      "coal_burn_kg_s": {
+        "maximum_absolute_error": 3.65078657074136e-05,
+        "phase": "coast",
+        "worst_tick": 1101
+      },
+      "distance_m": {
+        "maximum_absolute_error": 1.8619499721539796,
+        "phase": "braking",
+        "worst_tick": 1600
+      },
+      "injection_kg_s": {
+        "maximum_absolute_error": 2.0101583744214224e-06,
+        "phase": "injection",
+        "worst_tick": 1089
+      },
+      "motive_force_n": {
+        "maximum_absolute_error": 18.49809062499844,
+        "phase": "injection",
+        "worst_tick": 1092
+      },
+      "net_evaporation_kg_s": {
+        "maximum_absolute_error": 0.03209464815881802,
+        "phase": "injection",
+        "worst_tick": 929
+      },
+      "pressure_bar": {
+        "maximum_absolute_error": 3.474270893200071e-05,
+        "phase": "braking",
+        "worst_tick": 1592
+      },
+      "pressure_psi": {
+        "maximum_absolute_error": 0.0005039003906119888,
+        "phase": "braking",
+        "worst_tick": 1592
+      },
+      "production_kg_s": {
+        "maximum_absolute_error": 7.570388549815732e-06,
+        "phase": "injection",
+        "worst_tick": 1086
+      },
+      "speed_mps": {
+        "maximum_absolute_error": 0.050428418188477764,
+        "phase": "coast",
+        "worst_tick": 1386
+      },
+      "steam_consumption_kg_s": {
+        "maximum_absolute_error": 0.0010269444555222051,
+        "phase": "steam_load",
+        "worst_tick": 678
+      },
+      "tender_coal_kg": {
+        "maximum_absolute_error": 0.005003906249839929,
+        "phase": "braking",
+        "worst_tick": 1407
+      },
+      "tender_water_kg": {
+        "maximum_absolute_error": 0.0002752127411440597,
+        "phase": "injection",
+        "worst_tick": 978
+      },
+      "thermal_power_w": {
+        "maximum_absolute_error": 9.281640625093132,
+        "phase": "coast",
+        "worst_tick": 1109
+      },
+      "water_fraction": {
+        "maximum_absolute_error": 4.608125305227695e-06,
+        "phase": "braking",
+        "worst_tick": 1596
+      }
+    },
+    "prior_limits": {
+      "boiler_enthalpy_j_abs": 100000.0,
+      "boiler_mass_kg_abs": 1.0,
+      "coal_burn_kg_s_abs": 0.05,
+      "distance_m_abs": 2.0,
+      "injection_kg_s_abs": 0.05,
+      "injector_state": "exact",
+      "motive_force_n_abs": 100.0,
+      "pressure_bar_abs": 0.1,
+      "production_kg_s_abs": 0.1,
+      "scope": "Prior diagnostic limits, including independently initialized state. A failure remains a failure and does not become an extension-parity claim.",
+      "speed_mps_abs": 0.1,
+      "steam_consumption_kg_s_abs": 0.1,
+      "tender_coal_kg_abs": 1.0,
+      "tender_water_kg_abs": 1.0,
+      "water_fraction_abs": 0.002
+    },
+    "injector_state_mismatches": 0
+  },
+  "cpu_regression": {
+    "directory": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-subsystems",
+    "reference_sha256": "c4183cc9a0585d331741b0de8cfb1b2ed6300f4152396399fb9cf402305c9fef",
+    "provenance_sha256": "b81e0cb568f51a45dfe10998e3973fe6ccc65dedc0034a6275db43aac0d60b9d",
+    "execution_receipt_sha256": "8b90bdc040d3f02ea57cb21275d6732b60ea80b5c8a2328a62cfb1f21a6d10cd",
+    "status": "pass",
+    "native_rows": 3202,
+    "original_table_calls": 310,
+    "dedicated_tests_passed": 3,
+    "installed_original_content_required": false,
+    "wine_required": false,
+    "all_directed_tests_passed": 59,
+    "full_workspace_gate_claim": false
+  },
+  "own_model_evidence": {
+    "conservation": "physical_extensions::vessel_conserves_mass_energy_through_fire_load_injection_and_safety PASS in directed11; own mass/internal-energy balance with pinned steam/water properties",
+    "independent_boilers": "physical_extensions::independent_boilers_compound_and_controls_survive_a_driven_save and double_steam_force_and_consumption_are_metered_by_locomotive_identity PASS in directed11",
+    "native_equivalence_failure_preserved": "docs/fixtures/compatibility/twenty-20261015/steam-diagnostic02/publication.json",
+    "receiver_scope": "DeclaredHP/LPfinite-receiver extension. Ideal-gas pressure at boiler temperature, advected energy and HP/LPwork ledgers; not fullLP/receiver first-law or nativeVauclain equivalence",
+    "small_force_regressions": {
+      "status": "pass",
+      "tests_passed": 2,
+      "receipt": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-own-ledger03/receipt.json",
+      "receipt_sha256": "ab9847ba520cc2bc45696ed6576932dfd1b45299a53c1f4703435cfd6aeebdcf",
+      "scope": "Own HP/receiver/LP extension only. Work below1N and starting-valve bypass bookkeeping; no original-DLL compound parity, no full receiver/LP energy closure claim."
+    }
+  },
+  "native_limits": {
+    "pressure_bar_abs": 0.1,
+    "boiler_mass_kg_abs": 1.0,
+    "boiler_enthalpy_j_abs": 100000.0,
+    "water_fraction_abs": 0.002,
+    "production_kg_s_abs": 0.1,
+    "steam_consumption_kg_s_abs": 0.1,
+    "injection_kg_s_abs": 0.05,
+    "coal_burn_kg_s_abs": 0.05,
+    "tender_coal_kg_abs": 1.0,
+    "tender_water_kg_abs": 1.0,
+    "motive_force_n_abs": 100.0,
+    "speed_mps_abs": 0.1,
+    "distance_m_abs": 2.0,
+    "injector_state": "exact",
+    "scope": "Prior diagnostic limits, including independently initialized state. A failure remains a failure and does not become an extension-parity claim."
+  },
+  "tables_limits": {
+    "abs": 0.0002,
+    "relative": 2e-06,
+    "selection": "All50 no-argument SteamTable Interpolator factories; fractions0,.13,.5,.9,1 across each static domain;2D upper/lower grids RPM0,12,50,110,350 cutoff.1,.3,.45,.65,.75,.9"
+  },
+  "original_resources_bundled": false,
+  "human_traces_modified": false,
+  "provenance_note": "Raw capture manifests/receipts retain their original hashes/status. Gzip and compact projection have separate explicit transformation manifests. Rust executable/source hashes belong to their actual measurement, not to a claimed clean HEAD or subsequent formatting.",
+  "closed_measurements": [
+    {
+      "directory": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed08",
+      "publication_sha256": "b6f37b287e01485f009aebb3523dfa1fc919a4f8b9122674dd804c41178cbf0f",
+      "comparison_sha256": "9237adc95b6a38660749d3f219e6ed07f3bf3fd80310c9b03a278b98a5c51dd4",
+      "receipt_sha256": "a056348732afff9725e8662f9871c09a21adb9a255443bdbf0738209d531fbc1",
+      "binary_sha256": "922c65c5fb31dbd280773b36412aef72b58af87dd98caaa1b50ca8443577fb77",
+      "build_result_sha256": "e248ffe7d669b5249f13dc94f36130dfdd3d21c42bd66a4687d7cc7e0ddc39e3",
+      "build_source_snapshot_sha256": "683608559ede78f65565b7543988a7c7cac4c726ce53281986142cab934db937",
+      "build_fixture_snapshot_sha256": "39bdbb77fa0836682696a4ef0f5904db2ac8877a7c4073eac095c6e0b1c119cf",
+      "status": "within_prior_limits",
+      "completed_ticks": 1600,
+      "selected_model": "native-or161",
+      "actual_measured_source_file_count": 728,
+      "native_state_or_motion_prescribed": false,
+      "context": "Original05 Paused=true; static post-Start centre only from03",
+      "maximum_errors": {
+        "boiler_heat_btu": {
+          "maximum_absolute_error": 31.5,
+          "phase": "coast",
+          "worst_tick": 1102
+        },
+        "boiler_heat_j": {
+          "maximum_absolute_error": 33234.25935745239,
+          "phase": "coast",
+          "worst_tick": 1102
+        },
+        "boiler_mass_kg": {
+          "maximum_absolute_error": 0.0223606863655732,
+          "phase": "coast",
+          "worst_tick": 1355
+        },
+        "boiler_mass_lb": {
+          "maximum_absolute_error": 0.04929687500043656,
+          "phase": "coast",
+          "worst_tick": 1355
+        },
+        "coal_burn_kg_s": {
+          "maximum_absolute_error": 3.65078657074136e-05,
+          "phase": "coast",
+          "worst_tick": 1101
+        },
+        "distance_m": {
+          "maximum_absolute_error": 1.8623010546875776,
+          "phase": "braking",
+          "worst_tick": 1600
+        },
+        "injection_kg_s": {
+          "maximum_absolute_error": 2.0101583744214224e-06,
+          "phase": "injection",
+          "worst_tick": 1089
+        },
+        "motive_force_n": {
+          "maximum_absolute_error": 18.49223124999844,
+          "phase": "injection",
+          "worst_tick": 1092
+        },
+        "net_evaporation_kg_s": {
+          "maximum_absolute_error": 0.03209464815881802,
+          "phase": "injection",
+          "worst_tick": 929
+        },
+        "pressure_bar": {
+          "maximum_absolute_error": 3.474270893200071e-05,
+          "phase": "braking",
+          "worst_tick": 1592
+        },
+        "pressure_psi": {
+          "maximum_absolute_error": 0.0005039003906119888,
+          "phase": "braking",
+          "worst_tick": 1592
+        },
+        "production_kg_s": {
+          "maximum_absolute_error": 7.570388549815732e-06,
+          "phase": "injection",
+          "worst_tick": 1086
+        },
+        "speed_mps": {
+          "maximum_absolute_error": 0.05043986228027464,
+          "phase": "coast",
+          "worst_tick": 1386
+        },
+        "steam_consumption_kg_s": {
+          "maximum_absolute_error": 0.0010269444555222051,
+          "phase": "steam_load",
+          "worst_tick": 678
+        },
+        "tender_coal_kg": {
+          "maximum_absolute_error": 0.005003906249839929,
+          "phase": "braking",
+          "worst_tick": 1407
+        },
+        "tender_water_kg": {
+          "maximum_absolute_error": 0.0002752127411440597,
+          "phase": "injection",
+          "worst_tick": 978
+        },
+        "thermal_power_w": {
+          "maximum_absolute_error": 9.281640625093132,
+          "phase": "coast",
+          "worst_tick": 1109
+        },
+        "water_fraction": {
+          "maximum_absolute_error": 4.608125305227695e-06,
+          "phase": "braking",
+          "worst_tick": 1596
+        }
+      },
+      "prior_limits": {
+        "boiler_enthalpy_j_abs": 100000.0,
+        "boiler_mass_kg_abs": 1.0,
+        "coal_burn_kg_s_abs": 0.05,
+        "distance_m_abs": 2.0,
+        "injection_kg_s_abs": 0.05,
+        "injector_state": "exact",
+        "motive_force_n_abs": 100.0,
+        "pressure_bar_abs": 0.1,
+        "production_kg_s_abs": 0.1,
+        "scope": "Prior diagnostic limits, including independently initialized state. A failure remains a failure and does not become an extension-parity claim.",
+        "speed_mps_abs": 0.1,
+        "steam_consumption_kg_s_abs": 0.1,
+        "tender_coal_kg_abs": 1.0,
+        "tender_water_kg_abs": 1.0,
+        "water_fraction_abs": 0.002
+      },
+      "injector_state_mismatches": 0,
+      "full_workspace_gate_claim": false
+    }
+  ],
+  "latest_closed_measurement": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed08"
+}

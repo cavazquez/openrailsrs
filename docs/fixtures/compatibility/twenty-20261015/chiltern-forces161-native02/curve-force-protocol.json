@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "status": "declared_before_first_rust_comparison",
+  "kind": "isolated_native_curve_force_subsystem",
+  "reference_version": "1.6.1",
+  "native_trace_sha256": "ad9e690435d784df243c8a49bfdb37137c6e5f98f8941045adfde27e4500a7e2",
+  "native_car_observation_sha256": "255304a33d0f365a23cabdb8fdc43c60c01e0cbb4ef9e540d153a21f4c781356",
+  "genuine_expected": "CurveForceN direct field from unmodified OR1.6.1 DLL after Simulator.Update; no formula-generated expected force",
+  "input_scope": "Isolated prescribed geometry/mass/vehicle speed/coefficient only; no observed force, radius, cant, pose, speed, cylinder or coefficient is supplied to a closed trajectory",
+  "force_absolute_tolerance_n": 0.01,
+  "previous_service_motion_thresholds_unchanged": true,
+  "phase": "CurveForceN rowN uses CurrentCurveRadiusM/SuperElevationM rowN-1, AbsSpeedMpS rowN and train coefficient published in car order. Vehicles0..6 see head0 current coefficient; vehicle7 sees rear7 current coefficient. Coefficient uses previous AbsSpeedMpS of that locomotive and current base factor. Initial tick0 is context only.",
+  "coefficient_derivation": "Read previous locomotive AbsSpeedMpS and current BaseFrictionCoefficientFactor from original observations; compute source expression in Single, (7.5f/(prevAbsSpeed*3.6f+44f)+.161f)*base. This derived input is labelled; post-update rear coefficient directly observed confirms equality. No expected force is derived.",
+  "single_rounding": "Inputs/expected parse native round-trip decimal and round to original IEEE754 Single. Coefficient rounds after each original Single operation.",
+  "selection": "32 fixed post-update ticks across startup, acceleration, coasting, braking and finalrest; replace fixedtick14000 by observedmaximum summed nativecurve tick when distinct; all8cars each tick. Output-extremum selection determines coverage, not thresholds.",
+  "fixture_rows": 256,
+  "source_methods": [
+    "TrainCar.Update\u2192UpdateCurveForce",
+    "MSTSLocomotive.UpdateFrictionCoefficient",
+    "Train.PhysicsUpdate car-order loop"
+  ],
+  "rust_execution": "not_run_by_capture_or_extractor"
+}

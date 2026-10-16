@@ -1,0 +1,258 @@
+{
+  "schema": 1,
+  "mode": "Preserve explicit source ENG/WAG quantities; no missing quantity inferred from a captured output",
+  "vehicles": [
+    {
+      "path": "examples/chiltern/trains/RF_Blue_Pullman/RF_WP_DMBSA.eng",
+      "source_file": "RF_WP_DMBSA.eng",
+      "source_sha256": "4da0da99e3141c2dd6938a58b5b94d3844e96d9fd6689b1d80f639b5027b92ea",
+      "before_sha256": "e8674a363d591915bc86779d3c5fef06b3a9de6736ae148e0e866a54c1e5b81b",
+      "fields": {
+        "ORTSTrackGauge": "4ft 8.5in",
+        "ORTSRigidWheelBase": "9ft 6in",
+        "ORTSUnbalancedSuperElevation": "6in"
+      },
+      "after_sha256": "22454b2e85cf1a0bbd45716b5fdda68a68db8a4853af782b3359fc12ff63062a"
+    },
+    {
+      "path": "examples/chiltern/trains/RF_Blue_Pullman/RF_WP_KFC.wag",
+      "source_file": "RF_WP_KFC.wag",
+      "source_sha256": "fca08cc01ba9fe0f732e0c5c79fcc8461a8367c14201ae2fc0d8c86f57add6c4",
+      "before_sha256": "c91d537331077d6a5d9419a05b590bcda92943edd5d2d9904433ca24dd500b00",
+      "fields": {
+        "ORTSTrackGauge": "4ft 8.5in",
+        "ORTSRigidWheelBase": "9ft 6in",
+        "ORTSUnbalancedSuperElevation": "6in"
+      },
+      "after_sha256": "bfd3a50eb4a92b98dd77f8a5aee728891263ddca4b47a8d26164e775760efe39"
+    },
+    {
+      "path": "examples/chiltern/trains/RF_Blue_Pullman/RF_WP_KFF.wag",
+      "source_file": "RF_WP_KFF.wag",
+      "source_sha256": "79f8c539828b1a961dfc859267981547de0c0268fa72493355ddd857bad9d3a3",
+      "before_sha256": "422d57115e0c65a3c2d6a6dafa52007a29cd83b7627a3aa757c2076d6788f02e",
+      "fields": {
+        "ORTSTrackGauge": "4ft 8.5in",
+        "ORTSRigidWheelBase": "9ft 6in",
+        "ORTSUnbalancedSuperElevation": "6in"
+      },
+      "after_sha256": "c4c865d52df82e882a832c1a9b333d3b38c8fd65341f3b8df54c258bdcfef0f0"
+    },
+    {
+      "path": "examples/chiltern/trains/RF_Blue_Pullman/RF_WP_PCFD.wag",
+      "source_file": "RF_WP_PCFD.wag",
+      "source_sha256": "b8a58bf85bd6f5e947a8033fdf87e85f9f422c3cc1ada9114c6d14044242ef00",
+      "before_sha256": "9553f70930fa426fc143e0501cfa1a5a89a8494c304e97fbe18016d70ed3fa13",
+      "fields": {
+        "ORTSTrackGauge": "4ft 8.5in",
+        "ORTSRigidWheelBase": "9ft 6in",
+        "ORTSUnbalancedSuperElevation": "6in"
+      },
+      "after_sha256": "24f6aff47715fafda1fc107e59ddb6faeec5eb88624944cd889ef1ee06166825"
+    },
+    {
+      "path": "examples/chiltern/trains/RF_Blue_Pullman/RF_WP_PCFE.wag",
+      "source_file": "RF_WP_PCFE.wag",
+      "source_sha256": "822160aaf16cba4d5cba07d3b37c7131441853d2daf71c8b401ad8b781ce2030",
+      "before_sha256": "53438e4e20121108e0cc7a0a7f8afce1e592e8df34cfe8be930945caddd4ffde",
+      "fields": {
+        "ORTSTrackGauge": "4ft 8.5in",
+        "ORTSRigidWheelBase": "9ft 6in",
+        "ORTSUnbalancedSuperElevation": "6in"
+      },
+      "after_sha256": "f524c578b2772523c9ac04d86789263ce4e899be584e12155a4659ca80f87f0d"
+    },
+    {
+      "path": "examples/chiltern/trains/RF_Blue_Pullman/RF_WP_PSB.wag",
+      "source_file": "RF_WP_PSB.wag",
+      "source_sha256": "a496249a60b460bbfa9c4163b77e8367985029462c2aa1277b7003835cf88beb",
+      "before_sha256": "8c4d38f0038cab4628e33247606430e8aaaf94e87e4fb7b9be03bb5fc50ab74f",
+      "fields": {
+        "ORTSTrackGauge": "4ft 8.5in",
+        "ORTSRigidWheelBase": "9ft 6in",
+        "ORTSUnbalancedSuperElevation": "6in"
+      },
+      "after_sha256": "ba3151e0a692685f03b5137e86759b06bc4ab960a8f46ffb642370cae0f3a81e"
+    },
+    {
+      "path": "examples/chiltern/trains/RF_Blue_Pullman/RF_WP_PSG.wag",
+      "source_file": "RF_WP_PSG.wag",
+      "source_sha256": "4ae0e96cce97002751fe7d8c034af29b65283a55acf0abdcbe1e2511085bc72a",
+      "before_sha256": "6a5812a99d45056bca4c8548b84349dbf5beeece8ba330dffc8c217f96d4ce37",
+      "fields": {
+        "ORTSTrackGauge": "4ft 8.5in",
+        "ORTSRigidWheelBase": "9ft 6in",
+        "ORTSUnbalancedSuperElevation": "6in"
+      },
+      "after_sha256": "a4b31fe995d264209f606928e08aac7cbb371c6032545f4403c8a77267f76e1f"
+    },
+    {
+      "path": "examples/chiltern_extended/trains/RF_Blue_Pullman/RF_WP_DMBSA.eng",
+      "source_file": "RF_WP_DMBSA.eng",
+      "source_sha256": "4da0da99e3141c2dd6938a58b5b94d3844e96d9fd6689b1d80f639b5027b92ea",
+      "before_sha256": "2ac52f50d0fe97872f0de41804c5133208d33b60d6b5e39ce1513919b9d77b0c",
+      "fields": {
+        "ORTSTrackGauge": "4ft 8.5in",
+        "ORTSRigidWheelBase": "9ft 6in",
+        "ORTSUnbalancedSuperElevation": "6in"
+      },
+      "after_sha256": "03d7a0264b894fc72887ad31a6628c168b88ea17a6a88eda3a3af246b4121be9"
+    },
+    {
+      "path": "examples/chiltern_extended/trains/RF_Blue_Pullman/RF_WP_KFC.wag",
+      "source_file": "RF_WP_KFC.wag",
+      "source_sha256": "fca08cc01ba9fe0f732e0c5c79fcc8461a8367c14201ae2fc0d8c86f57add6c4",
+      "before_sha256": "0d106df718b84456a5df8a30a999f4ac8f033a9807b60e0649c50df8a253f355",
+      "fields": {
+        "ORTSTrackGauge": "4ft 8.5in",
+        "ORTSRigidWheelBase": "9ft 6in",
+        "ORTSUnbalancedSuperElevation": "6in"
+      },
+      "after_sha256": "efefe23a5a4b3406755e0a97612444b5dd476fdac19902776e350a9c4dd92a48"
+    },
+    {
+      "path": "examples/chiltern_extended/trains/RF_Blue_Pullman/RF_WP_KFF.wag",
+      "source_file": "RF_WP_KFF.wag",
+      "source_sha256": "79f8c539828b1a961dfc859267981547de0c0268fa72493355ddd857bad9d3a3",
+      "before_sha256": "fe1d40a4827e27e4eba47d9d25b5f57aacd9725236538ea9052dc51c869bc288",
+      "fields": {
+        "ORTSTrackGauge": "4ft 8.5in",
+        "ORTSRigidWheelBase": "9ft 6in",
+        "ORTSUnbalancedSuperElevation": "6in"
+      },
+      "after_sha256": "7b4102fb74718d3870a794654615125ff34918cfcc1fb2a80b30c260718a678f"
+    },
+    {
+      "path": "examples/chiltern_extended/trains/RF_Blue_Pullman/RF_WP_PCFD.wag",
+      "source_file": "RF_WP_PCFD.wag",
+      "source_sha256": "b8a58bf85bd6f5e947a8033fdf87e85f9f422c3cc1ada9114c6d14044242ef00",
+      "before_sha256": "4f9c17626e05deed35b64a4cd7103934916712f64acdd1080b04d5a473334b56",
+      "fields": {
+        "ORTSTrackGauge": "4ft 8.5in",
+        "ORTSRigidWheelBase": "9ft 6in",
+        "ORTSUnbalancedSuperElevation": "6in"
+      },
+      "after_sha256": "2958a2ec7dc49b3492d34060ab3b290ead55a0c6d26a18d1198ae196d9ed2fdf"
+    },
+    {
+      "path": "examples/chiltern_extended/trains/RF_Blue_Pullman/RF_WP_PCFE.wag",
+      "source_file": "RF_WP_PCFE.wag",
+      "source_sha256": "822160aaf16cba4d5cba07d3b37c7131441853d2daf71c8b401ad8b781ce2030",
+      "before_sha256": "d88d84b37548399f5ac03cbd9ff4c40046c21dc8c67006450d4397e144fecb47",
+      "fields": {
+        "ORTSTrackGauge": "4ft 8.5in",
+        "ORTSRigidWheelBase": "9ft 6in",
+        "ORTSUnbalancedSuperElevation": "6in"
+      },
+      "after_sha256": "1af4f0a96f46596204b141ba4bf8ffcd4783ed283c473d3c4363f4caf6f13cad"
+    },
+    {
+      "path": "examples/chiltern_extended/trains/RF_Blue_Pullman/RF_WP_PSB.wag",
+      "source_file": "RF_WP_PSB.wag",
+      "source_sha256": "a496249a60b460bbfa9c4163b77e8367985029462c2aa1277b7003835cf88beb",
+      "before_sha256": "92d898355973f30f313f4559128f586a563765a84a35dfac6d99f7c26ab9a1b4",
+      "fields": {
+        "ORTSTrackGauge": "4ft 8.5in",
+        "ORTSRigidWheelBase": "9ft 6in",
+        "ORTSUnbalancedSuperElevation": "6in"
+      },
+      "after_sha256": "8581bcf742aa59b81fdd9fd6b81bc13f2df9c17e1075c1ad905bbc8fa31a5579"
+    },
+    {
+      "path": "examples/chiltern_extended/trains/RF_Blue_Pullman/RF_WP_PSG.wag",
+      "source_file": "RF_WP_PSG.wag",
+      "source_sha256": "4ae0e96cce97002751fe7d8c034af29b65283a55acf0abdcbe1e2511085bc72a",
+      "before_sha256": "9d75e58d2ed3b17d3a38a34cf4fdcf0672234f24949f0b5b8861e35ee17d1e07",
+      "fields": {
+        "ORTSTrackGauge": "4ft 8.5in",
+        "ORTSRigidWheelBase": "9ft 6in",
+        "ORTSUnbalancedSuperElevation": "6in"
+      },
+      "after_sha256": "abc9a367024804a9ec448d89a29d1750b7c91d22e9a9e6fca2ed7e68a37afc97"
+    },
+    {
+      "path": "examples/chiltern_local/physics/trains/RF_Blue_Pullman/RF_WP_DMBSA.eng",
+      "source_file": "RF_WP_DMBSA.eng",
+      "source_sha256": "4da0da99e3141c2dd6938a58b5b94d3844e96d9fd6689b1d80f639b5027b92ea",
+      "before_sha256": "91a2e89e1fa251283194b397ab45141c56308e8ddac4624de3344e4490c57066",
+      "fields": {
+        "ORTSTrackGauge": "4ft 8.5in",
+        "ORTSRigidWheelBase": "9ft 6in",
+        "ORTSUnbalancedSuperElevation": "6in"
+      },
+      "after_sha256": "0f5dc92753ac378f1ad903018c87b384b6a76effb4e1fec70c0692162e466a81"
+    },
+    {
+      "path": "examples/chiltern_local/physics/trains/RF_Blue_Pullman/RF_WP_KFC.wag",
+      "source_file": "RF_WP_KFC.wag",
+      "source_sha256": "fca08cc01ba9fe0f732e0c5c79fcc8461a8367c14201ae2fc0d8c86f57add6c4",
+      "before_sha256": "8c47f1de2a9806145de42277cce971db0841f2c01aabe23be23f74b5cbae6e14",
+      "fields": {
+        "ORTSTrackGauge": "4ft 8.5in",
+        "ORTSRigidWheelBase": "9ft 6in",
+        "ORTSUnbalancedSuperElevation": "6in"
+      },
+      "after_sha256": "36936021a9932b4deafbde4904695b2d311bef2e1c7c08f84cb94260eb3d8c57"
+    },
+    {
+      "path": "examples/chiltern_local/physics/trains/RF_Blue_Pullman/RF_WP_KFF.wag",
+      "source_file": "RF_WP_KFF.wag",
+      "source_sha256": "79f8c539828b1a961dfc859267981547de0c0268fa72493355ddd857bad9d3a3",
+      "before_sha256": "1f9d7d0c6578e579dce98662a430a016d526e7da28bbbc543ef8aa70b6d8c568",
+      "fields": {
+        "ORTSTrackGauge": "4ft 8.5in",
+        "ORTSRigidWheelBase": "9ft 6in",
+        "ORTSUnbalancedSuperElevation": "6in"
+      },
+      "after_sha256": "2a8b9714cd7ca3175e913781eabc928ebc05cc45fad1dd49c35ac2895c5a89e7"
+    },
+    {
+      "path": "examples/chiltern_local/physics/trains/RF_Blue_Pullman/RF_WP_PCFD.wag",
+      "source_file": "RF_WP_PCFD.wag",
+      "source_sha256": "b8a58bf85bd6f5e947a8033fdf87e85f9f422c3cc1ada9114c6d14044242ef00",
+      "before_sha256": "77139cedcffa68ae1706e371ff29a9016d8b20d5912ea7a8cbb272c9131db04c",
+      "fields": {
+        "ORTSTrackGauge": "4ft 8.5in",
+        "ORTSRigidWheelBase": "9ft 6in",
+        "ORTSUnbalancedSuperElevation": "6in"
+      },
+      "after_sha256": "ef88d63a452d0432145f78bc4986f39b9ec6de58207590b63cba88277b7712ab"
+    },
+    {
+      "path": "examples/chiltern_local/physics/trains/RF_Blue_Pullman/RF_WP_PCFE.wag",
+      "source_file": "RF_WP_PCFE.wag",
+      "source_sha256": "822160aaf16cba4d5cba07d3b37c7131441853d2daf71c8b401ad8b781ce2030",
+      "before_sha256": "80125b73b5e864dfff8bef9f71d6291bd28b0ac07cf9605d8a133a0c36229f7a",
+      "fields": {
+        "ORTSTrackGauge": "4ft 8.5in",
+        "ORTSRigidWheelBase": "9ft 6in",
+        "ORTSUnbalancedSuperElevation": "6in"
+      },
+      "after_sha256": "bc1e9ec55e589d9363340cedc291f31a48d1323f6cb5ca61d0a46937543a5485"
+    },
+    {
+      "path": "examples/chiltern_local/physics/trains/RF_Blue_Pullman/RF_WP_PSB.wag",
+      "source_file": "RF_WP_PSB.wag",
+      "source_sha256": "a496249a60b460bbfa9c4163b77e8367985029462c2aa1277b7003835cf88beb",
+      "before_sha256": "0afd4fae879df240f40722d1fdf2864a17a72524f9a46efcc3b111abea54e818",
+      "fields": {
+        "ORTSTrackGauge": "4ft 8.5in",
+        "ORTSRigidWheelBase": "9ft 6in",
+        "ORTSUnbalancedSuperElevation": "6in"
+      },
+      "after_sha256": "e3fb841b1e5e3b4e910943525ce5902f3076ed6fa6b24cd3276f1fd2361004e1"
+    },
+    {
+      "path": "examples/chiltern_local/physics/trains/RF_Blue_Pullman/RF_WP_PSG.wag",
+      "source_file": "RF_WP_PSG.wag",
+      "source_sha256": "4ae0e96cce97002751fe7d8c034af29b65283a55acf0abdcbe1e2511085bc72a",
+      "before_sha256": "cbac03c2943bb65de2f0ea4a44fd2091d4883dc0c72058566d17474d36e095a2",
+      "fields": {
+        "ORTSTrackGauge": "4ft 8.5in",
+        "ORTSRigidWheelBase": "9ft 6in",
+        "ORTSUnbalancedSuperElevation": "6in"
+      },
+      "after_sha256": "49d23222ee19053f336b2bb88022bc16f5a2364afc68a03d822844b72ff80ece"
+    }
+  ]
+}

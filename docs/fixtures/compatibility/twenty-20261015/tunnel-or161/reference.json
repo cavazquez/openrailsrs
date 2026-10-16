@@ -1,0 +1,6764 @@
+{
+  "schema": 1,
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "protocol_sha256": "49eed6db5e701f9e513a5f4b15091ba5f8c17a42435136da835a850df8877705",
+  "tolerance_abs_n": 0.01,
+  "route_hardware": {
+    "authored_route_speed_limit_mps": 223.52,
+    "authored_tunnel_overrides": false,
+    "single": {
+      "area_m2": 70.0,
+      "perimeter_m": 32.0
+    },
+    "double": {
+      "area_m2": 100.0,
+      "perimeter_m": 37.5
+    },
+    "origin": "OR1.6.1 TrainCar.Initialize779–858; source-default >=97.22m/s branch, original TRK hash recorded"
+  },
+  "scope": "Isolated prescribed geometry/speed/mass context, not a closed-loop route acceptance",
+  "cases": [
+    {
+      "force_row": 1,
+      "context_row": 0,
+      "car": 0,
+      "time_s": 0.05,
+      "reasons": [
+        "first_computed_tick"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 0.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 0.0
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 1,
+      "context_row": 0,
+      "car": 1,
+      "time_s": 0.05,
+      "reasons": [
+        "first_computed_tick"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 0.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 0.0
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 1,
+      "context_row": 0,
+      "car": 2,
+      "time_s": 0.05,
+      "reasons": [
+        "first_computed_tick"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 0.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 0.0
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 1,
+      "context_row": 0,
+      "car": 3,
+      "time_s": 0.05,
+      "reasons": [
+        "first_computed_tick"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 0.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 0.0
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 1,
+      "context_row": 0,
+      "car": 4,
+      "time_s": 0.05,
+      "reasons": [
+        "first_computed_tick"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 0.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 0.0
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 1,
+      "context_row": 0,
+      "car": 5,
+      "time_s": 0.05,
+      "reasons": [
+        "first_computed_tick"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 0.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 0.0
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 1,
+      "context_row": 0,
+      "car": 6,
+      "time_s": 0.05,
+      "reasons": [
+        "first_computed_tick"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 0.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 0.0
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 2795,
+      "context_row": 2794,
+      "car": 0,
+      "time_s": 139.75,
+      "reasons": [
+        "context_transition_at_2795"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.2094497680664,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 5.5393242835998535
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 2796,
+      "context_row": 2795,
+      "car": 0,
+      "time_s": 139.8,
+      "reasons": [
+        "context_transition_at_2795"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20935821533203,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 5.534469127655029
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 217.6946258544922,
+        "length_behind_m": 0.1153717041015625,
+        "num_paths": 2
+      },
+      "expected_force_n": 1.7287087440490723
+    },
+    {
+      "force_row": 2797,
+      "context_row": 2796,
+      "car": 0,
+      "time_s": 139.85,
+      "reasons": [
+        "context_transition_at_2795"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20917510986328,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 5.531161308288574
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 217.4180450439453,
+        "length_behind_m": 0.3919525146484375,
+        "num_paths": 2
+      },
+      "expected_force_n": 1.7266385555267334
+    },
+    {
+      "force_row": 2828,
+      "context_row": 2827,
+      "car": 1,
+      "time_s": 141.4,
+      "reasons": [
+        "context_transition_at_2828"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.2092056274414,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 5.531307697296143
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 2829,
+      "context_row": 2828,
+      "car": 1,
+      "time_s": 141.45000000000002,
+      "reasons": [
+        "context_transition_at_2828"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20907592773438,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 5.536646842956543
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 220.75164794921875,
+        "length_behind_m": 0.2383575439453125,
+        "num_paths": 2
+      },
+      "expected_force_n": 1.2678477764129639
+    },
+    {
+      "force_row": 2830,
+      "context_row": 2829,
+      "car": 1,
+      "time_s": 141.5,
+      "reasons": [
+        "context_transition_at_2828"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20880889892578,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 5.534848690032959
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 220.4751739501953,
+        "length_behind_m": 0.51483154296875,
+        "num_paths": 2
+      },
+      "expected_force_n": 1.2670197486877441
+    },
+    {
+      "force_row": 2860,
+      "context_row": 2859,
+      "car": 2,
+      "time_s": 143.0,
+      "reasons": [
+        "context_transition_at_2860"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.2090072631836,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 5.531283378601074
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 2861,
+      "context_row": 2860,
+      "car": 2,
+      "time_s": 143.05,
+      "reasons": [
+        "context_transition_at_2860"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.2092056274414,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 5.535478115081787
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 220.905029296875,
+        "length_behind_m": 0.0849761962890625,
+        "num_paths": 2
+      },
+      "expected_force_n": 1.2673149108886719
+    },
+    {
+      "force_row": 2862,
+      "context_row": 2861,
+      "car": 2,
+      "time_s": 143.1,
+      "reasons": [
+        "context_transition_at_2860"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.2092514038086,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 5.533883094787598
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 220.62823486328125,
+        "length_behind_m": 0.3617706298828125,
+        "num_paths": 2
+      },
+      "expected_force_n": 1.2665852308273315
+    },
+    {
+      "force_row": 2893,
+      "context_row": 2892,
+      "car": 3,
+      "time_s": 144.65,
+      "reasons": [
+        "context_transition_at_2893"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20944213867188,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 5.533627986907959
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 2894,
+      "context_row": 2893,
+      "car": 3,
+      "time_s": 144.70000000000002,
+      "reasons": [
+        "context_transition_at_2893"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20950317382812,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 5.538090229034424
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 220.78172302246094,
+        "length_behind_m": 0.208282470703125,
+        "num_paths": 2
+      },
+      "expected_force_n": 1.2685164213180542
+    },
+    {
+      "force_row": 2895,
+      "context_row": 2894,
+      "car": 3,
+      "time_s": 144.75,
+      "reasons": [
+        "context_transition_at_2893"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.2092056274414,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 5.535348415374756
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 220.5052490234375,
+        "length_behind_m": 0.4847564697265625,
+        "num_paths": 2
+      },
+      "expected_force_n": 1.267255425453186
+    },
+    {
+      "force_row": 2925,
+      "context_row": 2924,
+      "car": 4,
+      "time_s": 146.25,
+      "reasons": [
+        "context_transition_at_2925"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20938873291016,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 5.535240650177002
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 2926,
+      "context_row": 2925,
+      "car": 4,
+      "time_s": 146.3,
+      "reasons": [
+        "context_transition_at_2925"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.2092056274414,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 5.533483028411865
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 220.9361572265625,
+        "length_behind_m": 0.0538482666015625,
+        "num_paths": 2
+      },
+      "expected_force_n": 1.2664015293121338
+    },
+    {
+      "force_row": 2927,
+      "context_row": 2926,
+      "car": 4,
+      "time_s": 146.35,
+      "reasons": [
+        "context_transition_at_2925"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20911407470703,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 5.534502029418945
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 220.65945434570312,
+        "length_behind_m": 0.3305511474609375,
+        "num_paths": 2
+      },
+      "expected_force_n": 1.2668662071228027
+    },
+    {
+      "force_row": 2969,
+      "context_row": 2968,
+      "car": 5,
+      "time_s": 148.45000000000002,
+      "reasons": [
+        "context_transition_at_2969"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20960235595703,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 5.538452625274658
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 2970,
+      "context_row": 2969,
+      "car": 5,
+      "time_s": 148.5,
+      "reasons": [
+        "context_transition_at_2969"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20956420898438,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 5.534702301025391
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 217.76803588867188,
+        "length_behind_m": 0.041961669921875,
+        "num_paths": 2
+      },
+      "expected_force_n": 1.2669590711593628
+    },
+    {
+      "force_row": 2971,
+      "context_row": 2970,
+      "car": 5,
+      "time_s": 148.55,
+      "reasons": [
+        "context_transition_at_2969"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20952606201172,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 5.538380146026611
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 217.49114990234375,
+        "length_behind_m": 0.31884765625,
+        "num_paths": 2
+      },
+      "expected_force_n": 1.268642783164978
+    },
+    {
+      "force_row": 3013,
+      "context_row": 3012,
+      "car": 6,
+      "time_s": 150.65,
+      "reasons": [
+        "context_transition_at_3013"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20956420898438,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 5.531009197235107
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 3014,
+      "context_row": 3013,
+      "car": 6,
+      "time_s": 150.70000000000002,
+      "reasons": [
+        "context_transition_at_3013"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20952606201172,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 5.534285545349121
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 217.78025817871094,
+        "length_behind_m": 0.0297393798828125,
+        "num_paths": 2
+      },
+      "expected_force_n": 1.7285979986190796
+    },
+    {
+      "force_row": 3015,
+      "context_row": 3014,
+      "car": 6,
+      "time_s": 150.75,
+      "reasons": [
+        "context_transition_at_3013"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20951843261719,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 5.5404744148254395
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 217.50323486328125,
+        "length_behind_m": 0.3067626953125,
+        "num_paths": 2
+      },
+      "expected_force_n": 1.7324658632278442
+    },
+    {
+      "force_row": 3516,
+      "context_row": 3515,
+      "car": 0,
+      "time_s": 175.8,
+      "reasons": [
+        "context_transition_at_3516"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20994567871094,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 8.467628479003906
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 0.41374969482421875,
+        "length_behind_m": -7.6037492752075195,
+        "num_paths": 2
+      },
+      "expected_force_n": 4.045077800750732
+    },
+    {
+      "force_row": 3516,
+      "context_row": 3515,
+      "car": 1,
+      "time_s": 175.8,
+      "reasons": [
+        "context_transition_at_3516"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20994567871094,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 8.467628479003906
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 5.0,
+        "length_behind_m": -9.010000228881836,
+        "num_paths": 2
+      },
+      "expected_force_n": 2.9644181728363037
+    },
+    {
+      "force_row": 3516,
+      "context_row": 3515,
+      "car": 2,
+      "time_s": 175.8,
+      "reasons": [
+        "context_transition_at_3516"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20994567871094,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 8.467628479003906
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 5.0,
+        "length_behind_m": -9.010000228881836,
+        "num_paths": 2
+      },
+      "expected_force_n": 2.9644181728363037
+    },
+    {
+      "force_row": 3516,
+      "context_row": 3515,
+      "car": 3,
+      "time_s": 175.8,
+      "reasons": [
+        "context_transition_at_3516"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20994567871094,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 8.465149879455566
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 5.0,
+        "length_behind_m": -9.010000228881836,
+        "num_paths": 2
+      },
+      "expected_force_n": 2.9626829624176025
+    },
+    {
+      "force_row": 3516,
+      "context_row": 3515,
+      "car": 4,
+      "time_s": 175.8,
+      "reasons": [
+        "context_transition_at_3516"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20994567871094,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 8.465149879455566
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 5.0,
+        "length_behind_m": -9.010000228881836,
+        "num_paths": 2
+      },
+      "expected_force_n": 2.9626829624176025
+    },
+    {
+      "force_row": 3516,
+      "context_row": 3515,
+      "car": 5,
+      "time_s": 175.8,
+      "reasons": [
+        "context_transition_at_3516"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20994567871094,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 8.46514892578125
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 5.0,
+        "length_behind_m": -12.189998626708984,
+        "num_paths": 2
+      },
+      "expected_force_n": 2.9626662731170654
+    },
+    {
+      "force_row": 3516,
+      "context_row": 3515,
+      "car": 6,
+      "time_s": 175.8,
+      "reasons": [
+        "context_transition_at_3516"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20994567871094,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 8.465149879455566
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 5.0,
+        "length_behind_m": -12.189998626708984,
+        "num_paths": 2
+      },
+      "expected_force_n": 4.042710304260254
+    },
+    {
+      "force_row": 3517,
+      "context_row": 3516,
+      "car": 0,
+      "time_s": 175.85000000000002,
+      "reasons": [
+        "context_transition_at_3516"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 8.475850105285645
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 3517,
+      "context_row": 3516,
+      "car": 1,
+      "time_s": 175.85000000000002,
+      "reasons": [
+        "context_transition_at_3516"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 8.475850105285645
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 3517,
+      "context_row": 3516,
+      "car": 2,
+      "time_s": 175.85000000000002,
+      "reasons": [
+        "context_transition_at_3516"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 8.475850105285645
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 3517,
+      "context_row": 3516,
+      "car": 3,
+      "time_s": 175.85000000000002,
+      "reasons": [
+        "context_transition_at_3516"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 8.473371505737305
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 3517,
+      "context_row": 3516,
+      "car": 4,
+      "time_s": 175.85000000000002,
+      "reasons": [
+        "context_transition_at_3516"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 8.473371505737305
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 3517,
+      "context_row": 3516,
+      "car": 5,
+      "time_s": 175.85000000000002,
+      "reasons": [
+        "context_transition_at_3516"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 8.473371505737305
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 3517,
+      "context_row": 3516,
+      "car": 6,
+      "time_s": 175.85000000000002,
+      "reasons": [
+        "context_transition_at_3516"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 8.473371505737305
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 3518,
+      "context_row": 3517,
+      "car": 0,
+      "time_s": 175.9,
+      "reasons": [
+        "context_transition_at_3516"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21009063720703,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 8.483492851257324
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 3518,
+      "context_row": 3517,
+      "car": 1,
+      "time_s": 175.9,
+      "reasons": [
+        "context_transition_at_3516"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21009063720703,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 8.483492851257324
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 3518,
+      "context_row": 3517,
+      "car": 2,
+      "time_s": 175.9,
+      "reasons": [
+        "context_transition_at_3516"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21009063720703,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 8.48349380493164
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 3518,
+      "context_row": 3517,
+      "car": 3,
+      "time_s": 175.9,
+      "reasons": [
+        "context_transition_at_3516"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21009063720703,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 8.483492851257324
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 3518,
+      "context_row": 3517,
+      "car": 4,
+      "time_s": 175.9,
+      "reasons": [
+        "context_transition_at_3516"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21009063720703,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 8.481597900390625
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 3518,
+      "context_row": 3517,
+      "car": 5,
+      "time_s": 175.9,
+      "reasons": [
+        "context_transition_at_3516"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21009063720703,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 8.481597900390625
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 3518,
+      "context_row": 3517,
+      "car": 6,
+      "time_s": 175.9,
+      "reasons": [
+        "context_transition_at_3516"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21009063720703,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 8.481597900390625
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 4261,
+      "context_row": 4260,
+      "car": 0,
+      "time_s": 213.05,
+      "reasons": [
+        "context_transition_at_4261"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20988464355469,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 14.755653381347656
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 4262,
+      "context_row": 4261,
+      "car": 0,
+      "time_s": 213.10000000000002,
+      "reasons": [
+        "context_transition_at_4261"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.2099838256836,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 14.767291069030762
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 282.52850341796875,
+        "length_behind_m": 0.281494140625,
+        "num_paths": 1
+      },
+      "expected_force_n": 9.926322937011719
+    },
+    {
+      "force_row": 4263,
+      "context_row": 4262,
+      "car": 0,
+      "time_s": 213.15,
+      "reasons": [
+        "context_transition_at_4261"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 14.776566505432129
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 281.7900085449219,
+        "length_behind_m": 1.019989013671875,
+        "num_paths": 1
+      },
+      "expected_force_n": 9.938797950744629
+    },
+    {
+      "force_row": 4273,
+      "context_row": 4272,
+      "car": 1,
+      "time_s": 213.65,
+      "reasons": [
+        "context_transition_at_4273"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 14.866806983947754
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 4274,
+      "context_row": 4273,
+      "car": 1,
+      "time_s": 213.70000000000002,
+      "reasons": [
+        "context_transition_at_4273"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20992279052734,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 14.876054763793945
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 285.8228454589844,
+        "length_behind_m": 0.167144775390625,
+        "num_paths": 1
+      },
+      "expected_force_n": 7.055287837982178
+    },
+    {
+      "force_row": 4275,
+      "context_row": 4274,
+      "car": 1,
+      "time_s": 213.75,
+      "reasons": [
+        "context_transition_at_4273"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20980834960938,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 14.885297775268555
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 285.0785827636719,
+        "length_behind_m": 0.911407470703125,
+        "num_paths": 1
+      },
+      "expected_force_n": 7.064046859741211
+    },
+    {
+      "force_row": 4285,
+      "context_row": 4284,
+      "car": 2,
+      "time_s": 214.25,
+      "reasons": [
+        "context_transition_at_4285"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21013641357422,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 14.979475021362305
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 4286,
+      "context_row": 4285,
+      "car": 2,
+      "time_s": 214.3,
+      "reasons": [
+        "context_transition_at_4285"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 14.986774444580078
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 285.8703918457031,
+        "length_behind_m": 0.119598388671875,
+        "num_paths": 1
+      },
+      "expected_force_n": 7.160707950592041
+    },
+    {
+      "force_row": 4287,
+      "context_row": 4286,
+      "car": 2,
+      "time_s": 214.35000000000002,
+      "reasons": [
+        "context_transition_at_4285"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20988464355469,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 14.995984077453613
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 285.12060546875,
+        "length_behind_m": 0.869384765625,
+        "num_paths": 1
+      },
+      "expected_force_n": 7.169500350952148
+    },
+    {
+      "force_row": 4297,
+      "context_row": 4296,
+      "car": 3,
+      "time_s": 214.85000000000002,
+      "reasons": [
+        "context_transition_at_4297"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21014404296875,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 15.089632987976074
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 4298,
+      "context_row": 4297,
+      "car": 3,
+      "time_s": 214.9,
+      "reasons": [
+        "context_transition_at_4297"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.21012115478516,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 15.097884178161621
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 285.85174560546875,
+        "length_behind_m": 0.13824462890625,
+        "num_paths": 1
+      },
+      "expected_force_n": 7.267292022705078
+    },
+    {
+      "force_row": 4299,
+      "context_row": 4298,
+      "car": 3,
+      "time_s": 214.95000000000002,
+      "reasons": [
+        "context_transition_at_4297"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 15.105142593383789
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 285.09637451171875,
+        "length_behind_m": 0.89361572265625,
+        "num_paths": 1
+      },
+      "expected_force_n": 7.274267196655273
+    },
+    {
+      "force_row": 4309,
+      "context_row": 4308,
+      "car": 4,
+      "time_s": 215.45000000000002,
+      "reasons": [
+        "context_transition_at_4309"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 15.19720458984375
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 4310,
+      "context_row": 4309,
+      "car": 4,
+      "time_s": 215.5,
+      "reasons": [
+        "context_transition_at_4309"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.21015167236328,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 15.206353187561035
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 285.766845703125,
+        "length_behind_m": 0.22314453125,
+        "num_paths": 1
+      },
+      "expected_force_n": 7.372091293334961
+    },
+    {
+      "force_row": 4311,
+      "context_row": 4310,
+      "car": 4,
+      "time_s": 215.55,
+      "reasons": [
+        "context_transition_at_4309"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.2100830078125,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 15.218000411987305
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 285.0060119628906,
+        "length_behind_m": 0.983978271484375,
+        "num_paths": 1
+      },
+      "expected_force_n": 7.383381366729736
+    },
+    {
+      "force_row": 4325,
+      "context_row": 4324,
+      "car": 5,
+      "time_s": 216.25,
+      "reasons": [
+        "context_transition_at_4325"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21009826660156,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 15.344046592712402
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 4326,
+      "context_row": 4325,
+      "car": 5,
+      "time_s": 216.3,
+      "reasons": [
+        "context_transition_at_4325"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 15.3556547164917
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 282.5481262207031,
+        "length_behind_m": 0.261871337890625,
+        "num_paths": 1
+      },
+      "expected_force_n": 7.5174994468688965
+    },
+    {
+      "force_row": 4327,
+      "context_row": 4326,
+      "car": 5,
+      "time_s": 216.35000000000002,
+      "reasons": [
+        "context_transition_at_4325"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20991516113281,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 15.36421012878418
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 281.7799987792969,
+        "length_behind_m": 1.029998779296875,
+        "num_paths": 1
+      },
+      "expected_force_n": 7.525870323181152
+    },
+    {
+      "force_row": 4341,
+      "context_row": 4340,
+      "car": 6,
+      "time_s": 217.05,
+      "reasons": [
+        "context_transition_at_4341"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21002197265625,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 15.492219924926758
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 4342,
+      "context_row": 4341,
+      "car": 6,
+      "time_s": 217.10000000000002,
+      "reasons": [
+        "context_transition_at_4341"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 15.501298904418945
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 282.3927001953125,
+        "length_behind_m": 0.41729736328125,
+        "num_paths": 1
+      },
+      "expected_force_n": 10.937623023986816
+    },
+    {
+      "force_row": 4343,
+      "context_row": 4342,
+      "car": 6,
+      "time_s": 217.15,
+      "reasons": [
+        "context_transition_at_4341"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20989227294922,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 15.509727478027344
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 281.6173095703125,
+        "length_behind_m": 1.19268798828125,
+        "num_paths": 1
+      },
+      "expected_force_n": 10.949504852294922
+    },
+    {
+      "force_row": 4607,
+      "context_row": 4606,
+      "car": 0,
+      "time_s": 230.35000000000002,
+      "reasons": [
+        "context_transition_at_4607"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 17.91807746887207
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 0.66412353515625,
+        "length_behind_m": 282.1458740234375,
+        "num_paths": 1
+      },
+      "expected_force_n": 14.614015579223633
+    },
+    {
+      "force_row": 4607,
+      "context_row": 4606,
+      "car": 1,
+      "time_s": 230.35000000000002,
+      "reasons": [
+        "context_transition_at_4607"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 17.91807746887207
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 12.8541259765625,
+        "length_behind_m": 273.1358642578125,
+        "num_paths": 1
+      },
+      "expected_force_n": 10.235815048217773
+    },
+    {
+      "force_row": 4607,
+      "context_row": 4606,
+      "car": 2,
+      "time_s": 230.35000000000002,
+      "reasons": [
+        "context_transition_at_4607"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 17.91807746887207
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 21.8641357421875,
+        "length_behind_m": 264.1258544921875,
+        "num_paths": 1
+      },
+      "expected_force_n": 10.235815048217773
+    },
+    {
+      "force_row": 4607,
+      "context_row": 4606,
+      "car": 3,
+      "time_s": 230.35000000000002,
+      "reasons": [
+        "context_transition_at_4607"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 17.913179397583008
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 30.8741455078125,
+        "length_behind_m": 255.1158447265625,
+        "num_paths": 1
+      },
+      "expected_force_n": 10.230219841003418
+    },
+    {
+      "force_row": 4607,
+      "context_row": 4606,
+      "car": 4,
+      "time_s": 230.35000000000002,
+      "reasons": [
+        "context_transition_at_4607"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 17.913179397583008
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 39.8841552734375,
+        "length_behind_m": 246.1058349609375,
+        "num_paths": 1
+      },
+      "expected_force_n": 10.230219841003418
+    },
+    {
+      "force_row": 4607,
+      "context_row": 4606,
+      "car": 5,
+      "time_s": 230.35000000000002,
+      "reasons": [
+        "context_transition_at_4607"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 17.913177490234375
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 48.8941650390625,
+        "length_behind_m": 233.91583251953125,
+        "num_paths": 1
+      },
+      "expected_force_n": 10.230149269104004
+    },
+    {
+      "force_row": 4607,
+      "context_row": 4606,
+      "car": 6,
+      "time_s": 230.35000000000002,
+      "reasons": [
+        "context_transition_at_4607"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 17.913179397583008
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 61.08416748046875,
+        "length_behind_m": 221.725830078125,
+        "num_paths": 1
+      },
+      "expected_force_n": 14.606027603149414
+    },
+    {
+      "force_row": 4608,
+      "context_row": 4607,
+      "car": 0,
+      "time_s": 230.4,
+      "reasons": [
+        "context_transition_at_4607"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.2101821899414,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 17.92632293701172
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 59.76832962036133,
+        "length_behind_m": -11.958328247070312,
+        "num_paths": 2
+      },
+      "expected_force_n": 18.13129425048828
+    },
+    {
+      "force_row": 4608,
+      "context_row": 4607,
+      "car": 1,
+      "time_s": 230.4,
+      "reasons": [
+        "context_transition_at_4607"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.2101821899414,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 17.926321029663086
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 60.0,
+        "length_behind_m": -9.010002136230469,
+        "num_paths": 2
+      },
+      "expected_force_n": 13.287386894226074
+    },
+    {
+      "force_row": 4608,
+      "context_row": 4607,
+      "car": 2,
+      "time_s": 230.4,
+      "reasons": [
+        "context_transition_at_4607"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.2101821899414,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 17.92632293701172
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 60.0,
+        "length_behind_m": -9.010002136230469,
+        "num_paths": 2
+      },
+      "expected_force_n": 13.287389755249023
+    },
+    {
+      "force_row": 4608,
+      "context_row": 4607,
+      "car": 3,
+      "time_s": 230.4,
+      "reasons": [
+        "context_transition_at_4607"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.2101821899414,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 17.92632293701172
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 60.0,
+        "length_behind_m": -9.010002136230469,
+        "num_paths": 2
+      },
+      "expected_force_n": 13.287389755249023
+    },
+    {
+      "force_row": 4608,
+      "context_row": 4607,
+      "car": 4,
+      "time_s": 230.4,
+      "reasons": [
+        "context_transition_at_4607"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.2101821899414,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 17.922576904296875
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 60.0,
+        "length_behind_m": -9.010002136230469,
+        "num_paths": 2
+      },
+      "expected_force_n": 13.28183650970459
+    },
+    {
+      "force_row": 4608,
+      "context_row": 4607,
+      "car": 5,
+      "time_s": 230.4,
+      "reasons": [
+        "context_transition_at_4607"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.2101821899414,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 17.922576904296875
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 60.0,
+        "length_behind_m": -12.19000244140625,
+        "num_paths": 2
+      },
+      "expected_force_n": 13.281765937805176
+    },
+    {
+      "force_row": 4608,
+      "context_row": 4607,
+      "car": 6,
+      "time_s": 230.4,
+      "reasons": [
+        "context_transition_at_4607"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.2101821899414,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 17.922576904296875
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 60.0,
+        "length_behind_m": -12.19000244140625,
+        "num_paths": 2
+      },
+      "expected_force_n": 18.123716354370117
+    },
+    {
+      "force_row": 4609,
+      "context_row": 4608,
+      "car": 0,
+      "time_s": 230.45000000000002,
+      "reasons": [
+        "context_transition_at_4607"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.21015167236328,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 17.933826446533203
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 58.871639251708984,
+        "length_behind_m": -11.061637878417969,
+        "num_paths": 2
+      },
+      "expected_force_n": 18.146469116210938
+    },
+    {
+      "force_row": 4609,
+      "context_row": 4608,
+      "car": 1,
+      "time_s": 230.45000000000002,
+      "reasons": [
+        "context_transition_at_4607"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.21015167236328,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 17.933826446533203
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 60.0,
+        "length_behind_m": -9.010002136230469,
+        "num_paths": 2
+      },
+      "expected_force_n": 13.29850959777832
+    },
+    {
+      "force_row": 4609,
+      "context_row": 4608,
+      "car": 2,
+      "time_s": 230.45000000000002,
+      "reasons": [
+        "context_transition_at_4607"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.21015167236328,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 17.933826446533203
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 60.0,
+        "length_behind_m": -9.010002136230469,
+        "num_paths": 2
+      },
+      "expected_force_n": 13.29850959777832
+    },
+    {
+      "force_row": 4609,
+      "context_row": 4608,
+      "car": 3,
+      "time_s": 230.45000000000002,
+      "reasons": [
+        "context_transition_at_4607"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.21015167236328,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 17.933826446533203
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 60.0,
+        "length_behind_m": -9.010002136230469,
+        "num_paths": 2
+      },
+      "expected_force_n": 13.29850959777832
+    },
+    {
+      "force_row": 4609,
+      "context_row": 4608,
+      "car": 4,
+      "time_s": 230.45000000000002,
+      "reasons": [
+        "context_transition_at_4607"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.21015167236328,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 17.934429168701172
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 60.0,
+        "length_behind_m": -9.010002136230469,
+        "num_paths": 2
+      },
+      "expected_force_n": 13.299403190612793
+    },
+    {
+      "force_row": 4609,
+      "context_row": 4608,
+      "car": 5,
+      "time_s": 230.45000000000002,
+      "reasons": [
+        "context_transition_at_4607"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.21015167236328,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 17.934429168701172
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 60.0,
+        "length_behind_m": -12.19000244140625,
+        "num_paths": 2
+      },
+      "expected_force_n": 13.299333572387695
+    },
+    {
+      "force_row": 4609,
+      "context_row": 4608,
+      "car": 6,
+      "time_s": 230.45000000000002,
+      "reasons": [
+        "context_transition_at_4607"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.21015167236328,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 17.934429168701172
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 60.0,
+        "length_behind_m": -12.19000244140625,
+        "num_paths": 2
+      },
+      "expected_force_n": 18.147687911987305
+    },
+    {
+      "force_row": 4678,
+      "context_row": 4677,
+      "car": 0,
+      "time_s": 233.9,
+      "reasons": [
+        "context_transition_at_4678"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 18.57769203186035
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 0.8720989227294922,
+        "length_behind_m": -8.062098503112793,
+        "num_paths": 2
+      },
+      "expected_force_n": 19.470949172973633
+    },
+    {
+      "force_row": 4678,
+      "context_row": 4677,
+      "car": 1,
+      "time_s": 233.9,
+      "reasons": [
+        "context_transition_at_4678"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 18.57769203186035
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 5.0,
+        "length_behind_m": -9.010000228881836,
+        "num_paths": 2
+      },
+      "expected_force_n": 14.26920223236084
+    },
+    {
+      "force_row": 4678,
+      "context_row": 4677,
+      "car": 2,
+      "time_s": 233.9,
+      "reasons": [
+        "context_transition_at_4678"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 18.577693939208984
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 5.0,
+        "length_behind_m": -9.010000228881836,
+        "num_paths": 2
+      },
+      "expected_force_n": 14.269206047058105
+    },
+    {
+      "force_row": 4678,
+      "context_row": 4677,
+      "car": 3,
+      "time_s": 233.9,
+      "reasons": [
+        "context_transition_at_4678"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 18.574697494506836
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 5.0,
+        "length_behind_m": -9.010000228881836,
+        "num_paths": 2
+      },
+      "expected_force_n": 14.264602661132812
+    },
+    {
+      "force_row": 4678,
+      "context_row": 4677,
+      "car": 4,
+      "time_s": 233.9,
+      "reasons": [
+        "context_transition_at_4678"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 18.574697494506836
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 5.0,
+        "length_behind_m": -9.010000228881836,
+        "num_paths": 2
+      },
+      "expected_force_n": 14.264602661132812
+    },
+    {
+      "force_row": 4678,
+      "context_row": 4677,
+      "car": 5,
+      "time_s": 233.9,
+      "reasons": [
+        "context_transition_at_4678"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 18.574697494506836
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 5.0,
+        "length_behind_m": -12.189998626708984,
+        "num_paths": 2
+      },
+      "expected_force_n": 14.2645263671875
+    },
+    {
+      "force_row": 4678,
+      "context_row": 4677,
+      "car": 6,
+      "time_s": 233.9,
+      "reasons": [
+        "context_transition_at_4678"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 18.574697494506836
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 5.0,
+        "length_behind_m": -12.189998626708984,
+        "num_paths": 2
+      },
+      "expected_force_n": 19.464672088623047
+    },
+    {
+      "force_row": 4679,
+      "context_row": 4678,
+      "car": 0,
+      "time_s": 233.95000000000002,
+      "reasons": [
+        "context_transition_at_4678"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21007537841797,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 18.586910247802734
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 4679,
+      "context_row": 4678,
+      "car": 1,
+      "time_s": 233.95000000000002,
+      "reasons": [
+        "context_transition_at_4678"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21007537841797,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 18.586910247802734
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 4679,
+      "context_row": 4678,
+      "car": 2,
+      "time_s": 233.95000000000002,
+      "reasons": [
+        "context_transition_at_4678"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21007537841797,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 18.585412979125977
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 4679,
+      "context_row": 4678,
+      "car": 3,
+      "time_s": 233.95000000000002,
+      "reasons": [
+        "context_transition_at_4678"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21007537841797,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 18.585412979125977
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 4679,
+      "context_row": 4678,
+      "car": 4,
+      "time_s": 233.95000000000002,
+      "reasons": [
+        "context_transition_at_4678"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21007537841797,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 18.58391571044922
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 4679,
+      "context_row": 4678,
+      "car": 5,
+      "time_s": 233.95000000000002,
+      "reasons": [
+        "context_transition_at_4678"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21007537841797,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 18.58391571044922
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 4679,
+      "context_row": 4678,
+      "car": 6,
+      "time_s": 233.95000000000002,
+      "reasons": [
+        "context_transition_at_4678"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21007537841797,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 18.58391571044922
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 4680,
+      "context_row": 4679,
+      "car": 0,
+      "time_s": 234.0,
+      "reasons": [
+        "context_transition_at_4678"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21018981933594,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 18.595458984375
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 4680,
+      "context_row": 4679,
+      "car": 1,
+      "time_s": 234.0,
+      "reasons": [
+        "context_transition_at_4678"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21018981933594,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 18.595458984375
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 4680,
+      "context_row": 4679,
+      "car": 2,
+      "time_s": 234.0,
+      "reasons": [
+        "context_transition_at_4678"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21018981933594,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 18.595457077026367
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 4680,
+      "context_row": 4679,
+      "car": 3,
+      "time_s": 234.0,
+      "reasons": [
+        "context_transition_at_4678"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21018981933594,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 18.595458984375
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 4680,
+      "context_row": 4679,
+      "car": 4,
+      "time_s": 234.0,
+      "reasons": [
+        "context_transition_at_4678"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21018981933594,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 18.593168258666992
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 4680,
+      "context_row": 4679,
+      "car": 5,
+      "time_s": 234.0,
+      "reasons": [
+        "context_transition_at_4678"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21018981933594,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 18.593168258666992
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 4680,
+      "context_row": 4679,
+      "car": 6,
+      "time_s": 234.0,
+      "reasons": [
+        "context_transition_at_4678"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21018981933594,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 18.593168258666992
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 7877,
+      "context_row": 7876,
+      "car": 0,
+      "time_s": 393.85,
+      "reasons": [
+        "context_transition_at_7877"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20880889892578,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 31.021499633789062
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 7878,
+      "context_row": 7877,
+      "car": 0,
+      "time_s": 393.90000000000003,
+      "reasons": [
+        "context_transition_at_7877",
+        "maximum_native_force"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20880889892578,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 31.020832061767578
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 1304.4932861328125,
+        "length_behind_m": 0.80078125,
+        "num_paths": 2
+      },
+      "expected_force_n": 54.410003662109375
+    },
+    {
+      "force_row": 7879,
+      "context_row": 7878,
+      "car": 0,
+      "time_s": 393.95000000000005,
+      "reasons": [
+        "context_transition_at_7877"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20880889892578,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 31.020036697387695
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 1302.9422607421875,
+        "length_behind_m": 2.351806640625,
+        "num_paths": 2
+      },
+      "expected_force_n": 54.4072151184082
+    },
+    {
+      "force_row": 7883,
+      "context_row": 7882,
+      "car": 1,
+      "time_s": 394.15000000000003,
+      "reasons": [
+        "context_transition_at_7883"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20880889892578,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 31.014101028442383
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 7884,
+      "context_row": 7883,
+      "car": 1,
+      "time_s": 394.20000000000005,
+      "reasons": [
+        "context_transition_at_7883",
+        "maximum_native_force"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20880889892578,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 31.012203216552734
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 1307.3782958984375,
+        "length_behind_m": 1.095703125,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.848114013671875
+    },
+    {
+      "force_row": 7885,
+      "context_row": 7884,
+      "car": 1,
+      "time_s": 394.25,
+      "reasons": [
+        "context_transition_at_7883"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20880889892578,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 31.010231018066406
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 1305.8277587890625,
+        "length_behind_m": 2.646240234375,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.843048095703125
+    },
+    {
+      "force_row": 7889,
+      "context_row": 7888,
+      "car": 2,
+      "time_s": 394.45000000000005,
+      "reasons": [
+        "context_transition_at_7889"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20880889892578,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.999725341796875
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 7890,
+      "context_row": 7889,
+      "car": 2,
+      "time_s": 394.5,
+      "reasons": [
+        "context_transition_at_7889",
+        "maximum_native_force"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20880889892578,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.996583938598633
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 1307.0870361328125,
+        "length_behind_m": 1.386962890625,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.807987213134766
+    },
+    {
+      "force_row": 7891,
+      "context_row": 7890,
+      "car": 2,
+      "time_s": 394.55,
+      "reasons": [
+        "context_transition_at_7889"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20880889892578,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.993391036987305
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 1305.5374755859375,
+        "length_behind_m": 2.9365234375,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.79978561401367
+    },
+    {
+      "force_row": 7894,
+      "context_row": 7893,
+      "car": 3,
+      "time_s": 394.70000000000005,
+      "reasons": [
+        "context_transition_at_7894"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20880889892578,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.982542037963867
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 7895,
+      "context_row": 7894,
+      "car": 3,
+      "time_s": 394.75,
+      "reasons": [
+        "context_transition_at_7894",
+        "maximum_native_force"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20880889892578,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.97833824157715
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 1308.3504638671875,
+        "length_behind_m": 0.12353515625,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.76113510131836
+    },
+    {
+      "force_row": 7896,
+      "context_row": 7895,
+      "car": 3,
+      "time_s": 394.8,
+      "reasons": [
+        "context_transition_at_7894"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20880889892578,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.97395896911621
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 1306.8018798828125,
+        "length_behind_m": 1.672119140625,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.74989318847656
+    },
+    {
+      "force_row": 7900,
+      "context_row": 7899,
+      "car": 4,
+      "time_s": 395.0,
+      "reasons": [
+        "context_transition_at_7900"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20880889892578,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.955402374267578
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 7901,
+      "context_row": 7900,
+      "car": 4,
+      "time_s": 395.05,
+      "reasons": [
+        "context_transition_at_7900",
+        "maximum_native_force"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20880889892578,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.950176239013672
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 1308.0718994140625,
+        "length_behind_m": 0.402099609375,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.68887710571289
+    },
+    {
+      "force_row": 7902,
+      "context_row": 7901,
+      "car": 4,
+      "time_s": 395.1,
+      "reasons": [
+        "context_transition_at_7900"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20880889892578,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.944759368896484
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 1306.5245361328125,
+        "length_behind_m": 1.949462890625,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.674983978271484
+    },
+    {
+      "force_row": 7908,
+      "context_row": 7907,
+      "car": 5,
+      "time_s": 395.40000000000003,
+      "reasons": [
+        "context_transition_at_7908"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20880889892578,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.90990447998047
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 7909,
+      "context_row": 7908,
+      "car": 5,
+      "time_s": 395.45000000000005,
+      "reasons": [
+        "context_transition_at_7908",
+        "maximum_native_force"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20880889892578,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.903566360473633
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 1304.7120361328125,
+        "length_behind_m": 0.58203125,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.56922149658203
+    },
+    {
+      "force_row": 7910,
+      "context_row": 7909,
+      "car": 5,
+      "time_s": 395.5,
+      "reasons": [
+        "context_transition_at_7908"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20880889892578,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.897172927856445
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 1303.1671142578125,
+        "length_behind_m": 2.126953125,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.552852630615234
+    },
+    {
+      "force_row": 7916,
+      "context_row": 7915,
+      "car": 6,
+      "time_s": 395.8,
+      "reasons": [
+        "context_transition_at_7916"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20880889892578,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.856203079223633
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 7917,
+      "context_row": 7916,
+      "car": 6,
+      "time_s": 395.85,
+      "reasons": [
+        "context_transition_at_7916",
+        "maximum_native_force"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20880889892578,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.849079132080078
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 1304.5526123046875,
+        "length_behind_m": 0.741455078125,
+        "num_paths": 2
+      },
+      "expected_force_n": 53.80916976928711
+    },
+    {
+      "force_row": 7918,
+      "context_row": 7917,
+      "car": 6,
+      "time_s": 395.90000000000003,
+      "reasons": [
+        "context_transition_at_7916"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20880889892578,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.841842651367188
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 1303.0106201171875,
+        "length_behind_m": 2.283447265625,
+        "num_paths": 2
+      },
+      "expected_force_n": 53.78392791748047
+    },
+    {
+      "force_row": 8000,
+      "context_row": 7999,
+      "car": 0,
+      "time_s": 400.0,
+      "reasons": [
+        "fixed_time_400"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.21005249023438,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.78770637512207
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 1116.6956787109375,
+        "length_behind_m": 188.598388671875,
+        "num_paths": 2
+      },
+      "expected_force_n": 53.596187591552734
+    },
+    {
+      "force_row": 8000,
+      "context_row": 7999,
+      "car": 1,
+      "time_s": 400.0,
+      "reasons": [
+        "fixed_time_400"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.21005249023438,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.78770637512207
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 1128.8856201171875,
+        "length_behind_m": 179.58837890625,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.27394485473633
+    },
+    {
+      "force_row": 8000,
+      "context_row": 7999,
+      "car": 2,
+      "time_s": 400.0,
+      "reasons": [
+        "fixed_time_400"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.21005249023438,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.787708282470703
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 1137.8956298828125,
+        "length_behind_m": 170.578369140625,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.273948669433594
+    },
+    {
+      "force_row": 8000,
+      "context_row": 7999,
+      "car": 3,
+      "time_s": 400.0,
+      "reasons": [
+        "fixed_time_400"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.21005249023438,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.78770637512207
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 1146.9056396484375,
+        "length_behind_m": 161.568359375,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.27394485473633
+    },
+    {
+      "force_row": 8000,
+      "context_row": 7999,
+      "car": 4,
+      "time_s": 400.0,
+      "reasons": [
+        "fixed_time_400"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.21005249023438,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.786556243896484
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 1155.9156494140625,
+        "length_behind_m": 152.558349609375,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.27101135253906
+    },
+    {
+      "force_row": 8000,
+      "context_row": 7999,
+      "car": 5,
+      "time_s": 400.0,
+      "reasons": [
+        "fixed_time_400"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.21005249023438,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.786556243896484
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 1164.9256591796875,
+        "length_behind_m": 140.368408203125,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.27081298828125
+    },
+    {
+      "force_row": 8000,
+      "context_row": 7999,
+      "car": 6,
+      "time_s": 400.0,
+      "reasons": [
+        "fixed_time_400"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.21005249023438,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.786556243896484
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 1177.1156005859375,
+        "length_behind_m": 128.178466796875,
+        "num_paths": 2
+      },
+      "expected_force_n": 53.59218215942383
+    },
+    {
+      "force_row": 8733,
+      "context_row": 8732,
+      "car": 0,
+      "time_s": 436.65000000000003,
+      "reasons": [
+        "context_transition_at_8733"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20996856689453,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.796058654785156
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": -11.8394775390625,
+        "length_behind_m": 1317.133544921875,
+        "num_paths": 2
+      },
+      "expected_force_n": 53.62520980834961
+    },
+    {
+      "force_row": 8734,
+      "context_row": 8733,
+      "car": 0,
+      "time_s": 436.70000000000005,
+      "reasons": [
+        "context_transition_at_8733"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20993041992188,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.791101455688477
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 8735,
+      "context_row": 8734,
+      "car": 0,
+      "time_s": 436.75,
+      "reasons": [
+        "context_transition_at_8733"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20989227294922,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.790699005126953
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 8739,
+      "context_row": 8738,
+      "car": 1,
+      "time_s": 436.95000000000005,
+      "reasons": [
+        "context_transition_at_8739"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.21006774902344,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.792205810546875
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": -8.8873291015625,
+        "length_behind_m": 1317.361328125,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.285438537597656
+    },
+    {
+      "force_row": 8740,
+      "context_row": 8739,
+      "car": 1,
+      "time_s": 437.0,
+      "reasons": [
+        "context_transition_at_8739"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.78721809387207
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 8741,
+      "context_row": 8740,
+      "car": 1,
+      "time_s": 437.05,
+      "reasons": [
+        "context_transition_at_8739"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.2099380493164,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.786739349365234
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 8744,
+      "context_row": 8743,
+      "car": 2,
+      "time_s": 437.20000000000005,
+      "reasons": [
+        "context_transition_at_8744"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.791706085205078
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": -7.5753173828125,
+        "length_behind_m": 1316.04931640625,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.28411865234375
+    },
+    {
+      "force_row": 8745,
+      "context_row": 8744,
+      "car": 2,
+      "time_s": 437.25,
+      "reasons": [
+        "context_transition_at_8744"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.2100601196289,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.790987014770508
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 8746,
+      "context_row": 8745,
+      "car": 2,
+      "time_s": 437.3,
+      "reasons": [
+        "context_transition_at_8744"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21012115478516,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.7947940826416
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 8750,
+      "context_row": 8749,
+      "car": 3,
+      "time_s": 437.5,
+      "reasons": [
+        "context_transition_at_8750"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.21002197265625,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.796764373779297
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": -7.8033447265625,
+        "length_behind_m": 1316.27734375,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.29704284667969
+    },
+    {
+      "force_row": 8751,
+      "context_row": 8750,
+      "car": 3,
+      "time_s": 437.55,
+      "reasons": [
+        "context_transition_at_8750"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.791976928710938
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 8752,
+      "context_row": 8751,
+      "car": 3,
+      "time_s": 437.6,
+      "reasons": [
+        "context_transition_at_8750"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.2099838256836,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.7921142578125
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 8756,
+      "context_row": 8755,
+      "car": 4,
+      "time_s": 437.8,
+      "reasons": [
+        "context_transition_at_8756"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20989990234375,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.794832229614258
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": -8.0313720703125,
+        "length_behind_m": 1316.50537109375,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.29204559326172
+    },
+    {
+      "force_row": 8757,
+      "context_row": 8756,
+      "car": 4,
+      "time_s": 437.85,
+      "reasons": [
+        "context_transition_at_8756"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20988464355469,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.790019989013672
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 8758,
+      "context_row": 8757,
+      "car": 4,
+      "time_s": 437.90000000000003,
+      "reasons": [
+        "context_transition_at_8756"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20997619628906,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.78873062133789
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 8764,
+      "context_row": 8763,
+      "car": 5,
+      "time_s": 438.20000000000005,
+      "reasons": [
+        "context_transition_at_8764"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20993041992188,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.79327964782715
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": -11.3380126953125,
+        "length_behind_m": 1316.632080078125,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.28790283203125
+    },
+    {
+      "force_row": 8765,
+      "context_row": 8764,
+      "car": 5,
+      "time_s": 438.25,
+      "reasons": [
+        "context_transition_at_8764"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.2098388671875,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.79229164123535
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 8766,
+      "context_row": 8765,
+      "car": 5,
+      "time_s": 438.3,
+      "reasons": [
+        "context_transition_at_8764"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20993041992188,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.795297622680664
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 8772,
+      "context_row": 8771,
+      "car": 6,
+      "time_s": 438.6,
+      "reasons": [
+        "context_transition_at_8772"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.2099380493164,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.797014236450195
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": -11.4654541015625,
+        "length_behind_m": 1316.759521484375,
+        "num_paths": 2
+      },
+      "expected_force_n": 53.628509521484375
+    },
+    {
+      "force_row": 8773,
+      "context_row": 8772,
+      "car": 6,
+      "time_s": 438.65000000000003,
+      "reasons": [
+        "context_transition_at_8772"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.2098388671875,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.792184829711914
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 8774,
+      "context_row": 8773,
+      "car": 6,
+      "time_s": 438.70000000000005,
+      "reasons": [
+        "context_transition_at_8772"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20989227294922,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.79106330871582
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 8870,
+      "context_row": 8869,
+      "car": 0,
+      "time_s": 443.5,
+      "reasons": [
+        "context_transition_at_8870"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20954132080078,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.791725158691406
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 8870,
+      "context_row": 8869,
+      "car": 1,
+      "time_s": 443.5,
+      "reasons": [
+        "context_transition_at_8870"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20954132080078,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.791725158691406
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 8870,
+      "context_row": 8869,
+      "car": 2,
+      "time_s": 443.5,
+      "reasons": [
+        "context_transition_at_8870"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20954132080078,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.792299270629883
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 8870,
+      "context_row": 8869,
+      "car": 3,
+      "time_s": 443.5,
+      "reasons": [
+        "context_transition_at_8870"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20954132080078,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.7921085357666
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 8870,
+      "context_row": 8869,
+      "car": 4,
+      "time_s": 443.5,
+      "reasons": [
+        "context_transition_at_8870"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20954132080078,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.79210662841797
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 8870,
+      "context_row": 8869,
+      "car": 5,
+      "time_s": 443.5,
+      "reasons": [
+        "context_transition_at_8870"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20954132080078,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.79210662841797
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 8870,
+      "context_row": 8869,
+      "car": 6,
+      "time_s": 443.5,
+      "reasons": [
+        "context_transition_at_8870"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20954132080078,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.79210662841797
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 8871,
+      "context_row": 8870,
+      "car": 0,
+      "time_s": 443.55,
+      "reasons": [
+        "context_transition_at_8870"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20965576171875,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.794206619262695
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 129.54476928710938,
+        "length_behind_m": -11.734771728515625,
+        "num_paths": 1
+      },
+      "expected_force_n": 43.14796829223633
+    },
+    {
+      "force_row": 8871,
+      "context_row": 8870,
+      "car": 1,
+      "time_s": 443.55,
+      "reasons": [
+        "context_transition_at_8870"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20965576171875,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.794206619262695
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 130.0,
+        "length_behind_m": -9.009994506835938,
+        "num_paths": 1
+      },
+      "expected_force_n": 30.222030639648438
+    },
+    {
+      "force_row": 8871,
+      "context_row": 8870,
+      "car": 2,
+      "time_s": 443.55,
+      "reasons": [
+        "context_transition_at_8870"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20965576171875,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.791141510009766
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 130.0,
+        "length_behind_m": -9.009994506835938,
+        "num_paths": 1
+      },
+      "expected_force_n": 30.216014862060547
+    },
+    {
+      "force_row": 8871,
+      "context_row": 8870,
+      "car": 3,
+      "time_s": 443.55,
+      "reasons": [
+        "context_transition_at_8870"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20965576171875,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.790950775146484
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 130.0,
+        "length_behind_m": -9.009994506835938,
+        "num_paths": 1
+      },
+      "expected_force_n": 30.215641021728516
+    },
+    {
+      "force_row": 8871,
+      "context_row": 8870,
+      "car": 4,
+      "time_s": 443.55,
+      "reasons": [
+        "context_transition_at_8870"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20965576171875,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.79094886779785
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 130.0,
+        "length_behind_m": -9.009994506835938,
+        "num_paths": 1
+      },
+      "expected_force_n": 30.21563720703125
+    },
+    {
+      "force_row": 8871,
+      "context_row": 8870,
+      "car": 5,
+      "time_s": 443.55,
+      "reasons": [
+        "context_transition_at_8870"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20965576171875,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.79094886779785
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 130.0,
+        "length_behind_m": -12.19000244140625,
+        "num_paths": 1
+      },
+      "expected_force_n": 30.21543312072754
+    },
+    {
+      "force_row": 8871,
+      "context_row": 8870,
+      "car": 6,
+      "time_s": 443.55,
+      "reasons": [
+        "context_transition_at_8870"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20965576171875,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.79094886779785
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 130.0,
+        "length_behind_m": -12.19000244140625,
+        "num_paths": 1
+      },
+      "expected_force_n": 43.13883972167969
+    },
+    {
+      "force_row": 8872,
+      "context_row": 8871,
+      "car": 0,
+      "time_s": 443.6,
+      "reasons": [
+        "context_transition_at_8870"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20977020263672,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.795516967773438
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 128.00498962402344,
+        "length_behind_m": -10.194992065429688,
+        "num_paths": 1
+      },
+      "expected_force_n": 43.151702880859375
+    },
+    {
+      "force_row": 8872,
+      "context_row": 8871,
+      "car": 1,
+      "time_s": 443.6,
+      "reasons": [
+        "context_transition_at_8870"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20977020263672,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.795515060424805
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 130.0,
+        "length_behind_m": -9.009994506835938,
+        "num_paths": 1
+      },
+      "expected_force_n": 30.224645614624023
+    },
+    {
+      "force_row": 8872,
+      "context_row": 8871,
+      "car": 2,
+      "time_s": 443.6,
+      "reasons": [
+        "context_transition_at_8870"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20977020263672,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.795516967773438
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 130.0,
+        "length_behind_m": -9.009994506835938,
+        "num_paths": 1
+      },
+      "expected_force_n": 30.22464942932129
+    },
+    {
+      "force_row": 8872,
+      "context_row": 8871,
+      "car": 3,
+      "time_s": 443.6,
+      "reasons": [
+        "context_transition_at_8870"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20977020263672,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.793132781982422
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 130.0,
+        "length_behind_m": -9.009994506835938,
+        "num_paths": 1
+      },
+      "expected_force_n": 30.219970703125
+    },
+    {
+      "force_row": 8872,
+      "context_row": 8871,
+      "car": 4,
+      "time_s": 443.6,
+      "reasons": [
+        "context_transition_at_8870"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20977020263672,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.79313087463379
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 130.0,
+        "length_behind_m": -9.009994506835938,
+        "num_paths": 1
+      },
+      "expected_force_n": 30.219966888427734
+    },
+    {
+      "force_row": 8872,
+      "context_row": 8871,
+      "car": 5,
+      "time_s": 443.6,
+      "reasons": [
+        "context_transition_at_8870"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20977020263672,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.79313087463379
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 130.0,
+        "length_behind_m": -12.19000244140625,
+        "num_paths": 1
+      },
+      "expected_force_n": 30.21976089477539
+    },
+    {
+      "force_row": 8872,
+      "context_row": 8871,
+      "car": 6,
+      "time_s": 443.6,
+      "reasons": [
+        "context_transition_at_8870"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20977020263672,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.79313087463379
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 130.0,
+        "length_behind_m": -12.19000244140625,
+        "num_paths": 1
+      },
+      "expected_force_n": 43.145015716552734
+    },
+    {
+      "force_row": 10000,
+      "context_row": 9999,
+      "car": 0,
+      "time_s": 500.0,
+      "reasons": [
+        "fixed_time_500"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.2099609375,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.794353485107422
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 1190.403564453125,
+        "length_behind_m": 1605.972900390625,
+        "num_paths": 1
+      },
+      "expected_force_n": 43.39957809448242
+    },
+    {
+      "force_row": 10000,
+      "context_row": 9999,
+      "car": 1,
+      "time_s": 500.0,
+      "reasons": [
+        "fixed_time_500"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.2099609375,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.794353485107422
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 1202.593505859375,
+        "length_behind_m": 1596.962890625,
+        "num_paths": 1
+      },
+      "expected_force_n": 30.386899948120117
+    },
+    {
+      "force_row": 10000,
+      "context_row": 9999,
+      "car": 2,
+      "time_s": 500.0,
+      "reasons": [
+        "fixed_time_500"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.2099609375,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.794353485107422
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 1211.603515625,
+        "length_behind_m": 1587.952880859375,
+        "num_paths": 1
+      },
+      "expected_force_n": 30.386899948120117
+    },
+    {
+      "force_row": 10000,
+      "context_row": 9999,
+      "car": 3,
+      "time_s": 500.0,
+      "reasons": [
+        "fixed_time_500"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.2099609375,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.792835235595703
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 1220.613525390625,
+        "length_behind_m": 1578.94287109375,
+        "num_paths": 1
+      },
+      "expected_force_n": 30.38390350341797
+    },
+    {
+      "force_row": 10000,
+      "context_row": 9999,
+      "car": 4,
+      "time_s": 500.0,
+      "reasons": [
+        "fixed_time_500"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.2099609375,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.792835235595703
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 1229.62353515625,
+        "length_behind_m": 1569.932861328125,
+        "num_paths": 1
+      },
+      "expected_force_n": 30.38390350341797
+    },
+    {
+      "force_row": 10000,
+      "context_row": 9999,
+      "car": 5,
+      "time_s": 500.0,
+      "reasons": [
+        "fixed_time_500"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.2099609375,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.792835235595703
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 1238.633544921875,
+        "length_behind_m": 1557.742919921875,
+        "num_paths": 1
+      },
+      "expected_force_n": 30.38372039794922
+    },
+    {
+      "force_row": 10000,
+      "context_row": 9999,
+      "car": 6,
+      "time_s": 500.0,
+      "reasons": [
+        "fixed_time_500"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.2099609375,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.79283332824707
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 1250.823486328125,
+        "length_behind_m": 1545.552978515625,
+        "num_paths": 1
+      },
+      "expected_force_n": 43.39529800415039
+    },
+    {
+      "force_row": 11060,
+      "context_row": 11059,
+      "car": 0,
+      "time_s": 553.0,
+      "reasons": [
+        "context_transition_at_11060"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20996856689453,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.792661666870117
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": -11.58966064453125,
+        "length_behind_m": 169.399658203125,
+        "num_paths": 1
+      },
+      "expected_force_n": 43.147743225097656
+    },
+    {
+      "force_row": 11061,
+      "context_row": 11060,
+      "car": 0,
+      "time_s": 553.0500000000001,
+      "reasons": [
+        "context_transition_at_11060"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.792951583862305
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11062,
+      "context_row": 11061,
+      "car": 0,
+      "time_s": 553.1,
+      "reasons": [
+        "context_transition_at_11060"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.2100830078125,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.7949275970459
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11066,
+      "context_row": 11065,
+      "car": 1,
+      "time_s": 553.3000000000001,
+      "reasons": [
+        "context_transition_at_11066"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20991516113281,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.79145050048828
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": -8.6375732421875,
+        "length_behind_m": 169.62757873535156,
+        "num_paths": 1
+      },
+      "expected_force_n": 30.21929931640625
+    },
+    {
+      "force_row": 11067,
+      "context_row": 11066,
+      "car": 1,
+      "time_s": 553.35,
+      "reasons": [
+        "context_transition_at_11066"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20977783203125,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.786935806274414
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11068,
+      "context_row": 11067,
+      "car": 1,
+      "time_s": 553.4,
+      "reasons": [
+        "context_transition_at_11066"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20967102050781,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.787384033203125
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11072,
+      "context_row": 11071,
+      "car": 2,
+      "time_s": 553.6,
+      "reasons": [
+        "context_transition_at_11072"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.2097396850586,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.79227638244629
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": -8.86468505859375,
+        "length_behind_m": 169.8546905517578,
+        "num_paths": 1
+      },
+      "expected_force_n": 30.22084617614746
+    },
+    {
+      "force_row": 11073,
+      "context_row": 11072,
+      "car": 2,
+      "time_s": 553.65,
+      "reasons": [
+        "context_transition_at_11072"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20986938476562,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.795515060424805
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11074,
+      "context_row": 11073,
+      "car": 2,
+      "time_s": 553.7,
+      "reasons": [
+        "context_transition_at_11072"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.793521881103516
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11077,
+      "context_row": 11076,
+      "car": 3,
+      "time_s": 553.85,
+      "reasons": [
+        "context_transition_at_11077"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.21003723144531,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.79251480102539
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": -7.5531463623046875,
+        "length_behind_m": 168.54315185546875,
+        "num_paths": 1
+      },
+      "expected_force_n": 30.221437454223633
+    },
+    {
+      "force_row": 11078,
+      "context_row": 11077,
+      "car": 3,
+      "time_s": 553.9,
+      "reasons": [
+        "context_transition_at_11077"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20999145507812,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.788333892822266
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11079,
+      "context_row": 11078,
+      "car": 3,
+      "time_s": 553.95,
+      "reasons": [
+        "context_transition_at_11077"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20995330810547,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.788902282714844
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11083,
+      "context_row": 11082,
+      "car": 4,
+      "time_s": 554.15,
+      "reasons": [
+        "context_transition_at_11083"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20985412597656,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.7915096282959
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": -7.7802581787109375,
+        "length_behind_m": 168.770263671875,
+        "num_paths": 1
+      },
+      "expected_force_n": 30.21938705444336
+    },
+    {
+      "force_row": 11084,
+      "context_row": 11083,
+      "car": 4,
+      "time_s": 554.2,
+      "reasons": [
+        "context_transition_at_11083"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20993041992188,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.793479919433594
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11085,
+      "context_row": 11084,
+      "car": 4,
+      "time_s": 554.25,
+      "reasons": [
+        "context_transition_at_11083"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21000671386719,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.791399002075195
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11091,
+      "context_row": 11090,
+      "car": 5,
+      "time_s": 554.5500000000001,
+      "reasons": [
+        "context_transition_at_11091"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.791542053222656
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": -11.087112426757812,
+        "length_behind_m": 168.89710998535156,
+        "num_paths": 1
+      },
+      "expected_force_n": 30.219308853149414
+    },
+    {
+      "force_row": 11092,
+      "context_row": 11091,
+      "car": 5,
+      "time_s": 554.6,
+      "reasons": [
+        "context_transition_at_11091"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20996856689453,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.794111251831055
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11093,
+      "context_row": 11092,
+      "car": 5,
+      "time_s": 554.65,
+      "reasons": [
+        "context_transition_at_11091"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.2099380493164,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.79180335998535
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11099,
+      "context_row": 11098,
+      "car": 6,
+      "time_s": 554.95,
+      "reasons": [
+        "context_transition_at_11099"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.21000671386719,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.793046951293945
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": -11.214370727539062,
+        "length_behind_m": 169.0243682861328,
+        "num_paths": 1
+      },
+      "expected_force_n": 43.148841857910156
+    },
+    {
+      "force_row": 11100,
+      "context_row": 11099,
+      "car": 6,
+      "time_s": 555.0,
+      "reasons": [
+        "context_transition_at_11099"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21001434326172,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.78891944885254
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11101,
+      "context_row": 11100,
+      "car": 6,
+      "time_s": 555.0500000000001,
+      "reasons": [
+        "context_transition_at_11099"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21002197265625,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.78901481628418
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11142,
+      "context_row": 11141,
+      "car": 0,
+      "time_s": 557.1,
+      "reasons": [
+        "context_transition_at_11142"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20992279052734,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.79053497314453
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11143,
+      "context_row": 11142,
+      "car": 0,
+      "time_s": 557.15,
+      "reasons": [
+        "context_transition_at_11142"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.2098617553711,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.79085350036621
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 726.0064697265625,
+        "length_behind_m": 1.08697509765625,
+        "num_paths": 2
+      },
+      "expected_force_n": 53.55459976196289
+    },
+    {
+      "force_row": 11144,
+      "context_row": 11143,
+      "car": 0,
+      "time_s": 557.2,
+      "reasons": [
+        "context_transition_at_11142"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20986938476562,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.793991088867188
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 724.4667358398438,
+        "length_behind_m": 2.626708984375,
+        "num_paths": 2
+      },
+      "expected_force_n": 53.56551742553711
+    },
+    {
+      "force_row": 11148,
+      "context_row": 11147,
+      "car": 1,
+      "time_s": 557.4,
+      "reasons": [
+        "context_transition_at_11148"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20999145507812,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.792888641357422
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11149,
+      "context_row": 11148,
+      "car": 1,
+      "time_s": 557.45,
+      "reasons": [
+        "context_transition_at_11148"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.21002197265625,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.793264389038086
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 728.95849609375,
+        "length_behind_m": 1.31494140625,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.25135803222656
+    },
+    {
+      "force_row": 11150,
+      "context_row": 11149,
+      "car": 1,
+      "time_s": 557.5,
+      "reasons": [
+        "context_transition_at_11148"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.21005249023438,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.791027069091797
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 727.4189453125,
+        "length_behind_m": 2.8544921875,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.24566650390625
+    },
+    {
+      "force_row": 11153,
+      "context_row": 11152,
+      "car": 2,
+      "time_s": 557.65,
+      "reasons": [
+        "context_transition_at_11153"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.2099609375,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.790279388427734
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11154,
+      "context_row": 11153,
+      "car": 2,
+      "time_s": 557.7,
+      "reasons": [
+        "context_transition_at_11153"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20986938476562,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.790563583374023
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 730.2705688476562,
+        "length_behind_m": 0.00286865234375,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.24439239501953
+    },
+    {
+      "force_row": 11155,
+      "context_row": 11154,
+      "car": 2,
+      "time_s": 557.75,
+      "reasons": [
+        "context_transition_at_11153"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.2098388671875,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.79364585876465
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 728.7308959960938,
+        "length_behind_m": 1.54254150390625,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.252227783203125
+    },
+    {
+      "force_row": 11159,
+      "context_row": 11158,
+      "car": 3,
+      "time_s": 557.95,
+      "reasons": [
+        "context_transition_at_11159"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20993041992188,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.79205322265625
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11160,
+      "context_row": 11159,
+      "car": 3,
+      "time_s": 558.0,
+      "reasons": [
+        "context_transition_at_11159"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20999145507812,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.792404174804688
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 730.0426025390625,
+        "length_behind_m": 0.2308349609375,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.2491455078125
+    },
+    {
+      "force_row": 11161,
+      "context_row": 11160,
+      "car": 3,
+      "time_s": 558.0500000000001,
+      "reasons": [
+        "context_transition_at_11159"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.21003723144531,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.791040420532227
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 728.5030517578125,
+        "length_behind_m": 1.7703857421875,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.245697021484375
+    },
+    {
+      "force_row": 11165,
+      "context_row": 11164,
+      "car": 4,
+      "time_s": 558.25,
+      "reasons": [
+        "context_transition_at_11165"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20999145507812,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.79298210144043
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11166,
+      "context_row": 11165,
+      "car": 4,
+      "time_s": 558.3000000000001,
+      "reasons": [
+        "context_transition_at_11165"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20991516113281,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.79397201538086
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 729.8150634765625,
+        "length_behind_m": 0.4583740234375,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.25310134887695
+    },
+    {
+      "force_row": 11167,
+      "context_row": 11166,
+      "car": 4,
+      "time_s": 558.35,
+      "reasons": [
+        "context_transition_at_11165"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20980834960938,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.792583465576172
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 728.2755126953125,
+        "length_behind_m": 1.9979248046875,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.249507904052734
+    },
+    {
+      "force_row": 11173,
+      "context_row": 11172,
+      "car": 5,
+      "time_s": 558.65,
+      "reasons": [
+        "context_transition_at_11173"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20986938476562,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.79231834411621
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11174,
+      "context_row": 11173,
+      "car": 5,
+      "time_s": 558.7,
+      "reasons": [
+        "context_transition_at_11173"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20993041992188,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.78817367553711
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 726.508056640625,
+        "length_behind_m": 0.58538818359375,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.23812484741211
+    },
+    {
+      "force_row": 11175,
+      "context_row": 11174,
+      "car": 5,
+      "time_s": 558.75,
+      "reasons": [
+        "context_transition_at_11173"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20999145507812,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.78817367553711
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 724.9686279296875,
+        "length_behind_m": 2.12481689453125,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.238162994384766
+    },
+    {
+      "force_row": 11181,
+      "context_row": 11180,
+      "car": 6,
+      "time_s": 559.0500000000001,
+      "reasons": [
+        "context_transition_at_11181"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20999145507812,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.792564392089844
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11182,
+      "context_row": 11181,
+      "car": 6,
+      "time_s": 559.1,
+      "reasons": [
+        "context_transition_at_11181"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.2099609375,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.79288101196289
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 726.38134765625,
+        "length_behind_m": 0.71209716796875,
+        "num_paths": 2
+      },
+      "expected_force_n": 53.56172180175781
+    },
+    {
+      "force_row": 11183,
+      "context_row": 11182,
+      "car": 6,
+      "time_s": 559.15,
+      "reasons": [
+        "context_transition_at_11181"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20990753173828,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.795076370239258
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": 724.8417358398438,
+        "length_behind_m": 2.251708984375,
+        "num_paths": 2
+      },
+      "expected_force_n": 53.5693244934082
+    },
+    {
+      "force_row": 11622,
+      "context_row": 11621,
+      "car": 0,
+      "time_s": 581.1,
+      "reasons": [
+        "context_transition_at_11622"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20960235595703,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.779956817626953
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": -11.4385986328125,
+        "length_behind_m": 738.5320434570312,
+        "num_paths": 2
+      },
+      "expected_force_n": 53.516510009765625
+    },
+    {
+      "force_row": 11623,
+      "context_row": 11622,
+      "car": 0,
+      "time_s": 581.15,
+      "reasons": [
+        "context_transition_at_11622"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20973205566406,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.78624153137207
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11624,
+      "context_row": 11623,
+      "car": 0,
+      "time_s": 581.2,
+      "reasons": [
+        "context_transition_at_11622"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20960235595703,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.805967330932617
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11628,
+      "context_row": 11627,
+      "car": 1,
+      "time_s": 581.4,
+      "reasons": [
+        "context_transition_at_11628"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.21025085449219,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.782411575317383
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": -8.48388671875,
+        "length_behind_m": 738.75732421875,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.22381591796875
+    },
+    {
+      "force_row": 11629,
+      "context_row": 11628,
+      "car": 1,
+      "time_s": 581.45,
+      "reasons": [
+        "context_transition_at_11628"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21039581298828,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.782543182373047
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11630,
+      "context_row": 11629,
+      "car": 1,
+      "time_s": 581.5,
+      "reasons": [
+        "context_transition_at_11628"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.78396987915039
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11634,
+      "context_row": 11633,
+      "car": 2,
+      "time_s": 581.7,
+      "reasons": [
+        "context_transition_at_11634"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.2092056274414,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.779150009155273
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": -8.7109375,
+        "length_behind_m": 738.984375,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.214942932128906
+    },
+    {
+      "force_row": 11635,
+      "context_row": 11634,
+      "car": 2,
+      "time_s": 581.75,
+      "reasons": [
+        "context_transition_at_11634"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20960235595703,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.75864601135254
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11636,
+      "context_row": 11635,
+      "car": 2,
+      "time_s": 581.8000000000001,
+      "reasons": [
+        "context_transition_at_11634"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.811901092529297
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11640,
+      "context_row": 11639,
+      "car": 3,
+      "time_s": 582.0,
+      "reasons": [
+        "context_transition_at_11640"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.21039581298828,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.788368225097656
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": -8.93994140625,
+        "length_behind_m": 739.21337890625,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.23907470703125
+    },
+    {
+      "force_row": 11641,
+      "context_row": 11640,
+      "car": 3,
+      "time_s": 582.0500000000001,
+      "reasons": [
+        "context_transition_at_11640"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.2100830078125,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.785259246826172
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11642,
+      "context_row": 11641,
+      "car": 3,
+      "time_s": 582.1,
+      "reasons": [
+        "context_transition_at_11640"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.775808334350586
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11645,
+      "context_row": 11644,
+      "car": 4,
+      "time_s": 582.25,
+      "reasons": [
+        "context_transition_at_11645"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.20921325683594,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.792251586914062
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": -7.6287841796875,
+        "length_behind_m": 737.9022216796875,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.24834442138672
+    },
+    {
+      "force_row": 11646,
+      "context_row": 11645,
+      "car": 4,
+      "time_s": 582.3000000000001,
+      "reasons": [
+        "context_transition_at_11645"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20960235595703,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.792999267578125
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11647,
+      "context_row": 11646,
+      "car": 4,
+      "time_s": 582.35,
+      "reasons": [
+        "context_transition_at_11645"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20963287353516,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.783334732055664
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11653,
+      "context_row": 11652,
+      "car": 5,
+      "time_s": 582.65,
+      "reasons": [
+        "context_transition_at_11653"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.21039581298828,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.81419563293457
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": -10.937255859375,
+        "length_behind_m": 738.0307006835938,
+        "num_paths": 2
+      },
+      "expected_force_n": 39.30472946166992
+    },
+    {
+      "force_row": 11654,
+      "context_row": 11653,
+      "car": 5,
+      "time_s": 582.7,
+      "reasons": [
+        "context_transition_at_11653"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20999908447266,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.80567169189453
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11655,
+      "context_row": 11654,
+      "car": 5,
+      "time_s": 582.75,
+      "reasons": [
+        "context_transition_at_11653"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20960235595703,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.80498695373535
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11661,
+      "context_row": 11660,
+      "car": 6,
+      "time_s": 583.0500000000001,
+      "reasons": [
+        "context_transition_at_11661"
+      ],
+      "active_previous": true,
+      "input": {
+        "train_length_m": 73.21039581298828,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.77730369567871
+      },
+      "tunnel_previous": {
+        "ahead_valid": true,
+        "behind_valid": true,
+        "length_ahead_m": -11.0634765625,
+        "length_behind_m": 738.1569213867188,
+        "num_paths": 2
+      },
+      "expected_force_n": 53.50785827636719
+    },
+    {
+      "force_row": 11662,
+      "context_row": 11661,
+      "car": 6,
+      "time_s": 583.1,
+      "reasons": [
+        "context_transition_at_11661"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.21052551269531,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.777381896972656
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 11663,
+      "context_row": 11662,
+      "car": 6,
+      "time_s": 583.15,
+      "reasons": [
+        "context_transition_at_11661"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.2107925415039,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.798908233642578
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 12000,
+      "context_row": 11999,
+      "car": 0,
+      "time_s": 600.0,
+      "reasons": [
+        "fixed_time_600"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20988464355469,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.790328979492188
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 12000,
+      "context_row": 11999,
+      "car": 1,
+      "time_s": 600.0,
+      "reasons": [
+        "fixed_time_600"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20988464355469,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.790328979492188
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 12000,
+      "context_row": 11999,
+      "car": 2,
+      "time_s": 600.0,
+      "reasons": [
+        "fixed_time_600"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20988464355469,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.790328979492188
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 12000,
+      "context_row": 11999,
+      "car": 3,
+      "time_s": 600.0,
+      "reasons": [
+        "fixed_time_600"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20988464355469,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.790699005126953
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 12000,
+      "context_row": 11999,
+      "car": 4,
+      "time_s": 600.0,
+      "reasons": [
+        "fixed_time_600"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20988464355469,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.792285919189453
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 12000,
+      "context_row": 11999,
+      "car": 5,
+      "time_s": 600.0,
+      "reasons": [
+        "fixed_time_600"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20988464355469,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 20000.0,
+        "width_m": 2.7850000858306885,
+        "height_m": 3.813999891281128,
+        "speed_mps": 30.792285919189453
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    },
+    {
+      "force_row": 12000,
+      "context_row": 11999,
+      "car": 6,
+      "time_s": 600.0,
+      "reasons": [
+        "fixed_time_600"
+      ],
+      "active_previous": false,
+      "input": {
+        "train_length_m": 73.20988464355469,
+        "train_mass_kg": 150000.0,
+        "car_mass_kg": 25000.0,
+        "width_m": 3.0999999046325684,
+        "height_m": 4.76800012588501,
+        "speed_mps": 30.792285919189453
+      },
+      "tunnel_previous": {
+        "ahead_valid": false,
+        "behind_valid": false,
+        "length_ahead_m": 0.0,
+        "length_behind_m": 0.0,
+        "num_paths": 0
+      },
+      "expected_force_n": 0.0
+    }
+  ]
+}

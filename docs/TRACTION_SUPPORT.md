@@ -48,6 +48,14 @@ RPM de eje y lectura de velocidades/esfuerzos originales. `E`/`Z` cambian marcha
 `B` muestra el estado. Los ensayos de Class 101 y sus límites se describen en
 [frenos, cambios y acopladores](ROLLING_STOCK_DYNAMICS.md#caja-de-cambios-diésel).
 
+Los perfiles hidráulicos propios declaran curvas de convertidor, relaciones,
+inercia, bloqueo, pérdidas y refrigeración. El mismo estado gobierna fuerza,
+RPM y consumo; `B` muestra bomba, turbina, par, aceite y protección térmica.
+La etiqueta original `Hydraulic` por sí sola no aporta esas curvas ni activa
+este modelo. Es una extensión Rust, con pruebas propias de potencia y consumo;
+no se presenta como un solver de convertidor de OR 1.6.1.
+[Perfil y ejercicio](PHYSICS_SEVEN_SYSTEMS.md).
+
 ## Vapor
 
 Hay caldera, presión, demanda de cilindros, consumo, animación y sonidos de
@@ -72,11 +80,16 @@ menor de dos metros sigue siendo un diámetro. Las cantidades del oráculo
 se comparan con el lector STF original. `BoilerVolume` se aproxima a capacidad
 de agua a 1000 kg/m³; no representa el volumen real de vapor y líquido de OR.
 
-La energía de caldera, combustión e inyección sigue siendo un modelo de
-conservación simplificado, sin las tablas termodinámicas completas de OR.
-Solo hay una caldera agregada por formación; no se certifican locomotoras
-compuestas, gestión independiente de doble tracción, condensación, toma de
-agua en marcha. Los abastecedores nativos permiten reponer agua del ténder y
+El modo habitual conserva su modelo simplificado. Los perfiles termodinámicos
+explícitos usan cinco tablas de agua/vapor e interpolación originales,
+contrastadas en 157 presiones, y un recipiente propio con balance de masa y
+energía. Las locomotoras de doble tracción conservan caldera, fuego, ténder,
+regulador y auxiliares separados. El compound declarado tiene HP, receptor y LP;
+no reproduce el Vauclain original. La comparación del ciclo completo de vapor
+continúa fuera de las tolerancias: compartir tablas no certifica producción,
+consumo, presión e inyectores equivalentes. Tampoco se certifican condensación
+ni toma de agua en marcha. [Resultados y trabajo pendiente](STEAM_THERMODYNAMICS_AUDIT.md).
+Los abastecedores nativos permiten reponer agua del ténder y
 carbón, con sus tomas y caudales. Llenar el ténder no llena la caldera ni repara
 un fallo por falta de agua. Hall y King sirven para probar contenido,
 cabina y sonido; su física completa todavía no está certificada.
@@ -221,11 +234,25 @@ Se engrana con un piñón de una locomotora equipada para ese sistema. Un tercer
 riel eléctrico también puede estar cerca del centro, pero suministra corriente
 y cumple otra función.
 
-La tracción y el frenado por cremallera **no están implementados**. Importar su
-modelo 3D no crea el engranamiento ni elimina el límite de adherencia. Harían
-falta declaraciones de tramo, locomotora compatible, transición entre adherencia
-y cremallera, velocidad admitida y frenos propios. No se atribuye esta función
-a la referencia 1.6.1 usando documentación de versiones posteriores.
+Los perfiles propios declaran tramos, sistema de dentado, vehículos compatibles,
+tiempo y velocidad de engrane, fuerza, potencia y freno mecánico. El contacto
+positivo sustituye la fuerza de adherencia de ese motor; no suma un segundo
+motor. La salida del tramo devuelve la tracción convencional. `B` permite
+solicitar o soltar el piñón y muestra fase, fuerza, frenado y trabajo.
+Importar un modelo 3D no declara este equipo. Es una extensión Rust, sin
+solver equivalente atribuido a OR 1.6.1.
+[Ejercicios de entrada, salida y frenada](PHYSICS_SEVEN_SYSTEMS.md).
+
+## Contacto vertical e incidentes opcionales
+
+Los tramos propios pueden declarar irregularidades reproducibles en ambos
+carriles y suspensión con contacto unilateral. Las cargas intervienen en
+adherencia y riesgo; el cuerpo visible consume el estado físico, separado de
+la vibración cosmética. El descarrilamiento opcional registra causa, fuerzas,
+velocidad y posición, corta tracción y añade frenado y arrastre. Su registro
+permanece al guardar o desactivar consecuencias. No incluye choques contra el
+terreno ni una animación de vuelco. Los ejemplos y límites están en
+[PHYSICS_SEVEN_SYSTEMS.md](PHYSICS_SEVEN_SYSTEMS.md).
 
 ## Escape, vapor y viento
 

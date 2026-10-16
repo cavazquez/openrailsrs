@@ -1,0 +1,25 @@
+{
+  "capture_dir": "/home/cristian/repos/propios/ProyectoOpenRails/openrailsrs/tmp/twenty-20261015/steam-native-cycle05",
+  "capture_manifest_sha256": "69c3e00601db4b00e79b77f07cd18de4c30e547481f8635588e5b02fdd999915",
+  "executable_sha256": "fac2c5b675523c7aa7ab3f7651c9f94c4ff896bb84a0063f6cb09b7731839b94",
+  "outputs": {
+    "comparison.json": "c44e3e7c7122255c8140d85b10e64fa82731e1531c37e9e169056a31f96e20e0",
+    "initial.json": "b4300162ea34e9289347a847085c0b47b03805b4fe1e47cd14df9676c5aba6f7",
+    "trace.csv": "69358873ca525579cd8d22d7589e6b025bad9eca760919fda2f53323c37cb7ba"
+  },
+  "result": "pass",
+  "source_sha256": {
+    "Cargo.lock": "a03c564a8dea961cd390990f94b6cd5750e58260ed0477950f9fac52b3ded893",
+    "crates/openrailsrs-formats/src/geography.rs": "7802781313b5815550d5cb8f7858df4259533b406106d23a3c03ebac1bce14e2",
+    "crates/openrailsrs-formats/src/typed/native_steam.rs": "ef65c968d10e7cf1c3bf77ccde016c7d68738ca3bcb3c4dd955d5d41e4906469",
+    "crates/openrailsrs-sim/examples/steam_cycle_compare.rs": "255cbe72201ec6fb2772c968673a045d168bf80313c6a2fd7f31780311440898",
+    "crates/openrailsrs-sim/src/native_steam/boiler.rs": "2a503a5fd0fd93b8be7f59f4df63d59d1aa67489aabd279aed755575ce5bdb50",
+    "crates/openrailsrs-sim/src/native_steam/bridge.rs": "786a646d61fe43237e1e73efb10183f20e7871f418a00eace13221d65bf6a738",
+    "crates/openrailsrs-sim/src/native_steam/cylinders.rs": "21b6b64b29883a67ff1228fde8b4729afbf6c5aefb359a95ebb016c7af23c63b",
+    "crates/openrailsrs-sim/src/native_steam/firebox.rs": "371def24158ff9258d43b5c4a752bf0678a14452f56b9f56afa86bc2ecc03f51",
+    "crates/openrailsrs-sim/src/native_steam/injectors.rs": "1ee3a87e61c052858cc13c91599a25a72d4e1f7bfd5808a551f3dc4b942fd3b2",
+    "crates/openrailsrs-sim/src/native_steam/mod.rs": "905d6284a73addcdbbab9d0e5b133d9abbaebe6e62d9defc34ac34cbe7ed364c",
+    "crates/openrailsrs-sim/src/native_steam/tables.rs": "369eb415450d398d2fa7119e992fe15563b4fca57726e6e267e2e8f136914645",
+    "crates/openrailsrs-sim/src/native_steam/vacuum.rs": "0d7dc7c38719c51f58f930b33c5f33ad54ed04490ae263896b3e55fe01741c1f"
+  }
+}

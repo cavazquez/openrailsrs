@@ -10,6 +10,8 @@ description = "Playable rules layer (objectives, scoring) on top of simulation"
 openrailsrs-scenarios = { path = "../openrailsrs-scenarios" }
 openrailsrs-sim = { path = "../openrailsrs-sim" }
 serde.workspace = true
+serde_json.workspace = true
+openrailsrs-track = { path = "../openrailsrs-track" }
 thiserror.workspace = true
 toml.workspace = true
 

@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "kind": "selected_genuine_native08_tunnel_subsystem_outputs",
+  "raw_trace_sha256": "362ecf741d06ae02e5bfb6ea67af88559d0f98adf631342d42e070c91f4eb13a",
+  "native07_projection_sha256": "21212399f6289ff44b6d108d6312670008e6503abee0054df2d4dd150d6e2be2",
+  "native08_manifest_sha256": "ff7ae813e38c837529c622153a2c5f0f2835c0970f66569db7bc5be51495cf72",
+  "telemetry_integrity_sha256": "a585b2c03c694a0158cfe3cd74e7c55301129a3b35b1b341d0c2739dc4fa11ec",
+  "original_trk_sha256": "6af09c2f6dcf61f3384646a97430d6e0b1fecace6260b607e63923f7a76953b7",
+  "native08_helper_sha256": "309729644b9f4d2c5692789b4079ddf24b1d56ecc914d2bf417b0f4722b03113",
+  "source_files_sha256": {
+    "Source/Orts.Simulation/Simulation/RollingStocks/TrainCar.cs": "f1020ef9aedfd0d502383920a94abfc6a93ed3627ab8f8874862579176fb2348",
+    "Source/Orts.Simulation/Simulation/Physics/Train.cs": "c4bc5b5822f8d154ea723c5bcb0390ccd54c675b65ec4d12d2e3e2acf92cf2cf"
+  },
+  "projection": "Select actual forceRowN outputs only; prescribed context is rowN−1; derive cross-section with Single(width*height), not observed TrainCrossSectionAreaM2. Store no native force formula.",
+  "selection": "Everycar active/path-count transition: force rowsK,K+1,K+2; everycar force maximum; rowsat400/500/600s; first computedrow. Deduplicate by forceRow/car; approximately100–300 calls, no downsampling of the full route reference.",
+  "cases": 259,
+  "geometry_calls": 140,
+  "inactive_transition_records": 119,
+  "original_resources_bundled": false,
+  "rust_comparison": "not_run",
+  "files_sha256": {
+    "extract-fixture.py": "9d72be455cc0df0c94487dee162a1e52a55f0cf84d0827f38fd3439073dd9539",
+    "native08-manifest.json": "ff7ae813e38c837529c622153a2c5f0f2835c0970f66569db7bc5be51495cf72",
+    "protocol.json": "49eed6db5e701f9e513a5f4b15091ba5f8c17a42435136da835a850df8877705",
+    "reference.json": "aee7e30da94c70e700c087f3dd7b7e7cc9d859d09152254d2bcdf75e322cc40c"
+  }
+}

@@ -39,6 +39,11 @@ pub fn run_cab(scenario_path: &Path, speed_mul: f64) -> anyhow::Result<()> {
         .parent()
         .ok_or_else(|| anyhow::anyhow!("scenario has no parent dir"))?;
     let scenario = load_scenario(scenario_path)?;
+    if !scenario.simulation.yard_operations.is_empty() {
+        anyhow::bail!(
+            "Los patios operativos requieren LiveDrive/LiveTraffic; este runner no ejecuta mesas, pools ni crews"
+        );
+    }
     let route_dir = scenario_dir.join(&scenario.route.path);
     let graph =
         load_track_graph_from_route_dir(&route_dir).map_err(|e| anyhow::anyhow!("route: {e}"))?;
@@ -77,6 +82,7 @@ pub fn run_cab(scenario_path: &Path, speed_mul: f64) -> anyhow::Result<()> {
     };
     let partial_throttle_run_up_time_s = max_partial_throttle_run_up_time_s(&diesel_engines);
     let mut train_physics = TrainPhysics {
+        rack: Default::default(),
         bogies: openrailsrs_train::bogie_geometry::load_models_for_consist(
             &consist_path,
             asset_root,
@@ -171,18 +177,39 @@ pub fn run_cab(scenario_path: &Path, speed_mul: f64) -> anyhow::Result<()> {
     let dt_per_frame = sim_per_frame.min(dt);
 
     // ── State ────────────────────────────────────────────────────────────────
+    train_physics.rack = openrailsrs_sim::rack::RackTrainConfig::from_scenario(
+        scenario.train.rack.as_ref(),
+        consist.vehicles.len(),
+        path_data.total_length_m(),
+    )
+    .map_err(anyhow::Error::msg)?;
     let mut state = TrainSimState::new(path_edges.clone());
+    state.rack = openrailsrs_sim::rack::RackTrainState::new(&train_physics.rack);
     state.articulated_joints = openrailsrs_sim::bogie_dynamics::apply_overrides(
         &mut train_physics.bogies,
         &scenario.train.bogie_dynamics,
     )
     .map_err(anyhow::Error::msg)?;
-    state
+    state.bogies = train_physics
         .bogies
-        .resize_with(train_physics.bogies.len(), Default::default);
+        .iter()
+        .map(openrailsrs_sim::bogie_dynamics::VehicleBogieState::from_model)
+        .collect();
     state.boiler_state = consist
         .aggregate_steam_params()
         .map(|p| openrailsrs_sim::steam::BoilerState::from_params(&p));
+    state.brake_system = openrailsrs_sim::brake::BrakeSystem::from_vehicle_specs(
+        &openrailsrs_sim::brake::vehicle_specs_from_consist(
+            &consist,
+            scenario.simulation.brake_shoe_speed_factor,
+            scenario.simulation.brake_skid_limit,
+        ),
+        200.,
+        scenario.simulation.train_air_lap_hold,
+        scenario.simulation.train_air_full_release_s,
+    );
+    openrailsrs_sim::steam_equipment::configure(&mut state, &consist)
+        .map_err(anyhow::Error::msg)?;
     let mut throttle: f64 = 0.0;
     let mut brake: f64 = 0.0;
     let mut emergency = false;

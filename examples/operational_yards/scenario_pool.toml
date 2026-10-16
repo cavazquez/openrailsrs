@@ -1,0 +1,75 @@
+[scenario]
+name = "Depósito: reservar, despachar y devolver material"
+description = "F9, Patio: reservar first-duty y despachar pool-loco. La locomotora recorre la vía y regresa por un PAT propio. Devolver al quedar detenida dentro del depósito; su tripulación aplica el freno de mano; el combustible y los km no se reinician."
+
+[route]
+path = "pool"
+start = "observe"
+destination = "observe_end"
+start_offset_m = 100.0
+assume_signals_clear = true
+
+[train]
+consist = "consists/loco.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+penalty_per_second_late = 0.0
+
+[simulation]
+duration = 2400.0
+time_step = 0.05
+seed = 42
+multi_body = true
+coupler_kind = "freight"
+legacy_power_cap = false
+train_air_full_release_s = 3.0
+
+[[simulation.yard_operations.pools]]
+id = "depot"
+edge = "storage"
+start_m = 20.0
+end_m = 180.0
+members = ["pool-loco"]
+[[simulation.yard_operations.pools.jobs]]
+id = "first-duty"
+not_before_s = 0.0
+deadline_s = 1800.0
+min_vehicles = 1
+max_vehicles = 1
+[[simulation.yard_operations.pools.jobs]]
+id = "second-duty"
+not_before_s = 0.0
+deadline_s = 2400.0
+min_vehicles = 1
+max_vehicles = 1
+
+[output]
+csv = "run_pool.csv"
+metadata = "run_pool.json"
+
+[[extra_trains]]
+id = "pool-loco"
+consist = "consists/loco.con"
+start = "depot"
+destination = "end"
+start_offset_m = 80.0
+parked = true
+output_csv = "pool-loco.csv"
+[[extra_trains.legs]]
+start = "depot"
+destination = "end"
+edges = ["storage", "out"]
+start_offset_m = 80.0
+end_chainage_m = 350.0
+reversed = false
+wait_s = 0.0
+[[extra_trains.legs]]
+start = "end"
+destination = "depot"
+edges = ["out_r", "storage_r"]
+start_offset_m = 70.0
+end_chainage_m = 340.0
+reversed = true
+wait_s = 0.0

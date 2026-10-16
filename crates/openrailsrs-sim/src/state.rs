@@ -9,6 +9,10 @@ use crate::steam::BoilerState;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TrainSimState {
     #[serde(default)]
+    pub yard_operations: crate::operational_yards::YardWorldState,
+    #[serde(default)]
+    pub rack: crate::rack::RackTrainState,
+    #[serde(default)]
     pub freight: Vec<crate::activity_freight::FreightCar>,
     /// Absent only in saves predating mechanical bogies. An explicit version
     /// prevents a new save with erased states from masquerading as legacy.
@@ -79,6 +83,10 @@ pub struct TrainSimState {
     pub pos_on_edge_m: f64,
     pub velocity_mps: f64,
     pub throttle: f64,
+    /// Door, reverser, TCS, departure or moving-device interlock. A local
+    /// locomotive regulator cannot bypass the session's traction permission.
+    #[serde(default)]
+    pub traction_inhibited: bool,
     pub brake: f64,
     /// Gross electrical energy drawn (minus regen already subtracted), in joules.
     pub cumulative_energy_j: f64,
@@ -125,6 +133,8 @@ pub struct TrainSimState {
 impl TrainSimState {
     pub fn new(path_edges: Vec<String>) -> Self {
         Self {
+            yard_operations: Default::default(),
+            rack: Default::default(),
             freight: vec![],
             bogie_state_version: Some(1),
             activity: None,
@@ -161,6 +171,7 @@ impl TrainSimState {
             pos_on_edge_m: 0.0,
             velocity_mps: 0.0,
             throttle: 0.0,
+            traction_inhibited: false,
             brake: 0.0,
             cumulative_energy_j: 0.0,
             odometer_m: 0.0,

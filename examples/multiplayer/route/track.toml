@@ -1,0 +1,95 @@
+[route]
+id = "multiplayer_own_demo"
+
+[[nodes]]
+id = "a"
+x_m = 0.0
+y_m = 0.0
+[[nodes]]
+id = "j"
+x_m = 2000.0
+y_m = 0.0
+kind = { switch = { stem_edge = "e2", diverging_edge = "siding", default_position = "straight" } }
+[[nodes]]
+id = "b"
+x_m = 4000.0
+y_m = 0.0
+[[nodes]]
+id = "s"
+x_m = 2300.0
+y_m = -80.0
+[[nodes]]
+id = "c"
+x_m = 0.0
+y_m = 35.0
+[[nodes]]
+id = "d"
+x_m = 4000.0
+y_m = 35.0
+[[nodes]]
+id = "yard_in"
+x_m = 200.0
+y_m = -100.0
+[[nodes]]
+id = "free_j"
+x_m = 400.0
+y_m = -100.0
+kind = { switch = { stem_edge = "free_straight", diverging_edge = "free_diverge", default_position = "straight" } }
+[[nodes]]
+id = "yard_out"
+x_m = 600.0
+y_m = -100.0
+[[nodes]]
+id = "yard_siding"
+x_m = 600.0
+y_m = -140.0
+
+[[edges]]
+id = "e1"
+from = "a"
+to = "j"
+length_m = 2000.0
+speed_limit_kmh = 80.0
+[[edges]]
+id = "e2"
+from = "j"
+to = "b"
+length_m = 2000.0
+speed_limit_kmh = 80.0
+[[edges]]
+id = "siding"
+from = "j"
+to = "s"
+length_m = 310.0
+speed_limit_kmh = 25.0
+[[edges]]
+id = "parallel"
+from = "c"
+to = "d"
+length_m = 4000.0
+speed_limit_kmh = 80.0
+
+[[signals]]
+id = "signal_b"
+edge_id = "e2"
+position_m = 100.0
+aspect = "clear"
+
+[[edges]]
+id = "free_approach"
+from = "yard_in"
+to = "free_j"
+length_m = 200.0
+speed_limit_kmh = 25.0
+[[edges]]
+id = "free_straight"
+from = "free_j"
+to = "yard_out"
+length_m = 200.0
+speed_limit_kmh = 25.0
+[[edges]]
+id = "free_diverge"
+from = "free_j"
+to = "yard_siding"
+length_m = 205.0
+speed_limit_kmh = 25.0

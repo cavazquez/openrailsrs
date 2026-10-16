@@ -1,0 +1,49 @@
+{
+  "success": true,
+  "phase": "completed",
+  "scenario": "Chiltern local: Northolt Park → West Ruislip",
+  "time_s": 750.9999999998647,
+  "distance_m": 7054.1154951039325,
+  "score": 999.9,
+  "failure": null,
+  "completion_scope": "Resolved route and declared passenger stops; not arbitrary ACT scripted events",
+  "stops": [
+    {
+      "name": "Northolt Park",
+      "node": "n97",
+      "scheduled_arrive_s": 0.0,
+      "actual_arrive_s": 0.05,
+      "actual_depart_s": 22.000000000000178,
+      "position_error_m": 2.2737367544323206e-13,
+      "arrival_speed_mps": 0.0,
+      "dwell_s": 20.00000000000015,
+      "delay_s": 0.05,
+      "early_departure_s": 0.0
+    },
+    {
+      "name": "South Ruislip",
+      "node": "n101",
+      "scheduled_arrive_s": 390.0,
+      "actual_arrive_s": 361.800000000048,
+      "actual_depart_s": 421.00000000006145,
+      "position_error_m": 3.9522932018553547,
+      "arrival_speed_mps": 0.09794465155240885,
+      "dwell_s": 57.249999999998884,
+      "delay_s": 0.0,
+      "early_departure_s": 0.0
+    },
+    {
+      "name": "West Ruislip",
+      "node": "n105",
+      "scheduled_arrive_s": 720.0,
+      "actual_arrive_s": 693.7499999999168,
+      "actual_depart_s": 750.9999999998647,
+      "position_error_m": 3.917116127378904,
+      "arrival_speed_mps": 0.08245018767787345,
+      "dwell_s": 55.299999999998995,
+      "delay_s": 0.0,
+      "early_departure_s": 0.0
+    }
+  ],
+  "traffic": []
+}

@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "reference_version": "1.6.1",
+  "conditions": {
+    "clock_time_s": 35700,
+    "weather": "clear",
+    "season": "summer",
+    "width": 1280,
+    "height": 720,
+    "view_radius_m": 450,
+    "cab_fov_deg": 45,
+    "orbit_yaw_rad": 1.6,
+    "orbit_pitch_rad": 0.6,
+    "orbit_distance_m": 160
+  },
+  "stations": [
+    {
+      "slug": "northolt-park",
+      "advance_m": 0
+    },
+    {
+      "slug": "south-ruislip",
+      "advance_m": 3868.22559
+    },
+    {
+      "slug": "west-ruislip",
+      "advance_m": 7058.02269
+    },
+    {
+      "slug": "denham",
+      "platform_id": 1864
+    },
+    {
+      "slug": "denham-golf-course",
+      "platform_id": 1299
+    },
+    {
+      "slug": "gerrards-cross",
+      "platform_id": 1303
+    }
+  ],
+  "intentional_presentation": [
+    "Bevy continuous solar lighting in ordinary play",
+    "Bevy tone mapping and soft shadows",
+    "The reference sun is frozen only for this comparison"
+  ],
+  "acceptance": "Equivalent cameras, conditions and completed scenery loading. Review content visually; no global pixel score certifies the scene.",
+  "formation": {
+    "file": "examples/chiltern_extended/consists/birmingham_pullman.con",
+    "sha256": "b267ebba70000bdb53eb90f78b3e48fdd40bfb303013fa50aa3d745eed91e9f6",
+    "cars": 8,
+    "name": "Birmingham Pullman",
+    "native_reference_scope": "Original historical activity; known missing author models remain documented in native metadata"
+  }
+}

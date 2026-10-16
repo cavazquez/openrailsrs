@@ -1,0 +1,147 @@
+{
+  "schema": 1,
+  "kind": "original_all_car_force_and_geometry_additive_observation",
+  "status": "captured_with_sparse_fixture_not_compared_in_rust_by_publisher",
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "original_capture_receipt_sha256": "37144f2b52cf0ceaaa94b02bef0791fd939130c42eb8536cd959bebfea96a72f",
+  "native_trace_sha256": "ad9e690435d784df243c8a49bfdb37137c6e5f98f8941045adfde27e4500a7e2",
+  "native_trace_rows": 15003,
+  "native_trace_columns": 20,
+  "native_trace_public_path": "examples/baselines/chiltern_local/capture/trace.csv",
+  "native_trace_byte_identical": true,
+  "native_all_car_rows": 120024,
+  "native_car_observation_sha256": "255304a33d0f365a23cabdb8fdc43c60c01e0cbb4ef9e540d153a21f4c781356",
+  "parent_observation01_sha256": "3392f303463a7d54b48cda1bfd8bd260855ffcc952fb77747e9bf3eea71a1103",
+  "parent_iir_public_path": "docs/fixtures/compatibility/twenty-20261015/chiltern-adhesion161-native01/native/adhesion-observation.json.gz",
+  "parent_publication01_sha256_unchanged": "f88e6314c8f1390ab465ea4f2c05f7efefa4bf9e1a0161d7175b04a72086df2a",
+  "all_original_inputs_unchanged": true,
+  "human_trace_sha256_unchanged": {
+    "examples/chiltern/run.csv": "ddba584bf99a24d18e2869e10159cbc3f6af0486f29a72d097bf71afb4ab5716",
+    "examples/chiltern/run.json": "c5696f1896bf944936bbcdbdf34b7f7a9948ed4a8c549295bb9a237c1f82c047",
+    "examples/chiltern/run_brake_coast_multi_body.csv": "3be525dca9a355c809dac4ce17c915ebbadd2c87ef0ad468037ff3cb72b09022",
+    "examples/chiltern/run_throttle100.csv": "30bd23a47ebd42c53298735ce56985d26bbac1b4f64a0a9eaa0c52468fc4f1d0",
+    "examples/chiltern/run_throttle50.csv": "46909080f32aa1c5b5d17877394014e5fffa20e81d77630cc83a57da98813b91",
+    "examples/chiltern/run_throttle75.csv": "0de294a0fd7e85f1f32fd5c54fe9d56686fcf7170fe77c45e48bcb4fd1d0ef28"
+  },
+  "private_wine_release_sha256": "deafd7e891c91eaabee7e464efd4d5214a9e01b9d7d5fc6712335aca77a73bbb",
+  "private_processes_remaining": [],
+  "forbidden_drivers_seen": [],
+  "original_assets_bundled": false,
+  "closed_trajectory_observed_outputs_prescribed": false,
+  "isolated_force_tolerance_n_abs": 0.01,
+  "original_service_limits_unchanged": true,
+  "rust_executed_by_publisher": false,
+  "global_gate_claim": false,
+  "files": {
+    "curve-force-protocol.json": {
+      "sha256": "b553a66098b7e538fa15855db787050383af2db59d51935cba093586d20a8b16",
+      "transformation": "genuine sparse projection with separately declared protocol"
+    },
+    "curve-force-sparse.json": {
+      "sha256": "dfdd41d166da63f5e2a3a0c681f2effe3e11aa272d5aac91a457d36a50ae47c5",
+      "transformation": "genuine sparse projection with separately declared protocol"
+    },
+    "receipt.json": {
+      "sha256": "37144f2b52cf0ceaaa94b02bef0791fd939130c42eb8536cd959bebfea96a72f",
+      "transformation": "literal captured or post-capture diagnostic file; no sanitization"
+    },
+    "compile.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "transformation": "literal captured or post-capture diagnostic file; no sanitization"
+    },
+    "capture.log": {
+      "sha256": "34e82c0a9d0e803b29df1202fdede83c888a65a1933da53379daf4fbf5d2f289",
+      "transformation": "literal captured or post-capture diagnostic file; no sanitization"
+    },
+    "trace-integrity.json": {
+      "sha256": "16d85cd602ffaa81c739ab9ef425742bbbff6c5687a9fd5e7160e9c21d69f061",
+      "transformation": "literal captured or post-capture diagnostic file; no sanitization"
+    },
+    "diagnostics-integrity.json": {
+      "sha256": "9aad92b210114d89d399fffda17c834eabc6e52f9f3318c6ffb1d12d44f7c276",
+      "transformation": "literal captured or post-capture diagnostic file; no sanitization"
+    },
+    "native/initial.json": {
+      "sha256": "aa7611255dff6b69654a15c674b246f21dbed69241e14dfbb2125ce23162e716",
+      "transformation": "literal captured or post-capture diagnostic file; no sanitization"
+    },
+    "native/outcome.json": {
+      "sha256": "3b5a0af595220a98a86320beacc6d7feaeb9714dc688ebd42b3d131e54098310",
+      "transformation": "literal captured or post-capture diagnostic file; no sanitization"
+    },
+    "wine-isolation/isolation.json": {
+      "sha256": "4dca58b6398334f04f7f87189d3e850153b8b46a236ba15955cc2898deea2b71",
+      "transformation": "literal captured or post-capture diagnostic file; no sanitization"
+    },
+    "wine-isolation/release.json": {
+      "sha256": "deafd7e891c91eaabee7e464efd4d5214a9e01b9d7d5fc6712335aca77a73bbb",
+      "transformation": "literal captured or post-capture diagnostic file; no sanitization"
+    },
+    "selected-force-geometry.json": {
+      "sha256": "fb8b15dbf04157a42d6e194e7976af3cfe7f039555cfd1eb4d376841c2437861",
+      "transformation": "literal captured or post-capture diagnostic file; no sanitization"
+    },
+    "source-phase-diagnostic.json": {
+      "sha256": "dc9b309f3cfa671460c3fd1e306daf2b1e711cdcaf74e8017f791af08032fdd0",
+      "transformation": "literal captured or post-capture diagnostic file; no sanitization"
+    },
+    "capture-sources/ChilternForceDiagnostics.cs": {
+      "sha256": "aef82385f464c89f9a0ad3cebd6d18dab769e6e8d423d5146c9927c575a82f99",
+      "transformation": "literal own capture source or pin snapshot used by this attempt"
+    },
+    "capture-sources/HeadlessCapture-original.cs": {
+      "sha256": "c832f071a28f61178da2814d382069c3dc15cdb2aff7b89f40fe5974ffdb60a0",
+      "transformation": "literal own capture source or pin snapshot used by this attempt"
+    },
+    "capture-sources/capture.py": {
+      "sha256": "71cf3137a8dbec683ab189a96ad27cdf0913c3322ee14276a184309b45d4b3a0",
+      "transformation": "literal own capture source or pin snapshot used by this attempt"
+    },
+    "capture-sources/oracle_wine.py": {
+      "sha256": "4e87773fd3fe535f5660a427ea12b8b6a716266ebf9161e433aa66fc86e9f590",
+      "transformation": "literal own capture source or pin snapshot used by this attempt"
+    },
+    "capture-sources/protocol.json": {
+      "sha256": "5991cedf7c97cefba837506c02d327f72a75296db9277f7b804b8454857ea42d",
+      "transformation": "literal own capture source or pin snapshot used by this attempt"
+    },
+    "capture-sources/reference-pin-at-capture.toml": {
+      "sha256": "e69350802947a099598cecf58f4f030f316fc7b6ea9b385dec341510cc732dba",
+      "transformation": "literal own capture source or pin snapshot used by this attempt"
+    },
+    "capture-sources/extract_curve_reference.py": {
+      "sha256": "bb0dc9e2980b244706e088eefac3d649503c7811538875bbe2ec71561f4723d1",
+      "transformation": "own deterministic extraction or diagnostic script executed after capture"
+    },
+    "capture-sources/verify_source_phase.py": {
+      "sha256": "47ed80f446d4bbcd7b9519b79660c3c2fdf416f3944f3f7f3c02e716974e7833",
+      "transformation": "own deterministic extraction or diagnostic script executed after capture"
+    },
+    "extraction.json": {
+      "sha256": "046d1a8f953244aa8906669bda10428737573618ba7c1138b36d3099b3fba24d",
+      "transformation": "literal successful deterministic extractor receipt"
+    },
+    "native/car-diagnostics.csv.gz": {
+      "sha256": "a7533bb0652d90506245f02bfd757c0fc60cba4070b679ed3612b8666018148e",
+      "raw_sha256": "255304a33d0f365a23cabdb8fdc43c60c01e0cbb4ef9e540d153a21f4c781356",
+      "raw_bytes": 38718983,
+      "transformation": "lossless gzip level9/mtime0; decoded bytes unchanged"
+    },
+    "README.md": {
+      "sha256": "6f1152c3835d6c07438f30063502c75c899c6f4cb15bdc71857b6a2504c9a42e",
+      "transformation": "own scope and phase documentation"
+    },
+    "publish.py": {
+      "sha256": "02eba84ee8ae96595fc9a100d6cbdc9e41b68bb4c213b97b71a46c9039e20901",
+      "transformation": "own publisher executed for this directory"
+    }
+  },
+  "excluded": [
+    "original content and DLL assets",
+    "runtime and private Wine prefix",
+    "human trace contents",
+    "duplicate original20column trace",
+    "duplicate parent IIR observation and runtime environmental CSV"
+  ]
+}

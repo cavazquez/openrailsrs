@@ -224,6 +224,17 @@ fn car_world_pose_with_supports(
 ) -> Option<Transform> {
     let sample = |offset| {
         if let Some(live) = live {
+            if let Some(pose) = crate::yard_scene::offset_pose(
+                live,
+                track_index,
+                path_offset_m,
+                offset,
+                route_offset,
+                focus,
+                origin,
+            ) {
+                return Some(pose * vehicle_authored_frame_transform(0., flipped));
+            }
             // Both supports belong to the same car. Using the support's own
             // offset to identify the car would attach a parked front bogie to
             // the moving section after an uncoupling.
@@ -292,6 +303,19 @@ pub fn car_world_pose_at_head_offset(
     terrain: Option<&TerrainElevation>,
     origin: &FloatingOrigin,
 ) -> Option<Transform> {
+    if let Some(live) = live
+        && let Some(pose) = crate::yard_scene::offset_pose(
+            live,
+            track_index,
+            path_offset_m,
+            path_offset_m,
+            route_offset,
+            focus,
+            origin,
+        )
+    {
+        return Some(pose * vehicle_authored_frame_transform(0., flipped));
+    }
     let (edge_id, pos) = if let Some(live) = live {
         live.visual_position_for_service(track_index, path_offset_m, path_offset_m)?
     } else {
@@ -392,6 +416,20 @@ pub fn update_consist_car_track_poses(
         let Ok(parent_tf) = parents.get(child_of.parent()) else {
             continue;
         };
+        if let (Some(live), Some(index)) = (live_ref, index)
+            && let Some(world) = crate::yard_scene::car_pose(
+                live,
+                car.track_index,
+                index.0,
+                offset.delta,
+                &focus,
+                &origin,
+            )
+        {
+            let authored = vehicle_authored_frame_transform(0., car.flipped);
+            *tf = car_local_from_parent_and_world(parent_tf, &(world * authored));
+            continue;
+        }
         let Some((head_edge, head_pos)) =
             head_graph_position(live_ref, replay_ref, car.track_index)
         else {

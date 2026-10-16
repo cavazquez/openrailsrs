@@ -1,0 +1,1229 @@
+{
+  "schema": 1,
+  "created_at_utc": "2026-10-16T12:00:10.965550+00:00",
+  "status": "three_pass_one_failed_two_not_executed",
+  "viewer_sha256": "7308481494a14fefa956abcdda5ed4bcd8c2e63badfd4c3a9b74164f71a64a1f",
+  "plan_sha256": "10a27d04f2096257a4245f92770faf10b2f7eb40f4f1ec71f64fffc00e2fab1c",
+  "original_partial_result_sha256": "5610b1234d1679b510c9a3e807fede41456f499a22f700caf6a8abae714ac15c",
+  "original_failure_sha256": "db8038c07a3c4f9467028bef253324f0a2f653aab38f19cfce0367e39215ea6c",
+  "execution_scope": "Parent-approved normal build04 on private AMD Vulkan. CPU LIRR/check work overlapped; no isolated performance result is claimed. No Cargo/runtime edits were made by the capture agent.",
+  "initial_pause": "Capture-start pause was opt-in before the first fixed tick. First action time_s=0 and speed=0, then ordinary controls and unpause; no position, velocity, force, phase or cause was prescribed.",
+  "passed_cases": [
+    "hydraulic-running",
+    "rack-positive-braking",
+    "rack-entry-exit"
+  ],
+  "failed_case": "vertical-on",
+  "not_executed": [
+    "vertical-off",
+    "derailment-from-rest"
+  ],
+  "captures": [
+    {
+      "name": "hydraulic-running",
+      "status": "physical_report_pass_and_pixels_inspected",
+      "file": "hydraulic-running.png",
+      "image_sha256": "db63cfada53caaeac54f729abdf6e9d9d22f995af5780e43784b6915feed1b89",
+      "source_report_sha256": "e77d74fb84f1c478ad3feab69fb8ce5bd0cf326cb3a371c27bc450089f4c21a9",
+      "source_process_receipt_sha256": "dd00e2ae0f39f458f3142a9eae877505e906feaaee4d3951be1c6223865746f3",
+      "viewer_returncode": 0,
+      "compositor_returncode": 0,
+      "controls": {
+        "brake": 0.0,
+        "braking_intervention": null,
+        "direction": 1.0,
+        "missed_stops": [],
+        "paused": true,
+        "throttle": 0.7,
+        "traction_load_fraction": 0.063847075521992,
+        "traffic_brake_assistance": false
+      },
+      "odometer_m": 698.919541711774,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "active_device_pci": "0000:03:00.0",
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "actions": [
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 0,
+          "odometer_m": 0.0,
+          "origin_m": [
+            -1400.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.0
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 1,
+          "odometer_m": 0.0,
+          "origin_m": [
+            -1400.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.0
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 0.7
+          },
+          "door_fractions": [],
+          "index": 2,
+          "odometer_m": 0.0020380137101912283,
+          "origin_m": [
+            -1400.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.027173273272152628,
+          "time_s": 0.15000000000000002
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 0.7
+          },
+          "door_fractions": [],
+          "index": 3,
+          "odometer_m": 698.919541711774,
+          "origin_m": [
+            -887.974609375,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 17.93056912799314,
+          "time_s": 59.64999999999875
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 0.7
+          },
+          "door_fractions": [],
+          "index": 4,
+          "odometer_m": 698.919541711774,
+          "origin_m": [
+            -887.974609375,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 17.93056912799314,
+          "time_s": 59.64999999999875
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 0.7
+          },
+          "door_fractions": [],
+          "index": 5,
+          "odometer_m": 698.919541711774,
+          "origin_m": [
+            -887.974609375,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 17.93056912799314,
+          "time_s": 59.64999999999875
+        }
+      ],
+      "diesel": {
+        "cars": [
+          {
+            "command_running": true,
+            "consumed_l": 1.0037696965568854,
+            "cooling_on": false,
+            "demanded_rpm": 1410.0,
+            "flow_lps": 0.0170896701487012,
+            "fuel_l": 498.99623030344367,
+            "hydraulic": {
+              "cooled_j": 154684.41123793408,
+              "force_n": 9577.0613282988,
+              "gear": 2,
+              "heat_j": 2308482.7506765774,
+              "input_power_w": 200638.1376431139,
+              "lock_up": false,
+              "loss_power_w": 28971.29935459012,
+              "output_power_w": 171666.83828852378,
+              "overtemperature": false,
+              "pump_rpm": 1045.2463798602612,
+              "pump_torque_nm": 1833.0622759920889,
+              "shift_remaining_s": 0.0,
+              "speed_ratio": 0.6550385223228805,
+              "temperature_c": 34.35865559625762,
+              "torque_ratio": 1.3749341448502,
+              "turbine_rpm": 684.6766441270056,
+              "turbine_torque_nm": 2520.3399128983438
+            },
+            "phase": "Running",
+            "refilled_l": 0.0,
+            "rpm": 1045.2463798602612,
+            "temperature_c": 43.60558421857659,
+            "vehicle": 0
+          }
+        ],
+        "initialized": true
+      },
+      "rack": {
+        "cars": []
+      },
+      "rendered_motion": {
+        "cars": 0,
+        "level": "off",
+        "max_pitch_deg": 0.0,
+        "max_roll_deg": 0.0,
+        "max_vertical_m": 0.0,
+        "physical_max_body_angle_deg": 0.0,
+        "physical_max_body_offset_m": 0.0,
+        "wheel_bogie_pose_compensated": true
+      },
+      "source_directory": "tmp/twenty-20261015/physics-driving-gpu01/hydraulic-running",
+      "pixel_review": {
+        "inspected": true,
+        "traction_panel_visible": true,
+        "hydraulic_fields_readable": true,
+        "rack_fields_readable": false,
+        "scroll_input_tested": false,
+        "all_diagnostics_fit": true,
+        "note": "Required physical meter fields are visible. Some lower auxiliary diagnostics require scrolling in rack cases; no claim that every line fits."
+      }
+    },
+    {
+      "name": "rack-positive-braking",
+      "status": "physical_report_pass_and_pixels_inspected",
+      "file": "rack-positive-braking.png",
+      "image_sha256": "04dc554cd66eb025c3ea44f9f1e66db3f75ffb77d18710c5470a8f2e10156b0a",
+      "source_report_sha256": "51467ca809f22810b89491ee5a8cee0759ad04dcd08c727deac8db5c2db1c191",
+      "source_process_receipt_sha256": "969bf9a8bafab9a1558d1f5fa9c657dfc8ebf1b9276db696386dd30fb27908ae",
+      "viewer_returncode": 0,
+      "compositor_returncode": 0,
+      "controls": {
+        "brake": 1.0,
+        "braking_intervention": null,
+        "direction": 1.0,
+        "missed_stops": [],
+        "paused": true,
+        "throttle": 0.0,
+        "traction_load_fraction": 0.0,
+        "traffic_brake_assistance": false
+      },
+      "odometer_m": 40.68126283168872,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "active_device_pci": "0000:03:00.0",
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "actions": [
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 0,
+          "odometer_m": 0.0,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.0
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 1,
+          "odometer_m": 0.0,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.0
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 0.7
+          },
+          "door_fractions": [],
+          "index": 2,
+          "odometer_m": 0.0020380137101912283,
+          "origin_m": [
+            -1400.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.027173273272152628,
+          "time_s": 0.15000000000000002
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 1.0,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 3,
+          "odometer_m": 32.5406020984732,
+          "origin_m": [
+            -1400.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 6.42753993385709,
+          "time_s": 9.650000000000002
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 1.0,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 4,
+          "odometer_m": 40.68126283168872,
+          "origin_m": [
+            -1400.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 13.650000000000059
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 1.0,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 5,
+          "odometer_m": 40.68126283168872,
+          "origin_m": [
+            -1400.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 13.650000000000059
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 1.0,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 6,
+          "odometer_m": 40.68126283168872,
+          "origin_m": [
+            -1400.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 13.650000000000059
+        }
+      ],
+      "diesel": {
+        "cars": [
+          {
+            "command_running": true,
+            "consumed_l": 0.17574100986267646,
+            "cooling_on": false,
+            "demanded_rpm": 500.0,
+            "flow_lps": 0.0033333333333333335,
+            "fuel_l": 499.824258990139,
+            "hydraulic": {
+              "cooled_j": 15426.754868720302,
+              "force_n": 0.0,
+              "gear": 0,
+              "heat_j": 764348.6849869189,
+              "input_power_w": 0.0,
+              "lock_up": false,
+              "loss_power_w": 0.0,
+              "output_power_w": 0.0,
+              "overtemperature": false,
+              "pump_rpm": 1048.8658957664695,
+              "pump_torque_nm": 0.0,
+              "shift_remaining_s": 0.0,
+              "speed_ratio": 0.0,
+              "temperature_c": 24.992812867454656,
+              "torque_ratio": 2.2,
+              "turbine_rpm": 0.0,
+              "turbine_torque_nm": 0.0
+            },
+            "phase": "Running",
+            "refilled_l": 0.0,
+            "rpm": 1048.8658957664695,
+            "temperature_c": 40.579009861006064,
+            "vehicle": 0
+          }
+        ],
+        "initialized": true
+      },
+      "rack": {
+        "cars": [
+          {
+            "brake_force_n": 180000.0,
+            "brake_work_j": 1490902.0724958442,
+            "engage_requested": true,
+            "engagement_remaining_s": 0.0,
+            "incompatible": false,
+            "overspeed": false,
+            "phase": "Engaged",
+            "section": 0,
+            "transmitted_force_n": 0.0,
+            "vehicle": 0
+          }
+        ]
+      },
+      "rendered_motion": {
+        "cars": 0,
+        "level": "off",
+        "max_pitch_deg": 0.0,
+        "max_roll_deg": 0.0,
+        "max_vertical_m": 0.0,
+        "physical_max_body_angle_deg": 0.0,
+        "physical_max_body_offset_m": 0.0,
+        "wheel_bogie_pose_compensated": true
+      },
+      "source_directory": "tmp/twenty-20261015/physics-driving-gpu01/rack-positive-braking",
+      "pixel_review": {
+        "inspected": true,
+        "traction_panel_visible": true,
+        "hydraulic_fields_readable": true,
+        "rack_fields_readable": true,
+        "scroll_input_tested": false,
+        "all_diagnostics_fit": false,
+        "note": "Required physical meter fields are visible. Some lower auxiliary diagnostics require scrolling in rack cases; no claim that every line fits."
+      }
+    },
+    {
+      "name": "rack-entry-exit",
+      "status": "physical_report_pass_and_pixels_inspected",
+      "file": "rack-entry-exit.png",
+      "image_sha256": "8d1422a31048573ce49b011ec0dee98c29d3d6a2c6f2f6e7a3a42e81ae09679a",
+      "source_report_sha256": "9ecaab0bb5b7fce52c186a2a978d89510c37cff6b7ec054ad34af685be9c54c1",
+      "source_process_receipt_sha256": "6886baadedfda4925fec172bc6095fef4a67d15af9bceacdf1755c34d3cd14c9",
+      "viewer_returncode": 0,
+      "compositor_returncode": 0,
+      "controls": {
+        "brake": 0.0,
+        "braking_intervention": null,
+        "direction": 1.0,
+        "missed_stops": [],
+        "paused": true,
+        "throttle": 0.12,
+        "traction_load_fraction": 0.010888922357490446,
+        "traffic_brake_assistance": false
+      },
+      "odometer_m": 388.4036504460208,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "active_device_pci": "0000:03:00.0",
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "actions": [
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 0,
+          "odometer_m": 0.0,
+          "origin_m": [
+            -1400.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.0
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 1,
+          "odometer_m": 0.0,
+          "origin_m": [
+            -1400.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.0
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 0.12
+          },
+          "door_fractions": [],
+          "index": 2,
+          "odometer_m": 0.0020380137101912283,
+          "origin_m": [
+            -1400.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.027173273272152628,
+          "time_s": 0.15000000000000002
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 0.12
+          },
+          "door_fractions": [],
+          "index": 3,
+          "odometer_m": 388.4036504460208,
+          "origin_m": [
+            -1143.8673095703125,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 11.28587333152667,
+          "time_s": 59.64999999999875
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 0.12
+          },
+          "door_fractions": [],
+          "index": 4,
+          "odometer_m": 388.4036504460208,
+          "origin_m": [
+            -1143.8673095703125,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 11.28587333152667,
+          "time_s": 59.64999999999875
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 0.12
+          },
+          "door_fractions": [],
+          "index": 5,
+          "odometer_m": 388.4036504460208,
+          "origin_m": [
+            -1143.8673095703125,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 11.28587333152667,
+          "time_s": 59.64999999999875
+        }
+      ],
+      "diesel": {
+        "cars": [
+          {
+            "command_running": true,
+            "consumed_l": 0.277872975774512,
+            "cooling_on": false,
+            "demanded_rpm": 656.0,
+            "flow_lps": 0.004741104798011595,
+            "fuel_l": 499.7221270242257,
+            "hydraulic": {
+              "cooled_j": 15145.981018854127,
+              "force_n": 1633.338353623567,
+              "gear": 2,
+              "heat_j": 211215.11426552132,
+              "input_power_w": 20532.547922541682,
+              "lock_up": false,
+              "loss_power_w": 2108.7870749402873,
+              "output_power_w": 18423.760847601396,
+              "overtemperature": false,
+              "pump_rpm": 516.4360708659889,
+              "pump_torque_nm": 379.78030097600737,
+              "shift_remaining_s": 0.0,
+              "speed_ratio": 0.8342897971606004,
+              "temperature_c": 21.307127554977782,
+              "torque_ratio": 1.132120144670616,
+              "turbine_rpm": 430.85734480920325,
+              "turbine_torque_nm": 429.9569292840075
+            },
+            "phase": "Running",
+            "refilled_l": 0.0,
+            "rpm": 516.4360708659889,
+            "temperature_c": 49.72840984113518,
+            "vehicle": 0
+          }
+        ],
+        "initialized": true
+      },
+      "rack": {
+        "cars": [
+          {
+            "brake_force_n": 0.0,
+            "brake_work_j": 0.0,
+            "engage_requested": true,
+            "engagement_remaining_s": 0.0,
+            "incompatible": false,
+            "overspeed": false,
+            "phase": "Disengaged",
+            "section": null,
+            "transmitted_force_n": 0.0,
+            "vehicle": 0
+          }
+        ]
+      },
+      "rendered_motion": {
+        "cars": 0,
+        "level": "off",
+        "max_pitch_deg": 0.0,
+        "max_roll_deg": 0.0,
+        "max_vertical_m": 0.0,
+        "physical_max_body_angle_deg": 0.0,
+        "physical_max_body_offset_m": 0.0,
+        "wheel_bogie_pose_compensated": true
+      },
+      "source_directory": "tmp/twenty-20261015/physics-driving-gpu01/rack-entry-exit",
+      "pixel_review": {
+        "inspected": true,
+        "traction_panel_visible": true,
+        "hydraulic_fields_readable": true,
+        "rack_fields_readable": true,
+        "scroll_input_tested": false,
+        "all_diagnostics_fit": false,
+        "note": "Required physical meter fields are visible. Some lower auxiliary diagnostics require scrolling in rack cases; no claim that every line fits."
+      }
+    },
+    {
+      "name": "vertical-on",
+      "status": "failed_rendered_physical_displacement",
+      "file": "vertical-on-failed.png",
+      "image_sha256": "82c2c01ec215722117fbbb84ced4b49e54e83bd9e0705555daf467f460b4b12e",
+      "source_report_sha256": "b497a3435b4d94f1404600cf0e182feae81f5446f689365d01bce65e45b8c21f",
+      "source_process_receipt_sha256": "97d6754a7800f6e2dc641dfe1ba4da6eeecf101a90cd1ebfdf9dc45f42bb7859",
+      "viewer_returncode": 0,
+      "compositor_returncode": 0,
+      "controls": {
+        "brake": 0.0,
+        "braking_intervention": null,
+        "direction": 1.0,
+        "missed_stops": [],
+        "paused": true,
+        "throttle": 0.7,
+        "traction_load_fraction": 0.11420724648979476,
+        "traffic_brake_assistance": false
+      },
+      "odometer_m": 112.82235186010826,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "active_device_pci": "0000:03:00.0",
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "actions": [
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 0,
+          "odometer_m": 0.0,
+          "origin_m": [
+            -1400.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.0
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 1,
+          "odometer_m": 0.0,
+          "origin_m": [
+            -1400.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.0
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 2,
+          "odometer_m": 0.0,
+          "origin_m": [
+            -1400.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.0
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 0.7
+          },
+          "door_fractions": [],
+          "index": 3,
+          "odometer_m": 0.002223459344218942,
+          "origin_m": [
+            -1400.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.029670420261567094,
+          "time_s": 0.15000000000000002
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 0.7
+          },
+          "door_fractions": [],
+          "index": 4,
+          "odometer_m": 112.82235186010826,
+          "origin_m": [
+            -1400.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 10.004101067465706,
+          "time_s": 19.600000000000144
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 0.7
+          },
+          "door_fractions": [],
+          "index": 5,
+          "odometer_m": 112.82235186010826,
+          "origin_m": [
+            -1400.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 10.004101067465706,
+          "time_s": 19.600000000000144
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 0.0,
+            "direction": 1.0,
+            "throttle": 0.7
+          },
+          "door_fractions": [],
+          "index": 6,
+          "odometer_m": 112.82235186010826,
+          "origin_m": [
+            -1400.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 10.004101067465706,
+          "time_s": 19.600000000000144
+        }
+      ],
+      "diesel": {
+        "cars": [
+          {
+            "command_running": true,
+            "consumed_l": 0.32658957770722113,
+            "cooling_on": false,
+            "demanded_rpm": 1410.0,
+            "flow_lps": 0.01711590922349049,
+            "fuel_l": 499.67341042229276,
+            "hydraulic": {
+              "cooled_j": 27662.2589433378,
+              "force_n": 17131.086973469213,
+              "gear": 1,
+              "heat_j": 1080634.675069285,
+              "input_power_w": 201020.838297355,
+              "lock_up": false,
+              "loss_power_w": 29932.19774636891,
+              "output_power_w": 171088.64055098608,
+              "overtemperature": false,
+              "pump_rpm": 1043.628188274134,
+              "pump_torque_nm": 1839.5977554322192,
+              "shift_remaining_s": 0.0,
+              "speed_ratio": 0.6396757348341445,
+              "temperature_c": 27.019816107506315,
+              "torque_ratio": 1.4005321971465015,
+              "turbine_rpm": 667.5836282278835,
+              "turbine_torque_nm": 2576.4158862812583
+            },
+            "phase": "Running",
+            "refilled_l": 0.0,
+            "rpm": 1043.628188274134,
+            "temperature_c": 41.147068027497255,
+            "vehicle": 0
+          }
+        ],
+        "initialized": true
+      },
+      "rack": {
+        "cars": []
+      },
+      "rendered_motion": {
+        "cars": 0,
+        "level": "off",
+        "max_pitch_deg": 0.0,
+        "max_roll_deg": 0.0,
+        "max_vertical_m": 0.0,
+        "physical_max_body_angle_deg": 0.0,
+        "physical_max_body_offset_m": 0.0,
+        "wheel_bogie_pose_compensated": true
+      },
+      "source_directory": "tmp/twenty-20261015/physics-driving-gpu01/vertical-on",
+      "pixel_review": {
+        "inspected": true,
+        "traction_panel_visible": true,
+        "hydraulic_fields_readable": true,
+        "rack_fields_readable": false,
+        "scroll_input_tested": false,
+        "all_diagnostics_fit": false,
+        "note": "Failed PNG personally inspected: B shows hydraulic meters, physical irregularities enabled and suspension load. Those readable diagnostics do not overcome zero renderer tracking/displacement; lower auxiliary lines require scrolling.",
+        "vertical_load_indicator_readable": true
+      },
+      "physical_motion": [
+        {
+          "native": {
+            "angle_of_attack_rad": 0.0,
+            "buff_force_exceeded": false,
+            "climb_distance_m": 0.0,
+            "derailment_coefficient": 0.0,
+            "elapsed_s": 0.0,
+            "expected": false,
+            "has_derailed": false,
+            "lateral_force_n": 0.0,
+            "nadal_coefficient": 0.0,
+            "possible": false,
+            "vertical_force_n": 0.0
+          },
+          "native_domain_valid": true,
+          "supports": [
+            {
+              "angle_of_attack_rad": 0.0,
+              "attack_limit": false,
+              "hard_stop_force_n": 0.0,
+              "lateral_acceleration_mps2": 0.0,
+              "lateral_offset_m": 0.0,
+              "lateral_velocity_mps": 0.0,
+              "left_wheel_load_n": 111115.64672898913,
+              "rail_reaction_n": 0.0,
+              "requested_force_n": 0.0,
+              "right_wheel_load_n": 110719.11421407353,
+              "travel_limit": false,
+              "wheel_unloaded": false
+            },
+            {
+              "angle_of_attack_rad": 0.0,
+              "attack_limit": false,
+              "hard_stop_force_n": 0.0,
+              "lateral_acceleration_mps2": 0.0,
+              "lateral_offset_m": 0.0,
+              "lateral_velocity_mps": 0.0,
+              "left_wheel_load_n": 111881.80469111462,
+              "rail_reaction_n": 0.0,
+              "requested_force_n": 0.0,
+              "right_wheel_load_n": 111480.1868143847,
+              "travel_limit": false,
+              "wheel_unloaded": false
+            }
+          ],
+          "vertical": {
+            "configured_enabled": true,
+            "enabled_override": true,
+            "supports": [
+              {
+                "wheels": [
+                  {
+                    "axle_velocity_mps": -0.024790522957912176,
+                    "axle_z_m": -0.0014722731765731039,
+                    "body_velocity_mps": -0.04770002872731354,
+                    "body_z_m": -0.00027906937373732446,
+                    "bump_force_n": 0.0,
+                    "contact_lost": false,
+                    "longitudinal_force_n": -295.39899586347315,
+                    "normal_force_n": 111115.64672898913,
+                    "reference_load_n": 110324.13306022449,
+                    "suspension_force_n": -603.0923997679786,
+                    "track_height_m": -0.0014549297151838134
+                  },
+                  {
+                    "axle_velocity_mps": -0.009730738304473713,
+                    "axle_z_m": 0.0016729131569502083,
+                    "body_velocity_mps": -0.029549481890615466,
+                    "body_z_m": 0.003016229516835411,
+                    "bump_force_n": 0.0,
+                    "contact_lost": false,
+                    "longitudinal_force_n": -123.05162826829509,
+                    "normal_force_n": 110719.11421407352,
+                    "reference_load_n": 110324.13306022449,
+                    "suspension_force_n": -241.74730660889395,
+                    "track_height_m": 0.0016814708221760577
+                  }
+                ]
+              },
+              {
+                "wheels": [
+                  {
+                    "axle_velocity_mps": -0.01900390328127014,
+                    "axle_z_m": 0.00020773863152637737,
+                    "body_velocity_mps": -0.04330205581031187,
+                    "body_z_m": 0.0007005037487763711,
+                    "bump_force_n": 0.0,
+                    "contact_lost": false,
+                    "longitudinal_force_n": -241.5126674407128,
+                    "normal_force_n": 111881.80469111462,
+                    "reference_load_n": 110324.13306022449,
+                    "suspension_force_n": -1335.1361596008603,
+                    "track_height_m": 0.00024211698573738333
+                  },
+                  {
+                    "axle_velocity_mps": -0.010738618601265449,
+                    "axle_z_m": -0.0019522064288214572,
+                    "body_velocity_mps": -0.03260771891541725,
+                    "body_z_m": -0.001241733748398335,
+                    "bump_force_n": 0.0,
+                    "contact_lost": false,
+                    "longitudinal_force_n": -144.2860698254994,
+                    "normal_force_n": 111480.1868143847,
+                    "reference_load_n": 110324.13306022449,
+                    "suspension_force_n": -961.3927306151018,
+                    "track_height_m": -0.0019267379527426304
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "native": {
+            "angle_of_attack_rad": 0.0,
+            "buff_force_exceeded": false,
+            "climb_distance_m": 0.0,
+            "derailment_coefficient": 0.0,
+            "elapsed_s": 0.0,
+            "expected": false,
+            "has_derailed": false,
+            "lateral_force_n": 0.0,
+            "nadal_coefficient": 0.0,
+            "possible": false,
+            "vertical_force_n": 0.0
+          },
+          "native_domain_valid": true,
+          "supports": [
+            {
+              "angle_of_attack_rad": 0.0,
+              "attack_limit": false,
+              "hard_stop_force_n": 0.0,
+              "lateral_acceleration_mps2": 0.0,
+              "lateral_offset_m": 0.0,
+              "lateral_velocity_mps": 0.0,
+              "left_wheel_load_n": 73549.875,
+              "rail_reaction_n": 0.0,
+              "requested_force_n": 0.0,
+              "right_wheel_load_n": 73549.875,
+              "travel_limit": false,
+              "wheel_unloaded": false
+            },
+            {
+              "angle_of_attack_rad": 0.0,
+              "attack_limit": false,
+              "hard_stop_force_n": 0.0,
+              "lateral_acceleration_mps2": 0.0,
+              "lateral_offset_m": 0.0,
+              "lateral_velocity_mps": 0.0,
+              "left_wheel_load_n": 73549.875,
+              "rail_reaction_n": 0.0,
+              "requested_force_n": 0.0,
+              "right_wheel_load_n": 73549.875,
+              "travel_limit": false,
+              "wheel_unloaded": false
+            }
+          ]
+        }
+      ],
+      "diagnosis": {
+        "confirmed_source": "crates/openrailsrs-viewer3d/src/train_motion.rs:216",
+        "issue": "The cosmetic Off early-return predicate did not consider enabled vertical physical suspension and cleared the render-motion tracker before vertical_pose was evaluated.",
+        "initial_hypothesis_retracted": "Missing proxy car root was only a hypothesis. The procedural fallback does have TrainCarTrackOffset/ChildOf, as verified in live.rs.",
+        "root_fix_pending": true
+      }
+    }
+  ],
+  "source_stability": "The runner checked the captured viewer/input hashes after each accepted case. It stopped at the vertical render failure; original raw artifacts remain untouched.",
+  "limits": [
+    "Accepted cases cover actual driving, pause and in-process SessionSnapshot JSON roundtrip followed by B/Tracción, not a full disk-save menu interaction.",
+    "This is not a six-case PASS and does not close vertical or derailment graphical acceptance.",
+    "All content is owned physical laboratory definitions/procedural geometry. No original OR rolling-stock graphics compatibility is inferred.",
+    "No marginal effect cost, isolated GPU frame time, long-term memory stability or native solver parity is claimed.",
+    "Wheel/bogie compensation for the procedural fallback is not proved by the global telemetry bool; no such claim is accepted here.",
+    "Private player-data/settings folders and raw logs are excluded."
+  ],
+  "history": {
+    "permission_review_timeout_before_launch": "The first requested exec did not start a process because automatic approval review timed out. Its one permitted retry started this run. This was not a renderer crash."
+  },
+  "owned_processes_remaining_at_export": []
+}

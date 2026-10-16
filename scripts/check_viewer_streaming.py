@@ -247,11 +247,17 @@ def run_checkpoint(args, name, target, pause):
         env["OPENRAILSRS_SOAK_OUT"] = str(prefix.with_suffix(".soak.jsonl"))
         if getattr(args,"soak_route_interval_s",None):env["OPENRAILSRS_SOAK_ROUTE_INTERVAL_S"]=str(args.soak_route_interval_s)
         if getattr(args,"soak_routes",None):env["OPENRAILSRS_SOAK_ROUTES"]=json.dumps(args.soak_routes)
+    # Explicit per-process overrides support network peers without changing the
+    # caller's environment or sharing private player data between concurrent runs.
+    env.update(getattr(args, "env_overrides", {}))
     viewer = None
     peak_kib = 0
     cpu_start = cpu_end = None
     gpu_busy, gpu_peak_vram = {}, {}
     started = time.monotonic()
+    processes = {"started_unix_s": time.time(), "viewer_pid": None,
+                 "viewer_returncode": None, "compositor_pid": None,
+                 "compositor_returncode": None}
     private_runtime = None
     with prefix.with_suffix(".xvfb.log").open("w") as xlog:
         if getattr(args, "headless_wayland", False):
@@ -301,6 +307,8 @@ def run_checkpoint(args, name, target, pause):
             )
             os.close(write_fd)
             display_number = os.fdopen(read_fd)
+        processes["compositor_pid"] = display.pid
+        prefix.with_suffix(".process.json").write_text(json.dumps(processes, indent=2) + "\n")
         try:
             if display_number is not None:
                 with display_number as number:
@@ -326,6 +334,8 @@ def run_checkpoint(args, name, target, pause):
                 viewer = subprocess.Popen(
                     command, cwd=args.repo, env=env, stdout=log, stderr=log
                 )
+                processes["viewer_pid"] = viewer.pid
+                prefix.with_suffix(".process.json").write_text(json.dumps(processes, indent=2) + "\n")
                 while viewer.poll() is None:
                     try:
                         status = Path(f"/proc/{viewer.pid}/status").read_text()
@@ -378,10 +388,20 @@ def run_checkpoint(args, name, target, pause):
                 except subprocess.TimeoutExpired:
                     viewer.kill()
                     viewer.wait()
-            display.terminate()
-            display.wait(timeout=5)
-            if private_runtime is not None:
-                private_runtime.cleanup()
+            try:
+                display.terminate()
+                try:
+                    display.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    display.kill()
+                    display.wait()
+            finally:
+                processes.update(viewer_returncode=None if viewer is None else viewer.returncode,
+                                 compositor_returncode=display.returncode,
+                                 elapsed_s=time.monotonic() - started)
+                prefix.with_suffix(".process.json").write_text(json.dumps(processes, indent=2) + "\n")
+                if private_runtime is not None:
+                    private_runtime.cleanup()
     log_text = prefix.with_suffix(".log").read_text(errors="replace")
     if renderer_failed(log_text):
         raise RuntimeError(f"{name}: renderer errors; see {prefix.with_suffix('.log')}")

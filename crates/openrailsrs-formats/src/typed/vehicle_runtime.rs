@@ -63,7 +63,32 @@ impl AirCircuitParams {
 }
 
 fn parse_air_circuit(ast: &Ast) -> Option<AirCircuitParams> {
-    if named_blocks(ast, "Engine").is_empty()
+    parse_air_circuit_inner(ast, false)
+}
+fn parse_air_circuit_inner(ast: &Ast, native_train: bool) -> Option<AirCircuitParams> {
+    // Native STF normalization removes the outer Engine name but preserves
+    // its Brake_Engine controller. Do not lose an explicitly fitted circuit
+    // just because the input used native keyword-before-parenthesis syntax.
+    let engine_body = |body: &Ast| {
+        let Ast::List(fields) = body else {
+            return false;
+        };
+        fields.iter().any(|field| {
+            let Ast::List(values) = field else { return false };
+            matches!(values.first(), Some(Ast::Atom(Atom::Symbol(key))) if key.eq_ignore_ascii_case("Type"))
+                && matches!(values.get(1), Some(Ast::Atom(Atom::Symbol(kind) | Atom::String(kind)))
+                    if matches!(kind.to_ascii_lowercase().as_str(), "engine" | "diesel" | "electric" | "steam"))
+        })
+    };
+    let native_engine =
+        engine_body(ast) || matches!(ast, Ast::List(roots) if roots.iter().any(engine_body));
+    if (named_blocks(ast, "Engine").is_empty()
+        && (!native_engine
+            || (named_blocks(ast, "Brake_Engine").is_empty()
+                && !(native_train
+                    && scalar(ast, "BrakeSystemType")
+                        .is_some_and(|s| s.eq_ignore_ascii_case("air_single_pipe"))
+                    && !named_blocks(ast, "Brake_Train").is_empty()))))
         || scalar(ast, "BrakeSystemType").is_some_and(|s| s.to_ascii_lowercase().contains("vacuum"))
     {
         return None;
@@ -108,9 +133,28 @@ fn parse_air_circuit(ast: &Ast) -> Option<AirCircuitParams> {
             * 1.01325
             / p.reservoir_m3
     });
+    if native_train
+        && !named_blocks(ast, "Brake_Train").is_empty()
+        && scalar(ast, "BrakeSystemType").is_some_and(|s| s.eq_ignore_ascii_case("air_single_pipe"))
+    {
+        // MSTSLocomotive.OneAtmospherePSI is Bar.ToPSI(1), despite the name.
+        // Native main-reservoir charging therefore uses one bar, not 1 atm.
+        p.charging_bar_s = pressure_field("ORTSMainResChargingRate").unwrap_or_else(|| {
+            volume("AirBrakesAirCompressorPowerRating")
+                .unwrap_or(0.025)
+                .max(0.025)
+                / p.reservoir_m3
+        });
+    }
     p.application_bar_s =
         pressure_field("ORTSEngineBrakeApplicationRate").unwrap_or(p.application_bar_s);
     p.release_bar_s = pressure_field("ORTSEngineBrakeReleaseRate").unwrap_or(p.release_bar_s);
+    if scalar(ast, "ORTSRSAdvancedEmergency").is_some_and(|v| v == "1") {
+        p.application_bar_s = pressure_field("EngineBrakesControllerMaxApplicationRate")
+            .unwrap_or(p.application_bar_s);
+        p.release_bar_s =
+            pressure_field("EngineBrakesControllerMaxReleaseRate").unwrap_or(p.release_bar_s);
+    }
     Some(p)
 }
 
@@ -206,6 +250,15 @@ pub struct NativeEpBrakeProfile {
 /// This covers normal service/release; emergency equipment remains separate.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NativeAirBrakeProfile {
+    /// Original plain-valve stock is enabled as a formation only when its
+    /// leading locomotive supplies a supported authored Brake_Train control.
+    #[serde(default)]
+    pub native_plain: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fixed_cylinder_volume_m3: Option<f64>,
+    /// Opt-in supported AirSinglePipe emergency valve/reservoir subset.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub emergency: Option<NativeEmergencyBrakeProfile>,
     pub cylinder: NativeEpBrakeProfile,
     pub triple_ratio: f64,
     pub relay_ratio: f64,
@@ -215,10 +268,264 @@ pub struct NativeAirBrakeProfile {
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NativeAirController {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub notched: Option<NativeTrainBrakeNotches>,
     pub charged_psi: f64,
     pub full_service_drop_psi: f64,
     pub application_psi_s: f64,
     pub release_psi_s: f64,
+    #[serde(default = "default_emergency_rate")]
+    pub emergency_psi_s: f64,
+}
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct NativeTrainBrakeNotches {
+    pub initial_value: f64,
+    pub minimum_reduction_psi: f64,
+    pub pipe_charging_psi_s: f64,
+    pub pipe_quick_charging_psi_s: f64,
+    pub quick_release_psi_s: f64,
+    pub overcharge_elimination_psi_s: f64,
+    pub slow_application_psi_s: f64,
+    pub mechanical_compressor_max_rpm: Option<f64>,
+    pub main_reservoir: Option<AirCircuitParams>,
+    pub independent_fitted: bool,
+    pub notches: Vec<(f64, bool, String)>,
+}
+impl NativeTrainBrakeNotches {
+    pub fn setting(&self, value: f64) -> (f32, &str) {
+        let value = value.clamp(0., 1.) as f32;
+        let i = self
+            .notches
+            .iter()
+            .rposition(|(v, _, _)| *v as f32 <= value)
+            .unwrap_or(0);
+        let (start, smooth, name) = &self.notches[i];
+        let fraction = if *smooth {
+            let end = self.notches.get(i + 1).map_or(1., |p| p.0 as f32);
+            (value - *start as f32) / (end - *start as f32).max(f32::EPSILON)
+        } else {
+            1.
+        };
+        (
+            if *smooth && name == "release" {
+                1. - fraction
+            } else {
+                fraction
+            },
+            name,
+        )
+    }
+}
+fn parse_native_train_brake_notches(ast: &Ast) -> Option<NativeTrainBrakeNotches> {
+    let block = named_blocks(ast, "Brake_Train").into_iter().last()?;
+    let Ast::List(items) = block else { return None };
+    let numbers = items
+        .iter()
+        .filter_map(|a| match a {
+            Ast::Atom(a) => {
+                super::atom_to_number(a).or_else(|| super::atom_to_string(a)?.parse::<f64>().ok())
+            }
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    let mut notches = vec![];
+    for block in named_blocks(block, "Notch") {
+        let Ast::List(items) = block else { continue };
+        let fields = items
+            .iter()
+            .filter_map(|a| match a {
+                Ast::Atom(a) => super::atom_to_string(a)
+                    .or_else(|| super::atom_to_number(a).map(|v| v.to_string())),
+                _ => None,
+            })
+            .filter(|s| !s.eq_ignore_ascii_case("Notch"))
+            .collect::<Vec<_>>();
+        if fields.len() < 3 {
+            return None;
+        }
+        let name = fields[2].to_ascii_lowercase();
+        let kind = name
+            .strip_prefix("trainbrakescontroller")
+            .unwrap_or(&name)
+            .trim_end_matches("start");
+        let kind = match kind {
+            "holdlapped" => "lap",
+            "neutralhandleoff" => "neutral",
+            v => v,
+        };
+        if !matches!(
+            kind,
+            "release"
+                | "fullquickrelease"
+                | "running"
+                | "neutral"
+                | "hold"
+                | "lap"
+                | "minimalreduction"
+                | "apply"
+                | "fullservice"
+                | "continuousservice"
+                | "graduatedselflaplimitedholding"
+                | "graduatedselflaplimited"
+                | "suppression"
+                | "emergency"
+                | "dummy"
+        ) {
+            return None;
+        }
+        notches.push((
+            fields[0].parse::<f64>().ok()?,
+            fields[1].parse::<i32>().ok()? != 0,
+            kind.to_string(),
+        ));
+    }
+    let initial_value = *numbers.get(3)?;
+    if notches.is_empty()
+        || !initial_value.is_finite()
+        || !(0. ..=1.).contains(&initial_value)
+        || notches
+            .iter()
+            .any(|n| !n.0.is_finite() || !(0. ..=1.).contains(&n.0))
+        || notches.windows(2).any(|p| p[0].0 >= p[1].0)
+    {
+        return None;
+    }
+    let psi = |key, default| {
+        super::traction_operation::quantity(ast, key, "psi")
+            .ok()
+            .flatten()
+            .map_or(default, |v| v / 0.0689475729)
+    };
+    // An arbitrary scripted controller cannot be replaced by the MSTS kernel.
+    if scalar(ast, "ORTSTrainBrakeController").is_some_and(|s| !s.eq_ignore_ascii_case("MSTS")) {
+        return None;
+    }
+    Some(NativeTrainBrakeNotches {
+        initial_value,
+        minimum_reduction_psi: psi("TrainBrakesControllerMinPressureReduction", 6.),
+        pipe_charging_psi_s: psi("ORTSBrakePipeChargingRate", 21.),
+        pipe_quick_charging_psi_s: psi(
+            "ORTSBrakePipeQuickChargingRate",
+            psi("ORTSBrakePipeChargingRate", 21.),
+        ),
+        quick_release_psi_s: psi("TrainBrakesControllerMaxQuickReleaseRate", 10.),
+        overcharge_elimination_psi_s: psi(
+            "ORTSTrainBrakesControllerOverchargeEliminationRate",
+            0.036,
+        ),
+        slow_application_psi_s: psi("ORTSTrainBrakesControllerSlowApplicationRate", 1.),
+        mechanical_compressor_max_rpm: (scalar(ast, "AirBrakesIsCompressorElectricOrMechanical")
+            .is_some_and(|v| v == "1")
+            && scalar(ast, "Type").is_some_and(|v| v.eq_ignore_ascii_case("Diesel")))
+        .then(|| {
+            scalar(ast, "DieselEngineMaxRPM")
+                .and_then(|v| v.parse::<f64>().ok())
+                .unwrap_or(600.)
+        })
+        .filter(|v| v.is_finite() && *v > 0.),
+        main_reservoir: parse_air_circuit_inner(ast, true),
+        independent_fitted: !named_blocks(ast, "Brake_Engine").is_empty(),
+        notches,
+    })
+}
+fn default_emergency_rate() -> f64 {
+    20.
+}
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct NativeEmergencyBrakeProfile {
+    pub distributor: bool,
+    pub reservoir_present: bool,
+    pub reservoir_volume_m3: f64,
+    pub reservoir_charging_psi_s: f64,
+    pub maximum_application_psi_s: f64,
+    pub actuation_psi_s: f64,
+    pub legacy_actuation: bool,
+    pub dump_psi_s: f64,
+    pub dump_duration_s: f64,
+    pub quick_action: bool,
+    pub pipe_volume_m3: f64,
+    pub pipe_volume_authored: bool,
+    pub pipe_time_factor_s: f64,
+    pub service_time_factor_s: f64,
+    pub emergency_time_factor_s: f64,
+    pub sensitivity_psi: f64,
+    pub initial_application_psi: f64,
+    pub insensitivity_psi_s: f64,
+    pub independent_max_psi: f64,
+}
+impl NativeEmergencyBrakeProfile {
+    pub fn valid(&self) -> bool {
+        (0.0001..=20.).contains(&self.reservoir_volume_m3)
+            && (0. ..=100.).contains(&self.reservoir_charging_psi_s)
+            && (0.01..=200.).contains(&self.maximum_application_psi_s)
+            && (0. ..=200.).contains(&self.actuation_psi_s)
+            && (0. ..=1000.).contains(&self.dump_psi_s)
+            && (0. ..=1000.).contains(&self.dump_duration_s)
+            && (0.0001..=10.).contains(&self.pipe_volume_m3)
+            && (0.0001..=1.).contains(&self.pipe_time_factor_s)
+            && (0.0001..=10.).contains(&self.service_time_factor_s)
+            && (0.0001..=10.).contains(&self.emergency_time_factor_s)
+            && (0. ..=10.).contains(&self.sensitivity_psi)
+            && (0. ..=10.).contains(&self.initial_application_psi)
+            && (0. ..=10.).contains(&self.insensitivity_psi_s)
+            && (0. ..=200.).contains(&self.independent_max_psi)
+    }
+}
+/// Explicit requests must fail before simulation if outside the supported
+/// subset, rather than degrading to the old service-only pressure model.
+pub fn validate_advanced_emergency(
+    ast: &Ast,
+    p: &VehicleBrakeProfile,
+) -> Result<(), crate::FormatError> {
+    if super::traction_operation::quantity(ast, "ORTSRSAdvancedEmergency", "rpm")?.unwrap_or(0.)
+        == 0.
+    {
+        return Ok(());
+    }
+    let unsupported = [
+        "ORTSQuickServiceLimit",
+        "ORTSQuickServiceVentRate",
+        "ORTSQuickServiceApplicationRate",
+        "ORTSAcceleratedApplicationFactor",
+        "ORTSEmergencyResQuickRelease",
+        "ORTSUniformChargingRatio",
+        "ORTSUniformReleaseRatio",
+        "ORTSBrakeRelayValveInshot",
+    ];
+    let equipment = scalar(ast, "BrakeEquipmentType")
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    for key in [
+        "EmergencyResCapacity",
+        "BrakePipeVolume",
+        "ORTSAuxiliaryResCapacity",
+        "ORTSAuxilaryResCapacity",
+    ] {
+        super::traction_operation::quantity(ast, key, "ft3")?;
+    }
+    for key in [
+        "MaxApplicationRate",
+        "EmergencyResChargingRate",
+        "ORTSEmergencyValveActuationRate",
+        "ORTSEmergencyDumpValveRate",
+        "TripleValveSensitivity",
+        "ORTSInitialApplicationThreshold",
+    ] {
+        super::traction_operation::quantity(ast, key, "psi")?;
+    }
+    if unsupported.iter().any(|k| scalar(ast, k).is_some())
+        || equipment.contains("supply_reservoir")
+        || p.system
+            .as_deref()
+            .is_none_or(|s| !s.eq_ignore_ascii_case("air_single_pipe"))
+        || p.native_air
+            .as_ref()
+            .is_none_or(|a| a.emergency.as_ref().is_none_or(|e| !e.valid()) || a.relay_ratio != 1.)
+    {
+        return Err(crate::FormatError::UnexpectedAtom { key:"ORTSRSAdvancedEmergency".into(),
+            context:"pneumatic emergency".into(), expected:"single pipe, authored cylinder, plain triple/distributor, no unsupported auxiliary valves".into() });
+    }
+    Ok(())
 }
 impl VehicleBrakeProfile {
     pub fn electro_pneumatic(&self) -> Option<bool> {
@@ -583,14 +890,42 @@ fn parse_native_cylinder(ast: &Ast) -> Option<NativeEpBrakeProfile> {
 
 fn parse_native_air(ast: &Ast) -> Option<NativeAirBrakeProfile> {
     let system = scalar(ast, "BrakeSystemType")?.to_ascii_lowercase();
+    let advanced = scalar(ast, "ORTSRSAdvancedEmergency")
+        .is_some_and(|s| s.parse::<f64>().is_ok_and(|v| v > 0.));
+    let equipment = scalar(ast, "BrakeEquipmentType")?.to_ascii_lowercase();
+    let tokens = equipment.split(',').map(str::trim).collect::<Vec<_>>();
+    let native_plain = !advanced
+        && system == "air_single_pipe"
+        && tokens.contains(&"triple_valve")
+        && tokens.iter().all(|t| {
+            matches!(
+                *t,
+                "triple_valve"
+                    | "handbrake"
+                    | "auxilary_reservoir"
+                    | "auxiliary_reservoir"
+                    | "emergency_brake_reservoir"
+            )
+        })
+        && [
+            "ORTSQuickServiceLimit",
+            "ORTSQuickServiceVentRate",
+            "ORTSQuickServiceApplicationRate",
+            "ORTSAcceleratedApplicationFactor",
+            "ORTSEmergencyResQuickRelease",
+            "ORTSUniformChargingRatio",
+            "ORTSUniformReleaseRatio",
+            "ORTSBrakeRelayValveInshot",
+        ]
+        .iter()
+        .all(|k| scalar(ast, k).is_none());
     if !matches!(system.as_str(), "air_twin_pipe" | "air_single_pipe")
-        || !scalar(ast, "BrakeEquipmentType")?
-            .to_ascii_lowercase()
-            .contains("distributor")
+        || !(equipment.contains("distributor")
+            || (advanced || native_plain) && equipment.contains("triple_valve"))
     {
         return None;
     }
-    let mut cylinder = parse_native_cylinder(ast)?;
+    let authored_cylinder = parse_native_cylinder(ast);
     let number = |key: &str, default: f64| {
         scalar(ast, key)
             .and_then(|v| v.parse::<f64>().ok())
@@ -603,13 +938,78 @@ fn parse_native_air(ast: &Ast) -> Option<NativeAirBrakeProfile> {
             .map(|bar| bar / 0.0689475729)
             .unwrap_or(default)
     };
+    let linear = (advanced || native_plain) && authored_cylinder.is_none();
+    let legacy_aux_volume =
+        super::traction_operation::quantity(ast, "ORTSAuxiliaryResCapacity", "ft3")
+            .ok()
+            .flatten()
+            .map(|v| v / 1000.)
+            .unwrap_or_else(|| {
+                super::traction_operation::quantity(ast, "EmergencyResCapacity", "ft3")
+                    .ok()
+                    .flatten()
+                    .map(|v| v / 1000.)
+                    .unwrap_or(0.07)
+                    / number("EmergencyResVolumeMultiplier", 1.4)
+            });
+    let mut cylinder = authored_cylinder.or_else(|| {
+        linear.then(|| NativeEpBrakeProfile {
+            diameter_m: 0.,
+            stroke_m: 0.,
+            spring_psi: 0.,
+            reference_psi: psi(
+                "ORTSBrakeForceReferencePressure",
+                psi("BrakeCylinderPressureForMaxBrakeBrakeForce", 64.),
+            ),
+            max_psi: psi("BrakeCylinderPressureForMaxBrakeBrakeForce", 64.),
+            service_psi: psi(
+                "ORTSMaxServiceCylinderPressure",
+                psi("BrakeCylinderPressureForMaxBrakeBrakeForce", 64.),
+            ),
+            application_psi_s: psi(
+                "ORTSMaxServiceApplicationRate",
+                psi("MaxApplicationRate", 0.9),
+            ),
+            release_psi_s: psi("MaxReleaseRate", 1.86),
+            auxiliary_volume_m3: legacy_aux_volume,
+            charging_psi_s: psi("MaxAuxilaryChargingRate", 1.684),
+            shoe_count: number("ORTSNumberCarBrakeShoes", 8.),
+            shoe_type: scalar(ast, "ORTSBrakeShoeType").unwrap_or_default(),
+            main_reservoir: false,
+            low_stage_psi: None,
+            stage_up_mps: 0.,
+            stage_down_mps: 0.,
+        })
+    })?;
+    if advanced || native_plain {
+        let q = |key, default| {
+            super::traction_operation::quantity(ast, key, "psi")
+                .ok()
+                .flatten()
+                .map(|v| v / 0.0689475729)
+                .unwrap_or(default)
+        };
+        cylinder.application_psi_s = q(
+            "ORTSMaxServiceApplicationRate",
+            q("MaxApplicationRate", 0.9),
+        );
+        cylinder.release_psi_s = q("MaxReleaseRate", 1.86);
+        cylinder.charging_psi_s = q(
+            "MaxAuxiliaryChargingRate",
+            q("MaxAuxilaryChargingRate", 1.684),
+        );
+    }
     let triple_ratio = number("TripleValveRatio", 2.5);
     let relay_ratio = number("ORTSBrakeRelayValveRatio", 1.);
     let cylinder_count = number("ORTSNumberBrakeCylinders", 1.);
-    let cylinder_volume =
-        std::f64::consts::PI * cylinder.diameter_m.powi(2) / 4. * cylinder.stroke_m;
+    let fixed_cylinder_volume_m3 =
+        linear.then_some(cylinder.auxiliary_volume_m3 / triple_ratio / cylinder_count);
+    let cylinder_volume = fixed_cylinder_volume_m3
+        .unwrap_or(std::f64::consts::PI * cylinder.diameter_m.powi(2) / 4. * cylinder.stroke_m);
     let nominal_cylinder = 70. * triple_ratio / (triple_ratio + 1.);
-    let piping_volume = if cylinder.main_reservoir || relay_ratio != 1. {
+    let piping_volume = if linear {
+        0.
+    } else if cylinder.main_reservoir || relay_ratio != 1. {
         cylinder_volume * 0.2
     } else {
         ((-cylinder_volume * 14.696
@@ -621,17 +1021,111 @@ fn parse_native_air(ast: &Ast) -> Option<NativeAirBrakeProfile> {
     // Air cylinders are fed from the auxiliary reservoir or a pneumatic relay;
     // the EP-only wire and its MainRes release path do not apply.
     cylinder.main_reservoir = relay_ratio != 1.;
+    let emergency = (advanced || native_plain).then(|| {
+        let volume = |key: &str, default| {
+            super::traction_operation::quantity(ast, key, "ft3")
+                .ok()
+                .flatten()
+                .map(|v| v / 1000.)
+                .unwrap_or(default)
+        };
+        let present = equipment.contains("emergency_brake_reservoir");
+        let explicit_rate = scalar(ast, "ORTSEmergencyValveActuationRate").is_some();
+        let psi = |key: &str, default| {
+            super::traction_operation::quantity(ast, key, "psi")
+                .ok()
+                .flatten()
+                .map(|v| v / 0.0689475729)
+                .unwrap_or(default)
+        };
+        NativeEmergencyBrakeProfile {
+            distributor: equipment.contains("distributor"),
+            reservoir_present: present,
+            reservoir_volume_m3: volume("EmergencyResCapacity", 0.07),
+            reservoir_charging_psi_s: psi("EmergencyResChargingRate", 1.684),
+            maximum_application_psi_s: psi("MaxApplicationRate", 0.9),
+            actuation_psi_s: psi(
+                "ORTSEmergencyValveActuationRate",
+                if present { 15. } else { 0. },
+            ),
+            legacy_actuation: present && !explicit_rate,
+            dump_psi_s: psi("ORTSEmergencyDumpValveRate", 0.),
+            dump_duration_s: scalar(ast, "ORTSEmergencyDumpValveTimer")
+                .and_then(|v| v.trim_end_matches('s').parse().ok())
+                .unwrap_or(120.),
+            quick_action: scalar(ast, "ORTSEmergencyQuickAction")
+                .is_some_and(|v| v.eq_ignore_ascii_case("true") || v == "1"),
+            pipe_volume_m3: volume(
+                "BrakePipeVolume",
+                0.032f64.powi(2) * std::f64::consts::PI / 4.
+                    * scalar(ast, "ORTSLengthCouplerFace")
+                        .and_then(|v| crate::msts_units::parse_length_m(&v))
+                        .unwrap_or(21.)
+                        .max(5.),
+            ),
+            pipe_volume_authored: scalar(ast, "BrakePipeVolume").is_some(),
+            pipe_time_factor_s: scalar(ast, "ORTSBrakePipeTimeFactor")
+                .and_then(|v| v.trim_end_matches('s').parse().ok())
+                .unwrap_or(0.0015),
+            service_time_factor_s: scalar(ast, "ORTSBrakeServiceTimeFactor")
+                .and_then(|v| v.trim_end_matches('s').parse().ok())
+                .unwrap_or(1.009),
+            emergency_time_factor_s: scalar(ast, "ORTSBrakeEmergencyTimeFactor")
+                .and_then(|v| v.trim_end_matches('s').parse().ok())
+                .unwrap_or(0.1),
+            sensitivity_psi: psi(
+                "TripleValveSensitivity",
+                if equipment.contains("distributor") {
+                    1.4
+                } else {
+                    1.
+                },
+            ),
+            initial_application_psi: psi(
+                "ORTSInitialApplicationThreshold",
+                if equipment.contains("distributor") {
+                    2.2
+                } else {
+                    1.
+                },
+            ),
+            insensitivity_psi_s: psi("ORTSBrakeInsensitivity", 0.07),
+            independent_max_psi: psi("EngineBrakesControllerMaxSystemPressure", cylinder.max_psi),
+        }
+    });
     Some(NativeAirBrakeProfile {
+        native_plain,
+        fixed_cylinder_volume_m3,
+        emergency,
         cylinder,
         triple_ratio,
         relay_ratio,
         cylinder_count,
         pipe_volume_ratio: piping_volume / cylinder_volume,
         controller: NativeAirController {
-            charged_psi: psi("TrainBrakesControllerMaxSystemPressure", 72.51887),
-            full_service_drop_psi: psi("TrainBrakesControllerFullServicePressureDrop", 21.755661),
-            application_psi_s: psi("TrainBrakesControllerMaxApplicationRate", 5.80151),
-            release_psi_s: psi("TrainBrakesControllerMaxReleaseRate", 7.251887),
+            notched: native_plain
+                .then(|| parse_native_train_brake_notches(ast))
+                .flatten(),
+            charged_psi: psi(
+                "TrainBrakesControllerMaxSystemPressure",
+                if native_plain { 90. } else { 72.51887 },
+            ),
+            full_service_drop_psi: psi(
+                "TrainBrakesControllerFullServicePressureDrop",
+                if native_plain { 26. } else { 21.755661 },
+            ),
+            application_psi_s: psi(
+                "TrainBrakesControllerMaxApplicationRate",
+                if native_plain { 2. } else { 5.80151 },
+            ),
+            release_psi_s: psi(
+                "TrainBrakesControllerMaxReleaseRate",
+                if native_plain { 5. } else { 7.251887 },
+            ),
+            emergency_psi_s: psi(
+                "TrainBrakesControllerEmergencyApplicationRate",
+                if native_plain { 10. } else { 20. },
+            ),
         },
     })
 }
@@ -701,6 +1195,60 @@ pub fn parse_vehicle_emitters(ast: &Ast) -> Vec<VehicleEmitter> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn plain_train_controller_preserves_authored_native_handles_and_main_reservoir() {
+        let source =
+            include_str!("../../../../examples/physics_lab/vehicles/plain_train_control.eng");
+        let ast = crate::parse_vehicle_text(source).unwrap();
+        let p = parse_vehicle_brake_profile(&ast);
+        // Adding a train pipe feed must not invent an independent controller
+        // or change the historical generic air-circuit metadata.
+        assert!(p.air_circuit.is_none());
+        let a = p.native_air.unwrap();
+        assert!(a.native_plain && a.emergency.is_some());
+        let n = a.controller.notched.unwrap();
+        assert_eq!(n.initial_value, 0.7);
+        assert!(!n.independent_fitted);
+        assert_eq!(n.mechanical_compressor_max_rpm, Some(900.));
+        assert_eq!(n.notches.len(), 4);
+        assert_eq!(n.setting(0.552).1, "graduatedselflaplimitedholding");
+        assert!((n.setting(0.552).0 - 0.704).abs() < 0.000001);
+        let mr = n.main_reservoir.unwrap();
+        assert!((mr.maximum_bar / 0.0689475729 - 130.).abs() < 1e-8);
+        assert!((mr.charging_bar_s / 0.0689475729 - 3.082052).abs() < 0.00001);
+        let unsupported = source.replace(
+            "GraduatedSelfLapLimitedHoldingStart",
+            "ArbitraryScriptStart",
+        );
+        let a = parse_vehicle_brake_profile(&crate::parse_vehicle_text(&unsupported).unwrap())
+            .native_air
+            .unwrap();
+        assert!(a.controller.notched.is_none());
+        let unsafe_valve = source.replace("Triple_valve,", "Triple_valve, Supply_reservoir,");
+        assert!(
+            parse_vehicle_brake_profile(&crate::parse_vehicle_text(&unsafe_valve).unwrap())
+                .native_air
+                .is_none()
+        );
+    }
+    #[test]
+    fn native_air_independent_controller_survives_normalized_engine_roots() {
+        let ast = crate::parse_vehicle_text(include_str!(
+            "../../../../examples/physics_lab/vehicles/hydraulic.eng"
+        ))
+        .unwrap();
+        let p = parse_vehicle_brake_profile(&ast);
+        let circuit = p
+            .air_circuit
+            .expect("Explicit native Brake_Engine was lost");
+        assert!(circuit.valid());
+        assert!((circuit.application_bar_s - 20. * 0.0689475729).abs() < 1e-8);
+        assert!((circuit.release_bar_s - 20. * 0.0689475729).abs() < 1e-8);
+        let wagon = crate::parse_vehicle_text(
+            "Wagon ( own Type ( Freight ) BrakeSystemType ( Air_single_pipe ) Brake_Engine ( 0 1 0.1 0 ) )"
+        ).unwrap();
+        assert!(parse_vehicle_brake_profile(&wagon).air_circuit.is_none());
+    }
     #[test]
     fn native_vacuum_independent_preserves_native_rates_notches_and_roles() {
         let ast = crate::parse_vehicle_text("Wagon ( hall Type ( Engine ) BrakeSystemType ( Vacuum_single_pipe ) Coupling ( Type ( Chain ) ) ) Engine ( hall Type ( Steam ) EngineBrakesControllerMaxApplicationRate ( 2 ) EngineBrakesControllerMaxReleaseRate ( 1bar/s ) EngineControllers ( Brake_Engine ( 0 1 0.1 0 NumNotches ( 2 Notch ( 0 0 EngineBrakesControllerReleaseStart ) Notch ( 0.2 1 EngineBrakesControllerVacuumContinuousServiceStart ) ) ) ) )").unwrap();

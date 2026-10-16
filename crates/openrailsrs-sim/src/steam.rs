@@ -1,5 +1,6 @@
 //! Finite tender, fire bed and boiler, with automatic or manual fireman.
-//! This conservation model does not reproduce OR's complete steam tables.
+//! Legacy operation remains available. Explicit thermodynamics uses the pinned
+//! OR steam properties with a separate finite-volume Rust vessel/cycle model.
 use openrailsrs_train::SteamParams;
 use serde::{Deserialize, Serialize};
 
@@ -21,6 +22,7 @@ pub struct SteamControls {
     pub injector2: bool,
     pub blower: bool,
     pub cylinder_cocks: bool,
+    pub compound_bypass: bool,
 }
 impl Default for SteamControls {
     fn default() -> Self {
@@ -33,6 +35,7 @@ impl Default for SteamControls {
             injector2: false,
             blower: false,
             cylinder_cocks: false,
+            compound_bypass: false,
         }
     }
 }
@@ -47,15 +50,24 @@ pub enum SteamCommand {
     Injector2,
     Blower,
     CylinderCocks,
+    CompoundStartingValve,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct BoilerState {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub native_or161: Option<crate::native_steam::NativeSteamState>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thermodynamics: Option<crate::steam_thermodynamics::ThermodynamicState>,
     pub pressure_bar: f64,
     /// Water in the boiler, not the tender.
     pub water_kg: f64,
     pub coal_kg: f64,
     pub initial_water_kg: f64,
+    #[serde(default)]
+    pub initial_tender_water_kg: f64,
+    #[serde(default)]
+    pub initial_coal_kg: f64,
     #[serde(default)]
     pub tender_water_kg: f64,
     #[serde(default)]
@@ -82,15 +94,46 @@ pub struct BoilerState {
 impl BoilerState {
     pub fn from_params(params: &SteamParams) -> Self {
         let capacity = params.operation.boiler_water_capacity_kg;
-        Self {
-            pressure_bar: params.working_pressure_bar,
-            water_kg: capacity * 0.9,
+        let initial_pressure = params
+            .operation
+            .thermodynamics
+            .as_ref()
+            .map_or(params.working_pressure_bar, |p| {
+                p.initial_pressure_bar(params.working_pressure_bar)
+            });
+        let water = params
+            .operation
+            .thermodynamics
+            .as_ref()
+            .map_or(capacity * 0.9, |p| {
+                p.boiler_volume_m3
+                    * crate::steam_thermodynamics::properties(initial_pressure).water_density_kg_m3
+                    * 0.9
+            });
+        let mut state = Self {
+            native_or161: None,
+            thermodynamics: params
+                .operation
+                .thermodynamics
+                .as_ref()
+                .map(|_| crate::steam_thermodynamics::ThermodynamicState::new(params, water)),
+            pressure_bar: initial_pressure,
+            water_kg: water,
             coal_kg: params.initial_coal_kg,
             initial_water_kg: capacity,
+            initial_tender_water_kg: params.initial_water_kg,
+            initial_coal_kg: params.initial_coal_kg,
             tender_water_kg: params.initial_water_kg,
             fire_mass_kg: params.operation.max_fire_mass_kg * 0.5,
             fire_capacity_kg: params.operation.max_fire_mass_kg,
-            controls: Default::default(),
+            controls: SteamControls {
+                compound_bypass: params
+                    .operation
+                    .compound
+                    .as_ref()
+                    .is_some_and(|p| p.starting_valve),
+                ..Default::default()
+            },
             low_water_failure: false,
             safety_valve: false,
             steam_usage_kg_s: 0.,
@@ -98,7 +141,14 @@ impl BoilerState {
             injection_kg_s: 0.,
             coal_burn_kg_s: 0.,
             tractive_force_n: 0.,
+        };
+        if let Some(profile) = &params.operation.native_or161 {
+            // Hardware construction only rejects invalid parameters. Content
+            // loaders and restore validate these before constructing a boiler.
+            crate::native_steam::initialize_boiler(&mut state, profile)
+                .expect("validated native steam hardware");
         }
+        state
     }
     pub fn command(&mut self, command: SteamCommand) {
         use SteamCommand::*;
@@ -109,9 +159,16 @@ impl BoilerState {
             self.controls.automatic_fireman = false;
         }
         match command {
-            AutomaticFireman => self.controls.automatic_fireman = !self.controls.automatic_fireman,
+            AutomaticFireman if self.native_or161.is_none() => {
+                self.controls.automatic_fireman = !self.controls.automatic_fireman
+            }
             Cutoff(delta) if delta.is_finite() => {
-                self.controls.cutoff = (self.controls.cutoff + delta).clamp(0., MAX_CUTOFF)
+                self.controls.cutoff = (self.controls.cutoff + delta).clamp(
+                    0.,
+                    self.native_or161
+                        .as_ref()
+                        .map_or(MAX_CUTOFF, |n| n.hardware.source.cutoff_maximum as f64),
+                )
             }
             Firing(delta) if delta.is_finite() => {
                 self.controls.firing = (self.controls.firing + delta).clamp(0., 1.)
@@ -123,26 +180,48 @@ impl BoilerState {
             Injector2 => self.controls.injector2 = !self.controls.injector2,
             Blower => self.controls.blower = !self.controls.blower,
             CylinderCocks => self.controls.cylinder_cocks = !self.controls.cylinder_cocks,
+            CompoundStartingValve if self.native_or161.is_none() => {
+                self.controls.compound_bypass = !self.controls.compound_bypass
+            }
             _ => (),
         }
     }
     pub fn valid_for(&self, p: &SteamParams) -> bool {
-        [
-            self.pressure_bar,
-            self.water_kg,
-            self.coal_kg,
-            self.initial_water_kg,
-            self.tender_water_kg,
-            self.fire_mass_kg,
-            self.fire_capacity_kg,
-            self.steam_usage_kg_s,
-            self.evaporation_kg_s,
-            self.injection_kg_s,
-            self.coal_burn_kg_s,
-            self.tractive_force_n,
-        ]
-        .iter()
-        .all(|v| v.is_finite() && *v >= 0.)
+        if self.native_or161.is_some() || p.operation.native_or161.is_some() {
+            return p.operation.native_or161.as_ref().is_some_and(|profile| {
+                p.operation.thermodynamics.is_none()
+                    && p.operation.compound.is_none()
+                    && crate::native_steam::boiler_valid(self, profile)
+            });
+        }
+        let thermo_valid = match (&self.thermodynamics, &p.operation.thermodynamics) {
+            (Some(s), Some(_)) => {
+                s.valid_for(p)
+                    && self.initial_tender_water_kg == p.initial_water_kg
+                    && self.initial_coal_kg == p.initial_coal_kg
+                    && s.state_consistent(self.pressure_bar, self.water_kg)
+                    && (s.total_mass_kg - s.steam_mass_kg - self.water_kg).abs() < 1e-6
+            }
+            (None, None) => true,
+            _ => false,
+        };
+        thermo_valid
+            && [
+                self.pressure_bar,
+                self.water_kg,
+                self.coal_kg,
+                self.initial_water_kg,
+                self.tender_water_kg,
+                self.fire_mass_kg,
+                self.fire_capacity_kg,
+                self.steam_usage_kg_s,
+                self.evaporation_kg_s,
+                self.injection_kg_s,
+                self.coal_burn_kg_s,
+                self.tractive_force_n,
+            ]
+            .iter()
+            .all(|v| v.is_finite() && *v >= 0.)
             && self.pressure_bar <= p.working_pressure_bar * SAFETY_VALVE_FACTOR + 1e-6
             && self.water_kg <= p.operation.boiler_water_capacity_kg
             && self.initial_water_kg == p.operation.boiler_water_capacity_kg
@@ -205,6 +284,20 @@ pub(crate) fn steam_step_with_equipment(
 ) -> f64 {
     if !dt.is_finite() || dt <= 0. {
         return b.tractive_force_n;
+    }
+    if p.operation.native_or161.is_some() {
+        return crate::native_steam::advance_boiler(b, p, regulator, velocity_mps, dt);
+    }
+    if p.operation.thermodynamics.is_some() {
+        return crate::steam_thermodynamics::advance(
+            b,
+            p,
+            regulator,
+            velocity_mps,
+            dt,
+            force_limit_n,
+            aux,
+        );
     }
     let regulator = regulator.clamp(0., 1.);
     let capacity = p.operation.boiler_water_capacity_kg;
@@ -337,7 +430,18 @@ impl crate::LiveDriveSession {
             return None;
         };
         let params = loco.steam.as_ref()?;
-        let boiler = self.state.boiler_state.as_ref()?;
+        let boiler = self
+            .state
+            .steam_boilers
+            .iter()
+            .find(|b| b.vehicle == vehicle)
+            .map(|b| &b.boiler)
+            .or_else(|| {
+                (self.state.steam_boilers.is_empty()
+                    && vehicle == self.state.active_cab_vehicle.unwrap_or(0))
+                .then_some(self.state.boiler_state.as_ref())
+                .flatten()
+            })?;
         let attached = vehicle < self.formation.coupled_count;
         let distance = if attached {
             self.render_head_chainage_m(remainder_s) - self.start_chainage_m

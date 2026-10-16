@@ -209,6 +209,8 @@ pub struct DavisSection {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct TrainSection {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rack: Option<crate::rack::RackDefinition>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub bogie_dynamics: Vec<crate::bogie_dynamics::BogieDynamicsDef>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -327,6 +329,8 @@ pub struct ShuntingStep {
 /// `[[extra_trains]]` with their own route, consist, and departure time.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct TrainEntryDef {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rack: Option<crate::rack::RackDefinition>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub bogie_dynamics: Vec<crate::bogie_dynamics::BogieDynamicsDef>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -415,6 +419,11 @@ pub struct NativePhysicsEnvironment {
     pub first_slippery_spot: Option<[f64; 2]>,
     #[serde(default)]
     pub paused_weather: bool,
+    /// Optional replay of exogenous adhesion noise; never vehicle motion or forces.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub adhesion_input_file: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub adhesion_input_step_s: Option<f64>,
 }
 impl Default for NativePhysicsEnvironment {
     fn default() -> Self {
@@ -424,12 +433,19 @@ impl Default for NativePhysicsEnvironment {
             simple_control_physics: false,
             first_slippery_spot: None,
             paused_weather: false,
+            adhesion_input_file: None,
+            adhesion_input_step_s: None,
         }
     }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct SimulationSection {
+    #[serde(
+        default,
+        skip_serializing_if = "crate::operational_yards::YardOperationsDef::is_empty"
+    )]
+    pub yard_operations: crate::operational_yards::YardOperationsDef,
     #[serde(default)]
     pub rail_operations: crate::rail_operations::RailOperationsDef,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -505,6 +521,9 @@ impl Default for OutputSection {
 
 impl ScenarioFile {
     pub fn validate(&self) -> Result<(), ScenarioError> {
+        if !self.simulation.yard_operations.valid() {
+            return Err(ScenarioError::Validation("Patio operativo inválido".into()));
+        }
         if self.native_activity.as_ref().is_some_and(|a| !a.valid()) {
             return Err(ScenarioError::Validation(
                 "Definición original ACT inválida".into(),
@@ -717,6 +736,20 @@ impl ScenarioFile {
                     }))
         {
             return Err(ScenarioError::Validation("native physics environment: finite temperature, adhesion and positive slippery spot length required".into()));
+        }
+        if let Some(native) = &self.simulation.native_physics {
+            match (&native.adhesion_input_file, native.adhesion_input_step_s) {
+                (None, None) => {}
+                (Some(path), Some(step))
+                    if !path.trim().is_empty()
+                        && step.is_finite()
+                        && step > 0.
+                        && (step - self.simulation.time_step).abs() <= 1e-8 => {}
+                _ => return Err(ScenarioError::Validation(
+                    "native adhesion input requires a file and the scenario's fixed physics step"
+                        .into(),
+                )),
+            }
         }
         if self.route.path.trim().is_empty() {
             return Err(ScenarioError::Validation("route.path is required".into()));

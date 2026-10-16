@@ -1,0 +1,151 @@
+{
+  "schema": 1,
+  "status": "failed_tolerance_or_coverage",
+  "native_capture_receipt": "$REPOSITORY/tmp/twenty-20261015/lirr-native-04/receipt.json",
+  "native_trace_sha256": "6c40d4863c6391d62b0468191713d42dc1597412f2e1c73b999a905614650afe",
+  "protocol_predeclared": {
+    "schema": 1,
+    "status": "DECLARED_BEFORE_EXECUTION",
+    "reference_version": "1.6.1",
+    "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+    "activity": "01Brooklyn-Hempstead.act",
+    "activity_sha256": "c667aeedf94b2b90283e801906f865e37d4e8a4b67cd83430bab74b94ac287ab",
+    "consist": "SFexpress-500",
+    "cars": 7,
+    "step_s": 0.05,
+    "maximum_duration_s": 3600,
+    "minimum_duration_s": 1575,
+    "minimum_distance_m": 30000,
+    "minimum_original_platforms": 2,
+    "thresholds": {
+      "velocity_rms_mps": 0.75,
+      "maximum_odometer_error_m": 45,
+      "brake_pipe_rms_psi": 5,
+      "cylinder_rms_psi": 5,
+      "motive_force_rms_n": 5000,
+      "brake_force_rms_n": 5000
+    },
+    "controls": "Native driver uses original signals, speed limits, platforms and boarding. Rust replays exactly the same 20Hz handles, with physical path and original vehicles. Station scoring and ACT goals are outside this physics comparison and are not allowed to truncate its diagnostics.",
+    "prohibited": [
+      "Changing original files",
+      "Regenerating old references",
+      "Increasing thresholds after observing a failure",
+      "Calling a short or truncated run a full-service acceptance"
+    ]
+  },
+  "input_sha256_before": {
+    "$REPOSITORY/tmp/twenty-20261015/lirr-native-04/receipt.json": "c2189bde0d3f24c4fdd4ba7f35ab5cabc787992eefc03c9b7e13574f9931b80d",
+    "$REPOSITORY/target/debug/openrailsrs": "d745490dc7bf32a0fa8bf0277e0d044bb8d9ffc6dc3d7eb6a53df1c5500e57b1",
+    "$REPOSITORY/target/debug/examples/activity_trajectory": "ab3ec48167e5b48bb985ed6adf2394b6d737d8c22fe55b9de632e9e44a41eeca",
+    "$REPOSITORY/tmp/twenty-20261015/lirr-replay-from-native.py": "00850e74431b7cc3cb4abe3122c8ed4f247f3b277268ac71a9962dd1679f6118",
+    "$ORIGINAL_CONTENT/ROUTES/LIRR/ACTIVITIES/01Brooklyn-Hempstead.act": "c667aeedf94b2b90283e801906f865e37d4e8a4b67cd83430bab74b94ac287ab",
+    "$ORIGINAL_CONTENT/TRAINS/CONSISTS/SFexpress-500.con": "0cfea1b99ae0165ea1ca1eb5600e433ef5a114c0fdecf6ec274726d68cb89690",
+    "$REPOSITORY/oracles/lirr-full-service-protocol.json": "8a861f32454a2bfa2eb6ee497d87b7968aae627a71d1462195704898964c326e",
+    "$REPOSITORY/tools/openrails-reference/ActivityTrajectory.cs": "195f20406012630f37f62bc357ef0f0b8ef3236f7449d26d7b59f394151470b5",
+    "$REPOSITORY/tools/openrails-reference/HeadlessCapture.cs": "c832f071a28f61178da2814d382069c3dc15cdb2aff7b89f40fe5974ffdb60a0",
+    "$REPOSITORY/scripts/capture_lirr_full_service.py": "05ac4d7881231c842c956f800e9e254c7384644f546a95eb1f65c0e14f72f705",
+    "$REPOSITORY/scripts/oracle_wine.py": "4e87773fd3fe535f5660a427ea12b8b6a716266ebf9161e433aa66fc86e9f590",
+    "$REPOSITORY/oracles/openrails-reference.toml": "1a7a80f560ef1039e237c465621cb3066cbbae56662f7e617f395593783f2970",
+    "$ORIGINAL_CONTENT/ROUTES/LIRR/LIRR.tdb": "1610b479bfedc6bedbfd54ead206dcbc7535f43c8ef5e75b56bc3d144426d5a6",
+    "$ORIGINAL_CONTENT/ROUTES/LIRR/LIRR.trk": "6af09c2f6dcf61f3384646a97430d6e0b1fecace6260b607e63923f7a76953b7",
+    "$OPENRAILS_INSTALL/RunActivity.exe": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2",
+    "$OPENRAILS_INSTALL/Orts.Simulation.dll": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679",
+    "$OPENRAILS_INSTALL/Orts.Formats.Msts.dll": "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465",
+    "$OPENRAILS_INSTALL/Orts.Common.dll": "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212",
+    "$REPOSITORY/tmp/twenty-20261015/lirr-reference-pin-historical.toml": "87c6230c00e9cbe476e020257686538e383a8bff592436321583c14440020a0a"
+  },
+  "reference_catalog_change": {
+    "historical_pin": "$REPOSITORY/tmp/twenty-20261015/lirr-reference-pin-historical.toml",
+    "historical_sha256": "87c6230c00e9cbe476e020257686538e383a8bff592436321583c14440020a0a",
+    "current_sha256": "1a7a80f560ef1039e237c465621cb3066cbbae56662f7e617f395593783f2970",
+    "unchanged_native_pin": true,
+    "updated_catalog_records": {
+      "oracles/coupling-reference-provenance.json": {
+        "old": "0c7253bb9820e5d62aa8e786043a4e84f7459277e71e4ad5359171487902d2a6",
+        "new": "13115156ef6db6f4cc2bd6b15e9721cc75c902600e5cb90abb89ea2219909143"
+      }
+    },
+    "added_catalog_records": {
+      "oracles/coupling-rust-twenty-systems-20261015.json": "e4c1c1608094ab767eeffd9898dd4fa2b016ab89dbab3a016a63a9c1974fc4b5",
+      "docs/fixtures/compatibility/coupling-twenty-systems-20261015/depot.json": "21d93ccb7eb98d81bd377a30715f83b980df2db4498fef4835f4075f4b934239",
+      "docs/fixtures/compatibility/coupling-twenty-systems-20261015/execution.json": "f88decf133540a6f858e078421f67d95b2f7dc179bf789795a4b3ccecf94c241",
+      "docs/fixtures/compatibility/coupling-twenty-systems-20261015/receipt.json": "75a2fcb4ffd5907f69843303e7f49de567a831c6bcaad5a929db55ea2e61ec95",
+      "docs/fixtures/compatibility/coupling-twenty-systems-20261015/source-inputs.json": "aa14de9a6078fcdd1d10ef03170b5ce389fd49ce70a48da852c3286cd37e4081",
+      "docs/fixtures/compatibility/twenty-20261015/physical-native05/PhysicalSystemsReference.cs": "4d92da562b340f9e1b170bceb94cb5bb829fbbefc9a2ae90d1f520528fb7433f",
+      "docs/fixtures/compatibility/twenty-20261015/physical-native05/capture-script.py": "8535d14d0c7e40703c72dfb637410325c134036e677486422daf8d24598ebfe5",
+      "docs/fixtures/compatibility/twenty-20261015/physical-native05/coverage.json": "6ec61c74cde41501ca131b24ecf1e11c0368c5a5e0dd60aecc3fa8427349fd96",
+      "docs/fixtures/compatibility/twenty-20261015/physical-native05/execution.json": "1829839844efde4f028713520f533543939ace3cd082885fe37b4610198afa6a",
+      "docs/fixtures/compatibility/twenty-20261015/physical-native05/inputs.json": "29348715131a3e8e0e0b2c53a931b698d920d96009c0f34d572d2d1e832ed7d9",
+      "docs/fixtures/compatibility/twenty-20261015/physical-native05/manifest.json": "667fb11206aa479c6a6d5901e880f0d1c1f1ad1699643c598d667620db774014",
+      "docs/fixtures/compatibility/twenty-20261015/physical-native05/native-steam/steam-drive.json": "caf524d9dad7c1034d5df1a41de034b589d6e0d943981116c4cda2f72e93683b",
+      "docs/fixtures/compatibility/twenty-20261015/physical-native05/protocol.json": "7e82b09d91489f63981c4082de87d39d245b3152105f9fe2b20b55ad5d0f018c",
+      "docs/fixtures/compatibility/twenty-20261015/physical-native05/reference.json": "1c72d5774b0b9dcfa39704e47e176cddb7e7eddc2438ec4fcb4b0663aee08b05",
+      "docs/fixtures/compatibility/twenty-20261015/physical-native05/registration.json": "e7ee0fe5c713fc742fb9401d7a9ca3b2f6cbbca2c57c7c5943a95bcd66ee4ab0",
+      "docs/fixtures/compatibility/twenty-20261015/physical-native05/steam-drive-config.json": "7b53ccb5d142cb3846a21fce3580ac4d7fb9e725c384a1d8054755088c0d18e1",
+      "docs/fixtures/compatibility/twenty-20261015/physical-native05/wine-isolation/isolation.json": "24b5f97904f0b1a161b609e8c626f25dcb51febfdb962b33021d96082a6fb0d5",
+      "docs/fixtures/compatibility/twenty-20261015/physical-native05/wine-isolation/release.json": "4914a6dee2477907399f184a6e9a66fdb1ba11c0f41c61c52974d6a629710e2b"
+    },
+    "scope": "Root appended physical05 and the current coupling replay; no original capture/DLL/source/threshold changed."
+  },
+  "commands": [
+    {
+      "name": "import",
+      "args": [
+        "$REPOSITORY/target/debug/openrailsrs",
+        "import-msts",
+        "$ORIGINAL_CONTENT/ROUTES/LIRR",
+        "--activity",
+        "$ORIGINAL_CONTENT/ROUTES/LIRR/ACTIVITIES/01Brooklyn-Hempstead.act",
+        "--consist",
+        "$ORIGINAL_CONTENT/TRAINS/CONSISTS/SFexpress-500.con",
+        "--out-dir",
+        "$REPOSITORY/tmp/twenty-20261015/lirr-replay-02/imported"
+      ],
+      "returncode": 0,
+      "wall_time_s": 10.07752847300435
+    },
+    {
+      "name": "replay",
+      "args": [
+        "$REPOSITORY/target/debug/examples/activity_trajectory",
+        "$REPOSITORY/tmp/twenty-20261015/lirr-replay-02/imported/scenario.toml",
+        "$REPOSITORY/tmp/twenty-20261015/lirr-native-04/native/trace.csv",
+        "$REPOSITORY/tmp/twenty-20261015/lirr-replay-02/rust.csv"
+      ],
+      "returncode": 0,
+      "wall_time_s": 1.1289557449999847
+    }
+  ],
+  "error": "Full native/Rust comparison failed at unchanged thresholds",
+  "wall_time_s": 11.336707549002313,
+  "input_sha256_after": {
+    "$REPOSITORY/tmp/twenty-20261015/lirr-native-04/receipt.json": "c2189bde0d3f24c4fdd4ba7f35ab5cabc787992eefc03c9b7e13574f9931b80d",
+    "$REPOSITORY/target/debug/openrailsrs": "d745490dc7bf32a0fa8bf0277e0d044bb8d9ffc6dc3d7eb6a53df1c5500e57b1",
+    "$REPOSITORY/target/debug/examples/activity_trajectory": "ab3ec48167e5b48bb985ed6adf2394b6d737d8c22fe55b9de632e9e44a41eeca",
+    "$REPOSITORY/tmp/twenty-20261015/lirr-replay-from-native.py": "00850e74431b7cc3cb4abe3122c8ed4f247f3b277268ac71a9962dd1679f6118",
+    "$ORIGINAL_CONTENT/ROUTES/LIRR/ACTIVITIES/01Brooklyn-Hempstead.act": "c667aeedf94b2b90283e801906f865e37d4e8a4b67cd83430bab74b94ac287ab",
+    "$ORIGINAL_CONTENT/TRAINS/CONSISTS/SFexpress-500.con": "0cfea1b99ae0165ea1ca1eb5600e433ef5a114c0fdecf6ec274726d68cb89690",
+    "$REPOSITORY/oracles/lirr-full-service-protocol.json": "8a861f32454a2bfa2eb6ee497d87b7968aae627a71d1462195704898964c326e",
+    "$REPOSITORY/tools/openrails-reference/ActivityTrajectory.cs": "195f20406012630f37f62bc357ef0f0b8ef3236f7449d26d7b59f394151470b5",
+    "$REPOSITORY/tools/openrails-reference/HeadlessCapture.cs": "c832f071a28f61178da2814d382069c3dc15cdb2aff7b89f40fe5974ffdb60a0",
+    "$REPOSITORY/scripts/capture_lirr_full_service.py": "05ac4d7881231c842c956f800e9e254c7384644f546a95eb1f65c0e14f72f705",
+    "$REPOSITORY/scripts/oracle_wine.py": "4e87773fd3fe535f5660a427ea12b8b6a716266ebf9161e433aa66fc86e9f590",
+    "$REPOSITORY/oracles/openrails-reference.toml": "1a7a80f560ef1039e237c465621cb3066cbbae56662f7e617f395593783f2970",
+    "$ORIGINAL_CONTENT/ROUTES/LIRR/LIRR.tdb": "1610b479bfedc6bedbfd54ead206dcbc7535f43c8ef5e75b56bc3d144426d5a6",
+    "$ORIGINAL_CONTENT/ROUTES/LIRR/LIRR.trk": "6af09c2f6dcf61f3384646a97430d6e0b1fecace6260b607e63923f7a76953b7",
+    "$OPENRAILS_INSTALL/RunActivity.exe": "514d7674fe660f24e32565580fbce48265c0b0ad4ed279b8d2eacfb4a3279ba2",
+    "$OPENRAILS_INSTALL/Orts.Simulation.dll": "dac17afff95141664ee87f734b64e89649699dc2c634196f38b0125d5df09679",
+    "$OPENRAILS_INSTALL/Orts.Formats.Msts.dll": "052aa89efaaabdd203a5a7f1f33aedb14a79132ffa368b458d4ed8a9911b8465",
+    "$OPENRAILS_INSTALL/Orts.Common.dll": "3517b42bfd534c096acfaf7b0433ae562e41e8ffc43eb42cd50a8c193b9b1212",
+    "$REPOSITORY/tmp/twenty-20261015/lirr-reference-pin-historical.toml": "87c6230c00e9cbe476e020257686538e383a8bff592436321583c14440020a0a"
+  },
+  "inputs_unchanged": true,
+  "outputs_sha256": {
+    "rust.csv": "f7dc941ec0aa237d97ea1c8dad6878d9013c87cf15e548a36df8334487cba189",
+    "comparison.json": "5cd2236d9cf004fecc04c80fdce0aa52f0732273471e0cab92d53e4d2a2d1133",
+    "import.log": "3039b1076ce3647c5766aa605b662b13860437feba2b07078c6a79c7f396e8af",
+    "replay.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "imported/track.toml": "3a3a22466503ea68c2d9bc16bcf7402aaaeef6792ba1b13f74b13a6e5298c2d4",
+    "imported/scenario.toml": "ee957860bc35db4bed2b504c62e9134777620d1eba77e34f240064fdb1bf48d1"
+  }
+}

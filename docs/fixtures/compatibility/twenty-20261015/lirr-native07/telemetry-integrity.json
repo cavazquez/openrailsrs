@@ -1,0 +1,88 @@
+{
+  "schema": 1,
+  "status": "NATIVE_ONLY_NO_RUST_ACCEPTANCE",
+  "samples": 32583,
+  "columns": 164,
+  "coverage": {
+    "schema": 1,
+    "reference_version": "1.6.1",
+    "samples": 32583,
+    "step_s": 0.05,
+    "duration_s": 1629.1000000000001,
+    "distance_m": 31361.201171875,
+    "coverage": {
+      "native_reached_all_platforms": true,
+      "original_platforms": true,
+      "all_original_tasks_visited": true,
+      "original_formation": true,
+      "full_distance": true,
+      "full_duration": true,
+      "declared_duration_limit": true,
+      "native_context_matches_predeclaration": true,
+      "unpaused_every_sample": true,
+      "dry_original_weather": true,
+      "original_motor_axles_recorded": true,
+      "context_unchanged_at_end": true
+    },
+    "passed": true,
+    "comparison_pending": true,
+    "scope": "Original DLL capture only; this does not certify Rust parity."
+  },
+  "checks": {
+    "all_sample_widths_match": true,
+    "all_unpaused": true,
+    "clear_visibility20000": true,
+    "no_precipitation": true,
+    "local_oriented_force_sums": true,
+    "local_flipped_frames_recorded": true,
+    "originals_and_sources_unchanged": true,
+    "isolated_no_remaining_processes": true,
+    "no_host_drivers": true
+  },
+  "motors": {
+    "0": {
+      "initial_driver_radius_m": 0.69342,
+      "initial_axle_inertia_kgm2": 962.397461,
+      "initial_axes": 1,
+      "substeps_min_max": [
+        0,
+        50
+      ],
+      "base_factor_range": [
+        0.0,
+        1.0
+      ],
+      "filtered_range": [
+        0.0,
+        1.0
+      ]
+    },
+    "6": {
+      "initial_driver_radius_m": 0.69342,
+      "initial_axle_inertia_kgm2": 962.397461,
+      "initial_axes": 1,
+      "substeps_min_max": [
+        0,
+        50
+      ],
+      "base_factor_range": [
+        0.0,
+        1.0
+      ],
+      "filtered_range": [
+        0.0,
+        1.0
+      ]
+    }
+  },
+  "reference_trace_sha256": "21212399f6289ff44b6d108d6312670008e6503abee0054df2d4dd150d6e2be2",
+  "receipt_sha256": "36654722f5f27b2fe5e7cb88dd3dee7285f97323ee22c2960ed2e9af7c16a312",
+  "source_helper_sha256": "d292049916f4840ad3fdd93e9f3eb197c8505046ca698606e5977168b9d4bfe6",
+  "source_capture_script_sha256": "19d08aa0ed4a2d17aba8f0d3961c1424866446e735a0cdedbe89e7afb1142aeb",
+  "release_observations": 143,
+  "sources": {
+    "native_DLLs_verified": true,
+    "original_source_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5"
+  },
+  "passed": true
+}

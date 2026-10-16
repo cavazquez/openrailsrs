@@ -143,6 +143,10 @@ pub struct SupportState {
 }
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct VehicleBogieState {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vertical: Option<crate::track_irregularity::VerticalVehicleState>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub derailment: Option<crate::derailment::DerailmentState>,
     pub supports: [SupportState; 2],
     pub native: NativeLateralState,
     /// Original asin(2*wheelbase/radius) has no real value on tighter curves.
@@ -150,7 +154,20 @@ pub struct VehicleBogieState {
     pub native_domain_valid: bool,
 }
 impl VehicleBogieState {
+    pub fn from_model(p: &VehicleBogieModel) -> Self {
+        Self {
+            vertical: p
+                .vertical_suspension
+                .as_ref()
+                .map(crate::track_irregularity::VerticalVehicleState::new),
+            derailment: p.derailment.as_ref().map(|_| Default::default()),
+            ..Default::default()
+        }
+    }
     pub fn reverse(&mut self) {
+        if let Some(v) = &mut self.vertical {
+            v.reverse();
+        }
         self.supports.swap(0, 1);
         for s in &mut self.supports {
             std::mem::swap(&mut s.left_wheel_load_n, &mut s.right_wheel_load_n);
@@ -175,7 +192,17 @@ impl VehicleBogieState {
         ]
         .iter()
         .all(|x| x.is_finite());
+        let optional = match (&self.vertical, &p.vertical_suspension) {
+            (Some(s), Some(p)) => s.valid_for(p),
+            (None, None) => true,
+            _ => false,
+        } && match (&self.derailment, &p.derailment) {
+            (Some(s), Some(_)) => s.valid(),
+            (None, None) => true,
+            _ => false,
+        };
         finite
+            && optional
             && self.native.elapsed_s >= 0.
             && self.supports.iter().all(|s| {
                 [
@@ -324,6 +351,39 @@ pub fn apply_overrides(
                 maximum_attack_rad: s.maximum_attack_rad,
             });
         }
+        if let Some(v) = &d.vertical_suspension {
+            p.vertical_suspension = Some(openrailsrs_train::bogie_geometry::VerticalSuspension {
+                enabled: v.enabled,
+                sprung_mass_fraction: v.sprung_mass_fraction,
+                spring_n_m: v.spring_n_m,
+                damper_ns_m: v.damper_ns_m,
+                contact_spring_n_m: v.contact_spring_n_m,
+                contact_damper_ns_m: v.contact_damper_ns_m,
+                travel_m: v.travel_m,
+                bump_stop_n_m: v.bump_stop_n_m,
+                sections: v
+                    .sections
+                    .iter()
+                    .map(|s| openrailsrs_train::bogie_geometry::IrregularitySection {
+                        start_chainage_m: s.start_chainage_m,
+                        end_chainage_m: s.end_chainage_m,
+                        transition_m: s.transition_m,
+                        seed: s.seed,
+                        spectrum: s.spectrum.clone(),
+                    })
+                    .collect(),
+            });
+        }
+        if let Some(v) = &d.derailment {
+            p.derailment = Some(openrailsrs_train::bogie_geometry::DerailmentLimits {
+                enabled: v.enabled,
+                minimum_speed_mps: v.minimum_speed_mps,
+                nadal_multiplier: v.nadal_multiplier,
+                unloading_fraction: v.unloading_fraction,
+                persistence_s: v.persistence_s,
+                offrail_drag_mu: v.offrail_drag_mu,
+            });
+        }
         if !p.valid() {
             return Err("Parámetros mecánicos de bogie inválidos".into());
         }
@@ -338,6 +398,11 @@ pub fn apply_overrides(
         }
     }
     for &[a, b] in &joints {
+        if models[a].vertical_suspension != models[b].vertical_suspension {
+            return Err(
+                "Un apoyo compartido requiere el mismo modelo vertical y espectro de vía".into(),
+            );
+        }
         if (models[a].gauge_m - models[b].gauge_m).abs() > 1e-6 {
             return Err("Un apoyo compartido requiere la misma trocha en ambos cuerpos".into());
         }
@@ -478,6 +543,37 @@ pub fn advance_train(
             }
         }
     }
+    crate::track_irregularity::advance_train(state, train, path, centers, dt);
+    let now = state.time_s();
+    let friction = state
+        .rail_adhesion
+        .as_ref()
+        .map_or(0.35, |s| 0.35 * s.weather_factor);
+    for (i, p) in models.iter().enumerate() {
+        if p.derailment.is_none() {
+            continue;
+        }
+        let speed = state
+            .vehicles
+            .get(i)
+            .map_or(state.velocity_mps, |v| v.velocity_mps);
+        let s = &mut state.bogies[i];
+        crate::derailment::advance(
+            s.derailment.get_or_insert_with(Default::default),
+            p,
+            &s.supports,
+            &s.native,
+            speed,
+            now,
+            if state.path_reversed {
+                path.total_length_m() - centers[i]
+            } else {
+                centers[i]
+            },
+            friction,
+            dt,
+        );
+    }
 }
 
 #[cfg(test)]
@@ -525,6 +621,47 @@ mod tests {
         assert!(s.travel_limit && s.attack_limit && s.wheel_unloaded);
         assert!((s.rail_reaction_n - 80_000.).abs() < 0.01);
         assert!((s.left_wheel_load_n + s.right_wheel_load_n - i.mass_kg * G).abs() < 1e-8);
+    }
+    #[test]
+    fn zero_centre_of_gravity_retains_finite_static_wheel_loads_on_a_curve() {
+        let mut p = model();
+        p.cog_height_m = 0.;
+        assert!(p.valid());
+        let mut support = SupportState::default();
+        advance_support(
+            &mut support,
+            &p,
+            SupportInput {
+                mass_kg: 20_000.,
+                lateral_acceleration_mps2: 4.,
+                curvature_per_m: 1. / 100.,
+                ..Default::default()
+            },
+            0.05,
+        );
+        assert_eq!(support.left_wheel_load_n, 20_000. * G / 2.);
+        assert_eq!(support.right_wheel_load_n, support.left_wheel_load_n);
+        assert!(!support.wheel_unloaded);
+        assert!(support.rail_reaction_n.is_finite());
+        let mut native = NativeLateralState::default();
+        native.advance(
+            &p,
+            NativeLateralInput {
+                mass_kg: 40_000.,
+                speed_mps: 20.,
+                radius_m: 100.,
+                cant_angle_rad: 0.03,
+                friction: 0.3,
+                ahead_force_n: Some(0.),
+                coupler_angle_rad: 0.,
+                buff: false,
+                axles: 4,
+                bogies: 2,
+            },
+            0.05,
+        );
+        assert_eq!(native.vertical_force_n, (40_000_f32 / 8. * G as f32) as f64);
+        assert!(native.derailment_coefficient.is_finite());
     }
     #[test]
     fn shared_support_counts_load_once_and_retains_one_displacement() {
@@ -608,6 +745,8 @@ mod tests {
             support_offsets_m: Some([10., -10.]),
             lateral_suspension: None,
             shared_with: Some(1),
+            vertical_suspension: None,
+            derailment: None,
         };
         assert!(apply_overrides(&mut models, std::slice::from_ref(&def)).is_err());
         models[1].support_offsets_m = [10., -10.];

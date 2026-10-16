@@ -1,0 +1,32 @@
+[scenario]
+name="Descarrilamiento: aproximación y exceso en curva"
+description="Ejercicio propio con locomotora de laboratorio de 2 MW / 160 km/h y 2000 m de aproximación. Conducir desde parado; no impone velocidad ni altera el umbral de la curva."
+[route]
+path="derailment_route"
+start="approach"
+destination="n38"
+start_offset_m=100.0
+assume_signals_clear=true
+[train]
+consist="consists/curve_risk.con"
+[simulation]
+duration=180.0
+time_step=0.05
+seed=20261015
+multi_body=true
+[gameplay]
+objective="arrive"
+difficulty="normal"
+[output]
+csv="run.csv"
+metadata="run.json"
+
+[[train.bogie_dynamics]]
+vehicle=0
+[train.bogie_dynamics.derailment]
+enabled=true
+minimum_speed_mps=1.0
+nadal_multiplier=1.0
+unloading_fraction=0.05
+persistence_s=0.1
+offrail_drag_mu=0.5

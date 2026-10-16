@@ -1,0 +1,394 @@
+{
+  "schema": 1,
+  "current_attempt": "lirr-replay-10",
+  "current_status": "pass",
+  "policy": "Historical failure and invalid-execution records remain unchanged. Contexts and binaries are identified separately; no failed threshold is relabelled as pass.",
+  "earlier_context": {
+    "native05": "Historical Simulator.Paused=true; see ../lirr-native05/history.json. Its raw failed results remain preserved and are not an unpaused-playable acceptance.",
+    "native06": "Our helper failed to compile before native physics; preserved in native07 history."
+  },
+  "attempts": [
+    {
+      "attempt": "lirr-replay-05",
+      "execution_validity": "complete_diagnostic",
+      "recorded_status": "failed_tolerance_or_coverage",
+      "native_context": {
+        "contract": "live-unpaused-v1",
+        "paused": false,
+        "use_advanced_adhesion": true,
+        "simple_control_physics": false,
+        "adhesion_factor_percent": 100,
+        "adhesion_factor_change_percent": 0,
+        "adhesion_proportional_to_weather": false,
+        "initialization": "Original ACT/CON initialization unchanged; explicitly set Simulator.Paused=false before initial sample; no warmup and no observed-state injection.",
+        "force_frame": "Original local motive/gravity forces multiplied by Flipped XOR player rear-cab orientation only when summing the train; raw per-vehicle local/oriented channels retained.",
+        "controls": "Actual CurrentValue of the original controllers; requested handles are diagnostic channels.",
+        "initial_force_phase": "At t=0 raw original force fields have not yet had an Update tick; preserve them as zero where original initializes them so; do not mask this sample.",
+        "original_weather": "Clear, zero precipitation from the original ACT; no live weather or randomization.",
+        "viewer_clear_preset": {
+          "visibility_m": 20000,
+          "cloud_cover_factor": 0.05,
+          "precipitation_ppspm2": 0,
+          "precipitation_liquidity": 1,
+          "source": "OR1.6.1 Source/RunActivity/Viewer3D/Weather.cs SetInitialWeatherParameters/UpdateWeatherParameters lines174-192",
+          "reason": "The real viewer initializes these static weather inputs; Simulator alone leaves them zero. The original ACT must already declare Clear."
+        }
+      },
+      "native_trace_sha256": "21212399f6289ff44b6d108d6312670008e6503abee0054df2d4dd150d6e2be2",
+      "private_receipt_sha256": "2ea0c43ae7094bca0131aa7b4efac8ae43c021272c86ba3fc1de4b4bbff35e47",
+      "private_comparison_sha256": "b87bc7008f12074a2d7ecc91d0f4f0412aa44d1ec1d14892d420a96b91af37eb",
+      "rust_csv_sha256": "adae50a400c09c9fc738acd0cfae8cf25be51da40b4f57960b4c0d7979f7a425",
+      "binaries": {
+        "openrailsrs": "4b6c03a6e5510176ad260ff6f1c3f2856d8565bb1977d7883fd3e16f09d453a4",
+        "activity_trajectory": "08f745c4da5629679176c6a311aff6d40ba48a1b658e63ee8f661450a9e8e00c"
+      },
+      "raw_comparison": {
+        "schema": 1,
+        "reference_version": "1.6.1",
+        "samples": 32583,
+        "errors": {
+          "velocity_rms_mps": 0.4817333332779012,
+          "brake_pipe_rms_psi": 0.0004184281483413141,
+          "cylinder_rms_psi": 0.00011563180303608016,
+          "motive_force_rms_n": 3798.012099835079,
+          "brake_force_rms_n": 366.79909683641864,
+          "maximum_odometer_error_m": 119.33197158334588
+        },
+        "thresholds_predeclared": {
+          "velocity_rms_mps": 0.75,
+          "maximum_odometer_error_m": 45,
+          "brake_pipe_rms_psi": 5,
+          "cylinder_rms_psi": 5,
+          "motive_force_rms_n": 5000,
+          "brake_force_rms_n": 5000
+        },
+        "checks": {
+          "velocity_rms_mps": true,
+          "brake_pipe_rms_psi": true,
+          "cylinder_rms_psi": true,
+          "motive_force_rms_n": true,
+          "brake_force_rms_n": true,
+          "maximum_odometer_error_m": false
+        },
+        "coverage": {
+          "native_reached_all_platforms": true,
+          "original_platforms": true,
+          "original_formation": true,
+          "full_distance": true,
+          "full_duration": true,
+          "exact_controls": true
+        },
+        "passed": false,
+        "scope": "Native driver uses original signals, speed limits, platforms and boarding. Rust replays exactly the same 20Hz handles, with physical path and original vehicles. Station scoring and ACT goals are outside this physics comparison and are not allowed to truncate its diagnostics."
+      }
+    },
+    {
+      "attempt": "lirr-replay-06",
+      "execution_validity": "complete_diagnostic",
+      "recorded_status": "failed_tolerance_or_coverage",
+      "native_context": {
+        "contract": "live-unpaused-v1",
+        "paused": false,
+        "use_advanced_adhesion": true,
+        "simple_control_physics": false,
+        "adhesion_factor_percent": 100,
+        "adhesion_factor_change_percent": 0,
+        "adhesion_proportional_to_weather": false,
+        "initialization": "Original ACT/CON initialization unchanged; explicitly set Simulator.Paused=false before initial sample; no warmup and no observed-state injection.",
+        "force_frame": "Original local motive/gravity forces multiplied by Flipped XOR player rear-cab orientation only when summing the train; raw per-vehicle local/oriented channels retained.",
+        "controls": "Actual CurrentValue of the original controllers; requested handles are diagnostic channels.",
+        "initial_force_phase": "At t=0 raw original force fields have not yet had an Update tick; preserve them as zero where original initializes them so; do not mask this sample.",
+        "original_weather": "Clear, zero precipitation from the original ACT; no live weather or randomization.",
+        "viewer_clear_preset": {
+          "visibility_m": 20000,
+          "cloud_cover_factor": 0.05,
+          "precipitation_ppspm2": 0,
+          "precipitation_liquidity": 1,
+          "source": "OR1.6.1 Source/RunActivity/Viewer3D/Weather.cs SetInitialWeatherParameters/UpdateWeatherParameters lines174-192",
+          "reason": "The real viewer initializes these static weather inputs; Simulator alone leaves them zero. The original ACT must already declare Clear."
+        }
+      },
+      "native_trace_sha256": "21212399f6289ff44b6d108d6312670008e6503abee0054df2d4dd150d6e2be2",
+      "private_receipt_sha256": "55038747667f514843cf00a66a03196bd0d7a3993d0e3c58858653aa65ce5406",
+      "private_comparison_sha256": "a6b467855ddfcf02fcfd0e78b332b997d9526e00c9fe234d8102714158aa4533",
+      "rust_csv_sha256": "e7e7dd4b99a74db83eb4d96e76607d7b5d422ea563ee79394d8206fc32d91d65",
+      "binaries": {
+        "openrailsrs": "62e7ec6373ca436c66c204fb3a69062ac8d0a233cf23edd4fbc2378ff2c35c75",
+        "activity_trajectory": "0d6fbfc5a2a5568a33e7b130e680b93bdcd1ef8713c1c1dd0363db55a11ae039"
+      },
+      "raw_comparison": {
+        "schema": 1,
+        "reference_version": "1.6.1",
+        "samples": 32583,
+        "errors": {
+          "velocity_rms_mps": 1.4511629288483736,
+          "brake_pipe_rms_psi": 0.0004184281483413141,
+          "cylinder_rms_psi": 0.00011563180303608016,
+          "motive_force_rms_n": 6209.182900399763,
+          "brake_force_rms_n": 636.1894292793055,
+          "maximum_odometer_error_m": 1179.8948296646158
+        },
+        "thresholds_predeclared": {
+          "velocity_rms_mps": 0.75,
+          "maximum_odometer_error_m": 45,
+          "brake_pipe_rms_psi": 5,
+          "cylinder_rms_psi": 5,
+          "motive_force_rms_n": 5000,
+          "brake_force_rms_n": 5000
+        },
+        "checks": {
+          "velocity_rms_mps": false,
+          "brake_pipe_rms_psi": true,
+          "cylinder_rms_psi": true,
+          "motive_force_rms_n": false,
+          "brake_force_rms_n": true,
+          "maximum_odometer_error_m": false
+        },
+        "coverage": {
+          "native_reached_all_platforms": true,
+          "original_platforms": true,
+          "original_formation": true,
+          "full_distance": true,
+          "full_duration": true,
+          "exact_controls": true
+        },
+        "passed": false,
+        "scope": "Native driver uses original signals, speed limits, platforms and boarding. Rust replays exactly the same 20Hz handles, with physical path and original vehicles. Station scoring and ACT goals are outside this physics comparison and are not allowed to truncate its diagnostics."
+      }
+    },
+    {
+      "attempt": "lirr-replay-07",
+      "execution_validity": "invalid_not_acceptance",
+      "recorded_status": "failed_tolerance_or_coverage",
+      "native_context": {
+        "contract": "live-unpaused-v1",
+        "paused": false,
+        "use_advanced_adhesion": true,
+        "simple_control_physics": false,
+        "adhesion_factor_percent": 100,
+        "adhesion_factor_change_percent": 0,
+        "adhesion_proportional_to_weather": false,
+        "initialization": "Original ACT/CON initialization unchanged; explicitly set Simulator.Paused=false before initial sample; no warmup and no observed-state injection.",
+        "force_frame": "Original local motive/gravity forces multiplied by Flipped XOR player rear-cab orientation only when summing the train; raw per-vehicle local/oriented channels retained.",
+        "controls": "Actual CurrentValue of the original controllers; requested handles are diagnostic channels.",
+        "initial_force_phase": "At t=0 raw original force fields have not yet had an Update tick; preserve them as zero where original initializes them so; do not mask this sample.",
+        "original_weather": "Clear, zero precipitation from the original ACT; no live weather or randomization.",
+        "viewer_clear_preset": {
+          "visibility_m": 20000,
+          "cloud_cover_factor": 0.05,
+          "precipitation_ppspm2": 0,
+          "precipitation_liquidity": 1,
+          "source": "OR1.6.1 Source/RunActivity/Viewer3D/Weather.cs SetInitialWeatherParameters/UpdateWeatherParameters lines174-192",
+          "reason": "The real viewer initializes these static weather inputs; Simulator alone leaves them zero. The original ACT must already declare Clear."
+        }
+      },
+      "native_trace_sha256": "21212399f6289ff44b6d108d6312670008e6503abee0054df2d4dd150d6e2be2",
+      "private_receipt_sha256": "528782cd3eacf9202371402c262593efc98e36dcb83018272025eba6d2b0646c",
+      "private_comparison_sha256": "a6b467855ddfcf02fcfd0e78b332b997d9526e00c9fe234d8102714158aa4533",
+      "rust_csv_sha256": "e7e7dd4b99a74db83eb4d96e76607d7b5d422ea563ee79394d8206fc32d91d65",
+      "binaries": {
+        "openrailsrs": "62e7ec6373ca436c66c204fb3a69062ac8d0a233cf23edd4fbc2378ff2c35c75",
+        "activity_trajectory": "0d6fbfc5a2a5568a33e7b130e680b93bdcd1ef8713c1c1dd0363db55a11ae039"
+      },
+      "raw_comparison": {
+        "schema": 1,
+        "reference_version": "1.6.1",
+        "samples": 32583,
+        "errors": {
+          "velocity_rms_mps": 1.4511629288483736,
+          "brake_pipe_rms_psi": 0.0004184281483413141,
+          "cylinder_rms_psi": 0.00011563180303608016,
+          "motive_force_rms_n": 6209.182900399763,
+          "brake_force_rms_n": 636.1894292793055,
+          "maximum_odometer_error_m": 1179.8948296646158
+        },
+        "thresholds_predeclared": {
+          "velocity_rms_mps": 0.75,
+          "maximum_odometer_error_m": 45,
+          "brake_pipe_rms_psi": 5,
+          "cylinder_rms_psi": 5,
+          "motive_force_rms_n": 5000,
+          "brake_force_rms_n": 5000
+        },
+        "checks": {
+          "velocity_rms_mps": false,
+          "brake_pipe_rms_psi": true,
+          "cylinder_rms_psi": true,
+          "motive_force_rms_n": false,
+          "brake_force_rms_n": true,
+          "maximum_odometer_error_m": false
+        },
+        "coverage": {
+          "native_reached_all_platforms": true,
+          "original_platforms": true,
+          "original_formation": true,
+          "full_distance": true,
+          "full_duration": true,
+          "exact_controls": true
+        },
+        "passed": false,
+        "scope": "Native driver uses original signals, speed limits, platforms and boarding. Rust replays exactly the same 20Hz handles, with physical path and original vehicles. Station scoring and ACT goals are outside this physics comparison and are not allowed to truncate its diagnostics."
+      },
+      "invalidity": {
+        "status": "invalid_not_acceptance",
+        "recorded_utc": "2026-10-16T13:00:02.952110+00:00",
+        "reason": "Root incorrectly dispatched dependent measurements while build09 still running; discard regardless of numeric result and repeat after confirmed completed coherent build. Earlier evidence preserved.",
+        "attempts": [
+          "lirr-replay-07",
+          "steam-native-compare05",
+          "lirr-axle-boundary-02"
+        ],
+        "inputs_modified": false,
+        "next": "Fresh directories only after build-09-result.json confirms pass and both sources/binaries are unchanged."
+      }
+    },
+    {
+      "attempt": "lirr-replay-08",
+      "execution_validity": "complete_diagnostic",
+      "recorded_status": "failed_tolerance_or_coverage",
+      "native_context": {
+        "contract": "live-unpaused-v1",
+        "paused": false,
+        "use_advanced_adhesion": true,
+        "simple_control_physics": false,
+        "adhesion_factor_percent": 100,
+        "adhesion_factor_change_percent": 0,
+        "adhesion_proportional_to_weather": false,
+        "initialization": "Original ACT/CON initialization unchanged; explicitly set Simulator.Paused=false before initial sample; no warmup and no observed-state injection.",
+        "force_frame": "Original local motive/gravity forces multiplied by Flipped XOR player rear-cab orientation only when summing the train; raw per-vehicle local/oriented channels retained.",
+        "controls": "Actual CurrentValue of the original controllers; requested handles are diagnostic channels.",
+        "initial_force_phase": "At t=0 raw original force fields have not yet had an Update tick; preserve them as zero where original initializes them so; do not mask this sample.",
+        "original_weather": "Clear, zero precipitation from the original ACT; no live weather or randomization.",
+        "viewer_clear_preset": {
+          "visibility_m": 20000,
+          "cloud_cover_factor": 0.05,
+          "precipitation_ppspm2": 0,
+          "precipitation_liquidity": 1,
+          "source": "OR1.6.1 Source/RunActivity/Viewer3D/Weather.cs SetInitialWeatherParameters/UpdateWeatherParameters lines174-192",
+          "reason": "The real viewer initializes these static weather inputs; Simulator alone leaves them zero. The original ACT must already declare Clear."
+        }
+      },
+      "native_trace_sha256": "21212399f6289ff44b6d108d6312670008e6503abee0054df2d4dd150d6e2be2",
+      "private_receipt_sha256": "d3bdab7c547aacee973741877a676ec2f2be03a33641ef170dcb562ecc6b3781",
+      "private_comparison_sha256": "a3bca141a5bafefac4da19a019c3d8dc2aead43eebb002e3e91a42e9d0a54654",
+      "rust_csv_sha256": "3cabf473d511a74b11d3fb0d09f66a7298f988f7682f0272f829ba80beda0ae6",
+      "binaries": {
+        "openrailsrs": "712e75bc12666f0f8358a59513bcc3b39e41443dde8da9771d16365d4053f497",
+        "activity_trajectory": "4bbd9bf2adb723a8d138f7c110c8fa44ea11023281b3393c5ae6fd3359cbee13"
+      },
+      "raw_comparison": {
+        "schema": 1,
+        "reference_version": "1.6.1",
+        "samples": 32583,
+        "errors": {
+          "velocity_rms_mps": 0.3686524565530028,
+          "brake_pipe_rms_psi": 0.0004184281483413141,
+          "cylinder_rms_psi": 0.00011563180303608016,
+          "motive_force_rms_n": 3884.002480691687,
+          "brake_force_rms_n": 303.40092206062127,
+          "maximum_odometer_error_m": 243.39675788770546
+        },
+        "thresholds_predeclared": {
+          "velocity_rms_mps": 0.75,
+          "maximum_odometer_error_m": 45,
+          "brake_pipe_rms_psi": 5,
+          "cylinder_rms_psi": 5,
+          "motive_force_rms_n": 5000,
+          "brake_force_rms_n": 5000
+        },
+        "checks": {
+          "velocity_rms_mps": true,
+          "brake_pipe_rms_psi": true,
+          "cylinder_rms_psi": true,
+          "motive_force_rms_n": true,
+          "brake_force_rms_n": true,
+          "maximum_odometer_error_m": false
+        },
+        "coverage": {
+          "native_reached_all_platforms": true,
+          "original_platforms": true,
+          "original_formation": true,
+          "full_distance": true,
+          "full_duration": true,
+          "exact_controls": true
+        },
+        "passed": false,
+        "scope": "Native driver uses original signals, speed limits, platforms and boarding. Rust replays exactly the same 20Hz handles, with physical path and original vehicles. Station scoring and ACT goals are outside this physics comparison and are not allowed to truncate its diagnostics."
+      }
+    },
+    {
+      "attempt": "lirr-replay-09",
+      "execution_validity": "complete_diagnostic",
+      "recorded_status": "failed_tolerance_or_coverage",
+      "native_context": {
+        "contract": "live-unpaused-v1",
+        "paused": false,
+        "use_advanced_adhesion": true,
+        "simple_control_physics": false,
+        "adhesion_factor_percent": 100,
+        "adhesion_factor_change_percent": 0,
+        "adhesion_proportional_to_weather": false,
+        "initialization": "Original ACT/CON initialization unchanged; explicitly set Simulator.Paused=false before initial sample; no warmup and no observed-state injection.",
+        "force_frame": "Original local motive/gravity forces multiplied by Flipped XOR player rear-cab orientation only when summing the train; raw per-vehicle local/oriented channels retained.",
+        "controls": "Actual CurrentValue of the original controllers; requested handles are diagnostic channels.",
+        "initial_force_phase": "At t=0 raw original force fields have not yet had an Update tick; preserve them as zero where original initializes them so; do not mask this sample.",
+        "original_weather": "Clear, zero precipitation from the original ACT; no live weather or randomization.",
+        "viewer_clear_preset": {
+          "visibility_m": 20000,
+          "cloud_cover_factor": 0.05,
+          "precipitation_ppspm2": 0,
+          "precipitation_liquidity": 1,
+          "source": "OR1.6.1 Source/RunActivity/Viewer3D/Weather.cs SetInitialWeatherParameters/UpdateWeatherParameters lines174-192",
+          "reason": "The real viewer initializes these static weather inputs; Simulator alone leaves them zero. The original ACT must already declare Clear."
+        }
+      },
+      "native_trace_sha256": "21212399f6289ff44b6d108d6312670008e6503abee0054df2d4dd150d6e2be2",
+      "private_receipt_sha256": "d63bc62857d38d4571c268f61c9c5cbfc74fbc56f3dde20966cf9bcf9617614d",
+      "private_comparison_sha256": "da20465a362cc812c533cbc904692f70863bbdf1e444c71b573d1bbe87919311",
+      "rust_csv_sha256": "60e2c537809160f58ab53f564d5ab2990973a9913b90a738dee68d9feb173be6",
+      "binaries": {
+        "openrailsrs": "2cbcf000fbac5b6731b9752be81d4b09c002e89d95f57c683e5917ba99b7b74c",
+        "activity_trajectory": "84d170540aa6d8f9930089208bced095fcd3d7e2058b67dc9a61d2643dd9da13"
+      },
+      "raw_comparison": {
+        "schema": 1,
+        "reference_version": "1.6.1",
+        "samples": 32583,
+        "errors": {
+          "velocity_rms_mps": 0.1807073942778568,
+          "brake_pipe_rms_psi": 0.0004184281483413141,
+          "cylinder_rms_psi": 0.00011563180303608016,
+          "motive_force_rms_n": 3253.0708165096876,
+          "brake_force_rms_n": 66.46659430673009,
+          "maximum_odometer_error_m": 65.2666265595035
+        },
+        "thresholds_predeclared": {
+          "velocity_rms_mps": 0.75,
+          "maximum_odometer_error_m": 45,
+          "brake_pipe_rms_psi": 5,
+          "cylinder_rms_psi": 5,
+          "motive_force_rms_n": 5000,
+          "brake_force_rms_n": 5000
+        },
+        "checks": {
+          "velocity_rms_mps": true,
+          "brake_pipe_rms_psi": true,
+          "cylinder_rms_psi": true,
+          "motive_force_rms_n": true,
+          "brake_force_rms_n": true,
+          "maximum_odometer_error_m": false
+        },
+        "coverage": {
+          "native_reached_all_platforms": true,
+          "original_platforms": true,
+          "original_formation": true,
+          "full_distance": true,
+          "full_duration": true,
+          "exact_controls": true
+        },
+        "passed": false,
+        "scope": "Native driver uses original signals, speed limits, platforms and boarding. Rust replays exactly the same 20Hz handles, with physical path and original vehicles. Station scoring and ACT goals are outside this physics comparison and are not allowed to truncate its diagnostics."
+      }
+    }
+  ]
+}

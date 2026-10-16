@@ -1780,3 +1780,20 @@ Seguí la [guía de los diez objetivos](TRAIN_OPERATION_UPDATE.md): incluye carg
 ## 50. Segunda entrega de treinta mejoras
 
 [Guía completa con una comprobación para cada issue](PLAN_30_2.md#cómo-probar-cada-cambio): prácticas y tutoriales, informe, ajustes propios, cabina, escenario, versiones, respaldos y reportes. El Laboratorio incluido permite probar equipos declarados sin descargar trenes.
+
+
+## Física, patios y red: lote del 15 de octubre
+
+La [guía de los veinte issues](TWENTY_ISSUES_20261015.md) reúne los controles y
+los ensayos. Para maniobras elegí los servicios de `examples/operational_yards`
+y abrí F9 → Patio, mesas y clasificación; las instrucciones de cada ejercicio
+están en [Operaciones de patio](OPERATIONAL_YARDS.md). Para dos conductores,
+despachador, fogonero o espectadores, elegí el ejemplo Multijugador y seguí la
+[guía de red](MULTIPLAYER_VIEWER.md), incluido guardar y reconectar.
+
+Los ejemplos `examples/physics_lab/scenario_*.toml` permiten probar cada equipo
+físico declarado. B muestra controles por caldera, reguladores locales,
+cremallera y las opciones de irregularidades y descarrilamiento. Guardá durante
+la marcha y cargá antes de repetir una comparación; los consumibles y las
+causas registradas deben conservarse. Estos ejercicios propios no certifican
+por sí solos todos los sistemas de cualquier tren comunitario.

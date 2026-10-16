@@ -1,0 +1,51 @@
+[scenario]
+name = "Mesa giratoria: traslado y salida"
+description = "F9, Patio: detener con freno aplicado; elegir salida. La locomotora gira o se desplaza con el tablero. P pausa; guardar a mitad del movimiento y continuar."
+
+[route]
+path = "turntable"
+start = "d0a"
+destination = "goal"
+start_offset_m = 25.0
+assume_signals_clear = true
+
+[train]
+consist = "consists/loco.con"
+
+[gameplay]
+objective = "arrive"
+difficulty = "normal"
+penalty_per_second_late = 0.0
+
+[simulation]
+duration = 2400.0
+time_step = 0.05
+seed = 42
+multi_body = true
+coupler_kind = "freight"
+legacy_power_cap = false
+train_air_full_release_s = 3.0
+
+[[simulation.yard_operations.moving_devices]]
+id = "turntable"
+kind = "turntable"
+center_x_m = 0.0
+center_z_m = 0.0
+heading_rad = 0.0
+deck_length_m = 30.0
+deck_width_m = 4.0
+max_mass_kg = 100000.0
+speed = 0.15
+initial_port = 0
+[[simulation.yard_operations.moving_devices.ports]]
+id = "entrada"
+position = 0.0
+path = ["deck0", "out0"]
+[[simulation.yard_operations.moving_devices.ports]]
+id = "salida"
+position = 1.5707963267948966
+path = ["deck1", "out1"]
+
+[output]
+csv = "run_turntable.csv"
+metadata = "run_turntable.json"

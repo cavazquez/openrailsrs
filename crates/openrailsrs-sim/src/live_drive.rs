@@ -727,13 +727,33 @@ impl LiveDriveSession {
             raw_curve
         };
         let partial_throttle_run_up_time_s = max_partial_throttle_run_up_time_s(&diesel_engines);
-        let (native_physics, cab_max_current_a) =
+        let (mut native_physics, cab_max_current_a) =
             crate::native_dynamics::NativeTrainPhysics::load_with_cab(
                 &consist_path,
                 consist_root(&consist_path),
                 &consist,
                 scenario.simulation.native_physics.as_ref(),
             )?;
+        if let Some(native) = &mut native_physics {
+            native.configure_adhesion_inputs(
+                scenario_dir,
+                scenario
+                    .simulation
+                    .time_step
+                    .clamp(1e-4, LIVE_REALTIME_MAX_DT_S),
+                scenario.simulation.duration,
+            )?;
+        } else if scenario
+            .simulation
+            .native_physics
+            .as_ref()
+            .is_some_and(|environment| environment.adhesion_input_file.is_some())
+        {
+            return Err(SimError::Msg(
+                "Las entradas ambientales requieren una formación con física nativa compatible"
+                    .into(),
+            ));
+        }
         let cab_vehicle_index = consist
             .vehicles
             .iter()
@@ -755,7 +775,18 @@ impl LiveDriveSession {
         let articulated_joints =
             crate::bogie_dynamics::apply_overrides(&mut bogies, &scenario.train.bogie_dynamics)
                 .map_err(SimError::Msg)?;
+        let rack = crate::rack::RackTrainConfig::from_scenario(
+            scenario.train.rack.as_ref(),
+            consist.vehicles.len(),
+            path_edges
+                .iter()
+                .filter_map(|id| graph.edge(id))
+                .map(|e| e.length_m)
+                .sum(),
+        )
+        .map_err(SimError::Msg)?;
         let physics = TrainPhysics {
+            rack,
             bogies,
             power_supply: crate::power_supply::PowerTrainConfig::from_consist_with_loads(
                 &consist,
@@ -801,10 +832,23 @@ impl LiveDriveSession {
         let mut path_data = PathData::from_path(&path_edges, &graph);
         crate::freight::cap(&mut path_data, scenario.train.freight.as_ref());
         let mut state = TrainSimState::new(path_edges.clone());
+        if let Some(native) = physics
+            .native
+            .as_ref()
+            .filter(|native| native.environment.adhesion_input_file.is_some())
+        {
+            state.native_dynamics = Some(native.initial_state(physics.diesel_engines.len()));
+        }
+        state.yard_operations = crate::operational_yards::YardWorldState::from_definition(
+            scenario.simulation.yard_operations.clone(),
+        );
         state.articulated_joints = articulated_joints;
-        state
+        state.bogies = physics
             .bogies
-            .resize_with(consist.vehicles.len(), Default::default);
+            .iter()
+            .map(crate::bogie_dynamics::VehicleBogieState::from_model)
+            .collect();
+        state.rack = crate::rack::RackTrainState::new(&physics.rack);
         state.weather_track = scenario.simulation.weather_track.clone();
         crate::vehicle_systems::configure(
             &mut state,
@@ -817,6 +861,14 @@ impl LiveDriveSession {
         state.announcements.package = scenario.train.announcements.clone();
         state.announcements.package.root.clear();
         state.rail_operations.definition = scenario.simulation.rail_operations.clone();
+        if !state
+            .yard_operations
+            .valid_for(&scenario.simulation.yard_operations)
+        {
+            return Err(SimError::Msg(
+                "Definición de patio o dispositivo móvil inválida".into(),
+            ));
+        }
         if !state.rail_operations.definition.valid() {
             return Err(crate::SimError::Msg(
                 "Operaciones ferroviarias inválidas".into(),
@@ -842,7 +894,7 @@ impl LiveDriveSession {
         state.boiler_state = consist
             .aggregate_steam_params()
             .map(|p| crate::steam::BoilerState::from_params(&p));
-        crate::steam_equipment::configure(&mut state, &consist);
+        crate::steam_equipment::configure(&mut state, &consist).map_err(SimError::Msg)?;
         state.diesel.initialize(&physics.diesel);
         if !physics.diesel_engines.is_empty() {
             state.diesel_rpm = physics
@@ -932,8 +984,19 @@ impl LiveDriveSession {
         let at_station = gameplay.stop_targets.first().is_some_and(|stop| {
             (stop.cum_dist_m - start_chainage_m).abs() <= crate::service::STOP_POSITION_TOLERANCE_M
         });
-        let initial_brake = if at_station { 1.0 } else { 0.0 };
-        if at_station {
+        let native_start_handle = state.brake_system.native_start_handle().or_else(|| {
+            state
+                .boiler_state
+                .as_ref()
+                .and_then(|b| b.native_or161.as_ref())
+                .map(|n| n.hardware.source.initial_train_brake as f64)
+        });
+        let initial_brake = native_start_handle.unwrap_or(if at_station { 1.0 } else { 0.0 });
+        if native_start_handle.is_some() {
+            // The native builder has already initialized pipe, reservoirs and
+            // cylinders from Brake_Train and its authored starting notch.
+            state.brake = initial_brake;
+        } else if at_station {
             // New native gradients must not let a parked consist roll away and
             // accidentally complete its first station before the player acts.
             state.brake = initial_brake;
@@ -1111,6 +1174,9 @@ impl LiveDriveSession {
         // A static cab/capture needs real aspects at t=0. The traffic layer
         // supplies its positional footprints before the first physics step.
         session.native_signals.needs_refresh = true;
+        session
+            .initialize_yard_operations()
+            .map_err(SimError::Msg)?;
         Ok(session)
     }
 
@@ -1184,6 +1250,11 @@ impl LiveDriveSession {
 
     pub fn time_s(&self) -> f64 {
         self.state.time_s()
+    }
+    /// A validated authoritative snapshot becomes the next interpolation base.
+    pub fn reset_remote_presentation(&mut self) {
+        self.previous_render_chainage_m = self.head_chainage_m();
+        self.sim_time_remainder = 0.;
     }
 
     pub fn velocity_mps(&self) -> f64 {
@@ -1615,6 +1686,11 @@ impl LiveDriveSession {
 
     /// Select an optional provider explicitly at startup. Presentation callers
     /// do not construct .NET processes or parse their protocol.
+    /// Script hosts are process-owned and cannot be mirrored as a Rust network seat.
+    pub fn uses_script_tcs(&self) -> bool {
+        self.script_tcs.is_some()
+    }
+
     pub fn configure_tcs_from_env(&mut self) -> Result<(), String> {
         let Ok(script) = std::env::var("OPENRAILSRS_TCS_SCRIPT") else {
             return Ok(());
@@ -2176,15 +2252,28 @@ impl LiveDriveSession {
         let dt = self.realtime_physics_dt();
         self.state.electric.pantograph_command_up = self.exterior.pantograph_command_up;
         while budget + 1e-12 >= dt {
+            if let Some(native) = &self.physics.native
+                && let Err(message) = native.validate_adhesion_tick(&self.state, dt)
+            {
+                self.driver_throttle = 0.;
+                self.driver_brake = 1.;
+                self.state.throttle = 0.;
+                self.state.brake = 1.;
+                self.state.traction_inhibited = true;
+                self.gameplay.fail(message);
+                self.arrived = true;
+                budget = 0.;
+                break;
+            }
             if let Some(throttle) = automatic {
                 self.autodrive_inputs(throttle);
             }
             self.state.driver_reverser = self.driver_direction;
-            self.state.throttle = if (self.driver_direction >= 0.75
-                || self.driver_direction <= 0.25)
+            let driving_enabled = (self.driver_direction >= 0.75 || self.driver_direction <= 0.25)
                 && self.exterior.door == crate::exterior::DoorState::Closed
-                && !self.gameplay.departure_hold
-            {
+                && !self.gameplay.departure_hold;
+            self.state.traction_inhibited = !driving_enabled;
+            self.state.throttle = if driving_enabled {
                 self.driver_throttle
             } else {
                 0.0
@@ -2192,6 +2281,7 @@ impl LiveDriveSession {
             let assistance_was_braking = self.state.brake > self.driver_brake + 0.01;
             self.state.brake = self.driver_brake;
             if self.state.brake_system.emergency {
+                self.state.traction_inhibited = true;
                 self.state.throttle = 0.0;
                 self.state.brake = 1.0;
             }
@@ -2200,6 +2290,7 @@ impl LiveDriveSession {
                 .as_ref()
                 .is_some_and(|host| host.applies_brake())
             {
+                self.state.traction_inhibited = true;
                 self.state.throttle = 0.0;
                 self.state.brake = 1.0;
             }
@@ -2210,6 +2301,7 @@ impl LiveDriveSession {
                     distance < speed.powi(2) / 0.44 + 12.0
                 })
             {
+                self.state.traction_inhibited = true;
                 self.state.throttle = 0.0;
                 self.state.brake = 1.0;
             }
@@ -2218,6 +2310,12 @@ impl LiveDriveSession {
                 self.velocity_mps() > a.speed_mps
                     || remaining < self.velocity_mps().powi(2) / 0.44 + 2.
             }) {
+                self.state.traction_inhibited = true;
+                self.state.throttle = 0.;
+                self.state.brake = 1.;
+            }
+            if self.yard_driving_blocked() {
+                self.state.traction_inhibited = true;
                 self.state.throttle = 0.;
                 self.state.brake = 1.;
             }
@@ -2231,30 +2329,7 @@ impl LiveDriveSession {
             let res = if backwards {
                 let previous = self.head_chainage_m();
                 let old_odometer = self.state.odometer_m;
-                let mut edge = self.path_data.edges[self.state.edge_index].clone();
-                edge.length_m = 1.0e12;
-                edge.grade_percent = -edge.grade_percent;
-                for grade in &mut edge.profile.grades {
-                    grade.grade_percent = -grade.grade_percent;
-                }
-                let source_edge = self
-                    .state
-                    .path_edges
-                    .get(self.state.edge_index)
-                    .cloned()
-                    .unwrap_or_default();
-                // The velocity calculation uses a virtual long edge; retain the
-                // native position for spatial weather and grade evaluation.
-                self.state.edge_index = 0;
-                step(
-                    &mut self.state,
-                    &PathData {
-                        edges: vec![edge],
-                        edge_ids: vec![source_edge],
-                    },
-                    &self.physics,
-                    dt,
-                );
+                crate::physics::step_backwards(&mut self.state, &self.path_data, &self.physics, dt);
                 let traveled = (self.state.odometer_m - old_odometer).min(previous);
                 apply_start_offset(&mut self.state, &self.path_data, previous - traveled);
                 self.state.odometer_m = old_odometer + traveled;

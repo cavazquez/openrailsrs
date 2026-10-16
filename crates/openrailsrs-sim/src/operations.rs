@@ -64,6 +64,8 @@ pub struct FormationState {
     pub native_bearing_c: HashMap<String, f64>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub native_axles: HashMap<String, crate::native_dynamics::NativeAxleState>,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub native_adhesion: HashMap<String, crate::native_adhesion_input::AdhesionInputState>,
 }
 
 impl FormationState {
@@ -109,6 +111,7 @@ impl FormationState {
             parked_bogies: vec![],
             native_bearing_c: HashMap::new(),
             native_axles: HashMap::new(),
+            native_adhesion: HashMap::new(),
         }
     }
 
@@ -219,6 +222,7 @@ impl SessionSnapshot {
         sessions: impl IntoIterator<Item = &'a Self>,
     ) -> Result<(), String> {
         let sessions: Vec<_> = sessions.into_iter().collect();
+        crate::operational_yards::validate_shared_yard_snapshots(sessions.iter().copied())?;
         let mut points: HashMap<&str, &crate::SwitchLock> = HashMap::new();
         let mut grants: Vec<&crate::native_signals::TrackOccupancy> = vec![];
         for session in &sessions {
@@ -267,6 +271,14 @@ impl LiveDriveSession {
     }
 
     pub fn snapshot(&self) -> SessionSnapshot {
+        let mut formation = self.formation.clone();
+        if let Some(dynamics) = &self.state.native_dynamics {
+            for (id, filter) in self.vehicle_ids().iter().zip(&dynamics.adhesion_filters) {
+                if let Some(filter) = filter {
+                    formation.native_adhesion.insert(id.clone(), filter.clone());
+                }
+            }
+        }
         SessionSnapshot {
             refilling: self.refilling.clone(),
             operational_operation: self.operational_operation,
@@ -278,7 +290,7 @@ impl LiveDriveSession {
             content_signature: self.content_signature.clone(),
             state: self.state.clone(),
             gameplay: self.gameplay.clone(),
-            formation: self.formation.clone(),
+            formation,
             exterior: self.exterior.clone(),
             signal_runtime: self.signal_runtime.clone(),
             native_signal_cache: Some(self.native_signals.snapshot()),
@@ -359,6 +371,7 @@ impl LiveDriveSession {
     }
 
     fn validate_snapshot_aligned(&self, saved: &SessionSnapshot) -> Result<(), String> {
+        self.validate_yard_snapshot(saved)?;
         if let Some(native) = &saved.native_signal_cache {
             self.native_signals.validate_snapshot(
                 native,
@@ -570,35 +583,24 @@ impl LiveDriveSession {
         {
             return Err("Circuito de frenos guardado inválido".into());
         }
-        let circuits = &saved.state.brake_system.circuits;
-        let expected: Vec<_> = self
-            .consist
-            .vehicles
-            .iter()
-            .enumerate()
-            .filter_map(|(i, v)| {
-                let profile = match v {
-                    Vehicle::Loco(l) => &l.brake_profile,
-                    Vehicle::Wagon(w) => &w.brake_profile,
-                };
-                profile.air_circuit.as_ref().map(|p| (i, p))
-            })
-            .collect();
-        if !circuits.is_empty()
-            && (circuits.len() != expected.len()
-                || circuits
-                    .iter()
-                    .zip(&expected)
-                    .any(|(c, (i, p))| c.vehicle != *i || &c.params != *p))
-        {
-            return Err("El circuito guardado no coincide con el equipo original".into());
-        }
         let expected_vacuum = crate::brake::BrakeSystem::from_vehicle_specs(
             &crate::brake::vehicle_specs_from_consist(&self.consist, false, false),
             200.,
             false,
             3.,
         );
+        let circuits = &saved.state.brake_system.circuits;
+        if (!circuits.is_empty() || expected_vacuum.native_start_handle().is_some())
+            && (circuits.len() != expected_vacuum.circuits.len()
+                || circuits
+                    .iter()
+                    .zip(&expected_vacuum.circuits)
+                    .any(|(c, expected)| {
+                        c.vehicle != expected.vehicle || c.params != expected.params
+                    }))
+        {
+            return Err("El circuito guardado no coincide con el equipo original".into());
+        }
         let saved_cylinders: Vec<_> = saved
             .state
             .brake_system
@@ -625,34 +627,45 @@ impl LiveDriveSession {
         {
             return Err("La partida tiene reservas de abastecimiento inválidas".into());
         }
-        if !saved.state.steam_boilers.is_empty() {
-            let expected = self
-                .consist
-                .vehicles
-                .iter()
-                .enumerate()
-                .filter_map(|(i, v)| match v {
-                    openrailsrs_train::Vehicle::Loco(l) => l.steam.as_ref().map(|p| (i, p)),
-                    _ => None,
-                })
-                .collect::<Vec<_>>();
-            if expected.len() != saved.state.steam_boilers.len()
-                || expected
+        let expected_boilers = self
+            .consist
+            .vehicles
+            .iter()
+            .enumerate()
+            .filter_map(|(i, v)| match v {
+                openrailsrs_train::Vehicle::Loco(l) => l.steam.as_ref().map(|p| (i, p)),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        let independent_required = expected_boilers.len() > 1
+            || expected_boilers.iter().any(|(_, p)| {
+                p.operation.thermodynamics.is_some() || p.operation.native_or161.is_some()
+            });
+        if (independent_required || !saved.state.steam_boilers.is_empty())
+            && (expected_boilers.len() != saved.state.steam_boilers.len()
+                || expected_boilers
                     .iter()
                     .zip(&saved.state.steam_boilers)
-                    .any(|((i, p), b)| *i != b.vehicle || **p != b.params || !b.boiler.valid_for(p))
-            {
-                return Err("Calderas guardadas incompatibles con la formación".into());
-            }
+                    .any(|((i, p), b)| *i != b.vehicle || **p != b.params || !b.valid()))
+        {
+            return Err("Calderas guardadas incompatibles con la formación".into());
         }
-        let boiler_params = saved
-            .state
-            .steam_boilers
-            .iter()
-            .find(|b| b.vehicle == saved.state.active_cab_vehicle.unwrap_or(0))
-            .map(|b| &b.params)
-            .or(self.original_physics.steam_params.as_ref());
+        let boiler_params = if saved.state.steam_boilers.is_empty() {
+            self.original_physics.steam_params.as_ref()
+        } else {
+            saved
+                .state
+                .steam_boilers
+                .iter()
+                .find(|b| b.vehicle == saved.state.active_cab_vehicle.unwrap_or(0))
+                .map(|b| &b.params)
+        };
         if !saved.state.diesel.valid_for(&self.original_physics.diesel)
+            || !saved.state.rack.valid_for(&self.original_physics.rack)
+            || !saved
+                .state
+                .yard_operations
+                .valid_for(&self.state.yard_operations.definition)
             || match (&saved.state.boiler_state, boiler_params) {
                 (Some(b), Some(p)) => !b.valid_for(p),
                 (None, None) => false,
@@ -740,7 +753,38 @@ impl LiveDriveSession {
                 "Los acopladores o su historial guardado no corresponden a la formación".into(),
             );
         }
+        if let Some(native) = &self.original_physics.native {
+            if !native.valid_adhesion_state(
+                saved.state.native_dynamics.as_ref(),
+                saved.state.time_s(),
+                saved.arrived,
+            ) {
+                return Err("El SHA, vehículo, reloj o historial del filtro ambiental guardado no corresponde al contenido actual".into());
+            }
+        } else if saved
+            .state
+            .native_dynamics
+            .as_ref()
+            .is_some_and(|d| d.adhesion_filters.iter().any(Option::is_some))
+        {
+            return Err(
+                "La partida contiene entradas ambientales sin una fuente configurada".into(),
+            );
+        }
         if let Some(dynamics) = &saved.state.native_dynamics {
+            let saved_ids = if saved.formation.vehicle_ids.is_empty() {
+                self.vehicle_ids()
+            } else {
+                saved.formation.vehicle_ids.clone()
+            };
+            for (id, filter) in saved_ids.iter().zip(&dynamics.adhesion_filters) {
+                if filter.as_ref() != saved.formation.native_adhesion.get(id) {
+                    return Err(
+                        "El filtro ambiental no corresponde a la identidad física de su vehículo"
+                            .into(),
+                    );
+                }
+            }
             let engines = self
                 .original_physics
                 .diesel_vehicle_indices
@@ -762,9 +806,13 @@ impl LiveDriveSession {
                     .bearing_c
                     .iter()
                     .any(|t| !t.is_finite() || !(-100.0..=500.0).contains(t))
-                || dynamics.axles.iter().any(|a| !a.speed_mps.is_finite())
+                || dynamics.axles.iter().any(|a| !a.valid())
                 || !dynamics.adhesion_factor.is_finite()
                 || !(0.05..=2.5).contains(&dynamics.adhesion_factor)
+                || !dynamics.mu_throttle.is_finite()
+                || !(0.0..=1.0).contains(&dynamics.mu_throttle)
+                || !dynamics.wagon_curve_coefficient.is_finite()
+                || !(0.0..=4.0).contains(&dynamics.wagon_curve_coefficient)
             {
                 return Err("La dinámica nativa guardada no corresponde a la formación".into());
             }
@@ -993,22 +1041,13 @@ impl LiveDriveSession {
                 .collect();
         }
         if self.state.brake_system.circuits.is_empty() {
-            self.state.brake_system.circuits = self
-                .consist
-                .vehicles
-                .iter()
-                .enumerate()
-                .filter_map(|(i, v)| {
-                    let profile = match v {
-                        Vehicle::Loco(l) => &l.brake_profile,
-                        Vehicle::Wagon(w) => &w.brake_profile,
-                    };
-                    profile
-                        .air_circuit
-                        .clone()
-                        .map(|p| crate::brake_circuit::AirCircuit::new(i, p))
-                })
-                .collect();
+            self.state.brake_system.circuits = crate::brake::BrakeSystem::from_vehicle_specs(
+                &crate::brake::vehicle_specs_from_consist(&self.consist, false, false),
+                200.,
+                false,
+                3.,
+            )
+            .circuits;
         }
         // Reconnecting a saved train must not restart a hose without a WORLD match.
         self.refilling = saved.refilling;
@@ -1362,6 +1401,22 @@ impl LiveDriveSession {
                         .unwrap_or(native.environment.ambient_c)
                 })
                 .collect();
+            dynamics.adhesion_filters = if native.has_adhesion_inputs() {
+                ids.iter()
+                    .enumerate()
+                    .map(|(i, id)| {
+                        self.formation.native_adhesion.get(id).cloned().or_else(|| {
+                            native
+                                .adhesion_inputs
+                                .get(i)
+                                .and_then(Option::as_ref)
+                                .map(|s| s.initial.clone())
+                        })
+                    })
+                    .collect()
+            } else {
+                Vec::new()
+            };
             dynamics.axles = p
                 .diesel_vehicle_indices
                 .iter()
@@ -1369,6 +1424,7 @@ impl LiveDriveSession {
                     self.formation.native_axles.get(&ids[i]).cloned().unwrap_or(
                         crate::native_dynamics::NativeAxleState {
                             speed_mps: self.state.velocity_mps,
+                            ..Default::default()
                         },
                     )
                 })
@@ -1721,6 +1777,36 @@ pub(crate) fn content_signature(
     let mut route = scenario.route.clone();
     route.path.clear(); // Absolute launch copies and source-relative scenarios describe the same content.
     let mut simulation = format!("{:?}", scenario.simulation);
+    if scenario
+        .simulation
+        .rail_operations
+        .yard_delivery_alternatives
+        .is_empty()
+    {
+        simulation = simulation.replacen("yard_delivery_alternatives: [], ", "", 1);
+    }
+    if scenario.simulation.yard_operations.is_empty() {
+        simulation = simulation.replacen(
+            &format!(
+                "yard_operations: {:?}, ",
+                scenario.simulation.yard_operations
+            ),
+            "",
+            1,
+        );
+    }
+    if scenario
+        .simulation
+        .native_physics
+        .as_ref()
+        .is_none_or(|n| n.adhesion_input_file.is_none() && n.adhesion_input_step_s.is_none())
+    {
+        simulation = simulation.replacen(
+            ", adhesion_input_file: None, adhesion_input_step_s: None",
+            "",
+            1,
+        );
+    }
     // Empty extensions keep the previous alpha's save identity. Authored work /
     // connections are included in the signature when they change operations.
     if scenario.simulation.rail_operations == Default::default() {
@@ -1740,8 +1826,56 @@ pub(crate) fn content_signature(
     for signal in graph.signals() {
         feed(&format!("{signal:?}"));
     }
-    feed(&format!("{consist:?}{electric:?}"));
+    // The previous save identity used Debug. Preserve that exact spelling
+    // when the new optional equipment is absent; do not invalidate every
+    // existing train merely because its Rust struct gained a field.
+    let signature_consist = crate::brake::legacy_brake_signature_consist(consist);
+    let mut hardware = format!("{signature_consist:?}{electric:?}");
+    for absent in [
+        "hydraulic: None, ",
+        "thermodynamics: None, ",
+        "native_or161: None, ",
+        "compound: None, ",
+        "fixed_cylinder_volume_m3: None, emergency: None, ",
+    ] {
+        hardware = hardware.replace(absent, "");
+    }
+    for vehicle in &signature_consist.vehicles {
+        let brake = match vehicle {
+            openrailsrs_train::Vehicle::Loco(l) => &l.brake_profile,
+            openrailsrs_train::Vehicle::Wagon(w) => &w.brake_profile,
+        };
+        if let Some(air) = &brake.native_air
+            && air.emergency.is_none()
+            && air.controller.emergency_psi_s == 20.
+        {
+            let controller = &air.controller;
+            let old = format!(
+                "NativeAirController {{ charged_psi: {:?}, full_service_drop_psi: {:?}, application_psi_s: {:?}, release_psi_s: {:?} }}",
+                controller.charged_psi,
+                controller.full_service_drop_psi,
+                controller.application_psi_s,
+                controller.release_psi_s
+            );
+            hardware = hardware.replace(&format!("{controller:?}"), &old);
+        }
+    }
+    hardware = hardware
+        .replace("native_plain: false, ", "")
+        .replace("notched: None, ", "");
+    feed(&hardware);
     feed(&format!("{:?}", scenario.train.electric_pickups));
+    if let Some(rack) = &scenario.train.rack {
+        feed(&format!("rack:{rack:?}"));
+    }
+    for dynamics in &scenario.train.bogie_dynamics {
+        if dynamics.vertical_suspension.is_some() || dynamics.derailment.is_some() {
+            feed(&format!(
+                "vertical/derailment:{}:{:?}:{:?}",
+                dynamics.vehicle, dynamics.vertical_suspension, dynamics.derailment
+            ));
+        }
+    }
     format!("{h:016x}")
 }
 

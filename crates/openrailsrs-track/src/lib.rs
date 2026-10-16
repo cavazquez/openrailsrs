@@ -5,6 +5,7 @@ pub mod graph;
 pub mod signal;
 pub mod sigscript;
 pub mod track_sound;
+pub mod tunnel;
 
 pub use error::TrackError;
 pub use graph::{

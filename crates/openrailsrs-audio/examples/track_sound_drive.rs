@@ -436,6 +436,7 @@ fn main() -> Result<()> {
         adhesion_factor: 1.,
         paused_weather: true,
         first_slippery_spot: None,
+        ..Default::default()
     });
     scenario.simulation.brake_shoe_speed_factor = false;
     scenario.simulation.brake_skid_limit = false;

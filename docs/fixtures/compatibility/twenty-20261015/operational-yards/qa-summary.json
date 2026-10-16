@@ -1,0 +1,1319 @@
+{
+  "schema": 1,
+  "status": "four_relevant_views_pass_with_explicit_scope",
+  "created_at_utc": "2026-10-16T11:54:12.490173+00:00",
+  "issues": [
+    344,
+    345
+  ],
+  "viewer_sha256": "7308481494a14fefa956abcdda5ed4bcd8c2e63badfd4c3a9b74164f71a64a1f",
+  "resolution": [
+    1280,
+    720
+  ],
+  "scope": "Actual moving deck and carried vehicle in intermediate/final states. Parent and exporter inspected four authentic PNGs. Production yard command, ordinary brake/neutral, pause, in-process JSON SessionSnapshot restore and genuine floating-origin excursion; no vehicle position/velocity prescription.",
+  "captures": [
+    {
+      "name": "turntable-mid",
+      "source_directory": "tmp/twenty-20261015/yard-views03",
+      "file": "turntable-mid.png",
+      "image_sha256": "02d3e6005ff36b3ab6ddebd6e45d35e939a770894faf0546895b894423aafbec",
+      "source_plan_sha256": "4702fcfe6f7439cc8c07c7c08d07579336e677b2a8376ca0a743359247b23bf2",
+      "source_report_sha256": "b2e9932d1c3a374c19bbb7f21cd595432521c995b5c936191bd828f4666603df",
+      "source_process_receipt_sha256": "0963736d88592c4149ddc39fb79e21a7288265bf39e46d96159c522307f6e5d4",
+      "viewer_returncode": 0,
+      "compositor_returncode": 0,
+      "elapsed_wall_s": 11.874488965999717,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "active_device_pci": "0000:03:00.0",
+      "controls": {
+        "brake": 1.0,
+        "braking_intervention": null,
+        "direction": 0.5,
+        "missed_stops": [],
+        "paused": true,
+        "throttle": 0.0,
+        "traction_load_fraction": 0.0,
+        "traffic_brake_assistance": false
+      },
+      "device_state": {
+        "aligned_port": 0,
+        "carrier": {
+          "head_on_deck_m": 25.0,
+          "service": "Jugador",
+          "source_port": 0,
+          "vehicle_ids": [
+            "Jugador/car/0"
+          ],
+          "vehicle_reversed": false
+        },
+        "position": 0.5475000000000001,
+        "started_s": 0.0,
+        "target_port": 1
+      },
+      "deck_pose": {
+        "aligned_port": 0,
+        "center_world": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "deck_length_m": 30.0,
+        "deck_width_m": 4.0,
+        "heading_rad": 0.5475000000000001,
+        "id": "turntable",
+        "kind": "turntable",
+        "moving": true,
+        "target_port": 1
+      },
+      "floating_origin_shift": [
+        -82.7041015625,
+        0.0,
+        -90.48880767822266
+      ],
+      "actions": [
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 0,
+          "odometer_m": 0.0,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.0
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 1,
+          "odometer_m": 0.0,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.0
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 2,
+          "odometer_m": 0.0,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.0
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 3,
+          "odometer_m": 0.0,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.0
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Fly",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 4,
+          "odometer_m": 0.0,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.65
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 5,
+          "odometer_m": 0.0,
+          "origin_m": [
+            5000.0,
+            0.0,
+            20.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 1.3500000000000005
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 6,
+          "odometer_m": 0.0,
+          "origin_m": [
+            -82.7041015625,
+            0.0,
+            -90.48880767822266
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 3.649999999999995
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 7,
+          "odometer_m": 0.0,
+          "origin_m": [
+            -82.7041015625,
+            0.0,
+            -90.48880767822266
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 3.649999999999995
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 8,
+          "odometer_m": 0.0,
+          "origin_m": [
+            -82.7041015625,
+            0.0,
+            -90.48880767822266
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 3.649999999999995
+        }
+      ],
+      "whole_app_performance": {
+        "elapsed_s": 11.001604249999996,
+        "frame_contexts": null,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 25,
+        "frames": 437,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 25,
+        "gameplay_frames": 422,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 26.324328,
+        "hitches_over_100_ms": 0,
+        "loading_frames": 15,
+        "longest_frame_ms": 44.233985000000004,
+        "peak_rss_mib": 538.8125,
+        "rss_mib": 485.14453125,
+        "startup_longest_frame_ms": 44.233985000000004
+      },
+      "top_level_peak_rss_mib": 538.8,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "pixel_review": {
+        "reviewed": true,
+        "method": "Authentic original PNG inspected with view_image",
+        "deck_and_carrier_visible": true,
+        "deck_and_carrier_aligned": true,
+        "exit_alignment_visible": false,
+        "blocking_pause_menu": false,
+        "limits": "Procedural owned laboratory geometry; exterior relevant view, not an original downloaded station or cabin."
+      }
+    },
+    {
+      "name": "turntable-final",
+      "source_directory": "tmp/twenty-20261015/yard-views03",
+      "file": "turntable-final.png",
+      "image_sha256": "8a404d03cd95f140e00edeb295b8acfee6c90e77e8115e8968b998a4f1b920da",
+      "source_plan_sha256": "4702fcfe6f7439cc8c07c7c08d07579336e677b2a8376ca0a743359247b23bf2",
+      "source_report_sha256": "e23b08425575a85fe3023f3eb7eb588fac79dcd1eebf009ac2c24d362cfbb395",
+      "source_process_receipt_sha256": "a5965f88f453b804e6b054b60dc8eb0b44a17437c4defc720559abb67205e178",
+      "viewer_returncode": 0,
+      "compositor_returncode": 0,
+      "elapsed_wall_s": 19.912485572999685,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "active_device_pci": "0000:03:00.0",
+      "controls": {
+        "brake": 1.0,
+        "braking_intervention": null,
+        "direction": 0.5,
+        "missed_stops": [],
+        "paused": true,
+        "throttle": 0.0,
+        "traction_load_fraction": 0.0,
+        "traffic_brake_assistance": false
+      },
+      "device_state": {
+        "aligned_port": 1,
+        "carrier": null,
+        "position": 1.5707963267948966,
+        "started_s": 0.0,
+        "target_port": null
+      },
+      "deck_pose": {
+        "aligned_port": 1,
+        "center_world": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "deck_length_m": 30.0,
+        "deck_width_m": 4.0,
+        "heading_rad": 1.5707963267948966,
+        "id": "turntable",
+        "kind": "turntable",
+        "moving": false,
+        "target_port": null
+      },
+      "floating_origin_shift": [
+        -82.7041015625,
+        0.0,
+        -90.48880767822266
+      ],
+      "actions": [
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 0,
+          "odometer_m": 0.0,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.0
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 1,
+          "odometer_m": 0.0,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.0
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 2,
+          "odometer_m": 0.0,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.0
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 3,
+          "odometer_m": 0.0,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.0
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Fly",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 4,
+          "odometer_m": 0.0,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.65
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 5,
+          "odometer_m": 0.0,
+          "origin_m": [
+            5000.0,
+            0.0,
+            20.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 1.3500000000000005
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 6,
+          "odometer_m": 0.0,
+          "origin_m": [
+            -82.7041015625,
+            0.0,
+            -90.48880767822266
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 11.700000000000031
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 7,
+          "odometer_m": 0.0,
+          "origin_m": [
+            -82.7041015625,
+            0.0,
+            -90.48880767822266
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 11.700000000000031
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 8,
+          "odometer_m": 0.0,
+          "origin_m": [
+            -82.7041015625,
+            0.0,
+            -90.48880767822266
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 11.700000000000031
+        }
+      ],
+      "whole_app_performance": {
+        "elapsed_s": 19.019073494000015,
+        "frame_contexts": null,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 25,
+        "frames": 755,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 25,
+        "gameplay_frames": 741,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 29.091353,
+        "hitches_over_100_ms": 0,
+        "loading_frames": 14,
+        "longest_frame_ms": 48.308184,
+        "peak_rss_mib": 562.78125,
+        "rss_mib": 471.3671875,
+        "startup_longest_frame_ms": 48.308184
+      },
+      "top_level_peak_rss_mib": 562.8,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "pixel_review": {
+        "reviewed": true,
+        "method": "Authentic original PNG inspected with view_image",
+        "deck_and_carrier_visible": true,
+        "deck_and_carrier_aligned": true,
+        "exit_alignment_visible": true,
+        "blocking_pause_menu": false,
+        "limits": "Procedural owned laboratory geometry; exterior relevant view, not an original downloaded station or cabin."
+      }
+    },
+    {
+      "name": "transfer-mid",
+      "source_directory": "tmp/twenty-20261015/yard-views03",
+      "file": "transfer-mid.png",
+      "image_sha256": "19a40d61f59fcd6181f7868850ef549591aebac147c99d9d17ebbd6c2b8ed0bd",
+      "source_plan_sha256": "4702fcfe6f7439cc8c07c7c08d07579336e677b2a8376ca0a743359247b23bf2",
+      "source_report_sha256": "100dee82cb1f123e8c1dc147f3c1f3e9ee61e366b1a2037a5b603258f37cd428",
+      "source_process_receipt_sha256": "30a4ff2d6805c3f7546552be59d09887f8e2cb1b8e555bc72003d7cf317fabb2",
+      "viewer_returncode": 0,
+      "compositor_returncode": 0,
+      "elapsed_wall_s": 12.877301829999851,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "active_device_pci": "0000:03:00.0",
+      "controls": {
+        "brake": 1.0,
+        "braking_intervention": null,
+        "direction": 0.5,
+        "missed_stops": [],
+        "paused": true,
+        "throttle": 0.0,
+        "traction_load_fraction": 0.0,
+        "traffic_brake_assistance": false
+      },
+      "device_state": {
+        "aligned_port": 0,
+        "carrier": {
+          "head_on_deck_m": 25.0,
+          "service": "Jugador",
+          "source_port": 0,
+          "vehicle_ids": [
+            "Jugador/car/0"
+          ],
+          "vehicle_reversed": false
+        },
+        "position": 6.975000000000011,
+        "started_s": 0.0,
+        "target_port": 1
+      },
+      "deck_pose": {
+        "aligned_port": 0,
+        "center_world": [
+          0.0,
+          0.0,
+          6.975000000000011
+        ],
+        "deck_length_m": 30.0,
+        "deck_width_m": 4.0,
+        "heading_rad": 0.0,
+        "id": "transfer",
+        "kind": "transfer_table",
+        "moving": true,
+        "target_port": 1
+      },
+      "floating_origin_shift": [
+        -82.5,
+        0.0,
+        -98.05000305175781
+      ],
+      "actions": [
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 0,
+          "odometer_m": 0.0,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.0
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 1,
+          "odometer_m": 0.0,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.0
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 2,
+          "odometer_m": 0.0,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.0
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 3,
+          "odometer_m": 0.0,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.0
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Fly",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 4,
+          "odometer_m": 0.0,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.65
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 5,
+          "odometer_m": 0.0,
+          "origin_m": [
+            5000.0,
+            0.0,
+            20.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 1.3500000000000005
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 6,
+          "odometer_m": 0.0,
+          "origin_m": [
+            -82.5,
+            0.0,
+            -98.05000305175781
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 4.6499999999999915
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 7,
+          "odometer_m": 0.0,
+          "origin_m": [
+            -82.5,
+            0.0,
+            -98.05000305175781
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 4.6499999999999915
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 8,
+          "odometer_m": 0.0,
+          "origin_m": [
+            -82.5,
+            0.0,
+            -98.05000305175781
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 4.6499999999999915
+        }
+      ],
+      "whole_app_performance": {
+        "elapsed_s": 11.998006799999997,
+        "frame_contexts": null,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 25,
+        "frames": 477,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 25,
+        "gameplay_frames": 462,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 25.386878000000003,
+        "hitches_over_100_ms": 0,
+        "loading_frames": 15,
+        "longest_frame_ms": 37.158692,
+        "peak_rss_mib": 559.15234375,
+        "rss_mib": 489.1171875,
+        "startup_longest_frame_ms": 37.158692
+      },
+      "top_level_peak_rss_mib": 559.2,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "pixel_review": {
+        "reviewed": true,
+        "method": "Authentic original PNG inspected with view_image",
+        "deck_and_carrier_visible": true,
+        "deck_and_carrier_aligned": true,
+        "exit_alignment_visible": false,
+        "blocking_pause_menu": false,
+        "limits": "Procedural owned laboratory geometry; exterior relevant view, not an original downloaded station or cabin."
+      }
+    },
+    {
+      "name": "transfer-final",
+      "source_directory": "tmp/twenty-20261015/yard-views03-final-retry",
+      "file": "transfer-final.png",
+      "image_sha256": "7f22ab8d8325be8df7ba1e6fbc548dfd0609fa84f0552355da4059847c9f40ea",
+      "source_plan_sha256": "5ae8ea7440976014580a582bd1fa390141330e94e512c255871ec08703025956",
+      "source_report_sha256": "6fd4f2983ea5b322ef0c71945a4ce1ed965bff54337d43d8efb43ba77effe1ac",
+      "source_process_receipt_sha256": "aafdd285c7e90cc4b6a53b42c929130dc8b73ff88e87277b7e3220680b271cc3",
+      "viewer_returncode": 0,
+      "compositor_returncode": 0,
+      "elapsed_wall_s": 26.950771346000238,
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "active_device_pci": "0000:03:00.0",
+      "controls": {
+        "brake": 1.0,
+        "braking_intervention": null,
+        "direction": 0.5,
+        "missed_stops": [],
+        "paused": true,
+        "throttle": 0.0,
+        "traction_load_fraction": 0.0,
+        "traffic_brake_assistance": false
+      },
+      "device_state": {
+        "aligned_port": 1,
+        "carrier": null,
+        "position": 25.0,
+        "started_s": 0.0,
+        "target_port": null
+      },
+      "deck_pose": {
+        "aligned_port": 1,
+        "center_world": [
+          0.0,
+          0.0,
+          25.0
+        ],
+        "deck_length_m": 30.0,
+        "deck_width_m": 4.0,
+        "heading_rad": 0.0,
+        "id": "transfer",
+        "kind": "transfer_table",
+        "moving": false,
+        "target_port": null
+      },
+      "floating_origin_shift": [
+        -82.5,
+        0.0,
+        -97.9749984741211
+      ],
+      "actions": [
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 0,
+          "odometer_m": 0.0,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.0
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 1,
+          "odometer_m": 0.0,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.0
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 2,
+          "odometer_m": 0.0,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.0
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 3,
+          "odometer_m": 0.0,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.0
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Fly",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 4,
+          "odometer_m": 0.0,
+          "origin_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 0.7000000000000001
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 5,
+          "odometer_m": 0.0,
+          "origin_m": [
+            5000.0,
+            0.0,
+            20.0
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 1.3500000000000005
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 6,
+          "odometer_m": 0.0,
+          "origin_m": [
+            -82.5,
+            0.0,
+            -97.9749984741211
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 18.70000000000013
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 7,
+          "odometer_m": 0.0,
+          "origin_m": [
+            -82.5,
+            0.0,
+            -97.9749984741211
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 18.70000000000013
+        },
+        {
+          "boarding_progress": 0.0,
+          "camera_mode": "Orbit",
+          "controls": {
+            "brake": 1.0,
+            "direction": 0.5,
+            "throttle": 0.0
+          },
+          "door_fractions": [],
+          "index": 8,
+          "odometer_m": 0.0,
+          "origin_m": [
+            -82.5,
+            0.0,
+            -97.9749984741211
+          ],
+          "passengers": 0,
+          "refilling": null,
+          "result": {
+            "Ok": null
+          },
+          "speed_mps": 0.0,
+          "time_s": 18.70000000000013
+        }
+      ],
+      "whole_app_performance": {
+        "elapsed_s": 26.01170136399999,
+        "frame_contexts": null,
+        "frame_p50_ms": 25,
+        "frame_p95_ms": 25,
+        "frame_p99_ms": 25,
+        "frames": 1034,
+        "gameplay_frame_p50_ms": 25,
+        "gameplay_frame_p95_ms": 25,
+        "gameplay_frame_p99_ms": 25,
+        "gameplay_frames": 1020,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 25.513465,
+        "hitches_over_100_ms": 0,
+        "loading_frames": 14,
+        "longest_frame_ms": 44.422533,
+        "peak_rss_mib": 526.26953125,
+        "rss_mib": 458.09375,
+        "startup_longest_frame_ms": 44.422533
+      },
+      "top_level_peak_rss_mib": 527.2,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "pixel_review": {
+        "reviewed": true,
+        "method": "Authentic original PNG inspected with view_image",
+        "deck_and_carrier_visible": true,
+        "deck_and_carrier_aligned": true,
+        "exit_alignment_visible": true,
+        "blocking_pause_menu": false,
+        "limits": "Procedural owned laboratory geometry; exterior relevant view, not an original downloaded station or cabin."
+      }
+    }
+  ],
+  "history": [
+    {
+      "directory": "tmp/twenty-20261015/yard-views01",
+      "status": "not_accepted_for_control_validation",
+      "review_sha256": "a6834c5dc17f6cdf302420e9bce164cffddee66ba0f4020bfe43bc2fa715a90b",
+      "reason": "Float string0.0 inadvertently enabled autodrive; transformations alone did not certify the intended stationary controls. Original outputs preserved."
+    },
+    {
+      "directory": "tmp/twenty-20261015/yard-views02",
+      "status": "data_checks_passed_visual_evidence_rejected",
+      "results_sha256": "e82c58e6dc91fe9fe2f0676bcaeece6a79b0d92f41228f531257c138faaa822b",
+      "reason": "The large pause menu obscured deck and vehicle. Those PNGs are not used as accepted graphical evidence."
+    },
+    {
+      "directory": "tmp/twenty-20261015/yard-views03",
+      "status": "first_three_captures_passed_fourth_interrupted_before_png",
+      "results_sha256": "ce1b7e2f6c10982daa0479ef37967c8fee46f2c434105de0a0b3a06451c0f20c",
+      "incomplete_process_receipt_sha256": "dc22635087b9d2e3eba57158f19c60163de4af8c5d946d7add52b8b9f0da444e",
+      "recorded_returncodes": {
+        "viewer": null,
+        "compositor": null
+      },
+      "parent_reported_shell_status": 143,
+      "scope": "Original process receipt remains null/incomplete. Status143 is the parent-reported interruption, not a fabricated viewer returncode. No transfer-final PNG existed in this attempt."
+    },
+    {
+      "directory": "tmp/twenty-20261015/yard-views03-final-retry",
+      "status": "transfer_final_retry_pass",
+      "results_sha256": "8c88f1935a934e43969b41d0a7164f912cd89cec91683372e9d9961c0ce70a5b",
+      "viewer_returncode": 0,
+      "compositor_returncode": 0
+    }
+  ],
+  "cost_scope": {
+    "basis": "whole application during these short laboratory captures",
+    "reported_frame_bins_ms": {
+      "p50": 25,
+      "p95": 25,
+      "p99": 25
+    },
+    "screen_hud_fps_approx": "30.7–30.8",
+    "peak_rss_mib_range_from_top_level": [
+      527.2,
+      562.8
+    ],
+    "marginal_effect_cost_measured": false,
+    "warning": "No deck-disabled baseline or isolated GPU pass timing was measured. HUD FPS and CPU frame bins are different counters; do not convert them into a measured marginal cost or claim memory stability."
+  },
+  "limits": [
+    "Relevant exterior views only; these are not separate cabin screenshot acceptances.",
+    "Pause/camera/origin/restore operations are actual actions recorded in the state and original image; complete disk-save menu interaction is covered separately by the CPU/manual workflow.",
+    "No runtime/native-content comparison or complete community moving-table importer is claimed.",
+    "Private player data, raw logs and prefixes are excluded."
+  ]
+}

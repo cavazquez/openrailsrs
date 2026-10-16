@@ -74,6 +74,34 @@ impl BrakeShoeFrictionCurve {
         (mu / self.mu_at_zero_kph).clamp(0.05, 1.0)
     }
 
+    /// Original legacy MaxBrakeForce normalization. OR's Single interpolator
+    /// extrapolates its first/last segment and clamps the resulting ratio at
+    /// 0.01, unlike the historical generic option. No weather factor is used:
+    /// this corresponds to the pinned user's 100% adhesion adjustment.
+    pub fn native_legacy_speed_factor(&self, speed_mps: f64) -> f64 {
+        let interpolate = |x: f32| {
+            if self.points_kph.len() < 2 {
+                return self.points_kph.first().map_or(1., |p| p.1 as f32);
+            }
+            let index = self
+                .points_kph
+                .partition_point(|p| p.0 as f32 <= x)
+                .saturating_sub(1)
+                .min(self.points_kph.len() - 2);
+            let (x0, y0) = self.points_kph[index];
+            let (x1, y1) = self.points_kph[index + 1];
+            let (x0, x1, y0, y1) = (x0 as f32, x1 as f32, y0 as f32, y1 as f32);
+            let d = x1 - x0;
+            if d <= 0. {
+                return y0;
+            }
+            (x1 - x) / d * y0 + (x - x0) / d * y1
+        };
+        let zero = interpolate(0.);
+        let value = interpolate(speed_mps.abs() as f32 * 3.6);
+        f64::from((value / zero.max(f32::MIN_POSITIVE)).clamp(0.01, 1.))
+    }
+
     fn interpolate_mu_kph(&self, kph: f64) -> f64 {
         let pts = &self.points_kph;
         if pts.is_empty() {

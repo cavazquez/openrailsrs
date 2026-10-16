@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "kind": "environment_inputs_only_projection",
+  "source_sha256": "3392f303463a7d54b48cda1bfd8bd260855ffcc952fb77747e9bf3eea71a1103",
+  "output_sha256": "355be676ad0d64120aa66014efd3f31f18d5848e863451d61ecc01d5570155a7",
+  "native_trace_identity_required": "ad9e690435d784df243c8a49bfdb37137c6e5f98f8941045adfde27e4500a7e2",
+  "rows": 30006,
+  "vehicles": [
+    0,
+    7
+  ],
+  "step_s": 0.05,
+  "initial": "only tick0 carries actual x[0..1]/y[0..1]; no Reset(.5) assumption",
+  "post_update": "only x0 exact Single and BaseFrictionCoefficientFactor; all post-step filter state and force/speed diagnostics excluded",
+  "numeric_conversion": "parse exact native JSON Single, format9 significant decimal digits; output recovers identical IEEE754 Single bits",
+  "rust_execution": "not_run"
+}

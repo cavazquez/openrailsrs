@@ -41,6 +41,7 @@ fn build_line_graph() -> TrackGraph {
 
 fn default_train() -> TrainPhysics {
     TrainPhysics {
+        rack: Default::default(),
         bogies: vec![],
         power_supply: Default::default(),
         rail_adhesion: None,

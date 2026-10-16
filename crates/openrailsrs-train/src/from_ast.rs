@@ -20,6 +20,10 @@ pub fn load_engine_from_path(path: impl AsRef<Path>) -> Result<Locomotive, Train
     locomotive.passenger_power =
         openrailsrs_formats::typed::power_supply::parse_passenger_power(&ast)?;
     locomotive.brake_profile = openrailsrs_formats::parse_vehicle_brake_profile(&ast);
+    openrailsrs_formats::typed::vehicle_runtime::validate_advanced_emergency(
+        &ast,
+        &locomotive.brake_profile,
+    )?;
     locomotive.power_supply =
         Box::new(openrailsrs_formats::typed::power_supply::parse_power_supply(&ast)?);
     if let Some(ep) = locomotive.brake_profile.native_ep.as_mut() {
@@ -38,6 +42,10 @@ pub fn load_wagon_from_path(path: impl AsRef<Path>) -> Result<Wagon, TrainError>
     vehicle.passenger_power =
         openrailsrs_formats::typed::power_supply::parse_passenger_power(&ast)?;
     vehicle.brake_profile = openrailsrs_formats::parse_vehicle_brake_profile(&ast);
+    openrailsrs_formats::typed::vehicle_runtime::validate_advanced_emergency(
+        &ast,
+        &vehicle.brake_profile,
+    )?;
     Ok(vehicle)
 }
 
@@ -158,7 +166,12 @@ pub fn load_consist_native_parameters(
                 ConsistEntry::Wagon { path, .. } => (path, false),
             };
             let path = resolve_consist_entry_path(base, relative);
-            let ast = openrailsrs_formats::read_vehicle_ast(&path)?;
+            // Native wheel radii live in separate Wagon and Engine scopes.
+            // Preserve those root names after the same bounded include,
+            // override and case-insensitive resource resolution as other data.
+            let ast = openrailsrs_formats::parse_named_stf(
+                &openrailsrs_formats::read_msts_text_with_includes(&path)?,
+            )?;
             Ok(openrailsrs_formats::parse_native_vehicle_physics(
                 &ast, engine, mass,
             ))

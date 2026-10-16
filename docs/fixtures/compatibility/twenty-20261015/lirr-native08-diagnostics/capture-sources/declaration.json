@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "status": "declared_before_capture",
+  "native07_helper_sha256": "d292049916f4840ad3fdd93e9f3eb197c8505046ca698606e5977168b9d4bfe6",
+  "native07_capture_script_sha256": "19d08aa0ed4a2d17aba8f0d3961c1424866446e735a0cdedbe89e7afb1142aeb",
+  "new_helper": "tools/openrails-reference/ActivityTrajectoryDiagnostics.cs",
+  "new_helper_sha256": "309729644b9f4d2c5692789b4079ddf24b1d56ecc914d2bf417b0f4722b03113",
+  "diagnostic_driver_sha256": "04052466686190652c19e6281e42b93601744fde412830c5178f1aa28d68e308",
+  "reference_pin_snapshot_sha256": "1bdb2732be0d2ee869e4635835781984ca765d142d9ef337e77b9f86bba4d92b",
+  "protocol_sha256": "7f5d39ada7927a4048ab63ae6a85311f47e2769e77095d5d6893133639d381b4",
+  "helper_projection_without_two_additive_blocks_sha256": "d292049916f4840ad3fdd93e9f3eb197c8505046ca698606e5977168b9d4bfe6",
+  "changes": "Only append numeric field reads at end of Header/Sample; retain all164 previous columns. Nullable tunnel fields have explicit validity bits and zero payload when absent. No controls, ACT/CON, pauses, weather, dt, thresholds, getters with physical side effects or update sequence changed.",
+  "rust_source_inputs": "None: native-only capture; current Rust runtime may change independently. Pin snapshot, original assets/DLL/sourceOR/helpers are verified pre/post.",
+  "old_source_preserved": true
+}

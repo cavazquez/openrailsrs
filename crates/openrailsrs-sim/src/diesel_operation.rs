@@ -76,6 +76,9 @@ pub struct DieselCarState {
     pub phase: EnginePhase,
     pub rpm: f64,
     pub demanded_rpm: f64,
+    /// Original DieselEngine.dRPM is retained when RealRPM equals its target.
+    #[serde(default)]
+    pub native_rpm_rate: f64,
     pub fuel_l: f64,
     pub consumed_l: f64,
     #[serde(default)]
@@ -83,6 +86,8 @@ pub struct DieselCarState {
     pub flow_lps: f64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub gearbox: Option<crate::gearbox::GearboxState>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hydraulic: Option<crate::hydraulic::HydraulicState>,
 }
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct DieselTrainState {
@@ -111,11 +116,13 @@ impl DieselTrainState {
                     },
                     rpm: if running { c.governor.idle_rpm } else { 0. },
                     demanded_rpm: if running { c.governor.idle_rpm } else { 0. },
+                    native_rpm_rate: 0.,
                     fuel_l: c.params.capacity_l,
                     consumed_l: 0.,
                     refilled_l: 0.,
                     flow_lps: 0.,
                     gearbox: c.params.gearbox.as_ref().map(|_| Default::default()),
+                    hydraulic: c.params.hydraulic.as_ref().map(|_| Default::default()),
                 }
             })
             .collect();
@@ -148,6 +155,8 @@ impl DieselTrainState {
                     .iter()
                     .all(|v| v.is_finite() && *v >= 0.)
                     && s.temperature_c.is_finite()
+                    && s.native_rpm_rate.is_finite()
+                    && s.native_rpm_rate.abs() <= 1e8
                     && (40.0..=600.0).contains(&s.temperature_c)
                     && s.fuel_l <= c.params.capacity_l
                     && (c.params.gearbox.is_some() || s.rpm <= c.governor.max_rpm * 1.5)
@@ -158,6 +167,12 @@ impl DieselTrainState {
                         _ => false,
                     }
                     && (s.fuel_l + s.consumed_l - c.params.capacity_l - s.refilled_l).abs() < 1e-5
+                    && match (&s.hydraulic, &c.params.hydraulic) {
+                        (Some(state), Some(profile)) => profile.valid() && state.valid_for(profile),
+                        (None, None) => true,
+                        _ => false,
+                    }
+                    && !(s.gearbox.is_some() && s.hydraulic.is_some())
                     && (s.phase != EnginePhase::Stopped || s.rpm == 0.)
                     && (s.phase != EnginePhase::Running || s.fuel_l > 0.)
             })
@@ -221,7 +236,9 @@ pub fn advance_with_vehicle_throttles(
 }
 
 /// Engine RPM, native clutch feedback and fuel share the same pre-integration
-/// vehicle speed. Legacy callers without a speed keep their original API.
+/// vehicle speed. `throttles` contains each engine's governor-phase command,
+/// which can precede the current traction command on a native MU train.
+/// Legacy callers without a speed keep their original API.
 #[allow(clippy::too_many_arguments)]
 pub fn advance_at_speed(
     state: &mut DieselTrainState,
@@ -263,7 +280,16 @@ pub fn advance_at_speed(
                 .find(|c| c.vehicle == car.vehicle)
                 .map_or(0., |c| c.supply.minimum_diesel_rpm)
                 .min(car.governor.max_rpm);
-            s.demanded_rpm = car.governor.target_rpm(throttle).max(minimum_rpm);
+            let throttle_rpm = if native {
+                native_governor_target_rpm(&car.governor, throttle)
+            } else {
+                car.governor.target_rpm(throttle)
+            };
+            s.demanded_rpm = if native {
+                f64::from(throttle_rpm.max(minimum_rpm) as f32)
+            } else {
+                throttle_rpm.max(minimum_rpm)
+            };
             if let (Some(gearbox), Some(profile)) = (&mut s.gearbox, &car.params.gearbox) {
                 s.demanded_rpm = gearbox.engine_demand(
                     profile,
@@ -279,20 +305,37 @@ pub fn advance_at_speed(
                     s.demanded_rpm,
                 );
             }
-            s.rpm = if native && s.gearbox.is_some() {
-                advance_geared_native_rpm(&car.governor, s.rpm, s.demanded_rpm, dt)
+            s.rpm = if let (Some(hydraulic), Some(profile)) =
+                (&mut s.hydraulic, &car.params.hydraulic)
+            {
+                hydraulic.advance(profile, &car.governor, s.rpm, throttle, speed_mps, true, dt)
+            } else if native {
+                advance_native_governor_rpm(
+                    &car.governor,
+                    s.rpm,
+                    s.demanded_rpm,
+                    dt,
+                    &mut s.native_rpm_rate,
+                )
             } else if s.gearbox.is_some() || minimum_rpm > car.governor.target_rpm(throttle) {
                 car.governor
                     .advance_native_target_rpm(s.rpm, s.demanded_rpm, dt)
-            } else if native {
-                car.governor.advance_native_rpm(s.rpm, throttle, dt)
             } else {
                 car.governor.advance_rpm(s.rpm, throttle, dt)
             };
         } else if s.phase != EnginePhase::Stopped {
-            s.rpm = car
-                .governor
-                .advance_native_target_rpm(s.rpm, s.demanded_rpm, dt);
+            s.rpm = if native {
+                advance_native_governor_rpm(
+                    &car.governor,
+                    s.rpm,
+                    s.demanded_rpm,
+                    dt,
+                    &mut s.native_rpm_rate,
+                )
+            } else {
+                car.governor
+                    .advance_native_target_rpm(s.rpm, s.demanded_rpm, dt)
+            };
         }
         if s.phase == EnginePhase::Starting {
             if s.rpm > 0.9 * car.params.starting_rpm && s.rpm <= car.params.starting_rpm {
@@ -326,7 +369,16 @@ pub fn advance_at_speed(
         let burning = s.phase == EnginePhase::Running
             || (matches!(s.phase, EnginePhase::Starting | EnginePhase::Stopping)
                 && s.rpm >= car.params.starting_rpm);
-        let flow = if burning {
+        let flow = if burning
+            && let (Some(hydraulic), Some(profile)) = (&s.hydraulic, &car.params.hydraulic)
+        {
+            // Pump work includes launch slip and converter loss at zero train
+            // speed; an idle RPM-only table would miss that fuel entirely.
+            interpolate(&car.params.consumption_lph, car.governor.idle_rpm) / 3600.
+                + hydraulic.input_power_w * profile.fuel_sfc_g_kwh
+                    / 3_600_000.
+                    / (DIESEL_KG_PER_L * 1000.)
+        } else if burning {
             // OR Initialize also generates an RPM table from the legacy
             // DieselUsedPerHourAtIdle/MaxPower endpoints.
             interpolate(&car.params.consumption_lph, s.rpm) / 3600.
@@ -355,21 +407,60 @@ fn initial_temperature() -> f64 {
     40.0
 }
 
-/// Native Single arithmetic is part of the legacy clutch feedback loop. Keep
-/// it local to geared engines; other accepted governor traces retain their API.
-fn advance_geared_native_rpm(p: &DieselEngineParams, current: f64, target: f64, dt: f64) -> f64 {
+/// Native Interpolator uses percentages and weighted Single interpolation.
+/// Normalized authored tables are converted back to their native axis once.
+pub fn native_governor_target_rpm(p: &DieselEngineParams, throttle: f64) -> f64 {
+    let x = (throttle as f32 * 100.).clamp(0., 100.);
+    let table = &p.throttle_rpm_tab;
+    let value = if table.len() < 2 {
+        let a = (100. - x) / 100.;
+        let b = x / 100.;
+        a * p.idle_rpm as f32 + b * p.max_rpm as f32
+    } else {
+        let pair = table
+            .windows(2)
+            .find(|pair| x <= (pair[1].0 * 100.) as f32)
+            .unwrap_or(&table[table.len() - 2..]);
+        let x0 = (pair[0].0 * 100.) as f32;
+        let x1 = (pair[1].0 * 100.) as f32;
+        if x1 > x0 {
+            let a = (x1 - x) / (x1 - x0);
+            let b = (x - x0) / (x1 - x0);
+            a * pair[0].1 as f32 + b * pair[1].1 as f32
+        } else {
+            pair[1].1 as f32
+        }
+    };
+    f64::from(
+        value
+            .clamp(p.idle_rpm as f32, p.max_rpm as f32)
+            .max(p.minimum_supply_rpm as f32),
+    )
+}
+
+/// DieselEngine.Update Single arithmetic and its persistent dRPM field.
+pub fn advance_native_governor_rpm(
+    p: &DieselEngineParams,
+    current: f64,
+    target: f64,
+    dt: f64,
+    previous_rate: &mut f64,
+) -> f64 {
     let current = current as f32;
     let delta = target as f32 - current;
     let rate = if delta > 0. {
         let square = 2. * p.rate_of_change_up_rpm_pss as f32 * delta;
-        let rate = (square as f64).sqrt().min(p.change_up_rpm_ps) as f32;
+        let rate = (square as f64)
+            .sqrt()
+            .min(f64::from(p.change_up_rpm_ps as f32)) as f32;
         if rate > 1. { rate } else { 0. }
     } else if delta < 0. {
         let square = 2. * p.rate_of_change_down_rpm_pss as f32 * -delta;
-        (-(square as f64).sqrt()).min(-p.change_down_rpm_ps) as f32
+        (-(square as f64).sqrt()).min(-f64::from(p.change_down_rpm_ps as f32)) as f32
     } else {
-        0.
+        *previous_rate as f32
     };
+    *previous_rate = f64::from(rate);
     (current + rate * dt as f32).max(0.) as f64
 }
 

@@ -3,8 +3,290 @@ use super::{field_values, scalar_text};
 use crate::{Ast, FormatError};
 use serde::{Deserialize, Serialize};
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SteamStartup {
+    #[default]
+    WorkingPressure,
+    OrHot,
+    OrCold,
+}
+impl SteamStartup {
+    fn is_working_pressure(&self) -> bool {
+        *self == Self::WorkingPressure
+    }
+}
+
+/// Saturated two-phase vessel using the pinned SteamTable properties. The
+/// vessel, heat balance and cylinder cycle are an explicit Rust extension.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SteamThermodynamicParams {
+    /// Explicit source-compatible startup. Absence retains the previous own
+    /// vessel initialization and does not change a legacy boiler.
+    #[serde(default, skip_serializing_if = "SteamStartup::is_working_pressure")]
+    pub startup: SteamStartup,
+    pub boiler_volume_m3: f64,
+    pub coal_heat_j_kg: f64,
+    pub boiler_efficiency: f64,
+    pub heat_loss_w: f64,
+    pub feedwater_c: f64,
+    pub cylinder_efficiency: f64,
+    pub idle_steam_kg_s: f64,
+}
+impl SteamThermodynamicParams {
+    pub fn initial_pressure_bar(&self, maximum_bar: f64) -> f64 {
+        let psi = (maximum_bar * 14.503773773) as f32;
+        match self.startup {
+            SteamStartup::WorkingPressure => maximum_bar,
+            SteamStartup::OrHot => (psi - 5.).max(0.) as f64 / 14.503773773,
+            SteamStartup::OrCold => (psi * 0.66) as f64 / 14.503773773,
+        }
+    }
+    pub fn valid(&self) -> bool {
+        (0.1..=100.).contains(&self.boiler_volume_m3)
+            && (1_000_000. ..=50_000_000.).contains(&self.coal_heat_j_kg)
+            && (0.01..=1.).contains(&self.boiler_efficiency)
+            && (0. ..=10_000_000.).contains(&self.heat_loss_w)
+            && (0. ..=99.).contains(&self.feedwater_c)
+            && (0.01..=1.).contains(&self.cylinder_efficiency)
+            && (0. ..=10.).contains(&self.idle_steam_kg_s)
+    }
+}
+
+/// Declared compound cycle, independently controlled on each locomotive.
+/// Receiver storage and LP expansion are not claimed as OR cylinder parity.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CompoundSteamParams {
+    pub hp_cylinders: u32,
+    pub lp_cylinders: u32,
+    pub lp_bore_m: f64,
+    pub receiver_volume_m3: f64,
+    pub receiver_pressure_ratio: f64,
+    pub starting_valve: bool,
+}
+impl CompoundSteamParams {
+    pub fn valid(&self) -> bool {
+        (1..=8).contains(&self.hp_cylinders)
+            && (1..=8).contains(&self.lp_cylinders)
+            && (0.05..=2.).contains(&self.lp_bore_m)
+            && (0.01..=20.).contains(&self.receiver_volume_m3)
+            && (0.05..=0.95).contains(&self.receiver_pressure_ratio)
+    }
+}
+
+/// A converter operating point: turbine/pump speed ratio, torque ratio and
+/// pump torque per squared rad/s. Loss follows Ppump-Pturbine, never a free
+/// multiplier on an existing electric tractive-effort curve.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ConverterPoint {
+    pub speed_ratio: f64,
+    pub torque_ratio: f64,
+    pub capacity_nm_per_rad_s2: f64,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct HydraulicProfile {
+    pub converter: Vec<ConverterPoint>,
+    /// Ordered overall turbine/wheel ratios, low gear first.
+    pub gear_ratios: Vec<f64>,
+    pub wheel_radius_m: f64,
+    pub final_efficiency: f64,
+    pub engine_inertia_kg_m2: f64,
+    pub shift_up_ratio: f64,
+    pub shift_down_ratio: f64,
+    pub shift_time_s: f64,
+    pub lock_up_ratio: Option<f64>,
+    pub lock_up_release_ratio: f64,
+    pub cooling_w_per_k: f64,
+    pub heat_capacity_j_per_k: f64,
+    pub max_temperature_c: f64,
+    pub fuel_sfc_g_kwh: f64,
+}
+impl HydraulicProfile {
+    pub fn valid(&self) -> bool {
+        self.converter.len() >= 2
+            && self.converter.len() <= 128
+            && self.converter.first().is_some_and(|p| p.speed_ratio == 0.)
+            && self.converter.last().is_some_and(|p| p.speed_ratio == 1.)
+            && self.converter.iter().all(|p| {
+                (0. ..=1.).contains(&p.speed_ratio)
+                    && (0. ..=5.).contains(&p.torque_ratio)
+                    && (0.00001..=10.).contains(&p.capacity_nm_per_rad_s2)
+                    && p.speed_ratio * p.torque_ratio <= 1. + 1e-10
+            })
+            && self.converter.windows(2).all(|p| {
+                let a = &p[0];
+                let b = &p[1];
+                let dr = b.speed_ratio - a.speed_ratio;
+                if dr <= 0. {
+                    return false;
+                }
+                // Linear torque interpolation makes efficiency r*TR a
+                // quadratic. Endpoints alone miss an interior maximum.
+                // Parameterize by t in [0,1] to avoid a slope divided by
+                // arbitrarily small authored speed-ratio intervals.
+                let dt = b.torque_ratio - a.torque_ratio;
+                let quadratic = dr * dt;
+                if quadratic >= 0. {
+                    return true;
+                }
+                let linear = a.speed_ratio * dt + dr * a.torque_ratio;
+                let t = -linear / (2. * quadratic);
+                if !(0. ..1.).contains(&t) {
+                    return true;
+                }
+                let ratio = a.speed_ratio + t * dr;
+                let torque = a.torque_ratio + t * dt;
+                ratio * torque <= 1. + 1e-10
+            })
+            && !self.gear_ratios.is_empty()
+            && self.gear_ratios.len() <= 16
+            && self.gear_ratios.iter().all(|v| (0.1..=200.).contains(v))
+            && self.gear_ratios.windows(2).all(|v| v[0] > v[1])
+            && (0.1..=2.).contains(&self.wheel_radius_m)
+            && (0.1..=1.).contains(&self.final_efficiency)
+            && (0.1..=10000.).contains(&self.engine_inertia_kg_m2)
+            && (0.1..=1.).contains(&self.shift_up_ratio)
+            && (0. ..self.shift_up_ratio).contains(&self.shift_down_ratio)
+            && (0. ..=10.).contains(&self.shift_time_s)
+            && self
+                .lock_up_ratio
+                .is_none_or(|v| (0.1..=1.).contains(&v) && v > self.lock_up_release_ratio)
+            && (0. ..=1.).contains(&self.lock_up_release_ratio)
+            && (0. ..=100000.).contains(&self.cooling_w_per_k)
+            && (1000. ..=100_000_000.).contains(&self.heat_capacity_j_per_k)
+            && (40. ..=300.).contains(&self.max_temperature_c)
+            && (0. ..=1000.).contains(&self.fuel_sfc_g_kwh)
+    }
+}
+
+fn parse_hydraulic(ast: &Ast) -> Result<Option<HydraulicProfile>, FormatError> {
+    let fields = field_values(ast, "ORTSRSHydraulicConverter");
+    let Some(values) = fields.last() else {
+        return Ok(None);
+    };
+    let nums = scalar_values(values)
+        .into_iter()
+        .map(|v| {
+            v.parse::<f64>()
+                .map_err(|_| invalid("ORTSRSHydraulicConverter"))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    if nums.len() < 6 || nums.len() % 3 != 0 {
+        return Err(invalid("ORTSRSHydraulicConverter"));
+    }
+    let ratios = field_values(ast, "ORTSRSHydraulicGearRatios");
+    let gear_ratios = ratios
+        .last()
+        .map(|v| scalar_values(v))
+        .unwrap_or_default()
+        .into_iter()
+        .map(|v| {
+            v.parse::<f64>()
+                .map_err(|_| invalid("ORTSRSHydraulicGearRatios"))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let q = |name, default| quantity(ast, name, "rpm").map(|v| v.unwrap_or(default));
+    let p = HydraulicProfile {
+        converter: nums
+            .chunks_exact(3)
+            .map(|v| ConverterPoint {
+                speed_ratio: v[0],
+                torque_ratio: v[1],
+                capacity_nm_per_rad_s2: v[2],
+            })
+            .collect(),
+        gear_ratios,
+        wheel_radius_m: q("ORTSRSHydraulicWheelRadiusM", 0.5)?,
+        final_efficiency: q("ORTSRSHydraulicFinalEfficiency", 0.95)?,
+        engine_inertia_kg_m2: q("ORTSRSHydraulicEngineInertia", 12.)?,
+        shift_up_ratio: q("ORTSRSHydraulicShiftUpRatio", 0.85)?,
+        shift_down_ratio: q("ORTSRSHydraulicShiftDownRatio", 0.35)?,
+        shift_time_s: quantity(ast, "ORTSRSHydraulicShiftTime", "s")?.unwrap_or(0.5),
+        lock_up_ratio: quantity(ast, "ORTSRSHydraulicLockUpRatio", "rpm")?,
+        lock_up_release_ratio: q("ORTSRSHydraulicLockUpReleaseRatio", 0.6)?,
+        cooling_w_per_k: q("ORTSRSHydraulicCoolingWPerK", 300.)?,
+        heat_capacity_j_per_k: q("ORTSRSHydraulicHeatCapacityJPerK", 150000.)?,
+        max_temperature_c: q("ORTSRSHydraulicMaxTemperatureC", 130.)?,
+        fuel_sfc_g_kwh: q("ORTSRSHydraulicFuelSfcGPerKwh", 210.)?,
+    };
+    if !p.valid() || super::gearbox::parse_native_gearbox(ast, 300., 900.)?.is_some() {
+        return Err(invalid("conflicting or invalid hydraulic transmission"));
+    }
+    Ok(Some(p))
+}
+
+pub(super) fn parse_steam_extensions(
+    ast: &Ast,
+    operation: &mut SteamOperatingParams,
+    hp_cylinders: u32,
+) -> Result<Option<u32>, FormatError> {
+    let enabled = quantity(ast, "ORTSRSUseSteamTables", "rpm")?.unwrap_or(0.) > 0.;
+    if !enabled {
+        return Ok(None);
+    }
+    let q = |name, default| quantity(ast, name, "rpm").map(|v| v.unwrap_or(default));
+    let p = SteamThermodynamicParams {
+        startup: match field_values(ast, "ORTSRSBoilerStartup")
+            .last()
+            .map(|v| scalar_values(v).join("").to_ascii_lowercase())
+            .as_deref()
+        {
+            None | Some("working_pressure") => SteamStartup::WorkingPressure,
+            Some("or_hot") => SteamStartup::OrHot,
+            Some("or_cold") => SteamStartup::OrCold,
+            _ => return Err(invalid("ORTSRSBoilerStartup")),
+        },
+        boiler_volume_m3: operation.boiler_water_capacity_kg / 1000.,
+        coal_heat_j_kg: q("ORTSRSCoalHeatJPerKg", 28_000_000.)?,
+        boiler_efficiency: q("ORTSRSBoilerEfficiency", 0.7)?,
+        heat_loss_w: q("ORTSRSBoilerHeatLossW", 15000.)?,
+        feedwater_c: quantity(ast, "ORTSRSFeedwaterTemperature", "c")?.unwrap_or(20.),
+        cylinder_efficiency: q("ORTSRSCylinderEfficiency", 0.12)?,
+        idle_steam_kg_s: q("ORTSRSIdleSteamKgPerS", 0.05)?,
+    };
+    if !p.valid() {
+        return Err(invalid("steam thermodynamics"));
+    }
+    operation.thermodynamics = Some(p);
+    let lp = quantity(ast, "LPNumCylinders", "rpm")?.unwrap_or(0.);
+    if lp == 0. {
+        return Ok(None);
+    }
+    if lp.fract() != 0. || !(1. ..=8.).contains(&lp) {
+        return Err(invalid("LPNumCylinders"));
+    }
+    let raw_bore = field_values(ast, "LPCylinderDiameter")
+        .last()
+        .map(|v| scalar_values(v).join(" "));
+    let bore = raw_bore
+        .as_deref()
+        .and_then(crate::msts_units::parse_length_m)
+        .ok_or_else(|| invalid("LPCylinderDiameter"))?;
+    let compound = CompoundSteamParams {
+        hp_cylinders,
+        lp_cylinders: lp as u32,
+        lp_bore_m: bore,
+        receiver_volume_m3: q("ORTSRSReceiverVolumeM3", 0.3)?,
+        receiver_pressure_ratio: q("ORTSRSReceiverPressureRatio", 0.4)?,
+        starting_valve: q("ORTSRSCompoundStartingValve", 0.)? > 0.,
+    };
+    if !compound.valid() {
+        return Err(invalid("compound cycle"));
+    }
+    operation.compound = Some(compound);
+    Ok(Some(hp_cylinders + lp as u32))
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DieselOperatingParams {
+    /// Authored Rust converter model. OR 1.6.1's `Hydraulic` label alone does
+    /// not supply converter characteristics and never enables this extension.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hydraulic: Option<HydraulicProfile>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub gearbox: Option<super::gearbox::NativeGearboxProfile>,
     pub thermal: DieselThermalParams,
@@ -18,6 +300,12 @@ pub struct DieselOperatingParams {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct SteamOperatingParams {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub native_or161: Option<super::native_steam::NativeSteamParams>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thermodynamics: Option<SteamThermodynamicParams>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub compound: Option<CompoundSteamParams>,
     pub boiler_water_capacity_kg: f64,
     pub max_fire_mass_kg: f64,
     pub max_firing_rate_kg_s: f64,
@@ -26,6 +314,9 @@ pub struct SteamOperatingParams {
 impl Default for SteamOperatingParams {
     fn default() -> Self {
         Self {
+            native_or161: None,
+            thermodynamics: None,
+            compound: None,
             boiler_water_capacity_kg: 4000.,
             max_fire_mass_kg: 300.,
             max_firing_rate_kg_s: 1.,
@@ -95,7 +386,13 @@ pub(super) fn quantity(
     // Native STF also writes quoted volume units such as "225*(ft^3)".
     // Normalize only the suffix; no expression is evaluated.
     let unit = unit.replace(['*', '(', ')', '^'], "");
-    let scale = match (default_unit, unit.as_str()) {
+    let per_minute = default_unit == "psi" && unit.ends_with("/min");
+    let unit = if default_unit == "psi" {
+        unit.trim_end_matches("/s").trim_end_matches("/min")
+    } else {
+        unit.as_str()
+    };
+    let scale = match (default_unit, unit) {
         ("c", "c" | "degc") | ("s", "s") => 1.,
         ("c", "degf") => 5. / 9.,
         ("s", "ms") => 0.001,
@@ -133,7 +430,8 @@ pub(super) fn quantity(
         ("ft3/s", "g-us" | "g-us/s") => 3.785411784,
         _ => return Err(invalid(key)),
     };
-    let mut value = number.parse::<f64>().map_err(|_| invalid(key))? * scale;
+    let mut value = number.parse::<f64>().map_err(|_| invalid(key))? * scale
+        / if per_minute { 60. } else { 1. };
     if default_unit == "c" && unit == "degf" {
         // STFReader.UNITS.Temperature uses an absolute Fahrenheit offset;
         // BNSF's original diesel files declare MaxTemperature (120degF).
@@ -220,6 +518,7 @@ pub(super) fn parse_diesel(
         return Err(invalid("diesel thermal parameters"));
     }
     Ok(Some(DieselOperatingParams {
+        hydraulic: parse_hydraulic(ast)?,
         gearbox: super::gearbox::parse_native_gearbox(ast, idle, max)?,
         thermal: DieselThermalParams {
             maximum_c,
@@ -238,6 +537,41 @@ pub(super) fn parse_diesel(
 mod tests {
     use super::*;
     use crate::{EngineFile, parse_vehicle_text};
+
+    #[test]
+    fn hydraulic_rejects_interior_energy_creation_between_valid_endpoints() {
+        let ast = parse_vehicle_text(include_str!(
+            "../../../../examples/physics_lab/vehicles/hydraulic.eng"
+        ))
+        .unwrap();
+        let mut p = parse_hydraulic(&ast).unwrap().unwrap();
+        assert!(p.valid(), "existing authored converter remains unchanged");
+        p.converter = [(0., 2.2), (0.5, 2.), (1., 1.)]
+            .into_iter()
+            .map(|(speed_ratio, torque_ratio)| ConverterPoint {
+                speed_ratio,
+                torque_ratio,
+                capacity_nm_per_rad_s2: 0.1,
+            })
+            .collect();
+        assert!(
+            p.converter
+                .iter()
+                .all(|c| c.speed_ratio * c.torque_ratio <= 1.)
+        );
+        assert_eq!(0.75 * 1.5, 1.125);
+        assert!(!p.valid(), "interpolated converter efficiency exceeds one");
+        // A concave segment whose interior maximum is exactly one remains
+        // valid; do not reject every negative torque slope.
+        p.converter[1].torque_ratio = 1.875;
+        p.converter[2].torque_ratio = 0.75;
+        assert!(p.valid());
+        let bad = parse_vehicle_text("Engine ( own Type ( Diesel ) ORTSRSHydraulicConverter ( 0 2.2 0.1 0.5 2 0.1 1 1 0.1 ) ORTSRSHydraulicGearRatios ( 6 3.5 2 ) )").unwrap();
+        assert!(
+            parse_hydraulic(&bad).is_err(),
+            "reject before runtime clipping"
+        );
+    }
 
     #[test]
     fn native_resources_use_correct_units_and_distinct_boiler_and_tender() {

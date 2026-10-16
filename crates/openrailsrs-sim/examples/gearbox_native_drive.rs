@@ -219,6 +219,7 @@ fn run() -> Result<bool> {
         adhesion_factor: 1.,
         paused_weather: true,
         first_slippery_spot: None,
+        ..Default::default()
     });
     fs::write(
         output.join("scenario.toml"),

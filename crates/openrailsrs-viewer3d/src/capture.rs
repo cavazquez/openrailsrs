@@ -46,6 +46,16 @@ pub fn capture_enabled() -> bool {
     std::env::var_os("OPENRAILSRS_SCREENSHOT").is_some_and(|v| !v.is_empty())
 }
 
+/// An explicit QA run can hold the initial physical state while scenery and
+/// pipelines load. Its first timed action must release pause; no pose or
+/// velocity is rewritten to recover a start that already moved downhill.
+pub(crate) fn start_paused_for_actions() -> bool {
+    cfg!(feature = "dev-tools")
+        && capture_enabled()
+        && std::env::var("OPENRAILSRS_CAPTURE_START_PAUSED").as_deref() == Ok("1")
+        && std::env::var_os("OPENRAILSRS_CAPTURE_ACTIONS").is_some_and(|v| !v.is_empty())
+}
+
 impl CaptureState {
     #[cfg(feature = "dev-tools")]
     pub(crate) fn journey_can_start(&self, odometer_m: f64) -> bool {
@@ -644,6 +654,10 @@ impl CaptureScene<'_, '_> {
                 .map(|contacts| contacts.report())
         );
         report["drive_controls"] = serde_json::json!(live.map(|l| serde_json::json!({
+            "throttle": l.session.driver_throttle,
+            "brake": l.session.driver_brake,
+            "direction": l.session.driver_direction,
+            "paused": l.paused,
             "missed_stops": l.session.gameplay.missed_stops,
             "traffic_brake_assistance": l.session.traffic_brake_assistance,
             "braking_intervention": l.session.braking_intervention(),
@@ -680,6 +694,13 @@ impl CaptureScene<'_, '_> {
             })
         }).collect::<Vec<_>>());
         report["crossings"] = serde_json::json!(live.map(|l| &l.session.state.crossings));
+        report["operational_yards"] =
+            serde_json::json!(live.map(|l| &l.session.state.yard_operations));
+        report["moving_decks"] = serde_json::json!(live.map(|l| l.session.yard_device_poses()));
+        report["physical_motion"] = serde_json::json!(live.map(|l| &l.session.state.bogies));
+        report["steam_boilers"] = serde_json::json!(live.map(|l| &l.session.state.steam_boilers));
+        report["diesel"] = serde_json::json!(live.map(|l| &l.session.state.diesel));
+        report["rack"] = serde_json::json!(live.map(|l| &l.session.state.rack));
         report["refilling"] = serde_json::json!(live.and_then(|l| l.session.refilling.as_ref()));
         report["traffic_operations"] = serde_json::json!(live.map(|l| serde_json::json!({
             "player_service":l.session.service_id,"control_history":l.traffic.control_history,

@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "kind": "rust_cpu_comparison_of_immutable_original_dll_capture",
+  "recorded_utc": "2026-10-16T03:04:34.383147+00:00",
+  "reference_version": "1.6.1",
+  "reference_commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+  "capture_manifest_sha256": "667fb11206aa479c6a6d5901e880f0d1c1f1ad1699643c598d667620db774014",
+  "preserved_capture_status": "captured_not_compared",
+  "native_artifacts_modified": false,
+  "native_capture_reexecuted": false,
+  "wine_required_for_regression": false,
+  "original_content_required_for_regression": false,
+  "execution": {
+    "observed_by": "root validation run physics-native-tests03",
+    "test_executable": "target/debug/deps/physics_seven_native-881cbcd931e6b673",
+    "binary_sha256": "0b99f90493bfa72f3246198e68e533741f49fd7027bbaf3ee4df544917a948ad",
+    "log_path": "tmp/twenty-20261015/physics-native-tests03.log",
+    "log_sha256": "6a551d65524cb361b724ad3d7b2f4acb08d3276286b47133c6aa9f61476a1fc5",
+    "raw_log": "\nrunning 3 tests\ntest original_emergency_service_pipe3_reservoir_and_rearm_match_runtime_subsystem ... ok\ntest original_steam_property_interpolators_match_at_knots_and_between_them ... ok\ntest original_three_car_propagation_keeps_only_the_head_boundary_prescribed ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s\n\n",
+    "test_source_before_fixture_promotion_sha256": "bf4298a6d8c7264495f049bda61f6ad0de78505421f264a03b370f9b819ccf70",
+    "passed": 3,
+    "failed": 0,
+    "ignored": 0,
+    "tests": [
+      {
+        "name": "original_emergency_service_pipe3_reservoir_and_rearm_match_runtime_subsystem",
+        "status": "passed"
+      },
+      {
+        "name": "original_steam_property_interpolators_match_at_knots_and_between_them",
+        "status": "passed"
+      },
+      {
+        "name": "original_three_car_propagation_keeps_only_the_head_boundary_prescribed",
+        "status": "passed"
+      }
+    ]
+  },
+  "scope": {
+    "steam_property_queries": 157,
+    "prescribed_valve_ticks": 6420,
+    "three_car_network_ticks": 6420,
+    "pneumatic_pressure_psi_abs": 0.005,
+    "pneumatic_force_n_abs": 50.0,
+    "valve_state": "exact",
+    "full_steam_cycle_parity": false,
+    "native_compound_or_double_steam_parity": false
+  },
+  "nonpassing_separate_diagnostic": {
+    "original_capture": "native-steam/steam-drive.json",
+    "rust_attempt": "tmp/twenty-20261015/steam-compare01",
+    "status": "outside_prior_limits",
+    "issues_remaining_open": [
+      223,
+      224
+    ]
+  },
+  "provenance_note": "manifest.json and all eleven files are exact bytes from physical-native-05. Its historical captured_not_compared status is not rewritten; this separate receipt records the later CPU comparison. The measured executable predates removing ignore attributes for ordinary CI."
+}

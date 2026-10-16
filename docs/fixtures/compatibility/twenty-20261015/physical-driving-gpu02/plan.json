@@ -1,0 +1,289 @@
+{
+  "schema": 1,
+  "status": "predeclared_before_launch",
+  "viewer_sha256": "80da4d50267917e84a75d1396887bb954b862d691b24e8d67f6b94c058f049e3",
+  "script_sha256": "c70f25a6122aa95559bcd3be64ed698d6fae5ce5d484726ea2e1fecd917a11d9",
+  "proposal_sha256": "b55b612f1f1985f7f0373ec736a3df845c4e46cdd428ad45bf1f7f6fc896403a",
+  "sources_sha256": {
+    "scripts/check_viewer_streaming.py": "87fab5abddb77d1703357cdc8eb3a8a7f855f9c705bbfdc0265b119c33a0c978",
+    "crates/openrailsrs-viewer3d/src/equipment_capture.rs": "3ddf57febcbae77b58d040a29eec6147462e4acd88c2eae4b032ad4e169fbd36",
+    "crates/openrailsrs-viewer3d/src/capture.rs": "8805e6bcd078695df98613fbe79f00ec60861fc0a84fe1ba6cc8986b1368f014",
+    "crates/openrailsrs-viewer3d/src/player_ui/physical_train.rs": "b1af0cb283e7a15bef40d53c4e44cb75600e9c05123f484ae523e0754975db25",
+    "crates/openrailsrs-viewer3d/src/live.rs": "2358f8b4044d7416a5e0235a751841648847f05b92f8dd15f2304943365e524e",
+    "crates/openrailsrs-viewer3d/src/train_motion.rs": "cb1136d210fd077789debb670243efe4e1d85cb3057763e16553ff4be09618e9",
+    "examples/physics_lab/scenario_hydraulic.toml": "1f1f395799f4c3a1324860686144ee415e204e5e44f659c573682c57ed382495",
+    "examples/physics_lab/scenario_double_steam.toml": "3b65b88a125b0ee886118ec035c33a74e9d676988a36ff7dfb9e3f6f7beeb4e1",
+    "examples/physics_lab/scenario_derailment.toml": "85f46ad65d6e118a0ac3b1b32a7b548fac756bc3292b528f66357ae7315ef5b2",
+    "examples/physics_lab/scenario_derailment_drive.toml": "3361117322f7f0fe4a8b404c23576c60b9ab396c84b47cb868c075afd117797c",
+    "examples/physics_lab/scenario_rack_transition.toml": "04b32089748285436eee7e115873bc88eba15fc83a59ea9f2564cca4f7896389",
+    "examples/physics_lab/scenario_vertical.toml": "29b48bd676d5dc4c26b69fe117f1e2b0a76e16af1d38bf2b61413f0add16aaea",
+    "examples/physics_lab/scenario_rack.toml": "08766cc6b3b44e9d0fa4511bea2af6ff3d1aed8ddc7e673ca6c4a8c57420129f",
+    "examples/physics_lab/route/track.toml": "705149bf7bf902e9c22aff1646a3a512a38c3561caa02864159a311742b62d24",
+    "examples/physics_lab/derailment_route/track.toml": "d67ae3025d799c2ad0d2eceb91de7d0a690e64017475ce9afdff7d5fd1f7fab3",
+    "examples/physics_lab/vehicles/compound.eng": "c2a30c83e2ef7a3cfa8d3a5273783b3f9d9c53b4ceeb5afe3cceee1ccdaea950",
+    "examples/physics_lab/vehicles/plain_train_control.eng": "e4751e489611ee6365dc6832fee210ce0de9fdcf925cbd3780956fda5a04e635",
+    "examples/physics_lab/vehicles/risk_loco.eng": "3b03a0039f424c8545cf0725d6ecaa4068811a7f6fd315d32522cb7e9b1b1e4e",
+    "examples/physics_lab/vehicles/hydraulic.eng": "9b6a9f19770932e60e6d3c2d4f42ce820efac95d293b6d08c29b9a1d5e802476",
+    "examples/physics_lab/vehicles/thermodynamic.eng": "42dbe97d5ebdd345586a7cb2e88aa5cab97774351bd3c11c7fc996c94c1eab69",
+    "examples/physics_lab/consists/curve_risk.con": "e625edb701ed2844a5dbf8050a0c058a8be89ec582c7b4aeaf45f3e125334b29",
+    "examples/physics_lab/consists/double_steam.con": "9547418e9698a42277c005cb102d8add0998dd27f115bbeaed9907b6788b7ba2",
+    "examples/physics_lab/consists/hydraulic.con": "4d3b01b3089ce9f7f6e8dbe149f63bfe77518695cc12576fd3e2f4e96af44fe8",
+    "examples/physics_lab/vehicles/air_wagon.wag": "8c3553e6e4f0206662ed6ee4b7997680d542434ca174abdf53a08f7a24c49d44",
+    "examples/physics_lab/vehicles/risk_coach.wag": "ca3e33b66bcbd525b04e03c45de2c2c8fcbb4799ef7767f042b0945b9588eccb"
+  },
+  "cases": [
+    {
+      "name": "vertical-on",
+      "issues": [
+        325
+      ],
+      "scenario": "scenario_vertical.toml",
+      "hold_s": 20,
+      "actions": [
+        {
+          "at_s": 0,
+          "operation": {
+            "action": "drive",
+            "throttle": 0,
+            "brake": 1,
+            "direction": 0.5
+          }
+        },
+        {
+          "at_s": 0,
+          "operation": {
+            "action": "pause",
+            "value": false
+          }
+        },
+        {
+          "at_s": 0.1,
+          "operation": {
+            "action": "irregularities",
+            "enabled": true
+          }
+        },
+        {
+          "at_s": 0.5,
+          "operation": {
+            "action": "drive",
+            "throttle": 0.7,
+            "brake": 0,
+            "direction": 1
+          }
+        },
+        {
+          "at_s": 20,
+          "operation": {
+            "action": "pause",
+            "value": true
+          }
+        },
+        {
+          "at_s": 20.2,
+          "operation": {
+            "action": "restore"
+          }
+        },
+        {
+          "at_s": 20.4,
+          "operation": {
+            "action": "panel",
+            "name": "traction"
+          }
+        }
+      ],
+      "expect": "vertical_on",
+      "required_ui": [
+        "Irregularidades físicas: Sí",
+        "Suspensión",
+        "carga normal",
+        "contactos perdidos"
+      ]
+    },
+    {
+      "name": "vertical-off",
+      "issues": [
+        325
+      ],
+      "scenario": "scenario_vertical.toml",
+      "hold_s": 20,
+      "actions": [
+        {
+          "at_s": 0,
+          "operation": {
+            "action": "drive",
+            "throttle": 0,
+            "brake": 1,
+            "direction": 0.5
+          }
+        },
+        {
+          "at_s": 0,
+          "operation": {
+            "action": "pause",
+            "value": false
+          }
+        },
+        {
+          "at_s": 0.1,
+          "operation": {
+            "action": "irregularities",
+            "enabled": false
+          }
+        },
+        {
+          "at_s": 0.5,
+          "operation": {
+            "action": "drive",
+            "throttle": 0.7,
+            "brake": 0,
+            "direction": 1
+          }
+        },
+        {
+          "at_s": 20,
+          "operation": {
+            "action": "pause",
+            "value": true
+          }
+        },
+        {
+          "at_s": 20.2,
+          "operation": {
+            "action": "restore"
+          }
+        },
+        {
+          "at_s": 20.4,
+          "operation": {
+            "action": "panel",
+            "name": "traction"
+          }
+        }
+      ],
+      "expect": "vertical_off",
+      "required_ui": [
+        "Irregularidades físicas: No",
+        "Suspensión"
+      ]
+    },
+    {
+      "name": "derailment-from-rest",
+      "issues": [
+        324
+      ],
+      "scenario": "scenario_derailment_drive.toml",
+      "hold_s": 55,
+      "actions": [
+        {
+          "at_s": 0,
+          "operation": {
+            "action": "drive",
+            "throttle": 0,
+            "brake": 1,
+            "direction": 0.5
+          }
+        },
+        {
+          "at_s": 0,
+          "operation": {
+            "action": "pause",
+            "value": false
+          }
+        },
+        {
+          "at_s": 0.1,
+          "operation": {
+            "action": "derailment",
+            "enabled": true
+          }
+        },
+        {
+          "at_s": 0.5,
+          "operation": {
+            "action": "drive",
+            "throttle": 1,
+            "brake": 0,
+            "direction": 1
+          }
+        },
+        {
+          "at_s": 55,
+          "operation": {
+            "action": "pause",
+            "value": true
+          }
+        },
+        {
+          "at_s": 55.19999999999999,
+          "operation": {
+            "action": "restore"
+          }
+        },
+        {
+          "at_s": 55.30000000000001,
+          "operation": {
+            "action": "derailment",
+            "enabled": false
+          }
+        },
+        {
+          "at_s": 55.400000000000006,
+          "operation": {
+            "action": "panel",
+            "name": "traction"
+          }
+        }
+      ],
+      "expect": "derailment_recorded_disabled",
+      "required_ui": [
+        "DESCARRILAMIENTO",
+        "fuerza lateral",
+        "carga mínima",
+        "Consecuencias de descarrilamiento: No"
+      ],
+      "fixture_selection_reason": "The separate owned drive exercise uses a 2000 m approach and a physical laboratory formation rated 2 MW / 160 km/h: an 80 t locomotive plus a 30 t coach. The earlier limited-power formation did not reach incident speed, a valid non-incident result. Curve, Nadal/unloading thresholds and runtime are unchanged. CPU fromrest09 passed with an actual WheelUnloading cause at 80.55 simulated seconds. GPU remains unexecuted; 55 real seconds at 2x allows approximately 110 simulated seconds without prescribing speed or position.",
+      "speed_mul": 2,
+      "conditions_override": {
+        "speed_multiplier": 2,
+        "wall_time_hold_s": 55,
+        "expected_simulation_horizon_approx_s": 110,
+        "input_timestamps": "wall seconds after QA readiness; recorded action time_s is the real fixed-tick simulation clock",
+        "scope": "Time compression only; physics still integrates its normal fixed time step."
+      },
+      "material": {
+        "scope": "Owned physical laboratory definitions, not an original OR stock compatibility or visual-art acceptance. No author downloads or missing-original substitute assets are included.",
+        "locomotive": {
+          "mass_t": 80,
+          "power_w": 2000000,
+          "maximum_speed_kmh": 160,
+          "maximum_force_n": 240000
+        },
+        "coach": {
+          "mass_t": 30
+        },
+        "files_sha256": {
+          "examples/physics_lab/consists/curve_risk.con": "e625edb701ed2844a5dbf8050a0c058a8be89ec582c7b4aeaf45f3e125334b29",
+          "examples/physics_lab/vehicles/risk_loco.eng": "3b03a0039f424c8545cf0725d6ecaa4068811a7f6fd315d32522cb7e9b1b1e4e",
+          "examples/physics_lab/vehicles/risk_coach.wag": "ca3e33b66bcbd525b04e03c45de2c2c8fcbb4799ef7767f042b0945b9588eccb"
+        }
+      },
+      "prior_cpu_result": {
+        "log": "tmp/twenty-20261015/fromrest-tests09.log",
+        "sha256": "456f0d89c1510a36acaa2d77661947791f64e764ed3080447bbc6bcaf15bf93b",
+        "scope": "Actual fixed-tick LiveDrive from-rest CPU acceptance, not a GPU result or runtime input.",
+        "passed": 3,
+        "failed": 0,
+        "cause": "WheelUnloading",
+        "event_time_s": 80.54999999999757,
+        "event_speed_mps": 29.374189473320993,
+        "event_chainage_m": 2094.2878179062864,
+        "lateral_force_n": 167125.63251476563,
+        "minimum_wheel_load_n": 0.0
+      }
+    }
+  ],
+  "initial_pause_requirement": "Use OPENRAILSRS_CAPTURE_START_PAUSED=1 with dev-tools, SCREENSHOT and CAPTURE_ACTIONS. The parent added this explicit QA pause before fixed ticks. First actions set ordinary full braking/neutral, then pause(false); first recorded time_s and speed_mps must both equal0. No physical-state initialization is overwritten.",
+  "pixel_review": "pending"
+}

@@ -118,21 +118,65 @@ fn passenger_power_uses_authored_watts_reduces_traction_and_counts_energy() {
 
 #[test]
 fn explicit_diesel_thermal_protection_is_visible_and_optional() {
-    let mut protected = session("traction_operation/scenario_thermal.toml");
-    let mut diagnostic = session("traction_operation/scenario_thermal.toml");
+    // Preserve the original 45 s controls and thermal thresholds, but use a
+    // longer declared track. Ending the 1 km route forces speed to zero and
+    // cannot be used to compare protection against an unprotected engine.
+    let source = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/traction_operation");
+    let content = tempfile::tempdir().unwrap();
+    for directory in ["route", "consists", "vehicles"] {
+        std::fs::create_dir(content.path().join(directory)).unwrap();
+    }
+    for file in ["consists/diesel_thermal.con", "vehicles/diesel_thermal.eng"] {
+        std::fs::copy(source.join(file), content.path().join(file)).unwrap();
+    }
+    let mut track: toml::Value =
+        toml::from_str(&std::fs::read_to_string(source.join("route/track.toml")).unwrap()).unwrap();
+    for node in track["nodes"].as_array_mut().unwrap() {
+        node["x_m"] = toml::Value::Float(node["x_m"].as_float().unwrap() * 10.);
+    }
+    for edge in track["edges"].as_array_mut().unwrap() {
+        edge["length_m"] = toml::Value::Float(edge["length_m"].as_float().unwrap() * 10.);
+    }
+    std::fs::write(
+        content.path().join("route/track.toml"),
+        toml::to_string(&track).unwrap(),
+    )
+    .unwrap();
+    let scenario =
+        openrailsrs_scenarios::load_scenario(source.join("scenario_thermal.toml")).unwrap();
+    let fixture = || LiveDriveSession::from_scenario(content.path(), &scenario).unwrap();
+    let mut protected = fixture();
+    let mut diagnostic = fixture();
     diagnostic.physics.diesel.cars[0].params.thermal.protection = false;
     for s in [&mut protected, &mut diagnostic] {
         s.driver_direction = 1.0;
         s.driver_throttle = 1.0;
         s.step_realtime(45.0, |_| {});
     }
+    assert!(protected.head_chainage_m() < 10000.);
+    assert!(diagnostic.head_chainage_m() < 10000.);
     assert!(protected.state.diesel.cars[0].temperature_c > 70.0);
     assert!(
         protected
             .traction_diagnosis()
             .contains("Protección térmica")
     );
-    assert!(protected.velocity_mps() < diagnostic.velocity_mps());
+    assert!(
+        protected.velocity_mps() < diagnostic.velocity_mps(),
+        "protected: v={} at={} throttle={} brake={} force={} temp={}; diagnostic: v={} at={} throttle={} brake={} force={} temp={}",
+        protected.velocity_mps(),
+        protected.head_chainage_m(),
+        protected.state.throttle,
+        protected.driver_brake,
+        protected.state.motor_force_n.iter().sum::<f64>(),
+        protected.state.diesel.cars[0].temperature_c,
+        diagnostic.velocity_mps(),
+        diagnostic.head_chainage_m(),
+        diagnostic.state.throttle,
+        diagnostic.driver_brake,
+        diagnostic.state.motor_force_n.iter().sum::<f64>(),
+        diagnostic.state.diesel.cars[0].temperature_c,
+    );
     assert_eq!(
         openrailsrs_sim::diesel_operation::available_fraction(
             &diagnostic.state.diesel,
@@ -141,7 +185,7 @@ fn explicit_diesel_thermal_protection_is_visible_and_optional() {
         ),
         1.0
     );
-    let mut resumed = session("traction_operation/scenario_thermal.toml");
+    let mut resumed = fixture();
     resumed.restore_snapshot(protected.snapshot()).unwrap();
     protected.step_realtime(1.0, |_| {});
     resumed.step_realtime(1.0, |_| {});
