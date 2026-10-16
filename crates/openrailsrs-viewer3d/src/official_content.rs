@@ -352,13 +352,7 @@ impl OfficialContent {
     }
     pub fn cancel_job(&mut self, id: u64) -> Result<(), String> {
         if self.job.as_ref().is_some_and(|j| j.download == Some(id)) {
-            self.cancel()?;
-            self.queue.update(
-                id,
-                crate::download_queue::Phase::CancelRequested,
-                "Cancelando y limpiando temporales",
-            );
-            self.queue.persist()
+            self.cancel()
         } else {
             self.queue.cancel_waiting(id)
         }
@@ -452,16 +446,12 @@ impl OfficialContent {
     }
     pub fn cancel(&mut self) -> Result<(), String> {
         let job = self.job.as_ref().ok_or("No hay una descarga activa")?;
-        std::fs::write(&job.cancel, b"cancel").map_err(|e| e.to_string())?;
-        self.status = "Cancelando la descarga y limpiando sus archivos temporales…".into();
+        let status = "Cancelando la descarga y limpiando sus archivos temporales…";
         if let Some(id) = job.download {
-            self.queue.update(
-                id,
-                crate::download_queue::Phase::CancelRequested,
-                &self.status,
-            );
-            self.queue.persist()?;
+            self.queue.request_cancel(id, status)?;
         }
+        std::fs::write(&job.cancel, b"cancel").map_err(|e| e.to_string())?;
+        self.status = status.into();
         Ok(())
     }
     pub fn poll(&mut self) -> bool {
@@ -504,8 +494,8 @@ impl OfficialContent {
         for event in events {
             match event["phase"].as_str().unwrap_or("") {
                 "download" | "extract" => {
-                    let bytes = event["done_bytes"].as_f64().unwrap_or(0.);
-                    let total = event["total_bytes"].as_f64();
+                    let bytes = event["done_bytes"].as_u64().unwrap_or(0);
+                    let total = event["total_bytes"].as_u64();
                     if let Some(id) = download {
                         self.queue.progress(
                             id,
@@ -514,14 +504,13 @@ impl OfficialContent {
                         );
                     }
                     self.status = format!(
-                        "{}: {:.1} MiB{}",
+                        "{}: {}",
                         if event["phase"] == "download" {
                             "Descargando"
                         } else {
                             "Descomprimiendo"
                         },
-                        bytes / 1048576.,
-                        total.map_or(String::new(), |n| format!(" / {:.1} MiB", n / 1048576.))
+                        crate::download_queue::progress_label(bytes, total)
                     );
                 }
                 "audit" => {
@@ -1218,6 +1207,50 @@ fn source_for_missing(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn active_cancellation_is_not_sent_when_queue_persistence_fails() {
+        use crate::download_queue::{Phase, Queue};
+        let tmp = tempfile::tempdir().unwrap();
+        let allowed = ["route".into()];
+        let mut queue = Queue::load(tmp.path(), &allowed);
+        let id = queue.enqueue("route".into()).unwrap();
+        queue.update(id, Phase::Running, "Descargando");
+        queue.persist().unwrap();
+        let entries = queue.entries.clone();
+        let (_sender, events) = mpsc::channel();
+        let cancel = tmp.path().join("cancel-request");
+        let mut content = OfficialContent {
+            queue,
+            packages: vec![],
+            selected: 0,
+            status: "Anterior".into(),
+            installed: vec![],
+            job: Some(Job {
+                download: Some(id),
+                child: None,
+                cancel: cancel.clone(),
+                events: Mutex::new(events),
+            }),
+            url_preview: None,
+            url_status: String::new(),
+            url_probe: None,
+        };
+        let path = tmp.path().join("download-queue.json");
+        std::fs::remove_file(&path).unwrap();
+        std::fs::create_dir(&path).unwrap();
+        assert!(content.cancel_job(id).is_err());
+        assert_eq!(content.queue.entries, entries);
+        assert_eq!(content.status, "Anterior");
+        assert!(!cancel.exists());
+        std::fs::remove_dir(&path).unwrap();
+        content.cancel_job(id).unwrap();
+        assert!(cancel.is_file());
+        assert_eq!(content.queue.entries[0].phase, Phase::CancelRequested);
+        assert_eq!(
+            Queue::load(tmp.path(), &allowed).entries[0].phase,
+            Phase::Cancelled
+        );
+    }
 
     fn user_origin(url: &str) -> OfficialPackage {
         serde_json::from_value(serde_json::json!({

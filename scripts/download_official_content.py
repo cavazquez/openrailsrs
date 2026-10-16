@@ -43,7 +43,7 @@ def catalog():
 
 def source_from_url(url, confirmed=False):
     """Resolve only supported author origins. Never fetch an HTML landing page."""
-    if not isinstance(url, str) or len(url) > 2048 or any(c.isspace() for c in url):
+    if not isinstance(url, str) or len(url) > 2048 or any(c.isspace() or ord(c) < 32 or ord(c) == 127 for c in url):
         raise ValueError('URL inválida: pegá un enlace HTTPS completo sin espacios')
     u = urlparse(url)
     validate_download_url(url)
@@ -161,6 +161,8 @@ def cancelled(path):
 
 
 def validate_download_url(url):
+    if not isinstance(url, str) or len(url)>2048 or any(c.isspace() or ord(c)<32 or ord(c)==127 for c in url):
+        raise ValueError('URL de descarga inválida')
     u = urlparse(url)
     if (u.scheme != 'https' or u.hostname not in DOWNLOAD_HOSTS
             or u.username or u.password or u.port not in (None, 443)):
@@ -292,9 +294,11 @@ def safe_members(archive, max_install):
         if index >= 500000:
             raise ValueError('El ZIP excede el número de recursos autorizado')
         name = info.filename.replace('\\', '/')
+        if '\x00' in info.orig_filename or info.file_size < 0 or info.compress_size < 0:
+            raise ValueError('Nombre o tamaño inválido en ZIP')
         path = PurePosixPath(name)
         mode = info.external_attr >> 16
-        if (not name or '\x00' in name or path.is_absolute() or '..' in path.parts
+        if (not name or not path.parts or '\x00' in name or path.is_absolute() or '..' in path.parts
                 or any(':' in part for part in path.parts) or stat.S_ISLNK(mode)
                 or (stat.S_IFMT(mode) and not (stat.S_ISREG(mode) or stat.S_ISDIR(mode)))):
             raise ValueError(f'Ruta insegura en ZIP: {name}')
@@ -344,14 +348,20 @@ def extract(archive_path, destination, max_install=MAX_INSTALL, cancel_file=None
                 target.mkdir(parents=True, exist_ok=True)
                 continue
             target.parent.mkdir(parents=True, exist_ok=True)
+            written = 0
             with archive.open(info) as source, target.open('xb') as output:
                 while block := source.read(256 * 1024):
                     cancelled(cancel_file)
+                    written += len(block)
+                    if written > info.file_size or done + len(block) > max_install:
+                        raise ValueError('Los datos extraídos exceden el tamaño autorizado')
                     output.write(block)
                     done += len(block)
                     if time.monotonic() - last > 0.2:
                         emit('extract', done_bytes=done, total_bytes=total)
                         last = time.monotonic()
+            if written != info.file_size:
+                raise ValueError('Recurso ZIP truncado respecto de su tamaño declarado')
         return total
 
 

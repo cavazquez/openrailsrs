@@ -962,6 +962,18 @@ pub fn read_y_raw_bytes(
     bytes: &[u8],
     params: &TerrainSamples,
 ) -> Result<ElevationGrid, FormatError> {
+    if params.nsamples == 0
+        || !params.sample_floor.is_finite()
+        || !params.sample_scale.is_finite()
+        || !params.sample_size.is_finite()
+        || params.sample_size <= 0.
+    {
+        return Err(FormatError::UnexpectedAtom {
+            key: "samples".into(),
+            context: "terrain y raw".into(),
+            expected: "positive dimensions and finite sample parameters".into(),
+        });
+    }
     let nsamples = params.nsamples as usize;
     let expected = nsamples
         .checked_mul(nsamples)
@@ -989,7 +1001,15 @@ pub fn read_y_raw_bytes(
     for chunk in bytes.as_chunks::<2>().0 {
         let raw = u16::from_le_bytes([chunk[0], chunk[1]]);
         let h = params.sample_floor + f64::from(raw) * params.sample_scale;
-        elevations.push(h as f32);
+        let height = h as f32;
+        if !height.is_finite() {
+            return Err(FormatError::UnexpectedAtom {
+                key: "elevation".into(),
+                context: "terrain y raw".into(),
+                expected: "finite representable elevation".into(),
+            });
+        }
+        elevations.push(height);
     }
 
     Ok(ElevationGrid {
@@ -1025,6 +1045,13 @@ pub fn read_f_raw_bytes(
     bytes: Vec<u8>,
     params: &TerrainSamples,
 ) -> Result<FeatureGrid, FormatError> {
+    if params.nsamples == 0 {
+        return Err(FormatError::UnexpectedAtom {
+            key: "samples".into(),
+            context: "terrain f raw".into(),
+            expected: "positive grid dimensions".into(),
+        });
+    }
     let nsamples = params.nsamples as usize;
     let expected = nsamples
         .checked_mul(nsamples)
@@ -1676,6 +1703,22 @@ pub fn parse_tile_xz_from_filename(path: &Path) -> Option<(i32, i32)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn raw_elevations_reject_nonfinite_parameters_and_unrepresentable_heights() {
+        for floor in [f64::NAN, f64::INFINITY, 1e300] {
+            let parameters = TerrainSamples {
+                nsamples: 1,
+                sample_floor: floor,
+                ..Default::default()
+            };
+            assert!(read_y_raw_bytes(&[0, 0], &parameters).is_err());
+        }
+        let zero = TerrainSamples {
+            nsamples: 0,
+            ..Default::default()
+        };
+        assert!(read_y_raw_bytes(&[], &zero).is_err());
+    }
 
     fn fixture(name: &str) -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))

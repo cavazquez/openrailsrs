@@ -1,0 +1,46 @@
+{
+  "cargo_invoked": false,
+  "runtime_modified": false,
+  "original_assets_versioned": false,
+  "dependencies": {
+    "openrailsrs_sim": {
+      "file": "libopenrailsrs_sim-8aea4f5f640cd4f3.rlib",
+      "sha256": "7be6a649107b457b60f1a779ae08ed4e03f41e3f00899970eaa88e8041473ef1"
+    },
+    "openrailsrs_scenarios": {
+      "file": "libopenrailsrs_scenarios-9cd3e3309e3e4a46.rlib",
+      "sha256": "33bb918bbcdaa53e6920bedac22f53ea69518c7eb0bfdfc949b729a9530416d1"
+    },
+    "serde_json": {
+      "file": "libserde_json-87a8e1f99d134334.rlib",
+      "sha256": "688f8881d192157e337b7e1b75f77edc09de0e93cbfed0cc21457bf92d2905ef"
+    }
+  },
+  "original_files": {
+    "RF_WP_DMBSA.eng": "4da0da99e3141c2dd6938a58b5b94d3844e96d9fd6689b1d80f639b5027b92ea",
+    "RF_WP_PSB.wag": "a496249a60b460bbfa9c4163b77e8367985029462c2aa1277b7003835cf88beb",
+    "RF_WP_KFC.wag": "fca08cc01ba9fe0f732e0c5c79fcc8461a8367c14201ae2fc0d8c86f57add6c4",
+    "RF_WP_PCFD.wag": "b8a58bf85bd6f5e947a8033fdf87e85f9f422c3cc1ada9114c6d14044242ef00",
+    "RF_WP_PCFE.wag": "822160aaf16cba4d5cba07d3b37c7131441853d2daf71c8b401ad8b781ce2030",
+    "RF_WP_KFF.wag": "79f8c539828b1a961dfc859267981547de0c0268fa72493355ddd857bad9d3a3",
+    "RF_WP_PSG.wag": "4ae0e96cce97002751fe7d8c034af29b65283a55acf0abdcbe1e2511085bc72a",
+    "RF_WP_DMBSH.eng": "468a335e44e17fe206e016b61cc98459bb88cd42839b374cae6c3224bd27d402"
+  },
+  "comparison": {
+    "status": "pass",
+    "reference": "Open Rails 1.6.1",
+    "transferred_original_vehicles": 8,
+    "force_cases": 3,
+    "maximum_force_error_n": 0.00038474577013403177,
+    "driving_after_restore_m": 16.08371905622363,
+    "limits": [
+      "Stationary manual rear-to-front joining only in Rust",
+      "OR automatically requires signed movement; zero-speed scan is retained separately",
+      "Different simple rigid / elastic transient and slack laws are not declared equivalent",
+      "Original stock is driven on owned synthetic track; native route/signal/full-physics parity not certified"
+    ]
+  },
+  "reference_sha256": "856bfa60d0be9fac22c6e05a8d05f3cf510a4bd7cebc253f87b0015329d195a4",
+  "rust_output_sha256": "db7050f2cbc3e7889cb56c60263871c69ee63f2b1a753c6f0870d192b73e44bb",
+  "depot_output_sha256": "a8053fa1254dbd21cd1bcc71c3eaae8d817565736adf89ca9f68168f2064a72e"
+}

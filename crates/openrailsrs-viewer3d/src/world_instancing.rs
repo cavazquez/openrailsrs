@@ -47,6 +47,12 @@ use bevy::render::{Render, RenderApp, RenderStartup, RenderSystems};
 use bevy::shader::Shader;
 use bytemuck::{Pod, Zeroable};
 
+#[path = "world_compute_cull.rs"]
+mod compute_cull;
+#[path = "world_visibility.rs"]
+mod visibility;
+pub use visibility::WorldOccluder;
+
 /// Minimum placements in one tile before GPU instancing is used.
 ///
 /// Two already save one entity/draw while sharing the immutable instance buffer.
@@ -220,11 +226,15 @@ pub struct DrawCounts {
     last_opaque: std::sync::atomic::AtomicU64,
     last_shadow: std::sync::atomic::AtomicU64,
     last_grass: std::sync::atomic::AtomicU64,
+    occluded: std::sync::atomic::AtomicU64,
+    last_occluded: std::sync::atomic::AtomicU64,
+    compute: std::sync::atomic::AtomicU64,
+    last_compute: std::sync::atomic::AtomicU64,
 }
 impl WorldDrawCounters {
     pub fn report(&self) -> serde_json::Value {
         use std::sync::atomic::Ordering::Relaxed;
-        serde_json::json!({"opaque":self.0.last_opaque.load(Relaxed),"shadow":self.0.last_shadow.load(Relaxed),"grass":self.0.last_grass.load(Relaxed),"scope":"actual WORLD/grass submissions; excludes Standard PBR, UI and Hanabi"})
+        serde_json::json!({"opaque":self.0.last_opaque.load(Relaxed),"shadow":self.0.last_shadow.load(Relaxed),"grass":self.0.last_grass.load(Relaxed),"occluded_groups":self.0.last_occluded.load(Relaxed),"compute_dispatches":self.0.last_compute.load(Relaxed),"scope":"WORLD/grass CPU submissions and compute dispatches, not GPU-visible instance counts; excludes Standard PBR, UI and Hanabi; shadows retain the full original instance buffer"})
     }
 }
 fn publish_draw_counts(counts: Res<WorldDrawCounters>) {
@@ -233,6 +243,8 @@ fn publish_draw_counts(counts: Res<WorldDrawCounters>) {
         (&counts.0.opaque, &counts.0.last_opaque),
         (&counts.0.shadow, &counts.0.last_shadow),
         (&counts.0.grass, &counts.0.last_grass),
+        (&counts.0.occluded, &counts.0.last_occluded),
+        (&counts.0.compute, &counts.0.last_compute),
     ] {
         last.store(current.swap(0, Relaxed), Relaxed);
     }
@@ -244,6 +256,21 @@ pub struct WorldInstancingPlugin;
 impl Plugin for WorldInstancingPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<WorldDrawCounters>()
+            .init_resource::<visibility::VisibilityOptions>()
+            .init_resource::<visibility::OcclusionGeometry>()
+            .add_plugins((
+                ExtractResourcePlugin::<visibility::VisibilityOptions>::default(),
+                ExtractResourcePlugin::<visibility::OcclusionGeometry>::default(),
+                ExtractComponentPlugin::<visibility::InstanceBounds>::default(),
+            ))
+            .add_systems(
+                PostUpdate,
+                (
+                    visibility::update_bounds,
+                    visibility::collect_occluders
+                        .after(bevy::transform::TransformSystems::Propagate),
+                ),
+            )
             .add_plugins(ExtractResourcePlugin::<WorldDrawCounters>::default())
             .init_resource::<WorldInstancingFallbackImage>()
             .init_resource::<crate::performance::ScenePipelineStatus>()
@@ -266,6 +293,7 @@ impl Plugin for WorldInstancingPlugin {
             return;
         };
         render_app
+            .add_systems(RenderStartup, compute_cull::init)
             .add_systems(Render, publish_draw_counts.in_set(RenderSystems::Cleanup))
             .init_resource::<crate::performance::RequiredRenderAssets>()
             .add_systems(
@@ -302,6 +330,7 @@ impl Plugin for WorldInstancingPlugin {
                 Render,
                 (
                     prepare_world_instance_buffers.in_set(RenderSystems::PrepareResources),
+                    compute_cull::prepare.in_set(RenderSystems::PrepareResources).after(prepare_world_instance_buffers),
                     prepare_world_instance_bind_groups.in_set(RenderSystems::PrepareBindGroups),
                     (
                         // Bevy's material queue first removes dirty meshes from
@@ -477,6 +506,7 @@ struct GpuWorldInstanceBuffer {
     buffer: Buffer,
     length: usize,
     source: Arc<[WorldInstanceData]>,
+    culled: std::collections::HashMap<RetainedViewEntity, compute_cull::CulledBuffers>,
 }
 
 #[derive(Component)]
@@ -484,6 +514,7 @@ struct GpuWorldInstanceBindGroup {
     bind_group: BindGroup,
     source: WorldInstanceAppearance,
     uniform: Buffer,
+    texture: TextureViewId,
 }
 
 #[derive(Clone, Copy, ShaderType, Pod, Zeroable)]
@@ -722,6 +753,7 @@ fn prepare_world_instance_buffers(
 ) {
     for (entity, data, existing) in &query {
         if data.is_empty() {
+            commands.entity(entity).remove::<GpuWorldInstanceBuffer>();
             continue;
         }
         if existing.is_some_and(|gpu| Arc::ptr_eq(&gpu.source, &data.0)) {
@@ -730,12 +762,19 @@ fn prepare_world_instance_buffers(
         let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
             label: Some("world_instance_buffer"),
             contents: bytemuck::cast_slice(data.0.as_ref()),
-            usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
+            usage: BufferUsages::VERTEX
+                | BufferUsages::COPY_DST
+                | if render_device.limits().max_storage_buffers_per_shader_stage > 0 {
+                    BufferUsages::STORAGE
+                } else {
+                    BufferUsages::empty()
+                },
         });
         commands.entity(entity).insert(GpuWorldInstanceBuffer {
             buffer,
             length: data.len(),
             source: data.0.clone(),
+            culled: compute_cull::empty_views(),
         });
     }
 }
@@ -760,9 +799,6 @@ fn prepare_world_instance_bind_groups(
     let layout = pipeline_cache.get_bind_group_layout(&pipeline.appearance_layout);
     let fallback = fallback_image.0.clone();
     for (entity, appearance, existing) in &query {
-        if existing.is_some_and(|gpu| gpu.source.eq(appearance)) {
-            continue;
-        }
         // Prefer the part albedo. If the GPU upload is not ready yet, wait — never
         // substitute white (that paints solid-white buildings for a whole stream).
         // Terracotta 1×1 is only for the rare None-texture edge case.
@@ -778,6 +814,10 @@ fn prepare_world_instance_bind_groups(
         let Some(gpu_image) = gpu_images.get(&image_handle) else {
             continue;
         };
+        let texture = gpu_image.texture_view.id();
+        if existing.is_some_and(|gpu| gpu.source.eq(appearance) && gpu.texture == texture) {
+            continue;
+        }
         let gpu = AppearanceGpu {
             surface_weather: appearance
                 .surface_weather
@@ -793,9 +833,9 @@ fn prepare_world_instance_bind_groups(
             world_from_local: appearance.world_from_local,
             vegetation: appearance.vegetation,
         };
-        if let Some(existing) =
-            existing.filter(|gpu| gpu.source.base_color_texture == appearance.base_color_texture)
-        {
+        if let Some(existing) = existing.filter(|gpu| {
+            gpu.texture == texture && gpu.source.base_color_texture == appearance.base_color_texture
+        }) {
             // LOD fading and floating origin only change the uniform. Reuse the
             // allocation/bind group instead of creating GPU objects every frame.
             render_queue.write_buffer(&existing.uniform, 0, bytemuck::bytes_of(&gpu));
@@ -803,6 +843,7 @@ fn prepare_world_instance_bind_groups(
                 bind_group: existing.bind_group.clone(),
                 uniform: existing.uniform.clone(),
                 source: appearance.clone(),
+                texture,
             });
             continue;
         }
@@ -824,6 +865,7 @@ fn prepare_world_instance_bind_groups(
             bind_group,
             uniform,
             source: appearance.clone(),
+            texture,
         });
     }
 }
@@ -838,12 +880,20 @@ fn queue_world_instanced(
     render_mesh_instances: Res<RenderMeshInstances>,
     mesh_allocator: Res<MeshAllocator>,
     material_meshes: Query<
-        (Entity, &MainEntity, &WorldInstanceAppearance),
+        (
+            Entity,
+            &MainEntity,
+            &WorldInstanceAppearance,
+            Option<&visibility::InstanceBounds>,
+        ),
         With<WorldInstanceBuffer>,
     >,
     mut opaque_render_phases: ResMut<ViewBinnedRenderPhases<Opaque3d>>,
     views: Query<(&ExtractedView, &RenderVisibleEntities)>,
     view_key_cache: Res<ViewKeyCache>,
+    geometry: Res<visibility::OcclusionGeometry>,
+    options: Res<visibility::VisibilityOptions>,
+    counts: Res<WorldDrawCounters>,
 ) {
     // Opaque WORLD instances only (#106). Cutout uses shader discard on this path;
     // blend/transparent parts never get `WorldInstanceBuffer` (see world spawn).
@@ -860,10 +910,36 @@ fn queue_world_instanced(
             continue;
         };
         let visible_groups = visible_main_entities(visible_meshes);
+        let clip = view
+            .clip_from_world
+            .unwrap_or_else(|| view.clip_from_view * view.world_from_view.to_matrix().inverse());
+        let triangles = if options.occlusion {
+            visibility::project_occluders(
+                &geometry,
+                clip,
+                &visible_groups,
+                (4. / view.viewport.z.min(view.viewport.w).max(1) as f32).max(0.01),
+            )
+        } else {
+            vec![]
+        };
 
-        for (entity, main_entity, appearance) in &material_meshes {
+        for (entity, main_entity, appearance, bounds) in &material_meshes {
             if !visible_groups.contains(main_entity) {
                 opaque_phase.remove(*main_entity);
+                continue;
+            }
+            if appearance.vegetation.x <= 0.
+                && appearance.surface_weather == Vec2::ZERO
+                && bounds.is_some_and(|b| {
+                    visibility::occluded(&b.group, appearance.world_from_local, clip, &triangles)
+                })
+            {
+                opaque_phase.remove(*main_entity);
+                counts
+                    .0
+                    .occluded
+                    .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                 continue;
             }
             let Some(mesh_instance) = render_mesh_instances.render_mesh_queue_data(*main_entity)
@@ -1114,13 +1190,13 @@ impl<P: PhaseItem> RenderCommand<P> for DrawMeshWorldInstanced {
         SRes<MeshAllocator>,
         SRes<WorldDrawCounters>,
     );
-    type ViewQuery = ();
+    type ViewQuery = Read<ExtractedView>;
     type ItemQuery = (Read<GpuWorldInstanceBuffer>, Read<WorldInstanceAppearance>);
 
     #[inline]
     fn render<'w>(
         item: &P,
-        _view: (),
+        view: &'w ExtractedView,
         instance: Option<(&'w GpuWorldInstanceBuffer, &'w WorldInstanceAppearance)>,
         (meshes, render_mesh_instances, mesh_allocator, counts): SystemParamItem<
             'w,
@@ -1147,7 +1223,17 @@ impl<P: PhaseItem> RenderCommand<P> for DrawMeshWorldInstanced {
         };
 
         pass.set_vertex_buffer(0, vertex_buffer_slice.buffer.slice(..));
-        pass.set_vertex_buffer(1, instance_buffer.buffer.slice(..));
+        let compacted = if std::any::TypeId::of::<P>() == std::any::TypeId::of::<Shadow>() {
+            None
+        } else {
+            instance_buffer.culled.get(&view.retained_view_entity)
+        };
+        pass.set_vertex_buffer(
+            1,
+            compacted
+                .map_or(&instance_buffer.buffer, |c| &c.output)
+                .slice(..),
+        );
 
         match &gpu_mesh.buffer_info {
             RenderMeshBufferInfo::Indexed {
@@ -1160,14 +1246,22 @@ impl<P: PhaseItem> RenderCommand<P> for DrawMeshWorldInstanced {
                     return RenderCommandResult::Skip;
                 };
                 pass.set_index_buffer(index_buffer_slice.buffer.slice(..), *index_format);
-                pass.draw_indexed(
-                    index_buffer_slice.range.start..(index_buffer_slice.range.start + count),
-                    vertex_buffer_slice.range.start as i32,
-                    0..instance_buffer.length as u32,
-                );
+                if let Some(compacted) = compacted {
+                    pass.draw_indexed_indirect(&compacted.indirect, 0);
+                } else {
+                    pass.draw_indexed(
+                        index_buffer_slice.range.start..(index_buffer_slice.range.start + count),
+                        vertex_buffer_slice.range.start as i32,
+                        0..instance_buffer.length as u32,
+                    );
+                }
             }
             RenderMeshBufferInfo::NonIndexed => {
-                pass.draw(vertex_buffer_slice.range, 0..instance_buffer.length as u32);
+                if let Some(compacted) = compacted {
+                    pass.draw_indirect(&compacted.indirect, 0);
+                } else {
+                    pass.draw(vertex_buffer_slice.range, 0..instance_buffer.length as u32);
+                }
             }
         }
         use std::sync::atomic::Ordering::Relaxed;

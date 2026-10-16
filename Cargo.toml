@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 # Pinned upstream backports are dependencies, not workspace feature targets.
-exclude = ["vendor/bevy_pbr", "vendor/bevy_core_pipeline"]
+exclude = ["vendor/bevy_pbr", "vendor/bevy_core_pipeline", "fuzz"]
 members = [
     "crates/openrailsrs-core",
     "crates/openrailsrs-content",
@@ -25,6 +25,7 @@ members = [
     "crates/openrailsrs-bevy-scenery",
     "crates/openrailsrs-viewer3d",
     "crates/openrailsrs-render3d",
+    "crates/openrailsrs-fuzz",
 ]
 
 [workspace.package]

@@ -1,0 +1,21 @@
+{
+  "minimization": {
+    "command": [
+      "tmp/next20-20261016/libfuzzer-target/x86_64-unknown-linux-gnu/release/textures",
+      "-minimize_crash=1",
+      "-max_total_time=10",
+      "-timeout=5",
+      "-exact_artifact_path=$REPOSITORY/tmp/next20-20261016/textures-minimized01.ace",
+      "fuzz/artifacts/textures/crash-835a5ce2250eddca2a04c0771d6509058657b09f"
+    ],
+    "old_buggy_binary_sha256": "cf3941effc69040b986e97b399f05511c2b079bd7f2d5f377d005119d9446360",
+    "exit_code": 0,
+    "original_bytes": 423,
+    "minimized_bytes": 184,
+    "scope": "Minimization uses the preserved old crashing binary; production source has already been fixed. Original failure and input remain unchanged."
+  },
+  "failure_input_sha256": "9cd5b3514b609dee021a117149fca1c8038fb4d3e4b7ae8554d256020a3ef25d",
+  "fixed_replay": "Stable production-reader replay passed for both the original 423-byte input and the minimized input.",
+  "regression": "crates/openrailsrs-ace/src/lib.rs::tests::malformed_structured_channels_and_rows_return_errors_instead_of_panicking",
+  "failure_log_sha256": "0f0492f731285d3126444768a03d7d537b86227231a1696c4a78612b1104bbea"
+}

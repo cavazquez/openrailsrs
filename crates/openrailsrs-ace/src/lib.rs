@@ -39,6 +39,8 @@ use thiserror::Error;
 
 mod dds;
 pub use dds::write_dds;
+mod dds_validation;
+pub use dds_validation::{DdsInfo, validate_dds};
 
 // ── Synthetic test-fixture magic (project-internal, not MSTS) ───────────────
 const ACE_MAGIC: &[u8; 4] = b"@ACE";
@@ -125,6 +127,8 @@ pub enum AceError {
     InvalidDimensions { width: u32, height: u32 },
     #[error("invalid texture mip chain")]
     InvalidMipChain,
+    #[error("invalid or incomplete ACE color channels")]
+    InvalidChannels,
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
     #[error("png encoding error: {0}")]
@@ -241,6 +245,9 @@ fn parse_or_body(body: &[u8], maximum_bytes: usize) -> Result<AceFile, AceError>
         let base = channels_start + i * 16;
         let size = read_u64_le(body, base) as u8; // 1 or 8 (bpp)
         let kind = read_u64_le(body, base + 8); // CH_RED..CH_ALPHA
+        if !matches!(size, 1 | 8) || !(CH_MASK..=CH_ALPHA).contains(&kind) {
+            return Err(AceError::InvalidChannels);
+        }
         channels.push((size, kind));
     }
 
@@ -381,12 +388,21 @@ fn parse_or_structured(
 ) -> Result<AceFile, AceError> {
     let w = width as usize;
     let h = height as usize;
+    if [CH_RED, CH_GREEN, CH_BLUE]
+        .iter()
+        .any(|required| !channels.iter().any(|(_, kind)| kind == required))
+    {
+        return Err(AceError::InvalidChannels);
+    }
 
     // Skip scanline offset tables for ALL mips
     let mut pos = data_offset;
     for i in 0..image_count {
         let mip_h = (h >> i).max(1);
         pos += 4 * mip_h;
+    }
+    if pos > body.len() {
+        return Err(AceError::Truncated(body.len()));
     }
 
     // Read ALL mip levels (as OR does), assemble each into RGBA8.
@@ -416,7 +432,9 @@ fn parse_or_structured(
                     mip_w // 8 bpp: one byte per pixel
                 };
 
-                let slice = body.get(pos..pos + bytes_needed).unwrap_or(&[]);
+                let slice = body
+                    .get(pos..pos + bytes_needed)
+                    .ok_or(AceError::Truncated(body.len()))?;
                 pos += bytes_needed;
 
                 let k = kind as usize;
@@ -687,6 +705,46 @@ pub fn write_synthetic_ace(path: &std::path::Path, pixels: &[u8]) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn malformed_structured_channels_and_rows_return_errors_instead_of_panicking() {
+        let crash = include_bytes!("../tests/fixtures/fuzz-missing-green.ace");
+        assert!(matches!(
+            AceFile::read_bytes(crash),
+            Err(AceError::InvalidChannels)
+        ));
+        let mut body = vec![0; 152];
+        for (offset, value) in [(0, 1u32), (8, 1), (12, 1), (20, 3)] {
+            body[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
+        }
+        for kind in [CH_RED, CH_GREEN, CH_BLUE] {
+            body.extend(8u64.to_le_bytes());
+            body.extend(kind.to_le_bytes());
+        }
+        body.extend([0; 4]);
+        body.extend([10, 20, 30]);
+        let wrap = |body: &[u8]| [b"SIMISA@@@@@@@@@@".as_slice(), body].concat();
+        assert_eq!(
+            AceFile::read_bytes(&wrap(&body)).unwrap().mip0,
+            [10, 20, 30, 255]
+        );
+        assert!(matches!(
+            AceFile::read_bytes(&wrap(&body[..body.len() - 1])),
+            Err(AceError::Truncated(_))
+        ));
+        let mut invalid = body.clone();
+        invalid[152..160].copy_from_slice(&7u64.to_le_bytes());
+        assert!(matches!(
+            AceFile::read_bytes(&wrap(&invalid)),
+            Err(AceError::InvalidChannels)
+        ));
+        invalid[152..160].copy_from_slice(&8u64.to_le_bytes());
+        invalid[160..168].copy_from_slice(&99u64.to_le_bytes());
+        assert!(matches!(
+            AceFile::read_bytes(&wrap(&invalid)),
+            Err(AceError::InvalidChannels)
+        ));
+    }
 
     fn raw_dxt_mips_body() -> Vec<u8> {
         let mut body = vec![0; 152];

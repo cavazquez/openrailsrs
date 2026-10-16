@@ -1,0 +1,15 @@
+[package]
+name = "openrailsrs-fuzz"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Shared bounded input exercises for regression and libFuzzer"
+
+[dependencies]
+openrailsrs-formats = { path = "../openrailsrs-formats" }
+openrailsrs-ace = { path = "../openrailsrs-ace" }
+openrailsrs-track = { path = "../openrailsrs-track" }
+openrailsrs-game = { path = "../openrailsrs-game" }
+serde_json.workspace = true
+sha2 = "0.10"

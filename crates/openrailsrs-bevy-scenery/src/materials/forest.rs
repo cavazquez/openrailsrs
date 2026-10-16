@@ -40,6 +40,7 @@ pub struct OrForestMaterial {
     pub params: OrForestGpuParams,
     #[texture(1)]
     #[sampler(2)]
+    #[dependency]
     pub base_texture: Handle<Image>,
     pub alpha_mode: AlphaMode,
 }

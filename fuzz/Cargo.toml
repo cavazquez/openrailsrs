@@ -1,0 +1,64 @@
+[package]
+name = "openrailsrs-libfuzzer"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[workspace]
+members = ["."]
+
+[dependencies]
+libfuzzer-sys = "0.4"
+openrailsrs-fuzz = { path = "../crates/openrailsrs-fuzz" }
+
+[[bin]]
+name = "stf"
+path = "fuzz_targets/stf.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "simisa"
+path = "fuzz_targets/simisa.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "textures"
+path = "fuzz_targets/textures.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "shapes"
+path = "fuzz_targets/shapes.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "terrain"
+path = "fuzz_targets/terrain.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "sigscript"
+path = "fuzz_targets/sigscript.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "multiplayer"
+path = "fuzz_targets/multiplayer.rs"
+test = false
+doc = false
+bench = false

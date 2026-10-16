@@ -33,6 +33,7 @@ struct BinaryReader<'a> {
     pos: usize,
     token_offset: i32,
     base_offset: usize,
+    depth: usize,
 }
 
 impl<'a> BinaryReader<'a> {
@@ -42,6 +43,7 @@ impl<'a> BinaryReader<'a> {
             pos: 0,
             token_offset,
             base_offset,
+            depth: 0,
         }
     }
 
@@ -405,6 +407,19 @@ impl<'a> BinaryReader<'a> {
     }
 
     fn dump_block(&mut self) -> Result<String, FormatError> {
+        if self.depth >= 128 {
+            return Err(FormatError::UnexpectedToken {
+                offset: self.absolute_pos(),
+                message: "binary shape nesting exceeds 128 levels".into(),
+            });
+        }
+        self.depth += 1;
+        let result = self.dump_block_inner();
+        self.depth -= 1;
+        result
+    }
+
+    fn dump_block_inner(&mut self) -> Result<String, FormatError> {
         let token_id = self.read_token_id()?;
         let _flags = self.read_u16()?;
         let remaining = self.read_u32()? as usize;

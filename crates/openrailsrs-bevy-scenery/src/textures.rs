@@ -724,6 +724,7 @@ pub fn apply_msts_texture_sampler(
     tex_addr_mode: Option<i32>,
     mip_map_lod_bias: Option<f32>,
 ) {
+    image.texture_descriptor.label = Some(crate::progressive_mips::AUTHORED_TEXTURE_LABEL);
     let addr = image_address_mode_from_msts(tex_addr_mode);
     let bias = mip_map_lod_bias.map(clamp_or_mip_map_lod_bias);
     let lod_min_clamp = bias.filter(|&b| b > 0.0).unwrap_or(0.0);

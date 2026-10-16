@@ -10,6 +10,7 @@ pub mod gpu_textures;
 pub mod lighting;
 pub mod load_diagnostics;
 pub mod materials;
+pub mod progressive_mips;
 pub mod shapes;
 pub mod spawn;
 pub mod stream;
@@ -109,6 +110,7 @@ pub struct OrSceneryPlugins;
 impl Plugin for OrSceneryPlugins {
     fn build(&self, app: &mut App) {
         app.add_plugins(MstsAssetPlugin)
+            .add_plugins(progressive_mips::ProgressiveMipsPlugin)
             .add_plugins(ScenerySpawnPlugin)
             .add_plugins(MaterialPlugin::<TerrainMaterial>::default())
             .add_plugins(MaterialPlugin::<OrTerrainMaterial>::default())

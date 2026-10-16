@@ -68,9 +68,11 @@ pub struct OrTerrainMaterial {
     pub params: OrTerrainGpuParams,
     #[texture(1)]
     #[sampler(2)]
+    #[dependency]
     pub base_texture: Handle<Image>,
     #[texture(3)]
     #[sampler(4)]
+    #[dependency]
     pub overlay_texture: Handle<Image>,
 }
 

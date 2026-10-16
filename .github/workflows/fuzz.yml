@@ -1,0 +1,71 @@
+name: Bounded input fuzzing
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'fuzz/**'
+      - 'crates/openrailsrs-fuzz/**'
+      - 'crates/openrailsrs-formats/**'
+      - 'crates/openrailsrs-ace/**'
+      - 'crates/openrailsrs-track/**'
+      - 'crates/openrailsrs-game/**'
+      - 'scripts/*content*.py'
+      - '.github/workflows/fuzz.yml'
+permissions:
+  contents: read
+env:
+  RUSTUP_TOOLCHAIN: "1.97.1"
+  CARGO_BUILD_JOBS: "2"
+  CARGO_INCREMENTAL: "0"
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUSTUP_TOOLCHAIN }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Deterministic production-reader mutations
+        run: cargo run --locked -p openrailsrs-fuzz -- --runs 128 --seed 1612026 --out tmp/fuzz-ci --export-corpus fuzz/corpus
+      - name: Offline URL and ZIP mutations
+        run: python3 scripts/fuzz_content.py --runs 128 --out tmp/fuzz-content-ci
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bounded-fuzz-reproduction
+          path: |
+            tmp/fuzz-ci/
+            tmp/fuzz-content-ci/
+          if-no-files-found: warn
+  libfuzzer:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      RUSTUP_TOOLCHAIN: nightly
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rust-src
+      - name: Install cargo-fuzz
+        env:
+          RUSTUP_TOOLCHAIN: nightly
+        run: cargo install cargo-fuzz --locked
+      - name: Export owned corpus
+        run: cargo run --locked -p openrailsrs-fuzz -- --runs 1 --out tmp/fuzz-seeds --export-corpus fuzz/corpus
+      - name: Coverage-guided campaigns (bounded per target)
+        env:
+          RUSTUP_TOOLCHAIN: nightly
+        run: |
+          for target in stf simisa textures shapes terrain sigscript multiplayer; do
+            cargo fuzz run "$target" -- -max_total_time=30 -timeout=5 -rss_limit_mb=1024 -max_len=65536
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: libfuzzer-inputs
+          path: fuzz/artifacts/
+          if-no-files-found: ignore

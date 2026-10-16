@@ -1,0 +1,186 @@
+{
+  "status": "pass",
+  "binary_sha256": "63d17f3c4e2bdb34764cb86161e6abf14ec71c0482e12d27436881642d2e1a74",
+  "reports": {
+    "northolt-park": {
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 160.0,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.6000000238418579,
+        "position_world": [
+          -12463280.0,
+          151.4334716796875,
+          -30571420.0
+        ],
+        "rotation_xyzw": [
+          -0.20589089393615723,
+          0.6853164434432983,
+          0.21199320256710052,
+          0.6655892729759216
+        ],
+        "target_world": [
+          -12463412.0,
+          61.090667724609375,
+          -30571416.0
+        ],
+        "yaw_rad": 1.600000023841858
+      },
+      "solar_direction": [
+        0.7324360609054565,
+        0.6552199125289917,
+        0.18499818444252014
+      ],
+      "clock_time_s": 35700.0,
+      "odometer_m": 0.0,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "draw_calls": {
+        "compute_dispatches": 0,
+        "grass": 0,
+        "occluded_groups": 0,
+        "opaque": 129,
+        "scope": "WORLD/grass CPU submissions and compute dispatches, not GPU-visible instance counts; excludes Standard PBR, UI and Hanabi; shadows retain the full original instance buffer",
+        "shadow": 887
+      },
+      "performance": {
+        "elapsed_s": 3.0709944240000007,
+        "frame_contexts": null,
+        "frame_p50_ms": 5,
+        "frame_p95_ms": 10,
+        "frame_p99_ms": 31,
+        "frames": 393,
+        "gameplay_frame_p50_ms": 6,
+        "gameplay_frame_p95_ms": 14,
+        "gameplay_frame_p99_ms": 15,
+        "gameplay_frames": 43,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 15.250475,
+        "hitches_over_100_ms": 1,
+        "loading_frames": 350,
+        "longest_frame_ms": 775.310211,
+        "peak_rss_mib": 1500.2890625,
+        "rss_mib": 1500.2890625,
+        "startup_longest_frame_ms": 775.310211
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 334.50529324398474,
+        "gpu_busy_percent_mean": 35.68421052631579,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 5.2105263157894735,
+          "0000:03:00.0": 35.68421052631579
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
+        "private_compositor": {
+          "gl_renderer": "AMD Ryzen 5 9600X 6-Core Processor (radeonsi, raphael_mendocino, ACO, DRM 3.64, 7.0.0-38-generic)",
+          "egl_device": "/dev/dri/renderD129",
+          "DRI_PRIME": null,
+          "scope": "GL renderer identifies effective offload device; EGL device may retain enumeration node"
+        }
+      },
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "elapsed_s": 5.1,
+      "peak_rss_mib": 1504.7
+    },
+    "northolt-park-cab": {
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 160.0,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.6000000238418579,
+        "position_world": [
+          -12463419.0,
+          63.92218017578125,
+          -30571412.0
+        ],
+        "rotation_xyzw": [
+          -0.07096271216869354,
+          0.8383246064186096,
+          0.112522654235363,
+          0.5286916494369507
+        ],
+        "target_world": [
+          -12463421.0,
+          61.03791809082031,
+          -30571412.0
+        ],
+        "yaw_rad": -2.6960983276367188
+      },
+      "solar_direction": [
+        0.7324360609054565,
+        0.6552199125289917,
+        0.18499818444252014
+      ],
+      "clock_time_s": 35700.0,
+      "odometer_m": 0.0,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "draw_calls": {
+        "compute_dispatches": 0,
+        "grass": 0,
+        "occluded_groups": 0,
+        "opaque": 124,
+        "scope": "WORLD/grass CPU submissions and compute dispatches, not GPU-visible instance counts; excludes Standard PBR, UI and Hanabi; shadows retain the full original instance buffer",
+        "shadow": 973
+      },
+      "performance": {
+        "elapsed_s": 3.3052879839999982,
+        "frame_contexts": null,
+        "frame_p50_ms": 5,
+        "frame_p95_ms": 12,
+        "frame_p99_ms": 41,
+        "frames": 339,
+        "gameplay_frame_p50_ms": 7,
+        "gameplay_frame_p95_ms": 12,
+        "gameplay_frame_p99_ms": 13,
+        "gameplay_frames": 42,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 13.076915999999999,
+        "hitches_over_100_ms": 2,
+        "loading_frames": 297,
+        "longest_frame_ms": 740.900566,
+        "peak_rss_mib": 2220.09765625,
+        "rss_mib": 2220.09765625,
+        "startup_longest_frame_ms": 740.900566
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 330.4882637881436,
+        "gpu_busy_percent_mean": 36.1,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 0.0,
+          "0000:03:00.0": 36.1
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
+        "private_compositor": {
+          "gl_renderer": "AMD Ryzen 5 9600X 6-Core Processor (radeonsi, raphael_mendocino, ACO, DRM 3.64, 7.0.0-38-generic)",
+          "egl_device": "/dev/dri/renderD129",
+          "DRI_PRIME": null,
+          "scope": "GL renderer identifies effective offload device; EGL device may retain enumeration node"
+        }
+      },
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "elapsed_s": 5.3,
+      "peak_rss_mib": 2223.2
+    }
+  },
+  "source_build": 11,
+  "scope": "Fresh cab and exterior captures after the final queue/cancellation changes, using the complete viewer and unchanged OR 1.6.1 condition references. No new before/after performance claim is derived from this single configuration."
+}

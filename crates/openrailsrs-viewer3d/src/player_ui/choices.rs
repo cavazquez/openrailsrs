@@ -1,5 +1,6 @@
 //! Direct, searchable choices. Incomplete content remains selectable for diagnosis.
 use super::*;
+use unicode_normalization::{UnicodeNormalization, char::is_combining_mark};
 #[path = "choice_filters.rs"]
 mod filters;
 pub(super) use filters::{ChoiceFilter, cycle_filter, favorite_key, filtered};
@@ -32,17 +33,28 @@ pub(super) struct ChoiceSearch {
     pub query: String,
     pub page: usize,
     pub cursor: Option<usize>,
+    pub cursor_identity: Option<String>,
     pub country: usize,
     pub gauge: usize,
     pub traction: usize,
     pub resources: usize,
     pub favorites_only: bool,
     pub filters_expanded: bool,
+    pub favorites_first: bool,
 }
 
 fn normalized(text: &str) -> String {
-    text.chars()
+    text.nfd()
         .flat_map(char::to_lowercase)
+        .scan(false, |latin, c| {
+            if is_combining_mark(c) {
+                Some((!(*latin)).then_some(c))
+            } else {
+                *latin = c.is_ascii_alphabetic() || ('\u{00c0}'..='\u{024f}').contains(&c);
+                Some(Some(c))
+            }
+        })
+        .flatten()
         .map(|c| match c {
             'á' | 'à' | 'â' | 'ä' => 'a',
             'é' | 'è' | 'ê' | 'ë' => 'e',
@@ -84,6 +96,23 @@ pub(super) fn matching(menu: &PlayerLaunchMenu, kind: ChoiceKind, query: &str) -
         })
         .collect()
 }
+fn cursor_position(
+    search: &ChoiceSearch,
+    menu: &PlayerLaunchMenu,
+    kind: ChoiceKind,
+    matches: &[usize],
+) -> Option<usize> {
+    search
+        .cursor_identity
+        .as_ref()
+        .map_or(search.cursor, |identity| {
+            matches
+                .iter()
+                .position(|&i| favorite_key(menu, kind, i) == *identity)
+        })
+        .filter(|&p| p < matches.len())
+}
+
 pub(super) fn select(menu: &mut PlayerLaunchMenu, kind: ChoiceKind, index: usize) {
     match kind {
         ChoiceKind::Route if index < menu.routes.len() && index != menu.route => {
@@ -154,6 +183,7 @@ pub(super) fn build(
     });
     filters::build(p, search, menu, kind, settings);
     let matches = filtered(menu, kind, search, settings);
+    let cursor_position = cursor_position(search, menu, kind, &matches);
     let pages = matches.len().div_ceil(PAGE_SIZE).max(1);
     let page = search.page.min(pages - 1);
     label(
@@ -219,7 +249,7 @@ pub(super) fn build(
                     ..default()
                 },
                 BackgroundColor(FIELD),
-                BorderColor::all(if selected || search.cursor == Some(position) {
+                BorderColor::all(if selected || cursor_position == Some(position) {
                     ACCENT
                 } else {
                     FIELD
@@ -265,6 +295,9 @@ pub(super) fn build(
                 if let Some(warning) = &railway_warning {
                     label(p, format!("! {warning}"), 11.0, CAUTION);
                 }
+                if let Some(warning) = audit.and_then(filters::gauge_warning) {
+                    label(p, warning, 11.0, CAUTION);
+                }
                 if incomplete && kind == ChoiceKind::Route {
                     label(
                         p,
@@ -282,12 +315,36 @@ pub(super) fn build(
         }
     }
     if matches.is_empty() {
-        label(
-            p,
-            "No hay coincidencias. Probá con otro nombre.",
-            14.0,
-            MUTED,
-        );
+        let all = matching(menu, kind, "");
+        let country_routes = if kind == ChoiceKind::Route {
+            all.iter()
+                .any(|&i| menu_country::route_matches(menu, i, search.country))
+        } else {
+            !all.is_empty()
+        };
+        let cause = if all.is_empty() {
+            "No hay contenido instalado para esta lista."
+        } else if !country_routes {
+            "No hay rutas instaladas para el país seleccionado."
+        } else if !search.query.is_empty() && matching(menu, kind, &search.query).is_empty() {
+            "Ningún nombre coincide con la búsqueda."
+        } else {
+            "Los filtros actuales no dejan coincidencias."
+        };
+        label(p, cause, 14.0, MUTED);
+        row(p, |p| {
+            if !search.query.is_empty() {
+                button(p, "Limpiar búsqueda", UiCommand::ClearSearch(kind));
+            }
+            if country_routes && !all.is_empty() {
+                button(
+                    p,
+                    "Quitar filtros",
+                    UiCommand::ChoiceFilter(kind, ChoiceFilter::Reset),
+                );
+            }
+            button(p, "Abrir Biblioteca", UiCommand::Open(PlayerPanel::Content));
+        });
     }
     if pages > 1 {
         row(p, |p| {
@@ -298,7 +355,7 @@ pub(super) fn build(
     label(
         p,
         if focused {
-            "Escribí para buscar · ↑/↓ elegir · Enter seleccionar · Esc salir del buscador"
+            "Escribí para buscar · ↑/↓ · Inicio/Fin · RePág/AvPág · Enter seleccionar · Esc salir"
         } else {
             "Podés seleccionar también los elementos en gris para ver sus detalles."
         },
@@ -327,30 +384,38 @@ pub(super) fn choice_keys(
                 search.query.pop();
                 search.page = 0;
                 search.cursor = None;
+                search.cursor_identity = None;
             }
-            Key::ArrowUp | Key::ArrowDown => {
-                let count = filtered(&menu, kind, search, &settings).len();
-                if count > 0 {
-                    let cursor = search.cursor.unwrap_or(search.page * PAGE_SIZE);
-                    search.cursor = Some(cycle(
-                        cursor,
-                        count,
-                        if input.logical_key == Key::ArrowUp {
-                            -1
-                        } else {
-                            1
-                        },
-                    ));
-                    search.page = search.cursor.unwrap() / PAGE_SIZE;
+            Key::ArrowUp | Key::ArrowDown | Key::Home | Key::End | Key::PageUp | Key::PageDown => {
+                let matches = filtered(&menu, kind, search, &settings);
+                let count = matches.len();
+                if let Some(identity) = &search.cursor_identity {
+                    search.cursor = matches
+                        .iter()
+                        .position(|&i| favorite_key(&menu, kind, i) == *identity);
+                    if search.cursor.is_none() {
+                        search.page = 0;
+                    }
                 }
+                move_cursor(search, count, &input.logical_key);
+                search.cursor_identity = search
+                    .cursor
+                    .and_then(|p| matches.get(p))
+                    .map(|&i| favorite_key(&menu, kind, i));
             }
             Key::Enter => {
-                let index = filtered(&menu, kind, search, &settings)
-                    .get(search.cursor.unwrap_or(search.page * PAGE_SIZE))
-                    .copied();
+                let matches = filtered(&menu, kind, search, &settings);
+                let position = if search.cursor_identity.is_none() && search.cursor.is_none() {
+                    Some(search.page.saturating_mul(PAGE_SIZE))
+                } else {
+                    cursor_position(search, &menu, kind, &matches)
+                };
+                let index = position.and_then(|p| matches.get(p)).copied();
                 if let Some(index) = index {
                     select(&mut menu, kind, index);
                     ui.choice_focus = None;
+                } else if search.cursor_identity.is_some() {
+                    ui.notice = "Los resultados cambiaron; volvé a elegir con las flechas.".into();
                 }
             }
             _ => {
@@ -367,9 +432,88 @@ pub(super) fn choice_keys(
                     }
                     search.page = 0;
                     search.cursor = None;
+                    search.cursor_identity = None;
                 }
             }
         }
         ui.rebuild = true;
+    }
+}
+
+fn move_cursor(search: &mut ChoiceSearch, count: usize, key: &Key) {
+    if count == 0 {
+        search.cursor = None;
+        search.page = 0;
+        return;
+    }
+    let cursor = search
+        .cursor
+        .unwrap_or(search.page.saturating_mul(PAGE_SIZE))
+        .min(count - 1);
+    let next = match key {
+        Key::Home => 0,
+        Key::End => count - 1,
+        Key::PageUp => cursor.saturating_sub(PAGE_SIZE),
+        Key::PageDown => cursor.saturating_add(PAGE_SIZE).min(count - 1),
+        Key::ArrowUp => cycle(cursor, count, -1),
+        _ => cycle(cursor, count, 1),
+    };
+    search.cursor = Some(next);
+    search.page = next / PAGE_SIZE;
+}
+
+#[cfg(test)]
+mod navigation_tests {
+    use super::*;
+    #[test]
+    fn asynchronous_results_cannot_confirm_another_identity_at_the_old_position() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut menu = PlayerLaunchMenu::discover(tmp.path(), None);
+        menu.routes = vec!["Zulu".into(), "Beta".into()];
+        let search = ChoiceSearch {
+            cursor: Some(0),
+            cursor_identity: Some("route:Beta".into()),
+            ..Default::default()
+        };
+        assert_eq!(
+            cursor_position(&search, &menu, ChoiceKind::Route, &[1, 0]),
+            Some(0)
+        );
+        menu.routes.insert(0, "Alpha".into());
+        assert_eq!(
+            cursor_position(&search, &menu, ChoiceKind::Route, &[0, 2, 1]),
+            Some(1)
+        );
+        assert_eq!(
+            cursor_position(&search, &menu, ChoiceKind::Route, &[0, 1]),
+            None
+        );
+    }
+    #[test]
+    fn unicode_equivalence_keeps_accents_out_of_search_identity_only() {
+        assert_eq!(
+            normalized("Éléctrico Ñandú"),
+            normalized("E\u{301}le\u{301}ctrico N\u{303}andu\u{301}")
+        );
+        assert_eq!(normalized("CAFÉ 6000"), "cafe 6000");
+        assert_eq!(normalized("東京"), "東京");
+        assert_ne!(normalized("ガ"), normalized("カ"));
+        assert_eq!(normalized("ガ"), normalized("カ\u{3099}"));
+    }
+    #[test]
+    fn paging_clamps_to_filtered_results_and_recovers_after_shrink() {
+        let mut s = ChoiceSearch::default();
+        move_cursor(&mut s, 13, &Key::End);
+        assert_eq!((s.cursor, s.page), (Some(12), 2));
+        move_cursor(&mut s, 13, &Key::PageUp);
+        assert_eq!((s.cursor, s.page), (Some(7), 1));
+        move_cursor(&mut s, 13, &Key::PageDown);
+        assert_eq!(s.cursor, Some(12));
+        move_cursor(&mut s, 2, &Key::PageDown);
+        assert_eq!((s.cursor, s.page), (Some(1), 0));
+        move_cursor(&mut s, 0, &Key::Home);
+        assert_eq!((s.cursor, s.page), (None, 0));
+        move_cursor(&mut s, 8, &Key::Home);
+        assert_eq!(s.cursor, Some(0));
     }
 }

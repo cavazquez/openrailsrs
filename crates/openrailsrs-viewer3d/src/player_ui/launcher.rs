@@ -345,35 +345,6 @@ pub(super) fn build_new_game(
         }
         NewGameStep::Train => {
             label(p, "¿Qué tren vas a llevar?", 21.0, TEXT);
-            if let Some(preview) = previews
-                && let Some(rail) = &preview.railway
-                && let Some(audit) = menu
-                    .consists
-                    .get(menu.consist)
-                    .and_then(|path| menu.consist_audits.get(path))
-            {
-                let assessment = crate::clearance::compare(audit, rail.clearance.as_ref());
-                label(
-                    p,
-                    assessment.text(),
-                    13.,
-                    if matches!(assessment, crate::clearance::Assessment::Incompatible(_)) {
-                        CAUTION
-                    } else {
-                        MUTED
-                    },
-                );
-            }
-            button(
-                p,
-                "Armar una formación propia",
-                UiCommand::FormationEditorStart,
-            );
-            button(
-                p,
-                "Ajustes propios por vehículo",
-                UiCommand::Open(PlayerPanel::VehicleProfile),
-            );
             choice_columns(
                 p,
                 |p| {
@@ -382,6 +353,25 @@ pub(super) fn build_new_game(
                 },
                 |p| {
                     label(p, menu.consist_label(), 17.0, TEXT);
+                    if let Some(preview) = previews
+                        && let Some(rail) = &preview.railway
+                        && let Some(audit) = menu
+                            .consists
+                            .get(menu.consist)
+                            .and_then(|path| menu.consist_audits.get(path))
+                    {
+                        let assessment = crate::clearance::compare(audit, rail.clearance.as_ref());
+                        label(
+                            p,
+                            assessment.text(),
+                            13.,
+                            if matches!(assessment, crate::clearance::Assessment::Incompatible(_)) {
+                                CAUTION
+                            } else {
+                                MUTED
+                            },
+                        );
+                    }
                     if let Some(preview) = previews {
                         super::previews::train_card(p, preview);
                     }
@@ -463,6 +453,18 @@ pub(super) fn build_new_game(
                     });
                 },
             );
+            row(p, |p| {
+                button(
+                    p,
+                    "Armar una formación propia",
+                    UiCommand::FormationEditorStart,
+                );
+                button(
+                    p,
+                    "Ajustes propios por vehículo",
+                    UiCommand::Open(PlayerPanel::VehicleProfile),
+                );
+            });
         }
         NewGameStep::Environment => {
             button(

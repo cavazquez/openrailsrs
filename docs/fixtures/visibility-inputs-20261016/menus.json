@@ -1,0 +1,122 @@
+{
+  "binary_sha256": "171a2b55618259c13ed6d999da4a75b3a2eb6cb680c3583e63fd97c9ec76eb20",
+  "scope": "Layout/correctness only; concurrent independent CPU fuzzing prevents using elapsed time as a performance claim.",
+  "runs": [
+    {
+      "command": [
+        "python3",
+        "scripts/capture_player_menu.py",
+        "--pages",
+        "route",
+        "train",
+        "library",
+        "downloads",
+        "--width",
+        "800",
+        "--height",
+        "600",
+        "--scale",
+        "1",
+        "--out-dir",
+        "tmp/next20-20261016/menu06-800"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/capture_player_menu.py",
+        "--pages",
+        "route",
+        "train",
+        "library",
+        "downloads",
+        "--width",
+        "1280",
+        "--height",
+        "720",
+        "--scale",
+        "1.5",
+        "--out-dir",
+        "tmp/next20-20261016/menu06-1280"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "800": [
+    {
+      "page": "route",
+      "width": 800,
+      "height": 600,
+      "scale": 1.0,
+      "elapsed_s": 6.615517005000584,
+      "peak_rss_mib": 513.78515625,
+      "exit_code": 0
+    },
+    {
+      "page": "train",
+      "width": 800,
+      "height": 600,
+      "scale": 1.0,
+      "elapsed_s": 6.615313852998952,
+      "peak_rss_mib": 525.83984375,
+      "exit_code": 0
+    },
+    {
+      "page": "library",
+      "width": 800,
+      "height": 600,
+      "scale": 1.0,
+      "elapsed_s": 6.616028038002696,
+      "peak_rss_mib": 505.41015625,
+      "exit_code": 0
+    },
+    {
+      "page": "downloads",
+      "width": 800,
+      "height": 600,
+      "scale": 1.0,
+      "elapsed_s": 6.615194994999911,
+      "peak_rss_mib": 499.0546875,
+      "exit_code": 0
+    }
+  ],
+  "1280": [
+    {
+      "page": "route",
+      "width": 1280,
+      "height": 720,
+      "scale": 1.5,
+      "elapsed_s": 6.718841795998742,
+      "peak_rss_mib": 515.23046875,
+      "exit_code": 0
+    },
+    {
+      "page": "train",
+      "width": 1280,
+      "height": 720,
+      "scale": 1.5,
+      "elapsed_s": 6.615710543002933,
+      "peak_rss_mib": 504.46875,
+      "exit_code": 0
+    },
+    {
+      "page": "library",
+      "width": 1280,
+      "height": 720,
+      "scale": 1.5,
+      "elapsed_s": 6.615920879998157,
+      "peak_rss_mib": 496.6640625,
+      "exit_code": 0
+    },
+    {
+      "page": "downloads",
+      "width": 1280,
+      "height": 720,
+      "scale": 1.5,
+      "elapsed_s": 6.615802316999179,
+      "peak_rss_mib": 483.78125,
+      "exit_code": 0
+    }
+  ]
+}

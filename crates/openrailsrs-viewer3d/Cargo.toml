@@ -62,6 +62,7 @@ bevy-inspector-egui = { version = "0.37", optional = true, default-features = fa
 bevy_framepace = { version = "0.22", optional = true, default-features = false }
 bytemuck.workspace = true
 image = { workspace = true, features = ["png", "bmp"] }
+unicode-normalization = "0.1"
 
 [target.'cfg(all(target_os = "linux", target_env = "gnu"))'.dependencies]
 libc = "0.2.189"

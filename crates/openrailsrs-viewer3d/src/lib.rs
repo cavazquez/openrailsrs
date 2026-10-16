@@ -424,6 +424,13 @@ impl Plugin for ViewerPlugin {
                     .run_if(in_state(ViewerAppState::Playing)),
             );
         app.add_plugins(bevy::pbr::MaterialPlugin::<surface_weather::SnowMaterial>::default())
+            .add_systems(
+                PostUpdate,
+                openrailsrs_bevy_scenery::progressive_mips::refresh_material_bindings::<
+                    surface_weather::SnowMaterial,
+                >
+                    .after(openrailsrs_bevy_scenery::progressive_mips::MipRefinement),
+            )
             .init_resource::<snow_tracks::SnowTracks>()
             .add_systems(
                 Update,

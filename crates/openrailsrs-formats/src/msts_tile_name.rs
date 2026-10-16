@@ -14,6 +14,9 @@ pub fn msts_tile_name_from_xz(tile_x: i32, tile_z: i32) -> String {
 }
 
 pub fn msts_tile_name_from_xz_zoom(tile_x: i32, tile_z: i32, zoom: u32) -> String {
+    // Higher zooms have no representable subdivision in MSTS' integer grid.
+    // Bound external callers rather than iterating an attacker-supplied u32.
+    let zoom = zoom.min(30);
     const HEX: &[u8; 16] = b"0123456789ABCDEF";
     let mut rect_x = -16_384i32;
     let mut rect_z = -16_384i32;
@@ -102,7 +105,7 @@ pub fn parse_world_w_tile_xz(path: &std::path::Path) -> Option<(i32, i32)> {
 /// `.w` filename (`w-006084+014923.w`) from signed tile coords (Open Rails
 /// `WorldFileNameFromTileCoordinates`).
 pub fn world_w_filename_from_tile_xz(tile_x: i32, tile_z: i32) -> String {
-    let fmt = |v: i32| format!("{}{:06}", if v < 0 { '-' } else { '+' }, v.abs());
+    let fmt = |v: i32| format!("{}{:06}", if v < 0 { '-' } else { '+' }, v.unsigned_abs());
     format!("w{}{}.w", fmt(tile_x), fmt(tile_z))
 }
 
@@ -110,6 +113,15 @@ pub fn world_w_filename_from_tile_xz(tile_x: i32, tile_z: i32) -> String {
 mod tests {
     use super::*;
     use std::path::PathBuf;
+    #[test]
+    fn extreme_coordinates_and_zoom_have_bounded_non_panicking_names() {
+        assert_eq!(
+            world_w_filename_from_tile_xz(i32::MIN, i32::MAX),
+            "w-2147483648+2147483647.w"
+        );
+        let name = msts_tile_name_from_xz_zoom(i32::MIN, i32::MAX, u32::MAX);
+        assert!(name.len() <= 16);
+    }
 
     #[test]
     fn tile_origin_is_centre_minus_half() {

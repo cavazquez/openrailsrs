@@ -16,6 +16,12 @@ Núcleo de simulación **sin gráficos** (Linux-first, Rust ≥1.95). CSV para s
 
 Fases y prioridades: [`ROADMAP.md`](ROADMAP.md). Docs: [`docs/README.md`](docs/README.md).
 
+El escenario incorpora descarte de instancias por cámara, oclusión conservadora
+y carga progresiva de mipmaps. La biblioteca suma búsqueda Unicode, navegación
+por teclado, orden por nombre/favoritos y recuperación de descargas. La
+[guía de los veinte issues](docs/NEXT_TWENTY_20261016.md) explica cómo probar
+estas mejoras y el bloque de fuzzing de archivos externos.
+
 La cuarta entrega amplía los equipos por vehículo: motores, pantógrafos, puertas, cabinas, alimentación entre coches, propulsión dual, frenos y auxiliares de vapor. También incorpora recorridos de mercancías, circulación por interiores permitidos y mejoras de iluminación, protección bajo techos, niebla y vidrio mojado. La [guía de los treinta cambios](docs/PLAYER_30_4_MANUAL.md) explica cómo probarlos y distingue los perfiles originales verificados de los modelos propios.
 
 La quinta entrega incorpora uniones flexibles y bogies compartidos, pasajeros visibles, espejos, pasos a nivel con tránsito original, nieve con espesor y huellas, encuentros, maniobras, patios y jornadas. La biblioteca permite instalar desde una URL original y elegir una carpeta de contenido escribible. La [guía manual de los cuarenta cambios](docs/MANUAL_FIFTH40.md) indica qué abrir, qué hacer y qué observar en cada caso; las [mediciones de rendimiento](docs/PERFORMANCE_FIFTH40.md) separan carga, conducción, memoria y audio. El [seguimiento del lote](docs/PLAN_40_5.md) distingue implementación de aceptación pendiente.

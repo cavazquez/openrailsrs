@@ -247,13 +247,9 @@ impl Framed {
         }
         let mut messages = vec![];
         while self.input.len() >= 4 && messages.len() < 8 {
-            let size = u32::from_be_bytes(self.input[..4].try_into().expect("four bytes")) as usize;
-            if size == 0 || size > self.limit {
-                return Err("Tamaño de trama inválido".into());
-            }
-            if self.input.len() < size + 4 {
+            let Some((parsed, consumed)) = decode_frame(&self.input, self.limit)? else {
                 break;
-            }
+            };
             if self.quota_at.elapsed() >= Duration::from_secs(1) {
                 self.quota_at = Instant::now();
                 self.quota = 0;
@@ -262,9 +258,7 @@ impl Framed {
             if request && self.quota > 40 {
                 return Err("Demasiados mandos por segundo".into());
             }
-            let parsed = serde_json::from_slice(&self.input[4..size + 4])
-                .map_err(|_| "Mensaje de red inválido")?;
-            self.input.drain(..size + 4);
+            self.input.drain(..consumed);
             messages.push(parsed);
         }
         if self.last_read.elapsed() > Duration::from_secs(10) {
@@ -272,6 +266,26 @@ impl Framed {
         }
         Ok(messages)
     }
+}
+/// Decode exactly one complete frame, without consuming a partial message.
+/// Shared by sockets, deterministic regression campaigns and libFuzzer.
+pub fn decode_frame<T: DeserializeOwned>(
+    input: &[u8],
+    limit: usize,
+) -> Result<Option<(T, usize)>, String> {
+    if input.len() < 4 {
+        return Ok(None);
+    }
+    let size = u32::from_be_bytes(input[..4].try_into().expect("four bytes")) as usize;
+    if size == 0 || size > limit.min(MAX_FRAME_BYTES) {
+        return Err("Tamaño de trama inválido".into());
+    }
+    let end = size.checked_add(4).ok_or("Tamaño de trama inválido")?;
+    if input.len() < end {
+        return Ok(None);
+    }
+    let parsed = serde_json::from_slice(&input[4..end]).map_err(|_| "Mensaje de red inválido")?;
+    Ok(Some((parsed, end)))
 }
 pub fn encode<T: Serialize>(value: &T, limit: usize) -> Result<Vec<u8>, String> {
     let payload = serde_json::to_vec(value).map_err(|_| "Mensaje no serializable".to_string())?;
@@ -283,6 +297,7 @@ pub fn encode<T: Serialize>(value: &T, limit: usize) -> Result<Vec<u8>, String> 
     bytes.extend(payload);
     Ok(bytes)
 }
+
 fn host_loop(
     listener: TcpListener,
     stop: Arc<AtomicBool>,
@@ -443,5 +458,37 @@ fn client_loop(
             }
         }
         thread::sleep(Duration::from_millis(5));
+    }
+}
+
+#[cfg(test)]
+mod frame_regressions {
+    use super::*;
+    #[test]
+    fn fragmented_frames_are_not_consumed_and_limits_are_checked_first() {
+        let message = ClientMessage::Command {
+            epoch: 1,
+            lease: 1,
+            sequence: u64::MAX,
+            action: RemoteCommand::Ping { client_millis: 0 },
+        };
+        let bytes = encode(&message, MAX_REQUEST_BYTES).unwrap();
+        for split in 0..bytes.len() {
+            assert!(
+                decode_frame::<ClientMessage>(&bytes[..split], MAX_REQUEST_BYTES)
+                    .unwrap()
+                    .is_none()
+            );
+        }
+        let (_, used) = decode_frame::<ClientMessage>(&bytes, MAX_REQUEST_BYTES)
+            .unwrap()
+            .unwrap();
+        assert_eq!(used, bytes.len());
+        for size in [0, MAX_REQUEST_BYTES as u32 + 1, u32::MAX] {
+            assert!(decode_frame::<ClientMessage>(&size.to_be_bytes(), MAX_REQUEST_BYTES).is_err());
+        }
+        let mut invalid = 4u32.to_be_bytes().to_vec();
+        invalid.extend(b"nope");
+        assert!(decode_frame::<ClientMessage>(&invalid, MAX_REQUEST_BYTES).is_err());
     }
 }

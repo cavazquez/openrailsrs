@@ -50,6 +50,8 @@ pub fn decode_dds_for_formats(
     addr: Option<i32>,
     bias: Option<f32>,
 ) -> Result<Image, String> {
+    openrailsrs_ace::validate_dds(bytes, openrailsrs_ace::DEFAULT_ACE_LIMIT)
+        .map_err(|e| e.to_string())?;
     if bytes.len() < 128 || &bytes[..4] != b"DDS " {
         return Err("invalid DDS header".into());
     }

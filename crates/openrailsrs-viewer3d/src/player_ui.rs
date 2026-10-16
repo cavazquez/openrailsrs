@@ -438,6 +438,7 @@ enum UiCommand {
     FocusSearch(ChoiceKind),
     ClearSearch(ChoiceKind),
     ChoicePage(ChoiceKind, i32),
+    ChoiceSort(ChoiceKind),
     ChoiceFilter(ChoiceKind, choices::ChoiceFilter),
     ToggleFavorite(ChoiceKind, usize),
     NewGameStep(NewGameStep),
@@ -1427,7 +1428,7 @@ fn handle_buttons(
             UiCommand::FocusSearch(kind) => { ui.choice_focus = Some(*kind); Ok(()) },
             UiCommand::ClearSearch(kind) => {
                 let search = &mut ui.choice_search[kind.slot()];
-                search.query.clear();search.page=0;search.cursor=None;
+                search.query.clear();search.page=0;search.cursor=None;search.cursor_identity=None;
                 ui.choice_focus = Some(*kind);
                 Ok(())
             },
@@ -1436,6 +1437,13 @@ fn handle_buttons(
                 choices::cycle_filter(&mut ui.choice_search[kind.slot()],*filter);
                 if *kind != ChoiceKind::Consist {ui.choice_search[kind.slot()].country = country;}
                 ui.choice_focus=None; Ok(())
+            },
+            UiCommand::ChoiceSort(kind) => {
+                let search = &mut ui.choice_search[kind.slot()];
+                search.favorites_first = !search.favorites_first;
+                search.page = 0; search.cursor = None; search.cursor_identity = None;
+                ui.choice_focus = None;
+                Ok(())
             },
             UiCommand::ToggleFavorite(kind,index) => {
                 let count=match kind {ChoiceKind::Route=>menu.routes.len(),ChoiceKind::Service=>menu.services.len(),ChoiceKind::Consist=>menu.consists.len()};
@@ -1450,6 +1458,7 @@ fn handle_buttons(
                 let search = &mut ui.choice_search[kind.slot()];
                 search.page = cycle(search.page, count.div_ceil(choices::PAGE_SIZE), *direction);
                 search.cursor = None;
+                search.cursor_identity = None;
                 ui.choice_focus = None;
                 Ok(())
             },
@@ -3815,13 +3824,9 @@ fn update_panel_text(
                         .find(|p| p.id() == job.package)
                         .map_or(job.package.as_str(), |p| p.name.as_str());
                     text.push_str(&format!(
-                        "\n{name}: {} · {:.1} MiB{} · {}",
+                        "\n{name}: {} · {} · {}",
                         job.phase.label(),
-                        job.done_bytes as f64 / 1048576.,
-                        job.total_bytes.map_or(String::new(), |n| format!(
-                            " / {:.1} MiB",
-                            n as f64 / 1048576.
-                        )),
+                        job.progress_label(),
                         job.message
                     ));
                 }
@@ -4943,7 +4948,12 @@ mod tests {
             &ui.choice_search[1],
             app.world().resource::<PlayerSettings>(),
         );
-        assert_eq!(services, menu.service_indices());
+        // Country filtering preserves membership; display order is now by name.
+        let mut membership = services.clone();
+        membership.sort_unstable();
+        let mut expected = menu.service_indices();
+        expected.sort_unstable();
+        assert_eq!(membership, expected);
         assert_eq!(
             menu.current().unwrap().route_dir,
             menu.services[services[0]].route_dir

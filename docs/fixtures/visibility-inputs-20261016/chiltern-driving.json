@@ -1,0 +1,184 @@
+{
+  "binary_sha256": "171a2b55618259c13ed6d999da4a75b3a2eb6cb680c3583e63fd97c9ec76eb20",
+  "scope": "Same original Chiltern route, formation, camera, seed and hardware; independently accelerated from Northolt Park to >=500m. Startup and gameplay frame statistics are separate. Independent target overshoot is recorded, so pictures are not a pixel-equivalence oracle.",
+  "reports": {
+    "reference": {
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 160.0,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.6000000238418579,
+        "position_world": [
+          -12463741.0,
+          148.83010864257812,
+          -30571188.0
+        ],
+        "rotation_xyzw": [
+          -0.20589089393615723,
+          0.6853164434432983,
+          0.21199320256710052,
+          0.6655892729759216
+        ],
+        "target_world": [
+          -12463873.0,
+          58.4873161315918,
+          -30571184.0
+        ],
+        "yaw_rad": 1.600000023841858
+      },
+      "solar_direction": [
+        0.6911145448684692,
+        0.6868765950202942,
+        0.2248586118221283
+      ],
+      "clock_time_s": 35781.6,
+      "odometer_m": 504.1004522211853,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "draw_calls": {
+        "compute_dispatches": 0,
+        "grass": 0,
+        "occluded_groups": 0,
+        "opaque": 148,
+        "scope": "WORLD/grass CPU submissions and compute dispatches, not GPU-visible instance counts; excludes Standard PBR, UI and Hanabi; shadows retain the full original instance buffer",
+        "shadow": 832
+      },
+      "performance": {
+        "elapsed_s": 9.194070178999988,
+        "frame_contexts": null,
+        "frame_p50_ms": 6,
+        "frame_p95_ms": 8,
+        "frame_p99_ms": 13,
+        "frames": 1310,
+        "gameplay_frame_p50_ms": 6,
+        "gameplay_frame_p95_ms": 8,
+        "gameplay_frame_p99_ms": 13,
+        "gameplay_frames": 972,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 15.909395,
+        "hitches_over_100_ms": 1,
+        "loading_frames": 461,
+        "longest_frame_ms": 779.261951,
+        "peak_rss_mib": 1533.984375,
+        "rss_mib": 1286.94921875,
+        "startup_longest_frame_ms": 779.261951
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 293.40655718813815,
+        "gpu_busy_percent_mean": 53.27906976744186,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 3.7674418604651163,
+          "0000:03:00.0": 53.27906976744186
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
+        "private_compositor": {
+          "gl_renderer": "AMD Ryzen 5 9600X 6-Core Processor (radeonsi, raphael_mendocino, ACO, DRM 3.64, 7.0.0-38-generic)",
+          "egl_device": "/dev/dri/renderD129",
+          "DRI_PRIME": null,
+          "scope": "GL renderer identifies effective offload device; EGL device may retain enumeration node"
+        }
+      },
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "elapsed_s": 11.1,
+      "peak_rss_mib": 1534.0
+    },
+    "automatic": {
+      "camera": {
+        "aspect_ratio": 1.7777777910232544,
+        "distance_m": 160.0,
+        "fov_y_rad": 0.7853981852531433,
+        "indirect_drawing": false,
+        "pitch_rad": 0.6000000238418579,
+        "position_world": [
+          -12463741.0,
+          148.83010864257812,
+          -30571188.0
+        ],
+        "rotation_xyzw": [
+          -0.20589087903499603,
+          0.6853164434432983,
+          0.21199320256710052,
+          0.6655892729759216
+        ],
+        "target_world": [
+          -12463873.0,
+          58.4873161315918,
+          -30571184.0
+        ],
+        "yaw_rad": 1.600000023841858
+      },
+      "solar_direction": [
+        0.6911145448684692,
+        0.6868765950202942,
+        0.2248586118221283
+      ],
+      "clock_time_s": 35781.6,
+      "odometer_m": 504.1004522211853,
+      "shader_pipelines": {
+        "failed": 0,
+        "pending": 0
+      },
+      "draw_calls": {
+        "compute_dispatches": 0,
+        "grass": 0,
+        "occluded_groups": 0,
+        "opaque": 148,
+        "scope": "WORLD/grass CPU submissions and compute dispatches, not GPU-visible instance counts; excludes Standard PBR, UI and Hanabi; shadows retain the full original instance buffer",
+        "shadow": 832
+      },
+      "performance": {
+        "elapsed_s": 9.247443901000004,
+        "frame_contexts": null,
+        "frame_p50_ms": 6,
+        "frame_p95_ms": 9,
+        "frame_p99_ms": 14,
+        "frames": 1290,
+        "gameplay_frame_p50_ms": 6,
+        "gameplay_frame_p95_ms": 8,
+        "gameplay_frame_p99_ms": 14,
+        "gameplay_frames": 963,
+        "gameplay_hitches_over_100_ms": 0,
+        "gameplay_longest_frame_ms": 16.632455,
+        "hitches_over_100_ms": 1,
+        "loading_frames": 449,
+        "longest_frame_ms": 782.5093469999999,
+        "peak_rss_mib": 1516.015625,
+        "rss_mib": 1332.87109375,
+        "startup_longest_frame_ms": 782.5093469999999
+      },
+      "host_usage": {
+        "cpu_percent_one_core": 288.34767104793184,
+        "gpu_busy_percent_mean": 52.51162790697674,
+        "selected_gpu_pci": "0000:03:00.0",
+        "gpu_busy_percent_by_device": {
+          "0000:0e:00.0": 2.302325581395349,
+          "0000:03:00.0": 52.51162790697674
+        },
+        "scope": "whole launch including loading; selected DRM device has largest observed process VRAM; global busy includes compositor/other processes",
+        "private_compositor": {
+          "gl_renderer": "AMD Ryzen 5 9600X 6-Core Processor (radeonsi, raphael_mendocino, ACO, DRM 3.64, 7.0.0-38-generic)",
+          "egl_device": "/dev/dri/renderD129",
+          "DRI_PRIME": null,
+          "scope": "GL renderer identifies effective offload device; EGL device may retain enumeration node"
+        }
+      },
+      "renderer": {
+        "backend": "Vulkan",
+        "device_type": "DiscreteGpu",
+        "hardware": true,
+        "name": "AMD Radeon RX 7600 (RADV NAVI33)"
+      },
+      "elapsed_s": 11.4,
+      "peak_rss_mib": 1516.0
+    }
+  }
+}

@@ -1,0 +1,169 @@
+{
+  "graphics_source_verification": {
+    "capture_build": 10,
+    "final_build": 11,
+    "changes_after_graphical_AB": [
+      "crates/openrailsrs-viewer3d/src/download_queue.rs",
+      "crates/openrailsrs-viewer3d/src/official_content.rs",
+      "crates/openrailsrs-viewer3d/src/player_ui.rs"
+    ],
+    "scope": "Final changes add active-cancellation and identity-limit guards, plus an integration assertion that checks service membership independently of name ordering. Renderer, scene, camera, mip streaming, menu layout and fuzz-reader source files are unchanged. Graphical A/B measurements use the same build10 binary for all variants."
+  },
+  "schema": 1,
+  "completed_utc": "2026-10-16T18:04:35.450111+00:00",
+  "status": "pass",
+  "base_commit": "125499a98477e29d80ffa9a6a7be3a92d2f168f7",
+  "selected": [
+    385,
+    386,
+    388,
+    415,
+    416,
+    417,
+    418,
+    419,
+    420,
+    421,
+    422,
+    423,
+    424,
+    425,
+    426,
+    427,
+    428,
+    429,
+    430,
+    431
+  ],
+  "implementation_written_before_first_check": true,
+  "implementation_gate_sha256": "a06e1a8df886745a88ef943d7dbe0a934a289a57a4aa9c9bfaf928b2ce633739",
+  "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+  "coherent_build": {
+    "exit_code": 0,
+    "completed_utc": "2026-10-16T17:55:14.444340+00:00",
+    "artifacts_sha256": "41cf4ea602a298b2d0465a7b8852051f258b348038d73c512863a5302407f4d2",
+    "source_inputs_unchanged": true
+  },
+  "clippy": {
+    "exit_code": 0,
+    "log_sha256": "d3170c8b1a3fbace868c54ea235898015a24368b4e9c0bf7b0f1e51121a822fe",
+    "completed_utc": "2026-10-16T17:53:32.688752+00:00"
+  },
+  "check_sh": {
+    "command": [
+      "bash",
+      "check.sh"
+    ],
+    "exit_code": 0,
+    "started_utc": "2026-10-16T17:56:19.143939+00:00",
+    "completed_utc": "2026-10-16T18:03:02.366421+00:00",
+    "log_sha256": "985e5812d703bcb367d5b852ed625b2e0a570e3e9e4d73365ec228a4987b8fce",
+    "recorded_source_inputs_unchanged": true,
+    "protected_player_traces_unchanged": true
+  },
+  "rust_test_totals": {
+    "suites": 184,
+    "passed": 2368,
+    "failed": 0,
+    "ignored": 49
+  },
+  "earlier_failed_attempts": [
+    {
+      "attempt": "check01",
+      "result": {
+        "exit_code": 101,
+        "completed_utc": "2026-10-16T16:35:16.827619+00:00",
+        "log_sha256": "5257e881b1ba0bf355190d948a0e696fa9b74791413823cf8b4dd038971c8eee"
+      }
+    },
+    {
+      "attempt": "check02",
+      "result": {
+        "command": [
+          "bash",
+          "check.sh"
+        ],
+        "exit_code": 101,
+        "started_utc": "2026-10-16T17:41:40.102781+00:00",
+        "completed_utc": "2026-10-16T17:51:45.272894+00:00",
+        "log_sha256": "1ac3648ae3b7b889e0eb1780f4bc9c862432bc380d27b4e52cf70b2509627e44",
+        "recorded_source_inputs_unchanged": true,
+        "protected_player_traces_unchanged": true
+      }
+    },
+    {
+      "attempt": "clippy02",
+      "result": {
+        "exit_code": 101,
+        "completed_utc": "2026-10-16T16:37:48.452362+00:00",
+        "log_sha256": "61496de40ec05d423eed745b9a828d642b80dbd2c5543f8c8ba704cc5f7fa01c"
+      }
+    },
+    {
+      "attempt": "clippy03",
+      "result": {
+        "exit_code": 101,
+        "completed_utc": "2026-10-16T16:41:39.524778+00:00",
+        "log_sha256": "9a198083e7aa54ed78b1b2dca4a2d832cf58415888b24871ffafe53a034199b6"
+      }
+    },
+    {
+      "attempt": "clippy04",
+      "result": {
+        "exit_code": 101,
+        "completed_utc": "2026-10-16T16:43:35.026691+00:00",
+        "log_sha256": "996581b2c887579116867c31693f2b2e7b1fcbd4423a85a49a56d8081ff88a24"
+      }
+    },
+    {
+      "attempt": "clippy05",
+      "result": {
+        "exit_code": 101,
+        "log_sha256": "b75a994394594c733b5c898d3514ab0da42bc5b7a0fba3d0c81d9a60e524a7b9",
+        "completed_utc": "2026-10-16T17:18:48.246284+00:00"
+      }
+    },
+    {
+      "attempt": "clippy08",
+      "result": {
+        "exit_code": 101,
+        "log_sha256": "530408532fb12c57136d67d6e1e2a53330a05c0d260a4e36c1bc098eaf9fea7f",
+        "completed_utc": "2026-10-16T17:27:08.942073+00:00"
+      }
+    }
+  ],
+  "regressions_fixed": [
+    "Stale GPU texture views left custom terrain at a coarse mip; refresh only materials depending on the replaced image.",
+    "Malformed ACE color channels panicked; validate descriptors, RGB presence and row lengths, preserving the own crashing input.",
+    "The new ordering control crowded the small-screen train list; group filters/order and show primary selection before secondary tools."
+  ],
+  "scope": "Selected visibility, menu, download-queue and bounded-input work only. Memory-pressure issues and the Bevy migration remain separate. Full check includes existing frozen OR acceptance oracles with unchanged tolerances. GPU timings are whole-frame measurements on one recorded device, not isolated GPU timestamps or an all-route speedup claim.",
+  "evidence_files": {
+    "ace-finding.json": "7c6956f73c66e18b33f44b1c5898874d9f010fe6c16eb08b36d78e9420e3f681",
+    "ace-minimized.ace": "d64261242f7082b727539b0b3c1d7383dee6016ae4fc910cee22b6ff1753c27e",
+    "chiltern-automatic-northolt-park-cab.png": "9a674cb3e7538fdab5b5c875ddd91bab22884145f904b80c7643ee3b9aec3469",
+    "chiltern-automatic-northolt-park.png": "4807d6f0b6a60ac4c68e3cb11e48349b601d48a5de1b42230bb2d8c806e723a6",
+    "chiltern-driving.json": "c4334c8af70b8467694c04c4be44e227a1cb00ac10ab3d505d63e3a07a97fc19",
+    "chiltern-reference-northolt-park-cab.png": "d306c76786c8ad2c349af88930453629945efc49264969bd5b1a1f22c0b69c6f",
+    "chiltern-reference-northolt-park.png": "0fcf93869f778ed7d917ec9cc02874fbf2b6c4ecf33439d4e52ac52f61a444fa",
+    "chiltern-views.json": "ad746ae3bfd6d79777dd519032f3cb90dabc2032f20d246cb1ca86f95cff6497",
+    "dense-0-automatic.png": "269161edfd68d638bae2026fcde9ea335de5cc864cc2c0f0a1e9ee97efdd9cd4",
+    "dense-0-reference.png": "269161edfd68d638bae2026fcde9ea335de5cc864cc2c0f0a1e9ee97efdd9cd4",
+    "dense-1-automatic.png": "c2ee0c6a1ca66d3ea4733d6e781fbd0812d5dbe859aff5f3b72ddd1841106471",
+    "dense-1-reference.png": "c2ee0c6a1ca66d3ea4733d6e781fbd0812d5dbe859aff5f3b72ddd1841106471",
+    "dense-2-automatic.png": "3756ce0b8ff4224d8202c78e6fde8faefa267133b10bf211420cf36f91e6573d",
+    "dense-2-reference.png": "3756ce0b8ff4224d8202c78e6fde8faefa267133b10bf211420cf36f91e6573d",
+    "dense-3-automatic.png": "2e6626fde8e7d38b1e9df88744cadcee7f4ea577737ee25cf950e7c9eeda1046",
+    "dense-3-reference.png": "2e6626fde8e7d38b1e9df88744cadcee7f4ea577737ee25cf950e7c9eeda1046",
+    "final-runtime.json": "e3b45a012e9f5658d51c6fa47261ed4272ee6c281db0745276321baed88c9032",
+    "graphics-dense.json": "73fe2ab33f649dc334fddc1e0f5b78b4744c8d7cebe6da176290e20db7ebbce2",
+    "graphics-small.json": "9dd8025080c3fd35a412d85c3866ba579786799419daa9d6f97cfda7c5b579d5",
+    "installer-mutations.json": "c405f4af354b4f45a64f91d0840c9e5ac6b67673d7102ccf29e686ac7a901ca2",
+    "libfuzzer.json": "8e35f802e775715febf35553e4231bd63245f13ffbb1d5dac305f30c94c7aeaa",
+    "menus.json": "3e1410641781789e681e902a8cb21a572f1fba163708d71bd41d4724af8086b0",
+    "source-inputs.json": "6b052a2057a027934981a8aa321e8944c1619a06542300deefdf24022893737d",
+    "stable-mutations.json": "9aeba4fba5fbbeeb16417e46ab838374bdc168de4cdafd6b1743b0ec5583367c",
+    "train-menu-1280.png": "181cfbfaa2b387e0b550dc84167b6a63bb1b11a9086c3b0ac2c971add6aabc3b",
+    "train-menu-800.png": "d04a2f2e354b8a91dd0deefec05a1e7330e60bcd202c409b02166703b18f9f56"
+  }
+}

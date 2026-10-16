@@ -627,7 +627,7 @@ sha256 = "c9b2b7f137809203466320f38f802f004b0766bab662b4db69d700213d6a947a"
 
 [[files]]
 path = "oracles/coupling-reference-provenance.json"
-sha256 = "dd29c97a0a6e68ec9523919c5e0def805ef37d1729df45a5849ff9abb2008831"
+sha256 = "4ed4d9732c122b2c3eadfd40b88f5d68e0d6240bcb7e5a3707301725fd35d509"
 
 [[files]]
 path = "oracles/coupling-reference.json"
@@ -1836,3 +1836,43 @@ sha256 = "c8847fd221e64a326a75873b10978c124ec62164b0797899218792fb36b6c7b0"
 [[files]]
 path = "docs/fixtures/compatibility/coupling-twenty-systems-geometry-20261016/source-inputs.json"
 sha256 = "a730bd86671407f145850b478d5ebebc3f67cb7fd2948ea3170f862e53a63228"
+
+[[files]]
+path = "oracles/coupling-rust-visibility-inputs-20261016.json"
+sha256 = "db7050f2cbc3e7889cb56c60263871c69ee63f2b1a753c6f0870d192b73e44bb"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-visibility-inputs-20261016/depot.json"
+sha256 = "a8053fa1254dbd21cd1bcc71c3eaae8d817565736adf89ca9f68168f2064a72e"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-visibility-inputs-20261016/execution.json"
+sha256 = "1dc90723ccfb47891fffb54d8726b98520c6a90f62b21f0d92b6bb9165cca2ef"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-visibility-inputs-20261016/receipt.json"
+sha256 = "c14aa4f8eca7eace0e6a18500153c4c7ad99c819ce29a385c8d7bf2341cf9fcf"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-visibility-inputs-20261016/source-inputs.json"
+sha256 = "d2eb85d104e58d2e19519d92abf6bb738bfc44175c2655241f0c73a42514dccf"
+
+[[files]]
+path = "oracles/coupling-rust-visibility-inputs-final-20261016.json"
+sha256 = "db7050f2cbc3e7889cb56c60263871c69ee63f2b1a753c6f0870d192b73e44bb"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-visibility-inputs-final-20261016/depot.json"
+sha256 = "a8053fa1254dbd21cd1bcc71c3eaae8d817565736adf89ca9f68168f2064a72e"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-visibility-inputs-final-20261016/execution.json"
+sha256 = "2cd6cc8d2caf9cd4d634a3319dd2d170bf08e41a39c3bbaa99047dd772747853"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-visibility-inputs-final-20261016/receipt.json"
+sha256 = "c14aa4f8eca7eace0e6a18500153c4c7ad99c819ce29a385c8d7bf2341cf9fcf"
+
+[[files]]
+path = "docs/fixtures/compatibility/coupling-visibility-inputs-final-20261016/source-inputs.json"
+sha256 = "dc8e0f92378f19626864453d01b6cb75f93611cca81ed519454cfab6d5efa286"

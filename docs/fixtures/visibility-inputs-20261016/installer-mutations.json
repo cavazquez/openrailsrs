@@ -1,0 +1,7 @@
+{
+  "status": "pass",
+  "cases": 5120,
+  "seed": 1612026,
+  "max_input": 65536,
+  "network": false
+}

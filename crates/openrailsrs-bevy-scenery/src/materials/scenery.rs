@@ -169,9 +169,11 @@ pub struct OrSceneryMaterial {
     pub params: OrSceneryGpuParams,
     #[texture(1)]
     #[sampler(2)]
+    #[dependency]
     pub base_texture: Handle<Image>,
     #[texture(3, dimension = "2d_array")]
     #[sampler(4)]
+    #[dependency]
     pub moment_atlas: Handle<Image>,
     pub alpha_mode: AlphaMode,
 }

@@ -65,6 +65,7 @@ unset OPENRAILSRS_CAPTURE_START_PAUSED
 unset OPENRAILSRS_SOAK_SECONDS OPENRAILSRS_SOAK_OUT OPENRAILSRS_SOAK_ROUTES
 unset OPENRAILSRS_NETWORK_HOST OPENRAILSRS_NETWORK_JOIN OPENRAILSRS_NETWORK_IDENTITY
 unset OPENRAILSRS_NETWORK_ROLE OPENRAILSRS_NETWORK_TRAIN OPENRAILSRS_NETWORK_KEY_FILE OPENRAILSRS_NETWORK_RESTORE
+unset OPENRAILSRS_WORLD_GPU_CULLING OPENRAILSRS_WORLD_OCCLUSION OPENRAILSRS_PROGRESSIVE_MIPS
 
 echo "==> rustfmt (cargo fmt --check)"
 cargo fmt --all -- --check
@@ -76,6 +77,12 @@ echo "==> tests"
 # Serial: several suites share process-global counters and environment variables.
 # Project regressions share one Bevy feature set.
 cargo test --locked --workspace --all-features --no-fail-fast -- --test-threads=1
+
+echo "==> bounded external-input mutations (owned seeds; no network/GPU)"
+mkdir -p tmp
+fuzz_check_output="$(mktemp -d tmp/fuzz-check.XXXXXX)"
+cargo run --locked -p openrailsrs-fuzz -- --runs 64 --seed 1612026 --out "$fuzz_check_output/rust"
+python3 scripts/fuzz_content.py --runs 64 --seed 1612026 --out "$fuzz_check_output/installer"
 
 # Excluded vendor crates retain their own features; select only CPU regression modules.
 echo "==> pinned Bevy lifecycle regressions (no GPU)"
@@ -104,6 +111,7 @@ python3 -m unittest discover -s scripts -p test_train_atmosphere.py
 python3 -m unittest discover -s scripts -p test_native_pilot.py
 python3 -m unittest discover -s scripts -p test_official_content.py
 python3 -m unittest discover -s scripts -p test_content_url.py
+python3 -m unittest discover -s scripts -p test_fuzz_content.py
 python3 -m unittest discover -s scripts -p test_website.py
 python3 -m unittest discover -s scripts -p test_packaging.py
 python3 -m unittest discover -s scripts -p test_formation_physics.py

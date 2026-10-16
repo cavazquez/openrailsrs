@@ -1,0 +1,37 @@
+{
+  "max_input": 65536,
+  "runs_per_seed": 512,
+  "scope": "deterministic mutations, not a coverage-guided fuzz campaign",
+  "seed": 1612026,
+  "status": "pass",
+  "targets": [
+    {
+      "cases": 1536,
+      "target": "stf"
+    },
+    {
+      "cases": 2048,
+      "target": "simisa"
+    },
+    {
+      "cases": 1536,
+      "target": "textures"
+    },
+    {
+      "cases": 1536,
+      "target": "shapes"
+    },
+    {
+      "cases": 2560,
+      "target": "terrain"
+    },
+    {
+      "cases": 1024,
+      "target": "sigscript"
+    },
+    {
+      "cases": 1536,
+      "target": "multiplayer"
+    }
+  ]
+}

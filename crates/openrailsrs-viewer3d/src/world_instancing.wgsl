@@ -80,6 +80,7 @@ fn weather_world_position(vertex: Vertex, model: mat4x4<f32>) -> vec4<f32> {
     return world;
 }
 
+
 @vertex
 fn vertex(vertex: Vertex) -> VertexOutput {
     let model = mat4x4<f32>(

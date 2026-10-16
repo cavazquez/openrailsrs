@@ -58,7 +58,7 @@ impl<'a> BinaryBlockReader<'a> {
     /// Absolute byte offset of the current position within the original file.
     #[inline]
     pub fn absolute_pos(&self) -> usize {
-        self.base_offset + self.pos
+        self.base_offset.saturating_add(self.pos)
     }
 
     /// Bytes remaining in the current block.

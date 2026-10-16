@@ -50,7 +50,7 @@ pub(in crate::player_ui) fn filtered(
     search: &ChoiceSearch,
     settings: &PlayerSettings,
 ) -> Vec<usize> {
-    matching(menu, kind, &search.query)
+    let mut result: Vec<usize> = matching(menu, kind, &search.query)
         .into_iter()
         .filter(|&index| {
             if search.favorites_only
@@ -69,12 +69,13 @@ pub(in crate::player_ui) fn filtered(
             let audit = menu.consist_audits.get(&menu.consists[index]);
             if let Some(gauge) = GAUGES[search.gauge]
                 && !audit.is_some_and(|a| {
-                    a.compatibility.iter().any(|v| {
-                        v.declared
-                            .curve
-                            .track_gauge_m
-                            .is_some_and(|m| (m - gauge).abs() < 0.005)
-                    })
+                    gauge_matches(
+                        a.compatibility
+                            .iter()
+                            .map(|v| v.declared.curve.track_gauge_m),
+                        a.vehicles,
+                        gauge,
+                    )
                 })
             {
                 return false;
@@ -102,7 +103,46 @@ pub(in crate::player_ui) fn filtered(
                 _ => true,
             }
         })
-        .collect()
+        .collect();
+    result.sort_by_cached_key(|&index| {
+        (
+            search.favorites_first
+                && !settings
+                    .library_favorites
+                    .contains(&favorite_key(menu, kind, index)),
+            super::normalized(&super::title(menu, kind, index)),
+            origin(menu, kind, index),
+            favorite_key(menu, kind, index),
+        )
+    });
+    result
+}
+
+fn gauge_matches(gauges: impl Iterator<Item = Option<f64>>, vehicles: usize, gauge: f64) -> bool {
+    let values = gauges.collect::<Vec<_>>();
+    vehicles > 0
+        && values.len() == vehicles
+        && values
+            .into_iter()
+            .all(|m| m.is_some_and(|m| m.is_finite() && (m - gauge).abs() < 0.005))
+}
+
+pub(super) fn gauge_warning(audit: &openrailsrs_train::ConsistAudit) -> Option<&'static str> {
+    let gauges = audit
+        .compatibility
+        .iter()
+        .filter_map(|v| v.declared.curve.track_gauge_m)
+        .filter(|m| m.is_finite() && *m > 0.)
+        .collect::<Vec<_>>();
+    if let Some(first) = gauges.first()
+        && gauges.iter().any(|m| (m - first).abs() >= 0.005)
+    {
+        return Some("Trocha mixta: revisar compatibilidad de los coches");
+    }
+    if gauges.len() != audit.vehicles || gauges.is_empty() {
+        return Some("Trocha: datos incompletos");
+    }
+    None
 }
 pub(in crate::player_ui) fn cycle_filter(search: &mut ChoiceSearch, filter: ChoiceFilter) {
     match filter {
@@ -116,6 +156,7 @@ pub(in crate::player_ui) fn cycle_filter(search: &mut ChoiceSearch, filter: Choi
     }
     search.page = 0;
     search.cursor = None;
+    search.cursor_identity = None;
 }
 pub(in crate::player_ui) fn build(
     p: &mut ChildSpawnerCommands<'_>,
@@ -166,6 +207,15 @@ pub(in crate::player_ui) fn build(
                 UiCommand::ToggleFavorite(kind, index),
             );
         }
+        button(
+            p,
+            if search.favorites_first {
+                "Orden: favoritos"
+            } else {
+                "Orden: nombre"
+            },
+            UiCommand::ChoiceSort(kind),
+        );
     });
     if !search.filters_expanded {
         return;
@@ -220,7 +270,7 @@ pub(in crate::player_ui) fn build(
     {
         label(
             p,
-            "Los filtros se actualizan al terminar la auditoría. Trocha: valor declarado en ENG/WAG.",
+            "Los filtros se actualizan al terminar la auditoría. La trocha exige datos compatibles de todos los coches; mezcla o datos desconocidos no se consideran confirmación.",
             11.0,
             MUTED,
         );
@@ -230,6 +280,75 @@ pub(in crate::player_ui) fn build(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn gauge_requires_every_vehicle_and_distinguishes_missing_data() {
+        assert!(gauge_matches(
+            [Some(1.435), Some(1.435)].into_iter(),
+            2,
+            1.435
+        ));
+        for values in [
+            [Some(1.435), Some(1.6)],
+            [Some(1.435), None],
+            [Some(1.435), Some(f64::NAN)],
+        ] {
+            assert!(!gauge_matches(values.into_iter(), 2, 1.435));
+        }
+        assert!(!gauge_matches([Some(1.435)].into_iter(), 2, 1.435));
+        assert!(!gauge_matches([].into_iter(), 0, 1.435));
+    }
+    #[test]
+    fn equal_names_and_origins_sort_by_identity_after_discovery_order_changes() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut menu = PlayerLaunchMenu::discover(tmp.path(), None);
+        menu.services.clear();
+        menu.consists = vec![
+            tmp.path().join("B/consists/Train.con"),
+            tmp.path().join("A/consists/Train.con"),
+        ];
+        let expected = vec![menu.consists[1].clone(), menu.consists[0].clone()];
+        let order = |menu: &PlayerLaunchMenu| {
+            filtered(
+                menu,
+                ChoiceKind::Consist,
+                &ChoiceSearch::default(),
+                &PlayerSettings::default(),
+            )
+            .into_iter()
+            .map(|i| menu.consists[i].clone())
+            .collect::<Vec<_>>()
+        };
+        assert_eq!(order(&menu), expected);
+        menu.consists.reverse();
+        assert_eq!(order(&menu), expected);
+    }
+    #[test]
+    fn ordering_keeps_identity_and_filtered_favorites_first() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut menu = PlayerLaunchMenu::discover(tmp.path(), None);
+        menu.routes = vec!["Zulu".into(), "Álamo".into(), "Beta".into()];
+        menu.route = 0;
+        let mut settings = PlayerSettings::default();
+        let mut search = ChoiceSearch::default();
+        assert_eq!(
+            filtered(&menu, ChoiceKind::Route, &search, &settings),
+            vec![1, 2, 0]
+        );
+        settings
+            .library_favorites
+            .insert(favorite_key(&menu, ChoiceKind::Route, 0));
+        search.favorites_first = true;
+        assert_eq!(
+            filtered(&menu, ChoiceKind::Route, &search, &settings),
+            vec![0, 1, 2]
+        );
+        assert_eq!(menu.route, 0);
+        search.query = "beta".into();
+        assert_eq!(
+            filtered(&menu, ChoiceKind::Route, &search, &settings),
+            vec![2]
+        );
+    }
     #[test]
     fn incomplete_and_unknown_stock_stay_selectable_and_favorites_filter() {
         let tmp = tempfile::tempdir().unwrap();

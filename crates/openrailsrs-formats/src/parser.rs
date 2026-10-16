@@ -278,6 +278,16 @@ pub fn parse(source: &str) -> Result<Ast, FormatError> {
 }
 
 fn parse_expr(lexer: &mut Lexer<'_>) -> Result<Ast, FormatError> {
+    parse_expr_depth(lexer, 0)
+}
+
+fn parse_expr_depth(lexer: &mut Lexer<'_>, depth: usize) -> Result<Ast, FormatError> {
+    if depth >= 128 {
+        return Err(FormatError::UnexpectedToken {
+            offset: lexer.position(),
+            message: "STF nesting exceeds 128 levels".into(),
+        });
+    }
     match lexer.next_token()? {
         None => Err(FormatError::UnexpectedEof),
         Some(Token::LParen) => {
@@ -292,7 +302,7 @@ fn parse_expr(lexer: &mut Lexer<'_>) -> Result<Ast, FormatError> {
                         let _ = lexer.next_token()?;
                         break;
                     }
-                    _ => items.push(parse_expr(lexer)?),
+                    _ => items.push(parse_expr_depth(lexer, depth + 1)?),
                 }
             }
             Ok(Ast::List(items))
@@ -310,6 +320,14 @@ fn parse_expr(lexer: &mut Lexer<'_>) -> Result<Ast, FormatError> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn deep_stf_inputs_return_an_error_before_exhausting_the_stack() {
+        let input = format!("{}0{}", "(".repeat(512), ")".repeat(512));
+        assert!(super::parse(&input).is_err());
+        assert!(super::parse_named_stf(&input).is_err());
+        assert!(super::parse_vehicle_text(&input).is_err());
+        assert!(super::parse(&format!("{}0{}", "(".repeat(64), ")".repeat(64))).is_ok());
+    }
     #[test]
     fn only_activity_eof_display_message_recovers_an_unclosed_quote() {
         let text = "Tr_Activity ( Tr_Activity_File ( Events ( DisplayMessage ( \"Legacy tutorial text at EOF";

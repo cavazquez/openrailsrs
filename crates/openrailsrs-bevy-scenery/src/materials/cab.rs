@@ -210,6 +210,7 @@ pub struct OrCabMaterial {
     pub params: OrCabGpuParams,
     #[texture(1)]
     #[sampler(2)]
+    #[dependency]
     pub base_texture: Handle<Image>,
     pub alpha_mode: AlphaMode,
     /// Polygon / sort depth bias (Bevy `Material::depth_bias`; integer part → GPU constant).
