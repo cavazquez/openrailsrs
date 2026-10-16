@@ -155,8 +155,11 @@ humana como realizada por haber escrito una prueba.
 Los veinte issues tienen evidencia dirigida dentro del alcance descrito aquí.
 El [batch físico14](fixtures/compatibility/twenty-20261015/physical-final14/result.json)
 pasó Chiltern, cuatro ensayos cortos, Class 47, las tres paradas jugables, LIRR12
-y vapor10 con sus límites previos. Este índice no declara cerrados los issues:
-la puerta global final de la versión integrada todavía está pendiente. Las dos
+y vapor10 con sus límites previos. El [check conjunto final](fixtures/compatibility/twenty-20261015/final-check/result.json)
+aprobó formato, Clippy, **2.346 pruebas Rust**, los contratos Python, los
+oráculos y el servicio completo. La [matriz de cierre](fixtures/compatibility/twenty-20261015/final-check/matrix.json)
+relaciona los **60 criterios** con sus pruebas, alcance y fuentes verificadas
+en el commit `953090a984c3`. Los cinco intentos anteriores conservan sus fallos. Las dos
 regresiones contables de
 **#224**, incluidos esfuerzos menores que 1 N, pasaron en la ejecución de
 librerías de 1.774 pruebas. Un binario compilado y un subconjunto aprobado no
@@ -230,7 +233,7 @@ con límites de 2 m y 0,1 m/s. El [pase anterior vapor08](fixtures/compatibility
 conserva sus mediciones y hashes. El
 [diagnóstico termodinámico](STEAM_THERMODYNAMICS_AUDIT.md) conserva los fallos
 anteriores del recipiente propio; ese modelo mantiene sus pruebas separadas
-de conservación y compound. Queda la puerta global para el cierre, sin afirmar
-compatibilidad de todos los motores de vapor ni recorridos completos.
+de conservación y compound. La validación conjunta también pasó. El alcance
+nativo sigue siendo ese perfil y esos 80 segundos.
 Las instrucciones de prueba y las revisiones de píxeles documentadas no se
 presentan como pruebas manuales realizadas por el usuario.

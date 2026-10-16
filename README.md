@@ -70,7 +70,7 @@ Pruebas de menús, guardado, monitor, libreta, formación, despachador, HUD, cli
 
 El [lote de física, patios y multijugador](docs/TWENTY_ISSUES_20261015.md) reúne veinte issues y sus criterios de validación. Los ejercicios propios de [patios](docs/OPERATIONAL_YARDS.md) y [multijugador](docs/MULTIPLAYER_VIEWER.md) se eligen desde Nueva partida. Las guías distinguen implementación, pruebas ejecutadas y límites de compatibilidad.
 
-La [validación física dirigida del 16 de octubre](docs/fixtures/compatibility/twenty-20261015/physical-final14/result.json) pasó Chiltern completo, cuatro ensayos cortos, Class 47, tres paradas jugables, LIRR y el ciclo nativo acotado de vapor. LIRR12 registra **0,03602 m/s** de error RMS y **12,355 m** de error máximo de odómetro. Vapor10 completa sus **1.600 ticks** dentro de los límites anteriores. Estos resultados no sustituyen la puerta global de `check.sh`, todavía pendiente.
+La [validación física dirigida del 16 de octubre](docs/fixtures/compatibility/twenty-20261015/physical-final14/result.json) pasó Chiltern completo, cuatro ensayos cortos, Class 47, tres paradas jugables, LIRR y el ciclo nativo acotado de vapor. LIRR12 registra **0,03602 m/s** de error RMS y **12,355 m** de error máximo de odómetro. Vapor10 completa sus **1.600 ticks** dentro de los límites anteriores. El [check completo del lote](docs/fixtures/compatibility/twenty-20261015/final-check/result.json) también pasó: **2.346 pruebas Rust**, cero fallos, contratos Python, oráculos y servicio completo.
 
 Guías: [`docs/CHILTERN.md`](docs/CHILTERN.md) · [`docs/VIEWER3D_TESTING.md`](docs/VIEWER3D_TESTING.md) · [`docs/BEVY.md`](docs/BEVY.md).
 

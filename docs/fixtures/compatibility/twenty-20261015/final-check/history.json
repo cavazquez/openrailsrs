@@ -1,0 +1,141 @@
+[
+  {
+    "attempt": 1,
+    "status": "fail",
+    "exit_code": 101,
+    "completed_utc": "2026-10-16T13:51:29.205789+00:00",
+    "rust_passed": 710,
+    "rust_failed": 1,
+    "rust_ignored": 0,
+    "raw_result_sha256": "f4e240606871dd896eefedb0fadece0ad9126e8c08477955f5248a7d01084ac5",
+    "raw_log_sha256": "1d9d9cd5952a51de56676c5190689118d192b6be2f5b7e0fe90fe23c6e8f9885",
+    "public_result_sha256": "f4e240606871dd896eefedb0fadece0ad9126e8c08477955f5248a7d01084ac5",
+    "public_log_gzip_sha256": "b19d021122abecaf9b3884e43d73172a4d92003951b3b923aa529c5d7a008113",
+    "public_log_decoded_sha256": "0845e90842e2d32c2625c369d7fdf4b798bf1a335d8e7cf89f15f758c1cd9d4d",
+    "log_export_redacted": true,
+    "failure_lines": [
+      "test import_route::native_tunnel_import::tests::consecutive_original_shapes_keep_group_length_minimum_paths_and_reverse_coordinates ... FAILED",
+      "error: test failed, to rerun pass `-p openrailsrs-msts --lib`"
+    ],
+    "pin_used": {
+      "path": "history/check-final01-pin-used.toml",
+      "sha256": "3c94d586dd9e17ed1843630b67e157485a56f495a740fb5be4f4c33b7f5e41d5",
+      "literal_copy": true,
+      "binding": "Explicit archived snapshot supplied by Root; not inferred from today’s pin"
+    },
+    "unknown_pin_policy": "Null means that attempt has no archived exact snapshot; no later pin is assigned retrospectively."
+  },
+  {
+    "attempt": 2,
+    "status": "fail",
+    "exit_code": 101,
+    "completed_utc": "2026-10-16T14:02:13.684614+00:00",
+    "rust_passed": 1162,
+    "rust_failed": 1,
+    "rust_ignored": 1,
+    "raw_result_sha256": "0bcca760dc938b50f4a996f14dcf87b2f9e1bff0f40aac1f69d8ada5625cc011",
+    "raw_log_sha256": "5efc13f19680c986544fa69fea14a45136962e2d6c39956ec6424e3de3eb4caf",
+    "public_result_sha256": "0bcca760dc938b50f4a996f14dcf87b2f9e1bff0f40aac1f69d8ada5625cc011",
+    "public_log_gzip_sha256": "50e7d76090ef03a33adeef547a18a9a98f75bfe769a4f40b45a2cd85f4ef962e",
+    "public_log_decoded_sha256": "3740536b606d8b0cd7ca62926beb5ffa60326b9112e0dcd4cfd4e012cb99f7f0",
+    "log_export_redacted": true,
+    "failure_lines": [
+      "test native_rigid_bodies_share_head_distance_and_survive_save_continuation ... FAILED",
+      "error: test failed, to rerun pass `-p openrailsrs-sim --test native_mu_phase`"
+    ],
+    "pin_used": null,
+    "unknown_pin_policy": "Null means that attempt has no archived exact snapshot; no later pin is assigned retrospectively."
+  },
+  {
+    "attempt": 3,
+    "status": "fail",
+    "exit_code": 101,
+    "completed_utc": "2026-10-16T14:08:05.046976+00:00",
+    "rust_passed": 2325,
+    "rust_failed": 2,
+    "rust_ignored": 49,
+    "raw_result_sha256": "8ad87feaf7bb1973dc2875db6b2ae813cc1b3bf599fe6d70472b79b70372d2aa",
+    "raw_log_sha256": "4737f2a2711e66d3bd9776b6631719e2b4842dd28d9cad18dff7ff9911cc354f",
+    "public_result_sha256": "8ad87feaf7bb1973dc2875db6b2ae813cc1b3bf599fe6d70472b79b70372d2aa",
+    "public_log_gzip_sha256": "d7a9679287b1201460ddb2c7918f1ea34e6c0b0f711262b591c930574cba35f3",
+    "public_log_decoded_sha256": "d87af126ea84fcb1ba1fe03c2ca6bb4dc2f6a69cb14f17fb038e8fb5a5f15884",
+    "log_export_redacted": true,
+    "failure_lines": [
+      "test original_single_double_tunnels_match_previous_tick_context_with_prior_limit ... FAILED",
+      "error: test failed, to rerun pass `-p openrailsrs-sim --test native_tunnel_oracle`",
+      "test explicit_diesel_thermal_protection_is_visible_and_optional ... FAILED",
+      "error: test failed, to rerun pass `-p openrailsrs-sim --test ten_goals`",
+      "error: 2 targets failed:"
+    ],
+    "pin_used": null,
+    "unknown_pin_policy": "Null means that attempt has no archived exact snapshot; no later pin is assigned retrospectively."
+  },
+  {
+    "attempt": 4,
+    "status": "fail",
+    "exit_code": 1,
+    "completed_utc": "2026-10-16T14:14:35.546596+00:00",
+    "rust_passed": 2335,
+    "rust_failed": 0,
+    "rust_ignored": 49,
+    "raw_result_sha256": "f016b9d19a28a9773e1eea95da60a8ce36cb16105b86579bbc22acd928d64174",
+    "raw_log_sha256": "5e9f06e4c143ee6f2eeeea2e4b80f563ab7e88a6d047be3106adccff0450cd42",
+    "public_result_sha256": "f016b9d19a28a9773e1eea95da60a8ce36cb16105b86579bbc22acd928d64174",
+    "public_log_gzip_sha256": "cdde41deab7b8f69aa76d7c17231bd926657db7b755e7c1a175a44042dfc6c15",
+    "public_log_decoded_sha256": "9d5dd1367f5d5985cc9c931551b5210cc83ee01d0b05700bc56e72e9fd6eeafb",
+    "log_export_redacted": true,
+    "failure_lines": [
+      "FAIL: test_reference_binds_pinned_dll_source_and_capture_helpers (test_coupling_reference.CouplingReferenceTests.test_reference_binds_pinned_dll_source_and_capture_helpers)"
+    ],
+    "pin_used": null,
+    "unknown_pin_policy": "Null means that attempt has no archived exact snapshot; no later pin is assigned retrospectively."
+  },
+  {
+    "attempt": 5,
+    "status": "fail",
+    "exit_code": 1,
+    "completed_utc": "2026-10-16T14:25:26.835054+00:00",
+    "rust_passed": 2335,
+    "rust_failed": 0,
+    "rust_ignored": 49,
+    "raw_result_sha256": "c1639994573879824909fe1fb37db446ea613988a182ce6bb74808453c4a7de7",
+    "raw_log_sha256": "45c83f1359b1802696407dbd06f5a30be2d6aafdc14dc966ef1684e3e3fc968f",
+    "public_result_sha256": "c1639994573879824909fe1fb37db446ea613988a182ce6bb74808453c4a7de7",
+    "public_log_gzip_sha256": "e560e5a3c3dde4b5c41ba50e43cc4b2c713c8900e2c79e18a18bc8fbdb2efaee",
+    "public_log_decoded_sha256": "19f6c8357b6d9ae1a62cd719852032a118c0df8eea3d52a56ea16776347a0c3a",
+    "log_export_redacted": true,
+    "failure_lines": [
+      "FAIL chiltern_local_native_controls: oracle coverage incomplete: reference [0.000,750.100], candidate [0.000,675.189] (90.0%)"
+    ],
+    "pin_used": {
+      "path": "history/check-final05-pin-used.toml",
+      "sha256": "ae9741d933ee1cc8caed949a28a2fcc29f74f53559d35274bd230d7d90ffec6d",
+      "literal_copy": true,
+      "binding": "Explicit archived snapshot supplied by Root; not inferred from today’s pin"
+    },
+    "unknown_pin_policy": "Null means that attempt has no archived exact snapshot; no later pin is assigned retrospectively."
+  },
+  {
+    "attempt": 6,
+    "status": "pass",
+    "exit_code": 0,
+    "completed_utc": "2026-10-16T15:39:33.338539+00:00",
+    "rust_passed": 2346,
+    "rust_failed": 0,
+    "rust_ignored": 49,
+    "raw_result_sha256": "6d7928e0206309dc815643483a48d8ba885e13a85b6c281e8964c3e94832b106",
+    "raw_log_sha256": "85bec49bef65ba21b7b6469a19d5609dba9772bc06839cbb152878bcd8f22bd5",
+    "public_result_sha256": "6d7928e0206309dc815643483a48d8ba885e13a85b6c281e8964c3e94832b106",
+    "public_log_gzip_sha256": "867d0fcec97f6614aa6a754073b30bdaee40b0ad6d45c06d5702eb3aaedec60b",
+    "public_log_decoded_sha256": "22d82c47e04a9d3e0ea70a6953131d80d0ef9e8f3b57de2ed533b13db8311698",
+    "log_export_redacted": true,
+    "failure_lines": [],
+    "pin_used": {
+      "path": "history/check-final06-pin-used.toml",
+      "sha256": "0d27b556c7bcc0de6b48c3da372038cc1151a9e2302513e1703a9d678807bcc8",
+      "literal_copy": true,
+      "binding": "Explicit archived snapshot supplied by Root; not inferred from today’s pin"
+    },
+    "unknown_pin_policy": "Null means that attempt has no archived exact snapshot; no later pin is assigned retrospectively."
+  }
+]

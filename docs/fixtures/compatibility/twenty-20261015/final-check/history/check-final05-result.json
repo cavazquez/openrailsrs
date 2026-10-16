@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "completed_utc": "2026-10-16T14:25:26.835054+00:00",
+  "command": "bash check.sh",
+  "exit_code": 1,
+  "status": "fail",
+  "log_sha256": "45c83f1359b1802696407dbd06f5a30be2d6aafdc14dc966ef1684e3e3fc968f",
+  "rust_test_suite_count": 178,
+  "rust_passed": 2335,
+  "rust_failed": 0,
+  "rust_ignored": 49,
+  "runtime_sources_unchanged_since_final_check_freeze": true,
+  "runtime_sources_changed": [],
+  "new_acceptance_fixture_count": 27,
+  "new_acceptance_fixtures_changed": [],
+  "human_traces_unchanged": {
+    "examples/chiltern/run.csv": true,
+    "examples/chiltern/run.json": true,
+    "examples/chiltern/run_brake_coast_multi_body.csv": true,
+    "examples/chiltern/run_throttle100.csv": true,
+    "examples/chiltern/run_throttle50.csv": true,
+    "examples/chiltern/run_throttle75.csv": true
+  },
+  "scope": "Workspace format/lints/tests/vendor lifecycle/Python contracts/build/pinned accepted OR suites/full authored service. Dedicated full-route and thermal oracle results retain separate acceptance; a global pass does not replace them."
+}

@@ -1,0 +1,2359 @@
+{
+  "schema": 2,
+  "created_at_utc": "2026-10-16T15:11:48.206056+00:00",
+  "status": "Private build12 outcome proposal; not a global PASS or issue closure",
+  "source_issue_snapshot": {
+    "path": "tmp/twenty-20261015/issues-initial.json",
+    "sha256": "a6d9aafddc7de49081aa929e1158b4a2f59d2818dd5b71359e8ba0c22c02cf71"
+  },
+  "selected_issue_count": 20,
+  "candidate_count_subject_to_gate": 20,
+  "explicit_open_issues": [
+    217,
+    218,
+    220,
+    221,
+    223,
+    224,
+    234,
+    324,
+    325,
+    329,
+    338,
+    344,
+    345,
+    346,
+    348,
+    397,
+    407,
+    408,
+    409,
+    410
+  ],
+  "all_close_now": false,
+  "reference": {
+    "open_rails": "1.6.1",
+    "commit": "d16e670da333d26d2edfc97d5631a19dadf49ce5",
+    "bevy": "0.19.1",
+    "bevy_hanabi": "0.19.0"
+  },
+  "global_gate": {
+    "status": "pending_current_source_final_check_and_commit",
+    "last_executed_complete_gate": {
+      "path": "tmp/twenty-20261015/check-final05-result.json",
+      "sha256": "c1639994573879824909fe1fb37db446ea613988a182ce6bb74808453c4a7de7"
+    },
+    "last_executed_complete_gate_status": "fail",
+    "last_executed_complete_gate_exit_code": 1,
+    "latest_measurement_build": {
+      "path": "tmp/twenty-20261015/build-12-result.json",
+      "sha256": "778ba02483f867de9e8efcc8c189b0d1f31bfefae797cc2ba10c63cab96ece2b"
+    },
+    "runtime_inputs_at_measurement": 757,
+    "new_acceptance_fixture_inputs_at_measurement": 53,
+    "scope": "Build12 directed replays passed. Ongoing original-geometry/curve corrections are later source changes and require their own final check/replay evidence; these receipts cannot be relabelled as later builds."
+  },
+  "evidence": {
+    "yard_cpu20": {
+      "kind": "executed_cpu_target",
+      "artifacts": [
+        {
+          "path": "tmp/twenty-20261015/directed-tests04.log",
+          "sha256": "f98367bad32f9dc10d005c2052214b52b9a9b4ff6fcf8a29e4c5b8fe760a9161"
+        }
+      ],
+      "scope": "20 operational_yards tests passed; the same command later failed the then-current from-rest derailment test. This is a passing target, not a passing full command.",
+      "passed": 20,
+      "failed": 0,
+      "target": "operational_yards"
+    },
+    "physics_cpu14": {
+      "kind": "executed_cpu_target",
+      "artifacts": [
+        {
+          "path": "tmp/twenty-20261015/directed-tests04.log",
+          "sha256": "f98367bad32f9dc10d005c2052214b52b9a9b4ff6fcf8a29e4c5b8fe760a9161"
+        }
+      ],
+      "scope": "14 physical_extensions tests passed; own declared physical extensions, separate from original cycle parity.",
+      "passed": 14,
+      "failed": 0,
+      "target": "physical_extensions"
+    },
+    "native_cpu3": {
+      "kind": "executed_original_dll_fixture_comparison",
+      "artifacts": [
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/physical-native05/execution.json",
+          "sha256": "1829839844efde4f028713520f533543939ace3cd082885fe37b4610198afa6a"
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/physical-native05/coverage.json",
+          "sha256": "6ec61c74cde41501ca131b24ecf1e11c0368c5a5e0dd60aecc3fa8427349fd96"
+        }
+      ],
+      "scope": "157 native property queries;6420 valve ticks and6420 three-car pressure-propagation ticks.3 CPU tests passed with prior limits. No full steam/compound parity.",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "target": "physics_seven_native"
+    },
+    "fromrest_cpu3": {
+      "kind": "executed_cpu_target",
+      "artifacts": [
+        {
+          "path": "tmp/twenty-20261015/fromrest-tests10.log",
+          "sha256": "3b1296cf4fbb5a05b327c8c59e6b37da9f1a933ed94e49b479503e8aab3ebd18"
+        }
+      ],
+      "scope": "Actual acceleration from rest, rack entry/exit and optional incident. Separate owned2MW/160kmh formation and2km approach; failed shorter/material trials remain preserved.",
+      "passed": 3,
+      "failed": 0,
+      "target": "twenty_joint_physics"
+    },
+    "vertical_ecs7": {
+      "kind": "executed_cpu_ecs_target",
+      "artifacts": [
+        {
+          "path": "tmp/twenty-20261015/mesh-suspension-tests01.log",
+          "sha256": "2f6f164a98bbd821e6c3d6db4862565bf82b32bb8629eeffe3829904894d7168"
+        }
+      ],
+      "scope": "Physical suspension with cosmetic Off reaches ECS meshes; original wheel/bogie world pose, disabled restoration, pause and parked tails.",
+      "passed": 7,
+      "failed": 0
+    },
+    "plain_controller_cpu": {
+      "kind": "executed_cpu_package_subsets",
+      "artifacts": [
+        {
+          "path": "tmp/twenty-20261015/subsystem-tests01.log",
+          "sha256": "4f7b4d8794253297afb0ba79691da0a4b56004f70830a827ca3a10544232be00"
+        },
+        {
+          "path": "docs/NATIVE_PLAIN_AIR.md",
+          "sha256": "37d9c622d274a5ff7e238c54cc6bd5ae54e8e18e4168d2d9cd1bc97c00a55bea"
+        }
+      ],
+      "scope": "275 formats and140 simulation unit tests passed, including5 specific plain-air parser/controller cases. Does not certify the latest source or LIRR full service.",
+      "relevant_tests": 5
+    },
+    "hydraulic_interior_curve": {
+      "kind": "executed_cpu_filtered_test",
+      "artifacts": [
+        {
+          "path": "tmp/twenty-20261015/hydraulic-validation-tests01.log",
+          "sha256": "28c42eb358a283f69cb841f93cf79c85265623dc65ebf77d7eae0b41b6e7d508"
+        }
+      ],
+      "scope": "One actual formats test rejects interior energy creation between valid converter endpoints. Other packages had zero matching tests.",
+      "passed": 1,
+      "failed": 0
+    },
+    "physics_gpu01": {
+      "kind": "executed_gpu_partial",
+      "artifacts": [
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/physical-driving-gpu01/qa-summary.json",
+          "sha256": "c45852a79dc574168d105cd8302b18fb47d69249129f2f048528d95f3ae08f73"
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/physical-driving-gpu01/failure.json",
+          "sha256": "db8038c07a3c4f9467028bef253324f0a2f653aab38f19cfce0367e39215ea6c"
+        }
+      ],
+      "scope": "Build04: hydraulic-running/rack-braking/rack-exit passed; vertical-on failed and later cases were not executed. Never represent this as six passes.",
+      "passed_cases": [
+        "hydraulic-running",
+        "rack-positive-braking",
+        "rack-entry-exit"
+      ]
+    },
+    "vertical_gpu02": {
+      "kind": "executed_gpu_partial",
+      "artifacts": [
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/physical-driving-gpu02/qa-summary.json",
+          "sha256": "ca5f772ab67d5f348f092a8212f4fd408cd646a01149f5ee45c13bbe64fe0c1e"
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/physical-driving-gpu02/failure.json",
+          "sha256": "94889846e22062607022dcf53bcb0ab99031bd1c3d8a6df46bfb7c43eae7bef7"
+        }
+      ],
+      "scope": "Build05: vertical On/Off passed and original1280x720PNG inspected. Rendered physical offset4.480mm/0;20 running-gear parts in On. Panel occludes body; ECS tests separately cover transforms. Derailment failed its sparse-action harness and remains failed.",
+      "passed_cases": [
+        "vertical-on",
+        "vertical-off"
+      ]
+    },
+    "derailment_gpu03": {
+      "kind": "executed_gpu_strict_retry",
+      "artifacts": [
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/physical-driving-gpu03/qa-summary.json",
+          "sha256": "625f254a9889afa3b3d4393a6d3c797e22b81bcd861d64960f0cdc4d3faab3c6"
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/physical-driving-gpu03/proposal04.json",
+          "sha256": "32961b8c04bf95ab61ee963aaddb2a55950306c9d30bfe9843b21df2b2b53f2d"
+        }
+      ],
+      "scope": "Build05 one-case retry: unchanged assertions,physics,controls,horizon55wall_s at2x. Only added panel-none observation at30wall_s. Intermediate29.340m/s, event83.60sim_s/104.7kmh; restore+Off preserves cause,emergency,traction-cut. PNG inspected.",
+      "passed": 1,
+      "failed": 0
+    },
+    "yard_gpu4": {
+      "kind": "executed_gpu_relevant_views",
+      "artifacts": [
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/operational-yards/qa-summary.json",
+          "sha256": "bdcbd6097fbcb7fd14e711dca930736c42739e93ad379b16fd03d8e2340c225a"
+        }
+      ],
+      "scope": "Four inspected exterior views: turntable/transfer intermediate+final, carried stock,pause,JSON restore,camera change and real floating-origin excursion. Whole-app cost only; no cabin screenshot or marginal-effect baseline.",
+      "passed_views": 4
+    },
+    "mp_cpu14": {
+      "kind": "executed_real_tcp_and_viewer_ecs",
+      "artifacts": [
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/multiplayer/cpu-tests-excerpt.txt",
+          "sha256": "46ddc4d9e45ae7fd7bed850d9de2e52cf9b4e3e4678289aaabd16d77e7c41817"
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/multiplayer/qa-summary.json",
+          "sha256": "1d0e84be42702ea066930767dcd4dc460d366dfa999f2cf2580f8b64c9178afb"
+        }
+      ],
+      "scope": "7 game+5 same-viewer-plugin+2 persistence tests passed. Real TCP,5 simultaneous identities,roles,delayed proxy,reconnection,authority,save/restore,dual own-steam resumed movement. Initial whole workspace had14 unrelated failures.",
+      "passed": 14,
+      "failed": 0,
+      "simultaneous_identities": 5,
+      "protocol_identity_limit": 8
+    },
+    "mp_gpu3": {
+      "kind": "executed_real_viewer_gpu",
+      "artifacts": [
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/multiplayer/qa-summary.json",
+          "sha256": "1d0e84be42702ea066930767dcd4dc460d366dfa999f2cf2580f8b64c9178afb"
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/multiplayer/pixel-review.json",
+          "sha256": "13dbc2285ce15f9eae7dc40381ee2015be62bf14add7d7e47a32f103f221cf42"
+        }
+      ],
+      "scope": "3 inspected initial panels: dispatcher host,driver,spectator; maximum2GPU viewers simultaneously. Fireman covered by CPU. Loopback displayed RTT25ms, state/render clock offsets0.05s clients/0.10s host. Wheel scroll manual pending.",
+      "captured_roles": [
+        "dispatcher",
+        "driver",
+        "spectator"
+      ],
+      "maximum_simultaneous_viewers": 2
+    },
+    "visual_equivalence12": {
+      "kind": "executed_gpu_with_fixed_native_reference",
+      "artifacts": [
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/visual/evidence.json",
+          "sha256": "6c828af39001888140285c5d3a4d4d32c9aa56b40fdcdb1eb31a8303440f2528"
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/visual/comparison.json",
+          "sha256": "2d9597306a92f1cc5664b7c6d8812f72dc435acbf9805e549314eb6e4240af4f"
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/visual/visual-review.json",
+          "sha256": "a593079471b52d681e806b5cab70018c42850217e3fefd894d80a6eb1cdb0428"
+        }
+      ],
+      "scope": "6Chiltern stations×cab/exterior; declared camera/light equivalence passed, original images and all Bevy PNG reviewed. No global pixel score or LOD-transition acceptance. Horizon450m and documented dynamic/tree differences.",
+      "passed_views": 12
+    },
+    "lirr_native07": {
+      "kind": "executed_original_only",
+      "artifacts": [
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/lirr-native07/README.md",
+          "sha256": "9fdb649213d4dede5fd18a7e8635695bd6a4b1a8a43cc75e9f6e82162e951604"
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/lirr-native07/coverage.json",
+          "sha256": "d930fd917bd1b27eb72eda2c6bf8acd1a018ff09a8f9e93eb88371dfd62423ee"
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/lirr-native07/telemetry-integrity.json",
+          "sha256": "10959af56f7f37578d6d474065757d5f342fb7a071c505367d991ca967ae665e"
+        }
+      ],
+      "scope": "Original Brooklyn–Hempstead/SFexpress-500 seven vehicles,32583samples/1629.10s/31.361km,2native station tasks completed. Live-unpaused context declared before run. Rust acceptance not passed.",
+      "rust_accepted": false
+    },
+    "steam_diagnostic02": {
+      "kind": "executed_nonpassing_diagnostic",
+      "artifacts": [
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-diagnostic02/comparison.json",
+          "sha256": "1c9193e3adb09fdccfa8704d6d2353cfa4db7511c9c640ff2494ca7f50d26669"
+        },
+        {
+          "path": "docs/STEAM_THERMODYNAMICS_AUDIT.md",
+          "sha256": "41faf055aafa1d15f02d78479812eed8ba66f7c487b116a36485e2c75a87fb2a"
+        }
+      ],
+      "scope": "Historical own-vessel comparison is outside prior full-cycle limits; five shared property tables do not validate the full cycle.",
+      "accepted": false
+    },
+    "own_compound_scope": {
+      "kind": "documented_model_boundary",
+      "artifacts": [
+        {
+          "path": "docs/STEAM_RECEIVER_PROFILE.md",
+          "sha256": "8727dcc5aa539db3302c6b163041563bdfd337b6e0817bd6d95af75ef37c12d7"
+        },
+        {
+          "path": "docs/PHYSICS_SEVEN_SYSTEMS.md",
+          "sha256": "9796597b3bbd71724616966b4faf1da777acfd60de437d461a37a5df73d7d4d5"
+        }
+      ],
+      "scope": "Own finite HP/receiver/LP extension; not native balanced Vauclain or arbitrary original Compound. Receiver energy is advective with HP-work subtraction; LP work tracked separately, not complete expansion/condensation solver."
+    },
+    "compound_ledger_regressions_pending": {
+      "kind": "written_not_executed",
+      "artifacts": [
+        {
+          "path": "crates/openrailsrs-sim/src/steam_thermodynamics.rs",
+          "sha256": "929f9e551302b53ddb5cb4eb8d86f36c2f94890c89e5e4d7c30f2a7020d7e1f8"
+        }
+      ],
+      "scope": "New0.5N work-ledger and bypass regression written after earlier14-pass run; must actually pass in final validation before closing224.",
+      "tests": [
+        "steam_thermodynamics::tests::sub_newton_hp_force_cannot_create_lp_work",
+        "steam_thermodynamics::tests::bypass_keeps_hp_exhaust_out_of_the_receiver_work_ledger"
+      ]
+    },
+    "libs_and_mp03": {
+      "kind": "executed_cpu_subsets",
+      "artifacts": [
+        {
+          "path": "tmp/twenty-20261015/libs-and-mp03-result.json",
+          "sha256": "cd348407e040d306443cb908f66e0af7ea3ba039f32859dbde64879067499c69"
+        },
+        {
+          "path": "tmp/twenty-20261015/libs-and-mp03.log",
+          "sha256": "eff357073d97b5371f4cb01e516a1ce2ba7b477edd6138cb42e2b7f291325616"
+        }
+      ],
+      "scope": "1774 passed,0 failed,46 ignored. Includes new FCalc/Size, own sub-newton and bypass, native refill/auxiliary/manual-UI regressions. Predates final yard identities, strengthened native-fireman stop, minimum-load and tunnel regressions.",
+      "passed": 1774,
+      "failed": 0,
+      "ignored": 46
+    },
+    "directed_native_joint11": {
+      "kind": "executed_cpu_targets",
+      "artifacts": [
+        {
+          "path": "tmp/twenty-20261015/directed-native-joint11-result.json",
+          "sha256": "b126ab29fc91649d637b45fa54ef742adaa12a368e137ad6b3ded08f667909c2"
+        },
+        {
+          "path": "tmp/twenty-20261015/directed-native-joint11.log",
+          "sha256": "aaf22f351caef1c7353c2ef6154ec3c282b997e0362a7bb571a7fe79e810aa57"
+        }
+      ],
+      "scope": "59 directed tests passed, including310 native steam property calls, hot/cold1601-row independent subsystem evolution, native steam/vacuum driving/save integration and own physics/yard targets.",
+      "passed": 59,
+      "failed": 0
+    },
+    "lirr_replay10": {
+      "kind": "executed_complete_fixed_controls_replay",
+      "artifacts": [
+        {
+          "path": "tmp/twenty-20261015/lirr-replay-10/comparison.json",
+          "sha256": "cc8d3029601c4ab8a4d02da4d90da27b14162cdf64d3978444bccf07fa83ae11"
+        },
+        {
+          "path": "tmp/twenty-20261015/lirr-replay-10/receipt.json",
+          "sha256": "d565108ca99ee85586331983731894c5cb29fc0ebf786b1e6d5873a4e6936d76"
+        },
+        {
+          "path": "tmp/twenty-20261015/build-11-result.json",
+          "sha256": "e248ffe7d669b5249f13dc94f36130dfdd3d21c42bd66a4687d7cc7e0ddc39e3"
+        }
+      ],
+      "scope": "32583 original controls at20Hz, same immutable native07 canonical reference, original SFexpress-500 seven-car stock, Brooklyn–Hempstead, complete duration/distance/platform coverage. Station scoring and every ACT event are outside this physics comparison.",
+      "passed": true,
+      "samples": 32583,
+      "errors": {
+        "velocity_rms_mps": 0.03985315640563054,
+        "brake_pipe_rms_psi": 0.0004184281483413141,
+        "cylinder_rms_psi": 0.00011563180303608016,
+        "motive_force_rms_n": 3114.4067834350135,
+        "brake_force_rms_n": 72.90721640979439,
+        "maximum_odometer_error_m": 11.486328125
+      },
+      "thresholds_predeclared": {
+        "velocity_rms_mps": 0.75,
+        "maximum_odometer_error_m": 45,
+        "brake_pipe_rms_psi": 5,
+        "cylinder_rms_psi": 5,
+        "motive_force_rms_n": 5000,
+        "brake_force_rms_n": 5000
+      },
+      "checks": {
+        "velocity_rms_mps": true,
+        "brake_pipe_rms_psi": true,
+        "cylinder_rms_psi": true,
+        "motive_force_rms_n": true,
+        "brake_force_rms_n": true,
+        "maximum_odometer_error_m": true
+      },
+      "coverage": {
+        "native_reached_all_platforms": true,
+        "original_platforms": true,
+        "original_formation": true,
+        "full_distance": true,
+        "full_duration": true,
+        "exact_controls": true
+      },
+      "public_artifacts": [
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/lirr-full-service-replay10/manifest.json",
+          "sha256": "d8dea5722db5d07e29fd76c48c0d8ff4b1be56a34b2b53110ee4bdc41ceb6333"
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/lirr-full-service-replay10/comparison.json",
+          "sha256": "cc8d3029601c4ab8a4d02da4d90da27b14162cdf64d3978444bccf07fa83ae11"
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/lirr-full-service-replay10/receipt.json",
+          "sha256": "d5d8af3ce6ea99b45deba91a5461c40f42801dd45998430099b3d84e05a2b554"
+        }
+      ]
+    },
+    "native08_tunnel_diagnostics": {
+      "kind": "executed_original_dll_diagnostic_capture",
+      "artifacts": [
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/publication.json",
+          "sha256": "eaec000b97044e621b2f8833785a0743a9e3131f42f71035eb7007a69e2fccea"
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/manifest.json",
+          "sha256": "ff7ae813e38c837529c622153a2c5f0f2835c0970f66569db7bc5be51495cf72"
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/receipt.json",
+          "sha256": "e23d05891364016280192a34d687371fca727fe60bc4cb9daaff148c6e7a0d3b"
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/telemetry-integrity.json",
+          "sha256": "a585b2c03c694a0158cfe3cd74e7c55301129a3b35b1b341d0c2739dc4fa11ec"
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/source-lineage.json",
+          "sha256": "b64ceed5f07d54589c96b427e573af087fa8bd9c12f100fbfdd0aab92be01001"
+        }
+      ],
+      "scope": "Only additive diagnostic columns; original164-column native07 projection is byte-identical. Identifies tunnel drag separately from wind/curve. Original force outputs are never inputs of the full Rust replay."
+    },
+    "steam_native_closed08": {
+      "kind": "executed_independently_initialized_closed_loop",
+      "artifacts": [
+        {
+          "path": "tmp/twenty-20261015/steam-native-compare08/comparison.json",
+          "sha256": "9237adc95b6a38660749d3f219e6ed07f3bf3fd80310c9b03a278b98a5c51dd4"
+        },
+        {
+          "path": "tmp/twenty-20261015/steam-native-compare08/receipt.json",
+          "sha256": "a056348732afff9725e8662f9871c09a21adb9a255443bdbf0738209d531fbc1"
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed08/publication.json",
+          "sha256": "b6f37b287e01485f009aebb3523dfa1fc919a4f8b9122674dd804c41178cbf0f"
+        }
+      ],
+      "scope": "1600ticks/80s of separately initialized bounded OR1.6.1 coal/simple/manual tank steam, original3F hardware and static Summer environment. Pressure,production,consumption,injection,force,motion/inventories obey unchanged prior limits; old failed models preserved. This is neither all steam locomotives nor native conservation-ledger certification.",
+      "status": "within_prior_limits",
+      "completed_ticks": 1600,
+      "failed_metrics": [],
+      "limits": {
+        "boiler_enthalpy_j_abs": 100000.0,
+        "boiler_mass_kg_abs": 1.0,
+        "coal_burn_kg_s_abs": 0.05,
+        "distance_m_abs": 2.0,
+        "injection_kg_s_abs": 0.05,
+        "injector_state": "exact",
+        "motive_force_n_abs": 100.0,
+        "pressure_bar_abs": 0.1,
+        "production_kg_s_abs": 0.1,
+        "scope": "Prior diagnostic limits, including independently initialized state. A failure remains a failure and does not become an extension-parity claim.",
+        "speed_mps_abs": 0.1,
+        "steam_consumption_kg_s_abs": 0.1,
+        "tender_coal_kg_abs": 1.0,
+        "tender_water_kg_abs": 1.0,
+        "water_fraction_abs": 0.002
+      },
+      "conservation_passed": null,
+      "full_native_steam_cycle_parity_claim": false,
+      "phases": [
+        "braking",
+        "coast",
+        "idle_fire",
+        "initial",
+        "injection",
+        "steam_load"
+      ],
+      "native_state_or_motion_prescribed": false,
+      "static_environment_contract": {
+        "paused": true,
+        "context": "Explicit reference diagnostic context; do not describe as a GPU interactive cab capture."
+      }
+    },
+    "steam_native_subsystems": {
+      "kind": "executed_original_dll_subsystem_comparison",
+      "artifacts": [
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-subsystems/protocol.json",
+          "sha256": "c62fc972d0799c3fa7d32db8e6bcd19fde852b986b8ebe652bbb96de0e7e73cb"
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-subsystems/provenance.json",
+          "sha256": "b81e0cb568f51a45dfe10998e3973fe6ccc65dedc0034a6275db43aac0d60b9d"
+        },
+        {
+          "path": "tmp/twenty-20261015/directed-native-joint11.log",
+          "sha256": "aaf22f351caef1c7353c2ef6154ec3c282b997e0362a7bb571a7fe79e810aa57"
+        }
+      ],
+      "scope": "Three actual Rust tests pass:310 original table queries and two hot/cold1601-row subsystem traces. Boundary inputs are explicit; each subsystem constructs its own state from original authored hardware.",
+      "passed": 3,
+      "tests": [
+        "all310_original_dll_steam_table_calls_respect_the_prior_limits",
+        "original_hot_subsystem1601_rows_evolve_from_authored_hardware",
+        "original_cold_subsystem1601_rows_evolve_from_authored_hardware"
+      ]
+    },
+    "own_ledger03": {
+      "kind": "executed_own_compound_boundary_regressions",
+      "artifacts": [
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-own-ledger03/receipt.json",
+          "sha256": "ab9847ba520cc2bc45696ed6576932dfd1b45299a53c1f4703435cfd6aeebdcf"
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-own-ledger03/result.json",
+          "sha256": "cd348407e040d306443cb908f66e0af7ea3ba039f32859dbde64879067499c69"
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-own-ledger03/excerpt.log",
+          "sha256": "ed70c17f5854f8c084b34e6666480d7190dbe28bd275b405a7d625483da6abb1"
+        }
+      ],
+      "scope": "Both sub-newton HP-only and bypass/no-receiver-work regressions passed. Own HP/receiver/LP extension only; no original Vauclain or universal receiver energy-closure claim.",
+      "passed": 2
+    },
+    "tunnel_ci_pending": {
+      "kind": "staged_original_dll_subsystem_fixture",
+      "artifacts": [
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/tunnel-or161/protocol.json",
+          "sha256": "49eed6db5e701f9e513a5f4b15091ba5f8c17a42435136da835a850df8877705"
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/tunnel-or161/provenance.json",
+          "sha256": "9f9e9b8265fd74de339ba83b037484237f30e35159cbb5012ad4ba8a2af7f3f1"
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/tunnel-or161/reference.json",
+          "sha256": "aee7e30da94c70e700c087f3dd7b7e7cc9d859d09152254d2bcdf75e322cc40c"
+        },
+        {
+          "path": "crates/openrailsrs-sim/tests/native_tunnel_oracle.rs",
+          "sha256": "d73759fd9abe93953d8402d7652f6c986254f4fb2e009117ca482e11c4d8bf4b"
+        }
+      ],
+      "scope": "259 records,140 active Single/Double calls, seven cars, previous-tick native geometry/speed/mass prescribed only for isolated formula comparison.119 inactive records record coverage/expected zero without pretending to exercise route membership. No Rust test execution received at proposal time.",
+      "execution_status": "pending_root_final_test",
+      "maximum_absolute_error_n_predeclared": 0.01,
+      "full_service_six_limits_changed": false
+    },
+    "final_review_regressions_pending": {
+      "kind": "written_post_review_regressions",
+      "artifacts": [
+        {
+          "path": "tmp/twenty-20261015/final-review-yard-identities/applied-manifest.json",
+          "sha256": "32e8115f90ebd6ceb10ed052ae97b19ea97381ea30322432e9ef9dc7726471e5"
+        },
+        {
+          "path": "tmp/twenty-20261015/final-review-derailment-diagnostic/applied-manifest.json",
+          "sha256": "39296573e83e1e8d55aec899e244c067a1bd6c2a5f93e2f41c40d7507e177826"
+        }
+      ],
+      "scope": "Persistent yard identity through front coupling/permutation/JSON; safe native-fireman loss closes local regulators; minimum wheel load across both supports. These source changes were built but their current strengthened tests still await Root final gate.",
+      "execution_status": "pending_root_final_test",
+      "tests": [
+        "front_foreign_pickup_inventory_uses_original_ids_through_json_restore_and_delivery",
+        "own_permuted_section_delivery_keeps_original_vehicle_numbers_after_restore",
+        "native_manual_fireman_cannot_be_changed_to_an_unsupported_automatic_state",
+        "unloading_event_reports_the_minimum_across_both_supports"
+      ]
+    },
+    "lirr_replay11": {
+      "kind": "executed_complete_fixed_controls_replay",
+      "artifacts": [
+        {
+          "path": "tmp/twenty-20261015/lirr-replay-11/comparison.json",
+          "sha256": "e7cd146c6c5c4c11044ce5a905ba27262b9cd5ecf2088cead78e7d53786858ac"
+        },
+        {
+          "path": "tmp/twenty-20261015/lirr-replay-11/receipt.json",
+          "sha256": "eedcbac1145c1d26387601ff66d6c1f3bac93e1bdaedaf495bbb90bb026a0365"
+        },
+        {
+          "path": "tmp/twenty-20261015/build-12-result.json",
+          "sha256": "778ba02483f867de9e8efcc8c189b0d1f31bfefae797cc2ba10c63cab96ece2b"
+        }
+      ],
+      "scope": "32583 original controls at20Hz, same immutable native07 canonical reference, original SFexpress-500 seven-car stock, Brooklyn–Hempstead, complete duration/distance/platform coverage. Station scoring and every ACT event are outside this physics comparison.",
+      "measurement_build": 12,
+      "passed": true,
+      "samples": 32583,
+      "errors": {
+        "velocity_rms_mps": 0.0411195594194816,
+        "brake_pipe_rms_psi": 0.0004184281483413141,
+        "cylinder_rms_psi": 0.00011563180303608016,
+        "motive_force_rms_n": 3117.913827154162,
+        "brake_force_rms_n": 73.10889674686436,
+        "maximum_odometer_error_m": 12.2646484375
+      },
+      "thresholds_predeclared": {
+        "velocity_rms_mps": 0.75,
+        "maximum_odometer_error_m": 45,
+        "brake_pipe_rms_psi": 5,
+        "cylinder_rms_psi": 5,
+        "motive_force_rms_n": 5000,
+        "brake_force_rms_n": 5000
+      },
+      "checks": {
+        "velocity_rms_mps": true,
+        "brake_pipe_rms_psi": true,
+        "cylinder_rms_psi": true,
+        "motive_force_rms_n": true,
+        "brake_force_rms_n": true,
+        "maximum_odometer_error_m": true
+      },
+      "coverage": {
+        "native_reached_all_platforms": true,
+        "original_platforms": true,
+        "original_formation": true,
+        "full_distance": true,
+        "full_duration": true,
+        "exact_controls": true
+      },
+      "public_artifacts": [],
+      "publication_status": "Private executed outcome; publish a separate immutable bundle before final closure. Keep replay10 intact."
+    },
+    "steam_native_closed09": {
+      "kind": "executed_independently_initialized_closed_loop",
+      "artifacts": [
+        {
+          "path": "tmp/twenty-20261015/steam-native-compare09/comparison.json",
+          "sha256": "9237adc95b6a38660749d3f219e6ed07f3bf3fd80310c9b03a278b98a5c51dd4"
+        },
+        {
+          "path": "tmp/twenty-20261015/steam-native-compare09/receipt.json",
+          "sha256": "0d11b38470e279c25cceba27023f00b3b97823b7ef9ceb95b4e877493ad2b8d1"
+        },
+        {
+          "path": "tmp/twenty-20261015/build-12-result.json",
+          "sha256": "778ba02483f867de9e8efcc8c189b0d1f31bfefae797cc2ba10c63cab96ece2b"
+        }
+      ],
+      "scope": "1600ticks/80s of separately initialized bounded OR1.6.1 coal/simple/manual tank steam, original3F hardware and static Summer environment. Pressure,production,consumption,injection,force,motion/inventories obey unchanged prior limits; old failed models preserved. This is neither all steam locomotives nor native conservation-ledger certification.",
+      "measurement_build": 12,
+      "status": "within_prior_limits",
+      "completed_ticks": 1600,
+      "failed_metrics": [],
+      "limits": {
+        "boiler_enthalpy_j_abs": 100000.0,
+        "boiler_mass_kg_abs": 1.0,
+        "coal_burn_kg_s_abs": 0.05,
+        "distance_m_abs": 2.0,
+        "injection_kg_s_abs": 0.05,
+        "injector_state": "exact",
+        "motive_force_n_abs": 100.0,
+        "pressure_bar_abs": 0.1,
+        "production_kg_s_abs": 0.1,
+        "scope": "Prior diagnostic limits, including independently initialized state. A failure remains a failure and does not become an extension-parity claim.",
+        "speed_mps_abs": 0.1,
+        "steam_consumption_kg_s_abs": 0.1,
+        "tender_coal_kg_abs": 1.0,
+        "tender_water_kg_abs": 1.0,
+        "water_fraction_abs": 0.002
+      },
+      "conservation_passed": null,
+      "full_native_steam_cycle_parity_claim": false,
+      "native_state_or_motion_prescribed": false,
+      "comparison_byte_identical_to_closed08": true,
+      "trace_byte_identical_to_closed08": true,
+      "binary_sha256": "f8d0aa67e9a62865b0e0011ee3a814be1cacb9b277a43dc280d3e87eb4eab39c",
+      "phases": [
+        "braking",
+        "coast",
+        "idle_fire",
+        "initial",
+        "injection",
+        "steam_load"
+      ],
+      "static_environment_contract": {
+        "paused": true,
+        "context": "Explicit reference diagnostic context; do not describe as a GPU interactive cab capture."
+      },
+      "public_artifacts": [],
+      "publication_status": "Private executed outcome; publish its own receipt/build identity even though numerical trace matches closed08. Keep closed08 intact."
+    },
+    "current_batch_lirr": {
+      "kind": "executed_complete_fixed_controls_replay",
+      "artifacts": [
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/physical-final14/lirr/comparison.json",
+          "sha256": "74e234a78a6d517827eaa4c2fd7a4aaa9ef38fa99a8acff444596ea12c80260c"
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/physical-final14/lirr/receipt.json",
+          "sha256": "a59afc73807809d35da4cb6cbc117de402363d25a84c80143a017a52c312983d"
+        }
+      ],
+      "scope": "Native driver uses original signals, speed limits, platforms and boarding. Rust replays exactly the same 20Hz handles, with physical path and original vehicles. Station scoring and ACT goals are outside this physics comparison and are not allowed to truncate its diagnostics.",
+      "passed": true,
+      "errors": {
+        "velocity_rms_mps": 0.03601759802902187,
+        "brake_pipe_rms_psi": 0.0004184281483413141,
+        "cylinder_rms_psi": 0.00011563180303608016,
+        "motive_force_rms_n": 3116.669830098488,
+        "brake_force_rms_n": 73.29868513334766,
+        "maximum_odometer_error_m": 12.35546875
+      },
+      "checks": {
+        "velocity_rms_mps": true,
+        "brake_pipe_rms_psi": true,
+        "cylinder_rms_psi": true,
+        "motive_force_rms_n": true,
+        "brake_force_rms_n": true,
+        "maximum_odometer_error_m": true
+      },
+      "coverage": {
+        "native_reached_all_platforms": true,
+        "original_platforms": true,
+        "original_formation": true,
+        "full_distance": true,
+        "full_duration": true,
+        "exact_controls": true
+      }
+    },
+    "current_batch_steam": {
+      "kind": "executed_independently_initialized_closed_loop",
+      "artifacts": [
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/physical-final14/steam/comparison.json",
+          "sha256": "16ad71306495b4c0f85fcfe8347bc3097a23abda1303378051dde4050821265c"
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/physical-final14/steam/receipt.json",
+          "sha256": "cf803f71f1df324a020aaf1a7d316da71163e89cea03e6171ccc9576f80005d0"
+        }
+      ],
+      "scope": "Bounded original coal/simple/manual tank cycle, separately initialized; no full steam-family or native conservation-ledger claim.",
+      "status": "within_prior_limits",
+      "conservation_passed": null,
+      "full_native_steam_cycle_parity_claim": false
+    }
+  },
+  "issues": [
+    {
+      "issue": 217,
+      "title": "Plan 007: Gestionar porciones móviles en horarios originales",
+      "proposed_status": "directed_scope_evidence_available_pending_current_integrated_gate_and_publication",
+      "close_now": false,
+      "manual_and_scope_documents": [
+        "docs/OPERATIONAL_YARDS.md"
+      ],
+      "scope_limits": [
+        "Authored TT $pickup bridge and declared physical meetings; no universal attach/transfer dialect or all community timetable claim."
+      ],
+      "pending": [
+        "Root final integrated successful check, real tested-code commit on main and publication of the newest measured evidence."
+      ],
+      "criteria": [
+        {
+          "criterion": 1,
+          "text": "Ejecutar encuentros y transferencia de porciones sin teletransportar trenes.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "yard_cpu20",
+              "test": "mobile_portion_drives_to_contact_transfers_real_identities_and_restores"
+            }
+          ],
+          "manual_steps": [
+            "docs/OPERATIONAL_YARDS.md"
+          ]
+        },
+        {
+          "criterion": 2,
+          "text": "Resolver esperas, incompatibilidades y errores operativos con diagnóstico.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "yard_cpu20",
+              "test": "mobile_portion_timeout_and_incompatible_material_do_not_create_replacements"
+            }
+          ],
+          "manual_steps": [
+            "docs/OPERATIONAL_YARDS.md"
+          ]
+        },
+        {
+          "criterion": 3,
+          "text": "Documentar una prueba manual desde el menú y un caso de aceptación reproducible; comprobar persistencia y errores relevantes para este alcance.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "yard_cpu20",
+              "test": "mobile_portion_drives_to_contact_transfers_real_identities_and_restores"
+            },
+            {
+              "evidence_id": "final_review_regressions_pending"
+            }
+          ],
+          "manual_steps": [
+            "docs/OPERATIONAL_YARDS.md"
+          ]
+        }
+      ],
+      "criterion_count": 3
+    },
+    {
+      "issue": 218,
+      "title": "Plan 008: Implementar pools de material y depósitos de horarios",
+      "proposed_status": "directed_scope_evidence_available_pending_current_integrated_gate_and_publication",
+      "close_now": false,
+      "manual_and_scope_documents": [
+        "docs/OPERATIONAL_YARDS.md"
+      ],
+      "scope_limits": [
+        "Physical own TOML pool/depot; no universal.pool-or stock-spawning implementation."
+      ],
+      "pending": [
+        "Root final integrated successful check, real tested-code commit on main and publication of the newest measured evidence."
+      ],
+      "criteria": [
+        {
+          "criterion": 1,
+          "text": "Asignar material desde pools con disponibilidad real.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "yard_cpu20",
+              "test": "pool_allocates_only_one_real_member_and_restores_its_claim"
+            }
+          ],
+          "manual_steps": [
+            "docs/OPERATIONAL_YARDS.md"
+          ]
+        },
+        {
+          "criterion": 2,
+          "text": "Reservar, devolver y restaurar vehículos evitando asignaciones simultáneas.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "yard_cpu20",
+              "test": "pool_drives_out_and_back_returns_and_reuses_the_same_consumed_stock"
+            },
+            {
+              "evidence_id": "yard_cpu20",
+              "test": "inconsistent_shared_device_or_pool_world_is_rejected_atomically"
+            }
+          ],
+          "manual_steps": [
+            "docs/OPERATIONAL_YARDS.md"
+          ]
+        },
+        {
+          "criterion": 3,
+          "text": "Documentar una prueba manual desde el menú y un caso de aceptación reproducible; comprobar persistencia y errores relevantes para este alcance.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "yard_cpu20",
+              "test": "pool_and_actor_definition_errors_are_explicit"
+            },
+            {
+              "evidence_id": "final_review_regressions_pending"
+            }
+          ],
+          "manual_steps": [
+            "docs/OPERATIONAL_YARDS.md"
+          ]
+        }
+      ],
+      "criterion_count": 3
+    },
+    {
+      "issue": 220,
+      "title": "Plan 010: Comparar una traza física completa de LIRR contra Open Rails",
+      "proposed_status": "directed_scope_evidence_available_pending_current_integrated_gate_and_publication",
+      "close_now": false,
+      "manual_and_scope_documents": [
+        "docs/TWENTY_ISSUES_20261015.md",
+        "docs/NATIVE_TUNNEL_RESISTANCE.md",
+        "docs/OR_PARITY.md"
+      ],
+      "scope_limits": [
+        "Full canonical07 fixed-control physics replay only; native08 is additive diagnostics with identical canonical projection. No all-ACT-event,script,sound or every-route parity claim."
+      ],
+      "pending": [
+        "Root final integrated successful check, real tested-code commit on main and publication of the newest measured evidence."
+      ],
+      "criteria": [
+        {
+          "criterion": 1,
+          "text": "Capturar Brooklyn–Hempstead con SFexpress-500 y entradas reproducibles.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "lirr_native07"
+            },
+            {
+              "evidence_id": "current_batch_lirr"
+            }
+          ],
+          "manual_steps": [
+            "docs/TWENTY_ISSUES_20261015.md"
+          ]
+        },
+        {
+          "criterion": 2,
+          "text": "Comparar velocidad, distancia, fuerzas y presiones con referencias y tolerancias fijadas antes del ensayo.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "lirr_native07"
+            },
+            {
+              "evidence_id": "current_batch_lirr"
+            },
+            {
+              "evidence_id": "native08_tunnel_diagnostics"
+            },
+            {
+              "evidence_id": "tunnel_ci_pending"
+            }
+          ],
+          "manual_steps": [
+            "docs/TWENTY_ISSUES_20261015.md"
+          ]
+        },
+        {
+          "criterion": 3,
+          "text": "Guardar configuración, versiones, hashes y resultados reproducibles; separar alcance verificado de sistemas que continúan pendientes.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "lirr_native07"
+            },
+            {
+              "evidence_id": "current_batch_lirr"
+            }
+          ],
+          "manual_steps": [
+            "docs/TWENTY_ISSUES_20261015.md"
+          ]
+        }
+      ],
+      "criterion_count": 3
+    },
+    {
+      "issue": 221,
+      "title": "Plan 011: Completar y validar válvulas avanzadas de emergencia neumática",
+      "proposed_status": "directed_scope_evidence_available_pending_current_integrated_gate_and_publication",
+      "close_now": false,
+      "manual_and_scope_documents": [
+        "docs/PHYSICS_SEVEN_SYSTEMS.md",
+        "docs/NATIVE_PLAIN_AIR.md"
+      ],
+      "scope_limits": [
+        "Identified legacy RF numeric profile plus two declared variants; bounded valves and native plain-air controllers,not arbitrary scripted/unsupported valve systems."
+      ],
+      "pending": [
+        "Root final integrated successful check, real tested-code commit on main and publication of the newest measured evidence."
+      ],
+      "criteria": [
+        {
+          "criterion": 1,
+          "text": "Reproducir propagación, depósitos y rearme en perfiles originales identificados.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "native_cpu3",
+              "test": "original_three_car_propagation_keeps_only_the_head_boundary_prescribed"
+            },
+            {
+              "evidence_id": "plain_controller_cpu"
+            }
+          ],
+          "manual_steps": [
+            "docs/PHYSICS_SEVEN_SYSTEMS.md",
+            "docs/NATIVE_PLAIN_AIR.md"
+          ]
+        },
+        {
+          "criterion": 2,
+          "text": "Añadir oráculos con separación entre emergencia, servicio e independiente.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "native_cpu3",
+              "test": "original_emergency_service_pipe3_reservoir_and_rearm_match_runtime_subsystem"
+            }
+          ],
+          "manual_steps": [
+            "docs/PHYSICS_SEVEN_SYSTEMS.md",
+            "docs/NATIVE_PLAIN_AIR.md"
+          ]
+        },
+        {
+          "criterion": 3,
+          "text": "Guardar configuración, versiones, hashes y resultados reproducibles; separar alcance verificado de sistemas que continúan pendientes.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "native_cpu3"
+            }
+          ],
+          "manual_steps": [
+            "docs/PHYSICS_SEVEN_SYSTEMS.md",
+            "docs/NATIVE_PLAIN_AIR.md"
+          ]
+        }
+      ],
+      "criterion_count": 3
+    },
+    {
+      "issue": 223,
+      "title": "Plan 013: Reproducir tablas termodinámicas originales de vapor",
+      "proposed_status": "directed_scope_evidence_available_pending_current_integrated_gate_and_publication",
+      "close_now": false,
+      "manual_and_scope_documents": [
+        "docs/NATIVE_STEAM161.md",
+        "docs/STEAM_THERMODYNAMICS_AUDIT.md",
+        "docs/PHYSICS_SEVEN_SYSTEMS.md"
+      ],
+      "scope_limits": [
+        "Bounded coal/simple/manual tank native cycle from original3F; external tenders,oil,AI-fireman/native compounds are not certified.",
+        "Own finite-vessel mass/energy balances and original property tables are separately evidenced. Native conservation_passed remains null; do not rewrite that as true.",
+        "Closed-loop08 uses explicit paused reference diagnostic context with actual evolving motion; this is not a GPU original cab acceptance."
+      ],
+      "pending": [
+        "Root final integrated successful check, real tested-code commit on main and publication of the newest measured evidence."
+      ],
+      "criteria": [
+        {
+          "criterion": 1,
+          "text": "Conservar energía y masa usando propiedades de vapor y agua de la referencia fijada.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "steam_native_subsystems"
+            },
+            {
+              "evidence_id": "physics_cpu14",
+              "test": "vessel_conserves_mass_energy_through_fire_load_injection_and_safety"
+            }
+          ],
+          "manual_steps": [
+            "docs/PHYSICS_SEVEN_SYSTEMS.md"
+          ]
+        },
+        {
+          "criterion": 2,
+          "text": "Comparar producción, presión, consumo e inyección en fases reproducibles.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "current_batch_steam"
+            },
+            {
+              "evidence_id": "steam_native_subsystems"
+            },
+            {
+              "evidence_id": "directed_native_joint11"
+            }
+          ],
+          "manual_steps": [
+            "docs/PHYSICS_SEVEN_SYSTEMS.md"
+          ]
+        },
+        {
+          "criterion": 3,
+          "text": "Añadir ensayos representativos de fuerzas/estados y una prueba de conducción; usar oráculos OR 1.6.1 para lo equivalente y pruebas propias para extensiones.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "current_batch_steam"
+            },
+            {
+              "evidence_id": "steam_native_subsystems"
+            },
+            {
+              "evidence_id": "directed_native_joint11"
+            }
+          ],
+          "manual_steps": [
+            "docs/PHYSICS_SEVEN_SYSTEMS.md"
+          ]
+        }
+      ],
+      "criterion_count": 3
+    },
+    {
+      "issue": 224,
+      "title": "Plan 014: Gestionar calderas independientes y vapor compuesto en doble tracción",
+      "proposed_status": "directed_scope_evidence_available_pending_current_integrated_gate_and_publication",
+      "close_now": false,
+      "manual_and_scope_documents": [
+        "docs/PHYSICS_SEVEN_SYSTEMS.md",
+        "docs/STEAM_RECEIVER_PROFILE.md"
+      ],
+      "scope_limits": [
+        "Declared owned HP/receiver/LP compound and independent boilers; not native Vauclain or all original Compound locomotives.",
+        "New sub-newton and bypass ledger regressions now have actual PASS receipts."
+      ],
+      "pending": [
+        "Root final integrated successful check, real tested-code commit on main and publication of the newest measured evidence."
+      ],
+      "criteria": [
+        {
+          "criterion": 1,
+          "text": "Mantener caldera, fuego, ténder y controles propios por locomotora.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "physics_cpu14",
+              "test": "double_steam_force_and_consumption_are_metered_by_locomotive_identity"
+            },
+            {
+              "evidence_id": "mp_cpu14",
+              "test": "multiplayer::tests::cooperative_double_steam_keeps_both_thermodynamic_ledgers_in_the_server_save"
+            }
+          ],
+          "manual_steps": [
+            "docs/PHYSICS_SEVEN_SYSTEMS.md",
+            "docs/STEAM_RECEIVER_PROFILE.md"
+          ]
+        },
+        {
+          "criterion": 2,
+          "text": "Validar reparto de esfuerzo y consumo para doble tracción y un perfil compuesto declarado.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "physics_cpu14",
+              "test": "independent_boilers_compound_and_controls_survive_a_driven_save"
+            },
+            {
+              "evidence_id": "own_compound_scope"
+            },
+            {
+              "evidence_id": "own_ledger03"
+            }
+          ],
+          "manual_steps": [
+            "docs/PHYSICS_SEVEN_SYSTEMS.md",
+            "docs/STEAM_RECEIVER_PROFILE.md"
+          ]
+        },
+        {
+          "criterion": 3,
+          "text": "Añadir ensayos representativos de fuerzas/estados y una prueba de conducción; usar oráculos OR 1.6.1 para lo equivalente y pruebas propias para extensiones.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "physics_cpu14",
+              "test": "local_regulator_obeys_the_same_operational_and_safety_interlocks"
+            },
+            {
+              "evidence_id": "mp_cpu14",
+              "test": "multiplayer::tests::cooperative_double_steam_keeps_both_thermodynamic_ledgers_in_the_server_save"
+            },
+            {
+              "evidence_id": "native_cpu3"
+            }
+          ],
+          "manual_steps": [
+            "docs/PHYSICS_SEVEN_SYSTEMS.md",
+            "docs/STEAM_RECEIVER_PROFILE.md"
+          ]
+        }
+      ],
+      "criterion_count": 3
+    },
+    {
+      "issue": 234,
+      "title": "Plan 024: Implementar tracción y frenado por cremallera",
+      "proposed_status": "directed_scope_evidence_available_pending_current_integrated_gate_and_publication",
+      "close_now": false,
+      "manual_and_scope_documents": [
+        "docs/PHYSICS_SEVEN_SYSTEMS.md"
+      ],
+      "scope_limits": [
+        "Explicit compatible rack systems in own scenarios; no equivalent OR1.6.1 rack solver oracle."
+      ],
+      "pending": [
+        "Root final integrated successful check, real tested-code commit on main and publication of the newest measured evidence."
+      ],
+      "criteria": [
+        {
+          "criterion": 1,
+          "text": "Declarar tramos y vehículos compatibles con transición entre adherencia y cremallera.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "physics_cpu14",
+              "test": "rack_rejects_an_incompatible_system_and_refuses_engagement_at_speed"
+            },
+            {
+              "evidence_id": "fromrest_cpu3",
+              "test": "rack_entry_and_exit_follow_a_train_accelerating_from_rest"
+            }
+          ],
+          "manual_steps": [
+            "docs/PHYSICS_SEVEN_SYSTEMS.md"
+          ]
+        },
+        {
+          "criterion": 2,
+          "text": "Validar engranamiento, velocidad admitida y frenado propio en pendientes.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "physics_cpu14",
+              "test": "rack_positive_contact_brakes_gradient_without_an_adhesion_cap"
+            },
+            {
+              "evidence_id": "physics_gpu01"
+            }
+          ],
+          "manual_steps": [
+            "docs/PHYSICS_SEVEN_SYSTEMS.md"
+          ]
+        },
+        {
+          "criterion": 3,
+          "text": "Añadir ensayos representativos de fuerzas/estados y una prueba de conducción; usar oráculos OR 1.6.1 para lo equivalente y pruebas propias para extensiones.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "fromrest_cpu3"
+            },
+            {
+              "evidence_id": "physics_gpu01"
+            }
+          ],
+          "manual_steps": [
+            "docs/PHYSICS_SEVEN_SYSTEMS.md"
+          ]
+        }
+      ],
+      "criterion_count": 3
+    },
+    {
+      "issue": 324,
+      "title": "Plan 114: Incorporar descarrilamiento opcional con diagnóstico",
+      "proposed_status": "directed_scope_evidence_available_pending_current_integrated_gate_and_publication",
+      "close_now": false,
+      "manual_and_scope_documents": [
+        "docs/PHYSICS_SEVEN_SYSTEMS.md"
+      ],
+      "scope_limits": [
+        "Physical causes and optional consequences; not a terrain-crash/fall solver."
+      ],
+      "pending": [
+        "Root final integrated successful check, real tested-code commit on main and publication of the newest measured evidence."
+      ],
+      "criteria": [
+        {
+          "criterion": 1,
+          "text": "Definir causas físicas y umbrales documentados para material y vía compatibles.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "physics_cpu14",
+              "test": "optional_derailment_records_cause_cuts_force_and_keeps_the_failure_on_restore"
+            }
+          ],
+          "manual_steps": [
+            "docs/PHYSICS_SEVEN_SYSTEMS.md"
+          ]
+        },
+        {
+          "criterion": 2,
+          "text": "Mostrar causa y permitir desactivar el modo conservando conducción habitual.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "fromrest_cpu3",
+              "test": "optional_derailment_is_reachable_by_driving_from_rest"
+            },
+            {
+              "evidence_id": "derailment_gpu03"
+            },
+            {
+              "evidence_id": "final_review_regressions_pending",
+              "test": "unloading_event_reports_the_minimum_across_both_supports"
+            }
+          ],
+          "manual_steps": [
+            "docs/PHYSICS_SEVEN_SYSTEMS.md"
+          ]
+        },
+        {
+          "criterion": 3,
+          "text": "Añadir ensayos representativos de fuerzas/estados y una prueba de conducción; usar oráculos OR 1.6.1 para lo equivalente y pruebas propias para extensiones.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "derailment_gpu03"
+            },
+            {
+              "evidence_id": "fromrest_cpu3"
+            }
+          ],
+          "manual_steps": [
+            "docs/PHYSICS_SEVEN_SYSTEMS.md"
+          ]
+        }
+      ],
+      "criterion_count": 3
+    },
+    {
+      "issue": 325,
+      "title": "Plan 115: Relacionar irregularidades de vía con fuerzas verticales",
+      "proposed_status": "directed_scope_evidence_available_pending_current_integrated_gate_and_publication",
+      "close_now": false,
+      "manual_and_scope_documents": [
+        "docs/PHYSICS_SEVEN_SYSTEMS.md"
+      ],
+      "scope_limits": [
+        "GPU stills show readable diagnostics but mostly occlude train; original-world running-gear transforms are covered by separately executed ECS tests.",
+        "Wall-time On/Off frames are not phase-identical numeric samples."
+      ],
+      "pending": [
+        "Root final integrated successful check, real tested-code commit on main and publication of the newest measured evidence."
+      ],
+      "criteria": [
+        {
+          "criterion": 1,
+          "text": "Representar irregularidades reproducibles por tramo y contacto de ruedas.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "physics_cpu14",
+              "test": "vertical_profile_is_spatial_reproducible_and_affects_contact_and_motion"
+            },
+            {
+              "evidence_id": "physics_cpu14",
+              "test": "one_shared_vertical_support_preserves_both_body_loads_and_spatial_reversal"
+            }
+          ],
+          "manual_steps": [
+            "docs/PHYSICS_SEVEN_SYSTEMS.md"
+          ]
+        },
+        {
+          "criterion": 2,
+          "text": "Validar fuerzas, estabilidad y movimiento de suspensión con y sin irregularidades.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "vertical_ecs7"
+            },
+            {
+              "evidence_id": "vertical_gpu02"
+            }
+          ],
+          "manual_steps": [
+            "docs/PHYSICS_SEVEN_SYSTEMS.md"
+          ]
+        },
+        {
+          "criterion": 3,
+          "text": "Añadir ensayos representativos de fuerzas/estados y una prueba de conducción; usar oráculos OR 1.6.1 para lo equivalente y pruebas propias para extensiones.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "vertical_gpu02"
+            },
+            {
+              "evidence_id": "physics_cpu14"
+            }
+          ],
+          "manual_steps": [
+            "docs/PHYSICS_SEVEN_SYSTEMS.md"
+          ]
+        }
+      ],
+      "criterion_count": 3
+    },
+    {
+      "issue": 329,
+      "title": "Plan 119: Modelar transmisiones hidráulicas y convertidores de par",
+      "proposed_status": "directed_scope_evidence_available_pending_current_integrated_gate_and_publication",
+      "close_now": false,
+      "manual_and_scope_documents": [
+        "docs/PHYSICS_SEVEN_SYSTEMS.md"
+      ],
+      "scope_limits": [
+        "Declared own converter curves; no nonexistent original OR hydraulic-solver parity claim."
+      ],
+      "pending": [
+        "Root final integrated successful check, real tested-code commit on main and publication of the newest measured evidence."
+      ],
+      "criteria": [
+        {
+          "criterion": 1,
+          "text": "Implementar perfiles declarados con curvas de convertidor y pérdidas.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "hydraulic_interior_curve"
+            }
+          ],
+          "manual_steps": [
+            "docs/PHYSICS_SEVEN_SYSTEMS.md"
+          ]
+        },
+        {
+          "criterion": 2,
+          "text": "Comparar esfuerzo, RPM y consumo en arranque y transiciones de régimen.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "physics_cpu14",
+              "test": "hydraulic_launch_load_fuel_heat_and_shifts_share_the_physics_tick"
+            }
+          ],
+          "manual_steps": [
+            "docs/PHYSICS_SEVEN_SYSTEMS.md"
+          ]
+        },
+        {
+          "criterion": 3,
+          "text": "Añadir ensayos representativos de fuerzas/estados y una prueba de conducción; usar oráculos OR 1.6.1 para lo equivalente y pruebas propias para extensiones.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "physics_gpu01"
+            },
+            {
+              "evidence_id": "fromrest_cpu3",
+              "test": "converter_rack_vertical_contact_emergency_and_restore_run_together"
+            }
+          ],
+          "manual_steps": [
+            "docs/PHYSICS_SEVEN_SYSTEMS.md"
+          ]
+        }
+      ],
+      "criterion_count": 3
+    },
+    {
+      "issue": 338,
+      "title": "Plan 128: Hacer que tráfico automático rodee coches por otra vía",
+      "proposed_status": "directed_scope_evidence_available_pending_current_integrated_gate_and_publication",
+      "close_now": false,
+      "manual_and_scope_documents": [
+        "docs/OPERATIONAL_YARDS.md"
+      ],
+      "scope_limits": [
+        "Explicit alternate-route plan; no automatic universal community-yard planner."
+      ],
+      "pending": [
+        "Root final integrated successful check, real tested-code commit on main and publication of the newest measured evidence."
+      ],
+      "criteria": [
+        {
+          "criterion": 1,
+          "text": "Planificar desacople, recorrido alternativo y reacople de un tren AI.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "yard_cpu20",
+              "test": "ai_runs_around_its_immobile_coaches_and_collects_from_the_other_end"
+            }
+          ],
+          "manual_steps": [
+            "docs/OPERATIONAL_YARDS.md"
+          ]
+        },
+        {
+          "criterion": 2,
+          "text": "Compartir reglas físicas y reservas con el jugador sin trasladar coches.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "yard_cpu20",
+              "test": "human_network_drivers_are_neither_consumed_nor_cut_by_automatic_yard_crews"
+            },
+            {
+              "evidence_id": "yard_cpu20",
+              "test": "ai_runs_around_its_immobile_coaches_and_collects_from_the_other_end"
+            }
+          ],
+          "manual_steps": [
+            "docs/OPERATIONAL_YARDS.md"
+          ]
+        },
+        {
+          "criterion": 3,
+          "text": "Documentar una prueba manual desde el menú y un caso de aceptación reproducible; comprobar persistencia y errores relevantes para este alcance.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "yard_cpu20",
+              "test": "runaround_rejects_missing_cab_and_discontinuous_plan"
+            }
+          ],
+          "manual_steps": [
+            "docs/OPERATIONAL_YARDS.md"
+          ]
+        }
+      ],
+      "criterion_count": 3
+    },
+    {
+      "issue": 344,
+      "title": "Plan 134: Implementar mesas giratorias operativas",
+      "proposed_status": "directed_scope_evidence_available_pending_current_integrated_gate_and_publication",
+      "close_now": false,
+      "manual_and_scope_documents": [
+        "docs/OPERATIONAL_YARDS.md"
+      ],
+      "scope_limits": [
+        "Four relevant exterior views across turntable/transfer; no separate cab screenshot acceptance.",
+        "Whole-application timing/RSS is recorded; marginal device cost was not measured."
+      ],
+      "pending": [
+        "Root final integrated successful check, real tested-code commit on main and publication of the newest measured evidence."
+      ],
+      "criteria": [
+        {
+          "criterion": 1,
+          "text": "Vincular giro físico, animación y conexiones de vía compatibles.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "yard_cpu20",
+              "test": "turntable_transports_physical_stock_and_resumes_mid_rotation"
+            },
+            {
+              "evidence_id": "yard_gpu4"
+            }
+          ],
+          "manual_steps": [
+            "docs/OPERATIONAL_YARDS.md"
+          ]
+        },
+        {
+          "criterion": 2,
+          "text": "Bloquear circulación durante movimiento y conservar vehículo y ocupación al guardar.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "yard_cpu20",
+              "test": "moving_devices_reject_motion_partial_train_overload_and_corrupt_save_without_mutation"
+            }
+          ],
+          "manual_steps": [
+            "docs/OPERATIONAL_YARDS.md"
+          ]
+        },
+        {
+          "criterion": 3,
+          "text": "Capturar cabina/exterior o vistas relevantes con condiciones reproducibles; comprobar pausa, cambios de cámara, origen flotante y coste del efecto.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "yard_gpu4"
+            }
+          ],
+          "manual_steps": [
+            "docs/OPERATIONAL_YARDS.md"
+          ]
+        }
+      ],
+      "criterion_count": 3
+    },
+    {
+      "issue": 345,
+      "title": "Plan 135: Implementar plataformas de transferencia de locomotoras",
+      "proposed_status": "directed_scope_evidence_available_pending_current_integrated_gate_and_publication",
+      "close_now": false,
+      "manual_and_scope_documents": [
+        "docs/OPERATIONAL_YARDS.md"
+      ],
+      "scope_limits": [
+        "Four relevant exterior views across turntable/transfer; no separate cab screenshot acceptance.",
+        "Whole-application timing/RSS is recorded; marginal device cost was not measured."
+      ],
+      "pending": [
+        "Root final integrated successful check, real tested-code commit on main and publication of the newest measured evidence."
+      ],
+      "criteria": [
+        {
+          "criterion": 1,
+          "text": "Alinear plataforma móvil con vías compatibles conservando tren transportado.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "yard_cpu20",
+              "test": "transfer_table_transports_physical_stock_and_resumes_mid_translation"
+            },
+            {
+              "evidence_id": "yard_gpu4"
+            }
+          ],
+          "manual_steps": [
+            "docs/OPERATIONAL_YARDS.md"
+          ]
+        },
+        {
+          "criterion": 2,
+          "text": "Restringir circulación y validar entradas, salidas y restauración.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "yard_cpu20",
+              "test": "moving_devices_reject_motion_partial_train_overload_and_corrupt_save_without_mutation"
+            }
+          ],
+          "manual_steps": [
+            "docs/OPERATIONAL_YARDS.md"
+          ]
+        },
+        {
+          "criterion": 3,
+          "text": "Capturar cabina/exterior o vistas relevantes con condiciones reproducibles; comprobar pausa, cambios de cámara, origen flotante y coste del efecto.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "yard_gpu4"
+            }
+          ],
+          "manual_steps": [
+            "docs/OPERATIONAL_YARDS.md"
+          ]
+        }
+      ],
+      "criterion_count": 3
+    },
+    {
+      "issue": 346,
+      "title": "Plan 136: Incorporar patios de clasificación por gravedad",
+      "proposed_status": "directed_scope_evidence_available_pending_current_integrated_gate_and_publication",
+      "close_now": false,
+      "manual_and_scope_documents": [
+        "docs/OPERATIONAL_YARDS.md"
+      ],
+      "scope_limits": [
+        "Impact fixture with prescribed initial speed is solver-only; gravity acceptance separately drives fromrest under real grade/retarder."
+      ],
+      "pending": [
+        "Root final integrated successful check, real tested-code commit on main and publication of the newest measured evidence."
+      ],
+      "criteria": [
+        {
+          "criterion": 1,
+          "text": "Simular vagones libres, pendiente y retardadores declarados.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "yard_cpu20",
+              "test": "gravity_classifies_both_declared_roads_using_grade_and_actual_retarder_work"
+            },
+            {
+              "evidence_id": "yard_cpu20",
+              "test": "declared_retarder_adds_force_per_vehicle_and_dissipates_only_real_work"
+            }
+          ],
+          "manual_steps": [
+            "docs/OPERATIONAL_YARDS.md"
+          ]
+        },
+        {
+          "criterion": 2,
+          "text": "Clasificar por vías sin omitir colisiones, frenos ni ocupación.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "yard_cpu20",
+              "test": "collision_prescribed_speed_fixture_keeps_occupancy_records_impact_and_applies_emergency_brakes"
+            }
+          ],
+          "manual_steps": [
+            "docs/OPERATIONAL_YARDS.md"
+          ]
+        },
+        {
+          "criterion": 3,
+          "text": "Añadir ensayos representativos de fuerzas/estados y una prueba de conducción; usar oráculos OR 1.6.1 para lo equivalente y pruebas propias para extensiones.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "yard_cpu20",
+              "test": "gravity_classifies_both_declared_roads_using_grade_and_actual_retarder_work"
+            },
+            {
+              "evidence_id": "final_review_regressions_pending"
+            }
+          ],
+          "manual_steps": [
+            "docs/OPERATIONAL_YARDS.md"
+          ]
+        }
+      ],
+      "criterion_count": 3
+    },
+    {
+      "issue": 348,
+      "title": "Plan 138: Crear ejercicios de recuperación de vagones sin control",
+      "proposed_status": "directed_scope_evidence_available_pending_current_integrated_gate_and_publication",
+      "close_now": false,
+      "manual_and_scope_documents": [
+        "docs/OPERATIONAL_YARDS.md"
+      ],
+      "scope_limits": [
+        "Optional authored incident; ordinary unsafe moving-cut restrictions remain enforced."
+      ],
+      "pending": [
+        "Root final integrated successful check, real tested-code commit on main and publication of the newest measured evidence."
+      ],
+      "criteria": [
+        {
+          "criterion": 1,
+          "text": "Preparar incidentes opcionales con pendiente y freno insuficiente explícitos.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "yard_cpu20",
+              "test": "optional_runaway_requires_protection_and_real_stopping_before_recovery"
+            }
+          ],
+          "manual_steps": [
+            "docs/OPERATIONAL_YARDS.md"
+          ]
+        },
+        {
+          "criterion": 2,
+          "text": "Evaluar protección y recuperación sin modificar las restricciones habituales de desacople.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "yard_cpu20",
+              "test": "recovery_rejects_late_protection_bad_retarder_and_moving_cuts"
+            }
+          ],
+          "manual_steps": [
+            "docs/OPERATIONAL_YARDS.md"
+          ]
+        },
+        {
+          "criterion": 3,
+          "text": "Documentar una prueba manual desde el menú y un caso de aceptación reproducible; comprobar persistencia y errores relevantes para este alcance.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "yard_cpu20",
+              "test": "optional_runaway_requires_protection_and_real_stopping_before_recovery"
+            },
+            {
+              "evidence_id": "final_review_regressions_pending"
+            }
+          ],
+          "manual_steps": [
+            "docs/OPERATIONAL_YARDS.md"
+          ]
+        }
+      ],
+      "criterion_count": 3
+    },
+    {
+      "issue": 397,
+      "title": "Plan 187: Automatizar capturas equivalentes de OR y nuestro visor",
+      "proposed_status": "directed_scope_evidence_available_pending_current_integrated_gate_and_publication",
+      "close_now": false,
+      "manual_and_scope_documents": [
+        "docs/TWENTY_ISSUES_20261015.md"
+      ],
+      "scope_limits": [
+        "Camera/light/readiness equivalence is not global pixel parity. Tree LOD,lighting,dynamic stock and horizon450m differences documented."
+      ],
+      "pending": [
+        "Root final integrated successful check, real tested-code commit on main and publication of the newest measured evidence."
+      ],
+      "criteria": [
+        {
+          "criterion": 1,
+          "text": "Fijar poses, iluminación, hora, formación y datos de referencia.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "visual_equivalence12"
+            }
+          ],
+          "manual_steps": [
+            "docs/TWENTY_ISSUES_20261015.md"
+          ]
+        },
+        {
+          "criterion": 2,
+          "text": "Generar comparación y evidencia con hashes separando mejoras intencionales de errores de contenido.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "visual_equivalence12"
+            }
+          ],
+          "manual_steps": [
+            "docs/TWENTY_ISSUES_20261015.md"
+          ]
+        },
+        {
+          "criterion": 3,
+          "text": "Guardar configuración, versiones, hashes y resultados reproducibles; separar alcance verificado de sistemas que continúan pendientes.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "visual_equivalence12"
+            }
+          ],
+          "manual_steps": [
+            "docs/TWENTY_ISSUES_20261015.md"
+          ]
+        }
+      ],
+      "criterion_count": 3
+    },
+    {
+      "issue": 407,
+      "title": "Plan 197: Integrar partidas con varios conductores y despachador",
+      "proposed_status": "directed_scope_evidence_available_pending_current_integrated_gate_and_publication",
+      "close_now": false,
+      "manual_and_scope_documents": [
+        "docs/MULTIPLAYER_VIEWER.md"
+      ],
+      "scope_limits": [
+        "Five simultaneous CPU identities,not eight. Three GPU roles,at most two GPU viewers.",
+        "Loopback25ms is separate from delayed-proxy test whose exact RTT was not printed. No WAN/TLS,long-soak or interpolated-frame claim."
+      ],
+      "pending": [
+        "Root final integrated successful check, real tested-code commit on main and publication of the newest measured evidence."
+      ],
+      "criteria": [
+        {
+          "criterion": 1,
+          "text": "Integrar la infraestructura de red existente con el visor 3D, servicios y roles del jugador.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "mp_cpu14",
+              "test": "multiplayer::tests::viewer_two_drivers_dispatch_fireman_spectator_and_shutdown_use_real_tcp"
+            },
+            {
+              "evidence_id": "mp_gpu3"
+            }
+          ],
+          "manual_steps": [
+            "docs/MULTIPLAYER_VIEWER.md"
+          ]
+        },
+        {
+          "criterion": 2,
+          "text": "Validar dos conductores y despachador con servidor autoritativo, latencia y reconexión.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "mp_cpu14",
+              "test": "multiplayer::tests::viewer_with_real_tcp_latency_receives_one_authoritative_result"
+            },
+            {
+              "evidence_id": "final_review_regressions_pending",
+              "test": "native_manual_fireman_cannot_be_changed_to_an_unsupported_automatic_state"
+            }
+          ],
+          "manual_steps": [
+            "docs/MULTIPLAYER_VIEWER.md"
+          ]
+        },
+        {
+          "criterion": 3,
+          "text": "Ensayo end-to-end con servidor y clientes del visor; cubrir latencia, desconexión, reconexión y autoridad de comandos.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "mp_cpu14"
+            },
+            {
+              "evidence_id": "mp_gpu3"
+            }
+          ],
+          "manual_steps": [
+            "docs/MULTIPLAYER_VIEWER.md"
+          ]
+        }
+      ],
+      "criterion_count": 3
+    },
+    {
+      "issue": 408,
+      "title": "Plan 198: Permitir conductor y fogonero cooperativos en una locomotora",
+      "proposed_status": "directed_scope_evidence_available_pending_current_integrated_gate_and_publication",
+      "close_now": false,
+      "manual_and_scope_documents": [
+        "docs/MULTIPLAYER_VIEWER.md"
+      ],
+      "scope_limits": [
+        "Fireman GPU panel not captured; cooperative role exercised by actual TCP same-viewer-plugin CPU tests.",
+        "NativeOr161 manual-only cycle compatibility is separately bounded; multiplayer acceptance uses owned examples."
+      ],
+      "pending": [
+        "Root final integrated successful check, real tested-code commit on main and publication of the newest measured evidence."
+      ],
+      "criteria": [
+        {
+          "criterion": 1,
+          "text": "Asignar controles por rol sobre la misma locomotora y caldera.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "mp_cpu14",
+              "test": "driver_and_fireman_commands_reach_the_same_real_boiler_then_restore"
+            }
+          ],
+          "manual_steps": [
+            "docs/MULTIPLAYER_VIEWER.md"
+          ]
+        },
+        {
+          "criterion": 2,
+          "text": "Sincronizar acciones y resolver desconexión o cambio de rol sin duplicar comandos.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "mp_cpu14",
+              "test": "role_changes_are_atomic_and_checkpoint_restarts_revoke_old_epochs"
+            },
+            {
+              "evidence_id": "mp_cpu14",
+              "test": "retries_gaps_and_reconnect_never_repeat_a_command"
+            },
+            {
+              "evidence_id": "final_review_regressions_pending",
+              "test": "native_manual_fireman_cannot_be_changed_to_an_unsupported_automatic_state"
+            }
+          ],
+          "manual_steps": [
+            "docs/MULTIPLAYER_VIEWER.md"
+          ]
+        },
+        {
+          "criterion": 3,
+          "text": "Ensayo end-to-end con servidor y clientes del visor; cubrir latencia, desconexión, reconexión y autoridad de comandos.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "mp_cpu14",
+              "test": "multiplayer::tests::viewer_two_drivers_dispatch_fireman_spectator_and_shutdown_use_real_tcp"
+            }
+          ],
+          "manual_steps": [
+            "docs/MULTIPLAYER_VIEWER.md"
+          ]
+        }
+      ],
+      "criterion_count": 3
+    },
+    {
+      "issue": 409,
+      "title": "Plan 199: Incorporar espectadores con seguimiento de servicios",
+      "proposed_status": "directed_scope_evidence_available_pending_current_integrated_gate_and_publication",
+      "close_now": false,
+      "manual_and_scope_documents": [
+        "docs/MULTIPLAYER_VIEWER.md"
+      ],
+      "scope_limits": [
+        "At most8 public train poses and5Hz publication/size/queue bounds; no eight-viewer GPU cost/stress benchmark."
+      ],
+      "pending": [
+        "Root final integrated successful check, real tested-code commit on main and publication of the newest measured evidence."
+      ],
+      "criteria": [
+        {
+          "criterion": 1,
+          "text": "Integrar observación de sesiones en el visor sin autoridad sobre trenes.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "mp_cpu14",
+              "test": "two_drivers_dispatcher_and_fireman_have_separate_authority"
+            },
+            {
+              "evidence_id": "mp_gpu3"
+            }
+          ],
+          "manual_steps": [
+            "docs/MULTIPLAYER_VIEWER.md"
+          ]
+        },
+        {
+          "criterion": 2,
+          "text": "Seguir servicios y cambiar cámaras con datos filtrados y coste acotado.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "mp_cpu14",
+              "test": "multiplayer::tests::observer_cameras_follow_rendered_services_and_do_not_create_an_extra_train"
+            },
+            {
+              "evidence_id": "mp_cpu14",
+              "test": "an_oversized_wire_frame_is_closed_before_deserializing_a_body"
+            }
+          ],
+          "manual_steps": [
+            "docs/MULTIPLAYER_VIEWER.md"
+          ]
+        },
+        {
+          "criterion": 3,
+          "text": "Ensayo end-to-end con servidor y clientes del visor; cubrir latencia, desconexión, reconexión y autoridad de comandos.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "mp_cpu14"
+            },
+            {
+              "evidence_id": "mp_gpu3"
+            }
+          ],
+          "manual_steps": [
+            "docs/MULTIPLAYER_VIEWER.md"
+          ]
+        }
+      ],
+      "criterion_count": 3
+    },
+    {
+      "issue": 410,
+      "title": "Plan 200: Guardar y recuperar sesiones multijugador completas",
+      "proposed_status": "directed_scope_evidence_available_pending_current_integrated_gate_and_publication",
+      "close_now": false,
+      "manual_and_scope_documents": [
+        "docs/MULTIPLAYER_VIEWER.md"
+      ],
+      "scope_limits": [
+        "Private complete host saves are intentionally not published; sanitized test/capture receipts prove the executed paths."
+      ],
+      "pending": [
+        "Root final integrated successful check, real tested-code commit on main and publication of the newest measured evidence."
+      ],
+      "criteria": [
+        {
+          "criterion": 1,
+          "text": "Persistir trenes, roles, horarios, clima y reservas del servidor.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "mp_cpu14",
+              "test": "multiplayer::tests::viewer_checkpoint_preserves_world_and_revokes_old_authority_on_restore"
+            }
+          ],
+          "manual_steps": [
+            "docs/MULTIPLAYER_VIEWER.md"
+          ]
+        },
+        {
+          "criterion": 2,
+          "text": "Recuperar clientes y autoridad sin duplicar vehículos, comandos ni concesiones.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "mp_cpu14",
+              "test": "role_changes_are_atomic_and_checkpoint_restarts_revoke_old_epochs"
+            },
+            {
+              "evidence_id": "mp_cpu14",
+              "test": "retries_gaps_and_reconnect_never_repeat_a_command"
+            },
+            {
+              "evidence_id": "final_review_regressions_pending",
+              "test": "native_manual_fireman_cannot_be_changed_to_an_unsupported_automatic_state"
+            }
+          ],
+          "manual_steps": [
+            "docs/MULTIPLAYER_VIEWER.md"
+          ]
+        },
+        {
+          "criterion": 3,
+          "text": "Ensayo end-to-end con servidor y clientes del visor; cubrir latencia, desconexión, reconexión y autoridad de comandos.",
+          "status": "executed_scope_evidence_available_final_gate_pending",
+          "evidence": [
+            {
+              "evidence_id": "mp_cpu14"
+            },
+            {
+              "evidence_id": "mp_gpu3"
+            }
+          ],
+          "manual_steps": [
+            "docs/MULTIPLAYER_VIEWER.md"
+          ]
+        }
+      ],
+      "criterion_count": 3
+    }
+  ],
+  "privacy_audit": {
+    "status": "completed_bounded_read_only_snapshot",
+    "artifact": {
+      "path": "tmp/twenty-20261015/public-evidence-audit-final-draft.json",
+      "sha256": "a8c4470e6bc22b5902ecfedda72d2c32ca5304abd493353fc694881024f4cf2f"
+    },
+    "files_scanned": 288,
+    "new_or_changed_since_prior": 140,
+    "credential_matches": 0,
+    "raw_original_asset_files": 0,
+    "private_key_or_player_data_files": 0,
+    "six_user_traces_unchanged": true,
+    "snapshot_stable": true,
+    "script": {
+      "path": "tmp/twenty-20261015/audit-final-public-evidence.py",
+      "sha256": "672cba2e2be8025d73b2e7feda6fe2911632cb260bfa927e7ee99b7eda7664ca"
+    },
+    "first_attempt_preserved": "tmp/twenty-20261015/public-evidence-audit-final-attempt1.json",
+    "first_attempt_note": "A Path-versus-string file-list ordering comparison initially produced a false public_file_set flag. Only that comparison was corrected; rescan preserved all original findings and verified a stable set."
+  },
+  "publication_findings": [
+    {
+      "kind": "personal_absolute_path_provenance_metadata",
+      "files_total": 56,
+      "files_new_or_changed": 33,
+      "credential": false,
+      "files": [
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/capture-sources/capture-script.py",
+          "occurrences": 2
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/receipt.json",
+          "occurrences": 560
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/wine-isolation/isolation.json",
+          "occurrences": 2
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/wine-isolation/release.json",
+          "occurrences": 6
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed06/comparison.json",
+          "occurrences": 1
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed06/configuration-overlay.json",
+          "occurrences": 1
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed06/execution.log",
+          "occurrences": 1
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed06/receipt.json",
+          "occurrences": 2
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed08/comparison.json",
+          "occurrences": 1
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed08/configuration-overlay.json",
+          "occurrences": 1
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed08/execution.log",
+          "occurrences": 1
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed08/receipt.json",
+          "occurrences": 2
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-cold05/manifest.json",
+          "occurrences": 2
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-cold05/measurements/01/receipt.json",
+          "occurrences": 1
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-cold05/registration.json",
+          "occurrences": 2
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-cold05/wine-isolation/isolation.json",
+          "occurrences": 2
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-cold05/wine-isolation/release.json",
+          "occurrences": 6
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-paused03/manifest.json",
+          "occurrences": 2
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-paused03/registration.json",
+          "occurrences": 2
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-paused03/wine-isolation/isolation.json",
+          "occurrences": 2
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-paused03/wine-isolation/release.json",
+          "occurrences": 6
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-unpaused04/manifest.json",
+          "occurrences": 2
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-unpaused04/registration.json",
+          "occurrences": 2
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-unpaused04/wine-isolation/isolation.json",
+          "occurrences": 2
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-drive-unpaused04/wine-isolation/release.json",
+          "occurrences": 6
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-hot02/manifest.json",
+          "occurrences": 2
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-hot02/measurements/01/receipt.json",
+          "occurrences": 1
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-hot02/registration.json",
+          "occurrences": 2
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-hot02/wine-isolation/isolation.json",
+          "occurrences": 2
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-hot02/wine-isolation/release.json",
+          "occurrences": 6
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-subsystems/execution/run.log",
+          "occurrences": 2
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-subsystems/raw-manifests/cold_subsystem.json",
+          "occurrences": 2
+        },
+        {
+          "path": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-subsystems/raw-manifests/hot_subsystem.json",
+          "occurrences": 2
+        }
+      ],
+      "scope": "P explicitly declares retained host paths/hashes. These are not private keys or original resource payloads. Root decides whether to retain declared provenance or prepare redacted derivatives; no publication bytes were changed by this audit."
+    }
+  ],
+  "preserved_failures": [
+    "Initial whole workspace had failures; multiplayer subset PASS is not global PASS.",
+    "Directed04 from-rest failure remains; later09/10 changed only separate own approach/material fixture before its declared acceptance.",
+    "GPU01 vertical failure and GPU02 sparse-action derailment-harness failure remain immutable.",
+    "LIRR05paused/native06compilefailure/live07capture contexts remain distinct; no old trace is turned into current Rust acceptance.",
+    "Historical own-vessel steam comparison failed original thresholds; sharing property tables does not override that result.",
+    "lirr-replay01..09 retain their original outcomes,including invalid catalog attempt07; replay10 does not rewrite them.",
+    "steam-native-compare01..07 retain their original results; closed08 is a new frozen build measurement."
+  ],
+  "known_evidence_limits": [
+    "All manual instructions are recipes,not proof that the human user executed them. Pixel reviews are explicitly recorded separately.",
+    "Public GPU evidence binds its original binary SHA; it is not silently relabelled build06.",
+    "For344/345 cost evidence is whole-app,not a marginal effect baseline; for407–410 maximum simultaneous CPU identities is5 andGPU viewers2.",
+    "Staged tunnel CI and strengthened final review tests are not marked passed before Root actually executes them.",
+    "Vector-local tunnel membership has own entry/partial-exit/reverse/save tests written; extra native TrackCircuit partition behavior is not universally certified by isolated geometry calls."
+  ],
+  "public_evidence_index": {
+    "path": "docs/TWENTY_ISSUES_20261015.md",
+    "sha256": "635b88d57f8de2b28696855d40d9a92ecfd37c4016f5d3e17817b5c1993fd8d1",
+    "tunnel": "docs/fixtures/compatibility/twenty-20261015/tunnel-or161/",
+    "lirr_native08_diagnostics": "docs/fixtures/compatibility/twenty-20261015/lirr-native08-diagnostics/",
+    "native_steam_closed08": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed08/",
+    "lirr_full_service_replay10": "docs/fixtures/compatibility/twenty-20261015/lirr-full-service-replay10/"
+  },
+  "github_closure_authority": "Root only after final check and commit; this reviewer neither closes issues nor changes their checkboxes",
+  "still_open_until_root_gate": [
+    217,
+    218,
+    220,
+    221,
+    223,
+    224,
+    234,
+    324,
+    325,
+    329,
+    338,
+    344,
+    345,
+    346,
+    348,
+    397,
+    407,
+    408,
+    409,
+    410
+  ],
+  "pending_global_documentation": "Root updates final docs/web/index and issue annotations after gate; current general index can still state220/223open until then.",
+  "publication_review": {
+    "status": "Newest executed LIRR11/steam09 outcomes remain private; older public passing bundles stay intact.",
+    "prior_public_lirr": "docs/fixtures/compatibility/twenty-20261015/lirr-full-service-replay10/",
+    "prior_public_steam": "docs/fixtures/compatibility/twenty-20261015/steam-cycle161-closed08/",
+    "no_product_or_public_files_modified": true
+  },
+  "current_directed_batch": {
+    "220": [
+      "docs/fixtures/compatibility/twenty-20261015/physical-final14/lirr/comparison.json",
+      "docs/fixtures/compatibility/twenty-20261015/physical-final14/lirr/receipt.json"
+    ],
+    "223": [
+      "docs/fixtures/compatibility/twenty-20261015/physical-final14/steam/comparison.json",
+      "docs/fixtures/compatibility/twenty-20261015/physical-final14/steam/receipt.json"
+    ],
+    "directed_batch": "docs/fixtures/compatibility/twenty-20261015/physical-final14/result.json",
+    "global_gate_passed": false,
+    "close_now": false
+  }
+}

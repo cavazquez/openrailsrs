@@ -58,8 +58,10 @@ los controles y sus hashes siguen intactos. El pase del 5 de octubre
 
 El [batch14](fixtures/compatibility/twenty-20261015/physical-final14/result.json)
 también aprobó cuatro ensayos cortos, Class 47, tres paradas jugables, LIRR y
-vapor acotado. Es una ejecución dirigida; la puerta global final de `check.sh`
-todavía está pendiente.
+vapor acotado. La [ejecución completa de check.sh](fixtures/compatibility/twenty-20261015/final-check/result.json)
+también terminó con salida 0: 2.346 pruebas Rust aprobadas, cero fallos,
+contratos Python y servicio completo. El recibo vincula las fuentes verificadas
+al commit `953090a984c3` y conserva los intentos fallidos anteriores.
 
 El replay usa las pendientes/límites nativos del corredor y una extracción
 numérica independiente de la formación original: 440906,4 kg, 166,164 m,
@@ -509,8 +511,8 @@ de 2 m, y el de velocidad **0,0478134 m/s** frente a 0,1 m/s. El
 [pase vapor08](fixtures/compatibility/twenty-20261015/steam-cycle161-closed08/README.md)
 permanece como resultado anterior. El perfil nativo conserva
 `conservation_passed = null`; las pruebas conservativas del recipiente propio
-y su compound tienen alcance separado. Estos pases dirigidos no sustituyen
-la puerta global final.
+y su compound tienen alcance separado. El recibo final enlazado arriba
+registra además la validación conjunta.
 
 
 ## Masa efectiva del combustible — OR 1.6.1
