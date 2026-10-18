@@ -1,0 +1,20 @@
+{
+  "format": "openrailsrs-package",
+  "format_version": 1,
+  "name": "Ejemplo routes-and-trains",
+  "id": "example-routes-and-trains",
+  "version": "1.0.0",
+  "author": {
+    "name": "OpenRailsRS contributors"
+  },
+  "license": "GPL-3.0-only",
+  "contents": [
+    "ROUTES",
+    "TRAINS"
+  ],
+  "dependencies": [],
+  "archive": {
+    "url": "https://raw.githubusercontent.com/cavazquez/openrailsrs/main/docs/examples/content-packages/downloads/routes-and-trains/example.zip",
+    "sha256": "03e1ab78033ce7d20455a43d56ce8116a97bcb38b9c5f6e4dd7bc0422a6b0e03"
+  }
+}

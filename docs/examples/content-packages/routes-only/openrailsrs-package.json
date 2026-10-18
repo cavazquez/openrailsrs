@@ -1,0 +1,15 @@
+{
+  "format": "openrailsrs-package",
+  "format_version": 1,
+  "name": "Ejemplo routes-only",
+  "id": "example-routes-only",
+  "version": "1.0.0",
+  "author": {
+    "name": "OpenRailsRS contributors"
+  },
+  "license": "GPL-3.0-only",
+  "contents": [
+    "ROUTES"
+  ],
+  "dependencies": []
+}

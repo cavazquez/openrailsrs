@@ -1,0 +1,1 @@
+Ejemplo mínimo del formato de paquetes OpenRailsRS. Datos propios GPL-3.0-only. La ruta mínima permite probar la importación; no incluye actividades ni un paisaje completo. Los trenes son modelos de laboratorio.

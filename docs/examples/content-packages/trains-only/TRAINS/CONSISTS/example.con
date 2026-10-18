@@ -1,0 +1,7 @@
+SIMISA@@@@@@@@@@JINX0D0t______
+Train (
+ TrainCfg ( "ExampleLab"
+  Engine ( UiD ( 0 ) EngineData ( lab ExampleLab ) )
+  Wagon ( UiD ( 1 ) WagonData ( lab ExampleLab ) )
+ )
+)

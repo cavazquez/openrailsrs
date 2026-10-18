@@ -1,0 +1,19 @@
+{
+  "format": "openrailsrs-package",
+  "format_version": 1,
+  "name": "Ejemplo trains-only",
+  "id": "example-trains-only",
+  "version": "1.0.0",
+  "author": {
+    "name": "OpenRailsRS contributors"
+  },
+  "license": "GPL-3.0-only",
+  "contents": [
+    "TRAINS"
+  ],
+  "dependencies": [],
+  "archive": {
+    "url": "https://raw.githubusercontent.com/cavazquez/openrailsrs/main/docs/examples/content-packages/downloads/trains-only/example.zip",
+    "sha256": "82cf68ede389920d6407e6128f059d22d6a3f56195fbc4cada52de09de7d3032"
+  }
+}

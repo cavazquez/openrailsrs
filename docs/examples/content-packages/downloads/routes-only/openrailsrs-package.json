@@ -1,0 +1,19 @@
+{
+  "format": "openrailsrs-package",
+  "format_version": 1,
+  "name": "Ejemplo routes-only",
+  "id": "example-routes-only",
+  "version": "1.0.0",
+  "author": {
+    "name": "OpenRailsRS contributors"
+  },
+  "license": "GPL-3.0-only",
+  "contents": [
+    "ROUTES"
+  ],
+  "dependencies": [],
+  "archive": {
+    "url": "https://raw.githubusercontent.com/cavazquez/openrailsrs/main/docs/examples/content-packages/downloads/routes-only/example.zip",
+    "sha256": "0234880d1f4dc2c34f88b35c0fb7808b928e5da317b0a994d96068de3e0af837"
+  }
+}

@@ -1,0 +1,2 @@
+SIMISA@@@@@@@@@@JINX0D0t______
+Wagon ( lab_coach Type ( Carriage ) WagonShape ( coach.s ) Mass ( 30t ) Size ( 3m 4m 20m ) BrakeSystemType ( Air_single_pipe ) MaxBrakeForce ( 80kN ) Inside ( PassengerCabinFile ( coach.s ) PassengerCabinHeadPos ( 0.0 2.0 0.0 ) StartDirection ( 0.0 0.0 0.0 ) RotationLimit ( 70.0 180.0 0.0 ) ) )
