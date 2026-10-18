@@ -1,6 +1,7 @@
 <header class="page-intro wrap"><p class="eyebrow">Instalación</p><h1>Tu primera partida.</h1><p class="lead">En Linux podés instalar la alpha desde Snap Store o compilar el código. Podés empezar con los ejemplos incluidos, Demo Model 1 o tu instalación de Chiltern.</p></header>
 <section class="section wrap getting-started" id="instalacion">
   <aside class="note"><strong>Instalar sin compilar</strong>La alpha está en <a href="https://snapcraft.io/openrailsrs">Snap Store</a>, canal edge. Ejecutá <code>sudo snap install openrailsrs --edge</code> y luego <code>snap run openrailsrs</code>. Si ya la tenés, actualizá con <code>sudo snap refresh openrailsrs --edge</code>. Biblioteca conserva las rutas descargadas entre revisiones.</aside>
+  <p>La <strong>alpha.10</strong> agrega la importación de paquetes por URL: pueden contener sólo <code>ROUTES</code>, sólo <code>TRAINS</code> o ambas carpetas. En <a href="contenido.html#importar-por-url">Rutas y trenes</a> tenés los pasos y la guía para crear tus propios paquetes.</p>
   <div class="section-heading"><div><h2>Compilar y abrir el menú</h2></div><p>Necesitás Git, Rust {{rust}} o superior y las bibliotecas gráficas y de audio de tu distribución. Python 3 se usa para descargar contenido.</p></div>
   <ol class="steps">
     <li><span class="step-number">1</span><div><h3>Descargá el proyecto</h3><div class="code-box"><pre><code>git clone https://github.com/cavazquez/openrailsrs.git

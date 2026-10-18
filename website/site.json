@@ -1,7 +1,7 @@
 {
   "name": "openrailsrs",
   "url": "https://cavazquez.github.io/openrailsrs/",
-  "updated": "16 de octubre de 2026",
+  "updated": "18 de octubre de 2026",
   "pages": [
     {
       "file": "index.html",
@@ -25,7 +25,7 @@
       "file": "contenido.html",
       "label": "Rutas y trenes",
       "title": "Rutas y trenes para openrailsrs",
-      "description": "Descargas de los autores originales, Demo Model 1 y ayuda para encontrar archivos faltantes en tu biblioteca."
+      "description": "Importá por URL paquetes de rutas, trenes o ambos. Guía para autores, ejemplos y dependencias de tu instalación original."
     },
     {
       "file": "estado.html",

@@ -1,4 +1,22 @@
 <header class="page-intro wrap"><p class="eyebrow">Rutas y trenes</p><h1>Elegí una ruta.</h1><p class="lead">Acá podés consultar el catálogo y llegar a la descarga de cada autor. En el juego, la biblioteca guarda las copias instaladas y revisa qué archivos necesita cada formación.</p></header>
+<section class="section wrap" id="importar-por-url">
+  <div class="section-heading"><div><p class="eyebrow">Desde la alpha.10 · Snap edge</p><h2>Importá contenido desde el enlace del autor.</h2></div><p>Además del catálogo, Biblioteca admite paquetes por URL HTTPS. Podés instalar una ruta, un conjunto de trenes o los dos juntos.</p></div>
+  <ol>
+    <li>Abrí <strong>Biblioteca → Descargas del autor → Instalar desde URL</strong>.</li>
+    <li>Pegá el enlace al <code>openrailsrs-package.json</code> publicado por el autor y pulsá <strong>Comprobar enlace</strong>. Revisá el autor declarado, la versión, la licencia y las dependencias.</li>
+    <li>Comprobá la procedencia en el sitio del autor y confirmá el origen para instalar. También se admite un enlace directo al ZIP que contenga ese manifiesto.</li>
+    <li>Vinculá los recursos que falten y reauditá la copia. El juego comprueba la ruta, la formación y sus recursos antes de habilitar <strong>Jugar</strong>.</li>
+  </ol>
+  <div class="feature-row">
+    <article><h3>Sólo rutas</h3><p>El paquete incluye <code>ROUTES</code>. Los trenes pueden provenir de otra copia que ya tengas instalada.</p></article>
+    <article><h3>Sólo trenes</h3><p>Incluye <code>TRAINS</code>, con vehículos, formaciones o recursos compartidos como cabinas y sonidos.</p></article>
+    <article><h3>Rutas y trenes</h3><p>Incluye las dos carpetas bajo una raíz común. Puede declarar otras dependencias locales.</p></article>
+  </div>
+  <p>El manifiesto externo permite comprobar el ZIP contra el SHA-256 publicado. Ese hash verifica la integridad del archivo; la licencia y los permisos deben revisarse con el autor. Las nuevas ediciones conservan la copia anterior y la descarga puede cancelarse.</p>
+  <aside class="note"><strong>Cabinas y sonidos de tu instalación original</strong>En <strong>Biblioteca → Copias y respaldos</strong>, elegí la raíz que contiene <code>TRAINS/TRAINSET</code> y pulsá <strong>Vincular instalación original</strong>. Guardá el vínculo en <strong>F10</strong> y reauditá el paquete. El juego lee los recursos locales sin copiarlos al paquete. Los recursos comerciales necesitan los permisos de su licencia para redistribuirse.</aside>
+  <p>Si publicás contenido, prepará un ZIP con <code>openrailsrs-package.json</code> y las carpetas que declares. La guía incluye los tres ejemplos, el generador de paquetes y los comandos para validar antes de publicar. Los ejemplos son mínimos para probar el formato; no incluyen actividades ni paisaje completo.</p>
+  <a class="text-link" href="https://github.com/cavazquez/openrailsrs/blob/main/docs/CONTENT_PACKAGES.md">Guía y ejemplos para autores <span aria-hidden="true">↗</span></a>
+</section>
 <section class="section wrap">
   <div class="section-heading"><div><p class="eyebrow">Para empezar</p><h2>Demo Model 1</h2></div><p>La descarga ocupa unos 260 MiB y la instalación, 315 MiB. En el menú abrí <strong>Descargar contenido oficial</strong>, elegí Demo Model 1 y pulsá <strong>Buscar actualización e instalar</strong>.</p></div>
   <p>Probamos la actividad de las 09:30 con la formación <strong>MT_MT_Class 47 &amp; 6 mk2 PP</strong>: una Class 47, seis coches y cabina 3D. El recorrido disponible en esta edición va de Edinburgh Waverley a Linlithgow, pasando por Haymarket.</p><p>Algunas otras formaciones del paquete tienen archivos faltantes. Si elegís una de ellas, el menú te muestra cuáles son y dónde ponerlos.</p>

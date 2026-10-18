@@ -1,0 +1,134 @@
+{
+  "version": "0.1.0-alpha.10",
+  "revision": 9,
+  "channel": "latest/edge",
+  "status": "published_and_download_verified",
+  "verified_utc": "2026-10-18T08:26:36.518767+00:00",
+  "platform": {
+    "architecture": "amd64",
+    "base": "core24",
+    "confinement": "strict"
+  },
+  "snap": {
+    "bytes": 170766336,
+    "sha256": "f7af69fa24a26fe0f577e2160fd6a17bcd81fef2a0224edf76f6e2c6c50f376b",
+    "store_url": "https://snapcraft.io/openrailsrs",
+    "store_download_matches_tested_file": true,
+    "byte_comparison_passed": true
+  },
+  "source": {
+    "snapshot_sha256": "9127d7a1d9882f07aca428fff1b16bb406a325bd7b68afd4cdbd746a5c7c679f",
+    "files": 2879,
+    "base_commit": "91a4b4a1ac79b59a639df7ceba2091e6f483f5a0",
+    "base_has_changes": true,
+    "archive": "openrailsrs_0.1.0-alpha.10_source.tar.gz",
+    "sha256": "7e970e7bdb3c481f166a3599a67df5d28b4660d2da19839ae23e23851588b73c",
+    "bytes": 208844514,
+    "github_digest_verified": true,
+    "url": "https://github.com/cavazquez/openrailsrs/releases/download/v0.1.0-alpha.10/openrailsrs_0.1.0-alpha.10_source.tar.gz",
+    "release_url": "https://github.com/cavazquez/openrailsrs/releases/tag/v0.1.0-alpha.10"
+  },
+  "qa": {
+    "status": "passed",
+    "installed_strict": true,
+    "unprivileged_user": true,
+    "binary_hashes_verified": true,
+    "cases": [
+      {
+        "name": "catalog",
+        "exit_code": 0
+      },
+      {
+        "name": "inspect-routes-only",
+        "exit_code": 0
+      },
+      {
+        "name": "install-routes-only",
+        "exit_code": 0
+      },
+      {
+        "name": "audit-routes-only",
+        "exit_code": 0
+      },
+      {
+        "name": "inspect-trains-only",
+        "exit_code": 0
+      },
+      {
+        "name": "install-trains-only",
+        "exit_code": 0
+      },
+      {
+        "name": "audit-trains-only",
+        "exit_code": 0
+      },
+      {
+        "name": "inspect-routes-and-trains",
+        "exit_code": 0
+      },
+      {
+        "name": "install-routes-and-trains",
+        "exit_code": 0
+      },
+      {
+        "name": "audit-routes-and-trains",
+        "exit_code": 0
+      },
+      {
+        "name": "station-service",
+        "exit_code": 0
+      },
+      {
+        "name": "native-steam-tender",
+        "exit_code": 0
+      },
+      {
+        "name": "installed-menu",
+        "exit_code": 0
+      }
+    ],
+    "url_packages": [
+      {
+        "package": "routes-only",
+        "public_https_url": "https://raw.githubusercontent.com/cavazquez/openrailsrs/main/docs/examples/content-packages/downloads/routes-only/openrailsrs-package.json",
+        "sha256": "0234880d1f4dc2c34f88b35c0fb7808b928e5da317b0a994d96068de3e0af837",
+        "native_routes": 1,
+        "train_audits": 0,
+        "audit_errors": 0
+      },
+      {
+        "package": "trains-only",
+        "public_https_url": "https://raw.githubusercontent.com/cavazquez/openrailsrs/main/docs/examples/content-packages/downloads/trains-only/openrailsrs-package.json",
+        "sha256": "82cf68ede389920d6407e6128f059d22d6a3f56195fbc4cada52de09de7d3032",
+        "native_routes": 0,
+        "train_audits": 3,
+        "audit_errors": 0
+      },
+      {
+        "package": "routes-and-trains",
+        "public_https_url": "https://raw.githubusercontent.com/cavazquez/openrailsrs/main/docs/examples/content-packages/downloads/routes-and-trains/openrailsrs-package.json",
+        "sha256": "03e1ab78033ce7d20455a43d56ce8116a97bcb38b9c5f6e4dd7bc0422a6b0e03",
+        "native_routes": 1,
+        "train_audits": 1,
+        "audit_errors": 0
+      }
+    ],
+    "persistence_files_checked": 71700,
+    "persistence_scope": "Existing file sizes and nanosecond mtimes before and after the update; isolated QA player directory",
+    "persistence_unchanged": true,
+    "visual_page": "Biblioteca / Copias y respaldos, with original-installation linking",
+    "renderer": {
+      "backend": "Vulkan",
+      "device_type": "Cpu",
+      "hardware": false,
+      "name": "llvmpipe (LLVM 20.1.2, 256 bits)"
+    },
+    "shader_failures": 0,
+    "new_button_within_window": true
+  },
+  "limitations": [
+    "Route examples are minimal format fixtures without activities or complete scenery.",
+    "Menu capture uses Vulkan software rendering; no additional hardware GPU or Wayland certification is claimed."
+  ],
+  "commercial_resources_distributed": false
+}

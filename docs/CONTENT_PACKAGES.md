@@ -1,8 +1,8 @@
 # Paquetes de contenido por URL
 
-Esta guía corresponde a **0.1.0-alpha.10** y posteriores. La entrega para Snap
-y sus [fuentes exactas](https://github.com/cavazquez/openrailsrs/releases/tag/v0.1.0-alpha.10)
-se publican por versión; para repetir su compilación, usá ese archivo de fuentes.
+Esta guía corresponde a **0.1.0-alpha.10** y posteriores. En Snap, usá el canal
+edge y actualizá con `sudo snap refresh openrailsrs --edge`. Para los comandos
+de esta guía, la CLI del Snap se llama `openrailsrs.cli`.
 
 El formato `openrailsrs-package`, versión 1, permite instalar rutas, trenes o
 ambos desde un ZIP del autor. Cada paquete incluye `openrailsrs-package.json`.

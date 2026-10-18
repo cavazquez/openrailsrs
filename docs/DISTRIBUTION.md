@@ -84,9 +84,39 @@ se hace con un comando separado.
 
 La revisión 3 incluye el puente ALSA–PulseAudio, el descubrimiento del socket de la sesión y la ruta de carga de `libpulsecommon`. El paquete final abrió el dispositivo y reprodujo una voz de limpiaparabrisas hacia un sumidero silencioso de QA, bajo el perfil estricto y sin avisos. La prueba anterior también abrió el contenido original en cabina y exterior. Estas pruebas no sustituyen la escucha manual. [QA de audio](NATIVE_AUDIO.md#audio-dentro-del-snap).
 
-## Alpha disponible en Snap Store
+## Entrega alfa.10: paquetes por URL
 
-Actualmente **latest/edge** ofrece **0.1.0-alpha.5**, revisión **6**. Incluye las
+`0.1.0-alpha.10` agrega la importación por URL HTTPS de paquetes con sólo
+`ROUTES`, sólo `TRAINS` o ambas carpetas. El manifiesto
+`openrailsrs-package.json` declara autor, versión, licencia y dependencias;
+un manifiesto externo permite verificar el SHA-256 del ZIP. La biblioteca
+permite vincular instalaciones originales para resolver cabinas y sonidos
+locales sin incorporarlos al paquete. [Guía y ejemplos](CONTENT_PACKAGES.md).
+
+Se distribuye en **latest/edge**, para Linux amd64, con base core24 y
+confinamiento estricto. El [recibo de publicación](fixtures/compatibility/snap-alpha10-url-20261018/release.json)
+registra la revisión de la tienda, los hashes y las comprobaciones del paquete.
+Para recompilar esta entrega, usá el archivo `openrailsrs_0.1.0-alpha.10_source.tar.gz`
+adjunto a las [fuentes de alpha.10](https://github.com/cavazquez/openrailsrs/releases/tag/v0.1.0-alpha.10).
+
+```bash
+sudo snap install openrailsrs --edge
+# Si ya está instalado:
+sudo snap refresh openrailsrs --edge
+```
+
+## Entrega alfa.9
+
+La entrega `0.1.0-alpha.9` está destinada a **latest/edge**, con base core24 y
+confinamiento estricto. Incluye las correcciones de escenario y menú de las
+alfas locales anteriores y las [mejoras de actividades nativas](ALPHA9_NATIVE_ACTIVITY.md).
+Las rutas descargadas y las cabinas comerciales se mantienen fuera del paquete.
+La revisión asignada por la tienda y el hash de la descarga se registran después
+de subir y comprobar el archivo validado.
+
+## Publicaciones anteriores
+
+**0.1.0-alpha.5**, revisión **6**, se publicó en **latest/edge**. Incluyó las
 entregas recientes de equipos independientes, alimentación, frenos, cabinas,
 puertas, peralte, clima e iluminación. Los [treinta cambios más recientes](PLAYER_30_4_MANUAL.md)
 incluyen ejemplos y pasos para probarlos desde el menú.
@@ -217,7 +247,7 @@ cuenta todavía no está autenticada, iniciá sesión:
 
 ```bash
 snapcraft login
-snapcraft upload openrailsrs_0.1.0-alpha.5_amd64.snap --release latest/edge
+snapcraft upload openrailsrs_0.1.0-alpha.9_amd64.snap --release latest/edge
 ```
 
 No se guardan credenciales de Snapcraft dentro del repositorio ni del paquete.
