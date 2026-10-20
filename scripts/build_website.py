@@ -35,9 +35,20 @@ def render():
     config = json.loads((SITE / "site.json").read_text())
     workspace = tomllib.loads((ROOT / "Cargo.toml").read_text())
     reference = tomllib.loads((ROOT / "oracles/openrails-reference.toml").read_text())
+    release = json.loads((ROOT / config["release_receipt"]).read_text())
+    checked = json.loads((ROOT / config["check_receipt"]).read_text())
+    if release["status"] != "published_and_download_verified" or checked["status"] != "pass":
+        raise ValueError("The website requires verified release and check receipts")
     values = {"bevy": workspace["workspace"]["dependencies"]["bevy"]["version"].lstrip("="),
               "rust": workspace["workspace"]["package"]["rust-version"],
-              "or_version": reference["version"], "updated": config["updated"]}
+              "or_version": reference["version"], "updated": config["updated"],
+              "snap_version": html.escape(release["version"]),
+              "snap_revision": str(release["revision"]),
+              "snap_channel": html.escape(release["channel"]),
+              "snap_release_url": html.escape(release["source"]["release_url"], quote=True),
+              "snap_source_archive": html.escape(release["source"]["archive"]),
+              "portable_glibc": html.escape(config["portable_glibc"]),
+              "full_check_rust_passed": f'{checked["rust_test_totals"]["passed"]:,}'.replace(",", ".")}
     layout = (SITE / "templates/layout.html").read_text()
     result = {}
     for page in config["pages"]:

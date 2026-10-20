@@ -1,7 +1,10 @@
 {
   "name": "openrailsrs",
   "url": "https://cavazquez.github.io/openrailsrs/",
-  "updated": "18 de octubre de 2026",
+  "updated": "20 de octubre de 2026",
+  "release_receipt": "docs/fixtures/compatibility/snap-alpha10-url-20261018/release.json",
+  "check_receipt": "docs/fixtures/simple-menu-20261016/execution.json",
+  "portable_glibc": "2.39",
   "pages": [
     {
       "file": "index.html",
@@ -19,7 +22,7 @@
       "file": "empezar.html",
       "label": "Cómo empezar",
       "title": "Instalar y jugar openrailsrs",
-      "description": "Cómo compilar en Linux, descargar Demo Model 1 o usar Chiltern y arrancar la primera partida."
+      "description": "Instalá la alpha desde Snap, importá rutas y trenes por URL y prepará tu primera partida. También podés compilar las fuentes de la versión."
     },
     {
       "file": "contenido.html",
@@ -31,13 +34,13 @@
       "file": "estado.html",
       "label": "Qué falta",
       "title": "Estado de openrailsrs",
-      "description": "Recorridos probados, resultados recientes y trabajo pendiente en gráficos, física y compatibilidad."
+      "description": "Avances comprobados, Snap publicado y pendientes de implementación, validación y recursos originales, con sus referencias."
     },
     {
       "file": "fisica.html",
       "label": "Cómo funciona",
       "title": "Física y código de openrailsrs",
-      "description": "Tracción, frenos, señales y organización del simulador en Rust y Bevy."
+      "description": "Tracción, frenos, acopladores, patios, señales y pruebas del simulador en Rust y Bevy, con el alcance de cada comparación."
     },
     {
       "file": "paridad-or.html",

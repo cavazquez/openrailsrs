@@ -6,7 +6,7 @@ documentación canónica y muestran el alcance real de compatibilidad.
 
 ## Estructura
 
-- `src/`: contenido de siete páginas: inicio, experiencia, empezar, estado, física y comparación OR.
+- `src/`: contenido de siete páginas: inicio, experiencia, empezar, contenido, estado, física y comparación OR.
 - `templates/layout.html`: navegación, pie, accesibilidad y metadatos compartidos.
 - `site.json`: configuración, navegación y descripciones SEO.
 - `css/style.css`: diseño responsive y foco de teclado.
@@ -17,6 +17,13 @@ documentación canónica y muestran el alcance real de compatibilidad.
 No necesita framework, Node, CDN ni fuentes externas. Páginas, enlaces y comandos
 siguen accesibles sin JavaScript. Bevy, Rust mínimo y la referencia OR se leen
 del repositorio para evitar versiones contradictorias.
+
+La versión y revisión de Snap y el total del último check completo se leen de
+los recibos declarados en `site.json`; no se mantienen cifras separadas por
+página. La fecha del pie indica la revisión editorial. Las pruebas conservan
+sus fechas, contenido y entorno originales. La lista canónica de pendientes
+está en `estado.html#prioridades` y enlaza las tareas abiertas y los límites
+documentados. Revisar las siete páginas cuando cambia ese estado.
 
 ## Textos
 

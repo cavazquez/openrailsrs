@@ -144,7 +144,9 @@ escritorio y limpieza en `finally`. El fallo controlado de aislamiento comprueba
 que una excepción termina el proceso y que no quedan procesos del prefijo.
 Las ejecuciones fallidas se conservan como fallos, sin registrarlas como paridad.
 
-El catálogo `oracles/rolling-stock-families.json` separa estas familias de las
-comparaciones aún pendientes, como termodinámica completa de vapor, protecciones
-eléctricas específicas y física completa del recorrido LIRR. Las referencias
-aprobadas de Pullman y Class 47 conservan sus bytes y tolerancias.
+El catálogo `oracles/rolling-stock-families.json` identifica las familias de
+estos ensayos. La comparación física completa de LIRR se aprobó después de
+este lote: el [replay LIRR12](fixtures/compatibility/twenty-20261015/physical-final14/lirr/comparison.json)
+pasó sus seis límites. La termodinámica completa de otras variantes de vapor
+y las protecciones eléctricas específicas mantienen validaciones pendientes.
+Las referencias aprobadas de Pullman y Class 47 conservan sus bytes y tolerancias.
