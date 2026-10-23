@@ -44,6 +44,7 @@ def render():
               "or_version": reference["version"], "updated": config["updated"],
               "snap_version": html.escape(release["version"]),
               "snap_revision": str(release["revision"]),
+              "snap_receipt_url": html.escape("https://github.com/cavazquez/openrailsrs/blob/main/" + config["release_receipt"]),
               "snap_channel": html.escape(release["channel"]),
               "snap_release_url": html.escape(release["source"]["release_url"], quote=True),
               "snap_source_archive": html.escape(release["source"]["archive"]),

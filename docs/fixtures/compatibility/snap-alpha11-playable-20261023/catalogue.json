@@ -1,0 +1,569 @@
+{
+  "initial_scenery_root": null,
+  "initial_selection": {
+    "pending": false,
+    "playable_services": [
+      {
+        "name": "Test freight run",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/smoke/scenario.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/consists/steam.con"
+      },
+      {
+        "name": "Vapor: km0 → km50",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/scenario.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/consists/steam.con"
+      },
+      {
+        "name": "0930 Edinburgh-Glasgow Queen Street",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/sce/scenario.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/sce/consists/mt_mt_class_47___6_mk2_pp.con"
+      },
+      {
+        "name": "Chiltern brake-coast baseline (180 s)",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/chiltern/scenario_brake_coast.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/consists/steam.con"
+      },
+      {
+        "name": "Chiltern brake-coast (multi-body, 180 s)",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/chiltern/scenario_brake_coast_multi_body.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/consists/steam.con"
+      },
+      {
+        "name": "Chiltern Birmingham (multi-body)",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/chiltern/scenario_multi_body.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/consists/steam.con"
+      },
+      {
+        "name": "Chiltern Birmingham (single-mass, dt=0.05)",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/chiltern/scenario_single_dt005.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/consists/steam.con"
+      },
+      {
+        "name": "Chiltern full-throttle baseline (120 s)",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/chiltern/scenario_throttle100.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/consists/steam.con"
+      },
+      {
+        "name": "Chiltern full-throttle (multi-body, 120 s)",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/chiltern/scenario_throttle100_multi_body.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/consists/steam.con"
+      },
+      {
+        "name": "Chiltern throttle-50 baseline (30 s)",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/chiltern/scenario_throttle50.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/consists/steam.con"
+      },
+      {
+        "name": "Chiltern throttle-75 baseline (60 s)",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/chiltern/scenario_throttle75.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/consists/steam.con"
+      },
+      {
+        "name": "Chiltern local: Northolt Park → West Ruislip · chiltern_local/scenario_oracle.toml",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/chiltern_local/scenario_oracle.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/chiltern_local/physics/consists/birmingham_pullman.con"
+      },
+      {
+        "name": "Class 47 original: referencia de controles",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/class47_reference/scenario.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/class47_reference/physics/consists/class47-mk2.con"
+      },
+      {
+        "name": "Alimentación eléctrica: catenaria y sector neutro",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/electric_supply/scenario.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/consists/steam.con"
+      },
+      {
+        "name": "Laboratorio: batería, red y regeneración",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/electric_supply/scenario_battery.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/electric_supply/consists/two_pantographs.con"
+      },
+      {
+        "name": "Laboratorio: propulsión dual: red, diésel y batería",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/electric_supply/scenario_dual.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/electric_supply/consists/two_pantographs.con"
+      },
+      {
+        "name": "Alimentación eléctrica: tercer riel y corte de alimentación",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/electric_supply/scenario_third_rail.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/consists/steam.con"
+      },
+      {
+        "name": "Eléctrico: dos pantógrafos independientes",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/electric_supply/scenario_two_pantographs.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/electric_supply/consists/two_pantographs.con"
+      },
+      {
+        "name": "Vapor OR1.6.1: ténder, purga y arenero",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/physics_lab/scenario_native_tender.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/physics_lab/consists/native_tender.con"
+      },
+      {
+        "name": "Jornada 1 · campaña de prueba",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_campaign/day1.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/consists/lab.con"
+      },
+      {
+        "name": "Jornada 2 · campaña de prueba",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_campaign/day2.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/consists/lab.con"
+      },
+      {
+        "name": "Laboratorio de cabina y carteles",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/scenario.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/consists/lab.con"
+      },
+      {
+        "name": "Laboratorio de fuelles, mangueras y acopladores · player_lab/scenario_connections.toml",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/scenario_connections.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/consists/connections.con"
+      },
+      {
+        "name": "Laboratorio de fuelles, mangueras y acopladores · player_lab/scenario_connections_curve.toml",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/scenario_connections_curve.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/consists/connections.con"
+      },
+      {
+        "name": "Laboratorio de bogie compartido Jacobs · player_lab/scenario_jacobs.toml",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/scenario_jacobs.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/consists/connections.con"
+      },
+      {
+        "name": "Laboratorio de bogie compartido Jacobs · player_lab/scenario_jacobs_curve.toml",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/scenario_jacobs_curve.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/consists/connections.con"
+      },
+      {
+        "name": "Laboratorio de abastecimiento original",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/scenario_refill.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/consists/refill.con"
+      },
+      {
+        "name": "SCE Edinburgh-Glasgow (multi-body, 100 s)",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/sce/scenario_multi_body.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/sce/consists/mt_mt_class_47___6_mk2_pp.con"
+      },
+      {
+        "name": "Test diverging run",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/smoke/scenario_diverging.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/consists/steam.con"
+      },
+      {
+        "name": "Anuncios autorizados · Diésel: arranque, parada y combustible",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/announcements/scenario.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/diesel.con"
+      },
+      {
+        "name": "Diésel: arranque, parada y combustible",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/diesel.con"
+      },
+      {
+        "name": "Depósito: preparación y mantenimiento",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario_depot.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/two_diesel.con"
+      },
+      {
+        "name": "Diésel: dos motores y equipos independientes",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario_equipment.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/two_diesel.con"
+      },
+      {
+        "name": "Mercancías: 25 t de carga y límite de 45 km/h",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario_freight.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/freight.con"
+      },
+      {
+        "name": "Mercancías: servicio con circulación cruzada",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario_freight_traffic.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/freight.con"
+      },
+      {
+        "name": "Consumo eléctrico: pasajeros y auxiliares",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario_hotel.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/diesel_hotel.con"
+      },
+      {
+        "name": "Diésel: agotar el tanque en 20 segundos",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario_low_fuel.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/low_fuel.con"
+      },
+      {
+        "name": "Diésel: fallo térmico de prueba",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario_motor_fault.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/two_diesel.con"
+      },
+      {
+        "name": "Mando múltiple: dos familias compatibles",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario_multiple_unit.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/two_diesel.con"
+      },
+      {
+        "name": "Diésel: dos gobernadores originales",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario_native_motors.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/native_motors.con"
+      },
+      {
+        "name": "Vapor: fogonero y ténder finito",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario_steam.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/consists/steam.con"
+      },
+      {
+        "name": "Vapor: dos calderas e inyectores originales",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario_steam_equipment.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/two_steam.con"
+      },
+      {
+        "name": "Vapor: agotamiento rápido de reservas",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario_steam_low_water.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/low_steam.con"
+      },
+      {
+        "name": "Diésel: temperatura y protección térmica",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario_thermal.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/diesel_thermal.con"
+      },
+      {
+        "name": "Diésel: dos motores independientes",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario_two_diesel.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/two_diesel.con"
+      },
+      {
+        "name": "Cambio de conductor · Laboratorio de cabina y carteles",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traffic_passing/scenario_control.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/consists/lab.con"
+      },
+      {
+        "name": "Recoger formación · Laboratorio de fuelles, mangueras y acopladores",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traffic_passing/scenario_coupling.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/consists/connections.con"
+      },
+      {
+        "name": "Tráfico: encuentro en vía única",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traffic_passing/scenario_meet.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/yard_training/consists/yard.con"
+      },
+      {
+        "name": "Tráfico: adelantamiento de local y expreso",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traffic_passing/scenario_overtake.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/yard_training/consists/yard.con"
+      },
+      {
+        "name": "Patio de prácticas: separar y volver a formar",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/yard_training/scenario.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/yard_training/consists/yard.con"
+      },
+      {
+        "name": "Patio: dos cuadrillas, dos destinos",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/yard_training/scenario_classification.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/yard_training/consists/yard.con"
+      },
+      {
+        "name": "Patio: clasificar y recoger vagones por destino",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/yard_training/scenario_delivery.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/yard_training/consists/yard.con"
+      },
+      {
+        "name": "Patio: recoger una formación independiente",
+        "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/yard_training/scenario_independent_coupling.toml",
+        "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/yard_training/consists/yard.con"
+      }
+    ],
+    "selected_service": "/snap/openrailsrs/x1/share/openrailsrs/examples/electric_supply/scenario_battery.toml",
+    "selected_train": "/snap/openrailsrs/x1/share/openrailsrs/examples/electric_supply/consists/two_pantographs.con",
+    "services_checked": 63,
+    "services_total": 63,
+    "visible_routes": [
+      "Laboratorio · test",
+      "Laboratorio · pampas",
+      "Laboratorio · sce",
+      "Laboratorio · Chiltern",
+      "Laboratorio · class47_reference",
+      "Laboratorio · route",
+      "Laboratorio · curve_route",
+      "Laboratorio · route_freight"
+    ]
+  },
+  "pending": false,
+  "playable_services": [
+    {
+      "name": "Test freight run",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/smoke/scenario.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/consists/steam.con"
+    },
+    {
+      "name": "Vapor: km0 → km50",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/scenario.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/consists/steam.con"
+    },
+    {
+      "name": "0930 Edinburgh-Glasgow Queen Street",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/sce/scenario.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/sce/consists/mt_mt_class_47___6_mk2_pp.con"
+    },
+    {
+      "name": "Chiltern brake-coast baseline (180 s)",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/chiltern/scenario_brake_coast.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/consists/steam.con"
+    },
+    {
+      "name": "Chiltern brake-coast (multi-body, 180 s)",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/chiltern/scenario_brake_coast_multi_body.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/consists/steam.con"
+    },
+    {
+      "name": "Chiltern Birmingham (multi-body)",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/chiltern/scenario_multi_body.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/consists/steam.con"
+    },
+    {
+      "name": "Chiltern Birmingham (single-mass, dt=0.05)",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/chiltern/scenario_single_dt005.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/consists/steam.con"
+    },
+    {
+      "name": "Chiltern full-throttle baseline (120 s)",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/chiltern/scenario_throttle100.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/consists/steam.con"
+    },
+    {
+      "name": "Chiltern full-throttle (multi-body, 120 s)",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/chiltern/scenario_throttle100_multi_body.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/consists/steam.con"
+    },
+    {
+      "name": "Chiltern throttle-50 baseline (30 s)",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/chiltern/scenario_throttle50.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/consists/steam.con"
+    },
+    {
+      "name": "Chiltern throttle-75 baseline (60 s)",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/chiltern/scenario_throttle75.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/consists/steam.con"
+    },
+    {
+      "name": "Chiltern local: Northolt Park → West Ruislip · chiltern_local/scenario_oracle.toml",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/chiltern_local/scenario_oracle.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/chiltern_local/physics/consists/birmingham_pullman.con"
+    },
+    {
+      "name": "Class 47 original: referencia de controles",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/class47_reference/scenario.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/class47_reference/physics/consists/class47-mk2.con"
+    },
+    {
+      "name": "Alimentación eléctrica: catenaria y sector neutro",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/electric_supply/scenario.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/consists/steam.con"
+    },
+    {
+      "name": "Laboratorio: batería, red y regeneración",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/electric_supply/scenario_battery.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/electric_supply/consists/two_pantographs.con"
+    },
+    {
+      "name": "Laboratorio: propulsión dual: red, diésel y batería",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/electric_supply/scenario_dual.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/electric_supply/consists/two_pantographs.con"
+    },
+    {
+      "name": "Alimentación eléctrica: tercer riel y corte de alimentación",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/electric_supply/scenario_third_rail.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/consists/steam.con"
+    },
+    {
+      "name": "Eléctrico: dos pantógrafos independientes",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/electric_supply/scenario_two_pantographs.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/electric_supply/consists/two_pantographs.con"
+    },
+    {
+      "name": "Vapor OR1.6.1: ténder, purga y arenero",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/physics_lab/scenario_native_tender.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/physics_lab/consists/native_tender.con"
+    },
+    {
+      "name": "Jornada 1 · campaña de prueba",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_campaign/day1.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/consists/lab.con"
+    },
+    {
+      "name": "Jornada 2 · campaña de prueba",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_campaign/day2.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/consists/lab.con"
+    },
+    {
+      "name": "Laboratorio de cabina y carteles",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/scenario.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/consists/lab.con"
+    },
+    {
+      "name": "Laboratorio de fuelles, mangueras y acopladores · player_lab/scenario_connections.toml",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/scenario_connections.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/consists/connections.con"
+    },
+    {
+      "name": "Laboratorio de fuelles, mangueras y acopladores · player_lab/scenario_connections_curve.toml",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/scenario_connections_curve.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/consists/connections.con"
+    },
+    {
+      "name": "Laboratorio de bogie compartido Jacobs · player_lab/scenario_jacobs.toml",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/scenario_jacobs.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/consists/connections.con"
+    },
+    {
+      "name": "Laboratorio de bogie compartido Jacobs · player_lab/scenario_jacobs_curve.toml",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/scenario_jacobs_curve.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/consists/connections.con"
+    },
+    {
+      "name": "Laboratorio de abastecimiento original",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/scenario_refill.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/consists/refill.con"
+    },
+    {
+      "name": "SCE Edinburgh-Glasgow (multi-body, 100 s)",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/sce/scenario_multi_body.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/sce/consists/mt_mt_class_47___6_mk2_pp.con"
+    },
+    {
+      "name": "Test diverging run",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/smoke/scenario_diverging.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/consists/steam.con"
+    },
+    {
+      "name": "Anuncios autorizados · Diésel: arranque, parada y combustible",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/announcements/scenario.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/diesel.con"
+    },
+    {
+      "name": "Diésel: arranque, parada y combustible",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/diesel.con"
+    },
+    {
+      "name": "Depósito: preparación y mantenimiento",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario_depot.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/two_diesel.con"
+    },
+    {
+      "name": "Diésel: dos motores y equipos independientes",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario_equipment.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/two_diesel.con"
+    },
+    {
+      "name": "Mercancías: 25 t de carga y límite de 45 km/h",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario_freight.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/freight.con"
+    },
+    {
+      "name": "Mercancías: servicio con circulación cruzada",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario_freight_traffic.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/freight.con"
+    },
+    {
+      "name": "Consumo eléctrico: pasajeros y auxiliares",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario_hotel.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/diesel_hotel.con"
+    },
+    {
+      "name": "Diésel: agotar el tanque en 20 segundos",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario_low_fuel.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/low_fuel.con"
+    },
+    {
+      "name": "Diésel: fallo térmico de prueba",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario_motor_fault.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/two_diesel.con"
+    },
+    {
+      "name": "Mando múltiple: dos familias compatibles",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario_multiple_unit.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/two_diesel.con"
+    },
+    {
+      "name": "Diésel: dos gobernadores originales",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario_native_motors.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/native_motors.con"
+    },
+    {
+      "name": "Vapor: fogonero y ténder finito",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario_steam.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/steam/consists/steam.con"
+    },
+    {
+      "name": "Vapor: dos calderas e inyectores originales",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario_steam_equipment.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/two_steam.con"
+    },
+    {
+      "name": "Vapor: agotamiento rápido de reservas",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario_steam_low_water.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/low_steam.con"
+    },
+    {
+      "name": "Diésel: temperatura y protección térmica",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario_thermal.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/diesel_thermal.con"
+    },
+    {
+      "name": "Diésel: dos motores independientes",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario_two_diesel.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/two_diesel.con"
+    },
+    {
+      "name": "Cambio de conductor · Laboratorio de cabina y carteles",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traffic_passing/scenario_control.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/consists/lab.con"
+    },
+    {
+      "name": "Recoger formación · Laboratorio de fuelles, mangueras y acopladores",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traffic_passing/scenario_coupling.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/player_lab/consists/connections.con"
+    },
+    {
+      "name": "Tráfico: encuentro en vía única",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traffic_passing/scenario_meet.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/yard_training/consists/yard.con"
+    },
+    {
+      "name": "Tráfico: adelantamiento de local y expreso",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/traffic_passing/scenario_overtake.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/yard_training/consists/yard.con"
+    },
+    {
+      "name": "Patio de prácticas: separar y volver a formar",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/yard_training/scenario.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/yard_training/consists/yard.con"
+    },
+    {
+      "name": "Patio: dos cuadrillas, dos destinos",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/yard_training/scenario_classification.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/yard_training/consists/yard.con"
+    },
+    {
+      "name": "Patio: clasificar y recoger vagones por destino",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/yard_training/scenario_delivery.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/yard_training/consists/yard.con"
+    },
+    {
+      "name": "Patio: recoger una formación independiente",
+      "source": "/snap/openrailsrs/x1/share/openrailsrs/examples/yard_training/scenario_independent_coupling.toml",
+      "train": "/snap/openrailsrs/x1/share/openrailsrs/examples/yard_training/consists/yard.con"
+    }
+  ],
+  "selected_service": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/scenario_freight_traffic.toml",
+  "selected_train": "/snap/openrailsrs/x1/share/openrailsrs/examples/traction_operation/consists/freight.con",
+  "services_checked": 63,
+  "services_total": 63,
+  "visible_routes": [
+    "Laboratorio · test",
+    "Laboratorio · pampas",
+    "Laboratorio · sce",
+    "Laboratorio · Chiltern",
+    "Laboratorio · class47_reference",
+    "Laboratorio · route",
+    "Laboratorio · curve_route",
+    "Laboratorio · route_freight"
+  ]
+}

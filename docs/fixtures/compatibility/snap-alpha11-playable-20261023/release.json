@@ -1,0 +1,142 @@
+{
+  "version": "0.1.0-alpha.11",
+  "revision": 10,
+  "channel": "latest/edge",
+  "status": "published_and_download_verified",
+  "verified_utc": "2026-10-23T21:07:52.129558+00:00",
+  "platform": {
+    "architecture": "amd64",
+    "base": "core24",
+    "confinement": "strict"
+  },
+  "snap": {
+    "bytes": 170876928,
+    "sha256": "b83256a7f80bfa28e1771855dc9a7badb5603f8255a59c385c7f6607734d00e9",
+    "store_url": "https://snapcraft.io/openrailsrs",
+    "store_download_matches_tested_file": true,
+    "byte_comparison_passed": true
+  },
+  "source": {
+    "snapshot_sha256": "24aec1419da52c624839cbd5d8c7e669fabd0a51fb2784756d491c3a4fd15741",
+    "files": 2881,
+    "base_commit": "91a4b4a1ac79b59a639df7ceba2091e6f483f5a0",
+    "base_has_changes": true,
+    "archive": "openrailsrs_0.1.0-alpha.11_source.tar.gz",
+    "sha256": "1ebda48c5609ae7cef38bb75685322b92ceac67f8062b54bc8f9fb54a7926334",
+    "bytes": 209003068,
+    "github_digest_verified": true,
+    "url": "https://github.com/cavazquez/openrailsrs/releases/download/v0.1.0-alpha.11/openrailsrs_0.1.0-alpha.11_source.tar.gz",
+    "release_url": "https://github.com/cavazquez/openrailsrs/releases/tag/v0.1.0-alpha.11"
+  },
+  "build": {
+    "source_commit": "91a4b4a1ac79b59a639df7ceba2091e6f483f5a0",
+    "source_dirty": true,
+    "source_snapshot_sha256": "24aec1419da52c624839cbd5d8c7e669fabd0a51fb2784756d491c3a4fd15741",
+    "architecture": "x86_64",
+    "build_libc": [
+      "glibc",
+      "2.39"
+    ],
+    "required_glibc": "2.39",
+    "downloaded_content_included": false,
+    "binary_sha256": {
+      "openrailsrs": "5617870bf60a0b3038fd733f3d5af7c3571374a4158f20e559d5a872d8385492",
+      "openrailsrs-viewer3d": "b208e24c6896e14edc430c5a9a61322af654ff404f1d60ba86a983628c6fe36b",
+      "openrailsrs-prepare-content": "4d8a9f032c13e1d50436a293328ac970379aaced29eae6579248e4ba3e682d8f"
+    }
+  },
+  "qa": {
+    "status": "passed",
+    "installed_strict": true,
+    "unprivileged_user": true,
+    "uid": 2003,
+    "renderer": "Mesa CPU, private Xvfb",
+    "binary_hashes_verified": true,
+    "rust_tests": {
+      "passed": 848,
+      "failed": 0,
+      "ignored": 46
+    },
+    "packaging_tests": {
+      "passed": 17,
+      "failed": 0
+    },
+    "catalogue": {
+      "included_services": 63,
+      "playable_services": 53,
+      "hidden_services": 10,
+      "all_selectable_services_initialize": true
+    },
+    "default_route_available_trains": 19,
+    "initial_service": "examples/electric_supply/scenario_battery.toml",
+    "initial_train": "examples/electric_supply/consists/two_pantographs.con",
+    "runtime_resources_equal_revision_9": true,
+    "complete_example": {
+      "success": true,
+      "phase": "completed",
+      "scenario": "Chiltern local: Northolt Park → West Ruislip",
+      "time_s": 401.6728956337247,
+      "distance_m": 7087.01025390625,
+      "score": 1000.0,
+      "failure": null,
+      "completion_scope": "Resolved route and declared passenger stops; not arbitrary ACT scripted events",
+      "stops": [],
+      "traffic": []
+    },
+    "cases": [
+      {
+        "case": "remove-baseline",
+        "exit_code": 0
+      },
+      {
+        "case": "install",
+        "exit_code": 0
+      },
+      {
+        "case": "catalogue",
+        "exit_code": 0
+      },
+      {
+        "case": "menu",
+        "exit_code": 0
+      },
+      {
+        "case": "scene",
+        "exit_code": 0
+      },
+      {
+        "case": "service",
+        "exit_code": 0
+      }
+    ],
+    "scope": "Resource checks and initial construction of every offered service, plus one completed synthetic service. This does not certify every complete activity or native route."
+  },
+  "build_commands": {
+    "rustc": "1.97.1 (8bab26f4f 2026-07-14)",
+    "rustflags": "-C link-arg=-fuse-ld=lld",
+    "cargo_profile": "release, debug=0, strip=debuginfo; copies stripped with strip --strip-unneeded",
+    "code_changes_from_alpha10": [
+      "crates/openrailsrs-viewer3d/src/player_ui.rs",
+      "crates/openrailsrs-viewer3d/src/capture.rs",
+      "crates/openrailsrs-viewer3d/src/player_launch.rs",
+      "crates/openrailsrs-viewer3d/src/lib.rs",
+      "crates/openrailsrs-viewer3d/src/train_availability.rs",
+      "crates/openrailsrs-viewer3d/src/playable_catalogue.rs",
+      "crates/openrailsrs-viewer3d/src/player_ui/choice_filters.rs",
+      "crates/openrailsrs-viewer3d/src/player_ui/menu_country.rs",
+      "crates/openrailsrs-viewer3d/src/player_ui/previews.rs",
+      "crates/openrailsrs-viewer3d/src/player_ui/choices.rs",
+      "crates/openrailsrs-viewer3d/src/player_ui/launcher.rs",
+      "crates/openrailsrs-viewer3d/src/player_ui/train_selection.rs",
+      "snap/snapcraft.yaml",
+      "docs/DISTRIBUTION.md",
+      "crates/openrailsrs-viewer3d/src/launch_audits.rs"
+    ]
+  },
+  "evidence": [
+    "before.png",
+    "menu.png",
+    "scene.png",
+    "catalogue.json"
+  ]
+}

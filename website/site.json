@@ -1,8 +1,8 @@
 {
   "name": "openrailsrs",
   "url": "https://cavazquez.github.io/openrailsrs/",
-  "updated": "20 de octubre de 2026",
-  "release_receipt": "docs/fixtures/compatibility/snap-alpha10-url-20261018/release.json",
+  "updated": "23 de octubre de 2026",
+  "release_receipt": "docs/fixtures/compatibility/snap-alpha11-playable-20261023/release.json",
   "check_receipt": "docs/fixtures/simple-menu-20261016/execution.json",
   "portable_glibc": "2.39",
   "pages": [

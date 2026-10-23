@@ -84,6 +84,30 @@ se hace con un comando separado.
 
 La revisión 3 incluye el puente ALSA–PulseAudio, el descubrimiento del socket de la sesión y la ruta de carga de `libpulsecommon`. El paquete final abrió el dispositivo y reprodujo una voz de limpiaparabrisas hacia un sumidero silencioso de QA, bajo el perfil estricto y sin avisos. La prueba anterior también abrió el contenido original en cabina y exterior. Estas pruebas no sustituyen la escucha manual. [QA de audio](NATIVE_AUDIO.md#audio-dentro-del-snap).
 
+## Entrega alfa.11: escenarios con trenes disponibles
+
+`0.1.0-alpha.11` muestra en Nueva partida sólo rutas y servicios que pueden
+iniciarse con al menos una formación instalada. La revisión se hace en segundo
+plano y comprueba paisaje, recursos del tren, alimentación, trocha, gálibo y
+el inicio del servicio con su tráfico. Al elegir un servicio queda seleccionada
+una formación que pasó esas comprobaciones. Los datos desconocidos de
+infraestructura conservan sus advertencias; esta revisión no certifica toda
+la ruta ni su física.
+
+Los paquetes incompletos se conservan en Biblioteca. Importar contenido,
+vincular una instalación original, guardar una formación o reauditar vuelve
+a comprobar la disponibilidad. Así, una instalación limpia no ofrece como
+partida una ruta que depende de cabinas o paisaje que no trae el Snap.
+
+La corrección también unifica el criterio del catálogo, las listas de trenes
+y el lanzamiento, y respeta los captadores eléctricos declarados por coche.
+El [recibo de publicación y QA](fixtures/compatibility/snap-alpha11-playable-20261023/release.json)
+registra el paquete probado y la revisión publicada en **latest/edge**.
+
+```bash
+sudo snap refresh openrailsrs --edge
+```
+
 ## Entrega alfa.10: paquetes por URL
 
 `0.1.0-alpha.10` agrega la importación por URL HTTPS de paquetes con sólo
