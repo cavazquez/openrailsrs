@@ -48,7 +48,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 rayon = "1.10"
 indexmap = "2.7"
 # Bevy pin — see docs/BEVY.md.
-bevy = { version = "0.19.1", default-features = false, features = [
+bevy = { version = "0.20.1", default-features = false, features = [
     "bevy_winit",
     "bevy_gilrs",
     "x11",
