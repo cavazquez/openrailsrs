@@ -27,7 +27,7 @@ image.workspace = true
 texpresso = "2"
 ktx2 = "0.5"
 blake3 = "1"
-zstd = "0.13"
+zstd = "0.14"
 tempfile = "3"
 serde = { workspace = true }
 serde_json = { workspace = true }
