@@ -12,7 +12,7 @@ openrailsrs-formats = { path = "../openrailsrs-formats" }
 thiserror.workspace = true
 serde.workspace = true
 toml.workspace = true
-sha2 = "0.10"
+sha2 = "0.11"
 
 [dev-dependencies]
 tempfile = "3"
