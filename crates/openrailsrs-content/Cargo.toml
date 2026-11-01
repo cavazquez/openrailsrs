@@ -9,7 +9,7 @@ description = "User content storage and bundled installer resources"
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-sha2 = "0.10.9"
+sha2 = "0.11.1"
 
 [dev-dependencies]
 tempfile = "3"

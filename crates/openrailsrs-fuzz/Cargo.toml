@@ -12,4 +12,4 @@ openrailsrs-ace = { path = "../openrailsrs-ace" }
 openrailsrs-track = { path = "../openrailsrs-track" }
 openrailsrs-game = { path = "../openrailsrs-game" }
 serde_json.workspace = true
-sha2 = "0.10"
+sha2 = "0.11"

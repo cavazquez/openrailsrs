@@ -20,5 +20,5 @@ openrailsrs-msts = { path = "../openrailsrs-msts" }
 openrailsrs-scenarios = { path = "../openrailsrs-scenarios" }
 openrailsrs-route = { path = "../openrailsrs-route" }
 openrailsrs-track = { path = "../openrailsrs-track" }
-sha2 = "0.10.9"
+sha2 = "0.11.1"
 toml.workspace = true

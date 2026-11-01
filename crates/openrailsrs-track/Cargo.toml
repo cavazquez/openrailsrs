@@ -11,7 +11,7 @@ openrailsrs-core = { path = "../openrailsrs-core" }
 indexmap.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-sha2 = "0.10.9"
+sha2 = "0.11.1"
 openrailsrs-content = { path = "../openrailsrs-content" }
 thiserror.workspace = true
 
@@ -20,4 +20,4 @@ tempfile = "3"
 serde_json.workspace = true
 
 [build-dependencies]
-sha2 = "0.10.9"
+sha2 = "0.11.1"
